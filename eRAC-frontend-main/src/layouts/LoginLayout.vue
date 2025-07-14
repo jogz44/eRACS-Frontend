@@ -32,7 +32,7 @@ export default {
   bottom: 0;
   background: url('src/assets/cityhall.jpg') no-repeat center center;
   background-size: cover;
-  filter: blur(4px);
+  filter: blur(100px);
   z-index: 0;
 }
 
