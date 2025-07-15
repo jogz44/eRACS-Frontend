@@ -16,43 +16,47 @@
     <q-card-section class="text-center">
       <div class="text-h5 text-green-8 text-bold">Admin</div>
     </q-card-section>
-    <q-card-section>
-      <q-input
-        color="green"
-        v-model="email"
-        label="Email"
-        type="email"
-        outlined
-        dense
-        :prepend-icon="'user'"
+   <q-card-section>
+  <q-input
+    color="green"
+    v-model="email"
+    label="Email"
+    type="email"
+    outlined
+    dense
+    :prepend-icon="'user'"
+  />
+
+  <q-input
+    color="primary"
+    v-model="password"
+    label="Password"
+    :type="isPasswordVisible ? 'text' : 'password'"
+    outlined
+    dense
+    class="q-mt-md"
+    :prepend-icon="'lock'"
+    :rules="[(val) => !!val || 'Password is required']"
+    @keyup.enter="handleLogin"
+  >
+    <template #append>
+      <q-icon
+        :name="isPasswordVisible ? 'visibility_off' : 'visibility'"
+        class="cursor-pointer"
+        @click="isPasswordVisible = !isPasswordVisible"
       />
-      <q-input
-        color="primary"
-        v-model="password"
-        label="Password"
-        :type="isPasswordVisible ? 'text' : 'password'"
-        outlined
-        dense
-        class="q-mt-md"
-        :prepend-icon="'lock'"
-        :rules="[(val) => !!val || 'Password is required']"
-      >
-        <template #append>
-          <q-icon
-            :name="isPasswordVisible ? 'visibility_off' : 'visibility'"
-            class="cursor-pointer"
-            @click="isPasswordVisible = !isPasswordVisible"
-          />
-        </template>
-      </q-input>
-      <q-btn
-        label="Sign In"
-        color="green"
-        class="full-width q-mt-md"
-        @click="handleLogin"
-        :loading="loading"
-      />
-    </q-card-section>
+    </template>
+  </q-input>
+
+  <q-btn
+    label="SIGN IN"
+    color="green"
+    class="full-width q-mt-md"
+    @click="handleLogin"
+    :loading="loading"
+  />
+</q-card-section>
+
     <q-card-section class="text-center">
       <div class="text-caption q-mt-sm">
         Switch to <span class="text-blue cursor-pointer" @click="goToUser">User</span>
