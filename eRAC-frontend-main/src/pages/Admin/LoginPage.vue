@@ -30,13 +30,21 @@
         color="primary"
         v-model="password"
         label="Password"
-        type="password"
+        :type="isPasswordVisible ? 'text' : 'password'"
         outlined
         dense
         class="q-mt-md"
         :prepend-icon="'lock'"
         :rules="[(val) => !!val || 'Password is required']"
-      />
+      >
+        <template #append>
+          <q-icon
+            :name="isPasswordVisible ? 'visibility_off' : 'visibility'"
+            class="cursor-pointer"
+            @click="isPasswordVisible = !isPasswordVisible"
+          />
+        </template>
+      </q-input>
       <q-btn
         label="Sign In"
         color="green"
@@ -51,6 +59,15 @@
       </div>
     </q-card-section>
   </q-card>
+  <div class="bottom">
+  <q-footer class="text-center">
+    <div class="text-caption text-grey-8" text-color="white">
+      © 2023 City Accounting Office, Tagum City. All rights reserved.
+    </div>
+  </q-footer>
+
+
+  </div>
 </template>
 
 <script setup>
@@ -66,6 +83,7 @@ const authStore = useAuthStore()
 const email = ref('admin@gmail.com') // Pre-fill for testing
 const password = ref('')
 const loading = ref(false)
+const isPasswordVisible = ref(false)
 const goToUser = () => {
   router.push('/') // Make sure this matches your signup route
 }
@@ -106,4 +124,13 @@ const handleLogin = async () => {
   box-shadow: 0 8px 8px rgb(38, 121, 0);
   margin-top: 120px;
 }
+.bottom{
+  justify-content: center;
+
+
+  position: absolute;
+  padding: 10px;
+  opacity: 90%;
+}
+
 </style>

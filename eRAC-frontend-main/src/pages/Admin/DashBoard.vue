@@ -4,7 +4,7 @@
     <q-page-container>
       <q-page class="q-pa-lg">
         <!-- Summary Cards -->
-        <div class="row q-col-gutter-md q-mb-md">
+        <div class="row summary-row q-mb-md">
           <q-card class="col-4 summary-card cursor-pointer" @click="onCardClick('budget')" v-ripple>
             <div class="card-top-strip"></div>
             <q-card-section>
@@ -40,7 +40,6 @@
             </q-card-section>
           </q-card>
         </div>
-
         <!-- Barangay Summary Table -->
         <q-card>
           <q-card-section>
@@ -132,13 +131,20 @@ export default {
 <style scoped>
 .summary-card {
   min-height: 120px !important; /* Override any defaults */
-  align-items: center;
+
   justify-content: center;
+width: 387px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  gap: 100px;
   border-radius: 12px;
   transition:
     transform 0.3s ease,
     box-shadow 0.3s ease;
   height: 100%;
+  padding: 20px;
 
   &:hover {
     transform: translateY(-5px);
@@ -158,10 +164,11 @@ export default {
 .summary-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
+
 }
 
 .card-top-strip {
-  height: 8px;
+  height: 30px;
   width: 100%;
   background-color: #2e7d32;
   border-top-left-radius: 4px;
@@ -170,6 +177,7 @@ export default {
   top: 0;
   left: 0;
   z-index: 1;
+
 }
 
 .summary-icon {
@@ -193,5 +201,9 @@ export default {
 }
 .my-sticky-header-table.q-table--loading thead tr:last-child th {
   top: 48px;
+}
+.summary-row {
+  display: flex;
+  gap: 30px; /* Creates space between summary cards */
 }
 </style>

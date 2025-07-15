@@ -16,8 +16,9 @@
     <q-card-section class="text-center">
       <div class="text-h5 text-green-8 text-bold">Sign In</div>
     </q-card-section>
+    <!-- Login Username-->
     <q-card-section>
-      <q-input
+      <q-input id="LoginUsername"
         color="green"
         v-model="username"
         label="Username"
@@ -25,7 +26,9 @@
         dense
         :prepend-icon="'user'"
       />
-      <q-input
+
+     <!-- Login Password-->
+      <q-input id="LoginPassword"
         color="primary"
         v-model="password"
         label="Password"
@@ -43,7 +46,7 @@
           />
         </template>
       </q-input>
-      <div class="text-right text-blue text-caption cursor-pointer q-mt-sm">Forgot password?</div>
+      <div class="text-right text-blue text-caption cursor-pointer q-mt-sm" @click="goToForgotPassword">Forgot password?</div>
       <q-btn
         label="Sign In"
         color="green"
@@ -62,6 +65,15 @@
       </div>
     </q-card-section>
   </q-card>
+<div class="bottom">
+  <q-footer class="text-center">
+    <div class="text-caption text-grey-8" text-color="white">
+      © 2023 City Accounting Office, Tagum City. All rights reserved.
+    </div>
+  </q-footer>
+
+
+  </div>
 </template>
 
 <script setup>
@@ -83,7 +95,7 @@ const handleLogin = async () => {
   await authStore.login(username.value, password.value, $q, router) // No success check needed
   isLoading.value = false
 }
-
+const goToForgotPassword = () => router.push('/forgotpage')
 const goToSignUp = () => router.push('/signup')
 const goToAdmin = () => router.push('/admin/login')
 </script>
@@ -97,5 +109,15 @@ const goToAdmin = () => router.push('/admin/login')
   position: relative;
   box-shadow: 0 8px 8px rgb(38, 121, 0);
   margin-top: 120px;
+}
+
+.bottom{
+  justify-content: center;
+
+
+  position: absolute;
+  padding: 10px;
+  opacity: 90%;
+
 }
 </style>

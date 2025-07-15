@@ -194,7 +194,7 @@
             </q-input>
           </div>
         </div>
-
+          <!-- Signup Password-->
         <div class="row q-col-gutter-md q-mt-sm">
           <div class="col-6">
             <q-input
@@ -202,28 +202,44 @@
               dense
               v-model="password"
               label="Password"
-              type="password"
+              :type="isPasswordVisible ? 'text' : 'password'"
               color="green"
               :rules="[(val) => val.length >= 8 || 'Minimum 8 characters']"
             >
+            <template #append>
+          <q-icon
+            :name="isPasswordVisible ? 'visibility_off' : 'visibility'"
+            class="cursor-pointer"
+            @click="isPasswordVisible = !isPasswordVisible"
+          />
+        </template>
               <template v-slot:prepend>
                 <q-icon name="lock" />
               </template>
             </q-input>
           </div>
+           <!-- Confirm Password-->
           <div class="col-6">
             <q-input
               outlined
               dense
               v-model="confirmPassword"
               label="Confirm Password"
-              type="password"
+              :type="isPasswordVisible2 ? 'text' : 'password'"
               color="green"
+
               :rules="[
                 (val) => !!val || 'Required',
                 (val) => val === password || 'Passwords do not match',
               ]"
             >
+            <template #append>
+          <q-icon
+            :name="isPasswordVisible2 ? 'visibility_off' : 'visibility'"
+            class="cursor-pointer"
+            @click="isPasswordVisible2 = !isPasswordVisible2"
+          />
+        </template>
               <template v-slot:prepend>
                 <q-icon name="lock" />
               </template>
@@ -238,6 +254,15 @@
       </q-step>
     </q-stepper>
   </q-card>
+  <div class="bottom">
+  <q-footer class="text-center">
+    <div class="text-caption text-grey-8" text-color="white">
+      © 2023 City Accounting Office, Tagum City. All rights reserved.
+    </div>
+  </q-footer>
+
+
+  </div>
 </template>
 
 <script>
@@ -271,6 +296,10 @@ export default {
     const uploadedFiles = ref([])
     const uploadError = ref(null)
     const barangayOptions = ref([])
+    const isPasswordVisible = ref(false)
+    const isPasswordVisible2 = ref(false)
+
+
 
     onMounted(async () => {
       try {
@@ -460,6 +489,8 @@ export default {
       username,
       password,
       confirmPassword,
+      isPasswordVisible,
+      isPasswordVisible2,
       isLoading,
       onFileAdded,
       onFileRemoved,
@@ -474,7 +505,7 @@ export default {
 
 <style scoped>
 .signup-card {
-  width: 700px;
+  width: 600px;
   padding: 30px;
   border-radius: 10px;
   background: rgba(255, 255, 255);
@@ -522,6 +553,16 @@ export default {
   font-size: 0.75rem;
   color: #e5e5e5;
 }
+.bottom{
+  justify-content: center;
+
+
+  position: absolute;
+  padding: 10px;
+  opacity: 90%;
+
+}
 
 /* Make it match your existing green theme */
 </style>
+

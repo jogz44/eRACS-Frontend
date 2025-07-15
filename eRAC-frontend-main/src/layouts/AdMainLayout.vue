@@ -2,8 +2,9 @@
   <q-layout view="lHh lpR ffr" no-shadow>
     <!-- Add admin info to header -->
     <q-header elevated class="custom-header">
-      <q-toolbar class="justify-between">
+      <q-toolbar class="justify-between" style="padding: 0 20px">
         <q-toolbar-title
+
           v-if="$q.screen.gt.sm"
           class="title"
           style="color: rgba(0, 0, 0, 0.7); font-weight: bold"
@@ -43,11 +44,13 @@
     </q-header>
 
     <q-drawer
+
       v-model="leftDrawerOpen"
       :width="250"
       :breakpoint="767"
       show-if-above
       class="custom-card-drawer"
+      v-if="$q.screen.gt.sm"
     >
       <q-list>
         <q-item class="column items-center q-pt-md">
@@ -142,12 +145,21 @@ const handleLogout = async () => {
 
 <style>
 .custom-card-drawer {
-  background: linear-gradient(to bottom, rgb(255, 255, 255), #58b265);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.8) 0%,
+    rgba(255, 255, 255, 0.8) 90%
+  );
+margin-top: 50px;
+ /* background-color: rgba(255, 255, 246, 0.9); */
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  padding-top: 30px;
 }
 
 .custom-header {
-  background: rgba(223, 237, 225, 1);
+  background:  rgb(89, 159, 100);
+margin-left: -250px;
+justify-content: center ;
 }
 
 /* Smooth transitions */
