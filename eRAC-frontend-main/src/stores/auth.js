@@ -248,17 +248,48 @@ export const useAuthStore = defineStore('auth', {
 
     adminLogout() {
       return api.post('/api/admin/logout').finally(() => {
-        this.admin = null
-        this.adminToken = null
-        localStorage.removeItem('admin_data')
-        localStorage.removeItem('admin_token')
+        this._clearAdminAuth()
       })
     },
+
     _clearAdminAuth() {
       this.admin = null
       this.adminToken = null
       localStorage.removeItem('admin_data')
       localStorage.removeItem('admin_token')
+      delete api.defaults.headers.common['Authorization']
+    },
+
+    // Password reset methods
+    async checkEmailExists(email) {
+      try {
+        const response = await api.post('/api/barangay/check-email', { email })
+        return {
+          exists: response.data.exists,
+          success: true
+        }
+      } catch (error) {
+        return {
+          exists: false,
+          success: false,
+          error: this._handleError(error, 'Failed to check email')
+        }
+      }
+    },
+
+    async resetPassword(data) {
+      try {
+        const response = await api.post('/api/barangay/reset-password', data)
+        return {
+          success: true,
+          data: response.data
+        }
+      } catch (error) {
+        return {
+          success: false,
+          error: this._handleError(error, 'Password reset failed')
+        }
+      }
     },
   },
 })

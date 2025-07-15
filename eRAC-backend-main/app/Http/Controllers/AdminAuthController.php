@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cookie;
 use App\Models\Admin;
+use App\Models\BarangayUser;
 
 //use Symfony\Component\HttpFoundation\Cookie;
 
@@ -63,5 +64,76 @@ class AdminAuthController extends Controller  // <-- This is crucial
             'status' => 'success',
             'message' => 'Successfully logged out'
         ])->withCookie($cookie);
+    }
+
+    // Get pending users (not approved)
+    public function getPendingUsers()
+    {
+        $users = BarangayUser::where('is_approved', false)
+            ->with('barangay')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->first_name . ' ' . $user->last_name,
+                    'barangay' => $user->barangay->name,
+                    'position' => $user->position,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'avatar' => $user->photo_url,
+                    'created_at' => $user->created_at->format('F j, Y'),
+                ];
+            });
+
+        return response()->json($users);
+    }
+
+    // Get accepted users (approved)
+    public function getAcceptedUsers()
+    {
+        $users = BarangayUser::where('is_approved', true)
+            ->with('barangay')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->first_name . ' ' . $user->last_name,
+                    'barangay' => $user->barangay->name,
+                    'position' => $user->position,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'avatar' => $user->photo_url,
+                    'created_at' => $user->created_at->format('F j, Y'),
+                ];
+            });
+
+        return response()->json($users);
+    }
+
+    // Approve a user
+    public function approveUser(Request $request, BarangayUser $user)
+    {
+        $user->update(['is_approved' => true]);
+
+        return response()->json([
+            'message' => 'User approved successfully',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->first_name . ' ' . $user->last_name,
+                'username' => $user->username,
+                'email' => $user->email,
+            ]
+        ]);
+    }
+
+    // Delete a user
+    public function deleteUser(BarangayUser $user)
+    {
+        $userName = $user->first_name . ' ' . $user->last_name;
+        $user->delete();
+
+        return response()->json([
+            'message' => "User {$userName} deleted successfully"
+        ]);
     }
 }

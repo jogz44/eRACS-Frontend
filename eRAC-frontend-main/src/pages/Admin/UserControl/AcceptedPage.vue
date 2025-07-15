@@ -1,7 +1,21 @@
 <template>
   <q-page class="q-pa-lg">
     <div class="page-header q-mb-lg">
-      <div class="text-h5 text-weight-bold">User Control Accepted</div>
+      <div class="row items-center justify-between">
+        <div class="text-h5 text-weight-bold">
+          User Control Accepted 
+          <span class="text-caption q-ml-sm">({{ users.length }} users)</span>
+        </div>
+        <q-btn
+          icon="refresh"
+          color="primary"
+          flat
+          round
+          @click="loadAcceptedUsers"
+          :loading="loading"
+          title="Refresh accepted users"
+        />
+      </div>
       <q-card-section>
         <!-- Search Bar -->
         <q-input dense outlined v-model="search" placeholder="Search..." class="search-bar">
@@ -16,7 +30,8 @@
           bordered
           :rows="filteredUsers"
           :columns="columns"
-          row-key="username"
+          row-key="id"
+          :loading="loading"
           class="user-table"
         >
           <!-- Custom Actions Column -->
@@ -60,6 +75,7 @@
               label="Yes"
               color="red"
               @click="confirmDelete"
+              :loading="deleteModal.loading"
               class="q-mx-sm"
               style="min-width: 80px"
             />
@@ -96,12 +112,13 @@
             <div class="q-mb-sm">
               <strong>Email:<br /></strong> {{ viewModal.selectedRow?.email }}
             </div>
+            <div class="q-mb-sm">
+              <strong>Approved Date:<br /></strong> {{ viewModal.selectedRow?.created_at }}
+            </div>
             <div class="q-mt-md"><strong>Picture:</strong></div>
             <div class="q-mt-sm flex flex-left">
               <q-img
-                :src="
-                  viewModal.selectedRow?.image || 'https://www.w3schools.com/w3images/avatar2.png'
-                "
+                :src="viewModal.selectedRow?.avatar || 'https://www.w3schools.com/w3images/avatar2.png'"
                 style="max-width: 200px; border-radius: 8px"
                 spinner-color="grey-5"
                 contain
@@ -119,37 +136,16 @@
 </template>
 
 <script>
+import { api } from 'boot/axios'
+import { useUserControlStore } from 'stores/userControlStore'
+
 export default {
   name: 'UserControlAcceptedPage',
   data() {
     return {
       search: '',
-      users: [
-        {
-          username: 'elecomvp34',
-          email: 'elkencp@gmail.com',
-          name: 'Alexandra May T. Pis-ing',
-          barangay: 'Visayan Village',
-          position: 'Secretary',
-          image: 'https://www.w3schools.com/w3images/avatar2.png',
-        },
-        {
-          username: 'elecomvp33',
-          email: 'elkencp@gmail.com',
-          name: 'Michael Smith',
-          barangay: 'Santo Niño',
-          position: 'Treasurer',
-          image: 'https://www.w3schools.com/w3images/avatar2.pngg',
-        },
-        {
-          username: 'elecomvp32',
-          email: 'elkencp@gmail.com',
-          name: 'John Doe',
-          barangay: 'Nueva Vida',
-          position: 'Chairperson',
-          image: 'https://www.w3schools.com/w3images/avatar2.png',
-        },
-      ],
+      users: [],
+      loading: false,
       columns: [
         { name: 'username', label: 'Username', field: 'username', align: 'left', sortable: true },
         { name: 'email', label: 'Email', field: 'email', align: 'left', sortable: true },
@@ -158,6 +154,7 @@ export default {
       deleteModal: {
         show: false,
         selectedRow: null,
+        loading: false,
       },
       viewModal: {
         show: false,
@@ -170,30 +167,71 @@ export default {
       return this.users.filter(
         (user) =>
           user.username.toLowerCase().includes(this.search.toLowerCase()) ||
-          user.email.toLowerCase().includes(this.search.toLowerCase()),
+          user.email.toLowerCase().includes(this.search.toLowerCase()) ||
+          user.name.toLowerCase().includes(this.search.toLowerCase()),
       )
     },
   },
+  async mounted() {
+    await this.loadAcceptedUsers()
+  },
+  activated() {
+    // Check if there was a recent user acceptance action
+    const userControlStore = useUserControlStore()
+    if (userControlStore.hasRecentAction('user_accepted')) {
+      // Auto-refresh if a user was recently accepted
+      this.loadAcceptedUsers()
+      userControlStore.clearLastAction()
+    }
+  },
   methods: {
+    async loadAcceptedUsers() {
+      this.loading = true
+      try {
+        const response = await api.get('/api/admin/users/accepted')
+        this.users = response.data
+      } catch (error) {
+        console.error('Error loading accepted users:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: 'Failed to load accepted users',
+          position: 'top',
+        })
+      } finally {
+        this.loading = false
+      }
+    },
     openDeleteModal(row) {
       this.deleteModal.selectedRow = row
       this.deleteModal.show = true
     },
-    confirmDelete() {
-      // Remove the user from the array
-      this.users = this.users.filter(
-        (user) => user.username !== this.deleteModal.selectedRow.username,
-      )
+    async confirmDelete() {
+      this.deleteModal.loading = true
+      try {
+        await api.delete(`/api/admin/users/${this.deleteModal.selectedRow.id}`)
+        
+        // Remove from local array
+        this.users = this.users.filter(
+          (user) => user.id !== this.deleteModal.selectedRow.id,
+        )
 
-      // Close the modal
-      this.deleteModal.show = false
-      this.deleteModal.selectedRow = null
-
-      // Show success notification
-      this.$q.notify({
-        type: 'positive',
-        message: 'User deleted successfully',
-      })
+        this.$q.notify({
+          type: 'positive',
+          message: 'User deleted successfully',
+          position: 'top',
+        })
+      } catch (error) {
+        console.error('Error deleting user:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: 'Failed to delete user',
+          position: 'top',
+        })
+      } finally {
+        this.deleteModal.show = false
+        this.deleteModal.selectedRow = null
+        this.deleteModal.loading = false
+      }
     },
     openViewModal(row) {
       this.viewModal.selectedRow = row

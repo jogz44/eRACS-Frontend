@@ -1,7 +1,21 @@
 <template>
   <q-page class="q-pa-lg">
     <div class="page-header q-mb-lg">
-      <div class="text-h5 text-weight-bold">User Control Pending</div>
+      <div class="row items-center justify-between">
+        <div class="text-h5 text-weight-bold">
+          User Control Pending 
+          <span class="text-caption q-ml-sm">({{ users.length }} users)</span>
+        </div>
+        <q-btn
+          icon="refresh"
+          color="primary"
+          flat
+          round
+          @click="loadPendingUsers"
+          :loading="loading"
+          title="Refresh pending users"
+        />
+      </div>
       <q-card-section>
         <div class="q-mb-lg">
           <q-input dense outlined v-model="search" placeholder="Search..." class="search-bar">
@@ -16,7 +30,8 @@
           bordered
           :rows="filteredUsers"
           :columns="columns"
-          row-key="username"
+          row-key="id"
+          :loading="loading"
           class="user-table"
         >
           <!-- Custom Actions Column -->
@@ -61,7 +76,7 @@
           <q-card-section class="column items-center">
             <div class="text-h6 q-mb-md">Are you sure you want to remove</div>
             <div class="text-h6 text-weight-bold q-mb-md">
-              {{ cancelModal.selectedRow?.username || 'alexamay3' }} ?
+              {{ cancelModal.selectedRow?.username }} ?
             </div>
           </q-card-section>
 
@@ -71,6 +86,7 @@
               label="Yes"
               color="red"
               @click="confirmCancel"
+              :loading="cancelModal.loading"
               class="q-mx-sm"
               style="min-width: 80px"
             />
@@ -102,6 +118,7 @@
               label="Confirm"
               color="green"
               @click="confirmAccept"
+              :loading="acceptModal.loading"
               class="q-mx-sm"
               style="min-width: 80px"
             />
@@ -137,14 +154,15 @@
             <div class="q-mb-sm">
               <strong>Email:<br /></strong> {{ viewModal.selectedRow?.email }}
             </div>
+            <div class="q-mb-sm">
+              <strong>Request Date:<br /></strong> {{ viewModal.selectedRow?.created_at }}
+            </div>
             <div class="q-mt-md">
               <strong>Picture<br /></strong>
             </div>
             <div class="q-mt-sm flex" style="align-items: flex-start; gap: 20px">
               <q-img
-                :src="
-                  viewModal.selectedRow?.avatar || 'https://www.w3schools.com/w3images/avatar2.png'
-                "
+                :src="viewModal.selectedRow?.avatar || 'https://www.w3schools.com/w3images/avatar2.png'"
                 style="max-width: 200px; border-radius: 8px"
                 spinner-color="grey-5"
                 contain
@@ -162,26 +180,17 @@
 </template>
 
 <script>
+import { api } from 'boot/axios'
+import { useUserControlStore } from 'stores/userControlStore'
+
 export default {
   data() {
     return {
       search: '',
-      users: [
-        {
-          name: 'Alexandra May T. Pis-ing',
-          barangay: 'Visayan Village',
-          position: 'Secretary',
-          username: 'alexamay20',
-          email: 'alexap@gmail.com',
-          avatar: 'https://www.w3schools.com/w3images/avatar2.png',
-        },
-        { date: 'February 26, 2025', username: 'alexamay3', email: 'aalexap@gmail.com' },
-        { date: 'February 26, 2025', username: 'alexamay34', email: 'aalexap@gmail.com' },
-        { date: 'February 25, 2025', username: 'alexamay35', email: 'aaalexap@gmail.com' },
-        { date: 'February 25, 2025', username: 'alexamay36', email: 'aaaalexap@gmail.com' },
-      ],
+      users: [],
+      loading: false,
       columns: [
-        { name: 'date', label: 'Request Date', field: 'date', align: 'left', classes: 'text-left' },
+        { name: 'created_at', label: 'Request Date', field: 'created_at', align: 'left', classes: 'text-left' },
         {
           name: 'username',
           label: 'Username',
@@ -201,10 +210,12 @@ export default {
       cancelModal: {
         show: false,
         selectedRow: null,
+        loading: false,
       },
       acceptModal: {
         show: false,
         selectedRow: null,
+        loading: false,
       },
       viewModal: {
         show: false,
@@ -218,11 +229,34 @@ export default {
         (user) =>
           user.username.toLowerCase().includes(this.search.toLowerCase()) ||
           user.email.toLowerCase().includes(this.search.toLowerCase()) ||
-          user.date.toLowerCase().includes(this.search.toLowerCase()),
+          user.name.toLowerCase().includes(this.search.toLowerCase()),
       )
     },
   },
+  async mounted() {
+    await this.loadPendingUsers()
+  },
+  activated() {
+    // Refresh data when component is activated (when navigating to this page)
+    this.loadPendingUsers()
+  },
   methods: {
+    async loadPendingUsers() {
+      this.loading = true
+      try {
+        const response = await api.get('/api/admin/users/pending')
+        this.users = response.data
+      } catch (error) {
+        console.error('Error loading pending users:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: 'Failed to load pending users',
+          position: 'top',
+        })
+      } finally {
+        this.loading = false
+      }
+    },
     openCancelModal(row) {
       this.cancelModal.selectedRow = row
       this.cancelModal.show = true
@@ -235,30 +269,65 @@ export default {
       this.viewModal.selectedRow = row
       this.viewModal.show = true
     },
-    confirmCancel() {
-      this.users = this.users.filter(
-        (user) => user.username !== this.cancelModal.selectedRow.username,
-      )
-      this.cancelModal.selectedRow = null
-      this.cancelModal.show = false
-      this.$q.notify({
-        type: 'positive',
-        message: 'User removed successfully',
-      })
-    },
-    confirmAccept() {
-      // Update user status to 'Accepted' or perform other acceptance logic
-      const userIndex = this.users.findIndex(
-        (user) => user.username === this.acceptModal.selectedRow.username,
-      )
-      if (userIndex !== -1) {
+    async confirmCancel() {
+      this.cancelModal.loading = true
+      try {
+        await api.delete(`/api/admin/users/${this.cancelModal.selectedRow.id}`)
+        
+        // Remove from local array
+        this.users = this.users.filter(
+          (user) => user.id !== this.cancelModal.selectedRow.id,
+        )
+        
         this.$q.notify({
           type: 'positive',
-          message: 'User accepted successfully',
+          message: 'User removed successfully',
+          position: 'top',
         })
+      } catch (error) {
+        console.error('Error deleting user:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: 'Failed to remove user',
+          position: 'top',
+        })
+      } finally {
+        this.cancelModal.selectedRow = null
+        this.cancelModal.show = false
+        this.cancelModal.loading = false
       }
-      this.acceptModal.selectedRow = null
-      this.acceptModal.show = false
+    },
+    async confirmAccept() {
+      this.acceptModal.loading = true
+      try {
+        await api.patch(`/api/admin/users/${this.acceptModal.selectedRow.id}/approve`)
+        
+        // Remove from local array (user is now approved and should appear in accepted list)
+        this.users = this.users.filter(
+          (user) => user.id !== this.acceptModal.selectedRow.id,
+        )
+        
+        this.$q.notify({
+          type: 'positive',
+          message: 'User accepted successfully! The user will now appear in the Accepted list.',
+          position: 'top',
+        })
+
+        // Notify the store that a user was accepted
+        const userControlStore = useUserControlStore()
+        userControlStore.userAccepted(this.acceptModal.selectedRow)
+      } catch (error) {
+        console.error('Error approving user:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: 'Failed to accept user',
+          position: 'top',
+        })
+      } finally {
+        this.acceptModal.selectedRow = null
+        this.acceptModal.show = false
+        this.acceptModal.loading = false
+      }
     },
   },
 }

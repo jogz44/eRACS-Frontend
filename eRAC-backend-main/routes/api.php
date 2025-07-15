@@ -28,6 +28,8 @@ Route::prefix('barangay')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/upload-photo', [AuthController::class, 'uploadPhoto']);
+    Route::post('/check-email', [AuthController::class, 'checkEmailExists']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
     Route::middleware(['auth:sanctum', 'auth.barangay'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -103,5 +105,11 @@ Route::prefix('admin')->group(function () {
     // Just use Sanctum's default auth
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'logout']);
+        
+        // User management endpoints
+        Route::get('/users/pending', [AdminAuthController::class, 'getPendingUsers']);
+        Route::get('/users/accepted', [AdminAuthController::class, 'getAcceptedUsers']);
+        Route::patch('/users/{user}/approve', [AdminAuthController::class, 'approveUser']);
+        Route::delete('/users/{user}', [AdminAuthController::class, 'deleteUser']);
     });
 });

@@ -53,7 +53,7 @@ public function register(Request $request)
         'username' => $validated['username'],
         'password' => Hash::make($validated['password']),
         'photo_path' => $validated['photo_path'],
-        'is_approved' => $validated['is_approved'] ?? true,
+        'is_approved' => false, // Set to false by default - requires admin approval
         'role' => 'barangay_user'
     ]);
 
@@ -93,6 +93,14 @@ public function login(Request $request)
             'status' => 'error',
             'message' => 'Invalid credentials'
         ], 401);
+    }
+
+    // Check if user is approved
+    if (!$user->is_approved) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Your account is pending approval. Please contact the administrator.'
+        ], 403);
     }
 
     // CREATE SANCTUM TOKEN
@@ -165,6 +173,49 @@ public function user(Request $request)
             'position' => $user->position ?? '',
             'photo_path' => $user->photo_path ?? null,
             'photo_url' => $user->photo_path ? asset("storage/{$user->photo_path}") : null
+        ]
+    ]);
+}
+
+public function checkEmailExists(Request $request)
+{
+    $validated = $request->validate([
+        'email' => 'required|email'
+    ]);
+
+    $user = BarangayUser::where('email', $validated['email'])->first();
+
+    return response()->json([
+        'exists' => $user !== null,
+        'message' => $user ? 'Email found' : 'Email not found'
+    ]);
+}
+
+public function resetPassword(Request $request)
+{
+    $validated = $request->validate([
+        'email' => 'required|email',
+        'password' => 'required|string|min:8|confirmed',
+    ]);
+
+    $user = BarangayUser::where('email', $validated['email'])->first();
+
+    if (!$user) {
+        return response()->json([
+            'message' => 'Email not found in our database'
+        ], 404);
+    }
+
+    // Update the user's password
+    $user->password = Hash::make($validated['password']);
+    $user->save();
+
+    return response()->json([
+        'message' => 'Password reset successful',
+        'user' => [
+            'email' => $user->email,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name
         ]
     ]);
 }

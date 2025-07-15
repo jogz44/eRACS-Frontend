@@ -101,11 +101,11 @@ onMounted(() => {
   console.log('ResetPasswordPage mounted')
   console.log('Route params:', route.params)
   console.log('Route query:', route.query)
-
+  
   // Get email from route params or query
   email.value = route.params.email || route.query.email || ''
   console.log('Email value:', email.value)
-
+  
   if (!email.value) {
     console.log('No email found, redirecting to forgot page')
     $q.notify({
@@ -205,4 +205,4 @@ const goToLogin = () => router.push('/')
 .q-page-container {
   background: transparent;
 }
-</style>
+</style> 

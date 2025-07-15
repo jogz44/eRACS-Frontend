@@ -1,9 +1,11 @@
 const routes = [
   {
+    // Landing Page
     path: '/',
     component: () => import('layouts/LoginLayout.vue'),
     children: [
       {
+        name: 'Login',
         path: '',
         component: () => import('pages/LoginPage.vue'),
       },
@@ -19,8 +21,21 @@ const routes = [
         name: 'Admin',
         component: () => import('pages/Admin/LoginPage.vue'),
       },
+
+      {
+        path: 'forgotpage',
+        name: 'forgotpage',
+        component: () => import('pages/ForgotPage.vue'),
+      },
     ],
   },
+
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: () => import('pages/ResetPasswordPage.vue'),
+  },
+
   {
     path: '/home',
     component: () => import('layouts/MainLayout.vue'),

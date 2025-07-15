@@ -1,3 +1,50 @@
 {
-  "extends": "./.quasar/tsconfig.json"
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "preserve",
+    "lib": [
+      "esnext",
+      "dom",
+      "dom.iterable"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "src": ["./src"],
+      "src/*": ["./src/*"],
+      "app": ["."],
+      "app/*": ["./*"],
+      "components": ["./src/components"],
+      "components/*": ["./src/components/*"],
+      "layouts": ["./src/layouts"],
+      "layouts/*": ["./src/layouts/*"],
+      "pages": ["./src/pages"],
+      "pages/*": ["./src/pages/*"],
+      "assets": ["./src/assets"],
+      "assets/*": ["./src/assets/*"],
+      "boot": ["./src/boot"],
+      "boot/*": ["./src/boot/*"],
+      "stores": ["./src/stores"],
+      "stores/*": ["./src/stores/*"]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "src/**/*.js",
+    "src/**/*.vue"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".quasar",
+    "src-capacitor",
+    "src-cordova"
+  ]
 }

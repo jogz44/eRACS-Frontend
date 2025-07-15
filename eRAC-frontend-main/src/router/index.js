@@ -38,7 +38,7 @@ export default defineRouter(function (/* { store, ssrContext } */) {
     const authStore = useAuthStore()
 
     // 1. Define public routes
-    const publicRoutes = ['/', '/signup', '/admin/login']
+    const publicRoutes = ['/', '/signup', '/admin/login','/forgotpage', '/reset-password']
 
     // 2. Check if route requires authentication
     if (!publicRoutes.includes(to.path)) {
