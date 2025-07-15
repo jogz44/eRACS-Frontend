@@ -66,14 +66,13 @@
     </q-card-section>
   </q-card>
 <div class="bottom">
-  <q-footer class="text-center">
-    <div class="text-caption text-white bg-green" >
+  <q-footer class="text-center no-footer-bg">
+    <div class="text-caption text-white">
       © 2025 City Accounting Office, Tagum City. All rights reserved.
     </div>
   </q-footer>
+</div>
 
-
-  </div>
 </template>
 
 <script setup>
@@ -111,10 +110,8 @@ const goToAdmin = () => router.push('/admin/login')
   margin-top: 120px;
 }
 
-.bottom{
-  justify-content: center;
-  position: absolute;
-  padding: 10px;
-
+.no-footer-bg {
+  background-color: transparent !important;
+  box-shadow: none !important;
 }
 </style>

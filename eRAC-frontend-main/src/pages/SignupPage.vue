@@ -1,4 +1,6 @@
 <template>
+  <q-page class="q-pa-lg no-scroll-page">
+
   <q-card class="signup-card">
     <!-- Logo Container -->
     <div class="logo-container">
@@ -103,7 +105,10 @@
                       {{ scope.uploadSizeLabel }} / {{ scope.uploadProgressLabel }}
                     </div>
                   </div>
-                  <q-btn v-if="scope.canAddFiles" icon="add" round dense flat color="white">
+                  <div clas="change_icon">
+
+                     <q-btn v-if="scope.canAddFiles" icon="add" round dense flat color="white"  >
+
                     <q-uploader-add-trigger />
                   </q-btn>
                   <q-btn
@@ -117,16 +122,20 @@
                     class="q-ml-auto"
                   />
                 </div>
+
+                </div>
               </template>
 
               <template v-slot:list="scope">
                 <q-list separator>
-                  <q-item v-for="file in scope.files" :key="file.name">
+                  <q-item v-for="file in scope.files" :key="file.name">  <q-img
+              v-if="photoUrl"
+              :src="photoUrl"
+              style="max-width: 200px; margin-top: 10px"
+              spinner-color="primary"
+            />
                     <q-item-section>
-                      <q-item-label>{{ file.name }}</q-item-label>
-                      <q-item-label caption>
-                        {{ file.sizeLabel }} • {{ file.__statusLabel }}
-                      </q-item-label>
+
                     </q-item-section>
                     <q-item-section side>
                       <q-btn
@@ -143,12 +152,7 @@
               </template>
             </q-uploader>
             <!-- Add this preview section below the uploader -->
-            <q-img
-              v-if="photoUrl"
-              :src="photoUrl"
-              style="max-width: 200px; margin-top: 10px"
-              spinner-color="primary"
-            />
+
           </div>
         </div>
 
@@ -254,15 +258,16 @@
       </q-step>
     </q-stepper>
   </q-card>
-  <div class="bottom">
-  <q-footer class="text-center">
-    <div class="text-caption text-grey-8" text-color="white">
-      © 2023 City Accounting Office, Tagum City. All rights reserved.
+ <div class="bottom">
+  <q-footer class="text-center no-footer-bg">
+    <div class="text-caption text-white">
+      © 2025 City Accounting Office, Tagum City. All rights reserved.
     </div>
   </q-footer>
+</div>
 
+  </q-page>
 
-  </div>
 </template>
 
 <script>
@@ -553,14 +558,13 @@ export default {
   font-size: 0.75rem;
   color: #e5e5e5;
 }
-.bottom{
-  justify-content: center;
-
-
-  position: absolute;
-  padding: 10px;
-  opacity: 90%;
-
+.no-footer-bg {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+.no-scroll-page {
+  overflow: hidden; /* Prevent scrolling */
+  height: 100v;
 }
 
 /* Make it match your existing green theme */

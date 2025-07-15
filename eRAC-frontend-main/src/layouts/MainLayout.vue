@@ -1,9 +1,21 @@
 <template>
+  <div class="MainLayout row q-mb-md">
+<div class="Main">
   <q-layout view="lHh lpR ffr" no-shadow>
     <q-header elevated class="custom-header">
       <q-toolbar class="justify-end q-pr-md">
+         <q-toolbar-title
+
+          v-if="$q.screen.gt.sm"
+          class="welcome-title"
+          style="color: rgba(0, 0, 0, 0.7); font-weight: bold"
+        >
+          Welcome, {{ authStore.user?.first_name || 'User' }}
+        </q-toolbar-title>
+
         <q-btn flat round dense>
           <q-avatar size="45px">
+
             <img
               :src="authStore.user?.photo_url || 'src/assets/user.png'"
               @error="handleImageError"
@@ -45,7 +57,13 @@
         </q-btn>
       </q-toolbar>
     </q-header>
-
+      <SetupDialog v-model="showSetupDialog" />
+    <q-page-container>
+      <router-view />
+    </q-page-container>
+  </q-layout>
+    </div>
+<div class="q-drawer">
     <q-drawer
       v-model="leftDrawerOpen"
       :width="250"
@@ -82,11 +100,10 @@
         />
       </q-list>
     </q-drawer>
-    <SetupDialog v-model="showSetupDialog" />
-    <q-page-container>
-      <router-view />
-    </q-page-container>
-  </q-layout>
+    </div>
+    </div>
+
+
 </template>
 
 <script setup>
@@ -95,7 +112,9 @@ import NavLink from 'components/Nav/NavLink.vue'
 import SetupDialog from 'components/SetupDialog.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from 'stores/auth'
+import { useQuasar } from 'quasar'
 
+const $q = useQuasar()
 const router = useRouter()
 const authStore = useAuthStore()
 const route = useRoute()
@@ -113,8 +132,15 @@ const handleImageError = (e) => {
 }
 
 const handleLogout = async () => {
-  await authStore.logout()
-  router.push('/login') // Handle redirect in component
+  $q.dialog({
+    title: 'Confirm Logout',
+    message: 'Are you sure you want to logout?',
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    await authStore.logout()
+    router.push('/')
+  })
 }
 
 onMounted(async () => {
@@ -200,6 +226,14 @@ const navLinks = [
     icon: 'assessment',
     link: '/home/reports',
   },
+
+
+  {
+    title: 'Admin',
+    icon: 'admin_panel_settings',
+    link: '/admin/dashboard',
+
+  },
 ]
 
 const leftDrawerOpen = ref(false)
@@ -254,12 +288,23 @@ const toggleExpand = (title, parentTitle = null) => {
 
 <style>
 .custom-card-drawer {
-  background: linear-gradient(to bottom, rgb(255, 255, 255), #58b265);
+  position: sticky;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.8) 0%,
+    rgba(255, 255, 255, 0.8) 90%
+  );
+margin-top: 50px;
+ /* background-color: rgba(255, 255, 246, 0.9); */
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  padding-top: 30px;
+overflow:hidden;
 }
 
 .custom-header {
-  background: rgba(223, 237, 225, 1);
+  background:  rgb(89, 159, 100);
+margin-left: -250px;
+justify-content: center ;
 }
 
 /* Smooth transitions */
@@ -273,4 +318,13 @@ const toggleExpand = (title, parentTitle = null) => {
   font-weight: bolder;
   text-align: center;
 }
+.q-drawer{
+
+
+  top: 0;
+  height: calc(100vh - 50px); /* Adjust based on header height */
+  width: 250px;
+
+}
+
 </style>

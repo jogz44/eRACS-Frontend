@@ -37,14 +37,12 @@
     </q-card-section>
   </q-card>
  <div class="bottom">
-  <q-footer class="text-center">
-    <div class="text-caption text-grey-8" text-color="white">
-      © 2023 City Accounting Office, Tagum City. All rights reserved.
+  <q-footer class="text-center no-footer-bg">
+    <div class="text-caption text-white">
+      © 2025 City Accounting Office, Tagum City. All rights reserved.
     </div>
   </q-footer>
-
-
-  </div>
+</div>
 
 </template>
 
@@ -154,13 +152,8 @@ button {
   margin-bottom: 20px;
   size: 10in;
 }
-.bottom{
-  justify-content: center;
-
-
-  position: absolute;
-  padding: 10px;
-  opacity: 90%;
-
+.no-footer-bg {
+  background-color: transparent !important;
+  box-shadow: none !important;
 }
 </style>
