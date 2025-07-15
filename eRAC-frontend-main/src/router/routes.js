@@ -183,6 +183,7 @@ const routes = [
   // Always leave this as last one
   {
     path: '/:catchAll(.*)*',
+    name: 'ErrorNotFound',
     component: () => import('pages/ErrorNotFound.vue'),
     meta: { title: 'Page Not Found' },
   },
