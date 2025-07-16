@@ -86,7 +86,7 @@
           { barangay: 'Cuambogan', appropriation: '28,000.00', balance: '28,000.00' },
           { barangay: 'La Filipina', appropriation: '28,000.00', balance: '28,000.00' },
           { barangay: 'Liboganon', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'Madsum', appropriation: '28,000.00', balance: '28,000.00' },
+          { barangay: 'Madaum', appropriation: '28,000.00', balance: '28,000.00' },
           { barangay: 'Magugpo Pobledon', appropriation: '28,000.00', balance: '28,000.00' },
           { barangay: 'Magugpo East', appropriation: '28,000.00', balance: '28,000.00' },
           { barangay: 'Magugpo North', appropriation: '28,000.00', balance: '28,000.00' },

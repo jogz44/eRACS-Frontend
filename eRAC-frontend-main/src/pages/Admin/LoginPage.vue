@@ -118,6 +118,7 @@ const handleLogin = async () => {
 </script>
 
 <style scoped>
+
 .login-card {
   width: 400px;
   padding: 20px;
