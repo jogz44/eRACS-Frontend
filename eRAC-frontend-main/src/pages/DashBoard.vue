@@ -277,13 +277,13 @@ onMounted(() => {
 <style lang="scss" scoped>
 .dashboard-header {
   .text-h5 {
-    color: #2e7d32;
+    color: #bddabe;
   }
 }
 
 .filter-card {
   border-radius: 1px;
-  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 15px rgba(102, 96, 96, 0.05);
 }
 
 .summary-card {

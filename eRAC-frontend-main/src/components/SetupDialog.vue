@@ -46,7 +46,7 @@ defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 // Form data
-const village = ref('Barangay Visayab Village')
+const village = ref('Barangay Visayan Village')
 const preparedByName = ref('')
 const preparedByPosition = ref('Barangay Treasurer')
 const notedByName = ref('')
