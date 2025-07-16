@@ -10,9 +10,7 @@
         <!-- Use barangay_name instead of barangay.name -->
         Barangay {{ authStore.user?.barangay_name }} Dashboard
       </div>
-      <div class="text-caption text-grey">
-        Welcome back, {{ authStore.user?.first_name || 'User' }}!
-      </div>
+
     </div>
 
     <div class="row q-col-gutter-lg q-mb-lg">

@@ -17,11 +17,12 @@
       <q-card-section></q-card-section>
 
       <q-card-section class="q-pt-none">
-        <q-input v-model="village" readonly filled />
+<div class="village"><q-input v-model="village" disable filled bg-color="light-green-1" class="input"/></div>
+
         <q-input v-model="preparedByName" label="Prepared by:" filled />
-        <q-input v-model="preparedByPosition" readonly filled />
+        <q-input v-model="preparedByPosition" disable filled bg-color="light-green-1" class="input"/>
         <q-input v-model="notedByName" label="Noted by:" filled />
-        <q-input v-model="notedByPosition" readonly filled />
+        <q-input v-model="notedByPosition" disable filled bg-color="light-green-1"/>
         <q-input v-model="certifiedByName" label="Certified by:" filled />
         <q-input v-model="certifiedByPosition" label="Input position" filled />
       </q-card-section>
@@ -58,3 +59,14 @@ const saveSettings = () => {
   emit('update:modelValue', false) // Close dialog after save
 }
 </script>
+
+<style scoped>
+.q-input[disabled] {
+  background-color: transparent !important;
+  color: #000 !important; /* or whatever text color you want */
+  opacity: 1 !important;
+}
+.village{
+  width: 300px;
+}
+</style>
