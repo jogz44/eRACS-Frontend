@@ -42,14 +42,14 @@ return [
         ],
 
         'barangay' => [
-        'driver' => 'sanctum',
-        'provider' => 'barangay_users',
-    ],
+            'driver' => 'sanctum',
+            'provider' => 'barangay_users',
+        ],
 
         'admin' => [
-        'driver' => 'sanctum',
-        'provider' => 'admins',
-    ],
+            'driver' => 'sanctum',
+            'provider' => 'admins',
+        ],
     ],
 
     /*
@@ -71,11 +71,11 @@ return [
 
     'providers' => [
         'users' => [
-            'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', App\Models\User::class),
-        ],
+        'driver' => 'eloquent',
+        'model' => env('AUTH_MODEL', App\Models\User::class),
+    ],
 
-         'barangay_users' => [
+        'barangay_users' => [
         'driver' => 'eloquent',
         'model' => App\Models\BarangayUser::class,
     ],
