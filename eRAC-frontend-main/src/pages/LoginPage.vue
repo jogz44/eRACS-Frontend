@@ -111,7 +111,7 @@ const goToAdmin = () => router.push('/admin/login')
   margin-top: 120px;
 }
 .no-footer-bg {
-  background: transparent !important;
+  background-color: transparent !important;
   box-shadow: none !important;
 }
 </style>
