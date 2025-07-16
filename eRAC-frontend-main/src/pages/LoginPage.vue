@@ -37,6 +37,7 @@
         :type="isPasswordVisible ? 'text' : 'password'"
         class="q-mt-md"
         prepend-icon="lock"
+        @keyup.enter="handleLogin"
       >
         <template #append>
           <q-icon
@@ -110,8 +111,5 @@ const goToAdmin = () => router.push('/admin/login')
   margin-top: 120px;
 }
 
-.no-footer-bg {
-  background-color: transparent !important;
-  box-shadow: none !important;
 }
 </style>

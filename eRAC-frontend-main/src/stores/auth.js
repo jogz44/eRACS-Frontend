@@ -147,7 +147,7 @@ export const useAuthStore = defineStore('auth', {
           position: 'top',
         })
 
-        router.push(this.returnUrl)
+        router.push('/home/dashboard')
         return true
       } catch (error) {
         $q.notify({
