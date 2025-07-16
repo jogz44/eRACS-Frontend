@@ -181,7 +181,7 @@
 
 <script>
 import { api } from 'boot/axios'
-import { useUserControlStore } from 'stores/userControlStore'
+//import { useUserControlStore } from 'stores/userControlStore'
 
 export default {
   data() {
@@ -313,9 +313,9 @@ export default {
           position: 'top',
         })
 
-        // Notify the store that a user was accepted
-        const userControlStore = useUserControlStore()
-        userControlStore.userAccepted(this.acceptModal.selectedRow)
+        //Notify the store that a user was accepted
+        //const userControlStore = useUserControlStore()
+        //userControlStore.userAccepted(this.acceptModal.selectedRow)
       } catch (error) {
         console.error('Error approving user:', error)
         this.$q.notify({
