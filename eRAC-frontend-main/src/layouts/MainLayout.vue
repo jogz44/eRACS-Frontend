@@ -6,16 +6,20 @@
         <q-toolbar-title
           v-if="$q.screen.gt.sm"
           class="welcome-title"
-          style="color: rgba(0, 0, 0, 0.7); font-weight: bold"
+          style="color: white; font-weight: bold"
         >
-          Welcome, {{ authStore.user?.first_name || 'User' }}
+          Barangay {{ authStore.user?.barangay_name }}
+
         </q-toolbar-title>
 
         <!-- AVATAR & MENU -->
+                {{ authStore.user ? `${authStore.user.first_name} ` : 'Guest' }}
         <q-btn flat round dense>
+
           <q-avatar size="45px">
             <img :src="userPhoto" @error="handleImageError" />
           </q-avatar>
+
           <q-menu transition-show="jump-down" transition-hide="jump-up">
             <q-list class="q-pa-sm" style="min-width: 180px">
               <q-item class="q-mb-sm" v-if="authStore.user">
@@ -49,10 +53,12 @@
     <!-- DRAWER -->
     <q-drawer
       v-model="leftDrawerOpen"
-      :width="250"
+      :width="300"
       :breakpoint="767"
       show-if-above
+      bordered
       class="custom-card-drawer"
+      v-if="$q.screen.gt.sm"
     >
       <q-list>
         <q-item class="column items-center q-pt-md">
@@ -62,8 +68,11 @@
           </q-item-label>
         </q-item>
         <br />
+<div class="nav-links">
+
 
         <NavLink
+
           v-for="link in navLinks"
           :key="link.title"
           v-bind="link"
@@ -75,7 +84,9 @@
             }),
           }"
           @toggle="(childTitle, parentTitle) => toggleExpand(childTitle, parentTitle || link.title)"
+
         />
+        </div>
       </q-list>
     </q-drawer>
 
@@ -150,7 +161,7 @@ const navLinks = [
     { title: 'Continuing', link: '/home/libraries/continuing' }
   ]},
   { title: 'Reports', icon: 'assessment', link: '/home/reports' },
-  { title: 'Admin', icon: 'admin_panel_settings', link: '/admin/dashboard' }
+
 ]
 
 const expanded = ref({ Transactions: false, 'Transactions.Current': false, 'Transactions.Continuing': false, Libraries: false })
@@ -177,17 +188,18 @@ const toggleExpand = (title, parentTitle = null) => {
 </script>
 
 <style>
+
 .custom-card-drawer {
   position: sticky;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.8) 90%);
-  margin-top: 50px;
+  background: linear-gradient(#E0FFE7, #69B31E,#187C19);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   padding-top: 30px;
   overflow: hidden;
+  overflow-x: hidden;
 }
 
 .custom-header {
-  background: rgb(89, 159, 100);
+  background: #69B31E;
   justify-content: center;
 }
 
@@ -200,5 +212,11 @@ const toggleExpand = (title, parentTitle = null) => {
   font-size: 0.95rem;
   font-weight: bolder;
   text-align: center;
+}
+.nav-links {
+  color: white;
+  padding: 10px;
+  margin: 10px;
+  overflow-x: hidden;
 }
 </style>

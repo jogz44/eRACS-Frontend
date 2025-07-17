@@ -46,7 +46,7 @@
     <q-drawer
 
       v-model="leftDrawerOpen"
-      :width="250"
+      :width="300"
       :breakpoint="767"
       show-if-above
       class="custom-card-drawer"
@@ -65,7 +65,7 @@
           </q-item-label>
         </q-item>
         <br />
-
+<div class="nav-links">
         <NavLink
           v-for="link in navLinks"
           :key="link.title"
@@ -73,6 +73,7 @@
           :expanded="expanded[link.title] || false"
           @toggle="toggleExpand(link.title)"
         />
+        </div>
       </q-list>
     </q-drawer>
 
@@ -145,21 +146,17 @@ const handleLogout = async () => {
 
 <style>
 .custom-card-drawer {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.8) 0%,
-    rgba(255, 255, 255, 0.8) 90%
-  );
-margin-top: 50px;
- /* background-color: rgba(255, 255, 246, 0.9); */
+ position: sticky;
+  background: linear-gradient(#E0FFE7, #69B31E,#187C19);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   padding-top: 30px;
+  overflow: hidden;
+  overflow-x: hidden;
 }
 
 .custom-header {
-  background:  rgb(89, 159, 100);
-margin-left: -250px;
-justify-content: center ;
+background: #69B31E;
+  justify-content: center;
 }
 
 /* Smooth transitions */
@@ -172,5 +169,11 @@ justify-content: center ;
   font-size: 0.95rem;
   font-weight: bolder;
   text-align: center;
+}
+.nav-links {
+  color: white;
+  padding: 10px;
+  margin: 10px;
+  overflow-x: hidden;
 }
 </style>

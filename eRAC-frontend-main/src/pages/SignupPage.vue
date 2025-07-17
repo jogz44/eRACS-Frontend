@@ -16,7 +16,7 @@
     </q-card-section>
 
     <!-- Horizontal Stepper -->
-    <q-stepper v-model="step" color="green" animated class="stepper-custom">
+    <q-stepper v-model="step" color="green" animated header-nav class="stepper-custom">
       <!-- Step 1: Personal Information -->
       <q-step :name="1" title="Personal Info" icon="person" :done="step > 1">
         <div class="row q-col-gutter-md">
@@ -105,24 +105,33 @@
                       {{ scope.uploadSizeLabel }} / {{ scope.uploadProgressLabel }}
                     </div>
                   </div>
-                  <div clas="change_icon">
+                  <div class="row items-center q-gutter-sm q-ml-md">
+                    <!-- Add Button -->
+                    <q-btn
 
-                     <q-btn v-if="scope.canAddFiles" icon="add" round dense flat color="white"  >
+                      icon="add"
+                      round
+                      dense
+                      flat
+                      color="white"
+                       v-if="scope.canAddFiles"
+                      :disable="uploadedFiles.length > 0"
+                      @click="scope.addFiles()"
 
-                    <q-uploader-add-trigger />
-                  </q-btn>
-                  <q-btn
-                    v-if="scope.canRemoveFiles"
-                    icon="clear"
-                    round
-                    dense
-                    flat
-                    color="red"
-                    @click="scope.removeQueuedFiles"
-                    class="q-ml-auto"
-                  />
-                </div>
-
+                    >
+                      <q-uploader-add-trigger  />
+                    </q-btn>
+                    <!-- Delete Button -->
+                    <q-btn
+                      icon="delete"
+                      round
+                      dense
+                      flat
+                      color="red"
+                      :disable="uploadedFiles.length === 0"
+                      @click="scope.removeFile(scope.files[0])"
+                    />
+                  </div>
                 </div>
               </template>
 
@@ -137,16 +146,7 @@
                     <q-item-section>
 
                     </q-item-section>
-                    <q-item-section side>
-                      <q-btn
-                        icon="delete"
-                        round
-                        dense
-                        flat
-                        color="red"
-                        @click="scope.removeFile(file)"
-                      />
-                    </q-item-section>
+
                   </q-item>
                 </q-list>
               </template>
@@ -236,7 +236,6 @@
                 (val) => !!val || 'Required',
                 (val) => val === password || 'Passwords do not match',
               ]"
-              @keyup.enter="handleSubmit"
             >
             <template #append>
           <q-icon
@@ -253,7 +252,6 @@
         </div>
 
         <q-stepper-navigation class="row justify-between q-mt-md">
-
           <q-btn flat @click="step = 1" color="green" label="Back" />
           <q-btn @click="handleSubmit" color="green" label="Submit" />
         </q-stepper-navigation>
@@ -353,118 +351,61 @@ export default {
     const handleSubmit = async () => {
       // Basic validations
       if (!firstName.value.trim()) {
-        $q.notify({ type: 'warning',
-        message: 'First name is required',
-        position: 'top',
-        color: 'red',
-        textColor: 'white'})
+        $q.notify({ type: 'warning', message: 'First name is required' })
         return
       }
 
       if (!lastName.value.trim()) {
-        $q.notify({ type: 'warning',
-          message: 'Last name is required',
-          position: 'top',
-          color: 'red',
-          textColor: 'white'
-        })
+        $q.notify({ type: 'warning', message: 'Last name is required' })
         return
       }
 
       if (!barangay.value) {
-        $q.notify({ type: 'warning',
-        message: 'Please select your barangay',
-        position: 'top',
-        color: 'red',
-        textColor: 'white' })
+        $q.notify({ type: 'warning', message: 'Please select your barangay' })
         return
       }
 
       if (!position.value.trim()) {
-        $q.notify({ type: 'warning',
-        message: 'Position is required',
-        position: 'top',
-        color: 'red',
-        textColor: 'white'})
+        $q.notify({ type: 'warning', message: 'Position is required' })
         return
       }
 
       if (!email.value.trim()) {
-        $q.notify({ type: 'warning',
-        message: 'Email is required',
-        position: 'top',
-        color: 'red',
-        textColor: 'white'})
+        $q.notify({ type: 'warning', message: 'Email is required' })
         return
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
-        $q.notify({ type: 'warning',
-        message: 'Please enter a valid email address',
-        position: 'top',
-        color: 'red',
-        textColor: 'white'
-         })
+        $q.notify({ type: 'warning', message: 'Please enter a valid email address' })
         return
       }
 
       if (!username.value.trim()) {
-        $q.notify({ type: 'warning',
-        message: 'Username is required',
-        position: 'top',
-        color: 'red',
-        textColor: 'white'
-         })
+        $q.notify({ type: 'warning', message: 'Username is required' })
         return
       } else if (username.value.length < 4) {
-        $q.notify({ type: 'warning',
-        message: 'Username must be at least 4 characters',
-        position: 'top',
-        color: 'red',
-        textColor: 'white' })
+        $q.notify({ type: 'warning', message: 'Username must be at least 4 characters' })
         return
       }
 
       if (!password.value) {
-        $q.notify({ type: 'warning',
-        message: 'Password is required',
-        position: 'top',
-        color: 'red',
-        textColor: 'white' })
+        $q.notify({ type: 'warning', message: 'Password is required' })
         return
       } else if (password.value.length < 8) {
-        $q.notify({ type: 'warning',
-        message: 'Password must be at least 8 characters',
-        position: 'top',
-        color: 'red',
-        textColor: 'white' })
+        $q.notify({ type: 'warning', message: 'Password must be at least 8 characters' })
         return
       }
 
       if (!confirmPassword.value) {
-        $q.notify({ type: 'warning',
-        message: 'Please confirm your password',
-        position: 'top',
-        color: 'red',
-        textColor: 'white' })
+        $q.notify({ type: 'warning', message: 'Please confirm your password' })
         return
       }
 
       if (password.value !== confirmPassword.value) {
-        $q.notify({ type: 'warning',
-        message: 'Passwords do not match',
-        position: 'top',
-        color: 'red',
-        textColor: 'white'
-         })
+        $q.notify({ type: 'warning', message: 'Passwords do not match' })
         return
       }
 
       if (!uploadedFile.value) {
-        $q.notify({ type: 'warning',
-        message: 'Please select a profile photo',
-        position: 'top',
-        color: 'red',
-        textColor: 'white'
-         })
+        $q.notify({ type: 'warning', message: 'Please select a profile photo' })
         return
       }
 
@@ -474,9 +415,6 @@ export default {
         $q.notify({
           type: 'negative',
           message: 'Invalid file type. Only JPG, PNG or GIF are allowed',
-          position: 'top',
-          color: 'red',
-          textColor: 'white'
         })
         return
       }
@@ -488,9 +426,6 @@ export default {
           type: 'negative',
           message: 'File too large. Maximum size is 2MB',
           caption: `Current size: ${(uploadedFile.value.size / 1024 / 1024).toFixed(2)}MB`,
-          position: 'top',
-          color: 'red',
-          textColor: 'white'
         })
         return
       }
@@ -631,6 +566,7 @@ export default {
   overflow: hidden; /* Prevent scrolling */
   height: 100v;
 }
+
 
 /* Make it match your existing green theme */
 </style>

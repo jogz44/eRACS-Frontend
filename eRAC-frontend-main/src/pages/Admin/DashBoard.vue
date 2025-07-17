@@ -133,7 +133,7 @@
     min-height: 120px !important; /* Override any defaults */
     /* align-items: center; */
     justify-content: center;
-  width: 387px;
+  width: 370px;
     display: flex;
     flex-direction: column;
     background: rgba(255, 255, 255, 0.9);
@@ -168,7 +168,7 @@
   }
 
   .card-top-strip {
-    height: 30px;
+    height: 10px;
     width: 100%;
     background-color: #2e7d32;
     border-top-left-radius: 4px;
