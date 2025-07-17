@@ -1,7 +1,6 @@
 <template>
   <div>
     <!-- Parent Item -->
-
     <q-item
       clickable
       :to="hasDirectLink ? props.link : null"
@@ -17,17 +16,19 @@
         <q-item-label>{{ props.title }}</q-item-label>
       </q-item-section>
 
-      <!-- Dropdown arrow indicator if has children -->
       <q-item-section v-if="hasChildren" class="dropdown-icon-section">
         <q-icon :name="isExpanded ? 'expand_less' : 'expand_more'" />
       </q-item-section>
     </q-item>
 
-    <!-- Child Items -->
+    <!-- Child Items with minimal scrollbar -->
     <q-slide-transition>
-      <q-list v-show="hasChildren && isExpanded" class="modern-tree-menu">
+      <q-list
+        v-show="hasChildren && isExpanded"
+        class="modern-tree-menu scroll scroll-minimal"
+      >
         <template v-for="child in props.children" :key="child.title">
-          <!-- Render simple links -->
+          <!-- Simple link -->
           <q-item
             v-if="!child.children"
             clickable
@@ -43,7 +44,7 @@
             </q-item-section>
           </q-item>
 
-          <!-- Render nested menus -->
+          <!-- Nested links -->
           <NavLink
             v-else
             :title="child.title"
@@ -65,40 +66,22 @@
 import { computed } from 'vue'
 
 const props = defineProps({
-  title: {
-    type: String,
-    required: true,
-  },
-  link: {
-    type: String,
-    default: '#',
-  },
-  icon: {
-    type: String,
-    default: '',
-  },
-  children: {
-    type: Array,
-    default: () => [],
-  },
-  expanded: {
-    type: Boolean,
-    default: false,
-  },
-
-  expandedChildren: {
-    type: Object,
-    default: () => ({}),
-  },
+  title: String,
+  link: { type: String, default: '#' },
+  icon: String,
+  children: { type: Array, default: () => [] },
+  expanded: Boolean,
+  expandedChildren: { type: Object, default: () => ({}) },
 })
 
 const emit = defineEmits(['toggle'])
 
-const hasChildren = computed(() => props.children && props.children.length > 0)
+const hasChildren = computed(() => props.children.length > 0)
 const hasDirectLink = computed(() => props.link && !hasChildren.value)
 const isExpanded = computed(() => props.expanded)
 
 const isChildExpanded = (childTitle) => props.expandedChildren?.[childTitle] || false
+
 const handleClick = (event) => {
   if (hasChildren.value) {
     event.preventDefault()
@@ -110,7 +93,7 @@ const handleClick = (event) => {
 
 <style scoped>
 .active-menu {
-  background-color:#0E780E !important;
+  background-color: #0E780E !important;
   color: white !important;
 }
 
@@ -123,33 +106,29 @@ const handleClick = (event) => {
   margin: 8px 0;
   padding: 10px 16px;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   display: flex;
   justify-content: space-between;
   align-items: center;
-
 }
 
 .nav-menu .q-item__section--main {
   flex: 1;
   text-align: left;
-
 }
 
 .nav-menu:hover {
-
   background-color: #0E780E;
   color: white;
   transform: translateX(4px);
 }
 
-/* Modern Tree Menu Container */
 .modern-tree-menu {
   margin-left: 24px;
   padding-left: 8px;
   position: relative;
-  overflow-x: hidden;
-  max-width: 100%;
+  overflow-y: auto;
+  max-height: 100%;
 }
 
 .q-list {
@@ -157,8 +136,9 @@ const handleClick = (event) => {
   max-width: 100%;
 }
 
-/* Vertical connecting line */
+/* Connecting Line */
 .modern-tree-menu:before {
+
   content: '';
   position: absolute;
   left: 16px;
@@ -176,7 +156,6 @@ const handleClick = (event) => {
 
 /* Submenu Items */
 .modern-submenu {
-  background: #69B31E;
   padding: 8px 14px;
   margin: 5px 0;
   border-radius: 8px;
@@ -191,21 +170,18 @@ const handleClick = (event) => {
   text-align: left;
 }
 
-/* Active State */
-.modern-submenu-active {
-  background-color: #0E780E !important;
-  color: white !important;
-  font-weight: bold;
-}
-
-/* Hover State */
 .modern-submenu:hover {
   background-color: #0E780E;
   color: white;
   transform: translateX(4px);
 }
 
-/* Tree icon styling */
+.modern-submenu-active {
+  background-color: #0E780E !important;
+  color: white !important;
+  font-weight: bold;
+}
+
 .tree-icon {
   min-width: 24px;
   color: rgba(255, 255, 255, 0.8);
@@ -216,10 +192,8 @@ const handleClick = (event) => {
   color: white;
 }
 
-/* Animation for smoother transitions */
 .q-slide-transition {
   transition: all 0.1s ease;
-
 }
 
 .dropdown-icon-section {
@@ -228,5 +202,28 @@ const handleClick = (event) => {
   justify-content: flex-end;
   min-width: 36px;
   margin-left: 8px;
+}
+
+/* Minimal Scrollbar Styling */
+::v-deep(.scroll-minimal::-webkit-scrollbar) {
+  width: 6px;
+}
+
+::v-deep(.scroll-minimal::-webkit-scrollbar-track) {
+  background: transparent;
+}
+
+::v-deep(.scroll-minimal::-webkit-scrollbar-thumb) {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+::v-deep(.scroll-minimal::-webkit-scrollbar-thumb:hover) {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+::v-deep(.scroll-minimal) {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 </style>

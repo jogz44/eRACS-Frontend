@@ -13,13 +13,8 @@
         </q-toolbar-title>
 
         <!-- AVATAR & MENU -->
-                {{ authStore.user ? `${authStore.user.first_name} ` : 'Guest' }}
-        <q-btn flat round dense>
 
-          <q-avatar size="45px">
-            <img :src="userPhoto" @error="handleImageError" />
-          </q-avatar>
-
+        <q-btn flat round dense icon="menu">
           <q-menu transition-show="jump-down" transition-hide="jump-up">
             <q-list class="q-pa-sm" style="min-width: 180px">
               <q-item class="q-mb-sm" v-if="authStore.user">
@@ -51,51 +46,86 @@
     </q-header>
 
     <!-- DRAWER -->
-    <q-drawer
-      v-model="leftDrawerOpen"
-      :width="300"
-      :breakpoint="767"
-      show-if-above
-      bordered
-      class="custom-card-drawer"
-      v-if="$q.screen.gt.sm"
-    >
-      <q-list>
-        <q-item class="column items-center q-pt-md">
-          <img src="src/assets/tagumlogo.png" alt="ERACS Logo" style="width: 80px; height: 75px" class="q-mb-sm" />
-          <q-item-label class="eracs-title">
-            Electronic Registry of Appropriation and Commitment (eRAC)
-          </q-item-label>
-        </q-item>
-        <br />
-<div class="nav-links">
-
-
-        <NavLink
-
-          v-for="link in navLinks"
-          :key="link.title"
-          v-bind="link"
-          :expanded="expanded[link.title] || false"
-          :expanded-children="{
-            ...(link.title === 'Transactions' && {
-              Current: expanded['Transactions.Current'],
-              Continuing: expanded['Transactions.Continuing'],
-            }),
-          }"
-          @toggle="(childTitle, parentTitle) => toggleExpand(childTitle, parentTitle || link.title)"
-
+   <q-drawer
+  v-model="leftDrawerOpen"
+  :width="300"
+  :breakpoint="767"
+  show-if-above
+  bordered
+  class="custom-card-drawer drawer-fixed"
+  v-if="$q.screen.gt.sm"
+>
+  <div class="drawer-content">
+    <!-- Logo & Title -->
+    <q-list>
+      <q-item class="column items-center q-pt-md">
+        <img
+          src="src/assets/tagumlogo.png"
+          alt="ERACS Logo"
+          style="width: 80px; height: 75px"
+          class="q-mb-sm"
         />
-        </div>
-      </q-list>
-    </q-drawer>
+        <q-item-label class="eracs-title text-center">
+          Electronic Registry of Appropriation and Commitment (eRAC)
+        </q-item-label>
+      </q-item>
+    </q-list>
+
+    <!-- Nav Links - Scrollable if needed -->
+    <div class="scroll nav-links q-pa-sm">
+      <NavLink
+        v-for="link in navLinks"
+        :key="link.title"
+        v-bind="link"
+        :expanded="expanded[link.title] || false"
+        :expanded-children="{
+          ...(link.title === 'Transactions' && {
+            Current: expanded['Transactions.Current'],
+            Continuing: expanded['Transactions.Continuing'],
+          }),
+        }"
+        @toggle="(childTitle, parentTitle) => toggleExpand(childTitle, parentTitle || link.title)"
+      />
+    </div>
+
+    <!-- Sticky Footer -->
+    <div class="drawer-footer">
+      <div class="text-caption text-grey items-center q-pa-sm footer-avatar">
+<q-list separator>
+  <div class="footer-user row items-center q-gutter-sm q-pa-sm">
+    <!-- Avatar -->
+    <q-avatar size="45px">
+      <img :src="userPhoto" @error="handleImageError" />
+    </q-avatar>
+
+    <!-- Name & Position -->
+    <div class="column">
+      <span class="text-caption text-white text-weight-bold " >
+        {{ authStore.user?.first_name || 'Guest' }}
+        {{ authStore.user?.last_name || ''   }}
+      </span>
+      <span class="text-caption text-black text-weight-medium text-h5"  >
+       {{ authStore.user.position }}
+      </span>
+    </div>
+  </div>
+</q-list>
+
+
+
+      </div>
+    </div>
+  </div>
+</q-drawer>
 
     <!-- MAIN CONTENT -->
     <q-page-container>
       <SetupDialog v-model="showSetupDialog" />
       <router-view />
     </q-page-container>
+
   </q-layout>
+
 </template>
 
 <script setup>
@@ -190,6 +220,7 @@ const toggleExpand = (title, parentTitle = null) => {
 <style>
 
 .custom-card-drawer {
+
   position: sticky;
   background: linear-gradient(#E0FFE7, #69B31E,#187C19);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
@@ -199,7 +230,7 @@ const toggleExpand = (title, parentTitle = null) => {
 }
 
 .custom-header {
-  background: #69B31E;
+  background: #187C19;
   justify-content: center;
 }
 
@@ -218,5 +249,35 @@ const toggleExpand = (title, parentTitle = null) => {
   padding: 10px;
   margin: 10px;
   overflow-x: hidden;
+}
+.drawer-fixed {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.drawer-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.drawer-content .nav-links {
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+.drawer-footer {
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding-left: 20px;
+  background-color:#187C19;
+  ;
+}.avatar-footer {
+  display: flex;
+  justify-content: end;
+  align-items: center;
+  padding: 10px;
 }
 </style>

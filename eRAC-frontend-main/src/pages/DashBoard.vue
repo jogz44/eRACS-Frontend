@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-lg">
+  <q-page class="q-pa-lg dashboard-page">
     <!-- Header Section -->
     <div class="page-header q-mb-lg">
       <template v-if="authStore.isLoading">
@@ -10,8 +10,17 @@
         <!-- Use barangay_name instead of barangay.name -->
 
       </div>
+<div class="welcome-user"> Welcome Back, {{ authStore.user?.first_name || 'Guest'   }}<span>
+  <br>
+  <span class="text-caption text-white">Here's a quick overview of your dashboard</span>
+
+</span>
+
+</div>
+
 
     </div>
+
 
     <div class="row q-col-gutter-lg q-mb-lg">
       <div
@@ -19,6 +28,7 @@
         v-for="(card, index) in summaryCards"
         :key="index"
       >
+
         <q-card class="summary-card" :class="`card-${index}`">
           <q-card-section class="row items-center justify-center q-pa-md" style="height: 100%">
             <div class="row items-center" style="max-width: 90%">
@@ -288,6 +298,7 @@ onMounted(() => {
 }
 
 .summary-card {
+  position: sticky;
   min-height: 120px !important; /* Override any defaults */
   align-items: center;
   justify-content: center;
@@ -297,6 +308,7 @@ onMounted(() => {
     box-shadow 0.3s ease;
   height: 100%;
     background-color: #C2FFC2;
+    overflow-y: hidden;
 
   &:hover {
     transform: translateY(-5px);
@@ -305,19 +317,23 @@ onMounted(() => {
 
   &.card-0 {
     border-top: 4px solid rgba(88, 178, 101, 1);
+    background-color: white;
   }
   &.card-1 {
     border-top: 4px solid rgba(88, 178, 101, 1);
+      background-color: white;
   }
   &.card-2 {
     border-top: 4px solid rgba(88, 178, 101, 1);
+      background-color: white;
   }
 }
 
 .chart-card {
   border-radius: 12px;
   transition: transform 0.3s ease;
-  background-color: #C2FFC2;
+  background-color: white;
+
 
   &:hover {
     transform: translateY(-2px);
@@ -376,5 +392,16 @@ onMounted(() => {
       border-radius: 50%;
     }
   }
+}
+.welcome-user {
+
+  font-weight: bold;
+  color: Black; /* Dark green */
+  margin-top: -10px;
+
+
+}
+.dashboard-page{
+  background: #D9D9D9;
 }
 </style>
