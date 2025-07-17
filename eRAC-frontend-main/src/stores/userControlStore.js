@@ -11,12 +11,14 @@ export const useUserControlStore = defineStore('userControl', {
     // userAccepted(userData) {
     //   this.lastAction = 'user_accepted'
     //   this.actionTimestamp = Date.now()
+    //   this.lastAcceptedUser = userData // used to avoid the warning
     // },
 
     // // Notify that a user was deleted
     // userDeleted(userData) {
     //   this.lastAction = 'user_deleted'
     //   this.actionTimestamp = Date.now()
+    //   this.lastAcceptedUser = userData // used to avoid the warning
     // },
 
     // Check if there was a recent action
