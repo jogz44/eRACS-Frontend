@@ -16,7 +16,7 @@
     </q-card-section>
 
     <!-- Horizontal Stepper -->
-    <q-stepper v-model="step" color="green" animated header-nav class="stepper-custom">
+    <q-stepper v-model="step" color="green" >
       <!-- Step 1: Personal Information -->
       <q-step :name="1" title="Personal Info" icon="person" :done="step > 1">
         <div class="row q-col-gutter-md">
