@@ -21,7 +21,8 @@
                 :model-value="totalActualExpense"
                 placeholder="0.00"
                 prefix="₱"
-                readonly
+                disable and readonly
+                bg-color="grey-3"
               />
             </div>
 
@@ -32,14 +33,16 @@
                 outlined
                 :model-value="store.currentLiquidation.dvAmount.toFixed(2)"
                 prefix="₱"
-                readonly
+                disable and readonly
+                bg-color="grey-3"
               />
             </div>
 
             <!-- Amount to Return -->
             <div class="q-mb-md">
               <div class="text-bold q-mb-xs">Amount to Return to Appropriation:</div>
-              <q-input outlined :model-value="totalReturnAmount" prefix="₱" readonly />
+              <q-input outlined :model-value="totalReturnAmount" prefix="₱" disable and readonly
+                bg-color="grey-3" />
             </div>
           </div>
 
@@ -48,13 +51,15 @@
             <!-- Date -->
             <div class="q-mb-md">
               <div class="text-bold q-mb-xs">Date:</div>
-              <q-input outlined :model-value="store.currentLiquidation.date" readonly />
+              <q-input outlined :model-value="store.currentLiquidation.date" disable and readonly
+                bg-color="grey-3" />
             </div>
 
             <!-- Remarks -->
             <div class="q-mb-md">
               <div class="text-bold q-mb-xs">Remarks:</div>
-              <q-input outlined :model-value="store.currentLiquidation.remarks" readonly />
+              <q-input outlined :model-value="store.currentLiquidation.remarks" disable and readonly
+                bg-color="grey-3" />
             </div>
           </div>
         </div>
@@ -109,7 +114,7 @@
     </q-card>
   </q-dialog>
 </template>
-  
+
 <script setup>
 import { computed } from 'vue'
 import { useDisbursementStore } from '../../stores/disbursementStore'

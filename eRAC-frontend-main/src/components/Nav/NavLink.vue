@@ -13,12 +13,12 @@
         <q-icon :name="props.icon" />
       </q-item-section>
 
-      <q-item-section>
+      <q-item-section main>
         <q-item-label>{{ props.title }}</q-item-label>
       </q-item-section>
 
       <!-- Dropdown arrow indicator if has children -->
-      <q-item-section avatar v-if="hasChildren">
+      <q-item-section v-if="hasChildren" class="dropdown-icon-section">
         <q-icon :name="isExpanded ? 'expand_less' : 'expand_more'" />
       </q-item-section>
     </q-item>
@@ -110,20 +110,37 @@ const handleClick = (event) => {
 
 <style scoped>
 .active-menu {
-  background-color: rgba(6, 100, 6, 0.6) !important;
+  background-color:#0E780E !important;
   color: white !important;
 }
 
 .nav-menu {
-  border-radius: 4px;
-  color: rgba(2, 2, 2, 0.655);
+  background: #69B31E;
+  border-radius: 10px;
+  color: white;
   font-size: 18px;
   font-weight: bolder;
+  margin: 8px 0;
+  padding: 10px 16px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+}
+
+.nav-menu .q-item__section--main {
+  flex: 1;
+  text-align: left;
+
 }
 
 .nav-menu:hover {
-  background-color: rgb(255, 255, 255);
-  color: #056e1f;
+
+  background-color: #0E780E;
+  color: white;
+  transform: translateX(4px);
 }
 
 /* Modern Tree Menu Container */
@@ -131,6 +148,13 @@ const handleClick = (event) => {
   margin-left: 24px;
   padding-left: 8px;
   position: relative;
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+.q-list {
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 /* Vertical connecting line */
@@ -144,7 +168,7 @@ const handleClick = (event) => {
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(6, 100, 6, 0.3) 10%,
+    rgba(49, 74, 49, 0.3) 10%,
     rgba(6, 100, 6, 0.3) 90%,
     transparent 100%
   );
@@ -152,41 +176,57 @@ const handleClick = (event) => {
 
 /* Submenu Items */
 .modern-submenu {
-  padding: 6px 12px;
-  margin: 2px 0;
-  border-radius: 4px;
-  color: rgba(0, 0, 0, 0.665);
+  background: #69B31E;
+  padding: 8px 14px;
+  margin: 5px 0;
+  border-radius: 8px;
+  color: white;
   font-size: 15px;
   font-weight: bolder;
   transition: all 0.2s ease;
   position: relative;
 }
 
-/* Active State (keeps your color scheme) */
+.modern-submenu .q-item__label {
+  text-align: left;
+}
+
+/* Active State */
 .modern-submenu-active {
-  background-color: rgba(6, 100, 6, 0.6) !important;
+  background-color: #0E780E !important;
   color: white !important;
   font-weight: bold;
 }
 
 /* Hover State */
 .modern-submenu:hover {
-  background-color: rgb(255, 255, 255);
-  color: #056e1f;
+  background-color: #0E780E;
+  color: white;
+  transform: translateX(4px);
 }
 
 /* Tree icon styling */
 .tree-icon {
   min-width: 24px;
-  color: rgba(6, 100, 6, 0.6);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .modern-submenu-active .tree-icon {
+  background-color: #0E780E;
   color: white;
 }
 
 /* Animation for smoother transitions */
 .q-slide-transition {
-  transition: all 0.25s ease;
+  transition: all 0.1s ease;
+
+}
+
+.dropdown-icon-section {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 36px;
+  margin-left: 8px;
 }
 </style>

@@ -8,7 +8,7 @@
       <!-- Loaded State -->
       <div class="text-h5 text-weight-bold">
         <!-- Use barangay_name instead of barangay.name -->
-        Barangay {{ authStore.user?.barangay_name }} Dashboard
+
       </div>
 
     </div>
@@ -222,6 +222,7 @@ const loadPieChartData = async () => {
           borderWidth: 0,
         },
       ],
+
     }
   } finally {
     chartLoading.value = false
@@ -295,6 +296,7 @@ onMounted(() => {
     transform 0.3s ease,
     box-shadow 0.3s ease;
   height: 100%;
+    background-color: #C2FFC2;
 
   &:hover {
     transform: translateY(-5px);
@@ -315,6 +317,7 @@ onMounted(() => {
 .chart-card {
   border-radius: 12px;
   transition: transform 0.3s ease;
+  background-color: #C2FFC2;
 
   &:hover {
     transform: translateY(-2px);
