@@ -1,7 +1,7 @@
   <template>
     <q-layout view="lHh Lpr lFf">
       <!-- Page Container -->
-      <q-page-container>
+      <q-page-container class="container" >
         <q-page class="q-pa-lg">
           <!-- Summary Cards -->
           <div class="row summary-row q-mb-md">
@@ -206,4 +206,7 @@
     display: flex;
     gap: 30px; /* Creates space between summary cards */
   }
+.container{
+  background-color: #D9D9D9;
+}
   </style>
