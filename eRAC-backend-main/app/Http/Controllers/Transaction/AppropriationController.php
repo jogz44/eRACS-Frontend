@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Transaction;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\AdminAuthController;
 use App\Models\Budget;
 use App\Models\TranAppropriation;
 use App\Models\LibFiscalYear;
@@ -16,6 +17,10 @@ use Illuminate\Validation\Rule;
     {
     public function index(Request $request)
     {
+        // Log user activity
+        if ($request->user()) {
+            // AdminAuthController::logUserAction($request->user(), 'Visited Appropriation Page');
+        }
         $request->validate([
             'year' => 'nullable|integer',
             'status' => 'nullable|in:draft,committed,reverted',

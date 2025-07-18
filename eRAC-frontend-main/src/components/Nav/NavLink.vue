@@ -227,4 +227,34 @@ const handleClick = (event) => {
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
+
+@media (max-width: 767px) {
+  .nav-menu {
+    font-size: 15px;
+    padding: 8px 10px;
+    margin: 4px 0;
+  }
+  .modern-tree-menu {
+    margin-left: 10px;
+    padding-left: 4px;
+  }
+  .modern-submenu {
+    font-size: 13px;
+    padding: 6px 8px;
+    margin: 3px 0;
+  }
+  .tree-icon {
+    min-width: 18px;
+  }
+}
+@media (max-width: 500px) {
+  .nav-menu {
+    font-size: 13px;
+    padding: 6px 6px;
+  }
+  .modern-submenu {
+    font-size: 11px;
+    padding: 4px 4px;
+  }
+}
 </style>

@@ -9,6 +9,7 @@
           <q-input
             dense
             outlined
+            bg-color="white"
             v-model="search"
             placeholder="Search users..."
             class="search-input"

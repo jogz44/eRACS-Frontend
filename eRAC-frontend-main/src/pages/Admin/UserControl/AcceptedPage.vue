@@ -18,7 +18,7 @@
       </div>
       <q-card-section>
         <!-- Search Bar -->
-        <q-input dense outlined v-model="search" placeholder="Search..." class="search-bar">
+        <q-input dense outlined bg-color="white" v-model="search" placeholder="Search..." class="search-bar">
           <template v-slot:prepend>
             <q-icon name="search" />
           </template>

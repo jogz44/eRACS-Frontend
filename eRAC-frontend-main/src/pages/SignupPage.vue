@@ -26,6 +26,7 @@
             <q-input
               outlined
               dense
+              bg-color="white"
               v-model="firstName"
               label="Firstname"
               color="green"
@@ -35,6 +36,7 @@
             <q-input
               outlined
               dense
+              bg-color="white"
               v-model="middleName"
               label="Middlename"
               color="green"
@@ -44,6 +46,7 @@
             <q-input
               outlined
               dense
+              bg-color="white"
               v-model="lastName"
               label="Lastname"
               color="green"
@@ -52,7 +55,7 @@
             />
 
             <div class="text-subtitle2 text-green-8 q-mb-xs">Suffix (Optional)</div>
-            <q-input outlined dense v-model="suffix" color="green" />
+            <q-input outlined dense bg-color="white" v-model="suffix" color="green" />
           </div>
 
           <!-- Right Column -->
@@ -61,6 +64,7 @@
             <q-select
               outlined
               dense
+              bg-color="white"
               v-model="barangay"
               :options="barangayOptions"
               label="Select Barangay"
@@ -76,6 +80,7 @@
             <q-input
               outlined
               dense
+              bg-color="white"
               v-model="position"
               color="green"
               class="q-mb-md"
@@ -92,6 +97,7 @@
               color="green"
               flat
               bordered
+              bg-color="white"
               @added="onFileAdded"
               @rejected="onFileRejected"
               @removed="onFileRemoved"
@@ -173,6 +179,7 @@
             <q-input
               outlined
               dense
+              bg-color="white"
               v-model="email"
               label="Email"
               color="green"
@@ -187,6 +194,7 @@
             <q-input
               outlined
               dense
+              bg-color="white"
               v-model="username"
               label="Username"
               color="green"
@@ -204,6 +212,7 @@
             <q-input
               outlined
               dense
+              bg-color="white"
               v-model="password"
               label="Password"
               :type="isPasswordVisible ? 'text' : 'password'"
@@ -227,6 +236,7 @@
             <q-input
               outlined
               dense
+              bg-color="white"
               v-model="confirmPassword"
               label="Confirm Password"
               :type="isPasswordVisible2 ? 'text' : 'password'"
@@ -570,4 +580,3 @@ export default {
 
 /* Make it match your existing green theme */
 </style>
-

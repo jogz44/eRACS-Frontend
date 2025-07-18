@@ -24,6 +24,7 @@
     type="email"
     outlined
     dense
+    bg-color="white"
     :prepend-icon="'user'"
   />
 
@@ -34,6 +35,7 @@
     :type="isPasswordVisible ? 'text' : 'password'"
     outlined
     dense
+    bg-color="white"
     class="q-mt-md"
     :prepend-icon="'lock'"
     :rules="[(val) => !!val || 'Password is required']"
