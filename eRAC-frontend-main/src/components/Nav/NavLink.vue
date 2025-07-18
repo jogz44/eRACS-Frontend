@@ -94,6 +94,7 @@ const handleClick = (event) => {
 <style scoped>
 .active-menu {
   background-color: #0E780E !important;
+
   color: white !important;
 }
 

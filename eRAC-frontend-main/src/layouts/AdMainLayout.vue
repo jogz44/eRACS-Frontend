@@ -177,7 +177,7 @@ const handleLogout = async () => {
 .custom-card-drawer {
 
   position: sticky;
-  background: linear-gradient(#E0FFE7, #69B31E,#187C19);
+  background: linear-gradient(#E0FFE7, #589b16,#187C19);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   padding-top: 30px;
   overflow: hidden;
