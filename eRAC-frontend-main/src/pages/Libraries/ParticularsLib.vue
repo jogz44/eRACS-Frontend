@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-lg">
+  <q-page class="q-pa-lg particulars-page">
     <div class="page-header q-mb-lg">
       <div class="text-h5 text-weight-bold">Particulars</div>
     </div>
@@ -9,6 +9,7 @@
       <div class="row items-center justify-between q-gutter-sm">
         <!-- Search Input -->
         <q-input
+        bg-color="white"
           outlined
           dense
           placeholder="Search..."
@@ -227,5 +228,8 @@ const confirmDeleteParticular = async (particular) => {
 </script>
 
 <style scoped>
-/* Your existing styles remain unchanged */
+.particulars-page {
+  background-color: #D9D9D9; /* Light gray background */
+  min-height: 100vh; /* Ensure full height */
+}
 </style>

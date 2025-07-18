@@ -75,6 +75,35 @@
         />
         </div>
       </q-list>
+
+    <!-- Sticky Footer -->
+    <div class="drawer-footer">
+      <div class="text-caption text-grey items-center q-pa-sm footer-avatar">
+<q-list separator>
+  <div class="footer-user row items-center q-gutter-sm q-pa-sm">
+    <!-- Avatar -->
+    <q-avatar size="45px">
+      <img :src="userPhoto" @error="handleImageError" />
+    </q-avatar>
+
+    <!-- Name & Position -->
+    <div class="column">
+      <span class="text-caption text-white text-weight-bold " >
+        {{ authStore.user?.first_name || 'Guest' }}
+        {{ authStore.user?.last_name || ''   }}
+      </span>
+      <span class="text-caption text-black text-weight-medium text-h5"  >
+       {{ authStore.user.position }}
+      </span>
+    </div>
+  </div>
+</q-list>
+
+
+
+      </div>
+    </div>
+
     </q-drawer>
 
     <q-page-container>
@@ -146,7 +175,8 @@ const handleLogout = async () => {
 
 <style>
 .custom-card-drawer {
- position: sticky;
+
+  position: sticky;
   background: linear-gradient(#E0FFE7, #69B31E,#187C19);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   padding-top: 30px;
@@ -175,5 +205,16 @@ background: #69B31E;
   padding: 10px;
   margin: 10px;
   overflow-x: hidden;
+}.drawer-footer {
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding-left: 20px;
+  background-color:#187C19;
+  ;
+}.avatar-footer {
+  display: flex;
+  justify-content: end;
+  align-items: center;
+  padding: 10px;
 }
 </style>

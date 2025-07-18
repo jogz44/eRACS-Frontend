@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-lg">
+  <q-page class="q-pa-lg contdis-page">
     <div class="page-header q-mb-lg">
       <div class="text-h5 text-weight-bold">Continuing Disbursement</div>
     </div>
@@ -9,6 +9,7 @@
         <div class="row items-center justify-between q-gutter-sm">
           <!-- Search Input -->
           <q-input
+            bg-color="white"
             outlined
             dense
             placeholder="Search..."
@@ -27,6 +28,7 @@
           <div class="row items-center justify-between">
             <!-- From Date -->
             <q-input
+              bg-color="white"
               outlined
               label="From"
               dense
@@ -50,6 +52,7 @@
 
             <!-- To Date -->
             <q-input
+             bg-color="white"
               outlined
               label="To"
               dense
@@ -263,4 +266,10 @@ import ContViewOr from '../../components/contDisburse/ContViewOr.vue'
 const store = useContDisbursementStore()
 </script>
 
-<style scoped></style>
+<style scoped>
+.contdis-page {
+  background-color: #D9D9D9; /* Light gray background */
+  min-height: 100vh; /* Ensure full height */
+}
+
+</style>

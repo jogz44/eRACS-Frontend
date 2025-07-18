@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-lg">
+  <q-page class="q-pa-lg accountslib-page">
     <div class="page-header q-mb-lg">
       <div class="text-h5 text-weight-bold">Accounts Library</div>
     </div>
@@ -7,8 +7,8 @@
     <!-- Top Controls -->
     <!-- Main Card -->
     <q-card
-      class="q-pa-none shadow-3 rounded-borders q-mx-auto"
-      style="overflow: hidden; max-width: 1000px; height: 70vh"
+      class="q-pa-none shadow-3 rounded-borders q-mx-auto Main-card"
+      style="overflow: hidden; max-width: 1200px; height: 70vh"
     >
       <!-- Header Section -->
       <div class="row items-center justify-between bg-grey-3 q-pa-md">
@@ -1548,5 +1548,7 @@ watch(
 
 .sortable-chosen {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}.accountslib-page{
+  background-color: #D9D9D9;
 }
 </style>

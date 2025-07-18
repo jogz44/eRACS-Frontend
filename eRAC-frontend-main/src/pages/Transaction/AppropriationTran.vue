@@ -1,5 +1,6 @@
 <template>
-  <q-page class="q-pa-lg">
+  <q-page class="q-pa-lg appropriation-page">
+
     <div class="page-header q-mb-lg">
       <div class="text-h5 text-weight-bold">Appropriation Transaction</div>
     </div>
@@ -7,6 +8,7 @@
       <div class="row items-center justify-between q-gutter-sm">
         <!-- Search Input -->
         <q-input
+          bg-color="white"
           outlined
           dense
           placeholder="Search..."
@@ -23,8 +25,10 @@
 
         <!-- Date Range Group -->
         <div class="row items-center justify-between q-xs">
+
           <!-- From Date -->
           <q-input
+              bg-color="white"
             outlined
             label="From"
             dense
@@ -33,6 +37,7 @@
             class="custom-date-from"
             style="width: 200px"
           >
+
             <template v-slot:append>
               <q-icon name="event" class="calend-icon">
                 <q-popup-proxy cover transition-show="scale" transition-hide="scale">
@@ -47,6 +52,7 @@
 
           <!-- To Date -->
           <q-input
+              bg-color="white"
             outlined
             label="To"
             dense
@@ -63,12 +69,14 @@
               </q-icon>
             </template>
           </q-input>
-        </div>
+          </div>
+
 
         <!-- Add Button -->
         <q-btn label="Add" icon="add" class="add-table-btn" @click="addBudget" />
       </div>
     </div>
+
 
     <!-- Add Budget Dialog-->
     <q-dialog v-model="showDialog">
@@ -441,4 +449,9 @@ const addBudget = () => {
 .q-mb-md :deep(.q-input .q-field__control) {
   border-radius: 8px;
 }
+.appropriation-page {
+  background-color: #D9D9D9; /* Light gray background */
+  min-height: 100vh; /* Ensure full height */
+}
+
 </style>

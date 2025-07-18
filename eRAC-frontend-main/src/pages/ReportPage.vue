@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-lg">
+  <q-page class="q-pa-lg report-page">
     <div class="page-header q-mb-lg">
       <div class="text-h5 text-weight-bold">Current Year Reports</div>
     </div>
@@ -235,4 +235,9 @@ export default {
 }
 </script>
 
-<style scoped></style>
+<style scoped>
+.report-page {
+  background-color: #D9D9D9; /* Light gray background */
+  min-height: 100vh; /* Ensure full height */
+}
+</style>
