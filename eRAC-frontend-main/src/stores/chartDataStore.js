@@ -141,6 +141,7 @@ export const useChartDataStore = defineStore('chartData', {
           label: 'DV Number',
           align: 'center',
           sortable: true,
+          field: 'dvNumber',
         },
         {
           name: 'dvAmount',
@@ -506,6 +507,22 @@ export const useChartDataStore = defineStore('chartData', {
               }]
             }
             console.log('No pie chart data available, showing placeholder')
+          }
+
+          // Fetch recent liquidated disbursements from backend
+          try {
+            const disbResponse = await api.get('/api/disbursements/recent-liquidated')
+            if (disbResponse.data && disbResponse.data.data) {
+              this.recentDisbursementRows = disbResponse.data.data.map(row => ({
+                dvNumber: row.dv_number,
+                dvAmount: row.dv_amount,
+                date: row.date,
+                status: row.status,
+                liquidatedAmount: row.liquidated_amount || '',
+              }))
+            }
+          } catch (err) {
+            console.error('Error fetching recent liquidated disbursements:', err)
           }
 
           return dashboardData

@@ -97,9 +97,13 @@ Route::prefix('barangay')->group(function () {
     Route::get('budgets/{budget}/allocations', [AppropriationController::class, 'getBudgetAllocations']);
     Route::post('budgets/{budget}/allocate', [AppropriationController::class, 'saveAllocation']);
     Route::get('budgets/{id}/history', [AppropriationController::class, 'getAllocationHistory']);
-});
-});
+    Route::patch('budgets/{budget}/allocations', [\App\Http\Controllers\Transaction\AppropriationController::class, 'updateAllocations']);
 
+    
+});
+});
+// Recent Liquidated Disbursements
+Route::get('/disbursements/recent-liquidated', [\App\Http\Controllers\DisbursementController::class, 'recentLiquidated']);
 
 Route::prefix('admin')->group(function () {
     Route::post('/login', [AdminAuthController::class, 'login']);

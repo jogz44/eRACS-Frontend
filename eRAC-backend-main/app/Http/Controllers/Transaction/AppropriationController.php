@@ -311,8 +311,11 @@ public function saveAllocation(Request $request, Budget $budget)
                     'fiscalYear'
                 ])->findOrFail($budgetId);
 
+                // Only use allocations for items
+                $itemAppropriations = $budget->tranAppropriations->whereNotNull('expense_item_id');
+
                 // Group by allocation date (session)
-                $groupedHistory = $budget->tranAppropriations->groupBy(function($item) {
+                $groupedHistory = $itemAppropriations->groupBy(function($item) {
                     return $item->created_at->format('Y-m-d H:i:s');
                 });
 
@@ -352,7 +355,7 @@ public function saveAllocation(Request $request, Budget $budget)
                         'budget' => $budget->only(['id', 'description', 'original_amount', 'current_amount']),
                         'fiscal_year' => $budget->fiscalYear->year ?? null,
                         'history' => $history,
-                        'total_allocated_to_date' => $budget->tranAppropriations->sum('amount')
+                        'total_allocated_to_date' => $itemAppropriations->sum('amount')
                     ]
                 ]);
 
@@ -363,6 +366,40 @@ public function saveAllocation(Request $request, Budget $budget)
                 ], 500);
             }
         }
+
+    // Add this method to your AppropriationController
+    public function updateAllocations(Request $request, $budgetId)
+    {
+        $validated = $request->validate([
+            'allocations' => 'required|array',
+            'allocations.*.expense_item_id' => 'required|integer|exists:lib_expense_items,id',
+            'allocations.*.amount' => 'required|numeric|min:0',
+        ]);
+
+        $budget = \App\Models\Budget::findOrFail($budgetId);
+
+        return DB::transaction(function () use ($validated, $budget) {
+            // Delete all old item-level appropriations for this budget
+            $budget->tranAppropriations()->whereNotNull('expense_item_id')->delete();
+
+            $totalAllocated = 0;
+            foreach ($validated['allocations'] as $alloc) {
+                $budget->tranAppropriations()->create([
+                    'barangay_id' => $budget->barangay_id,
+                    'amount' => $alloc['amount'],
+                    'expense_item_id' => $alloc['expense_item_id'],
+                    'transaction_date' => now(),
+                    'status' => 'committed',
+                    'user_id' => $budget->user_id,
+                ]);
+                $totalAllocated += $alloc['amount'];
+            }
+            // Update current_amount
+            $budget->current_amount = $budget->original_amount - $totalAllocated;
+            $budget->save();
+            return response()->json(['status' => true, 'message' => 'Allocations updated', 'budget' => $budget]);
+        });
+    }
 
     // Add this method to your AppropriationController
     public function getDashboardSummary(Request $request)
@@ -383,7 +420,8 @@ public function saveAllocation(Request $request, Budget $budget)
             // Calculate totals
             $totalAppropriation = $budgets->sum('original_amount');
             $totalObligation = $budgets->sum(function($budget) {
-                return $budget->tranAppropriations->sum('amount');
+                // Only sum allocations for items
+                return $budget->tranAppropriations->whereNotNull('expense_item_id')->sum('amount');
             });
             $totalBalance = $totalAppropriation - $totalObligation;
 
@@ -426,19 +464,9 @@ public function saveAllocation(Request $request, Budget $budget)
             $classTotals = [];
             foreach ($expenseHierarchy as $expenseClass) {
                 $classTotal = 0;
-                
-                // Sum allocations for this expense class
                 foreach ($budgets as $budget) {
-                    $classTotal += $budget->tranAppropriations
-                        ->where('expense_class_id', $expenseClass['id'])
-                        ->sum('amount');
-                        
-                    // Also sum allocations from child types and items
+                    // Only sum allocations for items under this class
                     foreach ($expenseClass['children'] as $expenseType) {
-                        $classTotal += $budget->tranAppropriations
-                            ->where('expense_type_id', $expenseType['id'])
-                            ->sum('amount');
-                            
                         foreach ($expenseType['children'] as $expenseItem) {
                             $classTotal += $budget->tranAppropriations
                                 ->where('expense_item_id', $expenseItem['id'])
@@ -446,7 +474,6 @@ public function saveAllocation(Request $request, Budget $budget)
                         }
                     }
                 }
-                
                 if ($classTotal > 0) {
                     $classTotals[] = [
                         'id' => $expenseClass['id'],

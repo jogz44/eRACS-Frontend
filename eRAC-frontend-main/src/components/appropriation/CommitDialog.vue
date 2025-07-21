@@ -425,9 +425,14 @@ const submitAllocation = async () => {
     })
   } catch (error) {
     console.error('[ERROR] submitAllocation:', error)
+    let message = error.message || 'Failed to save allocation'
+    // If backend returns 422, show the backend message
+    if (error.response && error.response.status === 422) {
+      message = error.response.data.message
+    }
     $q.notify({
       type: 'negative',
-      message: error.message || 'Failed to save allocation',
+      message,
       icon: 'error',
       position: 'top',
     })
