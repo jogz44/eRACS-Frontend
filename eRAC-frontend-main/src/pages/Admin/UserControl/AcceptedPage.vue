@@ -145,12 +145,6 @@ export default {
     return {
       search: '',
       users: [],
-      loading: false,
-      columns: [
-        { name: 'username', label: 'Username', field: 'username', align: 'left', sortable: true },
-        { name: 'email', label: 'Email', field: 'email', align: 'left', sortable: true },
-        { name: 'action', label: 'Actions', field: 'action', align: 'center' },
-      ],
       deleteModal: {
         show: false,
         selectedRow: null,

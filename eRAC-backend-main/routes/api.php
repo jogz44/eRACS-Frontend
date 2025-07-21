@@ -32,12 +32,13 @@ Route::prefix('barangay')->group(function () {
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
     Route::middleware(['auth:sanctum', 'auth.barangay'])->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/user', [AuthController::class, 'user']);
+        Route::post('/setlogs', [AdminAuthController::class, 'logUserAction']);
+        Route::post('/logout', [AuthController::class, 'logout']);
+        Route::get('/user', [AuthController::class, 'user']);
 
-    //Accounts Library
+        //Accounts Library
 
-   // Particulars CRUD (simplified)
+        // Particulars CRUD (simplified)
         Route::apiResource('particulars', LibParticularController::class)
             ->only(['index', 'store', 'show', 'update', 'destroy']);
 
@@ -98,12 +99,12 @@ Route::prefix('barangay')->group(function () {
     Route::post('budgets/{budget}/allocate', [AppropriationController::class, 'saveAllocation']);
     Route::get('budgets/{id}/history', [AppropriationController::class, 'getAllocationHistory']);
     Route::patch('budgets/{budget}/allocations', [\App\Http\Controllers\Transaction\AppropriationController::class, 'updateAllocations']);
-
+    // Recent Liquidated Disbursements
+    Route::get('/disbursements/recent-liquidated', [\App\Http\Controllers\DisbursementController::class, 'recentLiquidated']);
     
+  });
+  
 });
-});
-// Recent Liquidated Disbursements
-Route::get('/disbursements/recent-liquidated', [\App\Http\Controllers\DisbursementController::class, 'recentLiquidated']);
 
 Route::prefix('admin')->group(function () {
     Route::post('/login', [AdminAuthController::class, 'login']);

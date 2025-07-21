@@ -93,6 +93,7 @@ const isPasswordVisible = ref(false)
 const handleLogin = async () => {
   isLoading.value = true
   await authStore.login(username.value, password.value, $q, router) // No success check needed
+
   isLoading.value = false
 }
 const goToForgotPassword = () => router.push('/forgotpage')

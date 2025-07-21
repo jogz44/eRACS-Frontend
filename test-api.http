@@ -1,0 +1,14 @@
+# ### Get all barangays
+# GET http://localhost:8000/api/barangay/barangays
+# Accept: application/json
+
+# GET http://localhost:8000/api/admin/users/accepted
+# Authorization: Bearer 20321|MJVIJC1JcFqCmc5PKQL9fxYnAlKup2wOU6Ax9bDe0589ebf2
+# Accept: application/json
+
+# GET http://localhost:8000/api/user
+# Accept: application/json
+
+GET http://localhost:8000/api/admin/admin/logs
+Authorization: Bearer 20321|MJVIJC1JcFqCmc5PKQL9fxYnAlKup2wOU6Ax9bDe0589ebf2
+Accept: application/json

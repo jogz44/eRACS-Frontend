@@ -85,6 +85,7 @@ const $q = useQuasar()
 const router = useRouter()
 const authStore = useAuthStore()
 
+
 const email = ref('admin@gmail.com') // Pre-fill for testing
 const password = ref('')
 const loading = ref(false)
@@ -100,6 +101,7 @@ const handleLogin = async () => {
       email: email.value,
       password: password.value,
     })
+    
     $q.notify({
       type: 'positive',
       message: 'Login successful!',
