@@ -2,7 +2,6 @@
 namespace App\Http\Controllers\Transaction;
 
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\AdminAuthController;
 use App\Models\Budget;
 use App\Models\TranAppropriation;
 use App\Models\LibFiscalYear;
@@ -17,10 +16,6 @@ use Illuminate\Validation\Rule;
     {
     public function index(Request $request)
     {
-        // Log user activity
-        if ($request->user()) {
-            // AdminAuthController::logUserAction($request->user(), 'Visited Appropriation Page');
-        }
         $request->validate([
             'year' => 'nullable|integer',
             'status' => 'nullable|in:draft,committed,reverted',
@@ -158,6 +153,23 @@ public function saveAllocation(Request $request, Budget $budget)
         'allocations.*.type' => 'required|in:class,type,item',
         'allocations.*.amount' => 'required|numeric|min:0'
     ]);
+
+    // 1. Calculate current total allocated for this budget
+    $currentAllocated = TranAppropriation::where('budget_id', $budget->id)->sum('amount');
+
+    // 2. Calculate the total of the new allocations in this request
+    $newTotal = $currentAllocated;
+    foreach ($validated['allocations'] as $allocation) {
+        $newTotal += $allocation['amount'];
+    }
+
+    // 3. Check if this would exceed the budget
+    if ($newTotal > $budget->original_amount) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Allocation exceeds the available budget. Please adjust your amounts.'
+        ], 422);
+    }
 
     return DB::transaction(function () use ($validated, $budget, $request) {
         $totalAllocated = 0;
@@ -299,8 +311,11 @@ public function saveAllocation(Request $request, Budget $budget)
                     'fiscalYear'
                 ])->findOrFail($budgetId);
 
+                // Only use allocations for items
+                $itemAppropriations = $budget->tranAppropriations->whereNotNull('expense_item_id');
+
                 // Group by allocation date (session)
-                $groupedHistory = $budget->tranAppropriations->groupBy(function($item) {
+                $groupedHistory = $itemAppropriations->groupBy(function($item) {
                     return $item->created_at->format('Y-m-d H:i:s');
                 });
 
@@ -340,7 +355,7 @@ public function saveAllocation(Request $request, Budget $budget)
                         'budget' => $budget->only(['id', 'description', 'original_amount', 'current_amount']),
                         'fiscal_year' => $budget->fiscalYear->year ?? null,
                         'history' => $history,
-                        'total_allocated_to_date' => $budget->tranAppropriations->sum('amount')
+                        'total_allocated_to_date' => $itemAppropriations->sum('amount')
                     ]
                 ]);
 
@@ -351,4 +366,152 @@ public function saveAllocation(Request $request, Budget $budget)
                 ], 500);
             }
         }
+
+    // Add this method to your AppropriationController
+    public function updateAllocations(Request $request, $budgetId)
+    {
+        $validated = $request->validate([
+            'allocations' => 'required|array',
+            'allocations.*.expense_item_id' => 'required|integer|exists:lib_expense_items,id',
+            'allocations.*.amount' => 'required|numeric|min:0',
+        ]);
+
+        $budget = \App\Models\Budget::findOrFail($budgetId);
+
+        return DB::transaction(function () use ($validated, $budget) {
+            // Delete all old item-level appropriations for this budget
+            $budget->tranAppropriations()->whereNotNull('expense_item_id')->delete();
+
+            $totalAllocated = 0;
+            foreach ($validated['allocations'] as $alloc) {
+                $budget->tranAppropriations()->create([
+                    'barangay_id' => $budget->barangay_id,
+                    'amount' => $alloc['amount'],
+                    'expense_item_id' => $alloc['expense_item_id'],
+                    'transaction_date' => now(),
+                    'status' => 'committed',
+                    'user_id' => $budget->user_id,
+                ]);
+                $totalAllocated += $alloc['amount'];
+            }
+            // Update current_amount
+            $budget->current_amount = $budget->original_amount - $totalAllocated;
+            $budget->save();
+            return response()->json(['status' => true, 'message' => 'Allocations updated', 'budget' => $budget]);
+        });
+    }
+
+    // Add this method to your AppropriationController
+    public function getDashboardSummary(Request $request)
+    {
+        try {
+            \Log::info('Dashboard summary requested for user: ' . $request->user()->id);
+            
+            $barangayId = $request->user()->barangay_id;
+            \Log::info('Barangay ID: ' . $barangayId);
+            
+            // Get all budgets for this barangay
+            $budgets = Budget::with(['tranAppropriations', 'fiscalYear'])
+                ->where('barangay_id', $barangayId)
+                ->get();
+
+            \Log::info('Found ' . $budgets->count() . ' budgets');
+
+            // Calculate totals
+            $totalAppropriation = $budgets->sum('original_amount');
+            $totalObligation = $budgets->sum(function($budget) {
+                // Only sum allocations for items
+                return $budget->tranAppropriations->whereNotNull('expense_item_id')->sum('amount');
+            });
+            $totalBalance = $totalAppropriation - $totalObligation;
+
+            \Log::info('Totals - Appropriation: ' . $totalAppropriation . ', Obligation: ' . $totalObligation . ', Balance: ' . $totalBalance);
+
+            // Get expense hierarchy for pie chart
+            $currentYear = now()->year;
+            $fiscalYear = LibFiscalYear::where('year', $currentYear)->first();
+            
+            \Log::info('Current year: ' . $currentYear . ', Fiscal year found: ' . ($fiscalYear ? 'yes' : 'no'));
+            
+            $expenseHierarchy = [];
+            if ($fiscalYear) {
+                $expenseHierarchy = LibExpenseClass::with(['types.items'])
+                    ->where('fiscal_year_id', $fiscalYear->id)
+                    ->get()
+                    ->map(function($class) {
+                        return [
+                            'id' => $class->id,
+                            'name' => $class->name,
+                            'children' => $class->types->map(function($type) {
+                                return [
+                                    'id' => $type->id,
+                                    'name' => $type->name,
+                                    'children' => $type->items->map(function($item) {
+                                        return [
+                                            'id' => $item->id,
+                                            'name' => $item->name,
+                                        ];
+                                    })
+                                ];
+                            })
+                        ];
+                    });
+            }
+
+            \Log::info('Expense hierarchy count: ' . count($expenseHierarchy));
+
+            // Calculate class totals for pie chart
+            $classTotals = [];
+            foreach ($expenseHierarchy as $expenseClass) {
+                $classTotal = 0;
+                foreach ($budgets as $budget) {
+                    // Only sum allocations for items under this class
+                    foreach ($expenseClass['children'] as $expenseType) {
+                        foreach ($expenseType['children'] as $expenseItem) {
+                            $classTotal += $budget->tranAppropriations
+                                ->where('expense_item_id', $expenseItem['id'])
+                                ->sum('amount');
+                        }
+                    }
+                }
+                if ($classTotal > 0) {
+                    $classTotals[] = [
+                        'id' => $expenseClass['id'],
+                        'name' => $expenseClass['name'],
+                        'total' => $classTotal
+                    ];
+                }
+            }
+
+            \Log::info('Class totals count: ' . count($classTotals));
+
+            $response = [
+                'status' => true,
+                'data' => [
+                    'summary' => [
+                        'total_appropriation' => (float)$totalAppropriation,
+                        'total_obligation' => (float)$totalObligation,
+                        'total_balance' => (float)$totalBalance,
+                    ],
+                    'pie_chart_data' => [
+                        'labels' => array_column($classTotals, 'name'),
+                        'data' => array_column($classTotals, 'total'),
+                    ],
+                    'budgets_count' => $budgets->count(),
+                    'current_fiscal_year' => $currentYear,
+                ]
+            ];
+
+            \Log::info('Dashboard response prepared', $response);
+            
+            return response()->json($response);
+            
+        } catch (\Exception $e) {
+            \Log::error('Dashboard summary error: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Error fetching dashboard data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
     }

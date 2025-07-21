@@ -58,36 +58,31 @@
                 </div>
               </div>
 
-              <!-- Expense Type Rows -->
-              <template
-                v-for="expenseType in expenseClass.children"
-                :key="'type-' + expenseType.id"
-              >
+              <!-- Expense Type Rows (expandable) -->
+              <template v-for="expenseType in expenseClass.children" :key="'type-' + expenseType.id">
                 <div
                   class="row"
                   :class="getTypeClass(expenseType)"
                   style="padding: 6px 12px; min-height: 32px; border-bottom: 1px solid #f0f0f0"
                 >
                   <div class="col-6" style="padding-left: 24px; display: flex; align-items: center">
-                    <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
-                    {{ expenseType.name }}
-                    <span v-if="expenseType.amount > 0" class="text-caption text-grey-7 q-ml-sm">
-                    </span>
+                    <q-btn
+                      flat
+                      dense
+                      size="sm"
+                      :icon="expandedTypes[expenseType.id] ? 'expand_more' : 'chevron_right'"
+                      @click="toggleType(expenseType.id)"
+                      style="min-width: 24px; margin-right: 4px;"
+                    />
+                    <span>{{ expenseType.name }}</span>
                   </div>
                   <div class="col-6 text-right">
-                    <div v-if="expenseType.amount > 0">
-                      {{ appropriationStore.formatCurrency(expenseType.amount) }}
-                    </div>
-                    <div v-else></div>
+                    <strong>{{ appropriationStore.formatCurrency(calculateTypeTotal(expenseType)) }}</strong>
                   </div>
                 </div>
-
-                <!-- Expense Item Rows -->
-                <template v-if="expenseType.children && expenseType.children.length > 0">
-                  <template
-                    v-for="expenseItem in expenseType.children"
-                    :key="'item-' + expenseItem.id"
-                  >
+                <!-- Expense Item Rows (only if expanded) -->
+                <template v-if="expandedTypes[expenseType.id] && expenseType.children && expenseType.children.length > 0">
+                  <template v-for="expenseItem in expenseType.children" :key="'item-' + expenseItem.id">
                     <div
                       class="row"
                       style="padding: 6px 12px; min-height: 32px; border-bottom: 1px solid #f0f0f0"
@@ -123,7 +118,7 @@
 <script setup>
 import { useQuasar } from 'quasar'
 import { useAppropriationStore } from '../../stores/appropriationStore'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { api } from 'src/boot/axios'
 
 const appropriationStore = useAppropriationStore()
@@ -132,51 +127,7 @@ const searchQuery = ref('')
 const viewAllocationData = ref(null)
 const viewAllocations = ref([])
 const allHistoryData = ref([])
-const $q = useQuasar()
-
-const formatDate = (dateString) => {
-  if (!dateString) return ''
-  const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-const openDialog = async (row) => {
-  try {
-    showDialog.value = true
-    await fetchAllocationData(row.id)
-  } catch (error) {
-    console.error('Error opening view dialog:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Failed to open allocation view',
-      icon: 'error',
-    })
-  }
-}
-
-const fetchAllocationData = async (id) => {
-  try {
-    const response = await api.get(`/api/barangay/budgets/${id}/history`)
-    allHistoryData.value = response.data.data?.history || []
-
-    if (allHistoryData.value.length > 0) {
-      // Get all allocations (combine from all history)
-      viewAllocations.value = allHistoryData.value.flatMap((h) => h.allocations || [])
-
-      // Just set the most recent date info for display
-      viewAllocationData.value = allHistoryData.value[0]
-    }
-  } catch (error) {
-    console.error('Error fetching allocation data:', error)
-    throw error
-  }
-}
+const expandedTypes = ref({})
 
 const displayAccounts = computed(() => {
   if (!viewAllocations.value || viewAllocations.value.length === 0) return []
@@ -242,6 +193,83 @@ const displayAccounts = computed(() => {
 
   return Object.values(classMap)
 })
+
+// Expand all types by default when displayAccounts changes
+watch(
+  () => displayAccounts.value,
+  (newVal) => {
+    if (Array.isArray(newVal)) {
+      const expanded = {}
+      newVal.forEach((expenseClass) => {
+        if (expenseClass && Array.isArray(expenseClass.children)) {
+          expenseClass.children.forEach((expenseType) => {
+            if (expenseType && expenseType.id) {
+              expanded[expenseType.id] = true
+            }
+          })
+        }
+      })
+      expandedTypes.value = expanded
+    }
+  },
+  { immediate: true }
+)
+
+const toggleType = (typeId) => {
+  expandedTypes.value[typeId] = !expandedTypes.value[typeId]
+}
+const calculateTypeTotal = (expenseType) => {
+  // Sum only the items under this type
+  if (!expenseType.children || expenseType.children.length === 0) {
+    return expenseType.amount || 0
+  }
+  return expenseType.children.reduce((sum, item) => sum + (item.amount || 0), 0)
+}
+const $q = useQuasar()
+
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+const openDialog = async (row) => {
+  try {
+    showDialog.value = true
+    await fetchAllocationData(row.id)
+  } catch (error) {
+    console.error('Error opening view dialog:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to open allocation view',
+      icon: 'error',
+    })
+  }
+}
+
+const fetchAllocationData = async (id) => {
+  try {
+    const response = await api.get(`/api/barangay/budgets/${id}/history`)
+    allHistoryData.value = response.data.data?.history || []
+
+    if (allHistoryData.value.length > 0) {
+      // Get all allocations (combine from all history)
+      viewAllocations.value = allHistoryData.value.flatMap((h) => h.allocations || [])
+
+      // Just set the most recent date info for display
+      viewAllocationData.value = allHistoryData.value[0]
+    }
+  } catch (error) {
+    console.error('Error fetching allocation data:', error)
+    throw error
+  }
+}
 
 const totalAllocated = computed(() => {
   return viewAllocations.value.reduce((sum, alloc) => sum + (alloc.amount || 0), 0)
