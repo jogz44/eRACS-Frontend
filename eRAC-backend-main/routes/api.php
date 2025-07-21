@@ -89,6 +89,8 @@ Route::prefix('barangay')->group(function () {
      Route::get('budgets', [AppropriationController::class, 'index']);
     // Add this above your existing budget routes
     Route::post('budgets/create', [AppropriationController::class, 'storeBudget']);
+    // Dashboard summary endpoint
+    Route::get('dashboard/summary', [AppropriationController::class, 'getDashboardSummary']);
     // Expense hierarchy
     Route::get('expense-hierarchy', [AppropriationController::class, 'getExpenseHierarchy']);
     // Allocation endpoints

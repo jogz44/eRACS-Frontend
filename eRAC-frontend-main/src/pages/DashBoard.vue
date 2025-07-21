@@ -25,7 +25,7 @@
     <div class="row q-col-gutter-lg q-mb-lg">
       <div
         class="col-xl-3 col-lg-4 col-md-6 col-sm-12"
-        v-for="(card, index) in summaryCards"
+        v-for="(card, index) in chartStore.summaryCards"
         :key="index"
       >
 
@@ -58,10 +58,10 @@
           </q-card-section>
           <q-separator />
           <q-card-section style="height: 350px; position: relative">
-            <div v-if="chartLoading" class="absolute-center">
+            <div v-if="chartStore.chartLoading" class="absolute-center">
               <q-spinner color="primary" size="3em" />
             </div>
-            <PieChart v-else :chart-data="pieChartData" :options="chartOptions" />
+            <PieChart v-else :chart-data="chartStore.pieChartData" :options="chartOptions" />
           </q-card-section>
         </q-card>
       </div>
@@ -75,8 +75,8 @@
           <q-separator />
           <q-card-section>
             <q-table
-              :rows="recentDisbursementRows"
-              :columns="recentDisbursementColumns"
+              :rows="chartStore.recentDisbursementRows"
+              :columns="chartStore.recentDisbursementColumns"
               row-key="id"
               flat
               bordered
@@ -89,59 +89,20 @@
         </q-card>
       </div>
     </div>
+    <div v-if="allocationError" class="q-mb-md text-negative text-bold">
+      {{ allocationError }}
+    </div>
   </q-page>
 </template>
 
 <script setup>
 import { ref, watch, computed, onMounted } from 'vue'
 import { useChartDataStore } from 'src/stores/chartDataStore'
-import { useAppropriationStore } from 'stores/appropriationStore'
-import { storeToRefs } from 'pinia'
-import PieChart from 'components/PieChart.vue' // Update the import
+import PieChart from 'components/PieChart.vue'
 import { useAuthStore } from 'stores/auth'
-import { api } from 'boot/axios'
-//import { useQuasar } from 'quasar'
-const chartLoading = ref(true)
-const appropriationStore = useAppropriationStore()
-const authStore = useAuthStore()
-//const $q = useQuasar()
-// 1. Date Pickers UI State
-
-// 2. Store Connection
 const chartStore = useChartDataStore()
-const { summaryCards, recentDisbursementRows, recentDisbursementColumns } = storeToRefs(chartStore)
-
-/// Pie chart data
-const pieChartData = ref({
-  labels: [],
-  datasets: [
-    {
-      data: [],
-      backgroundColor: [
-        '#2E7D32',
-        '#1565C0',
-        '#FFA000',
-        '#C62828',
-        '#6A1B9A',
-        '#00838F',
-        '#EF6C00',
-        '#4E342E',
-        '#AD1457', // deep pink
-        '#00796B', // teal green
-        '#5D4037', // brown
-        '#4527A0', // deep purple
-        '#689F38', // lime green
-        '#D84315', // burnt orange
-        '#283593', // indigo
-        '#F4511E', // vibrant orange
-        '#00695C', // dark cyan
-        '#512DA8',
-      ],
-      borderWidth: 0,
-      hoverOffset: 12,
-    },
-  ],
-})
+const allocationError = ref('')
+const authStore = useAuthStore()
 
 // Chart options
 const chartOptions = computed(() => ({
@@ -149,12 +110,11 @@ const chartOptions = computed(() => ({
   maintainAspectRatio: false,
   plugins: {
     legend: {
-      position: 'left', // Changed from 'center' to match the example
+      position: 'left',
       labels: {
         position: 'left',
         boxWidth: 12,
         boxHeight: 12,
-
         fontColor: '#fff',
         padding: 15,
         usePointStyle: true,
@@ -179,109 +139,36 @@ const chartOptions = computed(() => ({
           const value = context.raw
           const total = context.dataset.data.reduce((a, b) => a + b, 0)
           const percentage = Math.round((value / total) * 100)
-          return `${label}: ${appropriationStore.formatCurrency(value)} (${percentage}%)`
+          return `${label}: ${chartStore.formatCurrency(value)} (${percentage}%)`
         },
       },
     },
   },
 }))
 
-// Load data for pie chart
-const loadPieChartData = async () => {
-  chartLoading.value = true
-
+// Load dashboard data
+const loadDashboardData = async () => {
   try {
-    // 1. Load expense hierarchy first
-    if (!appropriationStore.expenseHierarchy?.length) {
-      await appropriationStore.fetchExpenseHierarchy()
-    }
-
-    // 2. Load budgets if needed
-    if (appropriationStore.appropriations.length === 0) {
-      await appropriationStore.fetchBudgets()
-    }
-
-    // 3. Process allocations if we have budgets
-    if (appropriationStore.appropriations.length > 0) {
-      const authConfig = {
-        headers: { Authorization: `Bearer ${authStore.token}` },
-      }
-
-      // Fetch allocations for all budgets
-      const responses = await Promise.all(
-        appropriationStore.appropriations.map((budget) =>
-          api.get(`/api/barangay/budgets/${budget.id}/allocations`, authConfig),
-        ),
-      )
-
-      // Combine and process allocations
-      const allAllocations = responses.flatMap((r) => r.data.data || [])
-      await appropriationStore.processCombinedAllocations(allAllocations)
-    }
-
-    updateChartFromStore()
+    await chartStore.loadDashboardData()
   } catch (error) {
-    console.error('Error loading chart data:', error)
-    // Show error state in chart
-    pieChartData.value = {
-      labels: ['Error Loading Data'],
-      datasets: [
-        {
-          data: [1],
-          backgroundColor: ['#C62828'],
-          borderWidth: 0,
-        },
-      ],
-
-    }
-  } finally {
-    chartLoading.value = false
-  }
-} // Track loading state
-
-// Update chart when store data changes
-const updateChartFromStore = () => {
-  const classTotals = appropriationStore.expenseClassTotals
-
-  if (!classTotals?.length) {
-    console.warn('No data available')
-    pieChartData.value = {
-      labels: ['No Data'],
-      datasets: [
-        {
-          data: [1],
-          backgroundColor: ['#FFA000'],
-          borderWidth: 0,
-        },
-      ],
-    }
-    return
-  }
-
-  pieChartData.value = {
-    labels: classTotals.map((c) => c.name),
-    datasets: [
-      {
-        data: classTotals.map((c) => c.total),
-        backgroundColor: pieChartData.value.datasets[0].backgroundColor,
-        borderWidth: 0,
-      },
-    ],
+    console.error('Error loading dashboard data:', error)
   }
 }
 
-// Watch for changes in allocations
+// Watch for changes in chart data
 watch(
-  () => appropriationStore.expenseClassTotals,
+  () => chartStore.pieChartData,
   (newVal) => {
-    console.log('Updated class totals:', newVal)
+    console.log('Updated pie chart data:', newVal)
+    console.log('Pie chart labels:', newVal.labels)
+    console.log('Pie chart data:', newVal.datasets?.[0]?.data)
   },
   { deep: true },
 )
 
 // Load data when component mounts
 onMounted(() => {
-  loadPieChartData()
+  loadDashboardData()
 })
 </script>
 

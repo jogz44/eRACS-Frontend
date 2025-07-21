@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\LibFiscalYear;
 
 class Budget extends Model
 {
@@ -41,8 +42,7 @@ class Budget extends Model
         return $this->belongsTo(Barangay::class);
     }
 
-    public function fiscalYear(): BelongsTo
-    {
-        return $this->belongsTo(FiscalYear::class);
+    public function fiscalYear() {
+        return $this->belongsTo(LibFiscalYear::class, 'fiscal_year_id');
     }
 }
