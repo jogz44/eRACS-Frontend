@@ -155,6 +155,7 @@ export const useChartDataStore = defineStore('chartData', {
           label: 'Date',
           align: 'center',
           sortable: true,
+          field: 'date', // <-- add this line
         },
         {
           name: 'status',
