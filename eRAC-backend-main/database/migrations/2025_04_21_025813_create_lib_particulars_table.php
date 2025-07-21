@@ -20,7 +20,7 @@ Schema::create('lib_particulars', function (Blueprint $table) {
               ->onDelete('cascade');
         $table->string('particular_name');
 
-        $table->date('transaction_date')->default(DB::raw('CURRENT_DATE'));
+        $table->date('transaction_date')->default(DB::raw('cast(getdate() as date)'));
         $table->boolean('is_active')->default(true);
         // Metadata: 'created_by' foreign key reference to 'barangay_users' table
         $table->foreignId('created_by')

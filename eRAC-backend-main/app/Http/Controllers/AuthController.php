@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Controllers\AdminAuthController;
 
 class AuthController extends Controller
 {
@@ -112,6 +113,8 @@ public function login(Request $request)
         60 * 24, // 1 day
         null, null, true, true, false, 'None'
     );
+
+    // Log user login
 
     return response()->json([
         'status' => 'success',

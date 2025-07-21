@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\DB;
 use App\Models\Admin;
 use App\Models\BarangayUser;
 
@@ -134,6 +135,38 @@ class AdminAuthController extends Controller  // <-- This is crucial
 
         return response()->json([
             'message' => "User {$userName} deleted successfully"
+        ]);
+    }
+
+    // Get all users with permissions
+    public function getUsersWithPermissions() {
+        return BarangayUser::select('id', 'first_name', 'last_name', 'username', 'position', 'permissions')
+            ->get();
+    }
+
+    // Update user permissions
+    public function updateUserPermissions(Request $request, $id) {
+        $user = BarangayUser::findOrFail($id);
+        $user->permissions = $request->input('permissions');
+        $user->save();
+        return response()->json(['success' => true]);
+    }
+
+    // Get logs
+    public function getLogs() {
+        return DB::table('logs')->orderBy('date', 'desc')->get();
+    }
+
+    // Helper to log user actions (can be called from other controllers)
+    public static function logUserAction($user, $activity, $details = null) {
+        DB::table('logs')->insert([
+            'user_id' => $user->id,
+            'fullname' => $user->first_name . ' ' . $user->last_name,
+            'activity' => $activity,
+            'date' => now(),
+            'details' => $details,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
     }
 }

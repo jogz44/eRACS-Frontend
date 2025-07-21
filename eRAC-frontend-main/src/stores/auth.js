@@ -208,8 +208,7 @@ export const useAuthStore = defineStore('auth', {
 
     // ====== NEW ADMIN ACTIONS ======
     // Admin actions
-    adminLogin(credentials) {
-      console.log('Sending login request with credentials:', credentials)
+    adminLogin(credentials, router) {
       return new Promise((resolve, reject) => {
         api
           .post('/api/admin/login', credentials, {
@@ -225,6 +224,10 @@ export const useAuthStore = defineStore('auth', {
               localStorage.setItem('admin_data', JSON.stringify(this.admin))
               localStorage.setItem('admin_token', this.adminToken)
               api.defaults.headers.common['Authorization'] = `Bearer ${this.adminToken}`
+              if (router) {
+                router.replace('/admin/dashboard')
+                setTimeout(() => window.location.reload(), 100)
+              }
               resolve(response.data)
             } else {
               throw new Error('No token received')
@@ -233,22 +236,23 @@ export const useAuthStore = defineStore('auth', {
           .catch((error) => {
             console.error('Login error:', error)
             if (error.response) {
-              // Server responded with error status
               reject(error.response.data.message || 'Login failed')
             } else if (error.request) {
-              // Request was made but no response
               reject('Network error - please check your connection')
             } else {
-              // Other errors
               reject(error.message)
             }
           })
       })
     },
 
-    adminLogout() {
+    adminLogout(router) {
       return api.post('/api/admin/logout').finally(() => {
         this._clearAdminAuth()
+        if (router) {
+          router.replace('/admin/login')
+          setTimeout(() => window.location.reload(), 100)
+        }
       })
     },
 

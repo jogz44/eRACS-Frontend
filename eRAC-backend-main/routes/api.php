@@ -112,4 +112,9 @@ Route::prefix('admin')->group(function () {
         Route::patch('/users/{user}/approve', [AdminAuthController::class, 'approveUser']);
         Route::delete('/users/{user}', [AdminAuthController::class, 'deleteUser']);
     });
+
+    // Admin user access and logs endpoints
+    Route::get('/admin/users', [AdminAuthController::class, 'getUsersWithPermissions']);
+    Route::post('/admin/user-access/{id}', [AdminAuthController::class, 'updateUserPermissions']);
+    Route::get('/admin/logs', [AdminAuthController::class, 'getLogs']);
 });

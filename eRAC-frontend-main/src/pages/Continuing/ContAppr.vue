@@ -1,6 +1,6 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="page-header q-mb-lg">
+  <q-page class="q-pa-lg cont-appr">
+    <div class="page-header q-mb-lg ">
       <div class="text-h5 text-weight-bold">Continuing Appropriation</div>
     </div>
 
@@ -8,6 +8,7 @@
       <div class="row items-center justify-between q-gutter-sm">
         <!-- Search Input -->
         <q-input
+        bg-color="white"
           dense
           outlined
           debounce="300"
@@ -26,6 +27,7 @@
         <div class="row items-center justify-between q-xs">
           <!-- From Date -->
           <q-input
+          bg-color="white"
             outlined
             dense
             v-model="dateFrom"
@@ -47,6 +49,7 @@
 
           <!-- To Date -->
           <q-input
+          bg-color="white"
             outlined
             dense
             v-model="dateTo"
@@ -534,5 +537,9 @@ defineExpose({
 
 .modal-cancel-btn {
   color: #666;
+}
+.cont-appr{
+  background-color: #D9D9D9; /* Light gray background */
+  min-height: 100vh; /* Ensure full height */
 }
 </style>

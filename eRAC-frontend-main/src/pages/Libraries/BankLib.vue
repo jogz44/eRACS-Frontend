@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-lg">
+  <q-page class="q-pa-lg banklib-page">
     <div class="page-header q-mb-lg">
       <div class="text-h5 text-weight-bold">Bank Library</div>
     </div>
@@ -7,6 +7,7 @@
     <div class="q-mb-md">
       <div class="row items-center justify-between q-gutter-sm">
         <q-input
+          bg-color="white"
           outlined
           dense
           placeholder="Search banks..."
@@ -678,4 +679,9 @@ watch(
 )
 // DV Numbers Actions
 </script>
-<style></style>
+<style scoped>
+.banklib-page {
+  background-color: #D9D9D9; /* Light gray background */
+  min-height: 100vh; /* Ensure full height */
+}
+</style>

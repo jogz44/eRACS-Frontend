@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-lg">
+  <q-page class="q-pa-lg augmentation-page">
     <div class="page-header q-mb-lg">
       <div class="text-h5 text-weight-bold">Augmentation Transaction</div>
     </div>
@@ -21,4 +21,9 @@ import AugExpenseSelecDial from '../../components/augmentation/AugExpenseSelecDi
 import AugExpenseDetailDial from '../../components/augmentation/AugExpenseDetailDial.vue'
 </script>
 
-<style scoped></style>
+<style scoped>
+.augmentation-page{
+  background-color: #D9D9D9; /* Light gray background */
+  min-height: 100vh; /* Ensure full height */
+}
+</style>

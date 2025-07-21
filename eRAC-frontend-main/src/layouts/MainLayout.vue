@@ -3,6 +3,17 @@
     <!-- HEADER -->
     <q-header elevated class="custom-header">
       <q-toolbar class="justify-end q-pr-md">
+        <!-- NEW: Hamburger button for drawer, only on mobile -->
+        <q-btn
+        
+          flat
+          round
+          dense
+          icon="menu"
+          class="q-mr-sm"
+          v-if="$q.screen.lt.md"
+          @click="leftDrawerOpen = !leftDrawerOpen"
+        />
         <q-toolbar-title
           v-if="$q.screen.gt.sm"
           class="welcome-title"
@@ -13,8 +24,7 @@
         </q-toolbar-title>
 
         <!-- AVATAR & MENU -->
-
-        <q-btn flat round dense icon="menu">
+        <q-btn flat round dense icon="menu" v-if="$q.screen.gt.sm">
           <q-menu transition-show="jump-down" transition-hide="jump-up">
             <q-list class="q-pa-sm" style="min-width: 180px">
               <q-item class="q-mb-sm" v-if="authStore.user">
@@ -46,14 +56,14 @@
     </q-header>
 
     <!-- DRAWER -->
-   <q-drawer
+<q-drawer
   v-model="leftDrawerOpen"
-  :width="300"
+  :width="$q.screen.lt.md ? 220 : 300"
   :breakpoint="767"
-  show-if-above
+  :show-if-above="$q.screen.gt.sm"
   bordered
   class="custom-card-drawer drawer-fixed"
-  v-if="$q.screen.gt.sm"
+  :class="{ 'drawer-mobile': $q.screen.lt.md }"
 >
   <div class="drawer-content">
     <!-- Logo & Title -->
@@ -62,7 +72,7 @@
         <img
           src="src/assets/tagumlogo.png"
           alt="ERACS Logo"
-          style="width: 80px; height: 75px"
+          style="width: 80px; height: 75px; max-width: 100%; height: auto;"
           class="q-mb-sm"
         />
         <q-item-label class="eracs-title text-center">
@@ -70,7 +80,6 @@
         </q-item-label>
       </q-item>
     </q-list>
-
     <!-- Nav Links - Scrollable if needed -->
     <div class="scroll nav-links q-pa-sm">
       <NavLink
@@ -87,39 +96,34 @@
         @toggle="(childTitle, parentTitle) => toggleExpand(childTitle, parentTitle || link.title)"
       />
     </div>
-
     <!-- Sticky Footer -->
-    <div class="drawer-footer">
+    <div class="drawer-footer q-mt-auto q-pa-xs">
       <div class="text-caption text-grey items-center q-pa-sm footer-avatar">
-<q-list separator>
-  <div class="footer-user row items-center q-gutter-sm q-pa-sm">
-    <!-- Avatar -->
-    <q-avatar size="45px">
-      <img :src="userPhoto" @error="handleImageError" />
-    </q-avatar>
-
-    <!-- Name & Position -->
-    <div class="column">
-      <span class="text-caption text-white text-weight-bold " >
-        {{ authStore.user?.first_name || 'Guest' }}
-        {{ authStore.user?.last_name || ''   }}
-      </span>
-      <span class="text-caption text-black text-weight-medium text-h5"  >
-       {{ authStore.user.position }}
-      </span>
-    </div>
-  </div>
-</q-list>
-
-
-
+        <q-list separator>
+          <div class="footer-user row items-center q-gutter-sm q-pa-sm">
+            <!-- Avatar -->
+            <q-avatar size="$q.screen.lt.md ? '32px' : '45px'">
+              <img :src="userPhoto" @error="handleImageError" style="max-width: 100%; height: auto;" />
+            </q-avatar>
+            <!-- Name & Position -->
+            <div class="column">
+              <span class="text-caption text-white text-weight-bold ">
+                {{ authStore.user?.first_name || 'Guest' }}
+                {{ authStore.user?.last_name || ''   }}
+              </span>
+              <span class="text-caption text-black text-weight-medium text-h5"  >
+               {{ authStore.user.position }}
+              </span>
+            </div>
+          </div>
+        </q-list>
       </div>
     </div>
   </div>
 </q-drawer>
 
     <!-- MAIN CONTENT -->
-    <q-page-container>
+    <q-page-container style="background: #D9D9D9; min-height: 100vh;">
       <SetupDialog v-model="showSetupDialog" />
       <router-view />
     </q-page-container>
@@ -222,7 +226,7 @@ const toggleExpand = (title, parentTitle = null) => {
 .custom-card-drawer {
 
   position: sticky;
-  background: linear-gradient(#E0FFE7, #69B31E,#187C19);
+  background: linear-gradient(#E0FFE7, #589b16,#187C19);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   padding-top: 30px;
   overflow: hidden;
@@ -279,5 +283,43 @@ const toggleExpand = (title, parentTitle = null) => {
   justify-content: end;
   align-items: center;
   padding: 10px;
+}
+@media (max-width: 767px) {
+  .custom-card-drawer {
+    width: 100vw !important;
+    min-width: 0 !important;
+    max-width: 100vw !important;
+    left: 0 !important;
+    border-radius: 0 !important;
+    padding-top: 10px;
+  }
+  .drawer-content {
+    padding: 0 4px;
+  }
+  .drawer-footer {
+    padding-left: 4px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .footer-user {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .eracs-title {
+    font-size: 0.8rem;
+  }
+  .nav-links {
+    margin: 0;
+    padding: 4px;
+  }
+}
+@media (max-width: 500px) {
+  .eracs-title {
+    font-size: 0.7rem;
+  }
+  .custom-header {
+    font-size: 0.9rem;
+    padding: 0 4px;
+  }
 }
 </style>

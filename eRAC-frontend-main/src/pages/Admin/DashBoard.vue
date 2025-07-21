@@ -1,64 +1,59 @@
   <template>
-    <q-layout view="lHh Lpr lFf">
-      <!-- Page Container -->
-      <q-page-container class="container" >
-        <q-page class="q-pa-lg">
-          <!-- Summary Cards -->
-          <div class="row summary-row q-mb-md">
-            <q-card class="col-4 summary-card cursor-pointer" @click="onCardClick('budget')" v-ripple>
-              <div class="card-top-strip"></div>
-              <q-card-section>
-                <q-icon name="account_balance" class="summary-icon" />
-                <div class="summary-text">Total Budget</div>
-                <div class="summary-value">{{ selectedData.budget }}</div>
-              </q-card-section>
-            </q-card>
+    <q-page class="q-pa-lg">
+      <!-- Summary Cards -->
+      <div class="row summary-row q-mb-md dashboard-cards-scroll">
+        <q-card class="col-4 summary-card cursor-pointer" @click="onCardClick('budget')" v-ripple>
+          <div class="card-top-strip"></div>
+          <q-card-section>
+            <q-icon name="account_balance" class="summary-icon" />
+            <div class="summary-text">Total Budget</div>
+            <div class="summary-value">{{ selectedData.budget }}</div>
+          </q-card-section>
+        </q-card>
 
-            <q-card
-              class="col-4 summary-card cursor-pointer"
-              @click="onCardClick('expenses')"
-              v-ripple
-            >
-              <div class="card-top-strip"></div>
-              <q-card-section>
-                <q-icon name="payment" class="summary-icon" />
-                <div class="summary-text">Total Expenses</div>
-                <div class="summary-value">{{ selectedData.expenses }}</div>
-              </q-card-section>
-            </q-card>
+        <q-card
+          class="col-4 summary-card cursor-pointer"
+          @click="onCardClick('expenses')"
+          v-ripple
+        >
+          <div class="card-top-strip"></div>
+          <q-card-section>
+            <q-icon name="payment" class="summary-icon" />
+            <div class="summary-text">Total Expenses</div>
+            <div class="summary-value">{{ selectedData.expenses }}</div>
+          </q-card-section>
+        </q-card>
 
-            <q-card
-              class="col-4 summary-card cursor-pointer"
-              @click="onCardClick('balance')"
-              v-ripple
-            >
-              <div class="card-top-strip"></div>
-              <q-card-section>
-                <q-icon name="balance" class="summary-icon" />
-                <div class="summary-text">Total Balance</div>
-                <div class="summary-value">{{ selectedData.balance }}</div>
-              </q-card-section>
-            </q-card>
-          </div>
-          <!-- Barangay Summary Table -->
-          <q-card>
-            <q-card-section>
-              <div class="text-h6">Barangay Summary</div>
-              <q-table
-                flat
-                bordered
-                :rows="barangaySummary"
-                :columns="summaryColumns"
-                row-key="barangay"
-                :pagination="{ rowsPerPage: 0 }"
-                class="my-sticky-header-table"
-                @row-click="onBarangayClick"
-              />
-            </q-card-section>
-          </q-card>
-        </q-page>
-      </q-page-container>
-    </q-layout>
+        <q-card
+          class="col-4 summary-card cursor-pointer"
+          @click="onCardClick('balance')"
+          v-ripple
+        >
+          <div class="card-top-strip"></div>
+          <q-card-section>
+            <q-icon name="balance" class="summary-icon" />
+            <div class="summary-text">Total Balance</div>
+            <div class="summary-value">{{ selectedData.balance }}</div>
+          </q-card-section>
+        </q-card>
+      </div>
+      <!-- Barangay Summary Table -->
+      <q-card>
+        <q-card-section>
+          <div class="text-h6">Barangay Summary</div>
+          <q-table
+            flat
+            bordered
+            :rows="barangaySummary"
+            :columns="summaryColumns"
+            row-key="barangay"
+            :pagination="{ rowsPerPage: 0 }"
+            class="my-sticky-header-table"
+            @row-click="onBarangayClick"
+          />
+        </q-card-section>
+      </q-card>
+    </q-page>
   </template>
 
   <script>
@@ -208,5 +203,20 @@
   }
 .container{
   background-color: #D9D9D9;
+}
+.dashboard-cards-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 767px) {
+  .summary-row.dashboard-cards-scroll {
+    flex-wrap: nowrap !important;
+    gap: 16px;
+  }
+  .summary-card {
+    min-width: 280px !important;
+    max-width: 90vw;
+    flex: 0 0 auto !important;
+  }
 }
   </style>

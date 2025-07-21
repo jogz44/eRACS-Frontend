@@ -5,7 +5,7 @@
       <q-card-section>
         <!-- Search Bar Only -->
         <div class="row q-mb-md">
-          <q-input dense outlined v-model="search" placeholder="Search..." class="search-input">
+          <q-input dense outlined bg-color="white" v-model="search" placeholder="Search..." class="search-input">
             <template v-slot:append>
               <q-icon name="search" />
             </template>
