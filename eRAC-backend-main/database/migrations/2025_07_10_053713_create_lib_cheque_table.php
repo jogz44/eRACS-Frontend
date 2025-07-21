@@ -9,20 +9,20 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
-    {
-        Schema::create('lib_cheque', function (Blueprint $table) {
-            $table->id();
+    // public function up(): void
+    // {
+    //     Schema::create('lib_cheque', function (Blueprint $table) {
+    //         $table->id();
 
-            $table->foreignId('booklet_id')->constrained('lib_booklet')->onDelete('cascade');
+    //         $table->foreignId('booklet_id')->constrained('lib_booklet')->onDelete('cascade');
 
-            $table->string('cheque_number');
+    //         $table->string('cheque_number');
 
-            $table->enum('status', ['unused', 'issued', 'void'])->default('unused');
+    //         $table->enum('status', ['unused', 'issued', 'void'])->default('unused');
 
-            $table->timestamps();
-        });
-    }
+    //         $table->timestamps();
+    //     });
+    // }
 
     /**
      * Reverse the migrations.

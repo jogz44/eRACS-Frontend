@@ -16,7 +16,7 @@
     </q-card-section>
 
     <!-- Horizontal Stepper -->
-    <q-stepper v-model="step" color="green" >
+    <q-stepper v-model="step" color="green" keep-alive>
       <!-- Step 1: Personal Information -->
       <q-step :name="1" title="Personal Info" icon="person" :done="step > 1">
         <div class="row q-col-gutter-md">
@@ -108,7 +108,7 @@
                   <div class="col">
                     <div class="q-uploader__title">Upload Photo</div>
                     <div class="q-uploader__subtitle">
-                      {{ scope.uploadSizeLabel }} / {{ scope.uploadProgressLabel }}
+                      {{ scope.uploadSizeLabel }} / {{ '2MB' }}
                     </div>
                   </div>
                   <div class="row items-center q-gutter-sm q-ml-md">

@@ -89,15 +89,21 @@ Route::prefix('barangay')->group(function () {
      Route::get('budgets', [AppropriationController::class, 'index']);
     // Add this above your existing budget routes
     Route::post('budgets/create', [AppropriationController::class, 'storeBudget']);
+    // Dashboard summary endpoint
+    Route::get('dashboard/summary', [AppropriationController::class, 'getDashboardSummary']);
     // Expense hierarchy
     Route::get('expense-hierarchy', [AppropriationController::class, 'getExpenseHierarchy']);
     // Allocation endpoints
     Route::get('budgets/{budget}/allocations', [AppropriationController::class, 'getBudgetAllocations']);
     Route::post('budgets/{budget}/allocate', [AppropriationController::class, 'saveAllocation']);
     Route::get('budgets/{id}/history', [AppropriationController::class, 'getAllocationHistory']);
-});
-});
+    Route::patch('budgets/{budget}/allocations', [\App\Http\Controllers\Transaction\AppropriationController::class, 'updateAllocations']);
 
+    
+});
+});
+// Recent Liquidated Disbursements
+Route::get('/disbursements/recent-liquidated', [\App\Http\Controllers\DisbursementController::class, 'recentLiquidated']);
 
 Route::prefix('admin')->group(function () {
     Route::post('/login', [AdminAuthController::class, 'login']);
