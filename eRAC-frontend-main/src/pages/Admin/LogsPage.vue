@@ -24,7 +24,7 @@
           <!-- Custom Date Formatting -->
           <template v-slot:body-cell-date="props">
             <q-td :props="props">
-              {{ formatDate(props.row.date) }}
+              {{ formatDate(props.row.created_at) }}
             </q-td>
           </template>
         </q-table>
@@ -34,24 +34,13 @@
 </template>
 
 <script>
+import { api } from 'boot/axios'
 export default {
   name: 'LogsPage',
   data() {
     return {
       search: '',
       logs: [
-        {
-          id: 1,
-          fullname: 'John Doe',
-          date: '02/27/25',
-          activity: 'Accessed Appropriation',
-        },
-        {
-          id: 2,
-          fullname: 'John Doe',
-          date: '02/25/25',
-          activity: 'Accessed Augmentation',
-        },
       ],
       columns: [
         { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
@@ -72,10 +61,33 @@ export default {
       )
     },
   },
+  async mounted() {
+    await this.loadLogs()
+  },
   methods: {
+    async loadLogs() {
+      this.loading = true
+      try {
+        const response = await api.get('/api/admin/admin/logs')
+        this.logs = response.data
+      } catch (error) {
+        console.error('Error loading logs:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: 'Failed to load logs',
+          position: 'top',
+        })
+      } finally {
+        this.loading = false
+      }
+    },
     formatDate(dateString) {
       // Implement your date formatting logic here
       return dateString // Return formatted date
+    },
+    openViewModal(row) {
+      this.viewModal.selectedRow = row
+      this.viewModal.show = true
     },
   },
 }

@@ -103,6 +103,8 @@ public function login(Request $request)
             'message' => 'Your account is pending approval. Please contact the administrator.'
         ], 403);
     }
+    
+    AdminAuthController::logUserAction($user, 'Login','Login to system');
 
     // CREATE SANCTUM TOKEN
     $token = $user->createToken('barangay_token')->plainTextToken;
