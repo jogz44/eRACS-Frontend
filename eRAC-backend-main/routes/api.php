@@ -112,6 +112,9 @@ Route::prefix('admin')->group(function () {
         Route::get('/users/accepted', [AdminAuthController::class, 'getAcceptedUsers']);
         Route::patch('/users/{user}/approve', [AdminAuthController::class, 'approveUser']);
         Route::delete('/users/{user}', [AdminAuthController::class, 'deleteUser']);
+
+        // Dashboard Routes
+        Route::get('/per-barangay-budgets',[AdminAuthController::class, 'getPerBarangaysBudgets']);
     });
 
     // Admin user access and logs endpoints
