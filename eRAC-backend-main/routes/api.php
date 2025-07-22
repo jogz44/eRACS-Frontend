@@ -119,7 +119,9 @@ Route::prefix('admin')->group(function () {
         Route::patch('/users/{user}/approve', [AdminAuthController::class, 'approveUser']);
         Route::delete('/users/{user}', [AdminAuthController::class, 'deleteUser']);
 
-        // Dashboard Routes
+
+        // Dashboard Routes upadtaed
+        // updated
         Route::get('/per-barangay-budgets',[AdminAuthController::class, 'getPerBarangaysBudgets']);
     });
 

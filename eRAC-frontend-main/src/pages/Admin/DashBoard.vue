@@ -39,8 +39,9 @@
       </div>
       <!-- Barangay Summary Table -->
       <q-card>
+        
         <q-card-section>
-          <div class="text-h6">Barangay Summary</div>
+          <div class="text-h6 q-mb-sm">Barangay Summary</div>
           <q-table
             virtual-scroll
             flat
@@ -48,7 +49,7 @@
             wrap-cells
             :rows="barangaySummary"
             :columns="summaryColumns"
-            row-key="barangay"
+            row-key="barangay_name"
             :pagination="{ rowsPerPage: 0 }"
             class="my-sticky-header-table"
             @row-click="onBarangayClick"
@@ -59,72 +60,84 @@
     </q-page>
   </template>
 
-  <script>
-  export default {
-    data() {
-      return {
-        selectedData: {
-          expenses: '39,000,000,000.00',
-          budget: '39,000,000,000.00',
-          balance: '39,000,000,000.00',
-        },
+<script>
+import { api } from 'boot/axios'
 
-        summaryColumns: [
-          { name: 'barangay', label: 'Barangay', align: 'left', field: 'barangay' },
-          { name: 'budget', label: 'Total Budget', align: 'left', field: 'appropriation' },
-          { name: 'appropriation', label: 'Total Expenses', align: 'right', field: 'appropriation' },
-          { name: 'balance', label: 'Total Balance', align: 'right', field: 'balance' },
-        ],
+export default {
+  data() {
+    return {
+      selectedData: {
+        expenses: '39,000,000,000.00',
+        budget: '39,000,000,000.00',
+        balance: '39,000,000,000.00',
+      },
 
-        barangaySummary: [
-          { barangay: 'Apokon', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'Bincungan', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'Busaon', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'Canocotan', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'Cuambogan', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'La Filipina', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'Liboganon', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'Madaum', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'Magugpo Pobledon', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'Magugpo East', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'Magugpo North', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'Magugpo Poblacion', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'Magugpo South', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'Magugpo West', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'Mankilam', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'New Balamban', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'Nueva Fuerza', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'Pagsabangan', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'Pandapan', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'San Agustin', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'San Isidro', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'San Miguel (Camp 4)', appropriation: '28,000.00', balance: '28,000.00' },
-          { barangay: 'Visayan Village', appropriation: '28,000.00', balance: '28,000.00' },
-        ],
+      summaryColumns: [
+        { name: 'barangay', label: 'Barangay', align: 'left', field: 'barangay' },
+        { name: 'budget', label: 'Total Budget', align: 'right', field: 'budget' },
+        { name: 'appropriation', label: 'Total Expenses', align: 'right', field: 'appropriation' },
+        { name: 'balance', label: 'Total Balance', align: 'right', field: 'balance' },
+      ],
+
+      barangaySummary: [] // initially empty, will be filled by API
+    }
+  },
+
+  mounted() {
+    this.fetchBarangaySummary()
+  },
+
+  methods: {
+    async fetchBarangaySummary() {
+      try {
+        const response = await api.get('/api/admin/per-barangay-budgets')
+        console.log('API response:', response.data)
+        this.barangaySummary = response.data.map((b) => {
+          // Fallback to 0 if empty string or invalid
+          const totalBudget = parseFloat(b.total_original_amount || '0') || 0
+          const balance = parseFloat(b.total_current_amount || '0') || 0
+          const totalExpenses = totalBudget - balance
+
+          return {
+            barangay: b.barangay_name || 'Unknown',
+            budget: totalBudget.toLocaleString(undefined, { minimumFractionDigits: 2 }),
+            appropriation: totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2 }),
+            balance: balance.toLocaleString(undefined, { minimumFractionDigits: 2 }),
+          }
+        })
+      } catch (error) {
+        console.error('API error:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: `Failed to load barangays list: ${error.message}`,
+          position: 'top',
+        })
       }
     },
-    methods: {
-      onCardClick(type) {
-        this.$q.notify({
-          message: `You clicked on ${type.toUpperCase()}`,
-          color: 'green-4',
-          textColor: 'white',
-          icon: 'info',
-          position: 'top-right',
-        })
-      },
-      onBarangayClick(row) {
-        this.$q.notify({
-          message: `You clicked on Barangay: ${row.barangay}`,
-          color: 'primary',
-          textColor: 'white',
-          icon: 'location_on',
-          position: 'top-right',
-        })
-      },
+
+    onCardClick(type) {
+      this.$q.notify({
+        message: `You clicked on ${type.toUpperCase()}`,
+        color: 'green-4',
+        textColor: 'white',
+        icon: 'info',
+        position: 'top-right',
+      })
+    },
+
+    onBarangayClick(row) {
+      this.$q.notify({
+        message: `You clicked on Barangay: ${row.barangay}`,
+        color: 'primary',
+        textColor: 'white',
+        icon: 'location_on',
+        position: 'top-right',
+      })
     },
   }
-  </script>
+}
+</script>
+
 
   <style scoped>
   .summary-card {
