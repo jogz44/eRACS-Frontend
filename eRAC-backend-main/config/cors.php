@@ -3,7 +3,7 @@
 return [
     'paths' => ['api/*', 'sanctum/csrf-cookie', 'upload-photo'],
     'allowed_methods' => ['*'],
-    'allowed_origins' => ['http://localhost:9000'], // Your frontend URL
+    'allowed_origins' => ['*'], // Allow all origins for development
     'allowed_origins_patterns' => [],
     'allowed_headers' => ['*'],
     'exposed_headers' => [],

@@ -152,7 +152,7 @@ export const useAuthStore = defineStore('auth', {
       } catch (error) {
         $q.notify({
           type: 'negative',
-          message: error.response?.data?.message || 'Login failed',
+          message: error.notify?.data?.message || 'Login Failed',
           position: 'top',
         })
         return false

@@ -5,7 +5,7 @@
       <q-toolbar class="justify-end q-pr-md">
         <!-- NEW: Hamburger button for drawer, only on mobile -->
         <q-btn
-        
+
           flat
           round
           dense
@@ -75,7 +75,7 @@
           style="width: 80px; height: 75px; max-width: 100%; height: auto;"
           class="q-mb-sm"
         />
-        <q-item-label class="eracs-title text-center">
+        <q-item-label class="eracs-title text-center" style="font-size: medium;color: black;">
           Electronic Registry of Appropriation and Commitment (eRAC)
         </q-item-label>
       </q-item>
@@ -316,6 +316,7 @@ const toggleExpand = (title, parentTitle = null) => {
 @media (max-width: 500px) {
   .eracs-title {
     font-size: 0.7rem;
+
   }
   .custom-header {
     font-size: 0.9rem;
