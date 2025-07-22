@@ -168,4 +168,21 @@ class AdminAuthController extends Controller  // <-- This is crucial
             'updated_at' => now(),
         ]);
     }
+    public static function getPerBarangaysBudgets()
+    {
+        $data = DB::table('barangays')
+            ->leftJoin('budgets', 'barangays.id', '=', 'budgets.barangay_id')
+            ->select(
+                'barangays.id',
+                'barangays.name as barangay_name',
+                DB::raw('COALESCE(SUM(budgets.original_amount), 0) as total_original_amount'),
+                DB::raw('COALESCE(SUM(budgets.current_amount), 0) as total_current_amount'),
+                DB::raw('COUNT(budgets.id) as total_budget_entries')
+            )
+            ->groupBy('barangays.id', 'barangays.name')
+            ->orderBy('barangay_name', 'asc')
+            ->get();
+
+        return response()->json($data);
+    }
 }

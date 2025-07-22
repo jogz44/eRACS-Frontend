@@ -16,6 +16,11 @@ use Illuminate\Validation\Rule;
     {
     public function index(Request $request)
     {
+        // Log user activity
+        if ($request->user()) {
+            AdminAuthController::logUserAction($request->user(),'Visited Appropriation Page' ,'Visited Appropriation Page');
+        }
+      
         $request->validate([
             'year' => 'nullable|integer',
             'status' => 'nullable|in:draft,committed,reverted',
