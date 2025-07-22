@@ -209,23 +209,20 @@
                   >
                     <div class="col-6" style="padding-left: 24px; display: flex; align-items: center">
                       <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
-                      {{ expenseType.name }}
+                      <q-btn
+                        dense
+                        flat
+                        :icon="expandedEditTypes[expenseType.id] ? 'expand_more' : 'chevron_right'"
+                        @click="toggleEditType(expenseType.id)"
+                        class="q-mr-sm"
+                      />
+                      <span>{{ expenseType.name }}</span>
                     </div>
                     <div class="col-6 text-right">
-                      <!-- Only show editable input if there are no children (i.e., this is a leaf node/item) -->
-                      <template v-if="!expenseType.children || expenseType.children.length === 0">
-                        <q-input
-                          v-model.number="expenseType.amount"
-                          type="number"
-                          dense
-                          min="0"
-                          style="width: 100px"
-                        />
-                      </template>
+                      <strong>{{ appropriationStore.formatCurrency(calculateTypeTotal(expenseType)) }}</strong>
                     </div>
                   </div>
-                  <!-- Expense Item Rows -->
-                  <template v-if="expenseType.children && expenseType.children.length > 0">
+                  <template v-if="expandedEditTypes[expenseType.id] && expenseType.children && expenseType.children.length > 0">
                     <template v-for="expenseItem in expenseType.children" :key="'item-' + expenseItem.id">
                       <div
                         class="row"
@@ -284,6 +281,7 @@ const loading = ref(false)
 
 const showEditAllocationDialog = ref(false)
 const editAllocations = ref([])
+const expandedEditTypes = ref({})
 
 const editDisplayAccounts = computed(() => {
   if (!editAllocations.value || editAllocations.value.length === 0) return []
@@ -338,8 +336,43 @@ const editDisplayAccounts = computed(() => {
       })
     }
   })
-  return Object.values(classMap)
+  // Sort classes, types, and items by id to keep order static
+  const classArr = Object.values(classMap)
+  classArr.forEach(cls => {
+    cls.children.sort((a, b) => a.id - b.id)
+    cls.children.forEach(type => {
+      if (type.children) {
+        type.children.sort((a, b) => a.id - b.id)
+      }
+    })
+  })
+  return classArr
 })
+
+// Expand all types by default when editDisplayAccounts changes
+watch(
+  () => editDisplayAccounts.value,
+  (newVal) => {
+    if (Array.isArray(newVal)) {
+      const expanded = {}
+      newVal.forEach((expenseClass) => {
+        if (expenseClass && Array.isArray(expenseClass.children)) {
+          expenseClass.children.forEach((expenseType) => {
+            if (expenseType && expenseType.id) {
+              expanded[expenseType.id] = true
+            }
+          })
+        }
+      })
+      expandedEditTypes.value = expanded
+    }
+  },
+  { immediate: true }
+)
+
+const toggleEditType = (typeId) => {
+  expandedEditTypes.value[typeId] = !expandedEditTypes.value[typeId]
+}
 
 const openAllocationDialog = async (row) => {
   await appropriationStore.openAllocationDialog(row)
@@ -381,6 +414,7 @@ const openEditAllocationDialog = async (row) => {
     // Use the most recent allocation set for editing
     const latestAllocations = allHistory.length > 0 ? allHistory[0].allocations : []
     editAllocations.value = JSON.parse(JSON.stringify(latestAllocations))
+    appropriationStore.selectedRow = row; // <-- Fix: set selectedRow for save
     showEditAllocationDialog.value = true
   } catch (error) {
     console.error('Failed to load allocation details for editing:', error)
@@ -388,6 +422,7 @@ const openEditAllocationDialog = async (row) => {
       type: 'negative',
       message: 'Failed to load allocation details for editing',
       icon: 'error',
+      position: 'top',
     })
   }
 }
@@ -423,6 +458,7 @@ const saveBudget = async () => {
       type: 'positive',
       message: 'Budget added successfully!',
       icon: 'check_circle',
+      position: 'top',
     })
 
     // Reset form
@@ -438,6 +474,7 @@ const saveBudget = async () => {
       type: 'negative',
       message: error.response?.data?.message || 'Failed to save budget',
       icon: 'error',
+      position: 'top',
     })
   } finally {
     loading.value = false
@@ -470,6 +507,7 @@ const saveEditedAllocation = async () => {
       type: 'positive',
       message: 'Allocations updated',
       icon: 'check_circle',
+      position: 'top',
     })
     await appropriationStore.fetchBudgets()
   } catch (error) {
@@ -477,6 +515,7 @@ const saveEditedAllocation = async () => {
       type: 'negative',
       message: error.message || 'Failed to update allocations',
       icon: 'error',
+      position: 'top',
     })
     console.error(error)
   }
@@ -495,6 +534,7 @@ onMounted(async () => {
       type: 'negative',
       message: error.response?.data?.message || 'Failed to load budgets',
       icon: 'error',
+      position: 'top',
     })
   }
 })
@@ -562,6 +602,11 @@ const openDialog = async () => {
   } catch (error) {
     console.error('Error loading fiscal years:', error)
   }
+}
+
+const calculateTypeTotal = (type) => {
+  if (!type || !type.children) return 0
+  return type.children.reduce((sum, item) => sum + item.amount, 0)
 }
 </script>
 

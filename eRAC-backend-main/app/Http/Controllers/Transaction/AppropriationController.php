@@ -399,7 +399,7 @@ public function saveAllocation(Request $request, Budget $budget)
             $budget->save();
             return response()->json(['status' => true, 'message' => 'Allocations updated', 'budget' => $budget]);
         });
-    }
+        }
 
     // Add this method to your AppropriationController
     public function getDashboardSummary(Request $request)
