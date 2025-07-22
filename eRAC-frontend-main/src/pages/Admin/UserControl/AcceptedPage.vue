@@ -3,7 +3,7 @@
     <div class="page-header q-mb-lg">
       <div class="row items-center justify-between">
         <div class="text-h5 text-weight-bold">
-          User Control Accepted 
+          User Control Accepted
           <span class="text-caption q-ml-sm">({{ users.length }} users)</span>
         </div>
         <q-btn
@@ -116,14 +116,14 @@
               <strong>Approved Date:<br /></strong> {{ viewModal.selectedRow?.created_at }}
             </div>
             <div class="q-mt-md"><strong>Picture:</strong></div>
-            <div class="q-mt-sm flex flex-left">
+            <!-- <div class="q-mt-sm flex flex-left">
               <q-img
                 :src="viewModal.selectedRow?.avatar || 'https://www.w3schools.com/w3images/avatar2.png'"
                 style="max-width: 200px; border-radius: 8px"
                 spinner-color="grey-5"
                 contain
               />
-            </div>
+            </div> -->
           </q-card-section>
 
           <q-card-actions align="right" class="q-pb-md q-pr-md">
@@ -154,6 +154,15 @@ export default {
         show: false,
         selectedRow: null,
       },
+      columns: [
+
+        { name: 'name', label: 'NAME', field: 'name', align: 'left' },
+        { name: 'barangay', label: 'BARANGAY', field: 'barangay', align: 'left' },
+        { name: 'position', label: 'POSITION', field: 'position', align: 'left' },
+        { name: 'username', label: 'USERNAME', field: 'username', align: 'left' },
+        { name: 'email', label: 'EMAIL', field: 'email', align: 'left' },
+        { name: 'action', label: '', field: 'action', align: 'center' },
+      ],
     }
   },
   computed: {
@@ -167,7 +176,17 @@ export default {
     },
   },
   async mounted() {
-    await this.loadAcceptedUsers()
+    // Try to load from localStorage first
+    const cached = localStorage.getItem('acceptedUsers');
+    if (cached) {
+      try {
+        this.users = JSON.parse(cached);
+      } catch {
+        this.users = [];
+      }
+    }
+    // Always fetch latest from API
+    await this.loadAcceptedUsers();
   },
   activated() {
     // Check if there was a recent user acceptance action
@@ -184,13 +203,9 @@ export default {
       try {
         const response = await api.get('/api/admin/users/accepted')
         this.users = response.data
-      } catch (error) {
-        console.error('Error loading accepted users:', error)
-        this.$q.notify({
-          type: 'negative',
-          message: 'Failed to load accepted users',
-          position: 'top',
-        })
+        // Persist to localStorage
+        localStorage.setItem('acceptedUsers', JSON.stringify(this.users));
+
       } finally {
         this.loading = false
       }
@@ -203,12 +218,12 @@ export default {
       this.deleteModal.loading = true
       try {
         await api.delete(`/api/admin/users/${this.deleteModal.selectedRow.id}`)
-        
         // Remove from local array
         this.users = this.users.filter(
           (user) => user.id !== this.deleteModal.selectedRow.id,
         )
-
+        // Update localStorage
+        localStorage.setItem('acceptedUsers', JSON.stringify(this.users));
         this.$q.notify({
           type: 'positive',
           message: 'User deleted successfully',

@@ -2,8 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -13,11 +11,23 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        $this->call([
+            BarangaySeeder::class,
+            BarangayUserSeeder::class,
+            LibFiscalYearSeeder::class,
+            LibExpenseClassSeeder::class,
+            LibExpenseTypeSeeder::class,
+            LibExpenseItemSeeder::class,
+            BudgetSeeder::class,
+            TranAppropriationSeeder::class,
+            DisbursementSeeder::class,
         ]);
+
+        // Recalculate current_amount for all budgets
+        \App\Models\Budget::all()->each(function($budget) {
+            $itemAllocated = $budget->tranAppropriations()->whereNotNull('expense_item_id')->sum('amount');
+            $budget->current_amount = $budget->original_amount - $itemAllocated;
+            $budget->save();
+        });
     }
 }

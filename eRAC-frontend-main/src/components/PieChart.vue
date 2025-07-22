@@ -1,7 +1,7 @@
 <template>
   <div class="chart-container" style="height: 100%; width: 100%">
     <canvas ref="chartCanvas"></canvas>
-    <div v-if="!chartData.labels.length" class="text-center q-pa-md">No expense data available</div>
+    <div v-if="chartError" class="text-center q-pa-md text-negative">{{ chartError }}</div>
   </div>
 </template>
 
@@ -26,37 +26,57 @@ export default defineComponent({
   },
   setup(props) {
     const chartCanvas = ref(null)
+    const chartError = ref(null)
     let chartInstance = null
 
     const renderChart = () => {
-      if (!chartCanvas.value) {
-        console.warn('Canvas element not available')
-        return
-      }
+      try {
+        if (!chartCanvas.value) {
+          console.warn('Canvas element not available')
+          return
+        }
 
-      // Destroy previous instance if exists
-      if (chartInstance) {
-        chartInstance.destroy()
-      }
+        console.log('Rendering chart with data:', props.chartData)
+        console.log('Chart labels:', props.chartData.labels)
+        console.log('Chart datasets:', props.chartData.datasets)
 
-      // Create new chart instance
-      chartInstance = new Chart(chartCanvas.value, {
-        type: 'pie',
-        data: props.chartData,
-        options: {
-          ...props.options,
-          elements: {
-            arc: {
-              borderWidth: 0,
-              hoverBorderWidth: 2,
-              hoverBorderColor: '#ffffff',
-              hoverOffset: 15,
+        // Validate data
+        if (!props.chartData.labels || !props.chartData.datasets || !props.chartData.datasets[0]) {
+          console.error('Invalid chart data structure')
+          chartError.value = 'Invalid chart data'
+          return
+        }
+
+        // Destroy previous instance if exists
+        if (chartInstance) {
+          chartInstance.destroy()
+        }
+
+        // Create new chart instance
+        chartInstance = new Chart(chartCanvas.value, {
+          type: 'pie',
+          data: props.chartData,
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            ...props.options,
+            elements: {
+              arc: {
+                borderWidth: 0,
+                hoverBorderWidth: 2,
+                hoverBorderColor: '#ffffff',
+                hoverOffset: 15,
+              },
             },
           },
-        },
-      })
+        })
 
-      console.log('Chart rendered with data:', props.chartData)
+        chartError.value = null
+        console.log('Chart rendered successfully with data:', props.chartData)
+      } catch (error) {
+        console.error('Error rendering chart:', error)
+        chartError.value = 'Error rendering chart: ' + error.message
+      }
     }
 
     // Watch for data changes
@@ -77,7 +97,7 @@ export default defineComponent({
       })
     })
 
-    return { chartCanvas }
+    return { chartCanvas, chartError }
   },
 })
 </script>
