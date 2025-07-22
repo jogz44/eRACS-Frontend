@@ -17,7 +17,7 @@ class LibExpenseTypeSeeder extends Seeder
             ['name' => 'Other MOE', 'order' => 0],
             ['name' => 'Furniture and fixture', 'order' => 0],
             ['name' => '70% Pre & Post Disaster Fund', 'order' => 0],
-            ['name' => 'MAintenance of Child Development Center', 'order' => 0],
+            ['name' => 'Maintenance of Child Development Center', 'order' => 0],
             ['name' => 'Honorarium', 'order' => 1],
             ['name' => 'Computer Equipment', 'order' => 1],
             ['name' => 'Building Improvements', 'order' => 2],

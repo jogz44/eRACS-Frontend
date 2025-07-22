@@ -17,7 +17,7 @@ class LibExpenseItemSeeder extends Seeder
             'Other MOE' => ['Miscellaneous', 'Contingency'],
             'Furniture and fixture' => ['Chair', 'Table'],
             '70% Pre & Post Disaster Fund' => ['Relief Goods', 'Evacuation Supplies'],
-            'MAintenance of Child Development Center' => ['Repair', 'Supplies'],
+            'Maintenance of Child Development Center' => ['Repair', 'Supplies'],
             'Honorarium' => ['Monthly Honorarium', 'Quarterly Honorarium'],
             'Computer Equipment' => ['Desktop', 'Printer'],
             'Building Improvements' => ['Roof Repair', 'Painting'],
