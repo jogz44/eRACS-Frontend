@@ -42,14 +42,17 @@
         <q-card-section>
           <div class="text-h6">Barangay Summary</div>
           <q-table
+            virtual-scroll
             flat
             bordered
+            wrap-cells
             :rows="barangaySummary"
             :columns="summaryColumns"
             row-key="barangay"
             :pagination="{ rowsPerPage: 0 }"
             class="my-sticky-header-table"
             @row-click="onBarangayClick"
+            :table-header-style="{ position: 'sticky', top: '0', zIndex: 3, background: 'white' }"
           />
         </q-card-section>
       </q-card>
@@ -128,12 +131,12 @@
     min-height: 120px !important; /* Override any defaults */
     /* align-items: center; */
     justify-content: center;
-  width: 370px;
+    width: 375px;
     display: flex;
     flex-direction: column;
     background: rgba(255, 255, 255, 0.9);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    gap: 100px;
+    gap: 110px;
     border-radius: 12px;
     transition:
       transform 0.3s ease,
@@ -188,15 +191,23 @@
     color: #333;
   }
 
-  .my-sticky-header-table {
-    max-height: 500px;
-  }
-  .my-sticky-header-table thead tr:first-child th {
-    top: 0;
-  }
-  .my-sticky-header-table.q-table--loading thead tr:last-child th {
-    top: 48px;
-  }
+.my-sticky-header-table {
+  max-height: 390px;
+  overflow-y: auto;
+}
+.my-sticky-header-table thead tr {
+  position: sticky;
+  top: 0;
+  background: white; /* Or match your theme */
+  z-index: 2;
+}
+.my-sticky-header-table thead th {
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 3;
+}
+
   .summary-row {
     display: flex;
     gap: 30px; /* Creates space between summary cards */
