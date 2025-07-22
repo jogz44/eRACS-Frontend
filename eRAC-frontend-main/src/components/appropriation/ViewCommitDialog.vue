@@ -191,7 +191,17 @@ const displayAccounts = computed(() => {
     }
   })
 
-  return Object.values(classMap)
+  // Sort classes, types, and items by id to keep order static
+  const classArr = Object.values(classMap)
+  classArr.forEach(cls => {
+    cls.children.sort((a, b) => a.id - b.id)
+    cls.children.forEach(type => {
+      if (type.children) {
+        type.children.sort((a, b) => a.id - b.id)
+      }
+    })
+  })
+  return classArr
 })
 
 // Expand all types by default when displayAccounts changes

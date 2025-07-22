@@ -13,17 +13,22 @@ class LibExpenseClassSeeder extends Seeder
     {
         $barangay = Barangay::first();
         $fiscalYear = LibFiscalYear::first();
-        LibExpenseClass::create([
-            'barangay_id' => $barangay->id,
-            'fiscal_year_id' => $fiscalYear->id,
-            'name' => 'Personnel Services',
-            'order' => 1,
-        ]);
-        LibExpenseClass::create([
-            'barangay_id' => $barangay->id,
-            'fiscal_year_id' => $fiscalYear->id,
-            'name' => 'Maintenance and Other Operating Expenses',
-            'order' => 2,
-        ]);
+        $classes = [
+            ['name' => 'PERSONAL SERVICES', 'order' => 0],
+            ['name' => 'MOOE', 'order' => 1],
+            ['name' => 'LOCALLY FUNDED PROJECTS', 'order' => 2],
+            ['name' => 'CAPITAL OUTLAY', 'order' => 3],
+            ['name' => '5% (BDRRMF)', 'order' => 4],
+            ['name' => '20% Development Fund', 'order' => 5],
+            ['name' => '10% SK FUND', 'order' => 6],
+        ];
+        foreach ($classes as $class) {
+            LibExpenseClass::firstOrCreate([
+                'barangay_id' => $barangay->id,
+                'fiscal_year_id' => $fiscalYear->id,
+                'name' => $class['name'],
+                'order' => $class['order'],
+            ]);
+        }
     }
 } 

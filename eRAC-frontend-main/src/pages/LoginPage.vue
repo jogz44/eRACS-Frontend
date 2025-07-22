@@ -25,6 +25,8 @@
         outlined
         dense
         :prepend-icon="'user'"
+        :error="showValidation && !username"
+        :error-message="showValidation && !username ? 'Username is required' : ''"
       />
 
      <!-- Login Password-->
@@ -38,6 +40,8 @@
         class="q-mt-md"
         prepend-icon="lock"
         @keyup.enter="handleLogin"
+        :error="showValidation && !password"
+        :error-message="showValidation && !password ? 'Password is required' : ''"
       >
         <template #append>
           <q-icon
@@ -47,7 +51,13 @@
           />
         </template>
       </q-input>
-      <div class="text-right text-blue text-caption cursor-pointer q-mt-sm" @click="goToForgotPassword">Forgot password?</div>
+      <div class="forgot-pass" style="display: flex;">
+
+ <div class=" text-caption m">
+        <span class="text-right text-blue cursor-pointer "  @click="goToForgotPassword">Forgot password?</span></div>
+
+      </div>
+
       <q-btn
         label="Sign In"
         color="green"
@@ -82,20 +92,30 @@ import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'stores/auth'
 
+
 const router = useRouter()
 const authStore = useAuthStore()
 const $q = useQuasar()
+
 
 const username = ref('')
 const password = ref('')
 const isLoading = ref(false)
 const isPasswordVisible = ref(false)
-const handleLogin = async () => {
-  isLoading.value = true
-  await authStore.login(username.value, password.value, $q, router) // No success check needed
+const showValidation = ref(false)
 
+const handleLogin = async () => {
+  showValidation.value = true
+  if (!username.value || !password.value) {
+    return
+  }
+  isLoading.value = true
+  await authStore.login(username.value, password.value, $q, router)
   isLoading.value = false
 }
+
+
+
 const goToForgotPassword = () => router.push('/forgotpage')
 const goToSignUp = () => router.push('/signup')
 const goToAdmin = () => router.push('/admin/login')
@@ -104,7 +124,7 @@ const goToAdmin = () => router.push('/admin/login')
 <style scoped>
 .login-card {
   width: 400px;
-  padding: 20px;
+  padding: 5px;
   border-radius: 10px;
   background: rgba(255, 255, 255);
   position: relative;
@@ -114,5 +134,12 @@ const goToAdmin = () => router.push('/admin/login')
 .no-footer-bg {
   background-color: transparent !important;
   box-shadow: none !important;
+}.forgot-pass{
+  position: sticky;
+  justify-content: right;
+  margin-left:auto;
+  text-align: right;
+
+
 }
 </style>

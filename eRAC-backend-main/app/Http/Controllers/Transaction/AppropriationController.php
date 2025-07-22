@@ -16,6 +16,11 @@ use Illuminate\Validation\Rule;
     {
     public function index(Request $request)
     {
+        // Log user activity
+        if ($request->user()) {
+            AdminAuthController::logUserAction($request->user(),'Visited Appropriation Page' ,'Visited Appropriation Page');
+        }
+      
         $request->validate([
             'year' => 'nullable|integer',
             'status' => 'nullable|in:draft,committed,reverted',
@@ -378,6 +383,15 @@ public function saveAllocation(Request $request, Budget $budget)
 
         $budget = \App\Models\Budget::findOrFail($budgetId);
 
+        // Prevent over-allocation
+        $totalAllocated = array_sum(array_column($validated['allocations'], 'amount'));
+        if ($totalAllocated > $budget->original_amount) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Allocation exceeds the available budget. Please adjust your amounts.'
+            ], 422);
+        }
+
         return DB::transaction(function () use ($validated, $budget) {
             // Delete all old item-level appropriations for this budget
             $budget->tranAppropriations()->whereNotNull('expense_item_id')->delete();
@@ -399,7 +413,7 @@ public function saveAllocation(Request $request, Budget $budget)
             $budget->save();
             return response()->json(['status' => true, 'message' => 'Allocations updated', 'budget' => $budget]);
         });
-    }
+        }
 
     // Add this method to your AppropriationController
     public function getDashboardSummary(Request $request)

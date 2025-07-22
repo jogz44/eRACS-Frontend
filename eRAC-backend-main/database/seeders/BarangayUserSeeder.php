@@ -11,20 +11,23 @@ class BarangayUserSeeder extends Seeder
 {
     public function run()
     {
-        $barangay = Barangay::first();
-        BarangayUser::create([
-            'first_name' => 'Juan',
-            'middle_name' => 'D.',
-            'last_name' => 'Cruz',
-            'barangay_id' => $barangay->id,
-            'position' => 'Barangay Captain',
-            'suffix' => null,
-            'photo_path' => null,
-            'email' => 'juan.cruz@example.com',
-            'username' => 'juancruz',
-            'password' => Hash::make('password123'),
-            'role' => 'admin',
-            'is_approved' => true,
-        ]);
+        $barangays = Barangay::all();
+        foreach ($barangays as $barangay) {
+            BarangayUser::firstOrCreate([
+                'username' => strtolower(str_replace(' ', '', $barangay->name)),
+            ], [
+                'first_name' => 'Reidh',
+                'middle_name' => 'D.',
+                'last_name' => 'Maze',
+                'barangay_id' => $barangay->id,
+                'position' => 'Barangay Captain',
+                'suffix' => null,
+                'photo_path' => 'profile-photos/rSYrsbZu3GvqESHS1ixYubhgnoAd1IQSguFEikge.png',
+                'email' => strtolower(str_replace(' ', '', $barangay->name)) . '@example.com',
+                'password' => Hash::make('password123'),
+                'role' => 'barangay_user',
+                'is_approved' => true,
+            ]);
+        }
     }
 } 

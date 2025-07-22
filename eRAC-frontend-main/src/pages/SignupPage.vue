@@ -3,16 +3,12 @@
 
   <q-card class="signup-card">
     <!-- Logo Container -->
-    <div class="logo-container">
-      <q-img src="src/assets/tagumlogo.png" class="logo" contain spinner-color="white" />
-    </div>
 
     <!-- Header Section -->
-    <q-card-section class="text-center header-section">
-      <div class="text-h6 text-green-8 text-bold">City Accounting Office</div>
-      <div class="text-caption text-gray" style="font-style: oblique">
-        Electronic Registry of Appropriation and Commitment System (eRACS)
-      </div>
+    <q-card-section class="text-center header-section" style="">
+    <div></div>
+      <div class="text-h6 text-green-8 text-bold text-gray">Create an Account</div>
+
     </q-card-section>
 
     <!-- Horizontal Stepper -->
@@ -549,23 +545,25 @@ export default {
 
 <style scoped>
 .signup-card {
-  width: 600px;
-  padding: 30px;
+  width: 700px;
+
   border-radius: 10px;
   background: rgba(255, 255, 255);
   position: relative;
   box-shadow: 0 4px 8px rgb(38, 121, 0);
-  margin-top: 110px;
+  margin-top: 10px;
   margin-bottom: 20px;
 }
 
 .header-section {
-  margin-top: 30px;
-  margin-bottom: 20px;
+  margin-top: 60px;
+
 }
 
 .text-gray {
   color: #666;
+
+
 }
 
 /* Custom stepper styles */
@@ -604,6 +602,11 @@ export default {
 .no-scroll-page {
   overflow: hidden; /* Prevent scrolling */
   height: 100v;
+}.logo-container{
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+  size: 10in;
 }
 
 
