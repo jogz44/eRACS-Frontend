@@ -2,16 +2,17 @@
   <q-layout view="lHh Lpr lFf">
     <!-- HEADER (unchanged) -->
     <q-header elevated class="custom-header">
-      <q-toolbar class="justify-between" style="padding: 0 20px">
+      <q-toolbar class="justify-between toolbar" style="padding: 0 20px">
         <q-toolbar-title
           v-if="$q.screen.gt.sm"
           class="title"
-          style="color: rgba(0, 0, 0, 0.7); font-weight: bold"
+          style="color: white; font-weight: bold"
+
         >
           Welcome, {{ authStore.admin?.name || 'Admin' }}
         </q-toolbar-title>
         <q-space />
-        <q-btn flat round dense icon="menu" class="q-mr-sm" style="color: black">
+        <q-btn flat round dense icon="menu" class="q-mr-sm" style="color: white">
           <q-menu transition-show="jump-down" transition-hide="jump-up">
             <q-list class="q-pa-sm" style="min-width: 180px">
               <q-item class="q-mb-sm" clickable v-ripple>
@@ -33,7 +34,8 @@
           </q-menu>
         </q-btn>
       </q-toolbar>
-    </q-header>
+    </q-header >
+
     <!-- DRAWER (match MainLayout.vue) -->
     <q-drawer
       v-model="leftDrawerOpen"
@@ -54,7 +56,7 @@
               style="width: 80px; height: 75px; max-width: 100%; height: auto;"
               class="q-mb-sm"
             />
-            <q-item-label class="eracs-title text-center">
+            <q-item-label class="eracs-title text-center" style="font-size: medium;">
               Electronic Registry of Appropriation and Commitment (eRAC)
             </q-item-label>
           </q-item>
@@ -75,14 +77,14 @@
             <q-list separator>
               <div class="footer-user row items-center q-gutter-sm q-pa-sm">
                 <!-- Avatar -->
-                <q-avatar size="$q.screen.lt.md ? '32px' : '45px'">
-                  <q-icon name="settings" />
+                <q-avatar  size="$q.screen.lt.md ? '32px' : '45px'">
+                  <img   src="src/assets/admin.png"/>
                 </q-avatar>
                 <!-- Name & Position -->
                 <div class="column">
                   <span class="text-caption text-white text-weight-bold ">
                     User
-                   
+
                   </span>
                   <span class="text-caption text-black text-weight-medium text-h5"  >
                    ADMIN
@@ -107,6 +109,7 @@ import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'stores/auth'
 import NavLink from 'components/Nav/NavLink.vue'
+import { api } from 'boot/axios'
 
 const $q = useQuasar()
 const router = useRouter()
@@ -163,6 +166,16 @@ const handleLogout = async () => {
 
 // Redirect to login if not authenticated
 onMounted(() => {
+  // Restore admin token and set Authorization header if present
+  if (!authStore.adminToken) {
+    const token = localStorage.getItem('admin_token');
+    if (token) {
+      authStore.adminToken = token;
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+  } else {
+    api.defaults.headers.common['Authorization'] = `Bearer ${authStore.adminToken}`;
+  }
   if (!authStore.admin || !authStore.adminToken) {
     router.replace('/admin/login')
   }
@@ -196,6 +209,11 @@ watch(
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+}.nav-links {
+  color: white;
+  padding: 10px;
+  margin: 10px;
+  overflow-x: hidden;
 }
 .drawer-content .nav-links {
   flex: 1 1 auto;
@@ -235,6 +253,11 @@ watch(
     align-items: flex-start;
   }
   .eracs-title {
+    color: rgba(2, 2, 2, 0.7);
+  font-size: 0.95rem;
+  font-weight: bolder;
+  text-align: center;
+  }.eracs-title {
     font-size: 0.8rem;
   }
   .nav-links {
@@ -249,6 +272,10 @@ watch(
   .custom-header {
     font-size: 0.9rem;
     padding: 0 4px;
+
+
   }
+}.toolbar{
+  background-color: #187C19;
 }
 </style>
