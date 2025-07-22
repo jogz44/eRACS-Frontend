@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
-//import { api } from 'boot/axios'
-//import { useAuthStore } from './auth'
+import { api } from 'boot/axios'
+import { useAuthStore } from './auth'
 
 import { computed } from 'vue'
 
@@ -10,33 +10,69 @@ export const useChartDataStore = defineStore('chartData', {
     dateFrom: new Date(new Date().getFullYear(), 0, 1), // Start of current year
     dateTo: new Date(), // Current date
 
-    // Enhanced Summary Cards Data
+    // Loading states
+    isLoading: false,
+    chartLoading: false,
+
+    // Enhanced Summary Cards Data - will be populated from backend
     summaryCards: [
       {
         label: 'Total Appropriation',
-        value: '₱50,000,000.00',
+        value: '₱0.00',
         icon: 'account_balance',
         color: 'secondary',
         trend: 'up',
-        change: '2.5%',
+        change: '0%',
       },
       {
         label: 'Total Obligation',
-        value: '₱21,000,000.00',
+        value: '₱0.00',
         icon: 'assignment',
         color: 'secondary',
         trend: 'down',
-        change: '1.2%',
+        change: '0%',
       },
       {
         label: 'Total Balance',
-        value: '₱29,000,000.00',
+        value: '₱0.00',
         icon: 'balance',
         color: 'secondary',
         trend: 'up',
-        change: '3.8%',
+        change: '0%',
       },
     ],
+
+    // Pie chart data
+    pieChartData: {
+      labels: [],
+      datasets: [
+        {
+          data: [],
+          backgroundColor: [
+            '#2E7D32',
+            '#1565C0',
+            '#FFA000',
+            '#C62828',
+            '#6A1B9A',
+            '#00838F',
+            '#EF6C00',
+            '#4E342E',
+            '#AD1457',
+            '#00796B',
+            '#5D4037',
+            '#4527A0',
+            '#689F38',
+            '#D84315',
+            '#283593',
+            '#F4511E',
+            '#00695C',
+            '#512DA8',
+          ],
+          borderWidth: 0,
+          hoverOffset: 12,
+        },
+      ],
+    },
 
     recentDisbursementRows: [
       {
@@ -105,6 +141,7 @@ export const useChartDataStore = defineStore('chartData', {
           label: 'DV Number',
           align: 'center',
           sortable: true,
+          field: 'dvNumber',
         },
         {
           name: 'dvAmount',
@@ -118,6 +155,7 @@ export const useChartDataStore = defineStore('chartData', {
           label: 'Date',
           align: 'center',
           sortable: true,
+          field: 'date', // <-- add this line
         },
         {
           name: 'status',
@@ -134,25 +172,40 @@ export const useChartDataStore = defineStore('chartData', {
           sortable: true,
         },
       ]).value,
-
-    // If you need to keep the computed property reactive, you can define it like this:
-    /*
-    recentDisbursementColumns() {
-      return [
-        // ... same column definitions
-      ]
-    }
-    */
   },
 
   actions: {
+    getAuthConfig() {
+      const authStore = useAuthStore()
+      if (!authStore.token) {
+        console.error('No authentication token found')
+        throw new Error('Authentication required')
+      }
+      console.log('Auth token available:', authStore.token ? 'Yes' : 'No')
+      return {
+        headers: {
+          Authorization: `Bearer ${authStore.token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      }
+    },
+
+    formatCurrency(value) {
+      return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: 'PHP',
+        minimumFractionDigits: 2,
+      }).format(value || 0)
+    },
+
     formatDate(date, options = {}) {
-      if (!date) return '' // Handle empty dates
+      if (!date) return ''
 
       const d = new Date(date)
       const {
-        fullYear = false, // Show full year (YYYY) if true, else YY
-        separator = '/', // Custom separator (default '/')
+        fullYear = false,
+        separator = '/',
       } = options
 
       const month = String(d.getMonth() + 1).padStart(2, '0')
@@ -171,85 +224,333 @@ export const useChartDataStore = defineStore('chartData', {
       return statusMap[status] || 'grey'
     },
 
-    /*async debugAPIs() {
-      try {
-        const hierarchy = await api.get('/api/barangay/expense-hierarchy', this.getAuthConfig())
-        console.log('Hierarchy API response:', hierarchy.data)
-
-        const budgetId = this.appropriations[0]?.id
-        if (budgetId) {
-          const allocations = await api.get(
-            `/api/barangay/budgets/${budgetId}/allocations`,
-            this.getAuthConfig(),
-          )
-          console.log('Allocations API response:', allocations.data)
-        }
-      } catch (error) {
-        console.error('Debug failed:', error)
-        throw error
-      }
-    },*/
-
-    /* async loadChartData() {
+    // Fetch dashboard summary data
+    async fetchDashboardSummary() {
       try {
         this.isLoading = true
+        
+        // Get budgets data
+        const budgetsResponse = await api.get('/api/barangay/budgets', this.getAuthConfig())
+        const budgets = budgetsResponse.data.data || []
+        
+        // Calculate totals
+        const totalAppropriation = budgets.reduce((sum, budget) => sum + (parseFloat(budget.amount) || 0), 0)
+        const totalObligation = budgets.reduce((sum, budget) => {
+          const allocated = budget.allocations?.reduce((allocSum, alloc) => allocSum + (parseFloat(alloc.amount) || 0), 0) || 0
+          return sum + allocated
+        }, 0)
+        const totalBalance = totalAppropriation - totalObligation
 
-        // 1. Get the structure
-        const hierarchyRes = await api.get('/api/barangay/expense-hierarchy', this.getAuthConfig())
-        const structure = hierarchyRes.data.data || []
+        // Update summary cards
+        this.summaryCards = [
+          {
+            label: 'Total Appropriation',
+            value: this.formatCurrency(totalAppropriation),
+            icon: 'account_balance',
+            color: 'secondary',
+            trend: 'up',
+            change: '2.5%',
+          },
+          {
+            label: 'Total Obligation',
+            value: this.formatCurrency(totalObligation),
+            icon: 'assignment',
+            color: 'secondary',
+            trend: 'down',
+            change: '1.2%',
+          },
+          {
+            label: 'Total Balance',
+            value: this.formatCurrency(totalBalance),
+            icon: 'balance',
+            color: 'secondary',
+            trend: 'up',
+            change: '3.8%',
+          },
+        ]
 
-        // 2. Get amounts
-        const budgetId = this.selectedBudgetId || this.appropriations[0]?.id
-        if (!budgetId) throw new Error('No budget selected')
-
-        const allocationsRes = await api.get(
-          `/api/barangay/budgets/${budgetId}/allocations`,
-          this.getAuthConfig(),
-        )
-        const allocations = allocationsRes.data.data || []
-
-        // 3. Process data (same logic as before)
-        const amountMap = {}
-        allocations.forEach((allocation) => {
-          const id =
-            allocation.expense_item_id || allocation.expense_type_id || allocation.expense_class_id
-          if (id) amountMap[id] = allocation.amount
-        })
-
-        // 4. Update store state
-        this.pieChartData = {
-          labels: structure.map((item) => item.name),
-          datasets: [
-            {
-              data: structure.map((classItem) => {
-                let total = amountMap[classItem.id] || 0
-                classItem.children?.forEach((type) => {
-                  total += amountMap[type.id] || 0
-                  type.children?.forEach((item) => {
-                    total += amountMap[item.id] || 0
-                  })
-                })
-                return total
-              }),
-              backgroundColor: this.pieChartData.datasets[0].backgroundColor,
-              borderWidth: 0,
-            },
-          ],
-        }
+        return { totalAppropriation, totalObligation, totalBalance }
       } catch (error) {
-        console.error('Failed to load chart data:', error)
+        console.error('Error fetching dashboard summary:', error)
         throw error
       } finally {
         this.isLoading = false
       }
-    },*/
+    },
 
-    /*getAuthConfig() {
-      return {
-        headers: {
-          Authorization: `Bearer ${useAuthStore().token}`,
-        },
+    // Fetch pie chart data from backend
+    async fetchPieChartData(fiscalYearId = null) {
+      try {
+        this.chartLoading = true
+
+        // Get expense hierarchy
+        const hierarchyResponse = await api.get('/api/barangay/expense-hierarchy', {
+          ...this.getAuthConfig(),
+          params: { fiscal_year_id: fiscalYearId }
+        })
+        
+        const expenseHierarchy = hierarchyResponse.data || []
+
+        // Get budgets to fetch allocations
+        const budgetsResponse = await api.get('/api/barangay/budgets', this.getAuthConfig())
+        const budgets = budgetsResponse.data.data || []
+
+        if (budgets.length === 0) {
+          this.pieChartData = {
+            labels: ['No Data Available'],
+            datasets: [{
+              data: [1],
+              backgroundColor: ['#FFA000'],
+              borderWidth: 0,
+            }]
+          }
+          return
+        }
+
+        // Fetch allocations for all budgets
+        const allocationPromises = budgets.map(budget => 
+          api.get(`/api/barangay/budgets/${budget.id}/allocations`, this.getAuthConfig())
+        )
+        
+        const allocationResponses = await Promise.all(allocationPromises)
+        const allAllocations = allocationResponses.flatMap(response => response.data.data || [])
+
+        // Process allocations and create pie chart data
+        const classTotals = this.processAllocationsForPieChart(expenseHierarchy, allAllocations)
+
+        // Update pie chart data
+        this.pieChartData = {
+          labels: classTotals.map(item => item.name),
+          datasets: [{
+            data: classTotals.map(item => item.total),
+            backgroundColor: this.pieChartData.datasets[0].backgroundColor,
+            borderWidth: 0,
+            hoverOffset: 12,
+          }]
+        }
+
+        return classTotals
+      } catch (error) {
+        console.error('Error fetching pie chart data:', error)
+        this.pieChartData = {
+          labels: ['Error Loading Data'],
+          datasets: [{
+            data: [1],
+            backgroundColor: ['#C62828'],
+            borderWidth: 0,
+          }]
+        }
+        throw error
+      } finally {
+        this.chartLoading = false
       }
-    },*/
+    },
+
+    // Process allocations to create pie chart data
+    processAllocationsForPieChart(expenseHierarchy, allocations) {
+      const classTotals = []
+
+      expenseHierarchy.forEach(expenseClass => {
+        let classTotal = 0
+
+        // Sum allocations for this expense class
+        allocations.forEach(allocation => {
+          if (allocation.expense_class_id === expenseClass.id) {
+            classTotal += parseFloat(allocation.amount) || 0
+          }
+        })
+
+        // Also sum allocations from child types and items
+        expenseClass.children?.forEach(expenseType => {
+          allocations.forEach(allocation => {
+            if (allocation.expense_type_id === expenseType.id) {
+              classTotal += parseFloat(allocation.amount) || 0
+            }
+          })
+
+          expenseType.children?.forEach(expenseItem => {
+            allocations.forEach(allocation => {
+              if (allocation.expense_item_id === expenseItem.id) {
+                classTotal += parseFloat(allocation.amount) || 0
+              }
+            })
+          })
+        })
+
+        if (classTotal > 0) {
+          classTotals.push({
+            id: expenseClass.id,
+            name: expenseClass.name,
+            total: classTotal
+          })
+        }
+      })
+
+      return classTotals
+    },
+
+    // Test method to set static data
+    setTestData() {
+      console.log('Setting test data for pie chart')
+      this.pieChartData = {
+        labels: ['Personnel Services', 'Maintenance', 'Capital Outlay', 'Financial Expenses'],
+        datasets: [{
+          data: [5000000, 3000000, 2000000, 1000000],
+          backgroundColor: [
+            '#2E7D32',
+            '#1565C0', 
+            '#FFA000',
+            '#C62828'
+          ],
+          borderWidth: 0,
+          hoverOffset: 12,
+        }]
+      }
+      
+      this.summaryCards = [
+        {
+          label: 'Total Appropriation',
+          value: this.formatCurrency(11000000),
+          icon: 'account_balance',
+          color: 'secondary',
+          trend: 'up',
+          change: '2.5%',
+        },
+        {
+          label: 'Total Obligation',
+          value: this.formatCurrency(8000000),
+          icon: 'assignment',
+          color: 'secondary',
+          trend: 'down',
+          change: '1.2%',
+        },
+        {
+          label: 'Total Balance',
+          value: this.formatCurrency(3000000),
+          icon: 'balance',
+          color: 'secondary',
+          trend: 'up',
+          change: '3.8%',
+        },
+      ]
+      
+      console.log('Test data set:', this.pieChartData)
+    },
+
+    // Load all dashboard data
+    async loadDashboardData() {
+      try {
+        this.isLoading = true
+        console.log('Loading dashboard data...')
+        
+        try {
+          // Try the new optimized dashboard endpoint first
+          const response = await api.get('/api/barangay/dashboard/summary', this.getAuthConfig())
+          console.log('Dashboard API response:', response.data)
+          
+          const dashboardData = response.data.data
+          console.log('Dashboard data:', dashboardData)
+
+          // Update summary cards
+          this.summaryCards = [
+            {
+              label: 'Total Appropriation',
+              value: this.formatCurrency(dashboardData.summary.total_appropriation),
+              icon: 'account_balance',
+              color: 'secondary',
+              trend: 'up',
+              change: '2.5%',
+            },
+            {
+              label: 'Total Obligation',
+              value: this.formatCurrency(dashboardData.summary.total_obligation),
+              icon: 'assignment',
+              color: 'secondary',
+              trend: 'down',
+              change: '1.2%',
+            },
+            {
+              label: 'Total Balance',
+              value: this.formatCurrency(dashboardData.summary.total_balance),
+              icon: 'balance',
+              color: 'secondary',
+              trend: 'up',
+              change: '3.8%',
+            },
+          ]
+
+          // Update pie chart data
+          if (dashboardData.pie_chart_data.labels.length > 0) {
+            const palette = [
+              '#2E7D32', '#1565C0', '#FFA000', '#C62828', '#6A1B9A', '#00838F', '#EF6C00', '#4E342E',
+              '#AD1457', '#00796B', '#5D4037', '#4527A0', '#689F38', '#D84315', '#283593', '#F4511E', '#00695C', '#512DA8'
+            ];
+            const colorCount = dashboardData.pie_chart_data.labels.length;
+            const backgroundColor = Array.from({length: colorCount}, (_, i) => palette[i % palette.length]);
+
+            this.pieChartData = {
+              labels: dashboardData.pie_chart_data.labels,
+              datasets: [{
+                data: dashboardData.pie_chart_data.data,
+                backgroundColor: backgroundColor,
+                borderWidth: 0,
+                hoverOffset: 12,
+              }]
+            }
+            console.log('Updated pie chart data:', this.pieChartData)
+          } else {
+            this.pieChartData = {
+              labels: ['No Data Available'],
+              datasets: [{
+                data: [1],
+                backgroundColor: ['#FFA000'],
+                borderWidth: 0,
+              }]
+            }
+            console.log('No pie chart data available, showing placeholder')
+          }
+
+          // Fetch recent liquidated disbursements from backend
+          try {
+            const disbResponse = await api.get('/api/barangay/disbursements/recent-liquidated')
+            if (disbResponse.data && disbResponse.data.data) {
+              this.recentDisbursementRows = disbResponse.data.data.map(row => ({
+                dvNumber: row.dv_number,
+                dvAmount: row.dv_amount,
+                date: row.date,
+                status: row.status,
+                liquidatedAmount: row.liquidated_amount || '',
+              }))
+            }
+          } catch (err) {
+            console.error('Error fetching recent liquidated disbursements:', err)
+          }
+
+          return dashboardData
+        } catch (dashboardError) {
+          console.warn('Dashboard endpoint failed, trying fallback method:', dashboardError)
+          
+          // Fallback: Use existing endpoints
+          await this.fetchDashboardSummary()
+          await this.fetchPieChartData()
+          
+          return { fallback: true }
+        }
+      } catch (error) {
+        console.error('Error loading dashboard data:', error)
+        // Set error state for pie chart
+        this.pieChartData = {
+          labels: ['Error Loading Data'],
+          datasets: [{
+            data: [1],
+            backgroundColor: ['#C62828'],
+            borderWidth: 0,
+          }]
+        }
+        throw error
+      } finally {
+        this.isLoading = false
+      }
+    },
   },
 })

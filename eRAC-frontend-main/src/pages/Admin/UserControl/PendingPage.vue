@@ -234,7 +234,17 @@ export default {
     },
   },
   async mounted() {
-    await this.loadPendingUsers()
+    // Try to load from localStorage first
+    const cached = localStorage.getItem('pendingUsers');
+    if (cached) {
+      try {
+        this.users = JSON.parse(cached);
+      } catch {
+        this.users = [];
+      }
+    }
+    // Always fetch latest from API
+    await this.loadPendingUsers();
   },
   activated() {
     // Refresh data when component is activated (when navigating to this page)
@@ -246,14 +256,9 @@ export default {
       try {
         const response = await api.get('/api/admin/users/pending')
         this.users = response.data
-      } catch (error) {
-        console.error('Error loading pending users:', error)
-        this.$q.notify({
-          type: 'negative',
-          message: 'Failed to load pending users',
-          position: 'top',
-        })
-      } finally {
+        // Persist to localStorage
+        localStorage.setItem('pendingUsers', JSON.stringify(this.users));
+      }  finally {
         this.loading = false
       }
     },
@@ -273,12 +278,12 @@ export default {
       this.cancelModal.loading = true
       try {
         await api.delete(`/api/admin/users/${this.cancelModal.selectedRow.id}`)
-        
         // Remove from local array
         this.users = this.users.filter(
           (user) => user.id !== this.cancelModal.selectedRow.id,
         )
-        
+        // Update localStorage
+        localStorage.setItem('pendingUsers', JSON.stringify(this.users));
         this.$q.notify({
           type: 'positive',
           message: 'User removed successfully',
@@ -301,18 +306,17 @@ export default {
       this.acceptModal.loading = true
       try {
         await api.patch(`/api/admin/users/${this.acceptModal.selectedRow.id}/approve`)
-        
         // Remove from local array (user is now approved and should appear in accepted list)
         this.users = this.users.filter(
           (user) => user.id !== this.acceptModal.selectedRow.id,
         )
-        
+        // Update localStorage
+        localStorage.setItem('pendingUsers', JSON.stringify(this.users));
         this.$q.notify({
           type: 'positive',
           message: 'User accepted successfully! The user will now appear in the Accepted list.',
           position: 'top',
         })
-
         //Notify the store that a user was accepted
         //const userControlStore = useUserControlStore()
         //userControlStore.userAccepted(this.acceptModal.selectedRow)
