@@ -1,5 +1,5 @@
 <?php
-// app/Models/FiscalYear.php
+// app/Models/LibFiscalYear.php
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;

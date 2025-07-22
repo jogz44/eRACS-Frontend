@@ -512,7 +512,7 @@ export const useChartDataStore = defineStore('chartData', {
 
           // Fetch recent liquidated disbursements from backend
           try {
-            const disbResponse = await api.get('/api/disbursements/recent-liquidated')
+            const disbResponse = await api.get('/api/barangay/disbursements/recent-liquidated')
             if (disbResponse.data && disbResponse.data.data) {
               this.recentDisbursementRows = disbResponse.data.data.map(row => ({
                 dvNumber: row.dv_number,

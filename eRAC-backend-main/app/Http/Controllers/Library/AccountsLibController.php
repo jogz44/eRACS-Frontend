@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Library;
 
 use App\Http\Controllers\Controller;
-use App\Models\FiscalYear;
+use App\Models\LibFiscalYear;
 use App\Models\LibExpense;
 use App\Models\LibExpenseClass;
 use App\Models\LibExpenseItem;
@@ -33,7 +33,7 @@ public function getFiscalYears()
     $barangayId = Auth::user()->barangay_id;
 
     return response()->json(
-        FiscalYear::where('barangay_id', $barangayId)
+        LibFiscalYear::where('barangay_id', $barangayId)
             ->orderBy('year', 'desc')
             ->get()
     );
@@ -55,7 +55,7 @@ public function createFiscalYear(Request $request)
         ]
     ]);
 
-    $year = FiscalYear::create([
+    $year = LibFiscalYear::create([
         'barangay_id' => $barangayId,
         'year' => $validated['year'],
         'is_active' => false,
