@@ -19,7 +19,7 @@ use Illuminate\Validation\Rule;
     {
         // Log user activity
         if ($request->user()) {
-            // AdminAuthController::logUserAction($request->user(), 'Visited Appropriation Page');
+            AdminAuthController::logUserAction($request->user(),'Visited Appropriation Page' ,'Visited Appropriation Page');
         }
         $request->validate([
             'year' => 'nullable|integer',
