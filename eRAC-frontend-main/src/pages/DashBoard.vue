@@ -10,19 +10,15 @@
         <!-- Use barangay_name instead of barangay.name -->
 
       </div>
-<div class="welcome-user"> Welcome Back, {{ authStore.user?.first_name || 'Guest'   }}<span>
-  <br>
-  <span class="text-caption text-white">Here's a quick overview of your dashboard</span>
-
-</span>
-
+<div class="welcome-user text-accent" style="font-size: 25px;">
+  Welcome Back, {{ authStore.user?.first_name || 'Guest' }}
+  <div style="font-size: 13px;" class="Custom-caption text-caption text-black">
+    Here's a quick overview of your dashboard
+  </div>
+</div>
 </div>
 
-
-    </div>
-
-
-    <div class="row q-col-gutter-lg q-mb-lg">
+   <div class="row q-col-gutter-lg q-mb-lg">
       <div
         class="col-xl-3 col-lg-4 col-md-6 col-sm-12"
         v-for="(card, index) in chartStore.summaryCards"
@@ -40,7 +36,7 @@
                 class="q-mr-md"
               />
               <div class="text-left">
-                <div class="text-caption text-grey">{{ card.label }}</div>
+                <div class="Custome-text text-caption text-grey">{{ card.label }}</div>
                 <div class="text-h5 text-weight-bold">{{ card.value }}</div>
               </div>
             </div>
@@ -237,6 +233,7 @@ onMounted(() => {
     }
   }
 }
+
 
 // Responsive adjustments
 @media (max-width: $breakpoint-xs-max) {

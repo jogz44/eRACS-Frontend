@@ -246,6 +246,7 @@
                 (val) => !!val || 'Required',
                 (val) => val === password || 'Passwords do not match',
               ]"
+              @keyup.enter="handleSubmit"
             >
             <template #append>
           <q-icon
@@ -361,61 +362,87 @@ export default {
     const handleSubmit = async () => {
       // Basic validations
       if (!firstName.value.trim()) {
-        $q.notify({ type: 'warning', message: 'First name is required' })
+        $q.notify({ type: 'negative', message: 'First name is required',
+          position: 'top'
+         })
         return
       }
 
       if (!lastName.value.trim()) {
-        $q.notify({ type: 'warning', message: 'Last name is required' })
+        $q.notify({ type: 'negative', message: 'Last name is required',
+          position: 'top'
+         })
         return
       }
 
       if (!barangay.value) {
-        $q.notify({ type: 'warning', message: 'Please select your barangay' })
+        $q.notify({ type: 'negative', message: 'Please select your barangay',
+          position: 'top'
+         })
         return
       }
 
       if (!position.value.trim()) {
-        $q.notify({ type: 'warning', message: 'Position is required' })
+        $q.notify({ type: 'negative', message: 'Position is required',
+          position: 'top'
+         })
         return
       }
 
       if (!email.value.trim()) {
-        $q.notify({ type: 'warning', message: 'Email is required' })
+        $q.notify({ type: 'negative', message: 'Email is required',
+          position: 'top'
+         })
         return
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
-        $q.notify({ type: 'warning', message: 'Please enter a valid email address' })
+        $q.notify({ type: 'negative', message: 'Please enter a valid email address',
+          position: 'top'
+         })
         return
       }
 
       if (!username.value.trim()) {
-        $q.notify({ type: 'warning', message: 'Username is required' })
+        $q.notify({ type: 'negative', message: 'Username is required',
+          position: 'top'
+         })
         return
       } else if (username.value.length < 4) {
-        $q.notify({ type: 'warning', message: 'Username must be at least 4 characters' })
+        $q.notify({ type: 'negative', message: 'Username must be at least 4 characters',
+          position: 'top'
+         })
         return
       }
 
       if (!password.value) {
-        $q.notify({ type: 'warning', message: 'Password is required' })
+        $q.notify({ type: 'negative', message: 'Password is required',
+          position: 'top'
+         })
         return
       } else if (password.value.length < 8) {
-        $q.notify({ type: 'warning', message: 'Password must be at least 8 characters' })
+        $q.notify({ type: 'negative', message: 'Password must be at least 8 characters',
+          position: 'top'
+         })
         return
       }
 
       if (!confirmPassword.value) {
-        $q.notify({ type: 'warning', message: 'Please confirm your password' })
+        $q.notify({ type: 'negative', message: 'Please confirm your password'
+          , position: 'top'
+         })
         return
       }
 
       if (password.value !== confirmPassword.value) {
-        $q.notify({ type: 'warning', message: 'Passwords do not match' })
+        $q.notify({ type: 'negative', message: 'Passwords do not match',
+          position: 'top'
+         })
         return
       }
 
       if (!uploadedFile.value) {
-        $q.notify({ type: 'warning', message: 'Please select a profile photo' })
+        $q.notify({ type: 'negative', message: 'Please select a profile photo',
+          position: 'top'
+         })
         return
       }
 
@@ -425,6 +452,7 @@ export default {
         $q.notify({
           type: 'negative',
           message: 'Invalid file type. Only JPG, PNG or GIF are allowed',
+          position: 'top',
         })
         return
       }
@@ -436,6 +464,7 @@ export default {
           type: 'negative',
           message: 'File too large. Maximum size is 2MB',
           caption: `Current size: ${(uploadedFile.value.size / 1024 / 1024).toFixed(2)}MB`,
+          position: 'top',
         })
         return
       }

@@ -5,7 +5,7 @@
       <q-toolbar class="justify-end q-pr-md">
         <!-- NEW: Hamburger button for drawer, only on mobile -->
         <q-btn
-        
+
           flat
           round
           dense
@@ -107,11 +107,11 @@
             </q-avatar>
             <!-- Name & Position -->
             <div class="column">
-              <span class="text-caption text-white text-weight-bold ">
+              <span class="Custom-text text-caption text-white text-weight-bold">
                 {{ authStore.user?.first_name || 'Guest' }}
                 {{ authStore.user?.last_name || ''   }}
               </span>
-              <span class="text-caption text-black text-weight-medium text-h5"  >
+              <span class="text-caption text-white text-weight-medium text-h5"  >
                {{ authStore.user.position }}
               </span>
             </div>
@@ -231,6 +231,9 @@ const toggleExpand = (title, parentTitle = null) => {
   padding-top: 30px;
   overflow: hidden;
   overflow-x: hidden;
+}
+.Custom-text {
+  font-size: 18px;
 }
 
 .custom-header {
