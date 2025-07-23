@@ -130,6 +130,13 @@ const routes = [
         component: () => import('pages/ReportPage.vue'),
         meta: { title: 'Reports' },
       },
+      // User Access
+      {
+        path: 'useraccess',
+        name: 'userAccess',
+        component: () => import ('src/pages/User/UserAccess.vue'),
+        meta: {title: 'UserAccess'}
+      }
     ],
   },
 

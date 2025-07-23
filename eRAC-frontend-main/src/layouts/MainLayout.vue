@@ -188,13 +188,22 @@ const navLinks = [
       ]}
     ]
   },
-  { title: 'Libraries', icon: 'library_books', children: [
-    { title: 'Accounts', link: '/home/libraries/accounts' },
-    { title: 'Particulars', link: '/home/libraries/particulars' },
-    { title: 'Bank', link: '/home/libraries/bank' },
-    { title: 'Continuing', link: '/home/libraries/continuing' }
+  { title: 'Libraries',
+    icon: 'library_books',
+    children: [
+    { title: 'Accounts',
+    link: '/home/libraries/accounts' },
+    { title: 'Particulars',
+    link: '/home/libraries/particulars' },
+    { title: 'Bank',
+    link: '/home/libraries/bank' },
+    { title: 'Continuing',
+    link: '/home/libraries/continuing' }
   ]},
   { title: 'Reports', icon: 'assessment', link: '/home/reports' },
+  {
+    title: 'User Access', icon: 'admin_panel_settings', link: '/home/useraccess'
+  },
 
 ]
 
