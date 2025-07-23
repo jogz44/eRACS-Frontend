@@ -102,7 +102,10 @@ Route::prefix('barangay')->group(function () {
     Route::patch('budgets/{budget}/allocations', [AppropriationController::class, 'updateAllocations']);
     // Recent Liquidated Disbursements
     Route::get('/disbursements/recent-liquidated', [DisbursementController::class, 'recentLiquidated']);
-    
+    // All Disbursements for barangay
+    Route::get('disbursements', [DisbursementController::class, 'index']);
+    // Liquidate a disbursement
+    Route::patch('disbursements/{id}/liquidate', [DisbursementController::class, 'liquidate']);
   });
   
 });

@@ -284,11 +284,12 @@
                   icon="visibility"
                   @click="store.openViewOrDetails(props.row)"
                 />
-
                 <q-btn
                   outlined
                   label="Liquidate"
                   class="allocate-btn"
+                  color="primary"
+                  v-if="props.row.status === 'Pending'"
                   @click="store.openOrDetailsDialog(props.row)"
                 />
               </div>
@@ -296,7 +297,6 @@
           </template>
         </q-table>
       </q-card>
-
       <OrDetailsDialog v-model="store.dialogs.orDetails" />
 
       <!-- View Only Dialog -->
@@ -318,13 +318,11 @@ import { useDisbursementStore } from '../../stores/disbursementStore'
 
 const store = useDisbursementStore()
 
-// Fetch expense hierarchy when component mounts
-// Fetch expense accounts when component mounts
 onMounted(async () => {
-  await store.fetchExpenseAccounts()
+  await store.fetchDisbursementAccounts?.(); // keep existing
+  await store.fetchDisbursements();
 })
 
-// Add this in your component's script section
 watch(
   () => store.expenses,
   (newExpenses) => {
