@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminAuthController;
+use App\Http\Controllers\DisbursementController;
 use App\Http\Controllers\Library\LibParticularController;
 use App\Http\Controllers\Library\AccountsLibController;
 use App\Http\Controllers\Library\BankLibraryController;
@@ -98,10 +99,13 @@ Route::prefix('barangay')->group(function () {
     Route::get('budgets/{budget}/allocations', [AppropriationController::class, 'getBudgetAllocations']);
     Route::post('budgets/{budget}/allocate', [AppropriationController::class, 'saveAllocation']);
     Route::get('budgets/{id}/history', [AppropriationController::class, 'getAllocationHistory']);
-    Route::patch('budgets/{budget}/allocations', [\App\Http\Controllers\Transaction\AppropriationController::class, 'updateAllocations']);
+    Route::patch('budgets/{budget}/allocations', [AppropriationController::class, 'updateAllocations']);
     // Recent Liquidated Disbursements
-    Route::get('/disbursements/recent-liquidated', [\App\Http\Controllers\DisbursementController::class, 'recentLiquidated']);
-    
+    Route::get('/disbursements/recent-liquidated', [DisbursementController::class, 'recentLiquidated']);
+    // All Disbursements for barangay
+    Route::get('disbursements', [DisbursementController::class, 'index']);
+    // Liquidate a disbursement
+    Route::patch('disbursements/{id}/liquidate', [DisbursementController::class, 'liquidate']);
   });
   
 });
@@ -118,6 +122,11 @@ Route::prefix('admin')->group(function () {
         Route::get('/users/accepted', [AdminAuthController::class, 'getAcceptedUsers']);
         Route::patch('/users/{user}/approve', [AdminAuthController::class, 'approveUser']);
         Route::delete('/users/{user}', [AdminAuthController::class, 'deleteUser']);
+
+
+        // Dashboard Routes upadtaed
+        // updated
+        Route::get('/per-barangay-budgets',[AdminAuthController::class, 'getPerBarangaysBudgets']);
     });
 
     // Admin user access and logs endpoints

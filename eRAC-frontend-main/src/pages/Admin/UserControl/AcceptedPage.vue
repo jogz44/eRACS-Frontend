@@ -34,6 +34,11 @@
           :loading="loading"
           class="user-table"
         >
+        <template v-slot:body-cell-index="props">
+          <q-td :props="props">
+            {{ props.pageIndex + 1 }}
+          </q-td>
+        </template>
           <!-- Custom Actions Column -->
           <template v-slot:body-cell-action="props">
             <q-td :props="props" class="action-buttons">
@@ -155,11 +160,17 @@ export default {
         selectedRow: null,
       },
       columns: [
-
-        { name: 'name', label: 'NAME', field: 'name', align: 'left' },
-        { name: 'barangay', label: 'BARANGAY', field: 'barangay', align: 'left' },
-        { name: 'position', label: 'POSITION', field: 'position', align: 'left' },
-        { name: 'username', label: 'USERNAME', field: 'username', align: 'left' },
+        {
+          name: 'index',
+          label: '#',
+          field: 'index', 
+          align: 'left',
+          sortable: false, // optional: disable sorting
+        },
+        { name: 'name', label: 'NAME', field: 'name', align: 'left', sortable: true  },
+        { name: 'barangay', label: 'BARANGAY', field: 'barangay', align: 'left', sortable: true  },
+        { name: 'position', label: 'POSITION', field: 'position', align: 'left', sortable: true  },
+        { name: 'username', label: 'USERNAME', field: 'username', align: 'left', sortable: true  },
         { name: 'email', label: 'EMAIL', field: 'email', align: 'left' },
         { name: 'action', label: '', field: 'action', align: 'center' },
       ],

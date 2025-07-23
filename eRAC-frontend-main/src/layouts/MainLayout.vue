@@ -107,11 +107,11 @@
             </q-avatar>
             <!-- Name & Position -->
             <div class="column">
-              <span class="text-caption text-white text-weight-bold ">
+              <span class="Custom-text text-caption text-white text-weight-bold">
                 {{ authStore.user?.first_name || 'Guest' }}
                 {{ authStore.user?.last_name || ''   }}
               </span>
-              <span class="text-caption text-black text-weight-medium text-h5"  >
+              <span class="text-caption text-white text-weight-medium text-h5"  >
                {{ authStore.user.position }}
               </span>
             </div>
@@ -201,6 +201,7 @@ const navLinks = [
     link: '/home/libraries/continuing' }
   ]},
   { title: 'Reports', icon: 'assessment', link: '/home/reports' },
+  
   {
     title: 'User Access', icon: 'admin_panel_settings', link: '/home/useraccess'
   },
@@ -240,6 +241,9 @@ const toggleExpand = (title, parentTitle = null) => {
   padding-top: 30px;
   overflow: hidden;
   overflow-x: hidden;
+}
+.Custom-text {
+  font-size: 18px;
 }
 
 .custom-header {

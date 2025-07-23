@@ -31,7 +31,7 @@
               <div class="text-bold q-mb-xs">DV Amount:</div>
               <q-input
                 outlined
-                :model-value="store.currentLiquidation.dvAmount.toFixed(2)"
+                :model-value="Number(store.currentLiquidation.dvAmount || 0).toFixed(2)"
                 prefix="₱"
                 disable and readonly
                 bg-color="grey-3"
@@ -117,7 +117,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useDisbursementStore } from '../../stores/disbursementStore'
+import { useDisbursementStore } from 'stores/disbursementStore'
 
 const store = useDisbursementStore()
 

@@ -58,6 +58,8 @@ public function register(Request $request)
         'role' => 'barangay_user'
     ]);
 
+    AdminAuthController::logUserAction($user, 'Registration','User registration to system');
+
     return response()->json([
         'message' => 'Registration successful',
         'user' => $user
@@ -104,7 +106,7 @@ public function login(Request $request)
         ], 403);
     }
     
-    AdminAuthController::logUserAction($user, 'Login','Login to system');
+    AdminAuthController::logUserAction($user, 'Login','User login to system');
 
     // CREATE SANCTUM TOKEN
     $token = $user->createToken('barangay_token')->plainTextToken;
@@ -151,6 +153,7 @@ public function login(Request $request)
 
         // Revoke the current token
         $user->currentAccessToken()->delete();
+        AdminAuthController::logUserAction($user, 'Logout','User logout from the System');
 
         return response()->json([
             'status' => true,
@@ -214,6 +217,8 @@ public function resetPassword(Request $request)
     // Update the user's password
     $user->password = Hash::make($validated['password']);
     $user->save();
+
+    AdminAuthController::logUserAction($user, 'Reset Password','User reset their account password');
 
     return response()->json([
         'message' => 'Password reset successful',

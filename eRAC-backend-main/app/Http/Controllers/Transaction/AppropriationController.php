@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Transaction;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\AdminAuthController;
 use App\Models\Budget;
 use App\Models\TranAppropriation;
 use App\Models\LibFiscalYear;
@@ -16,6 +17,11 @@ use Illuminate\Validation\Rule;
     {
     public function index(Request $request)
     {
+        // Log user activity
+        if ($request->user()) {
+            AdminAuthController::logUserAction($request->user(),'Visited Appropriation Page' ,'Visited Appropriation Page');
+        }
+
         $request->validate([
             'year' => 'nullable|integer',
             'status' => 'nullable|in:draft,committed,reverted',
@@ -378,6 +384,15 @@ public function saveAllocation(Request $request, Budget $budget)
 
         $budget = \App\Models\Budget::findOrFail($budgetId);
 
+        // Prevent over-allocation
+        $totalAllocated = array_sum(array_column($validated['allocations'], 'amount'));
+        if ($totalAllocated > $budget->original_amount) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Allocation exceeds the available budget. Please adjust your amounts.'
+            ], 422);
+        }
+
         return DB::transaction(function () use ($validated, $budget) {
             // Delete all old item-level appropriations for this budget
             $budget->tranAppropriations()->whereNotNull('expense_item_id')->delete();
@@ -399,17 +414,17 @@ public function saveAllocation(Request $request, Budget $budget)
             $budget->save();
             return response()->json(['status' => true, 'message' => 'Allocations updated', 'budget' => $budget]);
         });
-    }
+        }
 
     // Add this method to your AppropriationController
     public function getDashboardSummary(Request $request)
     {
         try {
             \Log::info('Dashboard summary requested for user: ' . $request->user()->id);
-            
+
             $barangayId = $request->user()->barangay_id;
             \Log::info('Barangay ID: ' . $barangayId);
-            
+
             // Get all budgets for this barangay
             $budgets = Budget::with(['tranAppropriations', 'fiscalYear'])
                 ->where('barangay_id', $barangayId)
@@ -430,9 +445,9 @@ public function saveAllocation(Request $request, Budget $budget)
             // Get expense hierarchy for pie chart
             $currentYear = now()->year;
             $fiscalYear = LibFiscalYear::where('year', $currentYear)->first();
-            
+
             \Log::info('Current year: ' . $currentYear . ', Fiscal year found: ' . ($fiscalYear ? 'yes' : 'no'));
-            
+
             $expenseHierarchy = [];
             if ($fiscalYear) {
                 $expenseHierarchy = LibExpenseClass::with(['types.items'])
@@ -503,9 +518,9 @@ public function saveAllocation(Request $request, Budget $budget)
             ];
 
             \Log::info('Dashboard response prepared', $response);
-            
+
             return response()->json($response);
-            
+
         } catch (\Exception $e) {
             \Log::error('Dashboard summary error: ' . $e->getMessage());
             return response()->json([

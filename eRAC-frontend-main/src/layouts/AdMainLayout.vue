@@ -40,7 +40,7 @@
     <q-drawer
       v-model="leftDrawerOpen"
       :width="$q.screen.lt.md ? 220 : 300"
-      :breakpoint="767"
+      :breakpoint="mobile"
       :show-if-above="$q.screen.gt.sm"
       bordered
       class="custom-card-drawer drawer-fixed"
@@ -54,15 +54,15 @@
               src="src/assets/tagumlogo.png"
               alt="ERACS Logo"
               style="width: 80px; height: 75px; max-width: 100%; height: auto;"
-              class="q-mb-sm"
+              class="q-mb-sm w-20 h-auto"
             />
-            <q-item-label class="eracs-title text-center" style="font-size: medium;">
+            <q-item-label class="eracs-title text-center text-sm md:text-base" style="font-size: medium;">
               Electronic Registry of Appropriation and Commitment (eRAC)
             </q-item-label>
           </q-item>
         </q-list>
         <!-- Nav Links - Scrollable if needed -->
-        <div class="scroll nav-links q-pa-sm">
+        <div class="scroll nav-links q-pa-sm" style = "max-height: 70hv; overflow-y: auto;">
           <NavLink
             v-for="link in navLinks"
             :key="link.title"
@@ -77,7 +77,8 @@
             <q-list separator>
               <div class="footer-user row items-center q-gutter-sm q-pa-sm">
                 <!-- Avatar -->
-                <q-avatar  size="$q.screen.lt.md ? '32px' : '45px'">
+                <q-avatar  size="$q.screen.lt.md ? '32px' : '45px'"
+                class="q-avatar--xs md:q-avatar--md">
                   <img   src="src/assets/admin.png"/>
                 </q-avatar>
                 <!-- Name & Position -->
@@ -96,12 +97,14 @@
         </div>
       </div>
     </q-drawer>
+
     <!-- MAIN CONTENT -->
     <q-page-container style="background: #D9D9D9; min-height: 100vh;">
       <router-view />
     </q-page-container>
   </q-layout>
 </template>
+
 
 <script setup>
 import { ref, watch, onMounted } from 'vue'

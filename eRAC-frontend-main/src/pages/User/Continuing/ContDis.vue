@@ -1,12 +1,89 @@
 <template>
-  <q-page class="q-pa-lg disbursement-page">
+  <q-page class="q-pa-lg contdis-page">
     <div class="page-header q-mb-lg">
-      <div class="text-h5 text-weight-bold">Disbursement Transaction</div>
+      <div class="text-h5 text-weight-bold">Continuing Disbursement</div>
     </div>
-    <div class="q-mb-md">
-      <SearchFilters />
 
-      <!-- Disbursement Dialog -->
+    <div class="q-mb-md">
+      <div class="justify-end q-mb-md">
+        <div class="row items-center justify-between q-gutter-sm">
+          <!-- Search Input -->
+          <q-input
+            bg-color="white"
+            outlined
+            dense
+            placeholder="Search..."
+            v-model="store.searchQuery"
+            class="col-md-3 col-sm-5 custom-search-input"
+            style="min-width: 450px"
+          >
+            <template v-slot:append>
+              <q-icon name="search" />
+            </template>
+          </q-input>
+
+          <div class="t q-px-xl"></div>
+
+          <!-- Date Range Group -->
+          <div class="row items-center justify-between">
+            <!-- From Date -->
+            <q-input
+              bg-color="white"
+              outlined
+              label="From"
+              dense
+              v-model="store.dateFrom"
+              mask="##/##/####"
+              class="custom-date-from"
+              style="width: 200px"
+            >
+              <template v-slot:append>
+                <q-icon name="event" class="calend-icon">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date v-model="store.dateFrom" mask="DD/MM/YYYY" />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+
+            <!-- To Label -->
+            <div class="t q-px-xs"></div>
+            <div class="t q-px-xs"></div>
+
+            <!-- To Date -->
+            <q-input
+             bg-color="white"
+              outlined
+              label="To"
+              dense
+              v-model="store.dateTo"
+              mask="##/##/####"
+              class="custom-date-to"
+              style="width: 200px"
+            >
+              <template v-slot:append>
+                <q-icon name="event" class="calend-icon">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date v-model="store.dateTo" mask="DD/MM/YYYY" />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
+
+          <div class="t q-px-xs"></div>
+
+          <!-- Add Button Disbursement -->
+          <q-btn
+            label="Add"
+            icon="add"
+            class="add-table-btn"
+            @click="store.openDialog('disbursement')"
+          />
+        </div>
+      </div>
+
+      <!--Disbursement Dialog-->
       <q-dialog v-model="store.dialogs.disbursement" persistent>
         <q-card style="min-width: 1100px">
           <q-card-section>
@@ -50,35 +127,12 @@
               <!-- Check Number Field -->
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Cheque Number:</q-item-label>
-                <q-select
+                <q-input
                   filled
                   outlined
                   dense
-                  v-model="store.selectedBooklet"
-                  @update:model-value="store.selectBooklet"
-                  :options="
-                    store.chequeBooklets.map((b) => ({
-                      label: `${b.label} (${b.range})`,
-                      value: b.range,
-                    }))
-                  "
-                  option-label="label"
-                  option-value="value"
-                  emit-value
-                  map-options
-                  label="Choose Booklet"
-                  class="q-mb-sm"
-                />
-
-                <q-select
-                  filled
-                  outlined
-                  dense
-                  v-model="store.selectedChequeNumber"
-                  @update:model-value="store.selectChequeNumber"
-                  :options="store.availableChequeNumbers"
-                  :disable="!store.selectedBooklet"
-                  label="Select Cheque Number"
+                  v-model="store.forms.disbursement.checkNumber"
+                  :rules="[(val) => !!val || 'Field is required']"
                 />
               </div>
               <!-- DV Number Field -->
@@ -162,107 +216,6 @@
         </q-card>
       </q-dialog>
 
-      <!-- Expense Selection Dialog -->
-      <q-dialog v-model="store.dialogs.expense" persistent>
-        <q-card style="min-width: 1000px">
-          <q-card-section>
-            <div class="text-h6">Select Expense Account</div>
-          </q-card-section>
-
-          <q-card-section>
-            <q-input
-              outlined
-              dense
-              placeholder="Search expense account..."
-              v-model="store.expenseSearch"
-              class="q-mb-sm"
-              style="width: 400px"
-            >
-              <template v-slot:append>
-                <q-icon name="search" />
-              </template>
-            </q-input>
-
-            <q-table
-              :rows="store.filteredExpenseAccounts"
-              :columns="store.expenseAccountColumns"
-              row-key="id"
-              :loading="store.loading"
-              :filter="store.expenseSearch"
-            >
-              <template v-slot:body-cell-action="props">
-                <q-td :props="props">
-                  <q-btn
-                    flat
-                    label="Select"
-                    color="primary"
-                    @click="store.openExpenseDetail(props.row)"
-                  />
-                </q-td>
-              </template>
-            </q-table>
-          </q-card-section>
-
-          <q-card-actions align="right">
-            <q-btn
-              flat
-              label="Cancel"
-              class="modal-cancel-btn"
-              @click="store.closeDialog('expense')"
-            />
-          </q-card-actions>
-        </q-card>
-      </q-dialog>
-
-      <!-- Add Expense Dialog -->
-      <q-dialog v-model="store.dialogs.expenseDetail">
-        <q-card style="min-width: 500px">
-          <q-card-section>
-            <div class="text-h6">Add Expense</div>
-          </q-card-section>
-
-          <q-card-section>
-            <div class="text-subtitle1 q-mb-sm">
-              <strong>Account:</strong> {{ store.forms.expense.account }}
-            </div>
-            <div class="text-subtitle1 q-mb-md">
-              <strong>Balance:</strong> ₱{{ store.forms.expense.balance.toLocaleString() }}
-            </div>
-
-            <q-input
-              outlined
-              dense
-              v-model="store.forms.expense.particulars"
-              label="Particulars"
-              class="q-mb-md"
-              type="textarea"
-              autogrow
-            />
-
-            <q-input
-              outlined
-              dense
-              v-model="store.forms.expense.amount"
-              label="Amount"
-              class="q-mb-md"
-              prefix="₱"
-              type="number"
-            />
-          </q-card-section>
-
-          <q-card-actions align="right">
-            <q-btn
-              flat
-              label="Cancel"
-              class="modal-cancel-btn"
-              color="negative"
-              @click="store.closeDialog('expenseDetail')"
-            />
-            <q-btn label="Save" @click="store.saveExpense" class="modal-save-btn" />
-          </q-card-actions>
-        </q-card>
-      </q-dialog>
-
       <!-- Main Data Table -->
       <q-card>
         <q-table
@@ -297,47 +250,26 @@
         </q-table>
       </q-card>
 
-      <OrDetailsDialog v-model="store.dialogs.orDetails" />
+      <ContLiquidateDialog v-model="store.dialogs.orDetails" />
 
       <!-- View Only Dialog -->
-      <ViewOrDetails v-model="store.dialogs.viewOrDetails" />
-
-      <!--Edit Disbursement-->
-      <EditDisbursement />
+      <ContViewOr v-model="store.dialogs.viewOrDetails" />
     </div>
   </q-page>
 </template>
 
 <script setup>
-import { watch, onMounted } from 'vue'
-import SearchFilters from '../../components/disbursement/SearchFilters.vue'
-import OrDetailsDialog from '../../components/disbursement/OrDetailsDialog.vue'
-import ViewOrDetails from '../../components/disbursement/ViewOrDetails.vue'
-import EditDisbursement from '../../components/disbursement/EditDisbursement.vue'
-import { useDisbursementStore } from '../../stores/disbursementStore'
+import { useContDisbursementStore } from 'stores/contDisburseStore'
+import ContLiquidateDialog from 'components/contDisburse/ContOrDetails.vue'
+import ContViewOr from 'components/contDisburse/ContViewOr.vue'
 
-const store = useDisbursementStore()
-
-// Fetch expense hierarchy when component mounts
-// Fetch expense accounts when component mounts
-onMounted(async () => {
-  await store.fetchExpenseAccounts()
-})
-
-// Add this in your component's script section
-watch(
-  () => store.expenses,
-  (newExpenses) => {
-    console.log('Expenses changed:', newExpenses)
-    console.log('Current total:', store.totalExpensesAmount)
-  },
-  { deep: true },
-)
+const store = useContDisbursementStore()
 </script>
 
 <style scoped>
-.disbursement-page {
+.contdis-page {
   background-color: #D9D9D9; /* Light gray background */
   min-height: 100vh; /* Ensure full height */
 }
+
 </style>

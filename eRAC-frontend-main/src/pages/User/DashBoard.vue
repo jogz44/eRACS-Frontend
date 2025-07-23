@@ -10,19 +10,15 @@
         <!-- Use barangay_name instead of barangay.name -->
 
       </div>
-<div class="welcome-user"> Welcome Back, {{ authStore.user?.first_name || 'Guest'   }}<span>
-  <br>
-  <span class="text-caption text-white">Here's a quick overview of your dashboard</span>
-
-</span>
-
+<div class="welcome-user text-accent" style="font-size: 25px;">
+  Welcome Back, {{ authStore.user?.first_name || 'Guest' }}
+  <div style="font-size: 13px;" class="Custom-caption text-caption text-black">
+    Here's a quick overview of your dashboard
+  </div>
+</div>
 </div>
 
-
-    </div>
-
-
-    <div class="row q-col-gutter-lg q-mb-lg">
+   <div class="row q-col-gutter-lg q-mb-lg">
       <div
         class="col-xl-3 col-lg-4 col-md-6 col-sm-12"
         v-for="(card, index) in chartStore.summaryCards"
@@ -30,7 +26,7 @@
       >
 
         <q-card class="summary-card" :class="`card-${index}`">
-          <q-card-section class="row items-center justify-center q-pa-md" style="height: 100%">
+          <q-card-section class="row items-center justify-evenly q-pa-md" style="height: 100%">
             <div class="row items-center" style="max-width: 90%">
               <q-avatar
                 :icon="card.icon"
@@ -40,7 +36,7 @@
                 class="q-mr-md"
               />
               <div class="text-left">
-                <div class="text-caption text-grey">{{ card.label }}</div>
+                <div class="Custome-text text-caption text-grey">{{ card.label }}</div>
                 <div class="text-h5 text-weight-bold">{{ card.value }}</div>
               </div>
             </div>
@@ -49,7 +45,7 @@
       </div>
     </div>
 
-    <div class="row q-col-gutter-lg">
+    <div class="row q-col-gutter-lg chart-section">
       <div class="col-lg-6 col-md-12">
         <q-card class="chart-card">
           <q-card-section>
@@ -57,7 +53,7 @@
             <div class="text-caption text-grey-6">Current Year</div>
           </q-card-section>
           <q-separator />
-          <q-card-section style="height: 350px; position: relative">
+          <q-card-section style="height: 350px; position: relative; width: 100%;">
             <div v-if="chartStore.chartLoading" class="absolute-center">
               <q-spinner color="primary" size="3em" />
             </div>
@@ -66,7 +62,7 @@
         </q-card>
       </div>
 
-      <div class="col-lg-6 col-md-12">
+      <div class="col-lg-6 col-md-12 scroll-x">
         <q-card class="chart-card">
           <q-card-section>
             <div class="text-h6 text-weight-medium">Recent Liquidated Disbursements</div>
@@ -116,11 +112,11 @@ const chartOptions = computed(() => ({
         boxWidth: 12,
         boxHeight: 12,
         fontColor: '#fff',
-        padding: 15,
+        padding: 10,
         usePointStyle: true,
         pointStyle: 'circle',
         font: {
-          size: 12,
+          size: 10,
         },
       },
     },
@@ -187,6 +183,7 @@ onMounted(() => {
 .summary-card {
   position: sticky;
   min-height: 120px !important; /* Override any defaults */
+  min-width: 330px  !important; /* Ensure cards are wide enough */
   align-items: center;
   justify-content: center;
   border-radius: 12px;
@@ -238,6 +235,7 @@ onMounted(() => {
   }
 }
 
+
 // Responsive adjustments
 @media (max-width: $breakpoint-xs-max) {
   .summary-card {
@@ -249,6 +247,26 @@ onMounted(() => {
   border-radius: 10px;
   width: 250px;
 }
+@media (max-width: 600px) {
+  .welcome-user {
+    font-size: 18px !important;
+    text-align: left;
+  }
+  .Custom-caption {
+    font-size: 10px !important;
+  }
+  .Custome-text {
+    font-size: 12px;
+  }
+  .summary-card {
+    padding: 10px;
+
+  }
+  .chart-card {
+    width: 330px
+  }
+}
+
 
 /* Legend adjustments */
 :deep(.chartjs-legend) {

@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('disbursements', function (Blueprint $table) {
             $table->bigIncrements('id');
+            $table->unsignedBigInteger('barangay_id');
             $table->date('date');
             $table->string('dv_number')->unique();
             $table->string('cheque_number');
@@ -20,8 +21,11 @@ return new class extends Migration
             $table->string('payee');
             $table->decimal('dv_amount', 15, 2);
             $table->decimal('liquidated_amount', 15, 2)->nullable();
-            $table->string('status');
+            $table->enum('status', ['Pending', 'Liquidated'])->default('Pending');
+            $table->timestamp('liquidated_at')->nullable();
             $table->timestamps();
+
+            $table->foreign('barangay_id')->references('id')->on('barangays')->onDelete('cascade');
         });
     }
 
