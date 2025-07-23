@@ -1,6 +1,6 @@
 <template>
   <q-dialog v-model="store.dialogs.orDetails" persistent>
-    <q-card style="min-width: 1200px; max-width: 98vw;">
+    <q-card style="min-width: 900px; max-width: 98vw;">
       <q-card-section>
         <div class="row justify-between items-center">
           <div class="text-h6">{{ store.currentLiquidation.dvNumber }}</div>
@@ -12,7 +12,7 @@
         <!-- Single column layout matching the image -->
         <div class="row q-col-gutter-md">
           <!-- Left column - Financial details -->
-          <div class="col-12 col-md-6">
+          <div class="col-12 col-md-6" style="max-width: 400px; min-width: 0; flex: 1 1 300px;">
             <!-- Actual Expense -->
             <div class="q-mb-md">
               <div class="text-bold q-mb-xs">Actual Expense:</div>
@@ -56,7 +56,7 @@
           </div>
 
           <!-- Right column - Date and Remarks -->
-          <div class="col-12 col-md-6">
+          <div class="col-12 col-md-6" style="max-width: 400px; min-width: 0; flex: 1 1 300px;">
             <!-- Date -->
             <div class="q-mb-md">
               <div class="text-bold q-mb-xs">Date:</div>
@@ -106,7 +106,7 @@
                   flat
                   round
                   dense
-                  icon="delete"
+                  icon="remove"
                   color="red"
                   @click="removeOrDetail(index)"
                   title="Remove this OR"
@@ -219,26 +219,43 @@
 <script setup>
 import { computed, watch, ref, nextTick } from 'vue'
 import { useDisbursementStore } from 'stores/disbursementStore'
-// import { useQuasar } from 'quasar'
+import axios from 'axios'
 
 const store = useDisbursementStore()
 const orImageInputs = ref([])
 
-// Initialize orDetails when dialog opens
+// Fetch OR Details from backend when dialog opens
+async function fetchOrDetails() {
+  console.log('Fetching OR Details for disbursement ID:', store.currentLiquidation.id)
+  if (!store.currentLiquidation.id || isNaN(Number(store.currentLiquidation.id))) {
+    alert('Invalid disbursement ID!');
+    return;
+  }
+  try {
+    const res = await axios.get(`/api/barangay/disbursements/${store.currentLiquidation.id}/or-details`)
+    // Map backend fields to frontend fields
+    store.currentLiquidation.orDetails = res.data.data.map(or => ({
+      orDate: or.or_date,
+      orNumber: or.or_number,
+      orAmount: or.or_amount,
+      orImage: null, // Image upload handled separately
+      orPhotoUrl: or.or_photo ? `/storage/${or.or_photo}` : null,
+      remarks: or.remarks || '',
+    }))
+  } catch {
+    // fallback: initialize empty
+    store.currentLiquidation.orDetails = [
+      { orNumber: '', orAmount: '', orImage: null, remarks: '' },
+    ]
+  }
+}
+
+// Watch dialog open, fetch OR Details
 watch(
   () => store.dialogs.orDetails,
   (isOpen) => {
-    if (
-      isOpen &&
-      (!store.currentLiquidation.orDetails || !store.currentLiquidation.orDetails.length)
-    ) {
-      store.currentLiquidation.orDetails = [
-        {
-          orNumber: '',
-          orAmount: '',
-          orImage: null,
-        },
-      ]
+    if (isOpen) {
+      fetchOrDetails()
     }
   },
 )
@@ -267,6 +284,7 @@ const addOrDetail = () => {
     orNumber: '',
     orAmount: '',
     orImage: null,
+    remarks: '',
   })
 }
 

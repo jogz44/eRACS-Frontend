@@ -51,6 +51,13 @@ class DisbursementController extends Controller
         ]);
     }
 
+    // GET /api/barangay/disbursements/{id}/or-details
+    public function getOrDetails($id)
+    {
+        $orDetails = \App\Models\DisbursementOrDetail::where('disbursement_id', $id)->get();
+        return response()->json(['status' => true, 'data' => $orDetails]);
+    }
+
     // PATCH /api/barangay/disbursements/{id}/liquidate
     public function liquidate(Request $request, $id)
     {

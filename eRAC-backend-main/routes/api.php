@@ -106,8 +106,10 @@ Route::prefix('barangay')->group(function () {
     Route::get('disbursements', [DisbursementController::class, 'index']);
     // Liquidate a disbursement
     Route::patch('disbursements/{id}/liquidate', [DisbursementController::class, 'liquidate']);
+   
   });
-  
+   // Fetch OR Details for a disbursement
+   Route::get('disbursements/{id}/or-details', [DisbursementController::class, 'getOrDetails']);
 });
 
 Route::prefix('admin')->group(function () {

@@ -58,7 +58,7 @@
             <!-- Remarks -->
             <div class="q-mb-md">
               <div class="text-bold q-mb-xs">Remarks:</div>
-              <q-input outlined :model-value="store.currentLiquidation.remarks" disable and readonly
+              <q-input outlined :model-value="store.currentLiquidation.orDetails && store.currentLiquidation.orDetails.length > 0 ? store.currentLiquidation.orDetails[0].remarks : ''" disable readonly
                 bg-color="grey-3" />
             </div>
           </div>
@@ -116,10 +116,22 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useDisbursementStore } from 'stores/disbursementStore'
 
 const store = useDisbursementStore()
+
+// Debug: log image paths when dialog opens
+watch(
+  () => store.dialogs.viewOrDetails,
+  (isOpen) => {
+    if (isOpen && store.currentLiquidation && store.currentLiquidation.orDetails) {
+      store.currentLiquidation.orDetails.forEach((orDetail, idx) => {
+        console.log(`OR Detail [${idx}] image path:`, orDetail.orImage)
+      })
+    }
+  }
+)
 
 const totalActualExpense = computed(() => {
   if (!store.currentLiquidation?.orDetails) return '0.00'
