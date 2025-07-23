@@ -7,13 +7,13 @@ const routes = [
       {
         name: 'Login',
         path: '',
-        component: () => import('pages/LoginPage.vue'),
+        component: () => import('src/pages/Accounts/LoginPage.vue'),
       },
 
       {
         path: 'signup',
         name: 'Signup',
-        component: () => import('pages/SignupPage.vue'),
+        component: () => import('src/pages/Accounts/SignupPage.vue'),
       },
 
       {
@@ -25,7 +25,7 @@ const routes = [
       {
         path: 'forgotpage',
         name: 'forgotpage',
-        component: () => import('pages/ForgotPage.vue'),
+        component: () => import('src/pages/Accounts/ForgotPage.vue'),
       },
     ],
   },
@@ -33,7 +33,7 @@ const routes = [
   {
     path: '/reset-password',
     name: 'ResetPassword',
-    component: () => import('pages/ResetPasswordPage.vue'),
+    component: () => import('src/pages/Accounts/ResetPasswordPage.vue'),
   },
 
   {
@@ -44,7 +44,7 @@ const routes = [
       {
         path: 'dashboard',
         name: 'UserDashboard',
-        component: () => import('pages/DashBoard.vue'),
+        component: () => import('src/pages/User/DashBoard.vue'),
         meta: { title: 'Dashboard' },
       },
       // Transactions
@@ -56,17 +56,17 @@ const routes = [
           {
             path: 'appropriation',
             name: 'Appropriation',
-            component: () => import('pages/Transaction/AppropriationTran.vue'),
+            component: () => import('src/pages/User/Transaction/AppropriationTran.vue'),
           },
           {
             path: 'disbursement',
             name: 'Disbursement',
-            component: () => import('pages/Transaction/DisbursementTran.vue'),
+            component: () => import('src/pages/User/Transaction/DisbursementTran.vue'),
           },
           {
             path: 'augmentation',
             name: 'Augmentation',
-            component: () => import('pages/Transaction/AugmentationTran.vue'),
+            component: () => import('src/pages/User/Transaction/AugmentationTran.vue'),
           },
         ],
       },
@@ -80,17 +80,17 @@ const routes = [
           {
             path: 'appropriation',
             name: 'ContAppropriation',
-            component: () => import('pages/Continuing/ContAppr.vue'),
+            component: () => import('src/pages/User/Continuing/ContAppr.vue'),
           },
           {
             path: 'disbursement',
             name: 'ContDisbursement',
-            component: () => import('pages/Continuing/ContDis.vue'),
+            component: () => import('src/pages/User/Continuing/ContDis.vue'),
           },
           {
             path: 'augmentation',
             name: 'ContAugmentation',
-            component: () => import('pages/Continuing/ContAug.vue'),
+            component: () => import('src/pages/User/Continuing/ContAug.vue'),
           },
         ],
       },
@@ -104,22 +104,22 @@ const routes = [
           {
             path: 'accounts',
             name: 'AccountsLib',
-            component: () => import('pages/Libraries/AccountsLib.vue'),
+            component: () => import('src/pages/User/Libraries/AccountsLib.vue'),
           },
           {
             path: 'particulars',
             name: 'ParticularLib',
-            component: () => import('pages/Libraries/ParticularsLib.vue'),
+            component: () => import('src/pages/User/Libraries/ParticularsLib.vue'),
           },
           {
             path: 'bank',
             name: 'BankLib',
-            component: () => import('pages/Libraries/BankLib.vue'),
+            component: () => import('src/pages/User/Libraries/BankLib.vue'),
           },
           {
             path: 'continuing',
             name: 'ContinuingLib',
-            component: () => import('pages/Libraries/ContinuingLib.vue'),
+            component: () => import('src/pages/User/Libraries/ContinuingLib.vue'),
           },
         ],
       },

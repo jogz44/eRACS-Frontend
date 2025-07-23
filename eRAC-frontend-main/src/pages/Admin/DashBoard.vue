@@ -34,6 +34,7 @@
           </q-card-section>
         </q-card>
       </div>
+    </div>
 
     <!-- Barangay Summary Table -->
     <q-card>
@@ -103,19 +104,19 @@ export default {
     const fetchDashboardData = async () => {
       try {
         isLoading.value = true
-        
+
         // Fetch barangay-wise data
         const response = await api.get('/api/admin/per-barangay-budgets')
-        
+
         // Calculate totals
         let budgetSum = 0
         let balanceSum = 0
-        
+
         barangaySummary.value = response.data.map((b) => {
           const budget = parseFloat(b.total_original_amount || '0')
           const balance = parseFloat(b.total_current_amount || '0')
           const expenses = budget - balance
-          
+
           // Add to sums
           budgetSum += budget
           balanceSum += balance

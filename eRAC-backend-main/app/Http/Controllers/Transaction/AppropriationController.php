@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Transaction;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\AdminAuthController;
 use App\Models\Budget;
-use App\Http\Controllers\AdminAuthController;
 use App\Models\TranAppropriation;
 use App\Models\LibFiscalYear;
 use App\Models\LibExpenseClass;
@@ -22,7 +21,7 @@ use Illuminate\Validation\Rule;
         if ($request->user()) {
             AdminAuthController::logUserAction($request->user(),'Visited Appropriation Page' ,'Visited Appropriation Page');
         }
-      
+
         $request->validate([
             'year' => 'nullable|integer',
             'status' => 'nullable|in:draft,committed,reverted',
@@ -422,10 +421,10 @@ public function saveAllocation(Request $request, Budget $budget)
     {
         try {
             \Log::info('Dashboard summary requested for user: ' . $request->user()->id);
-            
+
             $barangayId = $request->user()->barangay_id;
             \Log::info('Barangay ID: ' . $barangayId);
-            
+
             // Get all budgets for this barangay
             $budgets = Budget::with(['tranAppropriations', 'fiscalYear'])
                 ->where('barangay_id', $barangayId)
@@ -446,9 +445,9 @@ public function saveAllocation(Request $request, Budget $budget)
             // Get expense hierarchy for pie chart
             $currentYear = now()->year;
             $fiscalYear = LibFiscalYear::where('year', $currentYear)->first();
-            
+
             \Log::info('Current year: ' . $currentYear . ', Fiscal year found: ' . ($fiscalYear ? 'yes' : 'no'));
-            
+
             $expenseHierarchy = [];
             if ($fiscalYear) {
                 $expenseHierarchy = LibExpenseClass::with(['types.items'])
@@ -519,9 +518,9 @@ public function saveAllocation(Request $request, Budget $budget)
             ];
 
             \Log::info('Dashboard response prepared', $response);
-            
+
             return response()->json($response);
-            
+
         } catch (\Exception $e) {
             \Log::error('Dashboard summary error: ' . $e->getMessage());
             return response()->json([
