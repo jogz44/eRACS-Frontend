@@ -34,7 +34,6 @@
           </q-card-section>
         </q-card>
       </div>
-    </div>
 
     <!-- Barangay Summary Table -->
     <q-card>
