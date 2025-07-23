@@ -263,10 +263,10 @@
 <script setup>
 import { ref, watch, onMounted, computed } from 'vue'
 import { useQuasar } from 'quasar'
-import CommitDialog from '../../components/appropriation/CommitDialog.vue'
-import ViewCommitDialog from '../../components/appropriation/ViewCommitDialog.vue'
-import { useAppropriationStore } from '../../stores/appropriationStore'
-import { useAccountsLibraryStore } from '../../stores/accountsLibstore'
+import CommitDialog from 'components/appropriation/CommitDialog.vue'
+import ViewCommitDialog from 'components/appropriation/ViewCommitDialog.vue'
+import { useAppropriationStore } from 'stores/appropriationStore'
+import { useAccountsLibraryStore } from 'stores/accountsLibstore'
 import { api } from 'src/boot/axios'
 
 const $q = useQuasar()

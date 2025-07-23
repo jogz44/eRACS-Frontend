@@ -195,6 +195,9 @@ const navLinks = [
     { title: 'Continuing', link: '/home/libraries/continuing' }
   ]},
   { title: 'Reports', icon: 'assessment', link: '/home/reports' },
+{
+  title: 'UserAccess', icon:  'admin_panel_settings',link:'User/UserAccess'
+}
 
 ]
 

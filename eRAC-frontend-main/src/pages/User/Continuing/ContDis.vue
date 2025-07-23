@@ -259,9 +259,9 @@
 </template>
 
 <script setup>
-import { useContDisbursementStore } from '../../stores/contDisburseStore'
-import ContLiquidateDialog from '../../components/contDisburse/ContOrDetails.vue'
-import ContViewOr from '../../components/contDisburse/ContViewOr.vue'
+import { useContDisbursementStore } from 'stores/contDisburseStore'
+import ContLiquidateDialog from 'components/contDisburse/ContOrDetails.vue'
+import ContViewOr from 'components/contDisburse/ContViewOr.vue'
 
 const store = useContDisbursementStore()
 </script>

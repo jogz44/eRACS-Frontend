@@ -166,7 +166,7 @@
 </template>
 
 <script setup>
-import { useDisbursementStore } from '../../stores/disbursementStore'
+import { useDisbursementStore } from 'stores/disbursementStore'
 
 const store = useDisbursementStore()
 </script>

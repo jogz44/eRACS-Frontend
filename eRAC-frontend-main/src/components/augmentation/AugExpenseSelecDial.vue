@@ -47,7 +47,7 @@
 </template>
 
 <script setup>
-import { useAugmentationStore } from '../../stores/augmentation'
+import { useAugmentationStore } from 'stores/augmentation'
 const store = useAugmentationStore()
 </script>
 

@@ -310,11 +310,11 @@
 
 <script setup>
 import { watch, onMounted } from 'vue'
-import SearchFilters from '../../components/disbursement/SearchFilters.vue'
-import OrDetailsDialog from '../../components/disbursement/OrDetailsDialog.vue'
-import ViewOrDetails from '../../components/disbursement/ViewOrDetails.vue'
-import EditDisbursement from '../../components/disbursement/EditDisbursement.vue'
-import { useDisbursementStore } from '../../stores/disbursementStore'
+import SearchFilters from 'components/disbursement/SearchFilters.vue'
+import OrDetailsDialog from 'components/disbursement/OrDetailsDialog.vue'
+import ViewOrDetails from 'components/disbursement/ViewOrDetails.vue'
+import EditDisbursement from 'components/disbursement/EditDisbursement.vue'
+import { useDisbursementStore } from 'stores/disbursementStore'
 
 const store = useDisbursementStore()
 

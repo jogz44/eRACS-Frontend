@@ -309,7 +309,7 @@
 </template>
 
 <script setup>
-import { useContAugmentationStore } from '../../stores/contAugmentation'
+import { useContAugmentationStore } from 'stores/contAugmentation'
 const store = useContAugmentationStore()
 </script>
 

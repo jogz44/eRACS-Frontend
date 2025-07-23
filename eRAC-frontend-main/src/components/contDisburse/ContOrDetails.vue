@@ -202,7 +202,7 @@
 
 <script setup>
 import { computed, watch } from 'vue'
-import { useContDisbursementStore } from '../../stores/contDisburseStore'
+import { useContDisbursementStore } from 'stores/contDisburseStore'
 
 const store = useContDisbursementStore()
 
