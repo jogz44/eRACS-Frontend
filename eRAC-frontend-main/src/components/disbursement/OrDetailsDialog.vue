@@ -1,6 +1,6 @@
 <template>
   <q-dialog v-model="store.dialogs.orDetails" persistent>
-    <q-card style="min-width: 900px">
+    <q-card style="min-width: 1200px; max-width: 98vw;">
       <q-card-section>
         <div class="row justify-between items-center">
           <div class="text-h6">{{ store.currentLiquidation.dvNumber }}</div>
@@ -35,7 +35,7 @@
                 filled
                 unelaveted
                 outlined
-                :model-value="`${store.currentLiquidation.dvAmount.toFixed(2)}`"
+                :model-value="Number(store.currentLiquidation.dvAmount || 0).toFixed(2)"
                 prefix="₱"
                 readonly
               />
@@ -94,15 +94,26 @@
           </div>
 
           <!-- OR Details List - Maintains original styling with added OR Date -->
-          <!-- OR Details List - Maintains original styling with added OR Date -->
           <div
             v-for="(orDetail, index) in store.currentLiquidation.orDetails"
             :key="index"
             class="q-mb-md"
           >
             <div class="row q-col-gutter-md">
+              <!-- Remove Button Far Left -->
+              <div class="col-auto flex flex-center" v-if="store.currentLiquidation.orDetails.length > 1" style="min-width: 40px;">
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="delete"
+                  color="red"
+                  @click="removeOrDetail(index)"
+                  title="Remove this OR"
+                />
+              </div>
               <!-- OR Date -->
-              <div class="col-12 col-md-3">
+              <div class="col-12 col-md-2">
                 <div class="text-bold q-mb-xs">OR Date:</div>
                 <q-input
                   filled
@@ -126,7 +137,7 @@
               </div>
 
               <!-- OR Number -->
-              <div class="col-12 col-md-3">
+              <div class="col-12 col-md-2">
                 <div class="text-bold q-mb-xs">OR Number:</div>
                 <q-input
                   filled
@@ -138,7 +149,7 @@
               </div>
 
               <!-- OR Amount -->
-              <div class="col-12 col-md-3">
+              <div class="col-12 col-md-2">
                 <div class="text-bold q-mb-xs">OR Amount:</div>
                 <q-input
                   filled
@@ -154,37 +165,42 @@
 
               <!-- OR Image -->
               <div class="col-12 col-md-3">
-                <div class="text-bold q-mb-xs">OR Image:</div>
-                <q-btn
-                  v-if="!orDetail.orImage"
-                  flat
-                  dense
-                  outline
-                  color="green"
-                  class="full-width"
-                  icon="upload"
-                  label="Upload Image"
-                  @click="$refs[`orImageUploader${index}`][0].pickFiles()"
-                />
-                <q-uploader
-                  :ref="`orImageUploader${index}`"
+                <div class="text-bold q-mb-xs" style="display: flex; align-items: center;">
+                  OR Image:
+                  <q-btn
+                    v-if="orDetail.orPhotoUrl"
+                    flat
+                    dense
+                    round
+                    icon="delete"
+                    color="red"
+                    @click="removeOrImage(index)"
+                    style="margin-left: 8px;"
+                  />
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+                    <q-btn
+                    v-if="!orDetail.orPhotoUrl"
+                    flat
+                    dense
+                    color="primary"
+                    icon="upload"
+                    label="Upload"
+                    @click="triggerOrFileInput(index)"
+                    style="min-width: 100px;"
+                  />
+                  <q-img
+                    v-if="orDetail.orPhotoUrl"
+                    :src="orDetail.orPhotoUrl"
+                    style="max-width: 100%; max-height: 100%; border-radius: 4px; border: 1px solid #eee;"
+                  />
+                </div>
+                <input
+                  :ref="setOrImageInputRef(index)"
+                  type="file"
+                  accept=".jpg,.jpeg,.png"
                   style="display: none"
-                  accept=".jpg,.png,.pdf"
-                  @added="(files) => uploadOrImage(files, index)"
-                />
-                <q-img
-                  v-if="orDetail.orImage"
-                  :src="orDetail.orImage"
-                  style="max-width: 100%; max-height: 100px; margin-top: 10px"
-                />
-                <q-btn
-                  v-if="store.currentLiquidation.orDetails.length > 1"
-                  flat
-                  dense
-                  icon="remove"
-                  color="red"
-                  @click="removeOrDetail(index)"
-                  class="q-mt-sm"
+                  @change="(e) => onOrImageChange(e, index)"
                 />
               </div>
             </div>
@@ -201,10 +217,12 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
+import { computed, watch, ref, nextTick } from 'vue'
 import { useDisbursementStore } from '../../stores/disbursementStore'
+// import { useQuasar } from 'quasar'
 
 const store = useDisbursementStore()
+const orImageInputs = ref([])
 
 // Initialize orDetails when dialog opens
 watch(
@@ -258,15 +276,47 @@ const removeOrDetail = (index) => {
   }
 }
 
-const uploadOrImage = (files, index) => {
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    if (store.currentLiquidation.orDetails?.[index]) {
-      store.currentLiquidation.orDetails[index].orImage = e.target.result
-    }
+function setOrImageInputRef(index) {
+  return (el) => {
+    orImageInputs.value[index] = el
   }
-  reader.readAsDataURL(files[0])
 }
+
+function triggerOrFileInput(index) {
+  nextTick(() => {
+    const input = orImageInputs.value[index]
+    if (input) {
+      input.value = '' // allow re-uploading same file
+      input.click()
+    }
+  })
+}
+
+function onOrImageChange(e, index) {
+  const file = e.target.files && e.target.files[0]
+  if (file) {
+    // Clean up previous object URL if any
+    const prevUrl = store.currentLiquidation.orDetails[index].orPhotoUrl
+    if (prevUrl) URL.revokeObjectURL(prevUrl)
+    store.currentLiquidation.orDetails[index].orImage = file
+    store.currentLiquidation.orDetails[index].orPhotoUrl = URL.createObjectURL(file)
+  }
+}
+
+function removeOrImage(index) {
+  const prevUrl = store.currentLiquidation.orDetails[index].orPhotoUrl
+  if (prevUrl) URL.revokeObjectURL(prevUrl)
+  store.currentLiquidation.orDetails[index].orImage = null
+  store.currentLiquidation.orDetails[index].orPhotoUrl = null
+  const input = orImageInputs.value[index]
+  if (input) input.value = ''
+}
+
+// function saveOrDetails() {
+//   // Example: pass orImageFile.value to store action for upload
+//   // store.saveOrDetails({ ...fields, orImage: orImageFile.value })
+//   store.dialogs.orDetails = false
+// }
 
 const isValid = computed(() => {
   return (
