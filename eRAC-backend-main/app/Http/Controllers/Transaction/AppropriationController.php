@@ -3,6 +3,7 @@ namespace App\Http\Controllers\Transaction;
 
 use App\Http\Controllers\Controller;
 use App\Models\Budget;
+use App\Http\Controllers\AdminAuthController;
 use App\Models\TranAppropriation;
 use App\Models\LibFiscalYear;
 use App\Models\LibExpenseClass;
