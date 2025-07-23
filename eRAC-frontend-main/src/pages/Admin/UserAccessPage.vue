@@ -30,6 +30,11 @@
           class="user-access-table"
           :pagination="{ rowsPerPage: 10 }"
         >
+          <template v-slot:body-cell-index="props">
+            <q-td :props="props">
+              {{ props.pageIndex + 1 }}
+            </q-td>
+          </template>
           <template v-slot:body-cell-actions="props">
             <q-td :props="props" class="actions-column">
               <q-btn label="Access" color="primary" size="sm" @click="openAccessModal(props.row)" />
@@ -90,11 +95,25 @@ export default {
         // Add more users as needed
       ],
       columns: [
-        { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
+        {
+          name: 'index',
+          label: '#',
+          field: 'index', // index starts from 0, so add 1
+          align: 'left',
+          sortable: false, // optional: disable sorting
+        },
         { name: 'fullname', label: 'Full Name', field: 'fullname', align: 'left', sortable: true },
-        { name: 'position', label: 'Position', field: 'position', align: 'left', sortable: true },
+        { name: 'barangay', label: 'BARANGAY', field: 'barangay', align: 'left', sortable: true },
+        { name: 'position', label: 'POSITION', field: 'position', align: 'left', sortable: true  },
         { name: 'username', label: 'Username', field: 'username', align: 'left', sortable: true },
         { name: 'actions', label: 'Actions', align: 'center', sortable: false },
+
+        // { name: 'name', label: 'NAME', field: 'name', align: 'left' },
+        // { name: 'barangay', label: 'BARANGAY', field: 'barangay', align: 'left' },
+        // { name: 'position', label: 'POSITION', field: 'position', align: 'left' },
+        // { name: 'username', label: 'USERNAME', field: 'username', align: 'left' },
+        // { name: 'email', label: 'EMAIL', field: 'email', align: 'left' },
+        // { name: 'action', label: '', field: 'action', align: 'center' },
       ],
       accessModal: {
         show: false,
