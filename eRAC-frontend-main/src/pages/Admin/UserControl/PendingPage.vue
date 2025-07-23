@@ -34,6 +34,12 @@
           :loading="loading"
           class="user-table"
         >
+        
+          <template v-slot:body-cell-index="props">
+            <q-td :props="props">
+              {{ props.pageIndex + 1 }}
+            </q-td>
+          </template>
           <!-- Custom Actions Column -->
           <template v-slot:body-cell-action="props">
             <q-td :props="props" class="action-buttons">
@@ -190,22 +196,19 @@ export default {
       users: [],
       loading: false,
       columns: [
-        { name: 'created_at', label: 'Request Date', field: 'created_at', align: 'left', classes: 'text-left' },
         {
-          name: 'username',
-          label: 'Username',
-          field: 'username',
+          name: 'index',
+          label: '#',
+          field: 'index', 
           align: 'left',
-          classes: 'text-left',
+          sortable: false, // optional: disable sorting
         },
-        { name: 'email', label: 'Email', field: 'email', align: 'left', classes: 'text-left' },
-        {
-          name: 'action',
-          label: 'Action',
-          field: 'action',
-          align: 'center',
-          classes: 'text-center',
-        },
+        { name: 'name', label: 'NAME', field: 'name', align: 'left', sortable: true  },
+        { name: 'barangay', label: 'BARANGAY', field: 'barangay', align: 'left', sortable: true  },
+        { name: 'position', label: 'POSITION', field: 'position', align: 'left', sortable: true  },
+        { name: 'username', label: 'USERNAME', field: 'username', align: 'left', sortable: true  },
+        { name: 'email', label: 'EMAIL', field: 'email', align: 'left' },
+        { name: 'action', label: '', field: 'action', align: 'center' },
       ],
       cancelModal: {
         show: false,

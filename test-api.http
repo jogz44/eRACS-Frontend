@@ -9,6 +9,23 @@
 # GET http://localhost:8000/api/user
 # Accept: application/json
 
-GET http://localhost:8000/api/admin/admin/logs
-Authorization: Bearer 20321|MJVIJC1JcFqCmc5PKQL9fxYnAlKup2wOU6Ax9bDe0589ebf2
+# GET http://localhost:8000/api/admin/admin/logs
+# Authorization: Bearer 20321|MJVIJC1JcFqCmc5PKQL9fxYnAlKup2wOU6Ax9bDe0589ebf2
+# Accept: application/json
+
+GET http://localhost:8000/api/barangay/budgets
+Authorization: Bearer 7|zxxYoCnlPgfTb88lahQzxnHCPMsRxPAcH1nWTELy0e2a2a44
 Accept: application/json
+
+# POST http://localhost:8000/api/barangay/budgets/create
+# Authorization: Bearer 324|G1oIfEkImwBudpxSRm1xlwlKcqKIeqk20vNu6r3ra3363939
+# Accept: application/json
+# Content-Type: application/json
+
+# {
+#   "fiscal_year_id": 22,
+#   "start_date": "2026-01-01",
+#   "end_date": "2026-12-31",
+#   "description": "Annual Barangay Budget",
+#   "original_amount": 1000000
+# }

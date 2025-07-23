@@ -12,6 +12,7 @@ class Disbursement extends Model
     protected $table = 'disbursements';
 
     protected $fillable = [
+        'barangay_id',
         'date',
         'dv_number',
         'cheque_number',
@@ -19,5 +20,17 @@ class Disbursement extends Model
         'payee',
         'dv_amount',
         'status',
+        'liquidated_amount',
+        'liquidated_at',
     ];
+
+    public function barangay()
+    {
+        return $this->belongsTo(Barangay::class);
+    }
+
+    public function orDetails()
+    {
+        return $this->hasMany(DisbursementOrDetail::class);
+    }
 } 

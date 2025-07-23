@@ -250,7 +250,7 @@
         </q-table>
       </q-card>
 
-      <ContOrDetailsDialog v-model="store.dialogs.orDetails" />
+      <ContLiquidateDialog v-model="store.dialogs.orDetails" />
 
       <!-- View Only Dialog -->
       <ContViewOr v-model="store.dialogs.viewOrDetails" />
@@ -260,7 +260,7 @@
 
 <script setup>
 import { useContDisbursementStore } from '../../stores/contDisburseStore'
-import ContOrDetailsDialog from '../../components/contDisburse/ContOrDetails.vue'
+import ContLiquidateDialog from '../../components/contDisburse/ContOrDetails.vue'
 import ContViewOr from '../../components/contDisburse/ContViewOr.vue'
 
 const store = useContDisbursementStore()

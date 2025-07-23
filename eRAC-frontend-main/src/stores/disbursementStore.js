@@ -1,6 +1,8 @@
 // src/stores/disbursementStore.js
 import { defineStore } from 'pinia'
 import { useAppropriationStore } from './appropriationStore'
+import { api } from 'src/boot/axios'
+import { useAuthStore } from './auth'
 
 export const useDisbursementStore = defineStore('disbursement', {
   state: () => ({
@@ -16,19 +18,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     availableChequeNumbers: [],
     selectedBooklet: null,
     selectedChequeNumber: null,
-    disbursements: [
-      {
-        id: 1,
-        date: '22/01/2025',
-        dvNumber: 'DV-25-43-01',
-        chequeNumber: '123456', // Consistent property name
-        bank: 'BDO',
-        payee: 'NORDECO',
-        dvAmount: 4000.0,
-        aging: '20 days',
-        status: 'Liquidated',
-      },
-    ],
+    disbursements: [], // <-- Remove static data, will be loaded from API
 
     // Current selections
     currentLiquidation: null,
@@ -254,6 +244,62 @@ export const useDisbursementStore = defineStore('disbursement', {
       } catch (error) {
         console.error('Error fetching expense accounts:', error)
         this.expenseData = []
+      }
+    },
+
+    async fetchDisbursements() {
+      try {
+        const authStore = useAuthStore()
+        const token = authStore.token
+        const response = await api.get('/api/barangay/disbursements', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        })
+        // Map backend fields to frontend fields if needed
+        this.disbursements = (response.data.data || []).map(d => ({
+          id: d.id,
+          date: d.date,
+          dvNumber: d.dv_number,
+          chequeNumber: d.cheque_number,
+          bank: d.bank,
+          payee: d.payee,
+          dvAmount: d.dv_amount,
+          status: d.status,
+          aging: calculateAging(d.date),
+        }))
+      } catch (error) {
+        console.error('Failed to fetch disbursements:', error)
+        this.disbursements = []
+      }
+    },
+
+    async liquidateDisbursement(id, liquidatedAmount) {
+      try {
+        const authStore = useAuthStore();
+        const token = authStore.token;
+        const response = await api.patch(`/api/barangay/disbursements/${id}/liquidate`,
+          { liquidated_amount: liquidatedAmount },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
+          }
+        );
+        // Update the local disbursement
+        const updated = response.data.data;
+        const idx = this.disbursements.findIndex(d => d.id === id);
+        if (idx !== -1) {
+          this.disbursements[idx].status = updated.status;
+          this.disbursements[idx].liquidated_amount = updated.liquidated_amount;
+          this.disbursements[idx].aging = calculateAging(updated.date);
+        }
+        return true;
+      } catch (error) {
+        console.error('Failed to liquidate disbursement:', error);
+        return false;
       }
     },
 
@@ -548,5 +594,46 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
       reader.readAsDataURL(files[0])
     },
+
+    async uploadOrPhoto(file) {
+      try {
+        const formData = new FormData();
+        formData.append('photo', file, file.name);
+        const response = await api.post('/api/barangay/disbursements/or-photo/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return { success: true, path: response.data.path };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    },
+
+    async deleteOrPhoto(path) {
+      try {
+        await api.delete('/api/barangay/disbursements/or-photo/delete', { data: { path } });
+        return { success: true };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    },
   },
 })
+
+function calculateAging(dateString) {
+  // Accepts 'YYYY-MM-DD' or 'YYYY/MM/DD'
+  if (!dateString) return '0 days';
+  const parts = dateString.includes('-') ? dateString.split('-') : dateString.split('/');
+  let yyyy, mm, dd;
+  if (parts[0].length === 4) {
+    // 'YYYY-MM-DD'
+    [yyyy, mm, dd] = parts;
+  } else {
+    // 'DD/MM/YYYY'
+    [dd, mm, yyyy] = parts;
+  }
+  const disbDate = new Date(`${yyyy}-${mm}-${dd}`);
+  const today = new Date();
+  const diffTime = today - disbDate;
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  return `${diffDays} days`;
+}

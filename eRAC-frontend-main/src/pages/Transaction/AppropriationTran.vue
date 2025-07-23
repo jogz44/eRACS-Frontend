@@ -428,7 +428,7 @@ const openEditAllocationDialog = async (row) => {
       position: 'top',
     })
   }
-}
+  }
 
 // The dialog should be closed with:
 const closeEditAllocationDialog = () => {
