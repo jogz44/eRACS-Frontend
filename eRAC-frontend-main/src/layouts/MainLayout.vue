@@ -103,26 +103,29 @@
     <div class="drawer-footer q-mt-auto q-pa-xs">
       <div class="text-caption text-grey items-center q-pa-sm footer-avatar">
         <q-list separator>
-          <div class="footer-user q-pa-sm">
-            <q-avatar size="$q.screen.lt.md ? '32px' : '45px'" class="footer-avatar-center">
-              <img :src="userPhoto" @error="handleImageError" style="max-width: 100%; height: auto;" />
-            </q-avatar>
-            <div class="footer-user-info">
-              <span class="Custom-text text-caption text-white text-weight-bold">
-                {{ authStore.user?.first_name || 'Guest' }}
-                {{ authStore.user?.last_name || ''   }}
-              </span>
-              <span class="text-caption text-white text-weight-medium text-h5">
-                {{ authStore.user.position }}
-              </span>
+          <div class="footer-user row items-center q-gutter-sm q-pa-sm justify-between">
+            <div class="row items-center q-gutter-sm">
+              <!-- Avatar -->
+              <q-avatar size="$q.screen.lt.md ? '32px' : '45px'">
+                <img :src="userPhoto" @error="handleImageError" style="max-width: 100%; height: auto;" />
+              </q-avatar>
+              <!-- Name & Position -->
+              <div class="column">
+                <span class="Custom-text text-caption text-white text-weight-bold">
+                  {{ authStore.user?.first_name || 'Guest' }}
+                  {{ authStore.user?.last_name || ''   }}
+                </span>
+                <span class="text-caption text-white text-weight-medium text-h5"  >
+                 {{ authStore.user.position }}
+                </span>
+              </div>
             </div>
             <q-btn
               icon="logout"
-              color="white"
+              color="negative"
               flat
               round
               dense
-              class="footer-logout-btn"
               @click="handleLogout"
             >
               <q-tooltip>Log Out</q-tooltip>
@@ -213,7 +216,7 @@ const navLinks = [
     link: '/home/libraries/continuing' }
   ]},
   { title: 'Reports', icon: 'assessment', link: '/home/reports' },
-  
+
   {
     title: 'User Access', icon: 'admin_panel_settings', link: '/home/useraccess'
   },
@@ -360,39 +363,7 @@ const toggleExpand = (title, parentTitle = null) => {
     padding: 0 4px;
   }
 }
-.footer-user {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
+.full-width {
   width: 100%;
-}
-.footer-avatar-center {
-  margin-bottom: 0;
-}
-.footer-user-info {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  min-width: 0;
-}
-.footer-logout-btn {
-  margin-top: 0;
-}
-@media (max-width: 600px) {
-  .footer-user {
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-  }
-  .footer-user-info {
-    align-items: center;
-    text-align: center;
-  }
-  .footer-logout-btn {
-    margin-top: 8px;
-  }
 }
 </style>
