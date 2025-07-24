@@ -331,12 +331,12 @@ export default {
         }))
 
         // Load positions
-        const positionResponse = await api.get('/api/barangay/positions') 
+        const positionResponse = await api.get('/api/barangay/positions')
           positionOptions.value = positionResponse.data.map((b) => ({
           name: b.name,
           value: b.name,
         }))
-        
+
       } catch (error) {
         $q.notify({
           type: 'negative',

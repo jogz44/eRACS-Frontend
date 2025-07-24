@@ -29,16 +29,60 @@
               emit-value
               map-options
               option-label="name"
-              option-value="value"
+              option-value="posvalue"
               :rules="[(val) => !!val || 'Barangay is required']"
             />
 
         <q-input v-model="preparedByName" label="Prepared by:" filled />
-        <q-input v-model="preparedByPosition" label="Position: " filled bg-color="light-green-1" class="input"/>
+
+        <q-select
+              outlined
+              dense
+              bg-color="light-green-1"
+              v-model="preparedposition"
+              :options="preparedByPosition"
+              label="Select Position"
+              color="green"
+              class="q-mb-sm"
+              emit-value
+              map-options
+              option-label="name"
+              option-value="value"
+              :rules="[(val) => !!val || 'Position is required']"
+            />
+
         <q-input v-model="notedByName" label="Noted by:" filled />
-        <q-input v-model="notedByPosition" label="Position: " filled bg-color="light-green-1"/>
+          <q-select
+              outlined
+              dense
+              bg-color="light-green-1"
+              v-model="notedposition"
+              :options="notedByPosition"
+              label="Select Position"
+              color="green"
+              class="q-mb-sm"
+              emit-value
+              map-options
+              option-label="name"
+              option-value="value"
+              :rules="[(val) => !!val || 'Position is required']"
+            />
         <q-input v-model="certifiedByName" label="Certified by:" filled />
-        <q-input v-model="certifiedByPosition" label="Input position" filled />
+        <q-select
+              outlined
+              dense
+              bg-color="light-green-1"
+              v-model="certifiedposition"
+              :options="certifiedByPosition"
+              label="Select Position"
+              color="green"
+              class="q-mb-sm"
+              emit-value
+              map-options
+              option-label="name"
+              option-value="value"
+              :rules="[(val) => !!val || 'Position is required']"
+            />
       </q-card-section>
       <q-card-actions align="right">
         <q-btn flat label="Save" class="modal-save-btn" v-close-popup @click="saveSettings" />
@@ -65,11 +109,14 @@ const emit = defineEmits(['update:modelValue'])
 // Form data
 const barangay = ref('')
 const preparedByName = ref('')
-const preparedByPosition = ref('Barangay Treasurer')
+const preparedposition = ref('')
+const notedposition = ref('')
+const certifiedposition = ref('')
 const notedByName = ref('')
 const notedByPosition = ref('Punong Barangay')
 const certifiedByName = ref('')
-const certifiedByPosition = ref('')
+const certifiedByPosition = ref([])
+const preparedByPosition = ref([])
 const barangayOptions = ref([])
 const $q = useQuasar()
 
@@ -81,14 +128,33 @@ const saveSettings = () => {
 onMounted(async () => {
   try {
     const response = await api.get('/api/barangay/barangays')
+
     barangayOptions.value = response.data.map((b) => ({
       name: b.name,
       value: b.name, // Still showing name to user but will convert to ID later
+
+
     }))
+        const positionResponse = await api.get('/api/barangay/positions')
+          preparedByPosition.value = positionResponse.data.map((b) => ({
+          name: b.name,
+          value: b.name,
+        }))
+        const notedpositionresponse = await api.get('/api/barangay/positions')
+          notedByPosition.value = notedpositionresponse.data.map((b) => ({
+          name: b.name,
+          value: b.name,
+        }))
+         const certifiednotedpositionresponse = await api.get('/api/barangay/positions')
+          certifiedByPosition.value = certifiednotedpositionresponse.data.map((b) => ({
+          name: b.name,
+          value: b.name,
+        }))
+
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: `Failed to load barangays list: ${error.message}`,
+      message: `Failed to load list: ${error.message}`,
       position: 'top',
     })
   }
