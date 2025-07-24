@@ -29,6 +29,7 @@ export const useAuthStore = defineStore('auth', {
         first_name: userData.first_name || '',
         last_name: userData.last_name || '',
         barangay_name: userData.barangay_name || '',
+        position_name: userData.position_name || '',
         position: userData.position || '',
         photo_path: userData.photo_path || null,
         photo_url:
@@ -68,13 +69,33 @@ export const useAuthStore = defineStore('auth', {
 
         const barangayId = barangayResponse.data[0].id
 
-        // 3. Prepare registration data
+        // 3. Get position ID
+        const positionResponse = await api.get('/api/barangay/positions', {
+          params: { active_only: true },
+        })
+
+        if (!positionResponse.data?.length) {
+          return {
+            success: false,
+            error: 'No positions available',
+          }
+        }
+
+        const position = positionResponse.data.find(p => p.name === userData.position)
+        if (!position) {
+          return {
+            success: false,
+            error: 'Invalid position selected',
+          }
+        }
+
+        // 4. Prepare registration data
         const registrationData = {
           first_name: userData.first_name,
           middle_name: userData.middle_name || null, // Handle optional field
           last_name: userData.last_name,
           barangay_id: barangayId,
-          position: userData.position,
+          position_id: position.id,
           suffix: userData.suffix || null, // Handle optional field
           email: userData.email,
           username: userData.username,

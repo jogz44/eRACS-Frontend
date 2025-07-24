@@ -34,7 +34,7 @@ public function register(Request $request)
         'middle_name' => 'nullable|string|max:255',
         'last_name' => 'required|string|max:255',
         'barangay_id' => 'required|exists:barangays,id',
-        'position' => 'required|string|max:255',
+        'position_id' => 'required|exists:barangay_positions,id',
         'suffix' => 'nullable|string|max:255',
         'email' => 'required|string|email|max:255|unique:barangay_users',
         'username' => 'required|string|max:255|unique:barangay_users',
@@ -48,7 +48,7 @@ public function register(Request $request)
         'middle_name' => $validated['middle_name'],
         'last_name' => $validated['last_name'],
         'barangay_id' => $validated['barangay_id'],
-        'position' => $validated['position'],
+        'position_id' => $validated['position_id'],
         'suffix' => $validated['suffix'],
         'email' => $validated['email'],
         'username' => $validated['username'],
@@ -89,7 +89,7 @@ public function login(Request $request)
     ]);
 
     // MANUAL CREDENTIALS VERIFICATION
-    $user = \App\Models\BarangayUser::where('username', $credentials['username'])->first();
+    $user = \App\Models\BarangayUser::where('username', $credentials['username'])->with(['barangay', 'position'])->first();
 
     if (!$user || !\Hash::check($credentials['password'], $user->password)) {
         return response()->json([
@@ -128,7 +128,7 @@ public function login(Request $request)
             'first_name' => $user->first_name,
             'last_name' => $user->last_name,
             'barangay_name' => $user->barangay->name,
-            'position' => $user->position,
+            'position_name' => $user->position->name,
            'photo_url' => $user->photo_path
                 ? asset("storage/{$user->photo_path}")
                 : null, // Returns full URL like http://localhost/storage/profile-photos/filename.jpg
@@ -171,14 +171,14 @@ public function login(Request $request)
 
 public function user(Request $request)
 {
-    $user = $request->user()->load('barangay');
+    $user = $request->user()->load(['barangay', 'position']);
 
     return response()->json([
         'user' => [
             'first_name' => $user->first_name ?? '',
             'last_name' => $user->last_name ?? '',
             'barangay_name' => $user->barangay->name ?? '',
-            'position' => $user->position ?? '',
+            'position_name' => $user->position->name ?? '',
             'photo_path' => $user->photo_path ?? null,
             'photo_url' => $user->photo_path ? asset("storage/{$user->photo_path}") : null
         ]

@@ -359,13 +359,28 @@ export const useDisbursementStore = defineStore('disbursement', {
     // In your disbursementStore.js actions
     // In your actions
     // For viewing only (read-only)
-    openViewOrDetails(row) {
-      this.currentLiquidation = JSON.parse(JSON.stringify(row))
-      // Ensure orDetails exists
-      if (!this.currentLiquidation.orDetails) {
-        this.currentLiquidation.orDetails = []
+    async openViewOrDetails(row) {
+      this.currentLiquidation = JSON.parse(JSON.stringify(row));
+      // Fetch OR Details from backend
+      if (row.id) {
+        try {
+          const res = await api.get(`/api/barangay/disbursements/${row.id}/or-details`);
+          const backendUrl = 'http://localhost:8000'; // Change if your backend runs elsewhere
+          this.currentLiquidation.orDetails = res.data.data.map(or => ({
+            orDate: or.or_date,
+            orNumber: or.or_number,
+            orAmount: or.or_amount,
+            orImage: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
+            orPhotoUrl: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
+            remarks: or.remarks || '',
+          }));
+        } catch {
+          this.currentLiquidation.orDetails = [];
+        }
+      } else {
+        this.currentLiquidation.orDetails = [];
       }
-      this.dialogs.viewOrDetails = true
+      this.dialogs.viewOrDetails = true;
     },
 
     // Update openExpenseDetail to match your current structure

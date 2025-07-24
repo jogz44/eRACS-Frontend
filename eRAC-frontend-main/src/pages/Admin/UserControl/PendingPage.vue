@@ -152,7 +152,7 @@
               <strong>Barangay:<br /></strong> {{ viewModal.selectedRow?.barangay }}
             </div>
             <div class="q-mb-sm">
-              <strong>Position:<br /></strong> {{ viewModal.selectedRow?.position }}
+              <strong>Position:<br /></strong> {{ viewModal.selectedRow?.position?.name }}
             </div>
             <div class="q-mb-sm">
               <strong>Username:<br /></strong> {{ viewModal.selectedRow?.username }}
@@ -232,7 +232,8 @@ export default {
         (user) =>
           user.username.toLowerCase().includes(this.search.toLowerCase()) ||
           user.email.toLowerCase().includes(this.search.toLowerCase()) ||
-          user.name.toLowerCase().includes(this.search.toLowerCase()),
+          user.name.toLowerCase().includes(this.search.toLowerCase()) ||
+          (user.position || '').toLowerCase().includes(this.search.toLowerCase()),
       )
     },
   },

@@ -36,7 +36,7 @@
                     {{ authStore.user.first_name }} {{ authStore.user.last_name }}
                   </div>
                   <div class="text-caption text-grey">
-                    {{ authStore.user.position }}
+                    {{ authStore.user.position_name }}
                   </div>
                 </q-item-section>
               </q-item>
