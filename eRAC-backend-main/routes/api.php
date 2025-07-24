@@ -118,7 +118,7 @@ Route::prefix('barangay')->group(function () {
     Route::get('disbursements', [DisbursementController::class, 'index']);
     // Liquidate a disbursement
     Route::patch('disbursements/{id}/liquidate', [DisbursementController::class, 'liquidate']);
-   
+
   });
    // Fetch OR Details for a disbursement
    Route::get('disbursements/{id}/or-details', [DisbursementController::class, 'getOrDetails']);
@@ -130,7 +130,7 @@ Route::prefix('admin')->group(function () {
     // Just use Sanctum's default auth
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'logout']);
-        
+
         // User management endpoints
         Route::get('/users/pending', [AdminAuthController::class, 'getPendingUsers']);
         Route::get('/users/accepted', [AdminAuthController::class, 'getAcceptedUsers']);

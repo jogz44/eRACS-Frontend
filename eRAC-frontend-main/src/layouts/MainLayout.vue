@@ -35,7 +35,7 @@
                   <div class="text-subtitle2">
                     {{ authStore.user.first_name }} {{ authStore.user.last_name }}
                   </div>
-                  <div class="text-caption text-grey">
+                  <div class="text-caption text-gray">
                     {{ authStore.user.position_name }}
                   </div>
                 </q-item-section>
@@ -107,11 +107,11 @@
             <img :src="userPhoto" @error="handleImageError" style="max-width: 100%; height: auto;" />
           </q-avatar>
           <div class="footer-user-info">
-            <span class="Custom-text text-caption text-white text-weight-bold">
+            <span class="Custom-text text-caption text-white text-weight-bold ">
               {{ authStore.user?.first_name || 'Guest' }}
-              {{ authStore.user?.last_name || ''   }}
+
             </span>
-            <span class="text-caption text-white text-weight-medium text-h5">
+            <span class="position-text text-caption text-white text-weight-medium text-h5">
               {{ authStore.user.position_name }}
             </span>
           </div>
@@ -256,6 +256,7 @@ const toggleExpand = (title, parentTitle = null) => {
 }
 .Custom-text {
   font-size: 18px;
+  color: White !important;
 }
 
 .custom-header {
@@ -336,6 +337,7 @@ const toggleExpand = (title, parentTitle = null) => {
   justify-content: center;
   min-width: 0;
   text-align: left;
+
 }
 .footer-avatar-center {
   margin-bottom: 0;
@@ -366,5 +368,10 @@ const toggleExpand = (title, parentTitle = null) => {
 }
 .full-width {
   width: 100%;
+}.position-text{
+  font-style: italic;
+  font-size: smaller;
+  color: white !important;
+
 }
 </style>
