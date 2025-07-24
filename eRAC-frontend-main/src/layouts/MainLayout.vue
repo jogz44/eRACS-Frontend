@@ -102,36 +102,30 @@
     <!-- Sticky Footer -->
     <div class="drawer-footer q-mt-auto q-pa-xs">
       <div class="text-caption text-grey items-center q-pa-sm footer-avatar">
-        <q-list separator>
-          <div class="footer-user row items-center q-gutter-sm q-pa-sm justify-between">
-            <div class="row items-center q-gutter-sm">
-              <!-- Avatar -->
-              <q-avatar size="$q.screen.lt.md ? '32px' : '45px'">
-                <img :src="userPhoto" @error="handleImageError" style="max-width: 100%; height: auto;" />
-              </q-avatar>
-              <!-- Name & Position -->
-              <div class="column">
-                <span class="Custom-text text-caption text-white text-weight-bold">
-                  {{ authStore.user?.first_name || 'Guest' }}
-                  {{ authStore.user?.last_name || ''   }}
-                </span>
-                <span class="text-caption text-white text-weight-medium text-h5"  >
-                 {{ authStore.user.position }}
-                </span>
-              </div>
-            </div>
-            <q-btn
-              icon="logout"
-              color="negative"
-              flat
-              round
-              dense
-              @click="handleLogout"
-            >
-              <q-tooltip>Log Out</q-tooltip>
-            </q-btn>
+        <div class="footer-user q-pa-sm">
+          <q-avatar size="$q.screen.lt.md ? '32px' : '45px'">
+            <img :src="userPhoto" @error="handleImageError" style="max-width: 100%; height: auto;" />
+          </q-avatar>
+          <div class="footer-user-info">
+            <span class="Custom-text text-caption text-white text-weight-bold">
+              {{ authStore.user?.first_name || 'Guest' }}
+              {{ authStore.user?.last_name || ''   }}
+            </span>
+            <span class="text-caption text-white text-weight-medium text-h5">
+              {{ authStore.user.position_name }}
+            </span>
           </div>
-        </q-list>
+          <q-btn
+            icon="logout"
+            color="white"
+            flat
+            round
+            dense
+            @click="handleLogout"
+          >
+            <q-tooltip>Log Out</q-tooltip>
+          </q-btn>
+        </div>
       </div>
     </div>
   </div>
@@ -327,43 +321,47 @@ const toggleExpand = (title, parentTitle = null) => {
     display: none !important;
   }
 }
+.footer-user {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start; /* left-aligned */
+  gap: 16px;
+  width: 100%;
+}
+.footer-user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+  text-align: left;
+}
+.footer-avatar-center {
+  margin-bottom: 0;
+}
 @media (max-width: 767px) {
-  .custom-card-drawer {
-    width: 100vw !important;
-    min-width: 0 !important;
-    max-width: 100vw !important;
-    left: 0 !important;
-    border-radius: 0 !important;
-    padding-top: 10px;
-  }
-  .drawer-content {
-    padding: 0 4px;
-  }
-  .drawer-footer {
-    padding-left: 4px;
-    flex-direction: column;
-    align-items: flex-start;
-  }
   .footer-user {
-    flex-direction: column;
-    align-items: flex-start;
+    gap: 8px;
+    padding-left: 0;
+    padding-right: 0;
+    justify-content: flex-start; /* still left-aligned on mobile */
   }
-  .eracs-title {
-    font-size: 0.8rem;
+  .footer-user-info {
+    font-size: 0.9em;
   }
-  .nav-links {
-    margin: 0;
-    padding: 4px;
+  .footer-avatar-center q-avatar {
+    width: 32px !important;
+    height: 32px !important;
   }
 }
 @media (max-width: 500px) {
-  .eracs-title {
-    font-size: 0.7rem;
-
+  .footer-user-info {
+    font-size: 0.8em;
   }
-  .custom-header {
-    font-size: 0.9rem;
-    padding: 0 4px;
+  .footer-avatar-center q-avatar {
+    width: 28px !important;
+    height: 28px !important;
   }
 }
 .full-width {
