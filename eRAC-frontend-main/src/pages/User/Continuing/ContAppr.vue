@@ -25,46 +25,44 @@
 
         <!-- Date Range Group -->
         <div class="row items-center justify-between q-xs">
-          <!-- From Date -->
-          <q-input
-          bg-color="white"
-            outlined
-            dense
-            v-model="dateFrom"
-            label="From"
-            mask="##/##/####"
-            style="width: 180px"
-          >
-            <template v-slot:append>
-              <q-icon name="event">
-                <q-popup-proxy cover transition-show="scale">
-                  <q-date v-model="dateFrom" mask="DD/MM/YYYY" />
-                </q-popup-proxy>
-              </q-icon>
-            </template>
-          </q-input>
-
-          <div class="t q-px-xs"></div>
-          <div class="t q-px-xs"></div>
-
-          <!-- To Date -->
-          <q-input
-          bg-color="white"
-            outlined
-            dense
-            v-model="dateTo"
-            label="To"
-            mask="##/##/####"
-            style="width: 180px"
-          >
-            <template v-slot:append>
-              <q-icon name="event">
-                <q-popup-proxy cover transition-show="scale">
-                  <q-date v-model="dateTo" mask="DD/MM/YYYY" />
-                </q-popup-proxy>
-              </q-icon>
-            </template>
-          </q-input>
+          <div>
+            <q-input
+              bg-color="white"
+              outlined
+              dense
+              v-model="dateFrom"
+              label="From"
+              mask="##/##/####"
+              style="width: 180px;"
+            >
+              <template v-slot:append>
+                <q-icon name="event">
+                  <q-popup-proxy cover transition-show="scale">
+                    <q-date v-model="dateFrom" mask="DD/MM/YYYY" />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
+          <div>
+            <q-input
+              bg-color="white"
+              outlined
+              dense
+              v-model="dateTo"
+              label="To"
+              mask="##/##/####"
+              style="width: 180px;"
+            >
+              <template v-slot:append>
+                <q-icon name="event">
+                  <q-popup-proxy cover transition-show="scale">
+                    <q-date v-model="dateTo" mask="DD/MM/YYYY" />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
         </div>
 
         <q-btn label="Continue Accounts" @click="showContinueDialog = true" color="secondary" />

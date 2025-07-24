@@ -12,8 +12,7 @@
           outlined
           dense
           placeholder="Search..."
-          class="col-md-3 col-sm-5 custom-search-input"
-          style="min-width: 450px"
+          class="custom-search-input"
           v-model="appropriationStore.searchQuery"
         >
           <template v-slot:append>
@@ -668,5 +667,14 @@ const openDialog = async () => {
   background-color: #D9D9D9; /* Light gray background */
   min-height: 100vh; /* Ensure full height */
 }
-
+.custom-search-input {
+  min-width: 450px;
+}
+@media (max-width: 600px) {
+  .custom-search-input {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
 </style>

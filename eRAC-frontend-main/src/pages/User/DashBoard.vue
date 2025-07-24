@@ -1,90 +1,86 @@
 <template>
   <q-page class="q-pa-lg dashboard-page">
     <!-- Header Section -->
-    <div class="page-header q-mb-lg">
-      <template v-if="authStore.isLoading">
-        <q-skeleton type="text" width="200px" />
-      </template>
-      <!-- Loaded State -->
-      <div class="text-h5 text-weight-bold">
-        <!-- Use barangay_name instead of barangay.name -->
-
+    <div class="page-header q-mb-lg row items-center">
+      <div class="col-12 col-md">
+        <div class="welcome-user text-accent">
+          Welcome Back, {{ authStore.user?.first_name || 'Guest' }}
+          <div class="Custom-caption text-caption text-black">
+            Here's a quick overview of your dashboard
+          </div>
+        </div>
       </div>
-<div class="welcome-user text-accent" style="font-size: 25px;">
-  Welcome Back, {{ authStore.user?.first_name || 'Guest' }}
-  <div style="font-size: 13px;" class="Custom-caption text-caption text-black">
-    Here's a quick overview of your dashboard
+    </div>
+
+<!-- Summary Cards Row -->
+<div class="row q-col-gutter-lg q-mb-lg">
+  <div
+    v-for="(card, index) in chartStore.summaryCards"
+    :key="index"
+    class="col-xs-12 col-sm-6 col-md-4 q-mb-md"
+  >
+    <q-card class="summary-card" :class="`card-${index}`">
+      <q-card-section class="row items-center justify-evenly q-pa-md" style="height: 100%">
+        <div class="row items-center" style="max-width: 90%">
+          <q-avatar
+            :icon="card.icon"
+            size="45px"
+            :color="card.color || 'primary'"
+            text-color="white"
+            class="q-mr-md"
+          />
+          <div class="text-left">
+            <div class="Custome-text text-caption text-grey">{{ card.label }}</div>
+            <div class="text-h5 text-weight-bold">{{ card.value }}</div>
+          </div>
+        </div>
+      </q-card-section>
+    </q-card>
   </div>
 </div>
+
+<!-- Charts Row -->
+<div class="row q-col-gutter-lg chart-section">
+  <div class="col-xs-12 col-md-6 q-mb-md">
+    <q-card class="chart-card responsive-card">
+      <q-card-section>
+        <div class="text-h6 text-weight-medium">Commitment Distribution</div>
+        <div class="text-caption text-grey-6">Current Year</div>
+      </q-card-section>
+      <q-separator />
+      <q-card-section style="height: 350px; position: relative; width: 100%; overflow-x: auto;">
+        <div v-if="chartStore.chartLoading" class="absolute-center">
+          <q-spinner color="primary" size="3em" />
+        </div>
+        <PieChart v-else :chart-data="chartStore.pieChartData" :options="chartOptions" />
+      </q-card-section>
+    </q-card>
+  </div>
+
+  <div class="col-xs-12 col-md-6 q-mb-md">
+    <q-card class="chart-card responsive-card">
+      <q-card-section>
+        <div class="text-h6 text-weight-medium">Recent Liquidated Disbursements</div>
+        <div class="text-caption text-grey-6">Current year</div>
+      </q-card-section>
+      <q-separator />
+      <q-card-section>
+        <q-table
+          :rows="chartStore.recentDisbursementRows"
+          :columns="chartStore.recentDisbursementColumns"
+          row-key="id"
+          flat
+          bordered
+          :pagination="{ rowsPerPage: 4 }"
+          class="disbursement-table responsive-table"
+          style="overflow-x:auto;"
+        >
+          <!-- Highlight fully liquidated rows -->
+        </q-table>
+      </q-card-section>
+    </q-card>
+  </div>
 </div>
-
-   <div class="row q-col-gutter-lg q-mb-lg">
-      <div
-        class="col-xl-3 col-lg-4 col-md-6 col-sm-12"
-        v-for="(card, index) in chartStore.summaryCards"
-        :key="index"
-      >
-
-        <q-card class="summary-card" :class="`card-${index}`">
-          <q-card-section class="row items-center justify-evenly q-pa-md" style="height: 100%">
-            <div class="row items-center" style="max-width: 90%">
-              <q-avatar
-                :icon="card.icon"
-                size="45px"
-                :color="card.color || 'primary'"
-                text-color="white"
-                class="q-mr-md"
-              />
-              <div class="text-left">
-                <div class="Custome-text text-caption text-grey">{{ card.label }}</div>
-                <div class="text-h5 text-weight-bold">{{ card.value }}</div>
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
-
-    <div class="row q-col-gutter-lg chart-section">
-      <div class="col-lg-6 col-md-12">
-        <q-card class="chart-card">
-          <q-card-section>
-            <div class="text-h6 text-weight-medium">Commitment Distribution</div>
-            <div class="text-caption text-grey-6">Current Year</div>
-          </q-card-section>
-          <q-separator />
-          <q-card-section style="height: 350px; position: relative; width: 100%;">
-            <div v-if="chartStore.chartLoading" class="absolute-center">
-              <q-spinner color="primary" size="3em" />
-            </div>
-            <PieChart v-else :chart-data="chartStore.pieChartData" :options="chartOptions" />
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <div class="col-lg-6 col-md-12 scroll-x">
-        <q-card class="chart-card">
-          <q-card-section>
-            <div class="text-h6 text-weight-medium">Recent Liquidated Disbursements</div>
-            <div class="text-caption text-grey-6">Current year</div>
-          </q-card-section>
-          <q-separator />
-          <q-card-section>
-            <q-table
-              :rows="chartStore.recentDisbursementRows"
-              :columns="chartStore.recentDisbursementColumns"
-              row-key="id"
-              flat
-              bordered
-              :pagination="{ rowsPerPage: 4 }"
-              class="disbursement-table"
-            >
-              <!-- Highlight fully liquidated rows -->
-            </q-table>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
     <div v-if="allocationError" class="q-mb-md text-negative text-bold">
       {{ allocationError }}
     </div>
@@ -181,11 +177,12 @@ onMounted(() => {
 }
 
 .summary-card {
+  min-width: unset !important;
+  width: 100%;
   position: sticky;
-  min-height: 120px !important; /* Override any defaults */
-  min-width: 330px  !important; /* Ensure cards are wide enough */
+  min-height: 150px !important; /* Override any defaults */
   align-items: center;
-  justify-content: center;
+  justify-content: space-evenly;
   border-radius: 12px;
   transition:
     transform 0.3s ease,
@@ -217,7 +214,8 @@ onMounted(() => {
   border-radius: 12px;
   transition: transform 0.3s ease;
   background-color: white;
-
+  width: 100%;
+  min-width: unset;
 
   &:hover {
     transform: translateY(-2px);
@@ -235,19 +233,40 @@ onMounted(() => {
   }
 }
 
+.responsive-card {
+  width: 100%;
+  min-width: unset !important;
+}
+
+.responsive-table {
+  width: 100%;
+  min-width: unset !important;
+}
 
 // Responsive adjustments
-@media (max-width: $breakpoint-xs-max) {
+@media (max-width: 900px) {
   .summary-card {
-    margin-bottom: 16px;
+    min-width: unset !important;
+    width: 100% !important;
+  }
+  .chart-card, .responsive-card, .responsive-table {
+    width: 100% !important;
+    min-width: unset !important;
   }
 }
-
-.custom-rounded-input :deep(.q-field__control) {
-  border-radius: 10px;
-  width: 250px;
-}
 @media (max-width: 600px) {
+  .summary-card {
+    padding: 10px;
+    min-width: unset !important;
+    width: 100% !important;
+  }
+  .chart-card, .responsive-card, .responsive-table {
+    width: 100% !important;
+    min-width: unset !important;
+  }
+  .dashboard-page {
+    padding: 8px !important;
+  }
   .welcome-user {
     font-size: 18px !important;
     text-align: left;
@@ -258,15 +277,7 @@ onMounted(() => {
   .Custome-text {
     font-size: 12px;
   }
-  .summary-card {
-    padding: 10px;
-
-  }
-  .chart-card {
-    width: 330px
-  }
 }
-
 
 /* Legend adjustments */
 :deep(.chartjs-legend) {
@@ -299,12 +310,9 @@ onMounted(() => {
   }
 }
 .welcome-user {
-
   font-weight: bold;
   color: Black; /* Dark green */
   margin-top: -10px;
-
-
 }
 .dashboard-page{
   background: #D9D9D9;
