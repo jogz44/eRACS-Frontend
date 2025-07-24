@@ -138,10 +138,11 @@ Route::prefix('admin')->group(function () {
         Route::delete('/users/{user}', [AdminAuthController::class, 'deleteUser']);
 
 
-        // Dashboard Routes upadtaed
-        // updated
-        Route::get('/per-barangay-budgets',[AdminAuthController::class, 'getPerBarangaysBudgets']);
     });
+
+    // Dashboard Routes upadtaed
+    // Outered from sanctum middleware
+    Route::get('/per-barangay-budgets',[AdminAuthController::class, 'getPerBarangaysBudgets']);
 
     // Admin user access and logs endpoints
     Route::get('/admin/users', [AdminAuthController::class, 'getUsersWithPermissions']);
