@@ -2,9 +2,9 @@
 # GET http://localhost:8000/api/barangay/barangays
 # Accept: application/json
 
-# GET http://localhost:8000/api/admin/users/accepted
-# Authorization: Bearer 20321|MJVIJC1JcFqCmc5PKQL9fxYnAlKup2wOU6Ax9bDe0589ebf2
-# Accept: application/json
+GET http://localhost:8000/api/admin/users/accepted
+Authorization: Bearer 13|2JZbdkVkfHttejhJLTCVTtxkJXJZo3svEpO4MThEd80377f7
+Accept: application/json
 
 # GET http://localhost:8000/api/user
 # Accept: application/json
@@ -13,8 +13,8 @@
 # Authorization: Bearer 20321|MJVIJC1JcFqCmc5PKQL9fxYnAlKup2wOU6Ax9bDe0589ebf2
 # Accept: application/json
 
-GET http://localhost:8000/api/barangay/budgets
-Authorization: Bearer 7|zxxYoCnlPgfTb88lahQzxnHCPMsRxPAcH1nWTELy0e2a2a44
+# GET http://localhost:8000/api/barangay/budgets
+# Authorization: Bearer 7|zxxYoCnlPgfTb88lahQzxnHCPMsRxPAcH1nWTELy0e2a2a44
 Accept: application/json
 
 # POST http://localhost:8000/api/barangay/budgets/create

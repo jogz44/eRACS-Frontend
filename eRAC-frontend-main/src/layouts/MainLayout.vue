@@ -24,35 +24,19 @@
           style="color: white; font-weight: bold"
         >
           Barangay {{ authStore.user?.barangay_name }}
-        </q-toolbar-title>
+        </q-toolbar-title >
 
-        <!-- AVATAR & MENU -->
-        <q-btn flat round dense icon="menu" v-if="$q.screen.gt.sm">
+
+
+        <!-- AVATAR & MENU
+        v-if="$q.screen.gt.sm" -->
+        <q-btn flat square dense icon="settings"  @click="openSetupDialog">
+               <div>
+              Setup
+            </div>
           <q-menu transition-show="jump-down" transition-hide="jump-up">
-            <q-list class="q-pa-sm" style="min-width: 180px">
-              <q-item class="q-mb-sm" v-if="authStore.user">
-                <q-item-section>
-                  <div class="text-subtitle2">
-                    {{ authStore.user.first_name }} {{ authStore.user.last_name }}
-                  </div>
-                  <div class="text-caption text-gray">
-                    {{ authStore.user.position_name }}
-                  </div>
-                </q-item-section>
-              </q-item>
-
               <q-separator />
 
-              <q-item clickable v-close-popup @click="openSetupDialog">
-                <q-item-section avatar><q-icon name="settings" /></q-item-section>
-                <q-item-section>Set-up</q-item-section>
-              </q-item>
-
-              <q-item clickable v-close-popup @click="handleLogout">
-                <q-item-section avatar><q-icon name="logout" /></q-item-section>
-                <q-item-section>Logout</q-item-section>
-              </q-item>
-            </q-list>
           </q-menu>
         </q-btn>
       </q-toolbar>
@@ -301,7 +285,6 @@ const toggleExpand = (title, parentTitle = null) => {
 .drawer-footer {
   justify-content: space-between;
   flex-shrink: 0;
-  padding-left: 20px;
   background-color:#187C19;
   ;
 }.avatar-footer {
