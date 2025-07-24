@@ -2,10 +2,9 @@
   <q-layout view="lHh Lpr lFf">
     <!-- HEADER -->
     <q-header elevated class="custom-header">
-      <q-toolbar class="justify-end q-pr-md">
-        <!-- NEW: Hamburger button for drawer, only on mobile -->
+      <q-toolbar class="q-pr-md items-center" style="display: flex; flex-direction: row;">
+        <!-- Hamburger button for drawer, only on mobile -->
         <q-btn
-
           flat
           round
           dense
@@ -14,13 +13,17 @@
           v-if="$q.screen.lt.md"
           @click="leftDrawerOpen = !leftDrawerOpen"
         />
+        <!-- Barangay name beside menu button on mobile only, left-aligned -->
+        <div v-if="$q.screen.lt.md && authStore.user?.barangay_name" class="barangay-mobile-title text-weight-bold q-mr-md">
+          Barangay {{ authStore.user.barangay_name }}
+        </div>
+        <q-space v-if="$q.screen.lt.md" />
         <q-toolbar-title
           v-if="$q.screen.gt.sm"
           class="welcome-title"
           style="color: white; font-weight: bold"
         >
           Barangay {{ authStore.user?.barangay_name }}
-
         </q-toolbar-title>
 
         <!-- AVATAR & MENU -->
@@ -100,21 +103,33 @@
     <div class="drawer-footer q-mt-auto q-pa-xs">
       <div class="text-caption text-grey items-center q-pa-sm footer-avatar">
         <q-list separator>
-          <div class="footer-user row items-center q-gutter-sm q-pa-sm">
-            <!-- Avatar -->
-            <q-avatar size="$q.screen.lt.md ? '32px' : '45px'">
-              <img :src="userPhoto" @error="handleImageError" style="max-width: 100%; height: auto;" />
-            </q-avatar>
-            <!-- Name & Position -->
-            <div class="column">
-              <span class="Custom-text text-caption text-white text-weight-bold">
-                {{ authStore.user?.first_name || 'Guest' }}
-                {{ authStore.user?.last_name || ''   }}
-              </span>
-              <span class="text-caption text-white text-weight-medium text-h5"  >
-               {{ authStore.user.position_name }}
-              </span>
+          <div class="footer-user row items-center q-gutter-sm q-pa-sm justify-between">
+            <div class="row items-center q-gutter-sm">
+              <!-- Avatar -->
+              <q-avatar size="$q.screen.lt.md ? '32px' : '45px'">
+                <img :src="userPhoto" @error="handleImageError" style="max-width: 100%; height: auto;" />
+              </q-avatar>
+              <!-- Name & Position -->
+              <div class="column">
+                <span class="Custom-text text-caption text-white text-weight-bold">
+                  {{ authStore.user?.first_name || 'Guest' }}
+                  {{ authStore.user?.last_name || ''   }}
+                </span>
+                <span class="text-caption text-white text-weight-medium text-h5"  >
+                 {{ authStore.user.position }}
+                </span>
+              </div>
             </div>
+            <q-btn
+              icon="logout"
+              color="negative"
+              flat
+              round
+              dense
+              @click="handleLogout"
+            >
+              <q-tooltip>Log Out</q-tooltip>
+            </q-btn>
           </div>
         </q-list>
       </div>
@@ -300,6 +315,18 @@ const toggleExpand = (title, parentTitle = null) => {
   align-items: center;
   padding: 10px;
 }
+.barangay-mobile-title {
+  font-size: 1.1rem;
+  color: #fff;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+}
+@media (min-width: 992px) {
+  .barangay-mobile-title {
+    display: none !important;
+  }
+}
 @media (max-width: 767px) {
   .custom-card-drawer {
     width: 100vw !important;
@@ -338,5 +365,8 @@ const toggleExpand = (title, parentTitle = null) => {
     font-size: 0.9rem;
     padding: 0 4px;
   }
+}
+.full-width {
+  width: 100%;
 }
 </style>

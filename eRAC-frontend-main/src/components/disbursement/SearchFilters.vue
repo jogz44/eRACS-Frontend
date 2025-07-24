@@ -10,8 +10,7 @@
         dense
         placeholder="Search..."
         v-model="store.searchQuery"
-        class="col-md-3 col-sm-5 custom-search-input"
-        style="min-width: 450px"
+        class="responsive-search-input"
       >
         <template v-slot:append>
           <q-icon name="search" />
@@ -67,15 +66,17 @@
         </q-input>
       </div>
 
-      <div class="t q-px-xs"></div>
-
-      <!-- Add Button Disbursement -->
-      <q-btn
-        label="Add"
-        icon="add"
-        class="add-table-btn"
-        @click="store.openDialog('disbursement')"
-      />
+      <div class="row q-mt-sm q-mb-sm">
+        <div class="col-auto">
+          <q-btn
+            icon="add"
+            label="Add"
+            class="add-table-btn"
+            @click="$emit('add')"
+            color="primary"
+          />
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -102,5 +103,16 @@ const store = useDisbursementStore()
 /* Using the deep selector (Vue 3 syntax) */
 .q-mb-md :deep(.q-input .q-field__control) {
   border-radius: 10px;
+}
+.responsive-search-input {
+  width: 100%;
+  min-width: 0;
+  max-width: 400px;
+  box-sizing: border-box;
+}
+@media (max-width: 900px) {
+  .responsive-search-input {
+    max-width: 100%;
+  }
 }
 </style>
