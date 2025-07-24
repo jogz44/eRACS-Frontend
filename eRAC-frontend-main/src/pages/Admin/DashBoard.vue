@@ -158,10 +158,10 @@ export default {
         clearInterval(refreshInterval.value)
       }
     })
-
     onMounted(() => {
       startAutoRefresh()
     })
+    
 
     const onCardClick = (type) => {
       this.$q.notify({
