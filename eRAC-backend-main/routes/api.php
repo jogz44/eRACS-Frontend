@@ -141,7 +141,7 @@ Route::prefix('admin')->group(function () {
     });
 
     // Dashboard Routes upadtaed
-    // Outered in sanctum middleware
+    // Outered from sanctum middleware
     Route::get('/per-barangay-budgets',[AdminAuthController::class, 'getPerBarangaysBudgets']);
 
     // Admin user access and logs endpoints
