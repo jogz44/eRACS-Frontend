@@ -20,7 +20,7 @@ class BarangayUser extends Authenticatable
         'middle_name',
         'last_name',
         'barangay_id',
-        'position',
+        'position_id',
         'suffix',
         'photo_path',
         'email',
@@ -44,6 +44,12 @@ class BarangayUser extends Authenticatable
     public function barangay()
     {
         return $this->belongsTo(Barangay::class);
+    }
+
+    // Relationship to BarangayPosition
+    public function position()
+    {
+        return $this->belongsTo(BarangayPosition::class, 'position_id');
     }
 
     // Check if user is admin

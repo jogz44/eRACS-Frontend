@@ -109,7 +109,7 @@
               <strong>Barangay:<br /></strong> {{ viewModal.selectedRow?.barangay }}
             </div>
             <div class="q-mb-sm">
-              <strong>Position:<br /></strong> {{ viewModal.selectedRow?.position }}
+              <strong>Position:<br /></strong> {{ viewModal.selectedRow?.position?.name }}
             </div>
             <div class="q-mb-sm">
               <strong>Username:<br /></strong> {{ viewModal.selectedRow?.username }}
@@ -121,14 +121,14 @@
               <strong>Approved Date:<br /></strong> {{ viewModal.selectedRow?.created_at }}
             </div>
             <div class="q-mt-md"><strong>Picture:</strong></div>
-            <!-- <div class="q-mt-sm flex flex-left">
+            <div class="q-mt-sm flex flex-left">
               <q-img
                 :src="viewModal.selectedRow?.avatar || 'https://www.w3schools.com/w3images/avatar2.png'"
                 style="max-width: 200px; border-radius: 8px"
                 spinner-color="grey-5"
                 contain
               />
-            </div> -->
+            </div>
           </q-card-section>
 
           <q-card-actions align="right" class="q-pb-md q-pr-md">
@@ -182,7 +182,8 @@ export default {
         (user) =>
           user.username.toLowerCase().includes(this.search.toLowerCase()) ||
           user.email.toLowerCase().includes(this.search.toLowerCase()) ||
-          user.name.toLowerCase().includes(this.search.toLowerCase()),
+          user.name.toLowerCase().includes(this.search.toLowerCase()) ||
+          (user.position || '').toLowerCase().includes(this.search.toLowerCase()),
       )
     },
   },
