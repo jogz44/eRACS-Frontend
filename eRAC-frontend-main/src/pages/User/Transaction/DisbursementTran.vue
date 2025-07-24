@@ -1,8 +1,19 @@
 <template>
   <q-page class="q-pa-lg disbursement-page">
     <div class="page-header q-mb-lg">
+       <div class="row items-center justify-between">
       <div class="text-h5 text-weight-bold">Disbursement Transaction</div>
-    </div>
+       <q-btn
+          icon="refresh"
+          color="primary"
+          flat
+          round
+          @click="loadPendingUsers"
+          :loading="loading"
+          title="Refresh pending users"
+        />
+        </div>
+</div>
     <div class="q-mb-md">
       <SearchFilters />
 
@@ -277,11 +288,13 @@
                 <q-btn
                   class="edit-btn"
                   icon="edit"
+                  v-if="props.row.status === 'Pending'"
                   @click="store.openEditDisbursement(props.row)"
                 />
                 <q-btn
                   class="view-btn"
                   icon="visibility"
+
                   @click="store.openViewOrDetails(props.row)"
                 />
                 <q-btn

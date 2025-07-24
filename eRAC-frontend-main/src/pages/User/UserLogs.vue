@@ -1,18 +1,7 @@
 <template>
   <q-page class="q-pa-lg">
     <div class="page-header q-mb-lg">
-       <div class="row items-center justify-between">
-      <div class="text-h5 text-weight-bold">User Access</div>
-          <q-btn
-          icon="refresh"
-          color="primary"
-          flat
-          round
-          @click="loadPendingUsers"
-          :loading="loading"
-          title="Refresh pending users"
-        />
-        </div>
+      <div class="text-h5 text-weight-bold">Logs</div>
       <q-card-section>
         <!-- Search Bar Only -->
         <div class="row q-mb-md">
@@ -24,6 +13,7 @@
         </div>
         <!-- Logs Table -->
         <q-table
+          style="max-height: 500px;"
           flat
           bordered
           :rows="filteredLogs"
@@ -31,6 +21,7 @@
           row-key="id"
           class="logs-table"
           :pagination="{ rowsPerPage: 10 }"
+          :table-header-style="{position: 'sticky',top: 0, zIndex: 3,background:'white'}"
         >
           <!-- Custom Date Formatting -->
           <template v-slot:body-cell-date="props">
@@ -113,6 +104,7 @@ export default {
   background-color: #f5f5f5;
   font-weight: bold;
   color: #333;
+
 }
 
 @media (max-width: 600px) {

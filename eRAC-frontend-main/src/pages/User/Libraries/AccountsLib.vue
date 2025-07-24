@@ -1,9 +1,19 @@
 <template>
   <q-page class="q-pa-lg accountslib-page">
     <div class="page-header q-mb-lg">
+         <div class="row items-center justify-between">
       <div class="text-h5 text-weight-bold">Accounts Library</div>
+          <q-btn
+          icon="refresh"
+          color="primary"
+          flat
+          round
+          @click="loadPendingUsers"
+          :loading="loading"
+          title="Refresh pending users"
+        />
     </div>
-
+  </div>
     <!-- Top Controls -->
     <!-- Main Card -->
     <q-card

@@ -25,7 +25,8 @@
               outlined
               dense
               :prepend-icon="'lock'"
-              :rules="[(val) => val.length >= 8 || 'Minimum 8 characters']"
+              :error="showValidation && !newPassword"
+              :error-message="showValidation && !newPassword ? 'Password is rquired':''"
             >
               <template #append>
                 <q-icon
@@ -46,10 +47,13 @@
               dense
               class="q-mt-md"
               :prepend-icon="'lock'"
+              :error="showValidation && !confirmPassword"
+              :error-message="showValidation && !confirmPassword ? 'Password is rquired':''"
               :rules="[
-                (val) => !!val || 'Required',
                 (val) => val === newPassword || 'Passwords do not match',
               ]"
+
+
             >
               <template #append>
                 <q-icon
@@ -61,8 +65,13 @@
             </q-input>
 
             <div class="button-container">
-              <q-btn @click="goToLogin" flat color="grey">Cancel</q-btn>
-              <q-btn @click="handleResetPassword" color="green" :loading="isLoading">
+              <q-btn @click="goToLogin" flat color="grey"
+              >Cancel</q-btn>
+              <q-btn @click="handleResetPassword"
+              olor="green"
+              :loading="isLoading"
+              >
+
                 Reset Password
               </q-btn>
             </div>
@@ -96,16 +105,17 @@ const confirmPassword = ref('')
 const isLoading = ref(false)
 const isPasswordVisible = ref(false)
 const isPasswordVisible2 = ref(false)
+const showValidation = ref(false)
 
 onMounted(() => {
   console.log('ResetPasswordPage mounted')
   console.log('Route params:', route.params)
   console.log('Route query:', route.query)
-  
+
   // Get email from route params or query
   email.value = route.params.email || route.query.email || ''
   console.log('Email value:', email.value)
-  
+
   if (!email.value) {
     console.log('No email found, redirecting to forgot page')
     $q.notify({
@@ -119,12 +129,15 @@ onMounted(() => {
   }
 })
 
+
 const handleResetPassword = async () => {
   // Basic validations
-  if (!newPassword.value) {
-    $q.notify({ type: 'warning', message: 'New password is required' })
+
+      showValidation.value = true
+  if (!email.value ) {
     return
-  } else if (newPassword.value.length < 8) {
+
+} else if (newPassword.value.length < 8) {
     $q.notify({ type: 'warning', message: 'Password must be at least 8 characters' })
     return
   }
@@ -205,4 +218,4 @@ const goToLogin = () => router.push('/')
 .q-page-container {
   background: transparent;
 }
-</style> 
+</style>

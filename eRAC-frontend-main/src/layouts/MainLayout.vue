@@ -201,10 +201,13 @@ const navLinks = [
     link: '/home/libraries/continuing' }
   ]},
   { title: 'Reports', icon: 'assessment', link: '/home/reports' },
-  
+
   {
     title: 'User Access', icon: 'admin_panel_settings', link: '/home/useraccess'
   },
+  {
+    title: 'Logs', icon: 'history', link: '/home/logsview'
+  }
 
 ]
 

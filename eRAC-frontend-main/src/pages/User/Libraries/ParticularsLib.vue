@@ -1,8 +1,20 @@
 <template>
   <q-page class="q-pa-lg particulars-page">
     <div class="page-header q-mb-lg">
+      <div class="row items-center justify-between">
       <div class="text-h5 text-weight-bold">Particulars</div>
-    </div>
+   <q-btn
+          icon="refresh"
+          color="primary"
+          flat
+          round
+          @click="loadPendingUsers"
+          :loading="loading"
+          title="Refresh pending users"
+        />
+        </div>
+        </div>
+
 
     <!-- Search and Date Filter -->
     <div class="q-mb-md">

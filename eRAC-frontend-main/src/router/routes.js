@@ -136,6 +136,14 @@ const routes = [
         name: 'userAccess',
         component: () => import ('src/pages/User/UserAccess.vue'),
         meta: {title: 'UserAccess'}
+      },
+      // Logs
+      {
+        path: 'logsview',
+        name: 'Logsview',
+        component: () => import ('src/pages/User/UserLogs.vue'),
+        meta: {title: 'Logs' }
+
       }
     ],
   },

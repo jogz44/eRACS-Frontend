@@ -20,16 +20,18 @@
         type="email"
         outlined
         dense
+
         :prepend-icon="'email'"
-        :rules="[
-          (val) => !!val || 'Email is required',
-          (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) || 'Please enter a valid email'
-        ]"
+        :error="showValidation && !email"
+        :error-message="showValidation && !email ? 'email is required' : ''"
+
       />
 
       <div class="button-container">
         <q-btn @click="goToLogin" color="white" text-color="black">Cancel</q-btn>
-        <q-btn @click="handleSearch" color="green" :loading="isLoading">Search</q-btn>
+        <q-btn @click="handleSearch" color="green"
+        :loading="isLoading"
+       >Search</q-btn>
       </div>
     </q-card-section>
     <q-card-section class="text-center">
@@ -58,13 +60,17 @@ const $q = useQuasar()
 
 const email = ref('')
 const isLoading = ref(false)
+const showValidation = ref(false)
+
 
 const handleSearch = async () => {
-  // Basic validation
-  if (!email.value.trim()) {
-    $q.notify({ type: 'warning', message: 'Email is required' })
+
+      showValidation.value = true
+  if (!email.value ) {
     return
-  }
+
+}
+  // Basic validation
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
     $q.notify({ type: 'warning', message: 'Please enter a valid email address' })
@@ -97,9 +103,11 @@ const handleSearch = async () => {
       message: error.message || 'An error occurred while checking email',
       position: 'top',
     })
+
   } finally {
     isLoading.value = false
   }
+
 }
 const goToResetPassword = () => {
   console.log('=== DEBUGGING NAVIGATION ===')

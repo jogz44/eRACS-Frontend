@@ -1,8 +1,19 @@
 <template>
   <q-page class="q-pa-lg cont-appr">
     <div class="page-header q-mb-lg ">
+        <div class="row items-center justify-between">
       <div class="text-h5 text-weight-bold">Continuing Appropriation</div>
-    </div>
+     <q-btn
+          icon="refresh"
+          color="primary"
+          flat
+          round
+          @click="loadPendingUsers"
+          :loading="loading"
+          title="Refresh pending users"
+        />
+        </div>
+</div>
 
     <div class="q-mb-md">
       <div class="row items-center justify-between q-gutter-sm">
@@ -289,6 +300,9 @@ const dateTo = ref('')
 const returnAmount = ref(0)
 const augmentationAmount = ref(0)
 const selectedYear = ref(null)
+
+
+
 
 //const hasAdjustments = computed(() => returnAmount.value > 0 || augmentationAmount.value > 0)
 
