@@ -73,13 +73,19 @@
               :rules="[(val) => !!val || 'Barangay is required']"
             />
             <div class="text-subtitle2 text-green-8 q-mb-xs">Position</div>
-            <q-input
+            <q-select
               outlined
               dense
               bg-color="white"
               v-model="position"
+              :options="positionOptions"
+              label="Select Position"
               color="green"
               class="q-mb-md"
+              emit-value
+              map-options
+              option-label="name"
+              option-value="value"
               :rules="[(val) => !!val || 'Position is required']"
             />
 
@@ -308,6 +314,7 @@ export default {
     const uploadedFiles = ref([])
     const uploadError = ref(null)
     const barangayOptions = ref([])
+    const positionOptions = ref([])
     const isPasswordVisible = ref(false)
     const isPasswordVisible2 = ref(false)
 
@@ -315,15 +322,24 @@ export default {
 
     onMounted(async () => {
       try {
-        const response = await api.get('/api/barangay/barangays')
-        barangayOptions.value = response.data.map((b) => ({
+        // Load barangays
+        const barangayResponse = await api.get('/api/barangay/barangays')
+        barangayOptions.value = barangayResponse.data.map((b) => ({
           name: b.name,
           value: b.name, // Still showing name to user but will convert to ID later
         }))
+
+        // Load positions
+        const positionResponse = await api.get('/api/barangay/positions') 
+          positionOptions.value = positionResponse.data.map((b) => ({
+          name: b.name,
+          value: b.name,
+        }))
+        
       } catch (error) {
         $q.notify({
           type: 'negative',
-          message: `Failed to load barangays list: ${error.message}`,
+          message: `Failed to load data: ${error.message}`,
           position: 'top',
         })
       }
@@ -522,6 +538,7 @@ export default {
       barangay,
       barangayOptions,
       position,
+      positionOptions,
       suffix,
       uploadedFile,
       photoUrl,

@@ -71,14 +71,14 @@ class AdminAuthController extends Controller  // <-- This is crucial
     public function getPendingUsers()
     {
         $users = BarangayUser::where('is_approved', false)
-            ->with('barangay')
+            ->with(['barangay', 'position'])
             ->get()
             ->map(function ($user) {
                 return [
                     'id' => $user->id,
                     'name' => $user->first_name . ' ' . $user->last_name,
                     'barangay' => $user->barangay->name,
-                    'position' => $user->position,
+                    'position' => $user->position->name,
                     'username' => $user->username,
                     'email' => $user->email,
                     'avatar' => $user->photo_url,
@@ -93,14 +93,14 @@ class AdminAuthController extends Controller  // <-- This is crucial
     public function getAcceptedUsers()
     {
         $users = BarangayUser::where('is_approved', true)
-            ->with('barangay')
+            ->with(['barangay', 'position'])
             ->get()
             ->map(function ($user) {
                 return [
                     'id' => $user->id,
                     'name' => $user->first_name . ' ' . $user->last_name,
                     'barangay' => $user->barangay->name,
-                    'position' => $user->position,
+                    'position' => $user->position->name,
                     'username' => $user->username,
                     'email' => $user->email,
                     'avatar' => $user->photo_url,
@@ -140,8 +140,18 @@ class AdminAuthController extends Controller  // <-- This is crucial
 
     // Get all users with permissions
     public function getUsersWithPermissions() {
-        return BarangayUser::select('id', 'first_name', 'last_name', 'username', 'position', 'permissions')
-            ->get();
+        return BarangayUser::with('position')
+            ->select('id', 'first_name', 'last_name', 'username', 'position_id', 'permissions')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->first_name . ' ' . $user->last_name,
+                    'username' => $user->username,
+                    'position' => $user->position->name,
+                    'permissions' => $user->permissions,
+                ];
+            });
     }
 
     // Update user permissions

@@ -11,12 +11,24 @@ use App\Http\Controllers\Library\BankLibraryController;
 use App\Http\Controllers\Transaction\AppropriationController;
 use App\Http\Middleware\AuthTokenValid;
 use App\Models\Barangay;
+use App\Models\BarangayPosition;
 use App\Models\Admin;
 
 Route::prefix('barangay')->group(function () {
     // Barangays list endpoint
     Route::get('/barangays', function(Request $request) {
         $query = Barangay::query();
+
+        if ($request->name) {
+            $query->where('name', $request->name);
+        }
+
+        return response()->json($query->get(['id', 'name']));
+    });
+
+    // Barangay positions endpoint
+    Route::get('/positions', function(Request $request) {
+        $query = BarangayPosition::query();
 
         if ($request->name) {
             $query->where('name', $request->name);

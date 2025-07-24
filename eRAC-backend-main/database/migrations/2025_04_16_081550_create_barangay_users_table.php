@@ -17,7 +17,7 @@ return new class extends Migration
         $table->string('middle_name')->nullable();
         $table->string('last_name');
         $table->foreignId('barangay_id')->constrained('barangays'); 
-        $table->string('position');
+        $table->foreignId('position_id')->constrained('barangay_positions');
         $table->string('suffix')->nullable();
         $table->string('photo_path')->nullable();
         $table->string('email')->unique();
