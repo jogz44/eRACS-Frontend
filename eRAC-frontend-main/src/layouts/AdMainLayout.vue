@@ -227,6 +227,7 @@ watch(
   flex-shrink: 0;
   padding-left: 20px;
   background-color:#187C19;
+
 }
 .avatar-footer {
   display: flex;

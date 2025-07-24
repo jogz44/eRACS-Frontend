@@ -17,6 +17,7 @@
       <div class="text-h5 text-green-8 text-bold">Admin</div>
     </q-card-section>
    <q-card-section>
+     <!-- Email -->
   <q-input
     color="green"
     v-model="email"
@@ -26,7 +27,10 @@
     dense
     bg-color="white"
     :prepend-icon="'user'"
+      :error="showValidation && !email"
+    :error-message="showValidation && !email ? 'Email is required!':''"
   />
+    <!-- Password -->
 
   <q-input
     color="primary"
@@ -38,7 +42,8 @@
     bg-color="white"
     class="q-mt-md"
     :prepend-icon="'lock'"
-    :rules="[(val) => !!val || 'Password is required']"
+    :error="showValidation && !password"
+    :error-message="showValidation && !password ? 'Password is required!':''"
     @keyup.enter="handleLogin"
   >
     <template #append>
@@ -90,18 +95,23 @@ const email = ref('admin@gmail.com') // Pre-fill for testing
 const password = ref('')
 const loading = ref(false)
 const isPasswordVisible = ref(false)
+const showValidation = ref(false)
 const goToUser = () => {
   router.push('/') // Make sure this matches your signup route
 }
 
 const handleLogin = async () => {
   loading.value = true
+  showValidation.value=true
+  if (!email.value || !password.value){
+    return
+  }
   try {
     await authStore.adminLogin({
       email: email.value,
       password: password.value,
     })
-    
+
     $q.notify({
       type: 'positive',
       message: 'Login successful!',

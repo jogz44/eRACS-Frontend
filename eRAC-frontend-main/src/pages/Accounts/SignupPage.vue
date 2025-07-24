@@ -310,6 +310,7 @@ export default {
     const barangayOptions = ref([])
     const isPasswordVisible = ref(false)
     const isPasswordVisible2 = ref(false)
+    const showValidation = ref(false)
 
 
 
@@ -356,7 +357,11 @@ export default {
     }
 
     const handleSubmit = async () => {
-      // Basic validations
+        showValidation.value=true
+        if (!email.value ) {
+    return
+
+}
       if (!firstName.value.trim()) {
         $q.notify({ type: 'negative', message: 'First name is required',
           position: 'top'
