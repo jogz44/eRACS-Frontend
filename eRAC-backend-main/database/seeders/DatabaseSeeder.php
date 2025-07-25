@@ -14,8 +14,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             BarangayUserSeeder::class,
             LibFiscalYearSeeder::class,
-            LibExpenseClassSeeder::class,
-            LibExpenseTypeSeeder::class,
+            LibExpenseClassAndTypeSeeder::class,
             LibExpenseItemSeeder::class,
             BudgetSeeder::class,
             TranAppropriationSeeder::class,
