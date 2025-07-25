@@ -1,82 +1,62 @@
 <template>
   <!-- Search and Date Filter -->
   <div class="q-mb-md">
-    <div class="justify-end q-mb-md"></div>
-    <div class="row items-center justify-between q-gutter-sm">
-      <!-- Search Input -->
+    <div class="row items-center q-gutter-sm" style="width: 100%; margin-bottom: 16px;">
       <q-input
-         bg-color="white"
+        bg-color="white"
         outlined
         dense
         placeholder="Search..."
         v-model="store.searchQuery"
-        class="responsive-search-input"
+        class="custom-search-input"
       >
         <template v-slot:append>
           <q-icon name="search" />
         </template>
       </q-input>
-
-      <div class="t q-px-xl"></div>
-
-      <!-- Date Range Group -->
-      <div class="row items-center justify-between">
-        <!-- From Date -->
-        <q-input
-         bg-color="white"
-          outlined
-          label="From"
-          dense
-          v-model="store.dateFrom"
-          mask="##/##/####"
-          class="custom-date-from"
-          style="width: 200px"
-        >
-          <template v-slot:append>
-            <q-icon name="event" class="calend-icon">
-              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                <q-date v-model="store.dateFrom" mask="DD/MM/YYYY" />
-              </q-popup-proxy>
-            </q-icon>
-          </template>
-        </q-input>
-
-        <!-- To Label -->
-        <div class="t q-px-xs"></div>
-        <div class="t q-px-xs"></div>
-
-        <!-- To Date -->
-        <q-input
-         bg-color="white"
-          outlined
-          label="To"
-          dense
-          v-model="store.dateTo"
-          mask="##/##/####"
-          class="custom-date-to"
-          style="width: 200px"
-        >
-          <template v-slot:append>
-            <q-icon name="event" class="calend-icon">
-              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                <q-date v-model="store.dateTo" mask="DD/MM/YYYY" />
-              </q-popup-proxy>
-            </q-icon>
-          </template>
-        </q-input>
-      </div>
-
-      <div class="row q-mt-sm q-mb-sm">
-        <div class="col-auto">
-          <q-btn
-            icon="add"
-            label="Add"
-            class="add-table-btn"
-            @click="$emit('add')"
-            color="primary"
-          />
-        </div>
-      </div>
+      <q-space />
+      <q-input
+        bg-color="white"
+        outlined
+        dense
+        label="From"
+        v-model="store.dateFrom"
+        mask="##/##/####"
+        class="custom-date-from"
+      >
+        <template v-slot:append>
+          <q-icon name="event" class="calend-icon">
+            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+              <q-date v-model="store.dateFrom" mask="DD/MM/YYYY" />
+            </q-popup-proxy>
+          </q-icon>
+        </template>
+      </q-input>
+      <q-input
+        bg-color="white"
+        outlined
+        dense
+        label="To"
+        v-model="store.dateTo"
+        mask="##/##/####"
+        class="custom-date-to"
+      >
+        <template v-slot:append>
+          <q-icon name="event" class="calend-icon">
+            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+              <q-date v-model="store.dateTo" mask="DD/MM/YYYY" />
+            </q-popup-proxy>
+          </q-icon>
+        </template>
+      </q-input>
+      <q-btn
+        label="Add"
+        icon="add"
+        class="add-table-btn"
+        @click="$emit('add')"
+        color="primary"
+        style="min-width: 180px;"
+      />
     </div>
   </div>
 </template>
@@ -113,6 +93,48 @@ const store = useDisbursementStore()
 @media (max-width: 900px) {
   .responsive-search-input {
     max-width: 100%;
+  }
+  .row.q-gutter-sm {
+    flex-wrap: wrap;
+  }
+  .row.q-gutter-sm > *:not(.q-space) {
+    flex: 1 1 100%;
+    max-width: 100%;
+    margin-bottom: 8px;
+  }
+  .q-space {
+    display: none !important;
+  }
+}
+@media (min-width: 768px) and (max-width: 1024px) {
+  .row.q-gutter-sm {
+    flex-wrap: wrap;
+  }
+  .row.q-gutter-sm > .q-input:not(:first-child) {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: calc(50% - 8px);
+  }
+  .row.q-gutter-sm > .q-btn {
+    flex: 1 1 100%;
+    max-width: 100%;
+    margin-top: 8px;
+  }
+  .q-space {
+    display: none !important;
+  }
+}
+@media (min-width: 1025px) {
+  .custom-search-input {
+    width: 400px !important;
+    min-width: 0 !important;
+    max-width: 1200px !important;
+  }
+  .custom-date-from,
+  .custom-date-to {
+    width: 250px !important;
+    min-width: 0 !important;
+    max-width: 350px !important;
   }
 }
 </style>

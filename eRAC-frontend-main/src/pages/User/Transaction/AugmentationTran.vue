@@ -67,4 +67,18 @@ const loadPendingUsers = async () => {
   background-color: #D9D9D9; /* Light gray background */
   min-height: 100vh; /* Ensure full height */
 }
+
+@media (min-width: 1025px) {
+  .custom-search-input {
+    width: 300px !important;
+    min-width: 0 !important;
+    max-width: 600px !important;
+  }
+  .custom-date-from,
+  .custom-date-to {
+    width: 180px !important;
+    min-width: 0 !important;
+    max-width: 250px !important;
+  }
+}
 </style>

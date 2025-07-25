@@ -53,8 +53,13 @@
                   filled
                   outlined
                   dense
-                  v-model="store.forms.disbursement.bank"
-                  :options="['BDO', 'Metro Bank', 'BPI', 'PNB']"
+                  v-model="store.forms.disbursement.bank_id"
+                  :options="bankStore.banks"
+                  option-label="name"
+                  option-value="id"
+                  emit-value
+                  map-options
+                  :label="currentBankLabel"
                 />
               </div>
 
@@ -322,18 +327,23 @@
 </template>
 
 <script setup>
-import { watch, onMounted } from 'vue'
+import { watch, onMounted, computed } from 'vue'
 import SearchFilters from 'components/disbursement/SearchFilters.vue'
 import OrDetailsDialog from 'components/disbursement/OrDetailsDialog.vue'
 import ViewOrDetails from 'components/disbursement/ViewOrDetails.vue'
 import EditDisbursement from 'components/disbursement/EditDisbursement.vue'
 import { useDisbursementStore } from 'stores/disbursementStore'
+import { useBankStore } from 'stores/bankStore'
 
 const store = useDisbursementStore()
+const bankStore = useBankStore()
 
 onMounted(async () => {
   await store.fetchDisbursementAccounts?.(); // keep existing
   await store.fetchDisbursements();
+  if (!bankStore.banks.length) {
+    await bankStore.fetchBanks()
+  }
 })
 
 watch(
@@ -372,6 +382,7 @@ const loadPendingUsers = async () => {
     loading.value = false
   }
 }
+
 </script>
 
 <style scoped>

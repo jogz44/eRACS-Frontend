@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB; // Added this import for DB facade
 
 return new class extends Migration
 {
@@ -18,6 +19,23 @@ return new class extends Migration
             $table->enum('status', ['available', 'consumed'])->default('available');
             $table->timestamps();
         });
+
+        // Seed initial bank data for all barangays
+        $barangayCount = DB::table('barangays')->count();
+        $banks = ['BDO', 'Metro Bank', 'BPI'];
+        $bankRows = [];
+        for ($i = 1; $i <= $barangayCount; $i++) {
+            foreach ($banks as $bank) {
+                $bankRows[] = [
+                    'barangay_id' => $i,
+                    'bank_name' => $bank,
+                    'status' => 'available',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+        }
+        DB::table('lib_banks')->insert($bankRows);
     }
 
     /**
