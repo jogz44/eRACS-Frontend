@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\Disbursement;
 use App\Models\Barangay;
+use App\Models\LibBank;
 use App\Models\DisbursementOrDetail;
 use Carbon\Carbon;
 
@@ -18,14 +19,19 @@ class DisbursementSeeder extends Seeder
         $disbursementIndex = 1;
         // 4 liquidated per barangay
         foreach ($barangays as $barangay) {
+            // Get all banks for this barangay
+            $banks = LibBank::where('barangay_id', $barangay->id)->get();
+            $bankCount = $banks->count();
             for ($i = 1; $i <= 2; $i++) {
                 $dvAmount = 1000 * $i;
+                $bank = $banks[($i - 1) % $bankCount] ?? $banks[0] ?? null;
+                $bankId = $bank ? $bank->id : null;
                 $disb = Disbursement::create([
                     'barangay_id' => $barangay->id,
                     'date' => $now->copy()->subDays($i),
                     'dv_number' => 'DV-25-07-' . str_pad($disbursementIndex, 2, '0', STR_PAD_LEFT),
                     'cheque_number' => '20000' . (150 + $disbursementIndex),
-                    'bank' => $i % 2 === 0 ? 'BDO' : 'BPI',
+                    'bank_id' => $bankId,
                     'payee' => 'Payee ' . $disbursementIndex,
                     'dv_amount' => $dvAmount,
                     'status' => 'Liquidated',
@@ -49,12 +55,14 @@ class DisbursementSeeder extends Seeder
             // 2 pending per barangay
             for ($i = 3; $i <= 4; $i++) {
                 $dvAmount = 1000 * $i;
+                $bank = $banks[($i - 1) % $bankCount] ?? $banks[0] ?? null;
+                $bankId = $bank ? $bank->id : null;
                 $disb = Disbursement::create([
                     'barangay_id' => $barangay->id,
                     'date' => $now->copy()->subDays($i),
                     'dv_number' => 'DV-25-07-' . str_pad($disbursementIndex, 2, '0', STR_PAD_LEFT),
                     'cheque_number' => '20000' . (150 + $disbursementIndex),
-                    'bank' => $i % 2 === 0 ? 'BDO' : 'BPI',
+                    'bank_id' => $bankId,
                     'payee' => 'Payee ' . $disbursementIndex,
                     'dv_amount' => $dvAmount,
                     'status' => 'Pending',

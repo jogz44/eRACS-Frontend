@@ -17,7 +17,7 @@ return new class extends Migration
             $table->date('date');
             $table->string('dv_number')->unique();
             $table->string('cheque_number');
-            $table->string('bank');
+            $table->unsignedBigInteger('bank_id');
             $table->string('payee');
             $table->decimal('dv_amount', 15, 2);
             $table->decimal('liquidated_amount', 15, 2)->nullable();
@@ -26,6 +26,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('barangay_id')->references('id')->on('barangays')->onDelete('cascade');
+            $table->foreign('bank_id')->references('id')->on('lib_banks')->onDelete('NO ACTION');
         });
     }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Disbursement;
+use App\Models\DisbursementOrDetail;
 use Illuminate\Http\Request;
 
 class DisbursementController extends Controller
@@ -28,34 +29,56 @@ class DisbursementController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $query = Disbursement::query();
+        $query = Disbursement::with('bank');
         // If user is authenticated and has barangay_id, filter by it
         if ($user && isset($user->barangay_id)) {
             $query->where('barangay_id', $user->barangay_id);
         }
-        $disbursements = $query->orderByDesc('date')->get([
-            'id',
-            'date',
-            'dv_number',
-            'cheque_number',
-            'bank',
-            'payee',
-            'dv_amount',
-            'status',
-            'created_at',
-            'updated_at',
-        ]);
+        $disbursements = $query->orderByDesc('date')->get();
+        $result = $disbursements->map(function($d) {
+            return [
+                'id' => $d->id,
+                'date' => $d->date,
+                'dv_number' => $d->dv_number,
+                'cheque_number' => $d->cheque_number,
+                'bank_name' => $d->bank->bank_name,
+                'payee' => $d->payee,
+                'dv_amount' => $d->dv_amount,
+                'status' => $d->status,
+                'created_at' => $d->created_at,
+                'updated_at' => $d->updated_at,
+            ];
+        });
         return response()->json([
             'status' => true,
-            'data' => $disbursements
+            'data' => $result
         ]);
     }
 
     // GET /api/barangay/disbursements/{id}/or-details
     public function getOrDetails($id)
     {
-        $orDetails = \App\Models\DisbursementOrDetail::where('disbursement_id', $id)->get();
+        $orDetails = DisbursementOrDetail::where('disbursement_id', $id)->get();
         return response()->json(['status' => true, 'data' => $orDetails]);
+    }
+
+    // GET /api/barangay/disbursements/{id}
+    public function show($id)
+    {
+        $disbursement = Disbursement::with('bank')->findOrFail($id);
+        return response()->json(['data' => [
+            'id' => $disbursement->id,
+            'date' => $disbursement->date,
+            'dv_number' => $disbursement->dv_number,
+            'cheque_number' => $disbursement->cheque_number,
+            'bank_id' => $disbursement->bank_id,
+            'bank_name' => $disbursement->bank ? $disbursement->bank->bank_name : null,
+            'payee' => $disbursement->payee,
+            'dv_amount' => $disbursement->dv_amount,
+            'status' => $disbursement->status,
+            'created_at' => $disbursement->created_at,
+            'updated_at' => $disbursement->updated_at,
+        ]]);
     }
 
     // PATCH /api/barangay/disbursements/{id}/liquidate
