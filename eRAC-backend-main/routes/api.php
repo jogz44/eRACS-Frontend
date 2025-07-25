@@ -112,16 +112,15 @@ Route::prefix('barangay')->group(function () {
     Route::post('budgets/{budget}/allocate', [AppropriationController::class, 'saveAllocation']);
     Route::get('budgets/{id}/history', [AppropriationController::class, 'getAllocationHistory']);
     Route::patch('budgets/{budget}/allocations', [AppropriationController::class, 'updateAllocations']);
-    // Recent Liquidated Disbursements
-    Route::get('/disbursements/recent-liquidated', [DisbursementController::class, 'recentLiquidated']);
-    // All Disbursements for barangay
-    Route::get('disbursements', [DisbursementController::class, 'index']);
-    // Liquidate a disbursement
-    Route::patch('disbursements/{id}/liquidate', [DisbursementController::class, 'liquidate']);
 
+    // Recent Liquidated Disbursements
+    Route::get('disbursements', [DisbursementController::class, 'index']);
+    Route::get('disbursements/recent-liquidated', [DisbursementController::class, 'recentLiquidated']);
+    Route::patch('disbursements/{id}/liquidate', [DisbursementController::class, 'liquidate']);
+    Route::get('disbursements/{id}/or-details', [DisbursementController::class, 'getOrDetails']);
+    Route::get('disbursements/{id}', [DisbursementController::class, 'show']);
   });
-   // Fetch OR Details for a disbursement
-   Route::get('disbursements/{id}/or-details', [DisbursementController::class, 'getOrDetails']);
+
 });
 
 Route::prefix('admin')->group(function () {

@@ -37,8 +37,13 @@
               filled
               outlined
               dense
-              v-model="store.forms.disbursement.bank"
-              :options="['BDO', 'Metro Bank', 'BPI', 'PNB']"
+              v-model="store.forms.disbursement.bank_id"
+              :options="bankStore.banks"
+              option-label="name"
+              option-value="id"
+              emit-value
+              map-options
+              :label="currentBankLabel"
             />
           </div>
 
@@ -167,6 +172,22 @@
 
 <script setup>
 import { useDisbursementStore } from 'stores/disbursementStore'
+import { useBankStore } from 'stores/bankStore'
+import { onMounted, computed } from 'vue'
 
 const store = useDisbursementStore()
+const bankStore = useBankStore()
+
+onMounted(async () => {
+  if (!bankStore.banks.length) {
+    await bankStore.fetchBanks()
+  }
+})
+
+const currentBankLabel = computed(() => {
+  const id = store.forms.disbursement.bank_id
+  const bank = bankStore.banks.find(b => b.id === id)
+  return bank ? bank.name : 'Select Bank'
+})
+
 </script>
