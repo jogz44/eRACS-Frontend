@@ -752,8 +752,11 @@ const saveExpenseClass = async () => {
   }
 
   try {
+    // Convert to uppercase
+    const upperCaseName = newExpenseClass.value.toUpperCase()
+
     await accountsStore.createExpenseClass({
-      name: newExpenseClass.value,
+      name: upperCaseName,
       fiscalYearId: selectedYear.value,
     })
 
@@ -789,9 +792,13 @@ const updateExpenseClass = async () => {
       throw new Error('Selected year not found in database')
     }
 
+    // Convert to uppercase
+    const upperCaseName = editingExpenseClass.value.name.toUpperCase()
+
     await accountsStore.updateExpenseClass({
       ...editingExpenseClass.value,
-      fiscalYearId: fiscalYear.id, // Use the actual ID
+      name: upperCaseName,
+      fiscalYearId: fiscalYear.id,
     })
 
     $q.notify({
@@ -880,9 +887,12 @@ const saveExpenseType = async () => {
       throw new Error('Selected year not found in database')
     }
 
+    // Convert to uppercase
+    const upperCaseName = newExpenseType.value.name.toUpperCase()
+
     // Add the new type
     const newType = await accountsStore.createExpenseType({
-      name: newExpenseType.value.name,
+      name: upperCaseName,
       expenseClassId: currentParentClass.value.id,
       fiscalYearId: fiscalYear.id,
       year: fiscalYear.year.toString(),
@@ -928,10 +938,13 @@ const editExpenseType = (expenseType) => {
 
 const updateExpenseType = async () => {
   try {
+    // Convert to uppercase
+    const upperCaseName = editingExpenseType.value.name.toUpperCase()
+
     await accountsStore.updateExpenseType({
       id: editingExpenseType.value.id,
       expenseClassId: editingExpenseType.value.expense_class_id,
-      name: editingExpenseType.value.name,
+      name: upperCaseName,
       order: editingExpenseType.value.order,
     })
 
@@ -1000,8 +1013,14 @@ const saveExpenseItem = async () => {
       throw new Error('Parent type not selected')
     }
 
+    // Capitalize first letter of each word
+    const capitalizedName = newExpenseItem.value.name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+
     await accountsStore.createExpenseItem({
-      name: newExpenseItem.value.name,
+      name: capitalizedName,
       expenseClassId: currentParentType.value.expense_class_id,
       expenseTypeId: currentParentType.value.id,
     })

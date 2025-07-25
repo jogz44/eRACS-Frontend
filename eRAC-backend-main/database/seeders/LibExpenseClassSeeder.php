@@ -19,7 +19,7 @@ class LibExpenseClassSeeder extends Seeder
             ['name' => 'LOCALLY FUNDED PROJECTS', 'order' => 2],
             ['name' => 'CAPITAL OUTLAY', 'order' => 3],
             ['name' => '5% (BDRRMF)', 'order' => 4],
-            ['name' => '20% Development Fund', 'order' => 5],
+            ['name' => '20% DEVELOPMENT FUND', 'order' => 5],
             ['name' => '10% SK FUND', 'order' => 6],
         ];
         foreach ($classes as $class) {
@@ -31,4 +31,4 @@ class LibExpenseClassSeeder extends Seeder
             ]);
         }
     }
-} 
+}
