@@ -199,6 +199,18 @@ export const useAppropriationStore = defineStore('appropriation', {
       }
     },
 
+    formatDate(value) {
+      if (!value) return ''
+
+      const date = new Date(value)
+
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    },
+
     formatCurrency(value) {
       if (value === null || value === undefined) return '₱0.00'
 

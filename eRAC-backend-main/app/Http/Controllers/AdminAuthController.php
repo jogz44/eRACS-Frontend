@@ -163,8 +163,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
     }
 
     // Get logs
-    public function getLogs() {
-        //return response()->json(DB::table('logs')->orderBy('created_at', 'desc')->get());
+    public function getAllLogs() {
         $logs = DB::table('logs')
         ->join('barangay_users', 'logs.user_id', '=', 'barangay_users.id')
         ->join('barangays', 'barangay_users.barangay_id', '=', 'barangays.id')
@@ -179,7 +178,6 @@ class AdminAuthController extends Controller  // <-- This is crucial
 
         return response()->json($logs);
     }
-
     // Helper to log user actions (can be called from other controllers)
     public static function logUserAction($user, $activity, $details = null) {
         DB::table('logs')->insert([

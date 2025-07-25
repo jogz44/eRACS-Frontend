@@ -26,6 +26,7 @@ export const useAuthStore = defineStore('auth', {
 
     _formatUser(userData) {
       return {
+        id: userData.id || null,
         first_name: userData.first_name || '',
         last_name: userData.last_name || '',
         barangay_name: userData.barangay_name || '',
@@ -316,5 +317,7 @@ export const useAuthStore = defineStore('auth', {
         }
       }
     },
+    getUserID() {
+      return this.user.id || null}
   },
 })

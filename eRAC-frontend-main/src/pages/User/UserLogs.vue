@@ -1,7 +1,18 @@
 <template>
   <q-page class="q-pa-lg">
     <div class="page-header q-mb-lg">
-      <div class="text-h5 text-weight-bold">Logs</div>
+       <div class="row items-center justify-between">
+      <div class="text-h5 text-weight-bold">User Access</div>
+          <q-btn
+          icon="refresh"
+          color="primary"
+          flat
+          round
+          @click="loadPendingUsers"
+          :loading="loading"
+          title="Refresh pending users"
+        />
+        </div>
       <q-card-section>
         <!-- Search Bar Only -->
         <div class="row q-mb-md">
@@ -13,7 +24,6 @@
         </div>
         <!-- Logs Table -->
         <q-table
-          style="max-height: 500px;"
           flat
           bordered
           :rows="filteredLogs"
@@ -21,8 +31,12 @@
           row-key="id"
           class="logs-table"
           :pagination="{ rowsPerPage: 10 }"
-          :table-header-style="{position: 'sticky',top: 0, zIndex: 3,background:'white'}"
         >
+        <template v-slot:body-cell-index="props">
+          <q-td :props="props">
+            {{ props.pageIndex + 1 }}
+          </q-td>
+        </template>
           <!-- Custom Date Formatting -->
           <template v-slot:body-cell-date="props">
             <q-td :props="props">
@@ -37,6 +51,25 @@
 
 <script>
 import { api } from 'boot/axios'
+import { useAuthStore } from 'stores/auth'
+
+const authStore = useAuthStore()
+const getAuthConfig = () => {
+  console.log('Current auth token:', authStore.token ? 'Token exists' : 'No token')
+
+  if (!authStore.token) {
+    console.warn('No authentication token found')
+    throw new Error('Authentication required')
+  }
+
+  return {
+    headers: {
+      Authorization: `Bearer ${authStore.token}`,
+      'Content-Type': 'application/json',
+    },
+  }
+}
+
 export default {
   name: 'LogsPage',
   data() {
@@ -45,10 +78,17 @@ export default {
       logs: [
       ],
       columns: [
-        { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
-        { name: 'fullname', label: 'Fullname', field: 'fullname', align: 'left', sortable: true },
-        { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
-        { name: 'activity', label: 'Activity', field: 'activity', align: 'left', sortable: true },
+        {
+          name: 'index',
+          label: '#',
+          field: 'index', 
+          align: 'left',
+          sortable: false, // optional: disable sorting
+        },
+        { name: 'fullname', label: 'NAME', field: 'fullname', align: 'left', sortable: true },
+        { name: 'position', label: 'POSITION', field: 'position', align: 'left', sortable: true  },
+        { name: 'date', label: 'DATE', field: 'date', align: 'left', sortable: true },
+        { name: 'activity', label: 'ACTIVITY', field: 'activity', align: 'left'},
       ],
     }
   },
@@ -58,8 +98,9 @@ export default {
       return this.logs.filter(
         (log) =>
           log.fullname.toLowerCase().includes(searchTerm) ||
+          log.position.toLowerCase().includes(searchTerm) ||
           log.activity.toLowerCase().includes(searchTerm) ||
-          log.date.toLowerCase().includes(searchTerm),
+          this.formatDate(log.date).toLowerCase().includes(searchTerm)
       )
     },
   },
@@ -67,11 +108,23 @@ export default {
     await this.loadLogs()
   },
   methods: {
+    formatDate(dateString) {
+      const date = new Date(dateString)
+      const options = {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      }
+      return new Intl.DateTimeFormat('en-US', options).format(date)
+    },
     async loadLogs() {
       this.loading = true
       try {
-        const response = await api.get('/api/admin/admin/logs')
-        this.logs = response.data
+        const response = await api.get(`/api/barangay/getlogs/${authStore.getUserID()}`,getAuthConfig())
+        this.logs = response.data.data
       } catch (error) {
         console.error('Error loading logs:', error)
         this.$q.notify({
@@ -82,10 +135,6 @@ export default {
       } finally {
         this.loading = false
       }
-    },
-    formatDate(dateString) {
-      // Implement your date formatting logic here
-      return dateString // Return formatted date
     },
     openViewModal(row) {
       this.viewModal.selectedRow = row
@@ -104,7 +153,6 @@ export default {
   background-color: #f5f5f5;
   font-weight: bold;
   color: #333;
-
 }
 
 @media (max-width: 600px) {
