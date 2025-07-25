@@ -21,6 +21,11 @@
           class="logs-table"
           :pagination="{ rowsPerPage: 10 }"
         >
+        <template v-slot:body-cell-index="props">
+          <q-td :props="props">
+            {{ props.pageIndex + 1 }}
+          </q-td>
+        </template>
           <!-- Custom Date Formatting -->
           <template v-slot:body-cell-date="props">
             <q-td :props="props">
@@ -43,10 +48,18 @@ export default {
       logs: [
       ],
       columns: [
-        { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
-        { name: 'fullname', label: 'Fullname', field: 'fullname', align: 'left', sortable: true },
-        { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
-        { name: 'activity', label: 'Activity', field: 'activity', align: 'left', sortable: true },
+        {
+          name: 'index',
+          label: '#',
+          field: 'index', 
+          align: 'left',
+          sortable: false, // optional: disable sorting
+        },
+        { name: 'fullname', label: 'NAME', field: 'fullname', align: 'left', sortable: true },
+        { name: 'barangay', label: 'BARANGAY', field: 'barangay', align: 'left', sortable: true  },
+        { name: 'position', label: 'POSITION', field: 'position', align: 'left', sortable: true  },
+        { name: 'date', label: 'DATE', field: 'date', align: 'left', sortable: true },
+        { name: 'activity', label: 'ACTIVITY', field: 'activity', align: 'left'},
       ],
     }
   },
@@ -56,8 +69,10 @@ export default {
       return this.logs.filter(
         (log) =>
           log.fullname.toLowerCase().includes(searchTerm) ||
+          log.barangay.toLowerCase().includes(searchTerm) ||
+          log.position.toLowerCase().includes(searchTerm) ||
           log.activity.toLowerCase().includes(searchTerm) ||
-          log.date.toLowerCase().includes(searchTerm),
+          this.formatDate(log.date).toLowerCase().includes(searchTerm)
       )
     },
   },
@@ -65,6 +80,18 @@ export default {
     await this.loadLogs()
   },
   methods: {
+    formatDate(dateString) {
+      const date = new Date(dateString)
+      const options = {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      }
+      return new Intl.DateTimeFormat('en-US', options).format(date)
+    },
     async loadLogs() {
       this.loading = true
       try {
@@ -80,10 +107,6 @@ export default {
       } finally {
         this.loading = false
       }
-    },
-    formatDate(dateString) {
-      // Implement your date formatting logic here
-      return dateString // Return formatted date
     },
     openViewModal(row) {
       this.viewModal.selectedRow = row
