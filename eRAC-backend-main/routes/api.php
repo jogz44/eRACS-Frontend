@@ -46,7 +46,7 @@ Route::prefix('barangay')->group(function () {
 
     Route::middleware(['auth:sanctum', 'auth.barangay'])->group(function () {
         Route::post('/setlogs', [AdminAuthController::class, 'logUserAction']);
-        Route::get('/getlogs/{barangay_id}', [AdminAuthController::class, 'getBarangayLogs']);
+        Route::get('/getlogs/{barangay_name}', [AdminAuthController::class, 'getBarangayLogs']);
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/user', [AuthController::class, 'user']);
 

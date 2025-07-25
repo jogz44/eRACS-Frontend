@@ -86,7 +86,6 @@ export default {
           sortable: false, // optional: disable sorting
         },
         { name: 'fullname', label: 'NAME', field: 'fullname', align: 'left', sortable: true },
-        { name: 'barangay', label: 'BARANGAY', field: 'barangay', align: 'left', sortable: true  },
         { name: 'position', label: 'POSITION', field: 'position', align: 'left', sortable: true  },
         { name: 'date', label: 'DATE', field: 'date', align: 'left', sortable: true },
         { name: 'activity', label: 'ACTIVITY', field: 'activity', align: 'left'},
@@ -99,7 +98,6 @@ export default {
       return this.logs.filter(
         (log) =>
           log.fullname.toLowerCase().includes(searchTerm) ||
-          log.barangay.toLowerCase().includes(searchTerm) ||
           log.position.toLowerCase().includes(searchTerm) ||
           log.activity.toLowerCase().includes(searchTerm) ||
           this.formatDate(log.date).toLowerCase().includes(searchTerm)
@@ -126,7 +124,7 @@ export default {
       this.loading = true
       try {
         
-        const response = await api.get(`/api/barangay/getlogs/${authStore.user.barangay_id}`,getAuthConfig())
+        const response = await api.get(`/api/barangay/getlogs/${authStore.getBarangayName()}`,getAuthConfig())
         this.logs = response.data.data
       } catch (error) {
         console.error('Error loading logs:', error)

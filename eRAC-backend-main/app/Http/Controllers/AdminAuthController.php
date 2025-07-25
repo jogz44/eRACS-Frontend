@@ -179,7 +179,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
         return response()->json($logs);
     }
 
-    public function getBarangayLogs($barangay_id) {
+    public function getBarangayLogs($barangay_name) {
         $logs = DB::table('logs')
         ->join('barangay_users', 'logs.user_id', '=', 'barangay_users.id')
         ->join('barangays', 'barangay_users.barangay_id', '=', 'barangays.id')
@@ -189,7 +189,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
             'barangays.name as barangay',
             'barangay_positions.name as position'
         )
-        ->where('barangays.id', $barangay_id)
+        ->where('barangays.name', $barangay_name)
         ->orderBy('logs.created_at', 'desc')
         ->get();
 

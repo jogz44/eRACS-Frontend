@@ -316,7 +316,7 @@ export const useAuthStore = defineStore('auth', {
         }
       }
     },
+    getBarangayName() {
+      return this.user.barangay_name || null}
   },
-  getBarangayId() {
-    return this.user?.barangay_id || null}
 })
