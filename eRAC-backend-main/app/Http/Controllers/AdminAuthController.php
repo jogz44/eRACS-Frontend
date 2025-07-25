@@ -178,24 +178,6 @@ class AdminAuthController extends Controller  // <-- This is crucial
 
         return response()->json($logs);
     }
-
-    public function getBarangayLogs($barangay_name) {
-        $logs = DB::table('logs')
-        ->join('barangay_users', 'logs.user_id', '=', 'barangay_users.id')
-        ->join('barangays', 'barangay_users.barangay_id', '=', 'barangays.id')
-        ->join('barangay_positions', 'barangay_users.position_id', '=', 'barangay_positions.id')
-        ->select(
-            'logs.*',
-            'barangays.name as barangay',
-            'barangay_positions.name as position'
-        )
-        ->where('barangays.name', $barangay_name)
-        ->orderBy('logs.created_at', 'desc')
-        ->get();
-
-        return response()->json($logs);
-    }
-
     // Helper to log user actions (can be called from other controllers)
     public static function logUserAction($user, $activity, $details = null) {
         DB::table('logs')->insert([

@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\AdminAuthController;
 
 class AuthController extends Controller
@@ -175,6 +176,7 @@ public function user(Request $request)
 
     return response()->json([
         'user' => [
+            'id' => $user->id,
             'first_name' => $user->first_name ?? '',
             'last_name' => $user->last_name ?? '',
             'barangay_name' => $user->barangay->name ?? '',
@@ -229,4 +231,39 @@ public function resetPassword(Request $request)
         ]
     ]);
 }
+
+    public function getBarangayLogs($userid) {
+        
+        $user = DB::table('barangay_users')
+        ->where('id', $userid)
+        ->first();
+        $barangay = DB::table('barangay_users')
+            ->join('barangays', 'barangay_users.barangay_id', '=', 'barangays.id')
+            ->where('barangay_users.id', $userid)
+            ->select(
+                'barangays.name as barangay_name'
+            )
+            ->first();
+
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+        AdminAuthController::logUserAction($user, "Check the Logs", 'This user opened the logs');
+
+        // Step 2: Get all logs where the user's barangay_id matches
+        $logs = DB::table('logs')
+            ->join('barangay_users', 'logs.user_id', '=', 'barangay_users.id')
+            ->join('barangays', 'barangay_users.barangay_id', '=', 'barangays.id')
+            ->join('barangay_positions', 'barangay_users.position_id', '=', 'barangay_positions.id')
+            ->select(
+                'logs.*',
+                'barangays.name as barangay',
+                'barangay_positions.name as position'
+            )
+            ->where('barangay_users.barangay_id', $user->barangay_id)
+            ->orderBy('logs.created_at', 'desc')
+            ->get();
+
+        return response()->json($logs);
+    }
 }

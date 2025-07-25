@@ -123,8 +123,7 @@ export default {
     async loadLogs() {
       this.loading = true
       try {
-        
-        const response = await api.get(`/api/barangay/getlogs/${authStore.getBarangayName()}`,getAuthConfig())
+        const response = await api.get(`/api/barangay/getlogs/${authStore.getUserID()}`,getAuthConfig())
         this.logs = response.data.data
       } catch (error) {
         console.error('Error loading logs:', error)

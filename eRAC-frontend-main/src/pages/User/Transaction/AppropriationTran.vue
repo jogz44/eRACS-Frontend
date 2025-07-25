@@ -151,6 +151,12 @@
         :loading="appropriationStore.loading"
         row-key="id"
       >
+        
+        <template v-slot:body-cell-index="props">
+          <q-td :props="props">
+            {{ props.pageIndex + 1 }}
+          </q-td>
+        </template>
         <template v-slot:body-cell-amount="props">
           <q-td :props="props">
             {{ appropriationStore.formatCurrency(props.row.amount) }}
@@ -597,17 +603,19 @@ onMounted(async () => {
 */
 const columns = [
   {
-    name: 'id',
-    required: true,
-    label: 'ID',
+    name: 'index',
+    label: '#',
+    field: 'index', 
     align: 'left',
-    field: 'id',
+    sortable: false, // optional: disable sorting
   },
   {
     name: 'date',
     label: 'Date',
     field: 'date',
     align: 'left',
+    sortable: true,
+    format: (val) => appropriationStore.formatDate(val),
   },
   {
     name: 'description',
