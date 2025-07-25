@@ -11,10 +11,16 @@ class LibFiscalYearSeeder extends Seeder
     public function run()
     {
         $barangay = Barangay::first();
-        LibFiscalYear::create([
-            'barangay_id' => $barangay->id,
-            'year' => now()->year,
-            'is_active' => true,
-        ]);
+
+        // Use updateOrCreate instead of create to handle existing records
+        LibFiscalYear::updateOrCreate(
+            [
+                'barangay_id' => $barangay->id,
+                'year' => '2025', // Set specific year instead of using now()
+            ],
+            [
+                'is_active' => true,
+            ]
+        );
     }
-} 
+}
