@@ -45,7 +45,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         date: '',
         dvNumber: '',
         chequeNumber: '', // Changed from checkNumber to chequeNumber
-        bank: '',
+        bank_id: '',
         payee: '',
         amount: '',
       },
@@ -263,7 +263,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           date: d.date,
           dvNumber: d.dv_number,
           chequeNumber: d.cheque_number,
-          bank: d.bank,
+          bank: d.bank_name, 
           payee: d.payee,
           dvAmount: d.dv_amount,
           status: d.status,
@@ -272,6 +272,67 @@ export const useDisbursementStore = defineStore('disbursement', {
       } catch (error) {
         console.error('Failed to fetch disbursements:', error)
         this.disbursements = []
+      }
+    },
+
+    async fetchDisbursementById(id) {
+      try {
+        const authStore = useAuthStore();
+        const token = authStore.token;
+        const response = await api.get(`/api/barangay/disbursements/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+        console.log('API raw response:', response.data);
+        // Unwrap the double data
+        const disbursement = response.data.data.data;
+        console.log('Fetched disbursement:', disbursement);
+        if (disbursement) {
+          this.forms.disbursement = {
+            date: formatDateForForm(disbursement.date),
+            dvNumber: disbursement.dv_number,
+            chequeNumber: disbursement.cheque_number,
+            bank_id: Number(disbursement.bank_id),
+            payee: disbursement.payee,
+            // Add other fields as needed
+          };
+
+          function formatDateForForm(dateStr) {
+            if (!dateStr) return '';
+            if (dateStr.includes('-')) {
+              // 'YYYY-MM-DD'
+              const [yyyy, mm, dd] = dateStr.split('-');
+              return `${mm}/${dd}/${yyyy}`;
+            } 
+            else if (dateStr.includes('/')) {
+              return dateStr;
+            }
+            return dateStr;
+          }
+
+          // Find and set the selected booklet based on the cheque number
+          const chequeNum = parseInt(disbursement.cheque_number)
+          const selectedBooklet = this.chequeBooklets.find((booklet) => {
+            const [start, end] = booklet.range.split('-').map(Number)
+            return chequeNum >= start && chequeNum <= end
+          })
+
+          if (selectedBooklet) {
+            this.selectedBooklet = selectedBooklet.range
+            this.selectBooklet(selectedBooklet.range)
+            this.selectedChequeNumber = disbursement.cheque_number
+          }
+
+          this.expenses = disbursement.expenses || []
+          this.currentItem = { ...disbursement }
+          this.dialogs.editDisbursement = true
+        }
+        return disbursement;
+      } catch (error) {
+        console.error('Failed to fetch disbursement:', error);
+        return null;
       }
     },
 
@@ -406,7 +467,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         date: this.forms.disbursement.date,
         dvNumber: this.forms.disbursement.dvNumber,
         chequeNumber: this.forms.disbursement.chequeNumber,
-        bank: this.forms.disbursement.bank,
+        bank_id: this.forms.disbursement.bank_id,
         payee: this.forms.disbursement.payee,
         dvAmount: this.totalExpensesAmount,
         aging: '0 days',
@@ -433,7 +494,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       const newDVNumber = `DV-${String(yyyy).slice(-2)}-${mm}-${String(lastDV + 1).padStart(3, '0')}`
 
       // Update form with new defaults
-      this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
+      this.forms.disbursement.date = `${mm}/${dd}/${yyyy}`
       this.forms.disbursement.dvNumber = newDVNumber
     },
 
@@ -474,7 +535,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           date: '',
           dvNumber: '',
           chequeNumber: '', // Add this line
-          bank: '',
+          bank_id: '',
           payee: '',
           amount: '',
         }
@@ -496,36 +557,11 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
-    openEditDisbursement(row) {
-      const disbursement = this.disbursements.find((d) => d.id === row.id)
-      if (disbursement) {
-        this.forms.disbursement = {
-          date: disbursement.date,
-          dvNumber: disbursement.dvNumber,
-          chequeNumber: disbursement.chequeNumber,
-          bank: disbursement.bank,
-          payee: disbursement.payee,
-        }
-
-        // Find and set the selected booklet based on the cheque number
-        const chequeNum = parseInt(disbursement.chequeNumber)
-        const selectedBooklet = this.chequeBooklets.find((booklet) => {
-          const [start, end] = booklet.range.split('-').map(Number)
-          return chequeNum >= start && chequeNum <= end
-        })
-
-        if (selectedBooklet) {
-          this.selectedBooklet = selectedBooklet.range
-          this.selectBooklet(selectedBooklet.range)
-          this.selectedChequeNumber = disbursement.chequeNumber
-        }
-
-        this.expenses = disbursement.expenses || []
-        this.currentItem = { ...disbursement }
-        this.dialogs.editDisbursement = true
-      }
+    async openEditDisbursement(row) {
+      await this.fetchDisbursementById(row.id);
     },
 
+      
     saveEditedDisbursement() {
       if (!this.currentItem) return
 

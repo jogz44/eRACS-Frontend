@@ -16,7 +16,7 @@ class Disbursement extends Model
         'date',
         'dv_number',
         'cheque_number',
-        'bank',
+        'bank_id',
         'payee',
         'dv_amount',
         'status',
@@ -32,5 +32,10 @@ class Disbursement extends Model
     public function orDetails()
     {
         return $this->hasMany(DisbursementOrDetail::class);
+    }
+
+    public function bank()
+    {
+        return $this->belongsTo(LibBank::class, 'bank_id');
     }
 } 
