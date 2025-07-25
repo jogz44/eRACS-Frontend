@@ -32,22 +32,33 @@
           class="logs-table"
           :pagination="{ rowsPerPage: 10 }"
         >
+
         <template v-slot:body-cell-index="props">
           <q-td :props="props">
             {{ props.pageIndex + 1 }}
           </q-td>
         </template>
+        
           <!-- Custom Date Formatting -->
           <template v-slot:body-cell-date="props">
             <q-td :props="props">
               {{ formatDate(props.row.created_at) }}
+                {{ props.pageIndex + 1 }}
             </q-td>
           </template>
+            <template v-slot:body-cell-actions="props">
+            <q-td :props="props" class="actions-column">
+              <q-btn label="View Activity" color="primary" size="sm" @click="openAccessModal(props.row)" />
+            </q-td>
+          </template>
+
         </q-table>
+
       </q-card-section>
     </div>
   </q-page>
 </template>
+
 
 <script>
 import { api } from 'boot/axios'
@@ -78,17 +89,13 @@ export default {
       logs: [
       ],
       columns: [
-        {
-          name: 'index',
-          label: '#',
-          field: 'index', 
-          align: 'left',
-          sortable: false, // optional: disable sorting
-        },
-        { name: 'fullname', label: 'NAME', field: 'fullname', align: 'left', sortable: true },
-        { name: 'position', label: 'POSITION', field: 'position', align: 'left', sortable: true  },
-        { name: 'date', label: 'DATE', field: 'date', align: 'left', sortable: true },
-        { name: 'activity', label: 'ACTIVITY', field: 'activity', align: 'left'},
+
+        { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
+        { name: 'fullname', label: 'Fullname', field: 'fullname', align: 'left', sortable: true },
+        { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
+        { name: 'activity', label: 'Activity', field: 'activity', align: 'left', sortable: true },
+        { name: 'actions', label: 'Actions', align: 'center', sortable: false },
+
       ],
     }
   },

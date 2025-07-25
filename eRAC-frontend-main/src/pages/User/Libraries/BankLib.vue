@@ -353,6 +353,24 @@
 </template>
 
 <script setup>
+const loading = ref(false)
+
+const loadPendingUsers = async () => {
+  loading.value = true
+  try {
+    await bankStore.fetchBanks()
+    tableRefreshKey.value++
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Failed to refresh data',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    loading.value = false
+  }
+}
 import { useBankStore } from 'src/stores/bankStore'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useQuasar } from 'quasar'

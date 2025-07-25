@@ -321,6 +321,36 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
+import { useQuasar } from 'quasar'
+
+const $q = useQuasar()
+const loading = ref(false)
+
+const loadPendingUsers = async () => {
+  loading.value = true
+  try {
+    // TODO: Replace with actual API call to fetch continuing augmentations
+    // Example: await store.fetchAugmentations()
+    // For now, just simulate a delay
+    await new Promise(resolve => setTimeout(resolve, 500))
+    $q.notify({
+      type: 'positive',
+      message: 'Augmentation refreshed!',
+      icon: 'refresh',
+      position: 'top',
+    })
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Failed to refresh data',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    loading.value = false
+  }
+}
 import { useContAugmentationStore } from 'stores/contAugmentation'
 const store = useContAugmentationStore()
 </script>

@@ -286,7 +286,36 @@
 </template>
 
 <script setup>
+const loading = ref(false)
+
+const loadPendingUsers = async () => {
+  loading.value = true
+  try {
+    // TODO: Replace with actual API call to fetch continuing appropriations/accounts
+    // Example: await store.fetchContinuingAppropriations()
+    // For now, just simulate a delay
+    await new Promise(resolve => setTimeout(resolve, 500))
+     $q.notify({
+      type: 'positive',
+      message: 'Appropriation refreshed!',
+      icon: 'refresh',
+      position: 'top',
+    })
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Failed to refresh data',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    loading.value = false
+  }
+}
 import { ref, computed } from 'vue'
+import { useQuasar } from 'quasar'
+
+const $q = useQuasar()
 
 const showContinueDialog = ref(false)
 const showAllocationDialog = ref(false)

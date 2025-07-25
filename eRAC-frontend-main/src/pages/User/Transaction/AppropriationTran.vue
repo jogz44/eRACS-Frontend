@@ -11,7 +11,7 @@
           round
           @click="loadPendingUsers"
           :loading="loading"
-          title="Refresh pending users"
+
         />
         </div>
 </div>
@@ -319,6 +319,7 @@ import { useAppropriationStore } from 'stores/appropriationStore'
 import { useAccountsLibraryStore } from 'stores/accountsLibstore'
 import { api } from 'src/boot/axios'
 
+
 const $q = useQuasar()
 const accountLibraryStore = useAccountsLibraryStore()
 const appropriationStore = useAppropriationStore()
@@ -330,6 +331,28 @@ const endDate = ref('')
 const description = ref('')
 const amount = ref(null)
 const loading = ref(false)
+
+const loadPendingUsers = async () => {
+  loading.value = true
+  try {
+    await appropriationStore.fetchBudgets()
+     $q.notify({
+      type: 'positive',
+      message: 'Appropriation refreshed!',
+      icon: 'refresh',
+      position: 'top',
+    })
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Failed to refresh data',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    loading.value = false
+  }
+}
 
 const showEditAllocationDialog = ref(false)
 const editAllocations = ref([])

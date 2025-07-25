@@ -1,8 +1,15 @@
 <template>
   <q-page class="q-pa-lg report-page">
-    <div class="page-header q-mb-lg">
+    <q-toolbar class="q-pr-md items-center" style="display: flex; flex-direction: row;">
       <div class="text-h5 text-weight-bold">Current Year Reports</div>
-    </div>
+      <q-space />
+      <q-btn flat square dense style="background-color: #589b16;" color="white" icon="settings" @click="openSetupDialog">
+        <div>Setup</div>
+      </q-btn>
+    </q-toolbar>
+
+    <SetupDialog v-model="showSetupDialog" />
+
     <q-card class="q-mb-md">
       <q-card-section>
         <div class="text-h6">Registry of Appropriation and Commitment (RAC)</div>
@@ -214,10 +221,16 @@
 </template>
 
 <script>
+import SetupDialog from 'components/SetupDialog.vue'
+
 export default {
   name: 'FinancialDashboard',
+  components: {
+    SetupDialog
+  },
   data() {
     return {
+      showSetupDialog: false,
       racDateFromCurrent: null,
       racDateToCurrent: null,
       sacbDateFromCurrent: null,
@@ -232,6 +245,11 @@ export default {
       expenseOptionsCont: ['Select Expense Class...', 'Capital Outlay'],
     }
   },
+  methods: {
+    openSetupDialog() {
+      this.showSetupDialog = true
+    }
+  }
 }
 </script>
 
