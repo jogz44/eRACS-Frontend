@@ -99,6 +99,23 @@
 </template>
 
 <script setup>
+const loading = ref(false)
+
+const loadPendingUsers = async () => {
+  loading.value = true
+  try {
+    await store.fetchParticulars()
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Failed to refresh data',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    loading.value = false
+  }
+}
 import { useParticularStore } from 'src/stores/particularStore'
 import { ref, onMounted, computed } from 'vue'
 import { useQuasar } from 'quasar'

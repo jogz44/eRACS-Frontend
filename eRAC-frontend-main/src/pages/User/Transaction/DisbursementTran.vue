@@ -344,6 +344,34 @@ watch(
   },
   { deep: true },
 )
+
+import { ref } from 'vue'
+import { useQuasar } from 'quasar'
+
+const $q = useQuasar()
+const loading = ref(false)
+
+const loadPendingUsers = async () => {
+  loading.value = true
+  try {
+    await store.fetchDisbursements()
+    $q.notify({
+      type: 'positive',
+      message: 'Disbursements refreshed!',
+      icon: 'refresh',
+      position: 'top',
+    })
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Failed to refresh disbursements',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    loading.value = false
+  }
+}
 </script>
 
 <style scoped>

@@ -96,13 +96,14 @@
           </div>
 
           <!-- Account Entries Exapandable -->
-          <div ref="sortableContainer" style="max-height: calc(70vh - 150px); overflow-y: auto">
+          <div ref="sortableContainer" style="max-height: calc(70vh - 150px); overflow-y: auto" >
             <template v-for="expenseClass in filteredExpenseClasses" :key="expenseClass.id">
               <div
                 class="draggable-item"
                 :data-id="expenseClass.id"
                 @mouseover="hoveredClass = expenseClass.id"
                 @mouseleave="hoveredClass = null"
+
               >
                 <q-card flat bordered class="q-mb-sm shadow-1">
                   <q-expansion-item
@@ -112,18 +113,22 @@
                     header-class="q-pa-none"
                     expand-icon-class="hidden"
                     dense
+
                   >
+                  <!--  EXPENSE CLASS -->
                     <template #header>
                       <div
-                        class="bg-white q-pa-md full-width row items-center justify-between rounded-borders"
+                        class="bg-green-4 q-pa-md full-width row items-center justify-between rounded-borders "
                         style="border: 1px solid #e0e0e0"
+
                       >
-                        <div class="row items-center">
+                        <div class="row items-center " >
                           <q-icon name="drag_indicator" class="drag-handle q-mr-sm" />
-                          <div class="text-body1 text-weight-medium">{{ expenseClass.name }}</div>
+                          <div class="text-body1 text-weight-medium " >{{ expenseClass.name }}</div>
                         </div>
-                        <div class="row items-center q-gutter-sm">
+                        <div class="row items-center q-gutter-sm ">
                           <q-btn
+
                             dense
                             flat
                             round
@@ -156,16 +161,18 @@
                     </template>
 
                     <!-- Expanded Content (with drag for types) -->
-                    <div class="q-pa-md">
-                      <div class="text-subtitle1 text-weight-medium q-mb-xs"></div>
-                      <div class="text-caption text-grey-7 q-mb-md">
+                    <div class="q-pa-md ">
+                      <div class="text-subtitle1 text-weight-medium q-mb-xs "></div>
+                      <div class="text-caption text-grey-7 q-mb-md ">
                         Expenses under {{ expenseClass.name }}
                       </div>
 
                       <!--Expense Type-->
                       <div
+
                         :ref="(el) => initTypeContainer(el, expenseClass.id)"
                         class="type-container"
+
                       >
                         <template
                           v-for="expenseType in getExpenseTypesForClass(expenseClass.id)"
@@ -179,9 +186,10 @@
                                 header-class="q-pa-none"
                                 expand-icon-class="hidden"
                               >
+                              <!-- EXPENSE TYPE -->
                                 <template #header>
                                   <div
-                                    class="bg-white q-pa-sm full-width row items-center justify-between rounded-borders"
+                                    class="bg-green-2 q-pa-sm full-width row items-center justify-between rounded-borders"
                                   >
                                     <div class="row items-center">
                                       <q-icon name="drag_indicator" class="drag-handle q-mr-sm" />
@@ -225,57 +233,58 @@
                                   </div>
                                 </template>
 
-                                <!-- Expense Items List -->
-                                <!-- Expense Items List -->
-                                <div class="text-subtitle2 text-weight-medium q-mb-xs"></div>
-                                <div class="text-caption text-grey-7 q-mb-md q-ml-md">
-                                  Expenses under {{ expenseType.name }}
-                                </div>
-                                <div class="q-p-xs item-container">
-                                  <div
-                                    :ref="
-                                      (el) => {
-                                        if (el) initItemContainer(el, expenseType.id)
-                                      }
-                                    "
-                                    class="item-container"
-                                  >
-                                    <template
-                                      v-for="item in getExpenseItemsForType(expenseType.id)"
-                                      :key="item.id"
+                                <!-- Expense Items List as Expansion Item -->
+                                <div class="q-ml-lg">
+                                  <div class=" text-caption text-grey-7 q-mb-md q-ml-md">
+                                    Expenses under {{ expenseType.name }}
+                                  </div>
+                                  <div class="q-p-xs item-container ">
+                                    <div
+                                      :ref="
+                                        (el) => {
+                                          if (el) initItemContainer(el, expenseType.id)
+                                        }
+                                      "
+                                      class="item-container "
                                     >
-                                      <div class="draggable-item" :data-id="item.id">
-                                        <q-card flat bordered style="max-width: 100%">
-                                          <div class="q-pa-xs row items-center justify-between">
-                                            <div class="row items-center justify-center">
-                                              <q-icon
-                                                name="drag_indicator"
-                                                class="drag-handle q-mr-sm"
-                                              />
-                                              <div class="text-body2">{{ item.name }}</div>
+                                      <template
+                                        v-for="item in getExpenseItemsForType(expenseType.id)"
+                                        :key="item.id"
+                                      >
+                                        <!-- EXPENSE ITEM -->
+                                        <div class="draggable-item " :data-id="item.id">
+                                          <q-card flat bordered style="max-width: 100%" >
+                                            <div class="bg-green-1  q-pa-xs row items-center justify-between">
+                                              <div class="row items-center justify-center">
+                                                <q-icon
+                                                  name="drag_indicator"
+                                                  class="drag-handle q-mr-sm"
+                                                />
+                                                <div class="text-body2">{{ item.name }}</div>
+                                              </div>
+                                              <div class="row no-wrap items-center">
+                                                <q-btn
+                                                  dense
+                                                  flat
+                                                  round
+                                                  icon="edit"
+                                                  class="edit-btn"
+                                                  @click="editExpenseItem(item)"
+                                                />
+                                                <q-btn
+                                                  dense
+                                                  flat
+                                                  round
+                                                  icon="delete"
+                                                  class="delete-btn"
+                                                  @click="confirmDeleteExpenseItem(item)"
+                                                />
+                                              </div>
                                             </div>
-                                            <div class="row no-wrap items-center">
-                                              <q-btn
-                                                dense
-                                                flat
-                                                round
-                                                icon="edit"
-                                                class="edit-btn"
-                                                @click="editExpenseItem(item)"
-                                              />
-                                              <q-btn
-                                                dense
-                                                flat
-                                                round
-                                                icon="delete"
-                                                class="delete-btn"
-                                                @click="confirmDeleteExpenseItem(item)"
-                                              />
-                                            </div>
-                                          </div>
-                                        </q-card>
-                                      </div>
-                                    </template>
+                                          </q-card>
+                                        </div>
+                                      </template>
+                                    </div>
                                   </div>
                                 </div>
                               </q-expansion-item>
@@ -618,6 +627,26 @@
   </q-page>
 </template>
 <script setup>
+const loading = ref(false)
+
+const loadPendingUsers = async () => {
+  loading.value = true
+  try {
+    await accountsStore.fetchYears()
+    if (selectedYear.value) {
+      await accountsStore.fetchExpenseClasses(selectedYear.value)
+    }
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Failed to refresh data',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    loading.value = false
+  }
+}
 import Sortable from 'sortablejs'
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useQuasar } from 'quasar'

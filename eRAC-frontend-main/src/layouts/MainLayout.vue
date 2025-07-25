@@ -28,17 +28,7 @@
 
 
 
-        <!-- AVATAR & MENU
-        v-if="$q.screen.gt.sm" -->
-        <q-btn flat square dense icon="settings"  @click="openSetupDialog">
-               <div>
-              Setup
-            </div>
-          <q-menu transition-show="jump-down" transition-hide="jump-up">
-              <q-separator />
 
-          </q-menu>
-        </q-btn>
       </q-toolbar>
     </q-header>
 
@@ -142,7 +132,7 @@ const leftDrawerOpen = ref(false)
 const showSetupDialog = ref(false)
 const imageLoadingFailed = ref(false)
 
-const openSetupDialog = () => (showSetupDialog.value = true)
+
 const handleImageError = (e) => (e.target.src = 'src/assets/user.png')
 
 const userPhoto = computed(() => {

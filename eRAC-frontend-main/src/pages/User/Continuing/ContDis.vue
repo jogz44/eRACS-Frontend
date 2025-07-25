@@ -271,6 +271,36 @@
 </template>
 
 <script setup>
+import { useQuasar } from 'quasar'
+
+const $q = useQuasar()
+const loading = ref(false)
+
+const loadPendingUsers = async () => {
+  loading.value = true
+  try {
+    // TODO: Replace with actual API call to fetch continuing disbursements
+    // Example: await store.fetchDisbursements()
+    // For now, just simulate a delay
+    await new Promise(resolve => setTimeout(resolve, 500))
+    $q.notify({
+      type: 'positive',
+      message: 'Disbursement refreshed!',
+      icon: 'refresh',
+      position: 'top',
+    })
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Failed to refresh data',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    loading.value = false
+  }
+}
+import { ref } from 'vue'
 import { useContDisbursementStore } from 'stores/contDisburseStore'
 import ContLiquidateDialog from 'components/contDisburse/ContOrDetails.vue'
 import ContViewOr from 'components/contDisburse/ContViewOr.vue'
