@@ -51,8 +51,7 @@
 
 <script>
 import { api } from 'boot/axios'
-import { useAuthStore } from 'src/stores/auth'
-
+import { useAuthStore } from 'stores/auth'
 
 const authStore = useAuthStore()
 const getAuthConfig = () => {
@@ -126,7 +125,8 @@ export default {
     async loadLogs() {
       this.loading = true
       try {
-        const response = await api.get(`/api/barangay/getlogs/${1}`,getAuthConfig())
+        
+        const response = await api.get(`/api/barangay/getlogs/${authStore.user.barangay_id}`,getAuthConfig())
         this.logs = response.data.data
       } catch (error) {
         console.error('Error loading logs:', error)

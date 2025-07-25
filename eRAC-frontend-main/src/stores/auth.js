@@ -317,4 +317,6 @@ export const useAuthStore = defineStore('auth', {
       }
     },
   },
+  getBarangayId() {
+    return this.user?.barangay_id || null}
 })
