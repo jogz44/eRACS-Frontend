@@ -33,13 +33,15 @@
           row-key="id"
           :loading="loading"
           class="user-table"
+          v-model:pagination="pagination"
+          :pagination="{ rowsPerPage: 10 }"
         >
-        
-          <template v-slot:body-cell-index="props">
-            <q-td :props="props">
-              {{ props.pageIndex + 1 }}
-            </q-td>
-          </template>
+
+        <template v-slot:body-cell-index="props">
+          <q-td :props="props">
+            {{ (pagination.page - 1) * pagination.rowsPerPage + props.pageIndex + 1 }}
+          </q-td>
+        </template>
           <!-- Custom Actions Column -->
           <template v-slot:body-cell-action="props">
             <q-td :props="props" class="action-buttons">
@@ -192,6 +194,10 @@ import { api } from 'boot/axios'
 export default {
   data() {
     return {
+      pagination: {
+        page: 1,
+        rowsPerPage: 10
+      },
       search: '',
       users: [],
       loading: false,

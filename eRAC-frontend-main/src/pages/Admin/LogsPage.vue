@@ -30,11 +30,13 @@
           :columns="columns"
           row-key="id"
           class="logs-table"
+          v-model:pagination="pagination"
           :pagination="{ rowsPerPage: 10 }"
         >
+
         <template v-slot:body-cell-index="props">
           <q-td :props="props">
-            {{ props.pageIndex + 1 }}
+            {{ (pagination.page - 1) * pagination.rowsPerPage + props.pageIndex + 1 }}
           </q-td>
         </template>
           <!-- Custom Date Formatting -->
@@ -55,6 +57,10 @@ export default {
   name: 'LogsPage',
   data() {
     return {
+      pagination: {
+        page: 1,
+        rowsPerPage: 10
+      },
       search: '',
       logs: [
       ],
