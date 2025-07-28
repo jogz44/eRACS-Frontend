@@ -91,6 +91,18 @@
                    ADMIN
                   </span>
                 </div>
+                <!-- Logout Icon -->
+                <q-space />
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="logout"
+                  color="white"
+                  @click="handleLogout"
+                  class="logout-btn"
+                  size="md"
+                />
               </div>
             </q-list>
           </div>

@@ -101,11 +101,12 @@ const goToUser = () => {
 }
 
 const handleLogin = async () => {
-  loading.value = true
-  showValidation.value=true
-  if (!email.value || !password.value){
+  showValidation.value = true
+  if (!email.value || !password.value) {
     return
   }
+  
+  loading.value = true
   try {
     await authStore.adminLogin({
       email: email.value,
