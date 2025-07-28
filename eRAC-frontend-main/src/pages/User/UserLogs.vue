@@ -28,7 +28,7 @@
           :columns="columns"
           row-key="id"
           class="logs-table"
-          :pagination="{ rowsPerPage: 50 }"
+          :pagination="{ rowsPerPage: 10 }"
           :rows-per-page-options="[10, 25, 50, 100]"
         >
           <!-- Custom Date Formatting -->
