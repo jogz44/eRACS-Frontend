@@ -30,12 +30,13 @@
           :columns="columns"
           row-key="id"
           class="logs-table"
+          v-model:pagination="pagination"
           :pagination="{ rowsPerPage: 10 }"
         >
 
         <template v-slot:body-cell-index="props">
           <q-td :props="props">
-            {{ props.pageIndex + 1 }}
+            {{ (pagination.page - 1) * pagination.rowsPerPage + props.pageIndex + 1 }}
           </q-td>
         </template>
         
@@ -43,7 +44,6 @@
           <template v-slot:body-cell-date="props">
             <q-td :props="props">
               {{ formatDate(props.row.created_at) }}
-                {{ props.pageIndex + 1 }}
             </q-td>
           </template>
             <template v-slot:body-cell-actions="props">
@@ -85,12 +85,21 @@ export default {
   name: 'LogsPage',
   data() {
     return {
+      pagination: {
+        page: 1,
+        rowsPerPage: 10
+      },
       search: '',
       logs: [
       ],
       columns: [
-
-        { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
+        {
+          name: 'index',
+          label: '#',
+          field: 'index', 
+          align: 'left',
+          sortable: false, // optional: disable sorting
+        },
         { name: 'fullname', label: 'Fullname', field: 'fullname', align: 'left', sortable: true },
         { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
         { name: 'activity', label: 'Activity', field: 'activity', align: 'left', sortable: true },
