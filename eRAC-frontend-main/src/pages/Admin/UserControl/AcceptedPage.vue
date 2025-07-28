@@ -33,10 +33,13 @@
           row-key="id"
           :loading="loading"
           class="user-table"
+          v-model:pagination="pagination"
+          :pagination="{ rowsPerPage: 10 }"
         >
+
         <template v-slot:body-cell-index="props">
           <q-td :props="props">
-            {{ props.pageIndex + 1 }}
+            {{ (pagination.page - 1) * pagination.rowsPerPage + props.pageIndex + 1 }}
           </q-td>
         </template>
           <!-- Custom Actions Column -->
@@ -148,6 +151,10 @@ export default {
   name: 'UserControlAcceptedPage',
   data() {
     return {
+      pagination: {
+        page: 1,
+        rowsPerPage: 10
+      },
       search: '',
       users: [],
       deleteModal: {

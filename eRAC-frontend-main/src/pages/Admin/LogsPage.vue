@@ -38,9 +38,17 @@
           :columns="columns"
           row-key="id"
           class="logs-table"
+          v-model:pagination="pagination"
           :pagination="{ rowsPerPage: 10 }"
           :rows-per-page-options="[10, 25, 50, 100]"
         >
+
+        <template v-slot:body-cell-index="props">
+          <q-td :props="props">
+            {{ (pagination.page - 1) * pagination.rowsPerPage + props.pageIndex + 1 }}
+          </q-td>
+        </template>
+
           <!-- Custom Date Formatting -->
           <template v-slot:body-cell-date="props">
             <q-td :props="props" class="text-center">
