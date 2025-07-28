@@ -2,6 +2,7 @@
   <q-page class="q-pa-lg">
     <div class="page-header q-mb-lg">
       <div class="text-h5 text-weight-bold">User Log Activities</div>
+      <LogsActivity v-model="showLogsActivity"/>
       <q-card-section>
         <!-- Search Field -->
         <div class="row q-mb-md">
@@ -32,7 +33,7 @@
           :pagination="{ rowsPerPage: 10 }"
           :rows-per-page-options="[10, 25, 50, 100]"
         >
-        
+
         <template v-slot:body-cell-index="props">
           <q-td :props="props">
             {{ (pagination.page - 1) * pagination.rowsPerPage + props.pageIndex + 1 }}
@@ -52,7 +53,7 @@
                 label="VIEW ACTIVITY"
                 color="green"
                 size="sm"
-                @click="openAccessModal(props.row)"
+                @click="openLogsActivity"
                 class="view-button"
               />
             </q-td>
@@ -66,6 +67,8 @@
 <script>
 import { api } from 'boot/axios'
 import { useAuthStore } from 'stores/auth'
+import LogsActivity from './LogsActivity.vue'
+
 
 const authStore = useAuthStore()
 const getAuthConfig = () => {
@@ -86,8 +89,12 @@ const getAuthConfig = () => {
 
 export default {
   name: 'LogsPage',
+  components:{
+    LogsActivity
+  },
   data() {
     return {
+      showLogsActivity: false,
       loading: false,
       searchQuery: '',
       logs: [],
@@ -95,7 +102,7 @@ export default {
         { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
         { name: 'fullname', label: 'Fullname', field: 'fullname', align: 'left', sortable: true },
         { name: 'date', label: 'Date', field: 'date', align: 'center', sortable: true },
-        { name: 'activity', label: 'Activity', field: 'activity', align: 'left', sortable: true },
+
         { name: 'actions', label: 'Actions', align: 'center', sortable: false },
       ],
     }
@@ -130,6 +137,10 @@ export default {
     await this.loadLogs()
   },
   methods: {
+    openLogsActivity() {
+      this.showLogsActivity = true;
+
+    },
     formatDate(dateString) {
       const date = new Date(dateString)
       return date.toLocaleString('en-US', {

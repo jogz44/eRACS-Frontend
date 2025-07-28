@@ -39,7 +39,7 @@
           <!-- Date Range Group -->
           <div class="row items-center justify-between">
             <!-- From Date -->
-            <q-input
+            <!-- <q-input
               bg-color="white"
               outlined
               label="From"
@@ -56,14 +56,14 @@
                   </q-popup-proxy>
                 </q-icon>
               </template>
-            </q-input>
+            </q-input> -->
 
             <!-- To Label -->
             <div class="t q-px-xs"></div>
             <div class="t q-px-xs"></div>
 
             <!-- To Date -->
-            <q-input
+            <!-- <q-input
              bg-color="white"
               outlined
               label="To"
@@ -80,7 +80,7 @@
                   </q-popup-proxy>
                 </q-icon>
               </template>
-            </q-input>
+            </q-input> -->
           </div>
 
           <div class="t q-px-xs"></div>

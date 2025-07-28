@@ -180,8 +180,7 @@ const navLinks = [
     link: '/home/libraries/particulars' },
     { title: 'Bank',
     link: '/home/libraries/bank' },
-    { title: 'Continuing',
-    link: '/home/libraries/continuing' }
+
   ]},
   { title: 'Reports', icon: 'assessment', link: '/home/reports' },
 
