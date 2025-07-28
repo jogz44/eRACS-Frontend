@@ -4,15 +4,15 @@
       <div class="text-h5 text-weight-bold">User Access</div>
       <q-card-section>
         <!-- Search Bar -->
-
         <div class="row q-mb-md">
           <q-input
             dense
             outlined
             bg-color="white"
             v-model="search"
-            placeholder="Search users..."
+            placeholder="Search by ID, Name, Barangay, Position, or Username..."
             class="search-input"
+            clearable
           >
             <template v-slot:append>
               <q-icon name="search" />
@@ -37,7 +37,13 @@
           </template>
           <template v-slot:body-cell-actions="props">
             <q-td :props="props" class="actions-column">
-              <q-btn label="Access" color="primary" size="sm" @click="openAccessModal(props.row)" />
+              <q-btn
+                label="ACCESS"
+                color="green"
+                size="sm"
+                @click="openAccessModal(props.row)"
+                class="access-button"
+              />
             </q-td>
           </template>
         </q-table>
@@ -90,30 +96,17 @@ export default {
     return {
       search: '',
       users: [
-        { id: 1, fullname: 'John Doe', position: 'Manager', username: 'johndoe' },
-        { id: 2, fullname: 'Jane Smith', position: 'Developer', username: 'janesmith' },
+        { id: 1, fullname: 'John Doe', barangay: 'Visayan Village', position: 'Manager', username: 'johndoe' },
+        { id: 2, fullname: 'Jane Smith', barangay: 'Apokon', position: 'Developer', username: 'janesmith' },
         // Add more users as needed
       ],
       columns: [
-        {
-          name: 'index',
-          label: '#',
-          field: 'index', // index starts from 0, so add 1
-          align: 'left',
-          sortable: false, // optional: disable sorting
-        },
-        { name: 'fullname', label: 'Full Name', field: 'fullname', align: 'left', sortable: true },
-        { name: 'barangay', label: 'BARANGAY', field: 'barangay', align: 'left', sortable: true },
-        { name: 'position', label: 'POSITION', field: 'position', align: 'left', sortable: true  },
+        { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
+        { name: 'fullname', label: 'Fullname', field: 'fullname', align: 'left', sortable: true },
+        { name: 'barangay', label: 'Barangay', field: 'barangay', align: 'left', sortable: true },
+        { name: 'position', label: 'Position', field: 'position', align: 'left', sortable: true },
         { name: 'username', label: 'Username', field: 'username', align: 'left', sortable: true },
         { name: 'actions', label: 'Actions', align: 'center', sortable: false },
-
-        // { name: 'name', label: 'NAME', field: 'name', align: 'left' },
-        // { name: 'barangay', label: 'BARANGAY', field: 'barangay', align: 'left' },
-        // { name: 'position', label: 'POSITION', field: 'position', align: 'left' },
-        // { name: 'username', label: 'USERNAME', field: 'username', align: 'left' },
-        // { name: 'email', label: 'EMAIL', field: 'email', align: 'left' },
-        // { name: 'action', label: '', field: 'action', align: 'center' },
       ],
       accessModal: {
         show: false,
@@ -130,13 +123,28 @@ export default {
   },
   computed: {
     filteredUsers() {
-      const searchTerm = this.search.toLowerCase()
-      return this.users.filter(
-        (user) =>
-          user.fullname.toLowerCase().includes(searchTerm) ||
-          user.position.toLowerCase().includes(searchTerm) ||
-          user.username.toLowerCase().includes(searchTerm),
-      )
+      const searchTerm = this.search.toLowerCase().trim()
+      if (!searchTerm) return this.users
+
+      return this.users.filter(user => {
+        // Search by ID
+        const idMatch = String(user.id).includes(searchTerm)
+
+        // Search by Name
+        const nameMatch = user.fullname.toLowerCase().includes(searchTerm)
+
+        // Search by Barangay
+        const barangayMatch = user.barangay?.toLowerCase().includes(searchTerm) || false
+
+        // Search by Position
+        const positionMatch = user.position.toLowerCase().includes(searchTerm)
+
+        // Search by Username
+        const usernameMatch = user.username.toLowerCase().includes(searchTerm)
+
+        // Return true if any field matches
+        return idMatch || nameMatch || barangayMatch || positionMatch || usernameMatch
+      })
     },
   },
   methods: {
@@ -176,6 +184,19 @@ export default {
   white-space: nowrap;
 }
 
+.access-button {
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+:deep(.q-table th) {
+  font-weight: bold;
+}
+
+:deep(.q-table td) {
+  height: 48px;
+}
+
 .access-grid {
   display: flex;
   flex-direction: column;
@@ -191,5 +212,11 @@ export default {
 .access-label {
   font-size: 1rem;
   color: #333;
+}
+
+@media (max-width: 600px) {
+  .search-input {
+    width: 100%;
+  }
 }
 </style>
