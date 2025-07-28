@@ -2,7 +2,7 @@
   <q-page class="q-pa-lg">
     <div class="page-header q-mb-lg">
        <div class="row items-center justify-between">
-      <div class="text-h5 text-weight-bold">User Access</div>
+      <div class="text-h5 text-weight-bold">User Log Activities</div>
           <q-btn
           icon="refresh"
           color="primary"
@@ -14,14 +14,23 @@
         />
         </div>
       <q-card-section>
-        <!-- Search Bar Only -->
+        <!-- Single Search Field -->
         <div class="row q-mb-md">
-          <q-input dense outlined bg-color="white" v-model="search" placeholder="Search..." class="search-input">
+          <q-input
+            dense
+            outlined
+            bg-color="white"
+            v-model="searchQuery"
+            placeholder="Search by ID, Name, or Date..."
+            class="search-input"
+            clearable
+          >
             <template v-slot:append>
               <q-icon name="search" />
             </template>
           </q-input>
         </div>
+
         <!-- Logs Table -->
         <q-table
           flat
@@ -32,33 +41,29 @@
           class="logs-table"
           :pagination="{ rowsPerPage: 10 }"
         >
-
         <template v-slot:body-cell-index="props">
           <q-td :props="props">
             {{ props.pageIndex + 1 }}
           </q-td>
         </template>
-        
+
           <!-- Custom Date Formatting -->
           <template v-slot:body-cell-date="props">
             <q-td :props="props">
               {{ formatDate(props.row.created_at) }}
-                {{ props.pageIndex + 1 }}
             </q-td>
           </template>
-            <template v-slot:body-cell-actions="props">
+
+          <template v-slot:body-cell-actions="props">
             <q-td :props="props" class="actions-column">
               <q-btn label="View Activity" color="primary" size="sm" @click="openAccessModal(props.row)" />
             </q-td>
           </template>
-
         </q-table>
-
       </q-card-section>
     </div>
   </q-page>
 </template>
-
 
 <script>
 import { api } from 'boot/axios'
@@ -85,30 +90,36 @@ export default {
   name: 'LogsPage',
   data() {
     return {
-      search: '',
-      logs: [
-      ],
+      loading: false,
+      searchQuery: '',
+      logs: [],
       columns: [
-
         { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
         { name: 'fullname', label: 'Fullname', field: 'fullname', align: 'left', sortable: true },
         { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
         { name: 'activity', label: 'Activity', field: 'activity', align: 'left', sortable: true },
         { name: 'actions', label: 'Actions', align: 'center', sortable: false },
-
       ],
     }
   },
   computed: {
     filteredLogs() {
-      const searchTerm = this.search.toLowerCase()
-      return this.logs.filter(
-        (log) =>
-          log.fullname.toLowerCase().includes(searchTerm) ||
-          log.position.toLowerCase().includes(searchTerm) ||
-          log.activity.toLowerCase().includes(searchTerm) ||
-          this.formatDate(log.date).toLowerCase().includes(searchTerm)
-      )
+      const query = this.searchQuery.toLowerCase().trim()
+      if (!query) return this.logs
+
+      return this.logs.filter(log => {
+        // Search by ID
+        const idMatch = String(log.id).includes(query)
+
+        // Search by Name
+        const nameMatch = log.fullname.toLowerCase().includes(query)
+
+        // Search by Date
+        const dateMatch = this.formatDate(log.created_at).toLowerCase().includes(query)
+
+        // Return true if any of the fields match
+        return idMatch || nameMatch || dateMatch
+      })
     },
   },
   async mounted() {
@@ -130,7 +141,7 @@ export default {
     async loadLogs() {
       this.loading = true
       try {
-        const response = await api.get(`/api/barangay/getlogs/${authStore.getUserID()}`,getAuthConfig())
+        const response = await api.get(`/api/barangay/getlogs/${authStore.getUserID()}`, getAuthConfig())
         this.logs = response.data.data
       } catch (error) {
         console.error('Error loading logs:', error)
@@ -143,9 +154,10 @@ export default {
         this.loading = false
       }
     },
-    openViewModal(row) {
-      this.viewModal.selectedRow = row
-      this.viewModal.show = true
+    openAccessModal(row) {
+      // Store the selected row data for the modal
+      console.log('Opening modal for row:', row)
+      // TODO: Implement modal logic
     },
   },
 }
@@ -153,7 +165,7 @@ export default {
 
 <style scoped>
 .search-input {
-  width: 450px;
+  width: 300px;
 }
 
 :deep(.logs-table thead th) {
