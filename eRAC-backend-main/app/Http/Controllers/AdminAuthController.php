@@ -169,7 +169,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
         ->join('barangays', 'barangay_users.barangay_id', '=', 'barangays.id')
         ->join('barangay_positions', 'barangay_users.position_id', '=', 'barangay_positions.id')
         ->select(
-            'logs.user_id',
+            'logs.user_id as id',
             'logs.fullname',
             DB::raw('CAST(logs.created_at AS DATE) as log_date'),
             DB::raw('COUNT(logs.id) as total_logs'),
