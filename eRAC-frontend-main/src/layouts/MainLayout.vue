@@ -176,8 +176,6 @@ const navLinks = [
     children: [
     { title: 'Accounts',
     link: '/home/libraries/accounts' },
-    { title: 'Particulars',
-    link: '/home/libraries/particulars' },
     { title: 'Bank',
     link: '/home/libraries/bank' },
 

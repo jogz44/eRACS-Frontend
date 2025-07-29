@@ -2,7 +2,10 @@
   <q-page class="q-pa-lg">
     <div class="page-header q-mb-lg">
       <div class="text-h5 text-weight-bold">User Log Activities</div>
-      <LogsActivity v-model="showLogsActivity"/>
+      <LogsActivity
+        v-model="showLogsActivity"
+        :selected-user="selectedLog"
+      />
       <q-card-section>
         <!-- Search Field -->
         <div class="row q-mb-md">
@@ -53,7 +56,7 @@
                 label="VIEW ACTIVITY"
                 color="green"
                 size="sm"
-                @click="openLogsActivity"
+                @click="openLogsActivity(props.row)"
                 class="view-button"
               />
             </q-td>
@@ -95,6 +98,7 @@ export default {
   data() {
     return {
       showLogsActivity: false,
+      selectedLog: null,
       loading: false,
       searchQuery: '',
       logs: [],
@@ -137,9 +141,9 @@ export default {
     await this.loadLogs()
   },
   methods: {
-    openLogsActivity() {
+    openLogsActivity(row) {
+      this.selectedLog = row;
       this.showLogsActivity = true;
-
     },
     formatDate(dateString) {
       const date = new Date(dateString)
