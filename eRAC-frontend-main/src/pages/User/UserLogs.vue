@@ -96,9 +96,9 @@ export default {
       logs: [],
       columns: [
         { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
-        { name: 'fullname', label: 'Fullname', field: 'fullname', align: 'left', sortable: true },
+        { name: 'fullname', label: 'Name', field: 'fullname', align: 'left', sortable: true },
+        { name: 'position', label: 'Position', field: 'position', align: 'left', sortable: true },
         { name: 'date', label: 'Date', field: 'date', align: 'center', sortable: true },
-
         { name: 'actions', label: 'Actions', align: 'center', sortable: false },
       ],
     }

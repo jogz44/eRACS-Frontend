@@ -3,6 +3,10 @@
     <div class="page-header q-mb-lg">
        <div class="row items-center justify-between">
       <div class="text-h5 text-weight-bold">Log Activities</div>
+      <AdminLogsActivity
+        v-model="showAdminLogsActivity"
+        :selected-user="selectedLog"
+      />
           <q-btn
           icon="refresh"
           color="primary"
@@ -13,6 +17,7 @@
           title="Refresh pending users"
         />
         </div>
+        
       <q-card-section>
         <!-- Search Bar -->
         <div class="row q-mb-md">
@@ -50,7 +55,18 @@
           <!-- Custom Date Formatting -->
           <template v-slot:body-cell-date="props">
             <q-td :props="props" class="text-center">
-              {{ formatDate(props.row.created_at) }}
+              {{ formatDate(props.row.log_date) }}
+            </q-td>
+          </template>
+          <template v-slot:body-cell-actions="props">
+            <q-td :props="props" class="text-center">
+              <q-btn
+                label="VIEW ACTIVITY"
+                color="green"
+                size="sm"
+                @click="openAdminLogsActivity(props.row)"
+                class="view-button"
+              />
             </q-td>
           </template>
         </q-table>
@@ -61,20 +77,26 @@
 
 <script>
 import { api } from 'boot/axios'
+import AdminLogsActivity from './AdminLogsActivity.vue' // Only import once
+
 export default {
   name: 'LogsPage',
+  components: {
+    AdminLogsActivity // Register the component
+  },
   data() {
     return {
+      showAdminLogsActivity: false,
+      selectedLog: null,
       loading: false,
       search: '',
       logs: [],
       columns: [
-        { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
-        { name: 'fullname', label: 'NAME', field: 'fullname', align: 'left', sortable: true },
-        { name: 'barangay', label: 'BARANGAY', field: 'barangay', align: 'left', sortable: true },
-        { name: 'position', label: 'POSITION', field: 'position', align: 'left', sortable: true },
-        { name: 'date', label: 'DATE', field: 'date', align: 'left', sortable: true },
-        { name: 'activity', label: 'ACTIVITY', field: 'activity', align: 'left', sortable: true },
+        { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
+        { name: 'fullname', label: 'Name', field: 'fullname', align: 'left', sortable: true },
+        { name: 'barangay', label: 'Barangay', field: 'barangay', align: 'left', sortable: true },
+        { name: 'position', label: 'Position', field: 'position', align: 'left', sortable: true },
+        { name: 'actions', label: 'Actions', align: 'center', sortable: false },
       ],
     }
   },
@@ -114,16 +136,18 @@ export default {
     await this.loadLogs()
   },
   methods: {
+    openAdminLogsActivity(row) {
+      this.selectedLog = row;
+      this.showAdminLogsActivity = true;
+    },
     formatDate(dateString) {
       const date = new Date(dateString)
       return date.toLocaleString('en-US', {
         month: 'long',
         day: 'numeric',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
+        year: 'numeric'
       })
+      
     },
     async loadLogs() {
       this.loading = true
@@ -140,6 +164,11 @@ export default {
       } finally {
         this.loading = false
       }
+    },
+    openAccessModal(row) {
+      // Store the selected row data for the modal
+      console.log('Opening modal for row:', row)
+      // TODO: Implement modal logic
     },
   },
 }

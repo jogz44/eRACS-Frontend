@@ -46,6 +46,11 @@
           :pagination="{ rowsPerPage: 10 }"
           :rows-per-page-options="[10, 25, 50, 100]"
         >
+          <template v-slot:body-cell-id="props">
+            <q-td :props="props">
+              {{ formatId(props.row.id) }}
+            </q-td>
+          </template>
           <template v-slot:body-cell-actions="props">
             <q-td :props="props" class="actions-column">
               <q-btn
@@ -110,18 +115,13 @@ export default {
     return {
       loading: false,
       search: '',
-      users: [
-        { id: 1, fullname: 'John Doe', barangay: 'Visayan Village', position: 'Manager', username: 'johndoe' },
-        { id: 2, fullname: 'Jane Smith', barangay: 'Apokon',position: 'Developer', username: 'janesmith' },
-        // Add more users as needed
-      ],
+      users: [],
       columns: [
         { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
-        { name: 'fullname', label: 'NAME', field: 'fullname', align: 'left', sortable: true },
-        { name: 'barangay', label: 'BARANGAY', field: 'barangay', align: 'left', sortable: true },
-        { name: 'position', label: 'POSITION', field: 'position', align: 'left', sortable: true },
-        { name: 'username', label: 'USERNAME', field: 'username', align: 'left', sortable: true },
-        { name: 'actions', label: 'ACTIONS', align: 'center', sortable: false },
+        { name: 'name', label: 'Name', field: 'name', align: 'left', sortable: true  },
+        { name: 'barangay', label: 'Barangay', field: 'barangay', align: 'left', sortable: true  },
+        { name: 'position', label: 'Position', field: 'position', align: 'left', sortable: true  },
+        { name: 'actions', label: 'Action', field: 'actions', align: 'center' },
       ],
       accessModal: {
         show: false,
@@ -146,7 +146,7 @@ export default {
         const idMatch = String(user.id).includes(query)
 
         // Search by Name
-        const nameMatch = user.fullname.toLowerCase().includes(query)
+        const nameMatch = user.name.toLowerCase().includes(query)
 
         // Search by Barangay
         const barangayMatch = user.barangay?.toLowerCase().includes(query) || false
