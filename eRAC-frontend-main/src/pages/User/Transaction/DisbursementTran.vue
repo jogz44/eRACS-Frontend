@@ -15,7 +15,7 @@
         </div>
 </div>
     <div class="q-mb-md">
-      <SearchFilters />
+      <SearchFilters @add="store.openDialog('disbursement')" />
 
       <!-- Disbursement Dialog -->
       <q-dialog v-model="store.dialogs.disbursement" persistent>

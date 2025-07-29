@@ -41,6 +41,7 @@ class DisbursementController extends Controller
                 'date' => $d->date,
                 'dv_number' => $d->dv_number,
                 'cheque_number' => $d->cheque_number,
+                'bank_id' => $d->bank_id,
                 'bank_name' => $d->bank->bank_name,
                 'payee' => $d->payee,
                 'dv_amount' => $d->dv_amount,
@@ -65,8 +66,31 @@ class DisbursementController extends Controller
     // GET /api/barangay/disbursements/{id}
     public function show($id)
     {
-        $disbursement = Disbursement::with('bank')->findOrFail($id);
-        return response()->json(['data' => [
+        try {
+            \Log::info("Fetching disbursement with ID: " . $id);
+            
+            $user = request()->user();
+            \Log::info("User: ", ['user_id' => $user ? $user->id : 'null', 'barangay_id' => $user ? $user->barangay_id : 'null']);
+            
+            $query = Disbursement::with('bank');
+            
+            // If user is authenticated and has barangay_id, filter by it
+            if ($user && isset($user->barangay_id)) {
+                $query->where('barangay_id', $user->barangay_id);
+            }
+            
+            $disbursement = $query->find($id);
+            
+            if (!$disbursement) {
+                \Log::warning("Disbursement not found with ID: " . $id);
+                return response()->json(['error' => 'Disbursement not found'], 404);
+            }
+            
+            \Log::info("Found disbursement: ", ['id' => $disbursement->id, 'dv_number' => $disbursement->dv_number]);
+            
+            return response()->json([
+                'status' => true,
+                'data' => [
             'id' => $disbursement->id,
             'date' => $disbursement->date,
             'dv_number' => $disbursement->dv_number,
@@ -78,7 +102,12 @@ class DisbursementController extends Controller
             'status' => $disbursement->status,
             'created_at' => $disbursement->created_at,
             'updated_at' => $disbursement->updated_at,
-        ]]);
+                ]
+            ]);
+        } catch (\Exception $e) {
+            \Log::error("Error fetching disbursement: " . $e->getMessage());
+            return response()->json(['error' => 'Internal server error'], 500);
+        }
     }
 
     // PATCH /api/barangay/disbursements/{id}/liquidate
