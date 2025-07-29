@@ -12,7 +12,7 @@
           Welcome, {{ authStore.admin?.name || 'Admin' }}
         </q-toolbar-title>
         <q-space />
-        <q-btn flat round dense icon="menu" class="q-mr-sm" style="color: white">
+        <!-- <q-btn flat round dense icon="menu" class="q-mr-sm" style="color: white">
           <q-menu transition-show="jump-down" transition-hide="jump-up">
             <q-list class="q-pa-sm" style="min-width: 180px">
               <q-item class="q-mb-sm" clickable v-ripple>
@@ -32,7 +32,7 @@
               </q-item>
             </q-list>
           </q-menu>
-        </q-btn>
+        </q-btn> -->
       </q-toolbar>
     </q-header >
 
