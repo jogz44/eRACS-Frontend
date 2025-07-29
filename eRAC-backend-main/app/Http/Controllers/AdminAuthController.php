@@ -169,11 +169,21 @@ class AdminAuthController extends Controller  // <-- This is crucial
         ->join('barangays', 'barangay_users.barangay_id', '=', 'barangays.id')
         ->join('barangay_positions', 'barangay_users.position_id', '=', 'barangay_positions.id')
         ->select(
-            'logs.*',
+            'logs.user_id',
+            'logs.fullname',
+            DB::raw('CAST(logs.created_at AS DATE) as log_date'),
+            DB::raw('COUNT(logs.id) as total_logs'),
             'barangays.name as barangay',
             'barangay_positions.name as position'
         )
-        ->orderBy('logs.created_at', 'desc')
+        ->groupBy(
+            'logs.user_id',
+            'logs.fullname',
+            DB::raw('CAST(logs.created_at AS DATE)'),
+            'barangays.name',
+            'barangay_positions.name'
+        )
+        ->orderByDesc(DB::raw('CAST(logs.created_at AS DATE)'))
         ->get();
 
         return response()->json($logs);
