@@ -109,6 +109,13 @@ use Illuminate\Validation\Rule;
             'user_id' => $request->user()->id
         ]);
 
+        // Log the budget creation
+        AdminAuthController::logUserAction(
+            $request->user(),
+            'Created Budget',
+            "Created new budget with amount ₱" . number_format($validated['original_amount'], 2) . " - " . $validated['description']
+        );
+
         return response()->json($budget, 201);
     }
 
@@ -230,10 +237,27 @@ public function saveAllocation(Request $request, Budget $budget)
                 // Update existing record
                 $existing->update($appropriationData);
                 $appropriations[] = $existing;
+
+                // Log the update
+                AdminAuthController::logUserAction(
+                    $request->user(),
+                    'Updated Appropriation',
+                    "Updated appropriation amount from ₱" . number_format($existing->amount, 2) .
+                    " to ₱" . number_format($allocation['amount'], 2) .
+                    " for budget: " . $budget->description
+                );
             } else {
                 // New allocation - add to total
                 $totalAllocated += $allocation['amount'];
                 $appropriations[] = TranAppropriation::create($appropriationData);
+
+                // Log the new allocation
+                AdminAuthController::logUserAction(
+                    $request->user(),
+                    'Added Appropriation',
+                    "Added new appropriation of ₱" . number_format($allocation['amount'], 2) .
+                    " to budget: " . $budget->description
+                );
             }
         }
 
@@ -248,6 +272,13 @@ public function saveAllocation(Request $request, Budget $budget)
         // If all allocations are removed, restore original amount
         if (empty($validated['allocations'])) {
             $budget->update(['current_amount' => $budget->original_amount]);
+
+            // Log the removal of all allocations
+            AdminAuthController::logUserAction(
+                $request->user(),
+                'Removed All Appropriations',
+                "Removed all appropriations from budget: " . $budget->description
+            );
         }
 
         $budget->refresh();
