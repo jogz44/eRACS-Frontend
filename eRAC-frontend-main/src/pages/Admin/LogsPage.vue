@@ -3,6 +3,10 @@
     <div class="page-header q-mb-lg">
        <div class="row items-center justify-between">
       <div class="text-h5 text-weight-bold">Log Activities</div>
+      <AdminLogsActivity
+        v-model="showAdminLogsActivity"
+        :selected-user="selectedLog"
+      />
           <q-btn
           icon="refresh"
           color="primary"
@@ -13,10 +17,7 @@
           title="Refresh pending users"
         />
         </div>
-        <LogsActivity
-        v-model="showLogsActivity"
-        :selected-user="selectedLog"
-      />
+        
       <q-card-section>
         <!-- Search Bar -->
         <div class="row q-mb-md">
@@ -63,7 +64,7 @@
                 label="VIEW ACTIVITY"
                 color="green"
                 size="sm"
-                @click="openLogsActivity(props.row)"
+                @click="openAdminLogsActivity(props.row)"
                 class="view-button"
               />
             </q-td>
@@ -76,17 +77,21 @@
 
 <script>
 import { api } from 'boot/axios'
+import AdminLogsActivity from './AdminLogsActivity.vue' // Only import once
+
 export default {
   name: 'LogsPage',
+  components: {
+    AdminLogsActivity // Register the component
+  },
   data() {
     return {
-      showLogsActivity: false,
+      showAdminLogsActivity: false,
       selectedLog: null,
       loading: false,
       search: '',
       logs: [],
       columns: [
-        //{ name: 'index', label: '#', field: 'id', align: 'left', sortable: true },
         { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
         { name: 'fullname', label: 'Name', field: 'fullname', align: 'left', sortable: true },
         { name: 'barangay', label: 'Barangay', field: 'barangay', align: 'left', sortable: true },
@@ -131,9 +136,9 @@ export default {
     await this.loadLogs()
   },
   methods: {
-    openLogsActivity(row) {
+    openAdminLogsActivity(row) {
       this.selectedLog = row;
-      this.showLogsActivity = true;
+      this.showAdminLogsActivity = true;
     },
     formatDate(dateString) {
       const date = new Date(dateString)
