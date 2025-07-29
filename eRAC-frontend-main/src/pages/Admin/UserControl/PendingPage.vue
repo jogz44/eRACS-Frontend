@@ -33,15 +33,13 @@
           row-key="id"
           :loading="loading"
           class="user-table"
-          v-model:pagination="pagination"
           :pagination="{ rowsPerPage: 10 }"
         >
-
-        <template v-slot:body-cell-index="props">
-          <q-td :props="props">
-            {{ (pagination.page - 1) * pagination.rowsPerPage + props.pageIndex + 1 }}
-          </q-td>
-        </template>
+          <template v-slot:body-cell-id="props">
+            <q-td :props="props">
+              {{ formatId(props.row.id) }}
+            </q-td>
+          </template>
           <!-- Custom Actions Column -->
           <template v-slot:body-cell-action="props">
             <q-td :props="props" class="action-buttons">
@@ -194,27 +192,17 @@ import { api } from 'boot/axios'
 export default {
   data() {
     return {
-      pagination: {
-        page: 1,
-        rowsPerPage: 10
-      },
       search: '',
       users: [],
       loading: false,
       columns: [
-        {
-          name: 'index',
-          label: '#',
-          field: 'index', 
-          align: 'left',
-          sortable: false, // optional: disable sorting
-        },
-        { name: 'name', label: 'NAME', field: 'name', align: 'left', sortable: true  },
-        { name: 'barangay', label: 'BARANGAY', field: 'barangay', align: 'left', sortable: true  },
-        { name: 'position', label: 'POSITION', field: 'position', align: 'left', sortable: true  },
-        { name: 'username', label: 'USERNAME', field: 'username', align: 'left', sortable: true  },
-        { name: 'email', label: 'EMAIL', field: 'email', align: 'left' },
-        { name: 'action', label: '', field: 'action', align: 'center' },
+        { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
+        { name: 'name', label: 'Name', field: 'name', align: 'left', sortable: true  },
+        { name: 'barangay', label: 'Barangay', field: 'barangay', align: 'left', sortable: true  },
+        { name: 'position', label: 'Position', field: 'position', align: 'left', sortable: true  },
+        { name: 'username', label: 'Username', field: 'username', align: 'left', sortable: true  },
+        { name: 'email', label: 'Email', field: 'email', align: 'left' },
+        { name: 'action', label: 'Action', field: 'action', align: 'center' },
       ],
       cancelModal: {
         show: false,
@@ -261,6 +249,9 @@ export default {
     this.loadPendingUsers()
   },
   methods: {
+    formatId(id) {
+      return id.toString().padStart(4, '0')  // e.g. 1 -> "0001"
+    },
     async loadPendingUsers() {
       this.loading = true
       try {
