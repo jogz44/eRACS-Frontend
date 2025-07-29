@@ -323,8 +323,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useQuasar } from 'quasar'
+import { useContAugmentationStore } from 'stores/contAugmentation'
 
 const $q = useQuasar()
+const store = useContAugmentationStore()
 const loading = ref(false)
 
 const loadPendingUsers = async () => {
@@ -351,13 +353,148 @@ const loadPendingUsers = async () => {
     loading.value = false
   }
 }
-import { useContAugmentationStore } from 'stores/contAugmentation'
-const store = useContAugmentationStore()
 </script>
 
 <style scoped>
 .contaug-page {
   background-color: #D9D9D9; /* Light gray background */
   min-height: 100vh; /* Ensure full height */
+}
+
+.custom-search-input {
+  min-width: 450px;
+}
+
+/* Responsive styles to match Continuing Appropriation */
+@media (max-width: 600px) {
+  .custom-search-input {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+  .custom-search-input {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .custom-date-from,
+  .custom-date-to {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .add-table-btn {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 900px) {
+  /* Force the main container to stack */
+  .row.items-center.justify-between.q-gutter-sm {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+  }
+  .row.items-center.justify-between.q-gutter-sm > * {
+    margin-bottom: 8px !important;
+    width: 100% !important;
+  }
+  /* Stack date container vertically in mobile */
+  .row.items-center.justify-between > .row.items-center.justify-between {
+    flex-direction: column !important;
+    width: 100% !important;
+    margin-bottom: 8px !important;
+  }
+  .row.items-center.justify-between > .row.items-center.justify-between > * {
+    margin-bottom: 8px !important;
+    width: 100% !important;
+  }
+  /* Hide spacing divs */
+  .t.q-px-xl, .t.q-px-xs {
+    display: none !important;
+  }
+  /* Make button full width */
+  .add-table-btn {
+    width: 100% !important;
+    margin-top: 8px !important;
+  }
+  /* Align date inputs width with search input in mobile */
+  .custom-date-from,
+  .custom-date-to {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  /* Ensure search input takes full width */
+  .custom-search-input {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  /* Force the main container to stack */
+  .row.items-center.justify-between.q-gutter-sm {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+  }
+  .row.items-center.justify-between.q-gutter-sm > * {
+    margin-bottom: 8px !important;
+    width: 100% !important;
+  }
+  /* Keep date container horizontal but align with table */
+  .row.items-center.justify-between > .row.items-center.justify-between {
+    flex-direction: row !important;
+    width: 100% !important;
+    margin-bottom: 8px !important;
+    gap: 16px !important;
+  }
+  .row.items-center.justify-between > .row.items-center.justify-between > * {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    max-width: calc(50% - 8px) !important;
+  }
+  /* Hide spacing divs */
+  .t.q-px-xl, .t.q-px-xs {
+    display: none !important;
+  }
+  /* Make button full width */
+  .add-table-btn {
+    width: 100% !important;
+    margin-top: 8px !important;
+  }
+  /* Align date inputs width with search input in iPad */
+  .custom-date-from,
+  .custom-date-to {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  /* Ensure search input takes full width */
+  .custom-search-input {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (min-width: 1025px) {
+  .custom-search-input {
+    width: 400px !important;
+    min-width: 0 !important;
+    max-width: 700px !important;
+  }
+  .custom-date-from,
+  .custom-date-to {
+    width: 220px !important;
+    min-width: 0 !important;
+    max-width: 300px !important;
+  }
 }
 </style>

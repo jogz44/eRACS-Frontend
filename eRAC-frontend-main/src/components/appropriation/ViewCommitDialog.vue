@@ -1,6 +1,6 @@
 <template>
   <q-dialog v-model="showDialog" persistent>
-    <q-card class="allocation-card" style="min-width: 1050px">
+    <q-card class="allocation-card">
       <q-card-section class="q-pb-sm q-pt-sm">
         <div class="row items-center justify-between">
           <div class="text-h6">View Allocation</div>
@@ -26,9 +26,8 @@
           outlined
           dense
           placeholder="Search accounts..."
-          class="q-mb-sm"
+          class="q-mb-sm search-input"
           v-model="searchQuery"
-          style="max-width: 500px"
           clearable
         >
           <template v-slot:append>
@@ -312,5 +311,514 @@ defineExpose({
 }
 .hierarchical-table .row:last-child {
   border-bottom: none;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  /* Mobile View */
+  
+  /* Dialog card adjustments */
+  .allocation-card {
+    width: 95vw !important;
+    min-width: 95vw !important;
+    max-width: 95vw !important;
+    margin: 8px !important;
+  }
+  
+  /* Card section adjustments */
+  .q-card-section {
+    padding: 12px !important;
+  }
+  
+  /* Header adjustments */
+  .text-h6 {
+    font-size: 1.1rem !important;
+  }
+  
+  /* Row adjustments for mobile */
+  .row.q-mb-sm {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  
+  .row.q-mb-sm .col-md-6 {
+    width: 100% !important;
+  }
+  
+  /* Search input adjustments */
+  .q-input {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  
+  /* Hierarchical table adjustments */
+  .hierarchical-table {
+    font-size: 0.8rem !important;
+  }
+  
+  .hierarchical-table .row {
+    min-height: 40px !important;
+    padding: 8px 8px !important;
+  }
+  
+  /* Table header adjustments */
+  .hierarchical-table .row.q-table__top {
+    padding: 8px 8px !important;
+    min-height: 36px !important;
+  }
+  
+  /* Column adjustments for mobile */
+  .hierarchical-table .col-6 {
+    width: 50% !important;
+  }
+  
+  /* Button adjustments */
+  .q-btn {
+    min-height: 44px !important;
+  }
+  
+  /* Text adjustments */
+  .text-weight-regular {
+    font-size: 0.9rem !important;
+  }
+  
+  .text-weight-bold {
+    font-size: 0.9rem !important;
+  }
+  
+  /* Icon adjustments */
+  .q-icon {
+    font-size: 0.8rem !important;
+  }
+  
+  /* Hierarchical body adjustments */
+  .hierarchical-body {
+    max-height: 300px !important;
+  }
+  
+  /* Padding adjustments for nested items */
+  .hierarchical-table .row[style*="padding-left: 24px"] {
+    padding-left: 16px !important;
+  }
+  
+  .hierarchical-table .row[style*="padding-left: 48px"] {
+    padding-left: 24px !important;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+  /* Small Tablet View */
+  
+  /* Dialog card adjustments */
+  .allocation-card {
+    width: 90vw !important;
+    min-width: 90vw !important;
+    max-width: 90vw !important;
+  }
+  
+  /* Card section adjustments */
+  .q-card-section {
+    padding: 16px !important;
+  }
+  
+  /* Header adjustments */
+  .text-h6 {
+    font-size: 1.2rem !important;
+  }
+  
+  /* Row adjustments for small tablet */
+  .row.q-mb-sm {
+    flex-direction: row !important;
+    gap: 16px !important;
+  }
+  
+  .row.q-mb-sm .col-md-6 {
+    width: 50% !important;
+  }
+  
+  /* Search input adjustments */
+  .q-input {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  
+  /* Hierarchical table adjustments */
+  .hierarchical-table {
+    font-size: 0.85rem !important;
+  }
+  
+  .hierarchical-table .row {
+    min-height: 44px !important;
+    padding: 10px 10px !important;
+  }
+  
+  /* Table header adjustments */
+  .hierarchical-table .row.q-table__top {
+    padding: 10px 10px !important;
+    min-height: 40px !important;
+  }
+  
+  /* Button adjustments */
+  .q-btn {
+    min-height: 44px !important;
+  }
+  
+  /* Text adjustments */
+  .text-weight-regular {
+    font-size: 0.95rem !important;
+  }
+  
+  .text-weight-bold {
+    font-size: 0.95rem !important;
+  }
+  
+  /* Hierarchical body adjustments */
+  .hierarchical-body {
+    max-height: 350px !important;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1200px) {
+  /* Large Tablet View */
+  
+  /* Dialog card adjustments */
+  .allocation-card {
+    width: 85vw !important;
+    min-width: 85vw !important;
+    max-width: 85vw !important;
+  }
+  
+  /* Card section adjustments */
+  .q-card-section {
+    padding: 20px !important;
+  }
+  
+  /* Header adjustments */
+  .text-h6 {
+    font-size: 1.3rem !important;
+  }
+  
+  /* Row adjustments for large tablet */
+  .row.q-mb-sm {
+    flex-direction: row !important;
+    gap: 20px !important;
+  }
+  
+  .row.q-mb-sm .col-md-6 {
+    width: 50% !important;
+  }
+  
+  /* Search input adjustments */
+  .q-input {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 500px !important;
+  }
+  
+  /* Hierarchical table adjustments */
+  .hierarchical-table {
+    font-size: 0.9rem !important;
+  }
+  
+  .hierarchical-table .row {
+    min-height: 46px !important;
+    padding: 12px 12px !important;
+  }
+  
+  /* Table header adjustments */
+  .hierarchical-table .row.q-table__top {
+    padding: 12px 12px !important;
+    min-height: 42px !important;
+  }
+  
+  /* Button adjustments */
+  .q-btn {
+    min-width: 120px !important;
+  }
+  
+  /* Text adjustments */
+  .text-weight-regular {
+    font-size: 1rem !important;
+  }
+  
+  .text-weight-bold {
+    font-size: 1rem !important;
+  }
+  
+  /* Hierarchical body adjustments */
+  .hierarchical-body {
+    max-height: 380px !important;
+  }
+}
+
+@media (min-width: 1201px) {
+  /* Desktop View */
+  
+  /* Dialog card adjustments */
+  .allocation-card {
+    width: 1050px !important;
+    min-width: 1050px !important;
+    max-width: 1050px !important;
+  }
+  
+  /* Card section adjustments */
+  .q-card-section {
+    padding: 24px !important;
+  }
+  
+  /* Header adjustments */
+  .text-h6 {
+    font-size: 1.4rem !important;
+  }
+  
+  /* Row adjustments for desktop */
+  .row.q-mb-sm {
+    flex-direction: row !important;
+    gap: 24px !important;
+  }
+  
+  .row.q-mb-sm .col-md-6 {
+    width: 50% !important;
+  }
+  
+  /* Search input adjustments */
+  .q-input {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 500px !important;
+  }
+  
+  /* Hierarchical table adjustments */
+  .hierarchical-table {
+    font-size: 1rem !important;
+  }
+  
+  .hierarchical-table .row {
+    min-height: 48px !important;
+    padding: 12px 12px !important;
+  }
+  
+  /* Table header adjustments */
+  .hierarchical-table .row.q-table__top {
+    padding: 12px 12px !important;
+    min-height: 44px !important;
+  }
+  
+  /* Button adjustments */
+  .q-btn {
+    min-width: 120px !important;
+  }
+  
+  /* Text adjustments */
+  .text-weight-regular {
+    font-size: 1.1rem !important;
+  }
+  
+  .text-weight-bold {
+    font-size: 1.1rem !important;
+  }
+  
+  /* Hierarchical body adjustments */
+  .hierarchical-body {
+    max-height: 400px !important;
+  }
+}
+
+/* General responsive improvements */
+@media (max-width: 900px) {
+  /* Adjust text sizes for better readability */
+  .text-h6 {
+    font-size: 1.2rem !important;
+  }
+  
+  /* Adjust padding for better mobile experience */
+  .q-pa-sm {
+    padding: 8px !important;
+  }
+  
+  .q-py-lg {
+    padding-top: 16px !important;
+    padding-bottom: 16px !important;
+  }
+  
+  /* Make buttons more touch-friendly */
+  .q-btn {
+    min-height: 40px !important;
+  }
+  
+  /* Adjust card margins */
+  .q-card {
+    margin: 4px !important;
+  }
+  
+  /* Ensure proper spacing */
+  .q-mb-sm {
+    margin-bottom: 8px !important;
+  }
+  
+  .q-mb-md {
+    margin-bottom: 12px !important;
+  }
+  
+  /* Adjust card sections */
+  .q-card-section {
+    padding: 12px !important;
+  }
+}
+
+/* Ensure proper spacing in all views */
+.q-mb-sm {
+  margin-bottom: 8px !important;
+}
+
+/* Dialog content responsive */
+@media (max-width: 600px) {
+  .q-card-actions {
+    padding: 8px 12px !important;
+  }
+  
+  /* Make form inputs full width on mobile */
+  .q-input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  
+  /* Adjust button groups */
+  .q-card-actions {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  
+  .q-card-actions .q-btn {
+    width: 100% !important;
+  }
+}
+
+/* Search input responsive */
+@media (max-width: 600px) {
+  .q-input[style*="max-width: 500px"] {
+    max-width: 100% !important;
+  }
+}
+
+/* Hierarchical table responsive improvements */
+@media (max-width: 600px) {
+  .hierarchical-table {
+    font-size: 0.75rem !important;
+  }
+  
+  .hierarchical-table .row {
+    padding: 6px 6px !important;
+    min-height: 36px !important;
+  }
+  
+  .hierarchical-table .row.q-table__top {
+    padding: 6px 6px !important;
+    min-height: 32px !important;
+  }
+  
+  /* Adjust padding for nested items on mobile */
+  .hierarchical-table .row[style*="padding-left: 24px"] {
+    padding-left: 12px !important;
+  }
+  
+  .hierarchical-table .row[style*="padding-left: 48px"] {
+    padding-left: 20px !important;
+  }
+}
+
+/* Button responsive adjustments */
+@media (max-width: 600px) {
+  .q-btn[style*="min-width: 24px"] {
+    min-width: 20px !important;
+    margin-right: 2px !important;
+  }
+  
+  .q-btn[style*="min-width: 24px"] .q-icon {
+    font-size: 0.7rem !important;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+  .q-btn[style*="min-width: 24px"] {
+    min-width: 22px !important;
+    margin-right: 3px !important;
+  }
+  
+  .q-btn[style*="min-width: 24px"] .q-icon {
+    font-size: 0.8rem !important;
+  }
+}
+
+/* Icon responsive adjustments */
+@media (max-width: 600px) {
+  .q-icon[name="arrow_right"] {
+    font-size: 0.6rem !important;
+  }
+  
+  .q-icon[name="expand_more"],
+  .q-icon[name="chevron_right"] {
+    font-size: 0.7rem !important;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+  .q-icon[name="arrow_right"] {
+    font-size: 0.7rem !important;
+  }
+  
+  .q-icon[name="expand_more"],
+  .q-icon[name="chevron_right"] {
+    font-size: 0.8rem !important;
+  }
+}
+
+/* Text weight responsive adjustments */
+@media (max-width: 600px) {
+  .text-weight-regular strong {
+    font-size: 0.9rem !important;
+  }
+  
+  .text-weight-bold strong {
+    font-size: 0.9rem !important;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+  .text-weight-regular strong {
+    font-size: 0.95rem !important;
+  }
+  
+  .text-weight-bold strong {
+    font-size: 0.95rem !important;
+  }
+}
+
+/* Close icon responsive */
+@media (max-width: 600px) {
+  .q-icon[name="close"] {
+    font-size: 0.8rem !important;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+  .q-icon[name="close"] {
+    font-size: 0.9rem !important;
+  }
+}
+
+/* Search icon responsive */
+@media (max-width: 600px) {
+  .q-input .q-icon[name="search"] {
+    font-size: 0.8rem !important;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+  .q-input .q-icon[name="search"] {
+    font-size: 0.9rem !important;
+  }
 }
 </style>
