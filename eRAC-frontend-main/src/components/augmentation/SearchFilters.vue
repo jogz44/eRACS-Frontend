@@ -52,7 +52,7 @@
         label="Add"
         icon="add"
         class="add-table-btn"
-        @click="store.openDialog('augmentation')"
+        @click="handleOpenDialog"
         color="primary"
         style="min-width: 180px;"
       />
@@ -63,6 +63,10 @@
 <script setup>
 import { useAugmentationStore } from 'stores/augmentation'
 const store = useAugmentationStore()
+
+const handleOpenDialog = async () => {
+  await store.openDialog('augmentation')
+}
 </script>
 
 <style scoped>

@@ -25,9 +25,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
-// import { useAugmentationStore } from 'stores/augmentation'
+import { useAugmentationStore } from 'stores/augmentation'
 import AugmentationTable from 'components/augmentation/AugmentationTable.vue'
 import SearchFilters from 'components/augmentation/SearchFilters.vue'
 import AugmentationDialog from 'components/augmentation/AugmentationDialog.vue'
@@ -35,14 +35,13 @@ import AugExpenseSelecDial from 'components/augmentation/AugExpenseSelecDial.vue
 import AugExpenseDetailDial from 'components/augmentation/AugExpenseDetailDial.vue'
 
 const $q = useQuasar()
-// const store = useAugmentationStore()
+const store = useAugmentationStore()
 const loading = ref(false)
 
 const loadPendingUsers = async () => {
   loading.value = true
   try {
-    // If you have an API, call it here. For now, just simulate refresh.
-    // await store.fetchAugmentations()
+    await store.fetchAugmentations()
     $q.notify({
       type: 'positive',
       message: 'Augmentations refreshed!',
@@ -60,6 +59,13 @@ const loadPendingUsers = async () => {
     loading.value = false
   }
 }
+
+onMounted(async () => {
+  await Promise.all([
+    store.fetchAugmentations(),
+    store.fetchAvailableBudgets()
+  ])
+})
 </script>
 
 <style scoped>

@@ -8,17 +8,17 @@
       <q-card-section>
         <!-- Display selected account info -->
         <div class="text-subtitle1 q-mb-sm">
-          <strong>Account:</strong> {{ store.forms.augExpense.account }}
+          <strong>Account:</strong> {{ store.forms.augExpense?.value?.account }}
         </div>
         <div class="text-subtitle1 q-mb-md">
-          <strong>Balance:</strong> ₱{{ store.forms.augExpense.balance.toLocaleString() }}
+          <strong>Balance:</strong> ₱{{ store.forms.augExpense?.value?.balance?.toLocaleString() }}
         </div>
 
         <!-- Particulars Field -->
         <q-input
           outlined
           dense
-          v-model="store.forms.augExpense.particulars"
+          v-model="store.forms.augExpense.value.particulars"
           label="Particulars"
           class="q-mb-md"
           type="textarea"
@@ -29,7 +29,7 @@
         <q-input
           outlined
           dense
-          v-model="store.forms.augExpense.amount"
+          v-model="store.forms.augExpense.value.amount"
           label="Amount"
           class="q-mb-md"
           prefix="₱"
@@ -52,5 +52,6 @@
 
 <script setup>
 import { useAugmentationStore } from 'stores/augmentation'
+
 const store = useAugmentationStore()
 </script>

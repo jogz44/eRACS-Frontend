@@ -116,28 +116,44 @@ use Illuminate\Validation\Rule;
         public function getExpenseHierarchy(Request $request)
         {
             $request->validate([
-            'fiscal_year_id' => 'required|exists:lib_fiscal_years,id'
+            'fiscal_year_id' => 'required|exists:lib_fiscal_years,id',
+            'budget_id' => 'nullable|exists:budgets,id'
         ]);
+
+            $barangayId = $request->user()->barangay_id;
+            $budgetId = $request->budget_id;
 
             $classes = LibExpenseClass::with(['types.items'])
                 ->where('fiscal_year_id', $request->fiscal_year_id)
                 ->get()
-                ->map(function($class) {
+                ->map(function($class) use ($barangayId, $budgetId) {
                     return [
                         'id' => $class->id,
                         'name' => $class->name,
                         'isMainCategory' => true,
-                        'children' => $class->types->map(function($type) {
+                        'children' => $class->types->map(function($type) use ($barangayId, $budgetId) {
                             return [
                                 'id' => $type->id,
                                 'name' => $type->name,
                                 'isMainCategory' => false,
-                                'children' => $type->items->map(function($item) {
+                                'children' => $type->items->map(function($item) use ($barangayId, $budgetId) {
+                                    // Get the allocated amount for this expense item
+                                    $query = TranAppropriation::where('barangay_id', $barangayId)
+                                        ->where('expense_item_id', $item->id)
+                                        ->where('status', 'committed');
+                                    
+                                    // If budget_id is provided, filter by that specific budget
+                                    if ($budgetId) {
+                                        $query->where('budget_id', $budgetId);
+                                    }
+                                    
+                                    $allocatedAmount = $query->sum('amount');
+                                    
                                     return [
                                         'id' => $item->id,
                                         'name' => $item->name,
                                         'isMainCategory' => false,
-                                        'amount' => null
+                                        'amount' => (float) $allocatedAmount
                                     ];
                                 })
                             ];

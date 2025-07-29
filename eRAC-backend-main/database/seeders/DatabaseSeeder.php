@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             BudgetSeeder::class,
             TranAppropriationSeeder::class,
             DisbursementSeeder::class,
+            BudgetAugmentationSeeder::class,
         ]);
 
         // Recalculate current_amount for all budgets
