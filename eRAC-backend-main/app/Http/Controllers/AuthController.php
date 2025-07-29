@@ -256,12 +256,22 @@ public function resetPassword(Request $request)
             ->join('barangays', 'barangay_users.barangay_id', '=', 'barangays.id')
             ->join('barangay_positions', 'barangay_users.position_id', '=', 'barangay_positions.id')
             ->select(
-                'logs.*',
+                'logs.user_id as id',
+                'logs.fullname',
+                DB::raw('CAST(logs.created_at AS DATE) as log_date'),
+                DB::raw('COUNT(logs.id) as total_logs'),
                 'barangays.name as barangay',
                 'barangay_positions.name as position'
             )
             ->where('barangay_users.barangay_id', $user->barangay_id)
-            ->orderBy('logs.created_at', 'desc')
+            ->groupBy(
+                'logs.user_id',
+                'logs.fullname',
+                DB::raw('CAST(logs.created_at AS DATE)'),
+                'barangays.name',
+                'barangay_positions.name'
+            )
+            ->orderByDesc(DB::raw('CAST(logs.created_at AS DATE)'))
             ->get();
 
         return response()->json($logs);
