@@ -109,6 +109,13 @@ use Illuminate\Validation\Rule;
             'user_id' => $request->user()->id
         ]);
 
+        // Log the budget creation
+        AdminAuthController::logUserAction(
+            $request->user(),
+            'Created Budget',
+            "Created new budget with amount ₱" . number_format($validated['original_amount'], 2) . " - " . $validated['description']
+        );
+
         return response()->json($budget, 201);
     }
 
@@ -116,28 +123,44 @@ use Illuminate\Validation\Rule;
         public function getExpenseHierarchy(Request $request)
         {
             $request->validate([
-            'fiscal_year_id' => 'required|exists:lib_fiscal_years,id'
+            'fiscal_year_id' => 'required|exists:lib_fiscal_years,id',
+            'budget_id' => 'nullable|exists:budgets,id'
         ]);
+
+            $barangayId = $request->user()->barangay_id;
+            $budgetId = $request->budget_id;
 
             $classes = LibExpenseClass::with(['types.items'])
                 ->where('fiscal_year_id', $request->fiscal_year_id)
                 ->get()
-                ->map(function($class) {
+                ->map(function($class) use ($barangayId, $budgetId) {
                     return [
                         'id' => $class->id,
                         'name' => $class->name,
                         'isMainCategory' => true,
-                        'children' => $class->types->map(function($type) {
+                        'children' => $class->types->map(function($type) use ($barangayId, $budgetId) {
                             return [
                                 'id' => $type->id,
                                 'name' => $type->name,
                                 'isMainCategory' => false,
-                                'children' => $type->items->map(function($item) {
+                                'children' => $type->items->map(function($item) use ($barangayId, $budgetId) {
+                                    // Get the allocated amount for this expense item
+                                    $query = TranAppropriation::where('barangay_id', $barangayId)
+                                        ->where('expense_item_id', $item->id)
+                                        ->where('status', 'committed');
+                                    
+                                    // If budget_id is provided, filter by that specific budget
+                                    if ($budgetId) {
+                                        $query->where('budget_id', $budgetId);
+                                    }
+                                    
+                                    $allocatedAmount = $query->sum('amount');
+                                    
                                     return [
                                         'id' => $item->id,
                                         'name' => $item->name,
                                         'isMainCategory' => false,
-                                        'amount' => null
+                                        'amount' => (float) $allocatedAmount
                                     ];
                                 })
                             ];
@@ -230,10 +253,27 @@ public function saveAllocation(Request $request, Budget $budget)
                 // Update existing record
                 $existing->update($appropriationData);
                 $appropriations[] = $existing;
+
+                // Log the update
+                AdminAuthController::logUserAction(
+                    $request->user(),
+                    'Updated Appropriation',
+                    "Updated appropriation amount from ₱" . number_format($existing->amount, 2) .
+                    " to ₱" . number_format($allocation['amount'], 2) .
+                    " for budget: " . $budget->description
+                );
             } else {
                 // New allocation - add to total
                 $totalAllocated += $allocation['amount'];
                 $appropriations[] = TranAppropriation::create($appropriationData);
+
+                // Log the new allocation
+                AdminAuthController::logUserAction(
+                    $request->user(),
+                    'Added Appropriation',
+                    "Added new appropriation of ₱" . number_format($allocation['amount'], 2) .
+                    " to budget: " . $budget->description
+                );
             }
         }
 
@@ -248,6 +288,13 @@ public function saveAllocation(Request $request, Budget $budget)
         // If all allocations are removed, restore original amount
         if (empty($validated['allocations'])) {
             $budget->update(['current_amount' => $budget->original_amount]);
+
+            // Log the removal of all allocations
+            AdminAuthController::logUserAction(
+                $request->user(),
+                'Removed All Appropriations',
+                "Removed all appropriations from budget: " . $budget->description
+            );
         }
 
         $budget->refresh();

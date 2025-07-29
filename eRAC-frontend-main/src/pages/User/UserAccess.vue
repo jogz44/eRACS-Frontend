@@ -18,13 +18,23 @@
       </div>
       <q-card-section>
         <!-- Search Bar -->
-        <q-input dense outlined bg-color="white" v-model="search" placeholder="Search..." class="search-bar">
-          <template v-slot:prepend>
-            <q-icon name="search" />
-          </template>
-        </q-input>
+        <div class="row q-mb-md">
+          <q-input
+            dense
+            outlined
+            bg-color="white"
+            v-model="search"
+            placeholder="Search by ID, Name, Barangay, Position, or Username..."
+            class="search-input"
+            clearable
+          >
+            <template v-slot:append>
+              <q-icon name="search" />
+            </template>
+          </q-input>
+        </div>
 
-        <!-- User Table -->
+        <!-- User Access Table -->
         <q-table
           flat
           bordered
@@ -43,7 +53,13 @@
           <!-- Custom Actions Column -->
           <template v-slot:body-cell-actions="props">
             <q-td :props="props" class="actions-column">
-              <q-btn label="Access" color="primary" size="sm" @click="openAccessModal(props.row)" />
+              <q-btn
+                label="ACCESS"
+                color="green"
+                size="sm"
+                @click="openAccessModal(props.row)"
+                class="access-button"
+              />
             </q-td>
           </template>
         </q-table>
@@ -130,13 +146,28 @@ export default {
   },
   computed: {
     filteredUsers() {
-      return this.users.filter(
-        (user) =>
-          user.username.toLowerCase().includes(this.search.toLowerCase()) ||
-          user.email.toLowerCase().includes(this.search.toLowerCase()) ||
-          user.name.toLowerCase().includes(this.search.toLowerCase()) ||
-          (user.position || '').toLowerCase().includes(this.search.toLowerCase()),
-      )
+      const searchTerm = this.search.toLowerCase().trim()
+      if (!searchTerm) return this.users
+
+      return this.users.filter(user => {
+        // Search by ID
+        const idMatch = String(user.id).includes(searchTerm)
+
+        // Search by Name
+        const nameMatch = user.fullname.toLowerCase().includes(searchTerm)
+
+        // Search by Barangay
+        const barangayMatch = user.barangay?.toLowerCase().includes(searchTerm) || false
+
+        // Search by Position
+        const positionMatch = user.position.toLowerCase().includes(searchTerm)
+
+        // Search by Username
+        const usernameMatch = user.username.toLowerCase().includes(searchTerm)
+
+        // Return true if any field matches
+        return idMatch || nameMatch || barangayMatch || positionMatch || usernameMatch
+      })
     },
   },
   async mounted() {
@@ -215,22 +246,19 @@ export default {
   padding: 8px 16px;
 }
 
-.action-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
+.access-button {
+  text-transform: uppercase;
+  font-weight: 500;
 }
 
-@media (max-width: 1000px) {
-  .search-bar {
-    width: 1000px;
-  }
-
+:deep(.q-table th) {
+  font-weight: bold;
 }
-  .action-buttons {
-    flex-wrap: wrap;
-  }
-  
+
+:deep(.q-table td) {
+  height: 48px;
+}
+
 .access-grid {
   display: flex;
   flex-direction: column;
@@ -246,5 +274,11 @@ export default {
 .access-label {
   font-size: 1rem;
   color: #333;
+}
+
+@media (max-width: 600px) {
+  .search-input {
+    width: 100%;
+  }
 }
 </style>

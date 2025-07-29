@@ -18,13 +18,23 @@
       </div>
       <q-card-section>
         <!-- Search Bar -->
-        <q-input dense outlined bg-color="white" v-model="search" placeholder="Search..." class="search-bar">
-          <template v-slot:prepend>
-            <q-icon name="search" />
-          </template>
-        </q-input>
+        <div class="row q-mb-md">
+          <q-input
+            dense
+            outlined
+            bg-color="white"
+            v-model="search"
+            placeholder="Search by ID, Name, Barangay, Position, or Username..."
+            class="search-input"
+            clearable
+          >
+            <template v-slot:append>
+              <q-icon name="search" />
+            </template>
+          </q-input>
+        </div>
 
-        <!-- User Table -->
+        <!-- User Access Table -->
         <q-table
           flat
           bordered
@@ -34,16 +44,17 @@
           :loading="loading"
           class="user-access-table"
           :pagination="{ rowsPerPage: 10 }"
+          :rows-per-page-options="[10, 25, 50, 100]"
         >
-          <template v-slot:body-cell-id="props">
-            <q-td :props="props">
-              {{ formatId(props.row.id) }}
-            </q-td>
-          </template>
-          <!-- Custom Actions Column -->
           <template v-slot:body-cell-actions="props">
             <q-td :props="props" class="actions-column">
-              <q-btn label="Access" color="primary" size="sm" @click="openAccessModal(props.row)" />
+              <q-btn
+                label="ACCESS"
+                color="green"
+                size="sm"
+                @click="openAccessModal(props.row)"
+                class="access-button"
+              />
             </q-td>
           </template>
         </q-table>
@@ -97,23 +108,20 @@ export default {
   name: 'UserControlAcceptedPage',
   data() {
     return {
+      loading: false,
       search: '',
-      users: [],
-      deleteModal: {
-        show: false,
-        selectedRow: null,
-        loading: false,
-      },
-      viewModal: {
-        show: false,
-        selectedRow: null,
-      },
+      users: [
+        { id: 1, fullname: 'John Doe', barangay: 'Visayan Village', position: 'Manager', username: 'johndoe' },
+        { id: 2, fullname: 'Jane Smith', barangay: 'Apokon',position: 'Developer', username: 'janesmith' },
+        // Add more users as needed
+      ],
       columns: [
         { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
-        { name: 'name', label: 'Name', field: 'name', align: 'left', sortable: true  },
-        { name: 'barangay', label: 'Barangay', field: 'barangay', align: 'left', sortable: true  },
-        { name: 'position', label: 'Position', field: 'position', align: 'left', sortable: true  },
-        { name: 'actions', label: 'Action', field: 'actions', align: 'center' },
+        { name: 'fullname', label: 'NAME', field: 'fullname', align: 'left', sortable: true },
+        { name: 'barangay', label: 'BARANGAY', field: 'barangay', align: 'left', sortable: true },
+        { name: 'position', label: 'POSITION', field: 'position', align: 'left', sortable: true },
+        { name: 'username', label: 'USERNAME', field: 'username', align: 'left', sortable: true },
+        { name: 'actions', label: 'ACTIONS', align: 'center', sortable: false },
       ],
       accessModal: {
         show: false,
@@ -130,13 +138,28 @@ export default {
   },
   computed: {
     filteredUsers() {
-      return this.users.filter(
-        (user) =>
-          user.username.toLowerCase().includes(this.search.toLowerCase()) ||
-          user.email.toLowerCase().includes(this.search.toLowerCase()) ||
-          user.name.toLowerCase().includes(this.search.toLowerCase()) ||
-          (user.position || '').toLowerCase().includes(this.search.toLowerCase()),
-      )
+      const query = this.search.toLowerCase().trim()
+      if (!query) return this.users
+
+      return this.users.filter(user => {
+        // Search by ID
+        const idMatch = String(user.id).includes(query)
+
+        // Search by Name
+        const nameMatch = user.fullname.toLowerCase().includes(query)
+
+        // Search by Barangay
+        const barangayMatch = user.barangay?.toLowerCase().includes(query) || false
+
+        // Search by Position
+        const positionMatch = user.position.toLowerCase().includes(query)
+
+        // Search by Username
+        const usernameMatch = user.username.toLowerCase().includes(query)
+
+        // Return true if any field matches
+        return idMatch || nameMatch || barangayMatch || positionMatch || usernameMatch
+      })
     },
   },
   async mounted() {
@@ -215,22 +238,20 @@ export default {
   padding: 8px 16px;
 }
 
-.action-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
+.access-button {
+  text-transform: uppercase;
+  font-weight: 500;
 }
 
-@media (max-width: 1000px) {
-  .search-bar {
-    width: 1000px;
-  }
-
+:deep(.q-table th) {
+  font-weight: bold;
+  background-color: #f5f5f5 !important;
 }
-  .action-buttons {
-    flex-wrap: wrap;
-  }
-  
+
+:deep(.q-table td) {
+  height: 48px;
+}
+
 .access-grid {
   display: flex;
   flex-direction: column;
@@ -246,5 +267,11 @@ export default {
 .access-label {
   font-size: 1rem;
   color: #333;
+}
+
+@media (max-width: 600px) {
+  .search-input {
+    width: 100%;
+  }
 }
 </style>

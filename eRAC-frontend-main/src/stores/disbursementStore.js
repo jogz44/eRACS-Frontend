@@ -285,16 +285,14 @@ export const useDisbursementStore = defineStore('disbursement', {
             Accept: 'application/json',
           },
         });
-        console.log('API raw response:', response.data);
-        // Unwrap the double data
-        const disbursement = response.data.data.data;
-        console.log('Fetched disbursement:', disbursement);
+        // Get the disbursement data
+        const disbursement = response.data.data;
         if (disbursement) {
           this.forms.disbursement = {
             date: formatDateForForm(disbursement.date),
             dvNumber: disbursement.dv_number,
             chequeNumber: disbursement.cheque_number,
-            bank_id: Number(disbursement.bank_id),
+            bank_id: disbursement.bank_id ? Number(disbursement.bank_id) : '',
             payee: disbursement.payee,
             // Add other fields as needed
           };
@@ -325,7 +323,8 @@ export const useDisbursementStore = defineStore('disbursement', {
             this.selectedChequeNumber = disbursement.cheque_number
           }
 
-          this.expenses = disbursement.expenses || []
+          // Set expenses to empty array since backend doesn't include them yet
+          this.expenses = []
           this.currentItem = { ...disbursement }
           this.dialogs.editDisbursement = true
         }
@@ -528,6 +527,29 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.forms.disbursement.amount = this.totalExpensesAmount
     },
 
+    // Alias functions for EditDisbursement component
+    editItem(row) {
+      this.editExpense(row)
+    },
+
+    deleteItem(row) {
+      this.deleteExpense(row.id)
+    },
+
+    // Helper function to format date
+    formatDateForForm(dateStr) {
+      if (!dateStr) return '';
+      if (dateStr.includes('-')) {
+        // 'YYYY-MM-DD'
+        const [yyyy, mm, dd] = dateStr.split('-');
+        return `${mm}/${dd}/${yyyy}`;
+      } 
+      else if (dateStr.includes('/')) {
+        return dateStr;
+      }
+      return dateStr;
+    },
+
     // Form Actions
     resetForm(formName) {
       if (formName === 'disbursement') {
@@ -561,7 +583,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       await this.fetchDisbursementById(row.id);
     },
 
-      
+
     saveEditedDisbursement() {
       if (!this.currentItem) return
 
@@ -583,6 +605,15 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.selectedBooklet = null
       this.selectedChequeNumber = null
       this.availableChequeNumbers = []
+      // Reset form data
+      this.forms.disbursement = {
+        date: '',
+        dvNumber: '',
+        chequeNumber: '',
+        bank_id: '',
+        payee: '',
+        amount: '',
+      }
     },
 
     uploadOrImage(file) {

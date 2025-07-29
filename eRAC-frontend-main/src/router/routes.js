@@ -107,19 +107,9 @@ const routes = [
             component: () => import('src/pages/User/Libraries/AccountsLib.vue'),
           },
           {
-            path: 'particulars',
-            name: 'ParticularLib',
-            component: () => import('src/pages/User/Libraries/ParticularsLib.vue'),
-          },
-          {
             path: 'bank',
             name: 'BankLib',
             component: () => import('src/pages/User/Libraries/BankLib.vue'),
-          },
-          {
-            path: 'continuing',
-            name: 'ContinuingLib',
-            component: () => import('src/pages/User/Libraries/ContinuingLib.vue'),
           },
         ],
       },

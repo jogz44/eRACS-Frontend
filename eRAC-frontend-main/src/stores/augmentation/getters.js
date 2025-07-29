@@ -3,12 +3,20 @@ import { computed } from 'vue'
 export function useGetters(state) {
   const augmentationColumns = computed(() => [
     { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
-    { name: 'refNo', label: 'Ref No', field: 'refNo', align: 'left', sortable: true },
-    { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
+    { name: 'ref_number', label: 'Ref No', field: 'ref_number', align: 'left', sortable: true },
+    { name: 'augmentation_date', label: 'Date', field: 'augmentation_date', align: 'left', sortable: true },
     {
-      name: 'totalAmount',
+      name: 'total_amount',
       label: 'Amount',
-      field: 'totalAmount',
+      field: 'total_amount',
+      align: 'left',
+      sortable: true,
+      format: (val) => `₱${val ? val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}`,
+    },
+    {
+      name: 'budget_description',
+      label: 'Budget',
+      field: 'budget_description',
       align: 'left',
       sortable: true,
     },
@@ -25,14 +33,21 @@ export function useGetters(state) {
   const expenseAugColumns = computed(() => [
     { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
     {
-      name: 'accountName',
+      name: 'account',
       label: 'Account Name',
-      field: 'accountName',
+      field: 'account',
       align: 'left',
       sortable: true,
     },
-    { name: 'augAmount', label: 'Amount', field: 'augAmount', align: 'left', sortable: true },
-    { name: 'particular', label: 'Particular', field: 'particular', align: 'left', sortable: true },
+    { 
+      name: 'amount', 
+      label: 'Amount', 
+      field: 'amount', 
+      align: 'left', 
+      sortable: true,
+      format: (val) => `₱${val ? val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}`,
+    },
+    { name: 'particulars', label: 'Particulars', field: 'particulars', align: 'left', sortable: true },
     { name: 'action', label: 'Action', field: '', align: 'center' },
   ])
 

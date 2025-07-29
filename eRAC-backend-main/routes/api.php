@@ -9,6 +9,7 @@ use App\Http\Controllers\Library\LibParticularController;
 use App\Http\Controllers\Library\AccountsLibController;
 use App\Http\Controllers\Library\BankLibraryController;
 use App\Http\Controllers\Transaction\AppropriationController;
+use App\Http\Controllers\BudgetAugmentationController;
 use App\Http\Middleware\AuthTokenValid;
 use App\Models\Barangay;
 use App\Models\BarangayPosition;
@@ -117,12 +118,19 @@ Route::prefix('barangay')->group(function () {
         Route::get('/disbursements/recent-liquidated', [DisbursementController::class, 'recentLiquidated']);
         // All Disbursements for barangay
         Route::get('disbursements', [DisbursementController::class, 'index']);
+        // Get single disbursement
+        Route::get('disbursements/{id}', [DisbursementController::class, 'show']);
         // Liquidate a disbursement
         Route::patch('disbursements/{id}/liquidate', [DisbursementController::class, 'liquidate']);
+        // Fetch OR Details for a disbursement
+        Route::get('disbursements/{id}/or-details', [DisbursementController::class, 'getOrDetails']);
+        // Budget Augmentation endpoints
+        Route::get('budget-augmentations/available-budgets', [BudgetAugmentationController::class, 'getAvailableBudgets']);
+        Route::apiResource('budget-augmentations', BudgetAugmentationController::class);
+
+
 
     });
-    // Fetch OR Details for a disbursement
-    Route::get('disbursements/{id}/or-details', [DisbursementController::class, 'getOrDetails']);
 
 });
 

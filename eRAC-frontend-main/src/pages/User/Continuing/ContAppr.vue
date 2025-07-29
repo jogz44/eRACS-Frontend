@@ -35,7 +35,7 @@
         <div class="t q-px-xl"></div>
 
         <!-- Date Range Group -->
-        <div class="row items-center justify-between q-xs">
+        <!-- <div class="row items-center justify-between q-xs">
           <div>
             <q-input
               bg-color="white"
@@ -74,7 +74,7 @@
               </template>
             </q-input>
           </div>
-        </div>
+        </div> -->
 
         <q-btn label="Continue Accounts" @click="showContinueDialog = true" color="secondary" />
       </div>

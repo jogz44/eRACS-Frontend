@@ -1,0 +1,52 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class BudgetAugmentation extends Model
+{
+    protected $fillable = [
+        'barangay_id',
+        'budget_id',
+        'ref_number',
+        'augmentation_date',
+        'total_amount',
+        'remarks',
+        'user_id'
+    ];
+
+    protected $casts = [
+        'augmentation_date' => 'date',
+        'total_amount' => 'decimal:2'
+    ];
+
+    public function barangay(): BelongsTo
+    {
+        return $this->belongsTo(Barangay::class);
+    }
+
+    public function budget(): BelongsTo
+    {
+        return $this->belongsTo(Budget::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(BarangayUser::class, 'user_id');
+    }
+
+    public function details(): HasMany
+    {
+        return $this->hasMany(BudgetAugmentationDetail::class);
+    }
+
+    public function scopeForBarangay($query, $barangayId)
+    {
+        return $query->where('barangay_id', $barangayId);
+    }
+
+
+} 

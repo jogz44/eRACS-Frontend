@@ -1,23 +1,31 @@
 // Augmentation Store
 import { defineStore } from 'pinia'
+import { computed } from 'vue'
 import { initialState } from './state'
 import { useGetters } from './getters'
 import { useDialogActions } from './actions/dialogActions.js'
 import { useFormActions } from './actions/formActions'
-//import { useAugmentationActions } from './actions/augmentationActions'
+import { useAugmentationActions } from './actions/augmentationAction'
 //import { useExpenseActions } from './actions/expenseActions'
 
 export const useAugmentationStore = defineStore('augmentation', () => {
   const state = initialState()
+  
   const getters = useGetters(state)
+
+  // Get augmentation actions first to access fetchExpenseAccounts
+  const augmentationActions = useAugmentationActions(state)
 
   // Combine all actions
   const actions = {
-    ...useDialogActions(state),
+    ...useDialogActions(state, augmentationActions.fetchExpenseAccounts, augmentationActions.fetchAvailableBudgets, augmentationActions.resetForm),
     ...useFormActions(state),
-    //...useAugmentationActions(state),
+    ...augmentationActions,
     //...useExpenseActions(state),
   }
+
+  // Computed properties to unwrap refs for easier component access
+  const forms = computed(() => state.forms.value)
 
   return {
     // State
@@ -28,5 +36,8 @@ export const useAugmentationStore = defineStore('augmentation', () => {
 
     // Actions
     ...actions,
+
+    // Computed properties
+    forms,
   }
 })
