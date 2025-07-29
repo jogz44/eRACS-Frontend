@@ -712,4 +712,432 @@ watch(
   background-color: #D9D9D9; /* Light gray background */
   min-height: 100vh; /* Ensure full height */
 }
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  /* Mobile View */
+  
+  /* Search and Add section */
+  .row.items-center.justify-between.q-gutter-sm {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+  
+  .row.items-center.justify-between.q-gutter-sm .q-input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  
+  .row.items-center.justify-between.q-gutter-sm .q-btn {
+    width: 100% !important;
+  }
+  
+  /* Table adjustments */
+  .q-table {
+    font-size: 0.8rem !important;
+  }
+  
+  .q-table th,
+  .q-table td {
+    padding: 8px 4px !important;
+  }
+  
+  /* Dialog adjustments */
+  .q-dialog .q-card {
+    min-width: 95vw !important;
+    max-width: 98vw !important;
+    margin: 8px !important;
+  }
+  
+  /* Booklet dialog */
+  .q-dialog .q-card[style*="min-width: 950px"] {
+    min-width: 95vw !important;
+    max-width: 98vw !important;
+  }
+  
+  /* Cheque dialog */
+  .q-dialog .q-card[style*="min-width: 800px"] {
+    min-width: 95vw !important;
+    max-width: 98vw !important;
+  }
+  
+  /* Add booklet dialog */
+  .q-dialog .q-card[style*="min-width: 500px"] {
+    min-width: 95vw !important;
+    max-width: 98vw !important;
+  }
+  
+  /* Add bank dialog */
+  .q-dialog .q-card[style*="min-width: 400px"] {
+    min-width: 95vw !important;
+    max-width: 98vw !important;
+  }
+  
+  /* Dialog content adjustments */
+  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  
+  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm .q-input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  
+  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm .q-btn {
+    width: 100% !important;
+  }
+  
+  /* Text adjustments */
+  .text-h5 {
+    font-size: 1.2rem !important;
+  }
+  
+  .text-h6 {
+    font-size: 1.1rem !important;
+  }
+  
+  /* Button adjustments */
+  .q-btn {
+    min-height: 44px !important;
+  }
+  
+  /* Badge adjustments */
+  .q-badge {
+    font-size: 0.7rem !important;
+    padding: 4px 6px !important;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+  /* Small Tablet View */
+  
+  /* Search and Add section */
+  .row.items-center.justify-between.q-gutter-sm {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+  
+  .row.items-center.justify-between.q-gutter-sm .q-input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  
+  .row.items-center.justify-between.q-gutter-sm .q-btn {
+    width: 100% !important;
+  }
+  
+  /* Table adjustments */
+  .q-table {
+    font-size: 0.85rem !important;
+  }
+  
+  /* Dialog adjustments */
+  .q-dialog .q-card {
+    min-width: 90vw !important;
+    max-width: 95vw !important;
+  }
+  
+  /* Booklet dialog */
+  .q-dialog .q-card[style*="min-width: 950px"] {
+    min-width: 90vw !important;
+    max-width: 95vw !important;
+  }
+  
+  /* Cheque dialog */
+  .q-dialog .q-card[style*="min-width: 800px"] {
+    min-width: 90vw !important;
+    max-width: 95vw !important;
+  }
+  
+  /* Add booklet dialog */
+  .q-dialog .q-card[style*="min-width: 500px"] {
+    min-width: 90vw !important;
+    max-width: 95vw !important;
+  }
+  
+  /* Add bank dialog */
+  .q-dialog .q-card[style*="min-width: 400px"] {
+    min-width: 90vw !important;
+    max-width: 95vw !important;
+  }
+  
+  /* Dialog content adjustments */
+  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  
+  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm .q-input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  
+  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm .q-btn {
+    width: 100% !important;
+  }
+  
+  /* Text adjustments */
+  .text-h5 {
+    font-size: 1.3rem !important;
+  }
+  
+  .text-h6 {
+    font-size: 1.2rem !important;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1200px) {
+  /* Large Tablet View */
+  
+  /* Search and Add section */
+  .row.items-center.justify-between.q-gutter-sm {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 16px !important;
+    width: 100% !important;
+  }
+  
+  .row.items-center.justify-between.q-gutter-sm .q-input {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 400px !important;
+  }
+  
+  .row.items-center.justify-between.q-gutter-sm .q-btn {
+    min-width: 120px !important;
+  }
+  
+  /* Dialog adjustments */
+  .q-dialog .q-card {
+    min-width: 80vw !important;
+    max-width: 90vw !important;
+  }
+  
+  /* Booklet dialog */
+  .q-dialog .q-card[style*="min-width: 950px"] {
+    min-width: 80vw !important;
+    max-width: 90vw !important;
+  }
+  
+  /* Cheque dialog */
+  .q-dialog .q-card[style*="min-width: 800px"] {
+    min-width: 80vw !important;
+    max-width: 90vw !important;
+  }
+  
+  /* Add booklet dialog */
+  .q-dialog .q-card[style*="min-width: 500px"] {
+    min-width: 80vw !important;
+    max-width: 90vw !important;
+  }
+  
+  /* Add bank dialog */
+  .q-dialog .q-card[style*="min-width: 400px"] {
+    min-width: 80vw !important;
+    max-width: 90vw !important;
+  }
+  
+  /* Dialog content adjustments */
+  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 16px !important;
+  }
+  
+  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm .q-input {
+    width: 300px !important;
+    min-width: 300px !important;
+  }
+  
+  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm .q-btn {
+    min-width: 100px !important;
+  }
+}
+
+@media (min-width: 1201px) {
+  /* Desktop View */
+  
+  /* Search and Add section */
+  .row.items-center.justify-between.q-gutter-sm {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 16px !important;
+  }
+  
+  .row.items-center.justify-between.q-gutter-sm .q-input {
+    width: 450px !important;
+    min-width: 450px !important;
+  }
+  
+  .row.items-center.justify-between.q-gutter-sm .q-btn {
+    min-width: 120px !important;
+  }
+  
+  /* Dialog adjustments */
+  .q-dialog .q-card {
+    min-width: 400px !important;
+    max-width: 600px !important;
+  }
+  
+  /* Booklet dialog */
+  .q-dialog .q-card[style*="min-width: 950px"] {
+    min-width: 950px !important;
+    max-width: 1200px !important;
+  }
+  
+  /* Cheque dialog */
+  .q-dialog .q-card[style*="min-width: 800px"] {
+    min-width: 800px !important;
+    max-width: 1000px !important;
+  }
+  
+  /* Add booklet dialog */
+  .q-dialog .q-card[style*="min-width: 500px"] {
+    min-width: 500px !important;
+    max-width: 700px !important;
+  }
+  
+  /* Add bank dialog */
+  .q-dialog .q-card[style*="min-width: 400px"] {
+    min-width: 400px !important;
+    max-width: 600px !important;
+  }
+  
+  /* Dialog content adjustments */
+  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 16px !important;
+  }
+  
+  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm .q-input {
+    width: 400px !important;
+    min-width: 400px !important;
+  }
+  
+  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm .q-btn {
+    min-width: 100px !important;
+  }
+}
+
+/* General responsive improvements */
+@media (max-width: 900px) {
+  /* Adjust text sizes for better readability */
+  .text-h5 {
+    font-size: 1.2rem !important;
+  }
+  
+  .text-h6 {
+    font-size: 1.1rem !important;
+  }
+  
+  /* Adjust padding for better mobile experience */
+  .q-pa-lg {
+    padding: 12px !important;
+  }
+  
+  .q-pa-md {
+    padding: 8px !important;
+  }
+  
+  /* Make buttons more touch-friendly */
+  .q-btn {
+    min-height: 40px !important;
+  }
+  
+  /* Adjust table for mobile */
+  .q-table {
+    font-size: 0.8rem !important;
+  }
+  
+  .q-table th,
+  .q-table td {
+    padding: 6px 4px !important;
+  }
+  
+  /* Adjust badges for mobile */
+  .q-badge {
+    font-size: 0.7rem !important;
+    padding: 2px 4px !important;
+  }
+  
+  /* Adjust card margins */
+  .q-card {
+    margin: 4px !important;
+  }
+  
+  /* Ensure proper spacing */
+  .q-mb-lg {
+    margin-bottom: 16px !important;
+  }
+  
+  .q-mb-md {
+    margin-bottom: 12px !important;
+  }
+  
+  .q-mb-sm {
+    margin-bottom: 8px !important;
+  }
+}
+
+/* Ensure proper spacing in all views */
+.q-gutter-sm > * {
+  margin-bottom: 8px !important;
+}
+
+.q-gutter-xs > * {
+  margin-bottom: 4px !important;
+}
+
+/* Table responsive improvements */
+@media (max-width: 600px) {
+  .q-table {
+    font-size: 0.75rem !important;
+  }
+  
+  .q-table th,
+  .q-table td {
+    padding: 4px 2px !important;
+  }
+  
+  /* Hide less important columns on mobile */
+  .q-table th:nth-child(3),
+  .q-table td:nth-child(3) {
+    display: none !important;
+  }
+}
+
+/* Dialog content responsive */
+@media (max-width: 600px) {
+  .q-card-section {
+    padding: 12px !important;
+  }
+  
+  .q-card-actions {
+    padding: 8px 12px !important;
+  }
+  
+  /* Make form inputs full width on mobile */
+  .q-input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  
+  /* Adjust button groups */
+  .q-card-actions {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  
+  .q-card-actions .q-btn {
+    width: 100% !important;
+  }
+}
 </style>

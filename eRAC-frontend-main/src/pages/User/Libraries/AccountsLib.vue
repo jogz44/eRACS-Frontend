@@ -1606,7 +1606,303 @@ watch(
 
 .sortable-chosen {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}.accountslib-page{
+}
+
+.accountslib-page {
   background-color: #D9D9D9;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  /* Mobile View */
+  .Main-card {
+    max-width: 100% !important;
+    height: 80vh !important;
+    margin: 0 !important;
+  }
+  
+  /* Header section */
+  .row.items-center.justify-between.bg-grey-3 {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  
+  /* Year selector */
+  .row.items-center.justify-between.bg-grey-3 .q-select {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  
+  /* Button group */
+  .row.items-center.justify-between.bg-grey-3 > div:last-child {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  
+  .row.items-center.justify-between.bg-grey-3 .q-btn {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+  
+  /* Search and Add Account section */
+  .row.items-center.justify-between.q-mb-sm {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  
+  .row.items-center.justify-between.q-mb-sm .q-input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  
+  .row.items-center.justify-between.q-mb-sm .q-btn {
+    width: 100% !important;
+  }
+  
+  /* Expansion items */
+  .q-expansion-item .row.items-center.justify-between {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+  
+  .q-expansion-item .row.items-center.justify-between > div:first-child {
+    width: 100% !important;
+  }
+  
+  .q-expansion-item .row.items-center.justify-between > div:last-child {
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 4px !important;
+  }
+  
+  /* Type expansion items */
+  .type-expansion .row.items-center.justify-between {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+  
+  .type-expansion .row.items-center.justify-between > div:first-child {
+    width: 100% !important;
+  }
+  
+  .type-expansion .row.items-center.justify-between > div:last-child {
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 4px !important;
+  }
+  
+  /* Item cards */
+  .bg-green-1 .row.items-center.justify-between {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+  
+  .bg-green-1 .row.items-center.justify-between > div:first-child {
+    width: 100% !important;
+  }
+  
+  .bg-green-1 .row.items-center.justify-between > div:last-child {
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 4px !important;
+  }
+  
+  /* Dialog adjustments */
+  .q-dialog .q-card {
+    min-width: 90vw !important;
+    max-width: 95vw !important;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+  /* Small Tablet View */
+  .Main-card {
+    max-width: 95% !important;
+    height: 75vh !important;
+  }
+  
+  /* Header section */
+  .row.items-center.justify-between.bg-grey-3 {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  
+  /* Year selector */
+  .row.items-center.justify-between.bg-grey-3 .q-select {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  
+  /* Button group */
+  .row.items-center.justify-between.bg-grey-3 > div:last-child {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  
+  .row.items-center.justify-between.bg-grey-3 .q-btn {
+    flex: 1 !important;
+  }
+  
+  /* Search and Add Account section */
+  .row.items-center.justify-between.q-mb-sm {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  
+  .row.items-center.justify-between.q-mb-sm .q-input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  
+  .row.items-center.justify-between.q-mb-sm .q-btn {
+    width: 100% !important;
+  }
+  
+  /* Dialog adjustments */
+  .q-dialog .q-card {
+    min-width: 80vw !important;
+    max-width: 90vw !important;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1200px) {
+  /* Large Tablet View */
+  .Main-card {
+    max-width: 90% !important;
+    height: 72vh !important;
+  }
+  
+  /* Header section */
+  .row.items-center.justify-between.bg-grey-3 {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 16px !important;
+  }
+  
+  /* Year selector */
+  .row.items-center.justify-between.bg-grey-3 .q-select {
+    width: 300px !important;
+  }
+  
+  /* Button group */
+  .row.items-center.justify-between.bg-grey-3 > div:last-child {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 8px !important;
+  }
+  
+  /* Search and Add Account section */
+  .row.items-center.justify-between.q-mb-sm {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 16px !important;
+  }
+  
+  .row.items-center.justify-between.q-mb-sm .q-input {
+    width: 300px !important;
+    min-width: 300px !important;
+  }
+  
+  .row.items-center.justify-between.q-mb-sm .q-btn {
+    min-width: 150px !important;
+  }
+}
+
+@media (min-width: 1201px) {
+  /* Desktop View */
+  .Main-card {
+    max-width: 1200px !important;
+    height: 70vh !important;
+  }
+  
+  /* Header section */
+  .row.items-center.justify-between.bg-grey-3 {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 16px !important;
+  }
+  
+  /* Year selector */
+  .row.items-center.justify-between.bg-grey-3 .q-select {
+    width: 300px !important;
+  }
+  
+  /* Button group */
+  .row.items-center.justify-between.bg-grey-3 > div:last-child {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 8px !important;
+  }
+  
+  /* Search and Add Account section */
+  .row.items-center.justify-between.q-mb-sm {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 16px !important;
+  }
+  
+  .row.items-center.justify-between.q-mb-sm .q-input {
+    width: 300px !important;
+    min-width: 300px !important;
+  }
+  
+  .row.items-center.justify-between.q-mb-sm .q-btn {
+    min-width: 150px !important;
+  }
+}
+
+/* General responsive improvements */
+@media (max-width: 900px) {
+  /* Adjust text sizes for better readability */
+  .text-h5 {
+    font-size: 1.2rem !important;
+  }
+  
+  .text-body1 {
+    font-size: 0.9rem !important;
+  }
+  
+  .text-body2 {
+    font-size: 0.85rem !important;
+  }
+  
+  /* Adjust padding for better mobile experience */
+  .q-pa-md {
+    padding: 12px !important;
+  }
+  
+  .q-pa-sm {
+    padding: 8px !important;
+  }
+  
+  /* Make buttons more touch-friendly */
+  .q-btn {
+    min-height: 40px !important;
+  }
+  
+  /* Adjust card margins */
+  .q-card {
+    margin: 4px !important;
+  }
+}
+
+/* Ensure proper spacing in all views */
+.q-gutter-sm > * {
+  margin-bottom: 8px !important;
+}
+
+.q-gutter-xs > * {
+  margin-bottom: 4px !important;
 }
 </style>

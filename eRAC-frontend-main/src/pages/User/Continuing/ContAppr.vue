@@ -16,67 +16,108 @@
 </div>
 
     <div class="q-mb-md">
-      <div class="row items-center justify-between q-gutter-sm">
-        <!-- Search Input -->
+      <!-- Desktop & Mobile: All in one row -->
+      <div class="row items-center justify-between q-gutter-sm all-in-one-row">
         <q-input
-        bg-color="white"
-          dense
+          bg-color="white"
           outlined
-          debounce="300"
-          v-model="searchQuery"
+          dense
           placeholder="Search Description..."
-          style="width: 350px"
+          v-model="searchQuery"
+          class="custom-search-input"
         >
           <template v-slot:append>
             <q-icon name="search" />
           </template>
         </q-input>
-
-        <div class="t q-px-xl"></div>
-
-        <!-- Date Range Group -->
-        <!-- <div class="row items-center justify-between q-xs">
-          <div>
-            <q-input
-              bg-color="white"
-              outlined
-              dense
-              v-model="dateFrom"
-              label="From"
-              mask="##/##/####"
-              style="width: 180px;"
-            >
-              <template v-slot:append>
-                <q-icon name="event">
-                  <q-popup-proxy cover transition-show="scale">
-                    <q-date v-model="dateFrom" mask="DD/MM/YYYY" />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
-          </div>
-          <div>
-            <q-input
-              bg-color="white"
-              outlined
-              dense
-              v-model="dateTo"
-              label="To"
-              mask="##/##/####"
-              style="width: 180px;"
-            >
-              <template v-slot:append>
-                <q-icon name="event">
-                  <q-popup-proxy cover transition-show="scale">
-                    <q-date v-model="dateTo" mask="DD/MM/YYYY" />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
-          </div>
-        </div> -->
-
-        <q-btn label="Continue Accounts" @click="showContinueDialog = true" color="secondary" />
+        <q-space />
+        <q-input
+          bg-color="white"
+          outlined
+          dense
+          label="From"
+          v-model="dateFrom"
+          mask="##/##/####"
+          class="custom-date-from"
+        >
+          <template v-slot:append>
+            <q-icon name="event" class="calend-icon">
+              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                <q-date v-model="dateFrom" mask="DD/MM/YYYY" />
+              </q-popup-proxy>
+            </q-icon>
+          </template>
+        </q-input>
+        <q-input
+          bg-color="white"
+          outlined
+          dense
+          label="To"
+          v-model="dateTo"
+          mask="##/##/####"
+          class="custom-date-to"
+        >
+          <template v-slot:append>
+            <q-icon name="event" class="calend-icon">
+              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                <q-date v-model="dateTo" mask="DD/MM/YYYY" />
+              </q-popup-proxy>
+            </q-icon>
+          </template>
+        </q-input>
+        <q-btn label="Continue Accounts" @click="showContinueDialog = true" color="secondary" style="min-width: 180px;" />
+      </div>
+      <!-- iPad: Search input in one row, From/To/Add in a single row below -->
+      <div class="ipad-search-row" style="display: none;">
+        <q-input
+          bg-color="white"
+          outlined
+          dense
+          placeholder="Search Description..."
+          v-model="searchQuery"
+          class="custom-search-input"
+        >
+          <template v-slot:append>
+            <q-icon name="search" />
+          </template>
+        </q-input>
+      </div>
+      <div class="row items-center q-gutter-sm ipad-dateadd-row" style="display: none;">
+        <q-input
+          bg-color="white"
+          outlined
+          dense
+          label="From"
+          v-model="dateFrom"
+          mask="##/##/####"
+          class="custom-date-from"
+        >
+          <template v-slot:append>
+            <q-icon name="event" class="calend-icon">
+              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                <q-date v-model="dateFrom" mask="DD/MM/YYYY" />
+              </q-popup-proxy>
+            </q-icon>
+          </template>
+        </q-input>
+        <q-input
+          bg-color="white"
+          outlined
+          dense
+          label="To"
+          v-model="dateTo"
+          mask="##/##/####"
+          class="custom-date-to"
+        >
+          <template v-slot:append>
+            <q-icon name="event" class="calend-icon">
+              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                <q-date v-model="dateTo" mask="DD/MM/YYYY" />
+              </q-popup-proxy>
+            </q-icon>
+          </template>
+        </q-input>
+        <q-btn label="Continue Accounts" @click="showContinueDialog = true" color="secondary" style="min-width: 180px;" />
       </div>
     </div>
 
@@ -582,5 +623,73 @@ defineExpose({
 .cont-appr{
   background-color: #D9D9D9; /* Light gray background */
   min-height: 100vh; /* Ensure full height */
+}
+
+.custom-search-input {
+  min-width: 450px;
+}
+@media (max-width: 600px) {
+  .custom-search-input {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+@media (max-width: 900px) {
+  .row.q-gutter-sm {
+    flex-wrap: wrap;
+  }
+  .row.q-gutter-sm > *:not(.q-space) {
+    flex: 1 1 100%;
+    max-width: 100%;
+    margin-bottom: 8px;
+  }
+  .q-space {
+    display: none !important;
+  }
+}
+@media (min-width: 768px) and (max-width: 1024px) {
+  .all-in-one-row {
+    display: none !important;
+  }
+  .ipad-search-row {
+    display: block !important;
+    margin-bottom: 8px;
+  }
+  .ipad-dateadd-row {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+  .ipad-date-row {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+  .custom-date-from,
+  .custom-date-to {
+    flex: 1 1 0 !important;
+    min-width: 120px !important;
+    width: auto !important;
+    max-width: 100% !important;
+  }
+}
+@media (max-width: 767px), (min-width: 1025px) {
+  .ipad-search-row,
+  .ipad-dateadd-row {
+    display: none !important;
+  }
+  .all-in-one-row {
+    display: flex !important;
+  }
+  .ipad-date-row {
+    display: none !important;
+  }
 }
 </style>
