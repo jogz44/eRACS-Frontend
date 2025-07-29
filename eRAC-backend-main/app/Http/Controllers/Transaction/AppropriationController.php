@@ -168,7 +168,10 @@ use Illuminate\Validation\Rule;
                     ];
                 });
 
-            return response()->json($classes);
+            return response()->json([
+                'status' => true,
+                'data' => $classes
+            ]);
         }
 
 

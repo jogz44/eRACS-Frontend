@@ -127,8 +127,8 @@
                       <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                         <q-date
                           v-model="orDetail.orDate"
-                          mask="YYYY-MM-DD"
-                          @update:model-value="calculateTotals"
+                          mask="DD/MM/YYYY"
+                          @update:model-value="(val) => handleDateChange(val, index)"
                         />
                       </q-popup-proxy>
                     </q-icon>
@@ -210,7 +210,13 @@
 
       <q-card-actions align="right" class="q-pa-md">
         <q-btn flat label="Partial" color="warning" @click="store.closeDialog('orDetails')" />
-        <q-btn label="Submit" color="green" @click="store.saveOrDetails" :disable="!isValid" />
+        <q-btn 
+          label="Submit" 
+          color="green" 
+          @click="handleSaveOrDetails" 
+          :disable="!isValid"
+          :loading="saving"
+        />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -219,7 +225,11 @@
 <script setup>
 import { computed, watch, ref, nextTick } from 'vue'
 import { useDisbursementStore } from 'stores/disbursementStore'
+import { useQuasar } from 'quasar'
 import axios from 'axios'
+
+const $q = useQuasar()
+const saving = ref(false)
 
 const store = useDisbursementStore()
 const orImageInputs = ref([])
@@ -234,18 +244,35 @@ async function fetchOrDetails() {
   try {
     const res = await axios.get(`/api/barangay/disbursements/${store.currentLiquidation.id}/or-details`)
     // Map backend fields to frontend fields
-    store.currentLiquidation.orDetails = res.data.data.map(or => ({
-      orDate: or.or_date,
-      orNumber: or.or_number,
-      orAmount: or.or_amount,
-      orImage: null, // Image upload handled separately
-      orPhotoUrl: or.or_photo ? `/storage/${or.or_photo}` : null,
-      remarks: or.remarks || '',
-    }))
+    store.currentLiquidation.orDetails = res.data.data.map(or => {
+      // Convert YYYY-MM-DD to DD/MM/YYYY format
+      let formattedDate = ''
+      if (or.or_date) {
+        const dateParts = or.or_date.split('-')
+        if (dateParts.length === 3) {
+          formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`
+        }
+      }
+      
+      return {
+        orDate: formattedDate,
+        orNumber: or.or_number,
+        orAmount: or.or_amount,
+        orImage: null, // Image upload handled separately
+        orPhotoUrl: or.or_photo ? `/storage/${or.or_photo}` : null,
+        remarks: or.remarks || '',
+      }
+    })
   } catch {
     // fallback: initialize empty
+    const today = new Date()
+    const dd = String(today.getDate()).padStart(2, '0')
+    const mm = String(today.getMonth() + 1).padStart(2, '0')
+    const yyyy = today.getFullYear()
+    const todayFormatted = `${dd}/${mm}/${yyyy}`
+    
     store.currentLiquidation.orDetails = [
-      { orNumber: '', orAmount: '', orImage: null, remarks: '' },
+      { orNumber: '', orAmount: '', orDate: todayFormatted, orImage: null, orPhotoUrl: null, serverPhotoPath: null, remarks: '' },
     ]
   }
 }
@@ -280,10 +307,21 @@ const addOrDetail = () => {
   if (!store.currentLiquidation.orDetails) {
     store.currentLiquidation.orDetails = []
   }
+  
+  // Get today's date in DD/MM/YYYY format
+  const today = new Date()
+  const dd = String(today.getDate()).padStart(2, '0')
+  const mm = String(today.getMonth() + 1).padStart(2, '0')
+  const yyyy = today.getFullYear()
+  const todayFormatted = `${dd}/${mm}/${yyyy}`
+  
   store.currentLiquidation.orDetails.push({
     orNumber: '',
     orAmount: '',
+    orDate: todayFormatted,
     orImage: null,
+    orPhotoUrl: null,
+    serverPhotoPath: null,
     remarks: '',
   })
 }
@@ -313,19 +351,29 @@ function triggerOrFileInput(index) {
 function onOrImageChange(e, index) {
   const file = e.target.files && e.target.files[0]
   if (file) {
-    // Clean up previous object URL if any
-    const prevUrl = store.currentLiquidation.orDetails[index].orPhotoUrl
-    if (prevUrl) URL.revokeObjectURL(prevUrl)
+    // Store the file for later upload
     store.currentLiquidation.orDetails[index].orImage = file
-    store.currentLiquidation.orDetails[index].orPhotoUrl = URL.createObjectURL(file)
+    
+    // Create local file path for preview
+    const localPath = URL.createObjectURL(file)
+    store.currentLiquidation.orDetails[index].orPhotoUrl = localPath
+    
+    $q.notify({
+      type: 'positive',
+      message: 'Photo selected successfully!',
+      position: 'top',
+    })
   }
 }
 
 function removeOrImage(index) {
   const prevUrl = store.currentLiquidation.orDetails[index].orPhotoUrl
-  if (prevUrl) URL.revokeObjectURL(prevUrl)
+  if (prevUrl && prevUrl.startsWith('blob:')) {
+    URL.revokeObjectURL(prevUrl)
+  }
   store.currentLiquidation.orDetails[index].orImage = null
   store.currentLiquidation.orDetails[index].orPhotoUrl = null
+  store.currentLiquidation.orDetails[index].serverPhotoPath = null
   const input = orImageInputs.value[index]
   if (input) input.value = ''
 }
@@ -338,8 +386,75 @@ function removeOrImage(index) {
 
 const isValid = computed(() => {
   return (
-    store.currentLiquidation.orDetails?.every((or) => or.orNumber && or.orAmount && or.orImage) ??
+    store.currentLiquidation.orDetails?.every((or) => 
+      or.orNumber && or.orAmount && or.orDate && or.orPhotoUrl
+    ) ??
     false
   )
 })
+
+const handleDateChange = (date, index) => {
+  console.log('Date changed:', date, 'for index:', index)
+  store.currentLiquidation.orDetails[index].orDate = date
+  calculateTotals()
+}
+
+const handleSaveOrDetails = async () => {
+  saving.value = true
+  try {
+    // First, upload all photos that haven't been uploaded yet
+    for (let i = 0; i < store.currentLiquidation.orDetails.length; i++) {
+      const orDetail = store.currentLiquidation.orDetails[i]
+      if (orDetail.orImage && !orDetail.serverPhotoPath) {
+        try {
+          const uploadResult = await store.uploadOrPhoto(orDetail.orImage)
+          if (uploadResult.success) {
+            store.currentLiquidation.orDetails[i].serverPhotoPath = uploadResult.path
+            // Keep the local preview visible, don't replace it
+            // The server path is stored separately for database
+          } else {
+            throw new Error(uploadResult.error)
+          }
+        } catch (error) {
+          console.error('Error uploading photo:', error)
+          $q.notify({
+            type: 'negative',
+            message: `Failed to upload photo for OR ${orDetail.orNumber || i + 1}: ${error.message}`,
+            icon: 'error',
+            position: 'top',
+          })
+          return
+        }
+      }
+    }
+    
+    // Now save the OR details
+    const result = await store.saveOrDetails()
+    if (result.success) {
+      $q.notify({
+        type: 'positive',
+        message: 'OR Details saved successfully!',
+        icon: 'check_circle',
+        position: 'top',
+      })
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: result.error || 'Failed to save OR details',
+        icon: 'error',
+        position: 'top',
+      })
+    }
+  } catch (error) {
+    console.error('Error saving OR details:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'An error occurred while saving',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    saving.value = false
+  }
+}
 </script>

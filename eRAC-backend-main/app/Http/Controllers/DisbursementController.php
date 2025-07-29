@@ -56,11 +56,217 @@ class DisbursementController extends Controller
         ]);
     }
 
+    // POST /api/barangay/disbursements
+    public function store(Request $request)
+    {
+        $request->validate([
+            'date' => 'required|string|regex:/^\d{2}\/\d{2}\/\d{4}$/',
+            'dv_number' => 'required|string|unique:disbursements,dv_number',
+            'cheque_number' => 'required|string',
+            'bank_id' => 'required|exists:lib_banks,id',
+            'payee' => 'required|string',
+            'dv_amount' => 'required|numeric|min:0',
+            'expenses' => 'array',
+            'expenses.*.accountId' => 'required|exists:lib_expense_items,id',
+            'expenses.*.amount' => 'required|numeric|min:0',
+            'expenses.*.particular' => 'nullable|string',
+        ]);
+
+        try {
+            $user = $request->user();
+            
+            // Convert date from DD/MM/YYYY to YYYY-MM-DD
+            $dateParts = explode('/', $request->date);
+            $formattedDate = $dateParts[2] . '-' . $dateParts[1] . '-' . $dateParts[0];
+
+            $disbursement = Disbursement::create([
+                'barangay_id' => $user->barangay_id,
+                'date' => $formattedDate,
+                'dv_number' => $request->dv_number,
+                'cheque_number' => $request->cheque_number,
+                'bank_id' => $request->bank_id,
+                'payee' => $request->payee,
+                'dv_amount' => $request->dv_amount,
+                'status' => 'Pending',
+            ]);
+
+            // Save expenses if provided
+            if ($request->has('expenses') && is_array($request->expenses)) {
+                foreach ($request->expenses as $expense) {
+                    // You might want to create a separate table for disbursement expenses
+                    // For now, we'll just log them or store them in a different way
+                    \Log::info('Disbursement expense:', [
+                        'disbursement_id' => $disbursement->id,
+                        'expense_item_id' => $expense['accountId'],
+                        'amount' => $expense['amount'],
+                        'particular' => $expense['particular'] ?? '',
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Disbursement created successfully',
+                'data' => $disbursement
+            ], 201);
+
+        } catch (\Exception $e) {
+            \Log::error('Error creating disbursement: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to create disbursement',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     // GET /api/barangay/disbursements/{id}/or-details
     public function getOrDetails($id)
     {
         $orDetails = DisbursementOrDetail::where('disbursement_id', $id)->get();
         return response()->json(['status' => true, 'data' => $orDetails]);
+    }
+
+    // POST /api/barangay/disbursements/{id}/or-details
+    public function saveOrDetails(Request $request, $id)
+    {
+        $request->validate([
+            'orDetails' => 'required|array',
+            'orDetails.*.orNumber' => 'required|string',
+            'orDetails.*.orAmount' => 'required|numeric|min:0',
+            'orDetails.*.orDate' => 'required|string|regex:/^\d{2}\/\d{2}\/\d{4}$/',
+            'orDetails.*.orPhotoUrl' => 'required|string',
+            'orDetails.*.remarks' => 'nullable|string',
+            'liquidatedAmount' => 'required|numeric|min:0',
+        ]);
+
+        try {
+            $user = $request->user();
+            
+            // Find the disbursement
+            $disbursement = Disbursement::where('id', $id)
+                ->where('barangay_id', $user->barangay_id)
+                ->firstOrFail();
+
+            // Delete existing OR details for this disbursement
+            DisbursementOrDetail::where('disbursement_id', $id)->delete();
+
+            // Save new OR details
+            foreach ($request->orDetails as $orDetail) {
+                // Convert date from DD/MM/YYYY to YYYY-MM-DD if provided
+                $orDate = null;
+                if (!empty($orDetail['orDate'])) {
+                    $dateParts = explode('/', $orDetail['orDate']);
+                    if (count($dateParts) === 3) {
+                        $orDate = $dateParts[2] . '-' . $dateParts[1] . '-' . $dateParts[0];
+                    }
+                }
+
+                DisbursementOrDetail::create([
+                    'disbursement_id' => $id,
+                    'or_date' => $orDate,
+                    'or_number' => $orDetail['orNumber'],
+                    'or_amount' => $orDetail['orAmount'],
+                    'remarks' => $orDetail['remarks'] ?? '',
+                    'or_photo' => $orDetail['orPhotoUrl'] ?? null, // Save the photo URL/path
+                ]);
+            }
+
+            // Update disbursement status to liquidated
+            $disbursement->update([
+                'status' => 'Liquidated',
+                'liquidated_amount' => $request->liquidatedAmount,
+                'liquidated_at' => now(),
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'OR Details saved successfully',
+                'data' => [
+                    'disbursement' => $disbursement,
+                    'orDetails' => DisbursementOrDetail::where('disbursement_id', $id)->get()
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error saving OR details: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to save OR details',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // POST /api/barangay/disbursements/or-photo/upload
+    public function uploadOrPhoto(Request $request)
+    {
+        $request->validate([
+            'photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // 2MB max
+        ]);
+
+        try {
+            $user = $request->user();
+            
+            if ($request->hasFile('photo')) {
+                $file = $request->file('photo');
+                $fileName = time() . '_' . $user->id . '_' . $file->getClientOriginalName();
+                $path = $file->storeAs('or-photos', $fileName, 'public');
+                
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Photo uploaded successfully',
+                    'path' => $path
+                ]);
+            }
+
+            return response()->json([
+                'status' => false,
+                'message' => 'No photo provided'
+            ], 400);
+
+        } catch (\Exception $e) {
+            \Log::error('Error uploading OR photo: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to upload photo',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // DELETE /api/barangay/disbursements/or-photo/delete
+    public function deleteOrPhoto(Request $request)
+    {
+        $request->validate([
+            'path' => 'required|string',
+        ]);
+
+        try {
+            $path = $request->path;
+            
+            if (\Storage::disk('public')->exists($path)) {
+                \Storage::disk('public')->delete($path);
+                
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Photo deleted successfully'
+                ]);
+            }
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Photo not found'
+            ], 404);
+
+        } catch (\Exception $e) {
+            \Log::error('Error deleting OR photo: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to delete photo',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     // GET /api/barangay/disbursements/{id}
@@ -107,6 +313,72 @@ class DisbursementController extends Controller
         } catch (\Exception $e) {
             \Log::error("Error fetching disbursement: " . $e->getMessage());
             return response()->json(['error' => 'Internal server error'], 500);
+        }
+    }
+
+    // PUT /api/barangay/disbursements/{id}
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'date' => 'required|string|regex:/^\d{2}\/\d{2}\/\d{4}$/',
+            'dv_number' => 'required|string|unique:disbursements,dv_number,' . $id,
+            'cheque_number' => 'required|string',
+            'bank_id' => 'required|exists:lib_banks,id',
+            'payee' => 'required|string',
+            'dv_amount' => 'required|numeric|min:0',
+            'expenses' => 'array',
+            'expenses.*.accountId' => 'required|exists:lib_expense_items,id',
+            'expenses.*.amount' => 'required|numeric|min:0',
+            'expenses.*.particular' => 'nullable|string',
+        ]);
+
+        try {
+            $user = $request->user();
+            
+            // Find the disbursement
+            $disbursement = Disbursement::where('id', $id)
+                ->where('barangay_id', $user->barangay_id)
+                ->firstOrFail();
+            
+            // Convert date from DD/MM/YYYY to YYYY-MM-DD
+            $dateParts = explode('/', $request->date);
+            $formattedDate = $dateParts[2] . '-' . $dateParts[1] . '-' . $dateParts[0];
+
+            // Update the disbursement
+            $disbursement->update([
+                'date' => $formattedDate,
+                'dv_number' => $request->dv_number,
+                'cheque_number' => $request->cheque_number,
+                'bank_id' => $request->bank_id,
+                'payee' => $request->payee,
+                'dv_amount' => $request->dv_amount,
+            ]);
+
+            // Log expenses if provided
+            if ($request->has('expenses') && is_array($request->expenses)) {
+                foreach ($request->expenses as $expense) {
+                    \Log::info('Updated disbursement expense:', [
+                        'disbursement_id' => $disbursement->id,
+                        'expense_item_id' => $expense['accountId'],
+                        'amount' => $expense['amount'],
+                        'particular' => $expense['particular'] ?? '',
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Disbursement updated successfully',
+                'data' => $disbursement
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error updating disbursement: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to update disbursement',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 
