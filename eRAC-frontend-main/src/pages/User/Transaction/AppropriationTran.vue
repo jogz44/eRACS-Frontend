@@ -185,7 +185,7 @@
         :loading="appropriationStore.loading"
         row-key="id"
       >
-        
+
         <template v-slot:body-cell-index="props">
           <q-td :props="props">
             {{ props.pageIndex + 1 }}
@@ -662,7 +662,7 @@ const columns = [
   {
     name: 'index',
     label: '#',
-    field: 'index', 
+    field: 'index',
     align: 'left',
     sortable: false, // optional: disable sorting
   },
