@@ -13,6 +13,10 @@
           title="Refresh pending users"
         />
         </div>
+        <LogsActivity
+        v-model="showLogsActivity"
+        :selected-user="selectedLog"
+      />
       <q-card-section>
         <!-- Search Bar -->
         <div class="row q-mb-md">
@@ -53,6 +57,17 @@
               {{ formatDate(props.row.created_at) }}
             </q-td>
           </template>
+          <template v-slot:body-cell-actions="props">
+            <q-td :props="props" class="text-center">
+              <q-btn
+                label="VIEW ACTIVITY"
+                color="green"
+                size="sm"
+                @click="openLogsActivity(props.row)"
+                class="view-button"
+              />
+            </q-td>
+          </template>
         </q-table>
       </q-card-section>
     </div>
@@ -65,16 +80,18 @@ export default {
   name: 'LogsPage',
   data() {
     return {
+      showLogsActivity: false,
+      selectedLog: null,
       loading: false,
       search: '',
       logs: [],
       columns: [
         { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
-        { name: 'fullname', label: 'NAME', field: 'fullname', align: 'left', sortable: true },
-        { name: 'barangay', label: 'BARANGAY', field: 'barangay', align: 'left', sortable: true },
-        { name: 'position', label: 'POSITION', field: 'position', align: 'left', sortable: true },
-        { name: 'date', label: 'DATE', field: 'date', align: 'left', sortable: true },
-        { name: 'activity', label: 'ACTIVITY', field: 'activity', align: 'left', sortable: true },
+        { name: 'fullname', label: 'Name', field: 'fullname', align: 'left', sortable: true },
+        { name: 'barangay', label: 'Barangay', field: 'barangay', align: 'left', sortable: true },
+        { name: 'position', label: 'Position', field: 'position', align: 'left', sortable: true },
+        { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
+        { name: 'actions', label: 'Actions', align: 'center', sortable: false },
       ],
     }
   },
@@ -114,6 +131,10 @@ export default {
     await this.loadLogs()
   },
   methods: {
+    openLogsActivity(row) {
+      this.selectedLog = row;
+      this.showLogsActivity = true;
+    },
     formatDate(dateString) {
       const date = new Date(dateString)
       return date.toLocaleString('en-US', {
@@ -140,6 +161,11 @@ export default {
       } finally {
         this.loading = false
       }
+    },
+    openAccessModal(row) {
+      // Store the selected row data for the modal
+      console.log('Opening modal for row:', row)
+      // TODO: Implement modal logic
     },
   },
 }

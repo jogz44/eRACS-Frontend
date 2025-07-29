@@ -127,7 +127,6 @@ export default {
       columns: [
         { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
         { name: 'name', label: 'Name', field: 'name', align: 'left', sortable: true  },
-        { name: 'barangay', label: 'Barangay', field: 'barangay', align: 'left', sortable: true  },
         { name: 'position', label: 'Position', field: 'position', align: 'left', sortable: true  },
         { name: 'actions', label: 'Action', field: 'actions', align: 'center' },
       ],
