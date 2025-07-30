@@ -18,7 +18,7 @@
     <!-- Main Card -->
     <q-card
       class="q-pa-none shadow-3 rounded-borders q-mx-auto Main-card"
-      style="overflow: hidden; max-width: 1200px; height: 70vh"
+      style="overflow: hidden; max-width: 1600px; height: 70vh"
     >
       <!-- Header Section -->
       <div class="row items-center justify-between bg-grey-3 q-pa-md">
@@ -1822,7 +1822,7 @@ watch(
 @media (min-width: 1201px) {
   /* Desktop View */
   .Main-card {
-    max-width: 1200px !important;
+    max-width: 1600px !important;
     height: 70vh !important;
   }
   
