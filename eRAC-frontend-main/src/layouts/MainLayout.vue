@@ -89,6 +89,7 @@
               {{ authStore.user.position_name }}
             </span>
           </div>
+          <q-space />
           <q-btn
             icon="logout"
             color="white"
@@ -296,7 +297,7 @@ const toggleExpand = (title, parentTitle = null) => {
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: flex-start; /* left-aligned */
+  justify-content: space-between; /* space between items */
   gap: 16px;
   width: 100%;
 }
