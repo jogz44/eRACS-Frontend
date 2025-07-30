@@ -12,9 +12,15 @@ class RacReportController extends Controller
         $data = $request->validate([
             'from' => 'required|date',
             'to'   => 'required|date|after_or_equal:from',
-            'class_id' => 'nullable|integer',
+            'user_id' => 'required|integer',
+            'noted_by_id' => 'required|integer',
+            'certified_by_id' => 'required|integer',
+            'expence_id' => 'required|integer',
+
         ]);
 
+        //change Order to your actual model
+        // and adjust the fields accordingly
         $q = Order::query()->whereBetween('date', [$data['from'], $data['to']]);
 
         if (!empty($data['class_id'])) {
