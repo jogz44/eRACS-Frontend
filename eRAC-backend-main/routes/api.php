@@ -137,6 +137,7 @@ Route::prefix('barangay')->group(function () {
 Route::prefix('admin')->group(function () {
     Route::post('/login', [AdminAuthController::class, 'login']);
 
+
     // Just use Sanctum's default auth
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'logout']);
@@ -158,4 +159,7 @@ Route::prefix('admin')->group(function () {
     Route::get('/admin/users', [AdminAuthController::class, 'getUsersWithPermissions']);
     Route::post('/admin/user-access/{id}', [AdminAuthController::class, 'updateUserPermissions']);
     Route::get('/admin/logs', [AdminAuthController::class, 'getAllLogs']);
+    
+    // Admin Individual Log Open
+    Route::get('/admin/logs/{user}/{day}', [AdminAuthController::class, 'getUserLogs']);
 });

@@ -9,7 +9,7 @@
 
       <q-card-section class="q-pa-md">
         <div class="user-info q-mb-md">
-          <div class="text-subtitle1 text-weight-bold">{{ selectedUser?.fullname }}</div>
+          <div class="text-subtitle1 text-weight-bold">{{ selectedUser?.fullname }} - {{ formatDate(selectedUser?.log_date) }}</div>
           <div class="text-caption">{{ selectedUser?.position }} - {{ selectedUser?.barangay }}</div>
         </div>
 
@@ -25,15 +25,15 @@
         >
           <template v-slot:body-cell-created_at="props">
             <q-td :props="props">
-              {{ formatDate(props.row.created_at) }}
+              {{ formatTime(props.row.created_at) }}
             </q-td>
           </template>
 
           <template v-slot:body-cell-description="props">
             <q-td :props="props">
               <div class="activity-description">
-                <span class="text-weight-medium">{{ props.row.action }}:</span>
-                {{ props.row.description }}
+                <span class="text-weight-medium">{{ props.row.activity }}:</span>
+                {{ props.row.details }}
               </div>
             </q-td>
           </template>
@@ -55,6 +55,7 @@
 <script>
 import { ref, computed, watch } from 'vue'
 import { date } from 'quasar'
+import { api } from 'boot/axios' // Adjust the import based on your axios setup
 
 export default {
   name: 'LogsActivity',
@@ -111,7 +112,7 @@ export default {
     const columns = [
       {
         name: 'created_at',
-        label: 'Date & Time',
+        label: 'Time',
         field: 'created_at',
         sortable: true,
         align: 'left'
@@ -143,15 +144,9 @@ export default {
       try {
         // For demo purposes, use sample data
         activities.value = sampleActivities
-
-        // Uncomment below for real API integration
-        /*const response = await api.get(`/api/barangay/getlogs/${props.selectedUser.id}`, {
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-            'Content-Type': 'application/json',
-          }
-        })
-        activities.value = response.data*/
+        const response = await api.get(`/api/admin/admin/logs/${props.selectedUser.id}/${props.selectedUser.log_date}`)
+        
+        activities.value = response.data
       } catch (error) {
         console.error('Error loading activities:', error)
       } finally {
@@ -159,8 +154,11 @@ export default {
       }
     }
 
+    const formatTime = (dateString) => {
+      return date.formatDate(dateString, 'h:mm A')
+    }
     const formatDate = (dateString) => {
-      return date.formatDate(dateString, 'MMMM D, YYYY h:mm A')
+      return date.formatDate(dateString, 'MMMM D, YYYY')
     }
 
     const closeDialog = () => {
@@ -171,6 +169,7 @@ export default {
       loading,
       activities,
       columns,
+      formatTime,
       formatDate,
       closeDialog,
       dialogModel
