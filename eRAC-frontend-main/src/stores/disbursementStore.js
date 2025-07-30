@@ -71,9 +71,12 @@ export const useDisbursementStore = defineStore('disbursement', {
   getters: {
     // Filtered expense accounts for search
     expenseAccounts(state) {
-      if (!state.expenseData || state.expenseData.length === 0) return []
+      if (!state.expenseData || state.expenseData.length === 0) {
+        console.log('No expense data available')
+        return []
+      }
 
-      return state.expenseData.reduce((acc, expenseClass) => {
+      const flattened = state.expenseData.reduce((acc, expenseClass) => {
         if (!expenseClass.children) return acc
 
         expenseClass.children.forEach((expenseType) => {
@@ -92,6 +95,9 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         return acc
       }, [])
+      
+      console.log('Flattened expense accounts:', flattened.length)
+      return flattened
     },
 
     disbursementColumns: () => [
@@ -238,9 +244,15 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     async fetchExpenseAccounts() {
       try {
+        console.log('Starting to fetch expense accounts...')
         const appropriationStore = useAppropriationStore()
         await appropriationStore.fetchExpenseHierarchy()
         this.expenseData = appropriationStore.allocations || []
+        console.log('Fetched expense data:', this.expenseData)
+        console.log('Number of expense classes:', this.expenseData.length)
+        if (this.expenseData.length > 0) {
+          console.log('First expense class:', this.expenseData[0])
+        }
       } catch (error) {
         console.error('Error fetching expense accounts:', error)
         this.expenseData = []
@@ -379,7 +391,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     // Dialog Actions
-    openDialog(dialogName) {
+    async openDialog(dialogName) {
       if (dialogName === 'disbursement') {
         const today = new Date()
         const dd = String(today.getDate()).padStart(2, '0')
@@ -398,6 +410,9 @@ export const useDisbursementStore = defineStore('disbursement', {
           return Math.max(max, num)
         }, 0)
         this.forms.disbursement.dvNumber = `DV-${String(yyyy).slice(-2)}-${mm}-${String(lastDV + 1).padStart(3, '0')}`
+      } else if (dialogName === 'expense') {
+        // Fetch expense accounts when opening expense dialog
+        await this.fetchExpenseAccounts()
       }
       this.dialogs[dialogName] = true
     },
@@ -406,14 +421,44 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.dialogs[dialogName] = false
     },
 
-    openOrDetailsDialog(item) {
-      this.currentLiquidation = {
-        ...JSON.parse(JSON.stringify(item)),
-        orNumber: '',
-        orAmount: '',
-        orImage: null,
+    async openOrDetailsDialog(item) {
+      this.currentLiquidation = JSON.parse(JSON.stringify(item));
+      
+      // Fetch existing OR Details from backend if this is a partial liquidation
+      if (item.id && item.status === 'Partial') {
+        try {
+          const res = await api.get(`/api/barangay/disbursements/${item.id}/or-details`);
+          const backendUrl = 'http://localhost:8000';
+          this.currentLiquidation.orDetails = res.data.data.map(or => {
+            // Convert YYYY-MM-DD to DD/MM/YYYY format
+            let formattedDate = '';
+            if (or.or_date) {
+              const dateParts = or.or_date.split('-');
+              if (dateParts.length === 3) {
+                formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+              }
+            }
+            
+            return {
+              orDate: formattedDate,
+              orNumber: or.or_number,
+              orAmount: or.or_amount,
+              orImage: null,
+              orPhotoUrl: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
+              serverPhotoPath: or.or_photo,
+              remarks: or.remarks || '',
+              isReadOnly: true, // Mark existing OR details as read-only
+            };
+          });
+        } catch {
+          this.currentLiquidation.orDetails = [];
+        }
+      } else {
+        // For new liquidations, initialize empty
+        this.currentLiquidation.orDetails = [];
       }
-      this.dialogs.orDetails = true
+      
+      this.dialogs.orDetails = true;
     },
 
     // In your disbursementStore.js actions
@@ -458,25 +503,54 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
     // Disbursement Actions
     // Update your saveDisbursement action in the Pinia store
-    saveDisbursement() {
-      const newId = this.disbursements.length + 1
+    async saveDisbursement() {
+      try {
+        const authStore = useAuthStore()
+        const token = authStore.token
 
-      this.disbursements.push({
-        id: newId,
-        date: this.forms.disbursement.date,
-        dvNumber: this.forms.disbursement.dvNumber,
-        chequeNumber: this.forms.disbursement.chequeNumber,
-        bank_id: this.forms.disbursement.bank_id,
-        payee: this.forms.disbursement.payee,
-        dvAmount: this.totalExpensesAmount,
-        aging: '0 days',
-        status: 'Pending',
-      })
+        // Prepare the payload
+        const payload = {
+          date: this.forms.disbursement.date,
+          dv_number: this.forms.disbursement.dvNumber,
+          cheque_number: this.forms.disbursement.chequeNumber,
+          bank_id: this.forms.disbursement.bank_id,
+          payee: this.forms.disbursement.payee,
+          dv_amount: this.totalExpensesAmount,
+          expenses: this.expenses.map(expense => ({
+            accountId: expense.accountId,
+            amount: expense.amount,
+            particular: expense.particular
+          }))
+        }
 
-      // Reset the form and generate new DV number
-      this.resetForm('disbursement')
-      this.generateNewDisbursementDefaults() // Add this line
-      this.closeDialog('disbursement')
+        console.log('Saving disbursement with payload:', payload)
+
+        const response = await api.post('/api/barangay/disbursements', payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        })
+
+        console.log('Disbursement saved successfully:', response.data)
+
+        // Refresh the disbursements list
+        await this.fetchDisbursements()
+
+        // Reset the form and generate new DV number
+        this.resetForm('disbursement')
+        this.expenses = []
+        this.generateNewDisbursementDefaults()
+        this.closeDialog('disbursement')
+
+        return { success: true, data: response.data.data }
+      } catch (error) {
+        console.error('Failed to save disbursement:', error)
+        return { 
+          success: false, 
+          error: error.response?.data?.message || 'Failed to save disbursement' 
+        }
+      }
     },
 
     generateNewDisbursementDefaults() {
@@ -493,7 +567,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       const newDVNumber = `DV-${String(yyyy).slice(-2)}-${mm}-${String(lastDV + 1).padStart(3, '0')}`
 
       // Update form with new defaults
-      this.forms.disbursement.date = `${mm}/${dd}/${yyyy}`
+      this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
       this.forms.disbursement.dvNumber = newDVNumber
     },
 
@@ -542,7 +616,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       if (dateStr.includes('-')) {
         // 'YYYY-MM-DD'
         const [yyyy, mm, dd] = dateStr.split('-');
-        return `${mm}/${dd}/${yyyy}`;
+        return `${dd}/${mm}/${yyyy}`;
       } 
       else if (dateStr.includes('/')) {
         return dateStr;
@@ -581,21 +655,58 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     async openEditDisbursement(row) {
       await this.fetchDisbursementById(row.id);
+      // Fetch expense accounts for the edit dialog
+      await this.fetchExpenseAccounts();
     },
 
 
-    saveEditedDisbursement() {
+    async saveEditedDisbursement() {
       if (!this.currentItem) return
 
-      const index = this.disbursements.findIndex((d) => d.id === this.currentItem.id)
-      if (index !== -1) {
-        this.disbursements[index] = {
-          ...this.disbursements[index],
-          ...this.forms.disbursement,
-          expenses: [...this.expenses],
-          dvAmount: this.totalExpensesAmount,
+      try {
+        const authStore = useAuthStore()
+        const token = authStore.token
+
+        // Prepare the payload
+        const payload = {
+          date: this.forms.disbursement.date,
+          dv_number: this.forms.disbursement.dvNumber,
+          cheque_number: this.forms.disbursement.chequeNumber,
+          bank_id: this.forms.disbursement.bank_id,
+          payee: this.forms.disbursement.payee,
+          dv_amount: this.totalExpensesAmount,
+          expenses: this.expenses.map(expense => ({
+            accountId: expense.accountId,
+            amount: expense.amount,
+            particular: expense.particular
+          }))
         }
+
+        console.log('Updating disbursement with payload:', payload)
+
+        const response = await api.put(`/api/barangay/disbursements/${this.currentItem.id}`, payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        })
+
+        console.log('Disbursement updated successfully:', response.data)
+
+        // Refresh the disbursements list
+        await this.fetchDisbursements()
+
+        // Close dialog and reset
         this.closeDialog('editDisbursement')
+        this.resetEditDisbursement()
+
+        return { success: true, data: response.data.data }
+      } catch (error) {
+        console.error('Failed to update disbursement:', error)
+        return { 
+          success: false, 
+          error: error.response?.data?.message || 'Failed to update disbursement' 
+        }
       }
     },
 
@@ -625,20 +736,132 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     // Liquidation Actions
-    saveOrDetails() {
-      const index = this.liquidationData.findIndex((d) => d.id === this.currentLiquidation.id)
+    async saveOrDetails() {
+      if (!this.currentLiquidation) {
+        console.warn('currentLiquidation is not available')
+        return
+      }
 
-      if (index !== -1) {
-        const hasOrDetails =
-          this.currentLiquidation.orNumber &&
-          this.currentLiquidation.orAmount &&
-          this.currentLiquidation.orImage
+      // Check if all OR details are complete
+      const allOrDetailsComplete = this.currentLiquidation.orDetails?.every(or => 
+        or.orNumber && or.orAmount && or.orDate && or.orPhotoUrl
+      )
 
-        this.liquidationData[index] = {
-          ...this.currentLiquidation,
-          liquidated: hasOrDetails ? 'Yes' : 'No',
-          actualExpense: this.currentLiquidation.orAmount,
-          returnAmount: this.currentLiquidation.dvAmount - this.currentLiquidation.orAmount,
+      if (!allOrDetailsComplete) {
+        console.warn('Not all OR details are complete')
+        return
+      }
+
+      try {
+        const authStore = useAuthStore()
+        const token = authStore.token
+
+        // Calculate total actual expense from OR details
+        const totalActualExpense = this.currentLiquidation.orDetails?.reduce(
+          (sum, or) => sum + (parseFloat(or.orAmount) || 0), 0
+        ) || 0
+
+        // Prepare the payload
+        const payload = {
+          orDetails: this.currentLiquidation.orDetails.filter(or => !or.isReadOnly).map(or => ({
+            orNumber: or.orNumber,
+            orAmount: or.orAmount,
+            orDate: or.orDate || '',
+            remarks: or.remarks || '',
+            orPhotoUrl: or.serverPhotoPath || '', // Use server path only
+          })),
+          liquidatedAmount: totalActualExpense,
+        }
+
+        console.log('Saving OR details with payload:', payload)
+        console.log('Current liquidation orDetails:', this.currentLiquidation.orDetails)
+
+        const response = await api.post(`/api/barangay/disbursements/${this.currentLiquidation.id}/or-details`, payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        })
+
+        console.log('OR Details saved successfully:', response.data)
+
+        // Refresh the disbursements list
+        await this.fetchDisbursements()
+
+        // Close the dialog after saving
+        this.closeDialog('orDetails')
+
+        return { success: true, data: response.data.data }
+      } catch (error) {
+        console.error('Failed to save OR details:', error)
+        return { 
+          success: false, 
+          error: error.response?.data?.message || 'Failed to save OR details' 
+        }
+      }
+    },
+
+    async savePartialOrDetails() {
+      if (!this.currentLiquidation) {
+        console.warn('currentLiquidation is not available')
+        return
+      }
+
+      // Check if all OR details are complete
+      const allOrDetailsComplete = this.currentLiquidation.orDetails?.every(or => 
+        or.orNumber && or.orAmount && or.orDate && or.orPhotoUrl
+      )
+
+      if (!allOrDetailsComplete) {
+        console.warn('Not all OR details are complete')
+        return
+      }
+
+      try {
+        const authStore = useAuthStore()
+        const token = authStore.token
+
+        // Calculate total actual expense from OR details
+        const totalActualExpense = this.currentLiquidation.orDetails?.reduce(
+          (sum, or) => sum + (parseFloat(or.orAmount) || 0), 0
+        ) || 0
+
+        // Prepare the payload for partial liquidation
+        const payload = {
+          orDetails: this.currentLiquidation.orDetails.filter(or => !or.isReadOnly).map(or => ({
+            orNumber: or.orNumber,
+            orAmount: or.orAmount,
+            orDate: or.orDate || '',
+            remarks: or.remarks || '',
+            orPhotoUrl: or.serverPhotoPath || '', // Use server path only
+          })),
+          liquidatedAmount: totalActualExpense,
+          isPartial: true, // Flag to indicate partial liquidation
+        }
+
+        console.log('Saving partial OR details with payload:', payload)
+
+        const response = await api.post(`/api/barangay/disbursements/${this.currentLiquidation.id}/or-details`, payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        })
+
+        console.log('Partial OR Details saved successfully:', response.data)
+
+        // Refresh the disbursements list
+        await this.fetchDisbursements()
+
+        // Close the dialog after saving
+        this.closeDialog('orDetails')
+
+        return { success: true, data: response.data.data }
+      } catch (error) {
+        console.error('Failed to save partial OR details:', error)
+        return { 
+          success: false, 
+          error: error.response?.data?.message || 'Failed to save partial OR details' 
         }
       }
     },
@@ -679,10 +902,16 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     async uploadOrPhoto(file) {
       try {
+        const authStore = useAuthStore()
+        const token = authStore.token
+        
         const formData = new FormData();
         formData.append('photo', file, file.name);
         const response = await api.post('/api/barangay/disbursements/or-photo/upload', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+          headers: { 
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${token}`,
+          },
         });
         return { success: true, path: response.data.path };
       } catch (error) {

@@ -38,7 +38,7 @@
           <!-- Custom Date Formatting -->
           <template v-slot:body-cell-date="props">
             <q-td :props="props" class="text-center">
-              {{ formatDate(props.row.created_at) }}
+              {{ formatDate(props.row.log_date) }}
             </q-td>
           </template>
 
@@ -143,9 +143,9 @@ export default {
         month: 'long',
         day: 'numeric',
         year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
+        // hour: 'numeric',
+        // minute: '2-digit',
+        // hour12: true
       })
     },
     async loadLogs() {

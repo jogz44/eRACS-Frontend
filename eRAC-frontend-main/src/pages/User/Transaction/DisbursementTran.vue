@@ -173,7 +173,12 @@
               class="modal-cancel-btn"
               @click="store.closeDialog('disbursement')"
             />
-            <q-btn label="Save" class="modal-save-btn" @click="store.saveDisbursement" />
+            <q-btn 
+              label="Save" 
+              class="modal-save-btn" 
+              @click="handleSaveDisbursement"
+              :loading="saving"
+            />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -293,7 +298,7 @@
                 <q-btn
                   class="edit-btn"
                   icon="edit"
-                  v-if="props.row.status === 'Pending'"
+                  v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
                   @click="store.openEditDisbursement(props.row)"
                 />
                 <q-btn
@@ -307,7 +312,7 @@
                   label="Liquidate"
                   class="allocate-btn"
                   color="primary"
-                  v-if="props.row.status === 'Pending'"
+                  v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
                   @click="store.openOrDetailsDialog(props.row)"
                 />
               </div>
@@ -360,6 +365,7 @@ import { useQuasar } from 'quasar'
 
 const $q = useQuasar()
 const loading = ref(false)
+const saving = ref(false)
 
 const loadPendingUsers = async () => {
   loading.value = true
@@ -380,6 +386,38 @@ const loadPendingUsers = async () => {
     })
   } finally {
     loading.value = false
+  }
+}
+
+const handleSaveDisbursement = async () => {
+  saving.value = true
+  try {
+    const result = await store.saveDisbursement()
+    if (result.success) {
+      $q.notify({
+        type: 'positive',
+        message: 'Disbursement saved successfully!',
+        icon: 'check_circle',
+        position: 'top',
+      })
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: result.error || 'Failed to save disbursement',
+        icon: 'error',
+        position: 'top',
+      })
+    }
+  } catch (error) {
+    console.error('Error saving disbursement:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'An error occurred while saving',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    saving.value = false
   }
 }
 

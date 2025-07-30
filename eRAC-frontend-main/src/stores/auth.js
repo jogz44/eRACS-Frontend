@@ -1,9 +1,13 @@
 import { defineStore } from 'pinia'
 import { api } from 'boot/axios'
 
+
+
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     // User state
+
     user: JSON.parse(localStorage.getItem('user_data')) || null,
     token: localStorage.getItem('barangay_token') || null,
     returnUrl: '/home/dashboard',
@@ -13,9 +17,26 @@ export const useAuthStore = defineStore('auth', {
     adminToken: localStorage.getItem('admin_token') || null,
     adminReturnUrl: '/admin/dashboard',
   }),
+   getters: {
+    isAuthenticated: (state) => !!state.token,
+    currentUser: (state) => state.user,
+  },
+
+
+  persist: true,
 
   actions: {
     // Helper methods
+        setToken(token) {
+      this.token = token
+    },
+    setUser(user) {
+      this.user = user
+    },
+    clearAuthData() {
+      this.token = null
+      this.user = null
+    },
     _setAuthData(userData, token) {
       this.user = this._formatUser(userData)
       this.token = token
