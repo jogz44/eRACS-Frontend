@@ -164,7 +164,12 @@
             }
           "
         />
-        <q-btn label="Save" class="modal-save-btn" @click="store.saveEditedDisbursement" />
+        <q-btn 
+          label="Save" 
+          class="modal-save-btn" 
+          @click="handleSaveEditedDisbursement"
+          :loading="saving"
+        />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -173,10 +178,13 @@
 <script setup>
 import { useDisbursementStore } from 'stores/disbursementStore'
 import { useBankStore } from 'stores/bankStore'
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, ref } from 'vue'
+import { useQuasar } from 'quasar'
 
 const store = useDisbursementStore()
 const bankStore = useBankStore()
+const $q = useQuasar()
+const saving = ref(false)
 
 onMounted(async () => {
   if (!bankStore.banks.length) {
@@ -189,5 +197,37 @@ const currentBankLabel = computed(() => {
   const bank = bankStore.banks.find(b => b.id === id)
   return bank ? bank.name : 'Select Bank'
 })
+
+const handleSaveEditedDisbursement = async () => {
+  saving.value = true
+  try {
+    const result = await store.saveEditedDisbursement()
+    if (result.success) {
+      $q.notify({
+        type: 'positive',
+        message: 'Disbursement updated successfully!',
+        icon: 'check_circle',
+        position: 'top',
+      })
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: result.error || 'Failed to update disbursement',
+        icon: 'error',
+        position: 'top',
+      })
+    }
+  } catch (error) {
+    console.error('Error updating disbursement:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'An error occurred while updating',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    saving.value = false
+  }
+}
 
 </script>
