@@ -810,4 +810,106 @@ const openDialog = async () => {
     display: none !important;
   }
 }
+
+/* Responsive Dialog - Only sizing adjustments */
+@media (max-width: 600px) {
+  /* Mobile View - Only size adjustments */
+  .q-dialog .q-card {
+    width: 95vw !important;
+    min-width: 95vw !important;
+    max-width: 95vw !important;
+    margin: 8px !important;
+  }
+  
+  .q-dialog .q-card-section {
+    padding: 12px !important;
+  }
+  
+  .q-dialog .q-gutter-md {
+    gap: 8px !important;
+  }
+  
+  .q-dialog .q-select,
+  .q-dialog .q-input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  
+  .q-dialog .q-btn {
+    min-height: 44px !important;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+  /* Small Tablet View - Only size adjustments */
+  .q-dialog .q-card {
+    width: 90vw !important;
+    min-width: 90vw !important;
+    max-width: 90vw !important;
+  }
+  
+  .q-dialog .q-card-section {
+    padding: 16px !important;
+  }
+  
+  .q-dialog .q-gutter-md {
+    gap: 12px !important;
+  }
+  
+  .q-dialog .q-select,
+  .q-dialog .q-input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  
+  .q-dialog .q-btn {
+    min-height: 44px !important;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1200px) {
+  /* Large Tablet View - Only size adjustments */
+  .q-dialog .q-card {
+    width: 80vw !important;
+    min-width: 80vw !important;
+    max-width: 80vw !important;
+  }
+  
+  .q-dialog .q-card-section {
+    padding: 20px !important;
+  }
+  
+  .q-dialog .q-gutter-md {
+    gap: 16px !important;
+  }
+  
+  .q-dialog .q-select,
+  .q-dialog .q-input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
+@media (min-width: 1201px) {
+  /* Desktop View - Only size adjustments */
+  .q-dialog .q-card {
+    width: 500px !important;
+    min-width: 500px !important;
+    max-width: 500px !important;
+  }
+  
+  .q-dialog .q-card-section {
+    padding: 24px !important;
+  }
+  
+  .q-dialog .q-gutter-md {
+    gap: 20px !important;
+  }
+  
+  .q-dialog .q-select,
+  .q-dialog .q-input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
 </style>
