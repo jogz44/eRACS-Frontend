@@ -23,8 +23,8 @@ class RacReportController extends Controller
         // and adjust the fields accordingly
         $q = Order::query()->whereBetween('date', [$data['from'], $data['to']]);
 
-        if (!empty($data['class_id'])) {
-            $q->where('class_id', $data['class_id']);
+        if (!empty($data['expence_id'])) {
+            $q->where('expence_id', $data['expence_id']);
         }
 
         $rows = $q->orderBy('date')->get()->map(fn($o) => [
