@@ -43,13 +43,14 @@
           </template>
 
           <template v-slot:body-cell-actions="props">
-            <q-td :props="props" class="text-center">
+            <q-td :props="props" class="text-center" style="text-align: center;">
               <q-btn
                 label="VIEW ACTIVITY"
                 color="green"
                 size="sm"
                 @click="openLogsActivity(props.row)"
                 class="view-button"
+                style="margin: 0 auto;"
               />
             </q-td>
           </template>
@@ -95,11 +96,10 @@ export default {
       searchQuery: '',
       logs: [],
       columns: [
-        { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
-        { name: 'fullname', label: 'Fullname', field: 'fullname', align: 'left', sortable: true },
-        { name: 'date', label: 'Date', field: 'date', align: 'center', sortable: true },
-
-        { name: 'actions', label: 'Actions', align: 'center', sortable: false },
+        { name: 'id', label: 'ID', field: 'id', align: 'center', sortable: true, headerAlign: 'center' },
+        { name: 'fullname', label: 'Fullname', field: 'fullname', align: 'center', sortable: true, headerAlign: 'center' },
+        { name: 'date', label: 'Date', field: 'created_at', align: 'center', sortable: true, headerAlign: 'center' },
+        { name: 'actions', label: 'Actions', align: 'center', sortable: false, headerAlign: 'center' },
       ],
     }
   },
@@ -153,6 +153,7 @@ export default {
       try {
         const response = await api.get(`/api/barangay/getlogs/${authStore.getUserID()}`, getAuthConfig())
         this.logs = response.data.data
+        console.log('Loaded logs:', this.logs) // Debug: Check if data is loaded
       } catch (error) {
         console.error('Error loading logs:', error)
         this.$q.notify({
@@ -186,6 +187,41 @@ export default {
 :deep(.q-table th) {
   font-weight: bold;
   background-color: #f5f5f5 !important;
+  text-align: center !important;
+}
+
+/* Align all headers and cells to center */
+:deep(.q-table th[data-col="id"]) {
+  text-align: center !important;
+}
+
+:deep(.q-table th[data-col="fullname"]) {
+  text-align: center !important;
+}
+
+:deep(.q-table th[data-col="date"]) {
+  text-align: center !important;
+}
+
+:deep(.q-table th[data-col="actions"]) {
+  text-align: center !important;
+}
+
+/* Align all table cells to center */
+:deep(.q-table td[data-col="id"]) {
+  text-align: center !important;
+}
+
+:deep(.q-table td[data-col="fullname"]) {
+  text-align: center !important;
+}
+
+:deep(.q-table td[data-col="date"]) {
+  text-align: center !important;
+}
+
+:deep(.q-table td[data-col="actions"]) {
+  text-align: center !important;
 }
 
 :deep(.q-table td) {
@@ -196,6 +232,17 @@ export default {
   text-transform: uppercase;
   font-weight: 500;
   min-width: 120px;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Ensure actions column is properly aligned */
+:deep(.q-table td[data-col="actions"]) {
+  text-align: center !important;
+}
+
+:deep(.q-table th[data-col="actions"]) {
+  text-align: center !important;
 }
 
 /* Responsive Design */
@@ -240,10 +287,11 @@ export default {
     display: none !important;
   }
   
-  .logs-table th:nth-child(3),
+  /* Keep date column visible on mobile */
+  /* .logs-table th:nth-child(3),
   .logs-table td:nth-child(3) {
     display: none !important;
-  }
+  } */
   
   /* Button adjustments */
   .q-btn {
@@ -497,10 +545,11 @@ export default {
     display: none !important;
   }
   
-  .logs-table th:nth-child(3),
+  /* Keep date column visible on mobile */
+  /* .logs-table th:nth-child(3),
   .logs-table td:nth-child(3) {
     display: none !important;
-  }
+  } */
 }
 
 /* Dialog content responsive */

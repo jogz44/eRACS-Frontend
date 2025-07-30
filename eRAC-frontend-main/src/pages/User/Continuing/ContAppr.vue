@@ -123,21 +123,20 @@
 
     <!-- Dialog for Selecting Accounts -->
     <q-dialog v-model="showContinueDialog">
-      <q-card style="min-width: 900px; max-width: 95vw">
-        <q-card-section>
+      <q-card class="responsive-dialog-card">
+        <q-card-section class="dialog-header">
           <div class="text-h6">Select Accounts to Continue</div>
         </q-card-section>
-        <q-card-section class="q-pa-sm q-mr-sm">
+        <q-card-section class="dialog-content q-pa-sm q-mr-sm">
           <!-- Year Selection -->
-          <div class="row items-center justify-between q-gutter-sm">
+          <div class="row items-center justify-between q-gutter-sm responsive-search-row">
             <q-input
               dense
               outlined
               debounce="300"
               v-model="searchQuery"
               placeholder="Search accounts..."
-              class="q-mb-sm"
-              style="width: 450px; margin-top: 10px; margin-bottom: 0px; margin-left: 16px"
+              class="responsive-search-input"
             />
             <q-select
               outlined
@@ -145,16 +144,10 @@
               v-model="selectedYear"
               :options="yearOptions"
               label="Select Year"
-              style="
-                width: 300px;
-
-                margin-top: 10px;
-                margin-bottom: 0px;
-                margin-right: 7px;
-              "
+              class="responsive-year-select"
             />
           </div>
-          <q-card-section class="q-pa-sm">
+          <q-card-section class="q-pa-sm table-container">
             <q-table
               bordered
               :rows="filteredAccounts"
@@ -162,7 +155,8 @@
               row-key="id"
               selection="multiple"
               v-model:selected="selectedAccounts"
-              style="margin-top: 5px"
+              class="responsive-table"
+              :pagination="{ rowsPerPage: 0 }"
             >
               <template v-slot:header-selection="scope">
                 <q-checkbox color="secondary" v-model="scope.selected" />
@@ -173,7 +167,7 @@
             </q-table>
           </q-card-section>
         </q-card-section>
-        <q-card-section>
+        <q-card-section class="dialog-description">
           <q-input
             outlined
             filled
@@ -182,11 +176,11 @@
             label="Description"
             type="text"
             placeholder="e.g., Carried-over balances from previous year"
-            style="width: 45%"
+            class="responsive-description-input"
           />
         </q-card-section>
 
-        <q-card-actions align="right">
+        <q-card-actions align="right" class="dialog-actions">
           <q-btn flat label="Cancel" color="secondary" v-close-popup />
           <q-btn
             label="Continue"
@@ -218,8 +212,8 @@
 
     <!-- Add this dialog to your main component -->
     <q-dialog v-model="showAllocationDialog" persistent>
-      <q-card class="allocation-card" style="min-width: 800px">
-        <q-card-section class="q-pb-sm q-pt-sm">
+      <q-card class="allocation-card responsive-allocation-card">
+        <q-card-section class="q-pb-sm q-pt-sm dialog-header">
           <div class="row items-center justify-between">
             <div class="text-h6">Allocate Amounts</div>
             <q-icon
@@ -230,23 +224,18 @@
             />
           </div>
         </q-card-section>
-        <q-card-section class="q-py-lg">
+        <q-card-section class="q-py-lg allocation-content">
           <!-- Summary section -->
-          <div class="row q-mb-sm q-col-gutter-md">
-            <div class="col-4">
+          <div class="row q-mb-sm q-col-gutter-md responsive-summary">
+            <div class="col-12 col-sm-4">
               <div class="text-weight-regular">Total Budget:</div>
               <strong>{{ formatCurrency(selectedRow.amount) }}</strong>
             </div>
-            <div class="col-4">
+            <div class="col-12 col-sm-4">
               <div class="text-weight-regular">Return Amount:</div>
               <strong>{{ formatCurrency(selectedRow.returnAmount || 0) }}</strong>
             </div>
-            <!--
-            <div class="col-4">
-              <div class="text-weight-regular">Augmentation Amount:</div>
-              <strong>{{ formatCurrency(selectedRow.augmentationAmount || 0) }}</strong>
-            </div>-->
-            <div class="col-4">
+            <div class="col-12 col-sm-4">
               <div class="text-weight-regular">Available Budget:</div>
               <strong>{{ formatCurrency(availableBudget) }}</strong>
             </div>
@@ -254,18 +243,18 @@
           <div class="justify-end q-mb-md"></div>
 
           <!-- Hierarchical Table -->
-          <div class="hierarchical-table" style="border: 1px solid #e0e0e0; border-radius: 4px">
+          <div class="hierarchical-table responsive-hierarchical-table">
             <!-- Table Header -->
-            <div class="row bg-grey-3 text-weight-bold" style="padding: 8px 12px">
+            <div class="row bg-grey-3 text-weight-bold table-header">
               <div class="col-6">Account</div>
               <div class="col-6 text-right">Amount (₱)</div>
             </div>
 
             <!-- Table Body -->
-            <div class="hierarchical-body" style="max-height: 400px; overflow-y: auto">
+            <div class="hierarchical-body responsive-hierarchical-body">
               <template v-for="category in displayAccounts" :key="'cat-' + category.id">
                 <!-- Category Row -->
-                <div class="row bg-grey-3 text-weight-bold" style="padding: 10px 12px">
+                <div class="row bg-grey-3 text-weight-bold category-row">
                   <div class="col-6">CAPITAL OUTLAYS</div>
                   <div class="col-6 text-right">
                     {{ formatCurrency(calculateCategoryTotal(category)) }}
@@ -274,34 +263,18 @@
 
                 <!-- Subcategory Rows -->
                 <template v-for="subcategory in category.children" :key="'sub-' + subcategory.id">
-                  <div
-                    class="row"
-                    style="
-                      padding: 8px 12px;
-                      padding-top: 0px;
-                      padding-bottom: 0px;
-                      border-bottom: 1px solid #f0f0f0;
-                    "
-                  >
-                    <div
-                      class="col-6"
-                      style="
-                        padding-left: 24px;
-                        text-align: left;
-                        padding-top: 18px;
-                        font-weight: normal;
-                      "
-                    >
+                  <div class="row subcategory-row">
+                    <div class="col-6 subcategory-name">
                       <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
                       {{ subcategory.name }}
                     </div>
-                    <div class="col-6 text-right" style="padding-left: 144px">
+                    <div class="col-6 text-right subcategory-input">
                       <q-input
                         dense
                         v-model.number="subcategory.amount"
                         prefix="₱"
                         :rules="[(val) => validateAmount(val)]"
-                        style="max-width: 200px"
+                        class="responsive-amount-input"
                         :disable="availableBudget <= 0"
                       />
                     </div>
@@ -312,7 +285,7 @@
           </div>
         </q-card-section>
 
-        <q-card-actions align="right">
+        <q-card-actions align="right" class="dialog-actions">
           <q-btn flat label="Cancel" color="secondary" v-close-popup />
           <q-btn
             label="Save"
@@ -690,6 +663,386 @@ defineExpose({
   }
   .ipad-date-row {
     display: none !important;
+  }
+}
+
+/* Dialog Responsive Styles */
+.responsive-dialog-card {
+  min-width: 400px;
+  max-width: 90vw;
+  max-height: 85vh;
+}
+
+.responsive-allocation-card {
+  min-width: 600px;
+  max-width: 90vw;
+  max-height: 85vh;
+}
+
+.dialog-header {
+  border-bottom: 1px solid #e0e0e0;
+  padding: 16px;
+}
+
+.dialog-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.dialog-description {
+  border-top: 1px solid #e0e0e0;
+  padding: 16px;
+}
+
+.dialog-actions {
+  border-top: 1px solid #e0e0e0;
+  padding: 16px;
+}
+
+.responsive-search-row {
+  margin-bottom: 16px;
+}
+
+.responsive-search-input {
+  min-width: 200px;
+  flex: 1;
+}
+
+.responsive-year-select {
+  min-width: 150px;
+  max-width: 200px;
+}
+
+.responsive-description-input {
+  width: 100%;
+  max-width: 500px;
+}
+
+.table-container {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.responsive-table {
+  font-size: 14px;
+}
+
+.responsive-summary {
+  margin-bottom: 16px;
+}
+
+.responsive-hierarchical-table {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.table-header {
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.category-row {
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.subcategory-row {
+  padding: 8px 12px;
+  padding-top: 0px;
+  padding-bottom: 0px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.subcategory-name {
+  padding-left: 24px;
+  text-align: left;
+  padding-top: 18px;
+  font-weight: normal;
+  font-size: 14px;
+}
+
+.subcategory-input {
+  padding-left: 144px;
+}
+
+.responsive-amount-input {
+  max-width: 200px;
+}
+
+.responsive-hierarchical-body {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.allocation-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Mobile Styles (up to 768px) */
+@media (max-width: 768px) {
+  .responsive-dialog-card {
+    min-width: 90vw;
+    max-width: 90vw;
+    max-height: 80vh;
+  }
+
+  .responsive-allocation-card {
+    min-width: 90vw;
+    max-width: 90vw;
+    max-height: 80vh;
+  }
+
+  .responsive-search-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .responsive-search-input,
+  .responsive-year-select {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .responsive-description-input {
+    max-width: 100%;
+  }
+
+  .responsive-table {
+    font-size: 12px;
+  }
+
+  .table-header,
+  .category-row {
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+
+  .subcategory-name {
+    padding-left: 16px;
+    font-size: 12px;
+  }
+
+  .subcategory-input {
+    padding-left: 8px;
+  }
+
+  .responsive-amount-input {
+    max-width: 120px;
+    font-size: 12px;
+  }
+
+  .responsive-summary {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .responsive-summary .col-12 {
+    margin-bottom: 8px;
+  }
+
+  /* Reduce table height on mobile to leave space for buttons */
+  .table-container {
+    max-height: 250px;
+  }
+
+  .responsive-hierarchical-body {
+    max-height: 200px;
+  }
+
+  .allocation-content {
+    max-height: 60vh;
+  }
+
+  /* Ensure dialog actions are always visible */
+  .dialog-actions {
+    position: sticky;
+    bottom: 0;
+    background: white;
+    border-top: 1px solid #e0e0e0;
+    padding: 12px 16px;
+    z-index: 10;
+  }
+
+  /* Reduce padding in dialog sections for mobile */
+  .dialog-header,
+  .dialog-content,
+  .dialog-description {
+    padding: 12px;
+  }
+
+  /* Make buttons more prominent on mobile */
+  .dialog-actions .q-btn {
+    min-height: 40px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+}
+
+/* iPad Styles (768px to 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .responsive-dialog-card {
+    min-width: 85vw;
+    max-width: 85vw;
+    max-height: 80vh;
+  }
+
+  .responsive-allocation-card {
+    min-width: 85vw;
+    max-width: 85vw;
+    max-height: 80vh;
+  }
+
+  .responsive-search-row {
+    gap: 16px;
+  }
+
+  .responsive-search-input {
+    min-width: 300px;
+  }
+
+  .responsive-year-select {
+    min-width: 180px;
+  }
+
+  .responsive-table {
+    font-size: 13px;
+  }
+
+  .table-header,
+  .category-row {
+    font-size: 13px;
+  }
+
+  .subcategory-name {
+    font-size: 13px;
+  }
+
+  .responsive-amount-input {
+    max-width: 150px;
+  }
+}
+
+/* Small Monitor Styles (1025px to 1366px) */
+@media (min-width: 1025px) and (max-width: 1366px) {
+  .responsive-dialog-card {
+    min-width: 800px;
+    max-width: 85vw;
+    max-height: 80vh;
+  }
+
+  .responsive-allocation-card {
+    min-width: 900px;
+    max-width: 85vw;
+    max-height: 80vh;
+  }
+
+  .responsive-search-input {
+    min-width: 350px;
+  }
+
+  .responsive-year-select {
+    min-width: 200px;
+  }
+}
+
+/* Large Monitor Styles (1367px and above) */
+@media (min-width: 1367px) {
+  .responsive-dialog-card {
+    min-width: 900px;
+    max-width: 80vw;
+    max-height: 75vh;
+  }
+
+  .responsive-allocation-card {
+    min-width: 1000px;
+    max-width: 80vw;
+    max-height: 75vh;
+  }
+
+  .responsive-search-input {
+    min-width: 400px;
+  }
+
+  .responsive-year-select {
+    min-width: 220px;
+  }
+}
+
+/* Landscape Mobile Styles */
+@media (max-width: 768px) and (orientation: landscape) {
+  .responsive-hierarchical-body {
+    max-height: 250px;
+  }
+
+  .allocation-content {
+    max-height: 60vh;
+  }
+}
+
+/* Portrait Mobile Styles */
+@media (max-width: 768px) and (orientation: portrait) {
+  .responsive-hierarchical-body {
+    max-height: 300px;
+  }
+
+  .allocation-content {
+    max-height: 70vh;
+  }
+}
+
+/* Ensure proper scrolling on all devices */
+.q-dialog__inner--minimized > div {
+  max-height: 100vh;
+  overflow-y: auto;
+}
+
+/* Button group responsive styles */
+.button-group {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .button-group {
+    flex-direction: column;
+    gap: 2px;
+  }
+  
+  .button-group .q-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Table responsive improvements */
+@media (max-width: 768px) {
+  .q-table {
+    font-size: 12px;
+  }
+  
+  .q-table th,
+  .q-table td {
+    padding: 4px 6px;
+  }
+}
+
+/* Ensure proper spacing in dialogs */
+.q-card-section {
+  padding: 16px;
+}
+
+@media (max-width: 768px) {
+  .q-card-section {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .q-card-section {
+    padding: 8px;
   }
 }
 </style>
