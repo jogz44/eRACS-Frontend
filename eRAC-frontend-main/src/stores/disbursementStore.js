@@ -421,14 +421,44 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.dialogs[dialogName] = false
     },
 
-    openOrDetailsDialog(item) {
-      this.currentLiquidation = {
-        ...JSON.parse(JSON.stringify(item)),
-        orNumber: '',
-        orAmount: '',
-        orImage: null,
+    async openOrDetailsDialog(item) {
+      this.currentLiquidation = JSON.parse(JSON.stringify(item));
+      
+      // Fetch existing OR Details from backend if this is a partial liquidation
+      if (item.id && item.status === 'Partial') {
+        try {
+          const res = await api.get(`/api/barangay/disbursements/${item.id}/or-details`);
+          const backendUrl = 'http://localhost:8000';
+          this.currentLiquidation.orDetails = res.data.data.map(or => {
+            // Convert YYYY-MM-DD to DD/MM/YYYY format
+            let formattedDate = '';
+            if (or.or_date) {
+              const dateParts = or.or_date.split('-');
+              if (dateParts.length === 3) {
+                formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+              }
+            }
+            
+            return {
+              orDate: formattedDate,
+              orNumber: or.or_number,
+              orAmount: or.or_amount,
+              orImage: null,
+              orPhotoUrl: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
+              serverPhotoPath: or.or_photo,
+              remarks: or.remarks || '',
+              isReadOnly: true, // Mark existing OR details as read-only
+            };
+          });
+        } catch {
+          this.currentLiquidation.orDetails = [];
+        }
+      } else {
+        // For new liquidations, initialize empty
+        this.currentLiquidation.orDetails = [];
       }
-      this.dialogs.orDetails = true
+      
+      this.dialogs.orDetails = true;
     },
 
     // In your disbursementStore.js actions
@@ -625,6 +655,8 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     async openEditDisbursement(row) {
       await this.fetchDisbursementById(row.id);
+      // Fetch expense accounts for the edit dialog
+      await this.fetchExpenseAccounts();
     },
 
 
@@ -731,7 +763,7 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Prepare the payload
         const payload = {
-          orDetails: this.currentLiquidation.orDetails.map(or => ({
+          orDetails: this.currentLiquidation.orDetails.filter(or => !or.isReadOnly).map(or => ({
             orNumber: or.orNumber,
             orAmount: or.orAmount,
             orDate: or.orDate || '',
@@ -765,6 +797,71 @@ export const useDisbursementStore = defineStore('disbursement', {
         return { 
           success: false, 
           error: error.response?.data?.message || 'Failed to save OR details' 
+        }
+      }
+    },
+
+    async savePartialOrDetails() {
+      if (!this.currentLiquidation) {
+        console.warn('currentLiquidation is not available')
+        return
+      }
+
+      // Check if all OR details are complete
+      const allOrDetailsComplete = this.currentLiquidation.orDetails?.every(or => 
+        or.orNumber && or.orAmount && or.orDate && or.orPhotoUrl
+      )
+
+      if (!allOrDetailsComplete) {
+        console.warn('Not all OR details are complete')
+        return
+      }
+
+      try {
+        const authStore = useAuthStore()
+        const token = authStore.token
+
+        // Calculate total actual expense from OR details
+        const totalActualExpense = this.currentLiquidation.orDetails?.reduce(
+          (sum, or) => sum + (parseFloat(or.orAmount) || 0), 0
+        ) || 0
+
+        // Prepare the payload for partial liquidation
+        const payload = {
+          orDetails: this.currentLiquidation.orDetails.filter(or => !or.isReadOnly).map(or => ({
+            orNumber: or.orNumber,
+            orAmount: or.orAmount,
+            orDate: or.orDate || '',
+            remarks: or.remarks || '',
+            orPhotoUrl: or.serverPhotoPath || '', // Use server path only
+          })),
+          liquidatedAmount: totalActualExpense,
+          isPartial: true, // Flag to indicate partial liquidation
+        }
+
+        console.log('Saving partial OR details with payload:', payload)
+
+        const response = await api.post(`/api/barangay/disbursements/${this.currentLiquidation.id}/or-details`, payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        })
+
+        console.log('Partial OR Details saved successfully:', response.data)
+
+        // Refresh the disbursements list
+        await this.fetchDisbursements()
+
+        // Close the dialog after saving
+        this.closeDialog('orDetails')
+
+        return { success: true, data: response.data.data }
+      } catch (error) {
+        console.error('Failed to save partial OR details:', error)
+        return { 
+          success: false, 
+          error: error.response?.data?.message || 'Failed to save partial OR details' 
         }
       }
     },

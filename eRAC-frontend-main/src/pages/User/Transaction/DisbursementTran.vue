@@ -298,7 +298,7 @@
                 <q-btn
                   class="edit-btn"
                   icon="edit"
-                  v-if="props.row.status === 'Pending'"
+                  v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
                   @click="store.openEditDisbursement(props.row)"
                 />
                 <q-btn
@@ -312,7 +312,7 @@
                   label="Liquidate"
                   class="allocate-btn"
                   color="primary"
-                  v-if="props.row.status === 'Pending'"
+                  v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
                   @click="store.openOrDetailsDialog(props.row)"
                 />
               </div>

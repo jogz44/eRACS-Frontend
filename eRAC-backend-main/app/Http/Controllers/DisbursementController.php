@@ -138,6 +138,7 @@ class DisbursementController extends Controller
             'orDetails.*.orPhotoUrl' => 'required|string',
             'orDetails.*.remarks' => 'nullable|string',
             'liquidatedAmount' => 'required|numeric|min:0',
+            'isPartial' => 'nullable|boolean',
         ]);
 
         try {
@@ -148,10 +149,15 @@ class DisbursementController extends Controller
                 ->where('barangay_id', $user->barangay_id)
                 ->firstOrFail();
 
-            // Delete existing OR details for this disbursement
-            DisbursementOrDetail::where('disbursement_id', $id)->delete();
+            // Check if this is a continuation of partial liquidation
+            $isContinuation = $disbursement->status === 'Partial';
+            
+            if (!$isContinuation) {
+                // Delete existing OR details only if not continuing partial liquidation
+                DisbursementOrDetail::where('disbursement_id', $id)->delete();
+            }
 
-            // Save new OR details
+            // Save new OR details (append if continuing, replace if new)
             foreach ($request->orDetails as $orDetail) {
                 // Convert date from DD/MM/YYYY to YYYY-MM-DD if provided
                 $orDate = null;
@@ -172,9 +178,11 @@ class DisbursementController extends Controller
                 ]);
             }
 
-            // Update disbursement status to liquidated
+            // Update disbursement status based on whether it's partial or full liquidation
+            $isPartial = $request->has('isPartial') && ($request->isPartial === true || $request->isPartial === 'true' || $request->isPartial === 1);
+            $status = $isPartial ? 'Partial' : 'Liquidated';
             $disbursement->update([
-                'status' => 'Liquidated',
+                'status' => $status,
                 'liquidated_amount' => $request->liquidatedAmount,
                 'liquidated_at' => now(),
             ]);

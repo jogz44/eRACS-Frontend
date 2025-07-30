@@ -51,7 +51,9 @@
                 :model-value="totalReturnAmount"
                 prefix="₱"
                 readonly
+                :color="actualReturnAmount < 0 ? 'negative' : undefined"
               />
+
             </div>
           </div>
 
@@ -93,128 +95,201 @@
             <q-btn color="green" icon="add" label="Add" flat @click="addOrDetail" />
           </div>
 
-          <!-- OR Details List - Maintains original styling with added OR Date -->
-          <div
-            v-for="(orDetail, index) in store.currentLiquidation.orDetails"
-            :key="index"
-            class="q-mb-md"
-          >
-            <div class="row q-col-gutter-md">
-              <!-- Remove Button Far Left -->
-              <div class="col-auto flex flex-center" v-if="store.currentLiquidation.orDetails.length > 1" style="min-width: 40px;">
-                <q-btn
-                  flat
-                  round
-                  dense
-                  icon="remove"
-                  color="red"
-                  @click="removeOrDetail(index)"
-                  title="Remove this OR"
-                />
-              </div>
-              <!-- OR Date -->
-              <div class="col-12 col-md-2">
-                <div class="text-bold q-mb-xs">OR Date:</div>
-                <q-input
-                  filled
-                  unelaveted
-                  outlined
-                  v-model="orDetail.orDate"
-                  placeholder="Select Date"
-                >
-                  <template v-slot:append>
-                    <q-icon name="event" class="cursor-pointer">
-                      <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                        <q-date
-                          v-model="orDetail.orDate"
-                          mask="DD/MM/YYYY"
-                          @update:model-value="(val) => handleDateChange(val, index)"
-                        />
-                      </q-popup-proxy>
-                    </q-icon>
-                  </template>
-                </q-input>
-              </div>
-
-              <!-- OR Number -->
-              <div class="col-12 col-md-2">
-                <div class="text-bold q-mb-xs">OR Number:</div>
-                <q-input
-                  filled
-                  unelaveted
-                  outlined
-                  v-model="orDetail.orNumber"
-                  placeholder="OR Number"
-                />
-              </div>
-
-              <!-- OR Amount -->
-              <div class="col-12 col-md-2">
-                <div class="text-bold q-mb-xs">OR Amount:</div>
-                <q-input
-                  filled
-                  unelaveted
-                  outlined
-                  v-model="orDetail.orAmount"
-                  placeholder="0.00"
-                  type="number"
-                  prefix="₱"
-                  @update:model-value="calculateTotals"
-                />
-              </div>
-
-              <!-- OR Image -->
-              <div class="col-12 col-md-3">
-                <div class="text-bold q-mb-xs" style="display: flex; align-items: center;">
-                  OR Image:
-                  <q-btn
-                    v-if="orDetail.orPhotoUrl"
-                    flat
-                    dense
-                    round
-                    icon="delete"
-                    color="red"
-                    @click="removeOrImage(index)"
-                    style="margin-left: 8px;"
+          <!-- Existing OR Details (Read-only for partial continuation) -->
+          <div v-if="hasExistingOrDetails" class="q-mb-lg">
+            <div class="text-subtitle2 q-mb-md text-grey-7">Previously Saved OR Details:</div>
+            <div
+              v-for="(orDetail, index) in existingOrDetails"
+              :key="`existing-${index}`"
+              class="q-mb-md"
+            >
+              <div class="row q-col-gutter-md">
+                <!-- OR Date -->
+                <div class="col-12 col-md-3">
+                  <div class="text-bold q-mb-xs">OR Date:</div>
+                  <q-input
+                    outlined
+                    :model-value="orDetail.orDate"
+                    readonly
+                    bg-color="grey-3"
                   />
                 </div>
-                <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
-                    <q-btn
-                    v-if="!orDetail.orPhotoUrl"
-                    flat
-                    dense
-                    color="primary"
-                    icon="upload"
-                    label="Upload"
-                    @click="triggerOrFileInput(index)"
-                    style="min-width: 100px;"
+
+                <!-- OR Number -->
+                <div class="col-12 col-md-3">
+                  <div class="text-bold q-mb-xs">OR Number:</div>
+                  <q-input
+                    outlined
+                    :model-value="orDetail.orNumber"
+                    readonly
+                    bg-color="grey-3"
                   />
+                </div>
+
+                <!-- OR Amount -->
+                <div class="col-12 col-md-3">
+                  <div class="text-bold q-mb-xs">OR Amount:</div>
+                  <q-input
+                    outlined
+                    :model-value="orDetail.orAmount"
+                    prefix="₱"
+                    readonly
+                    bg-color="grey-3"
+                  />
+                </div>
+
+                <!-- OR Image -->
+                <div class="col-12 col-md-3">
+                  <div class="text-bold q-mb-xs">OR Image:</div>
                   <q-img
                     v-if="orDetail.orPhotoUrl"
                     :src="orDetail.orPhotoUrl"
-                    style="max-width: 100%; max-height: 100%; border-radius: 4px; border: 1px solid #eee;"
+                    style="max-width: 100%; max-height: 100px; border-radius: 4px; border: 1px solid #eee;"
+                  />
+                  <div v-else class="text-grey">No image uploaded</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- New OR Details (Editable) -->
+          <div v-if="hasNewOrDetails" class="q-mb-lg">
+            <div class="text-subtitle2 q-mb-md text-primary">New OR Details:</div>
+            <div
+              v-for="(orDetail, index) in newOrDetails"
+              :key="`new-${index}`"
+              class="q-mb-md"
+            >
+              <div class="row q-col-gutter-md">
+                <!-- Remove Button Far Left -->
+                <div class="col-auto flex flex-center" v-if="newOrDetails.length > 1" style="min-width: 40px;">
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    icon="remove"
+                    color="red"
+                    @click="removeNewOrDetail(index)"
+                    title="Remove this OR"
                   />
                 </div>
-                <input
-                  :ref="setOrImageInputRef(index)"
-                  type="file"
-                  accept=".jpg,.jpeg,.png"
-                  style="display: none"
-                  @change="(e) => onOrImageChange(e, index)"
-                />
+                <!-- OR Date -->
+                <div class="col-12 col-md-3">
+                  <div class="text-bold q-mb-xs">OR Date:</div>
+                  <q-input
+                    filled
+                    unelaveted
+                    outlined
+                    v-model="orDetail.orDate"
+                    placeholder="Select Date"
+                  >
+                    <template v-slot:append>
+                      <q-icon name="event" class="cursor-pointer">
+                        <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                          <q-date
+                            v-model="orDetail.orDate"
+                            mask="DD/MM/YYYY"
+                            @update:model-value="(val) => handleDateChange(val, getNewOrDetailIndex(index))"
+                          />
+                        </q-popup-proxy>
+                      </q-icon>
+                    </template>
+                  </q-input>
+                </div>
+
+                <!-- OR Number -->
+                <div class="col-12 col-md-3">
+                  <div class="text-bold q-mb-xs">OR Number:</div>
+                  <q-input
+                    filled
+                    unelaveted
+                    outlined
+                    v-model="orDetail.orNumber"
+                    placeholder="OR Number"
+                  />
+                </div>
+
+                <!-- OR Amount -->
+                <div class="col-12 col-md-3">
+                  <div class="text-bold q-mb-xs">OR Amount:</div>
+                  <q-input
+                    filled
+                    unelaveted
+                    outlined
+                    v-model="orDetail.orAmount"
+                    placeholder="0.00"
+                    type="number"
+                    prefix="₱"
+                    @update:model-value="calculateTotals"
+                  />
+                  <!-- Over-liquidation warning -->
+                  <div v-if="actualReturnAmount < 0" class="text-negative q-mt-xs text-caption">
+                    Exceeds DV amount
+                  </div>
+                </div>
+
+                <!-- OR Image -->
+                <div class="col-12 col-md-3">
+                  <div class="text-bold q-mb-xs" style="display: flex; align-items: center;">
+                    OR Image:
+                    <q-btn
+                      v-if="orDetail.orPhotoUrl"
+                      flat
+                      dense
+                      round
+                      icon="delete"
+                      color="red"
+                      @click="removeNewOrImage(index)"
+                      style="margin-left: 8px;"
+                    />
+                  </div>
+                  <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+                      <q-btn
+                      v-if="!orDetail.orPhotoUrl"
+                      flat
+                      dense
+                      color="primary"
+                      icon="upload"
+                      label="Upload"
+                      @click="triggerNewOrFileInput(index)"
+                      style="min-width: 100px;"
+                    />
+                    <q-img
+                      v-if="orDetail.orPhotoUrl"
+                      :src="orDetail.orPhotoUrl"
+                      style="max-width: 100%; max-height: 100%; border-radius: 4px; border: 1px solid #eee;"
+                    />
+                  </div>
+                  <input
+                    :ref="setNewOrImageInputRef(index)"
+                    type="file"
+                    accept=".jpg,.jpeg,.png"
+                    style="display: none"
+                    @change="(e) => onNewOrImageChange(e, index)"
+                  />
+                </div>
               </div>
             </div>
           </div>
         </div>
       </q-card-section>
 
+
+
       <q-card-actions align="right" class="q-pa-md">
-        <q-btn flat label="Partial" color="warning" @click="store.closeDialog('orDetails')" />
+        <q-btn 
+          flat 
+          label="Partial" 
+          color="warning" 
+          @click="handlePartialLiquidation" 
+          :disable="!isValid || actualReturnAmount < 0"
+          :loading="saving"
+        />
         <q-btn 
           label="Submit" 
           color="green" 
           @click="handleSaveOrDetails" 
-          :disable="!isValid"
+          :disable="!canSubmit"
           :loading="saving"
         />
       </q-card-actions>
@@ -226,54 +301,51 @@
 import { computed, watch, ref, nextTick } from 'vue'
 import { useDisbursementStore } from 'stores/disbursementStore'
 import { useQuasar } from 'quasar'
-import axios from 'axios'
 
 const $q = useQuasar()
 const saving = ref(false)
 
 const store = useDisbursementStore()
-const orImageInputs = ref([])
+const newOrImageInputs = ref([])
 
-// Fetch OR Details from backend when dialog opens
-async function fetchOrDetails() {
-  console.log('Fetching OR Details for disbursement ID:', store.currentLiquidation.id)
-  if (!store.currentLiquidation.id || isNaN(Number(store.currentLiquidation.id))) {
-    alert('Invalid disbursement ID!');
-    return;
-  }
-  try {
-    const res = await axios.get(`/api/barangay/disbursements/${store.currentLiquidation.id}/or-details`)
-    // Map backend fields to frontend fields
-    store.currentLiquidation.orDetails = res.data.data.map(or => {
-      // Convert YYYY-MM-DD to DD/MM/YYYY format
-      let formattedDate = ''
-      if (or.or_date) {
-        const dateParts = or.or_date.split('-')
-        if (dateParts.length === 3) {
-          formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`
-        }
-      }
-      
-      return {
-        orDate: formattedDate,
-        orNumber: or.or_number,
-        orAmount: or.or_amount,
-        orImage: null, // Image upload handled separately
-        orPhotoUrl: or.or_photo ? `/storage/${or.or_photo}` : null,
-        remarks: or.remarks || '',
-      }
-    })
-  } catch {
-    // fallback: initialize empty
+// Initialize OR Details when dialog opens
+function initializeOrDetails() {
+  // If no OR details exist, add one empty row for new liquidation
+  if (!store.currentLiquidation.orDetails || store.currentLiquidation.orDetails.length === 0) {
     const today = new Date()
     const dd = String(today.getDate()).padStart(2, '0')
     const mm = String(today.getMonth() + 1).padStart(2, '0')
     const yyyy = today.getFullYear()
     const todayFormatted = `${dd}/${mm}/${yyyy}`
     
-    store.currentLiquidation.orDetails = [
-      { orNumber: '', orAmount: '', orDate: todayFormatted, orImage: null, orPhotoUrl: null, serverPhotoPath: null, remarks: '' },
-    ]
+    store.currentLiquidation.orDetails = [{
+      orNumber: '',
+      orAmount: '',
+      orDate: todayFormatted,
+      orImage: null,
+      orPhotoUrl: null,
+      serverPhotoPath: null,
+      remarks: '',
+      isReadOnly: false,
+    }]
+  } else {
+    // For partial liquidations, add one empty row for new OR details
+    const today = new Date()
+    const dd = String(today.getDate()).padStart(2, '0')
+    const mm = String(today.getMonth() + 1).padStart(2, '0')
+    const yyyy = today.getFullYear()
+    const todayFormatted = `${dd}/${mm}/${yyyy}`
+    
+    store.currentLiquidation.orDetails.push({
+      orNumber: '',
+      orAmount: '',
+      orDate: todayFormatted,
+      orImage: null,
+      orPhotoUrl: null,
+      serverPhotoPath: null,
+      remarks: '',
+      isReadOnly: false,
+    })
   }
 }
 
@@ -282,7 +354,7 @@ watch(
   () => store.dialogs.orDetails,
   (isOpen) => {
     if (isOpen) {
-      fetchOrDetails()
+      initializeOrDetails()
     }
   },
 )
@@ -296,7 +368,36 @@ const totalActualExpense = computed(() => {
 
 const totalReturnAmount = computed(() => {
   if (!store.currentLiquidation?.dvAmount) return '0.00'
-  return (store.currentLiquidation.dvAmount - parseFloat(totalActualExpense.value)).toFixed(2)
+  const returnAmount = store.currentLiquidation.dvAmount - parseFloat(totalActualExpense.value)
+  // Prevent negative return amounts - if over-liquidation occurs, show 0.00
+  return Math.max(0, returnAmount).toFixed(2)
+})
+
+// Actual return amount for validation (can be negative)
+const actualReturnAmount = computed(() => {
+  if (!store.currentLiquidation?.dvAmount) return 0
+  return store.currentLiquidation.dvAmount - parseFloat(totalActualExpense.value)
+})
+
+
+
+// Separate existing and new OR details
+const existingOrDetails = computed(() => {
+  if (!store.currentLiquidation?.orDetails) return []
+  return store.currentLiquidation.orDetails.filter(or => or.isReadOnly)
+})
+
+const newOrDetails = computed(() => {
+  if (!store.currentLiquidation?.orDetails) return []
+  return store.currentLiquidation.orDetails.filter(or => !or.isReadOnly)
+})
+
+const hasExistingOrDetails = computed(() => {
+  return existingOrDetails.value.length > 0
+})
+
+const hasNewOrDetails = computed(() => {
+  return newOrDetails.value.length > 0
 })
 
 const calculateTotals = () => {
@@ -323,24 +424,34 @@ const addOrDetail = () => {
     orPhotoUrl: null,
     serverPhotoPath: null,
     remarks: '',
+    isReadOnly: false,
   })
 }
 
-const removeOrDetail = (index) => {
+// Helper function to get the actual index in the full orDetails array
+const getNewOrDetailIndex = (newIndex) => {
+  const existingCount = existingOrDetails.value.length
+  return existingCount + newIndex
+}
+
+// Remove new OR detail
+const removeNewOrDetail = (newIndex) => {
+  const actualIndex = getNewOrDetailIndex(newIndex)
   if (store.currentLiquidation.orDetails) {
-    store.currentLiquidation.orDetails.splice(index, 1)
+    store.currentLiquidation.orDetails.splice(actualIndex, 1)
   }
 }
 
-function setOrImageInputRef(index) {
+// New OR detail image functions
+const setNewOrImageInputRef = (index) => {
   return (el) => {
-    orImageInputs.value[index] = el
+    newOrImageInputs.value[index] = el
   }
 }
 
-function triggerOrFileInput(index) {
+const triggerNewOrFileInput = (index) => {
   nextTick(() => {
-    const input = orImageInputs.value[index]
+    const input = newOrImageInputs.value[index]
     if (input) {
       input.value = '' // allow re-uploading same file
       input.click()
@@ -348,15 +459,16 @@ function triggerOrFileInput(index) {
   })
 }
 
-function onOrImageChange(e, index) {
+const onNewOrImageChange = (e, newIndex) => {
   const file = e.target.files && e.target.files[0]
   if (file) {
+    const actualIndex = getNewOrDetailIndex(newIndex)
     // Store the file for later upload
-    store.currentLiquidation.orDetails[index].orImage = file
+    store.currentLiquidation.orDetails[actualIndex].orImage = file
     
     // Create local file path for preview
     const localPath = URL.createObjectURL(file)
-    store.currentLiquidation.orDetails[index].orPhotoUrl = localPath
+    store.currentLiquidation.orDetails[actualIndex].orPhotoUrl = localPath
     
     $q.notify({
       type: 'positive',
@@ -366,17 +478,20 @@ function onOrImageChange(e, index) {
   }
 }
 
-function removeOrImage(index) {
-  const prevUrl = store.currentLiquidation.orDetails[index].orPhotoUrl
+const removeNewOrImage = (newIndex) => {
+  const actualIndex = getNewOrDetailIndex(newIndex)
+  const prevUrl = store.currentLiquidation.orDetails[actualIndex].orPhotoUrl
   if (prevUrl && prevUrl.startsWith('blob:')) {
     URL.revokeObjectURL(prevUrl)
   }
-  store.currentLiquidation.orDetails[index].orImage = null
-  store.currentLiquidation.orDetails[index].orPhotoUrl = null
-  store.currentLiquidation.orDetails[index].serverPhotoPath = null
-  const input = orImageInputs.value[index]
+  store.currentLiquidation.orDetails[actualIndex].orImage = null
+  store.currentLiquidation.orDetails[actualIndex].orPhotoUrl = null
+  store.currentLiquidation.orDetails[actualIndex].serverPhotoPath = null
+  const input = newOrImageInputs.value[newIndex]
   if (input) input.value = ''
 }
+
+
 
 // function saveOrDetails() {
 //   // Example: pass orImageFile.value to store action for upload
@@ -385,12 +500,31 @@ function removeOrImage(index) {
 // }
 
 const isValid = computed(() => {
-  return (
-    store.currentLiquidation.orDetails?.every((or) => 
-      or.orNumber && or.orAmount && or.orDate && or.orPhotoUrl
-    ) ??
-    false
+  // Only validate new OR details (non-read-only ones)
+  const newDetails = store.currentLiquidation.orDetails?.filter(or => !or.isReadOnly) || []
+  
+  // If no new details, check if there are any existing details (for view-only case)
+  if (newDetails.length === 0) {
+    const existingDetails = store.currentLiquidation.orDetails?.filter(or => or.isReadOnly) || []
+    return existingDetails.length > 0
+  }
+  
+  // Validate all new details
+  return newDetails.every((or) => 
+    or.orNumber && or.orAmount && or.orDate && or.orPhotoUrl
   )
+})
+
+const canSubmit = computed(() => {
+  if (!isValid.value) return false
+  
+  const returnAmount = actualReturnAmount.value
+  
+  // Cannot submit if return amount is negative (over-liquidation)
+  if (returnAmount < 0) return false
+  
+  // Can only submit when return amount is exactly 0 (full liquidation)
+  return Math.abs(returnAmount) < 0.01
 })
 
 const handleDateChange = (date, index) => {
@@ -399,13 +533,74 @@ const handleDateChange = (date, index) => {
   calculateTotals()
 }
 
+const handlePartialLiquidation = async () => {
+  saving.value = true
+  try {
+    // First, upload all photos that haven't been uploaded yet (only for new OR details)
+    for (let i = 0; i < store.currentLiquidation.orDetails.length; i++) {
+      const orDetail = store.currentLiquidation.orDetails[i]
+      // Only process new OR details (non-read-only)
+      if (!orDetail.isReadOnly && orDetail.orImage && !orDetail.serverPhotoPath) {
+        try {
+          const uploadResult = await store.uploadOrPhoto(orDetail.orImage)
+          if (uploadResult.success) {
+            store.currentLiquidation.orDetails[i].serverPhotoPath = uploadResult.path
+            // Keep the local preview visible, don't replace it
+            // The server path is stored separately for database
+          } else {
+            throw new Error(uploadResult.error)
+          }
+        } catch (error) {
+          console.error('Error uploading photo:', error)
+          $q.notify({
+            type: 'negative',
+            message: `Failed to upload photo for OR ${orDetail.orNumber || i + 1}: ${error.message}`,
+            icon: 'error',
+            position: 'top',
+          })
+          return
+        }
+      }
+    }
+    
+    // Save as partial liquidation
+    const result = await store.savePartialOrDetails()
+    if (result.success) {
+      $q.notify({
+        type: 'positive',
+        message: 'Partial liquidation saved successfully!',
+        icon: 'check_circle',
+        position: 'top',
+      })
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: result.error || 'Failed to save partial liquidation',
+        icon: 'error',
+        position: 'top',
+      })
+    }
+  } catch (error) {
+    console.error('Error saving partial liquidation:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'An error occurred while saving',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    saving.value = false
+  }
+}
+
 const handleSaveOrDetails = async () => {
   saving.value = true
   try {
-    // First, upload all photos that haven't been uploaded yet
+    // First, upload all photos that haven't been uploaded yet (only for new OR details)
     for (let i = 0; i < store.currentLiquidation.orDetails.length; i++) {
       const orDetail = store.currentLiquidation.orDetails[i]
-      if (orDetail.orImage && !orDetail.serverPhotoPath) {
+      // Only process new OR details (non-read-only)
+      if (!orDetail.isReadOnly && orDetail.orImage && !orDetail.serverPhotoPath) {
         try {
           const uploadResult = await store.uploadOrPhoto(orDetail.orImage)
           if (uploadResult.success) {

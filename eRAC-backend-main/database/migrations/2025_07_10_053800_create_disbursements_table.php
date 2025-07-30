@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('payee');
             $table->decimal('dv_amount', 15, 2);
             $table->decimal('liquidated_amount', 15, 2)->nullable();
-            $table->enum('status', ['Pending', 'Liquidated'])->default('Pending');
+            $table->enum('status', ['Pending', 'Liquidated', 'Partial'])->default('Pending');
             $table->timestamp('liquidated_at')->nullable();
             $table->timestamps();
 
