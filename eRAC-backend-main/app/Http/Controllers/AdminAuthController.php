@@ -169,7 +169,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
         ->join('barangays', 'barangay_users.barangay_id', '=', 'barangays.id')
         ->join('barangay_positions', 'barangay_users.position_id', '=', 'barangay_positions.id')
         ->select(
-            'logs.user_id',
+            'logs.user_id as id',
             'logs.fullname',
             DB::raw('CAST(logs.created_at AS DATE) as log_date'),
             DB::raw('COUNT(logs.id) as total_logs'),
@@ -188,6 +188,30 @@ class AdminAuthController extends Controller  // <-- This is crucial
 
         return response()->json($logs);
     }
+
+    // Get individual user logs
+    public function getUserLogs($userId, $day) {
+        $logs = DB::table('logs')
+            ->join('barangay_users', 'logs.user_id', '=', 'barangay_users.id')
+            ->join('barangays', 'barangay_users.barangay_id', '=', 'barangays.id')
+            ->join('barangay_positions', 'barangay_users.position_id', '=', 'barangay_positions.id')
+            ->select(
+                'logs.id',
+                'logs.activity',
+                'logs.details',
+                'logs.created_at',
+                'barangays.name as barangay',
+                'barangay_positions.name as position',
+                'barangay_users.first_name',
+                'barangay_users.last_name'
+            )
+            ->where('barangay_users.id', $userId)
+            ->whereDate('logs.created_at', $day)
+            ->orderByDesc('logs.created_at')
+            ->get();
+        return response()->json($logs);
+    }
+
     // Helper to log user actions (can be called from other controllers)
     public static function logUserAction($user, $activity, $details = null) {
         DB::table('logs')->insert([

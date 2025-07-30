@@ -17,7 +17,7 @@
           title="Refresh pending users"
         />
         </div>
-        
+
       <q-card-section>
         <!-- Search Bar -->
         <div class="row q-mb-md">
@@ -54,7 +54,7 @@
         </template>
           <!-- Custom Date Formatting -->
           <template v-slot:body-cell-date="props">
-            <q-td :props="props" class="text-center">
+            <q-td :props="props" class="text-left">
               {{ formatDate(props.row.log_date) }}
             </q-td>
           </template>
@@ -77,12 +77,13 @@
 
 <script>
 import { api } from 'boot/axios'
-import AdminLogsActivity from './AdminLogsActivity.vue' // Only import once
+import { date } from 'quasar'
+import AdminLogsActivity from './AdminLogsActivity.vue'
 
 export default {
   name: 'LogsPage',
   components: {
-    AdminLogsActivity // Register the component
+    AdminLogsActivity
   },
   data() {
     return {
@@ -92,11 +93,40 @@ export default {
       search: '',
       logs: [],
       columns: [
-        { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
-        { name: 'fullname', label: 'Name', field: 'fullname', align: 'left', sortable: true },
-        { name: 'barangay', label: 'Barangay', field: 'barangay', align: 'left', sortable: true },
-        { name: 'position', label: 'Position', field: 'position', align: 'left', sortable: true },
-        { name: 'actions', label: 'Actions', align: 'center', sortable: false },
+        {
+          name: 'date',
+          label: 'Date',
+          field: 'log_date',
+          align: 'left',
+          sortable: true
+        },
+        {
+          name: 'fullname',
+          label: 'Name',
+          field: 'fullname',
+          align: 'left',
+          sortable: true
+        },
+        {
+          name: 'barangay',
+          label: 'Barangay',
+          field: 'barangay',
+          align: 'left',
+          sortable: true
+        },
+        {
+          name: 'position',
+          label: 'Position',
+          field: 'position',
+          align: 'left',
+          sortable: true
+        },
+        {
+          name: 'actions',
+          label: 'Actions',
+          align: 'center',
+          sortable: false
+        },
       ],
     }
   },
@@ -141,18 +171,14 @@ export default {
       this.showAdminLogsActivity = true;
     },
     formatDate(dateString) {
-      const date = new Date(dateString)
-      return date.toLocaleString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric'
-      })
-      
+      if (!dateString) return 'N/A'
+      return date.formatDate(dateString, 'MMMM D, YYYY')
     },
     async loadLogs() {
       this.loading = true
       try {
         const response = await api.get('/api/admin/admin/logs')
+        // The API returns log_date, so we don't need to transform it
         this.logs = response.data
       } catch (error) {
         console.error('Error loading logs:', error)

@@ -38,7 +38,7 @@
           <!-- Custom Date Formatting -->
           <template v-slot:body-cell-date="props">
             <q-td :props="props" class="text-center">
-              {{ formatDate(props.row.created_at) }}
+              {{ formatDate(props.row.log_date) }}
             </q-td>
           </template>
 
@@ -95,10 +95,10 @@ export default {
       searchQuery: '',
       logs: [],
       columns: [
-        { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
+        { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
+        //{ name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
         { name: 'fullname', label: 'Name', field: 'fullname', align: 'left', sortable: true },
         { name: 'position', label: 'Position', field: 'position', align: 'left', sortable: true },
-        { name: 'date', label: 'Date', field: 'date', align: 'center', sortable: true },
         { name: 'actions', label: 'Actions', align: 'center', sortable: false },
       ],
     }
@@ -143,9 +143,9 @@ export default {
         month: 'long',
         day: 'numeric',
         year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
+        // hour: 'numeric',
+        // minute: '2-digit',
+        // hour12: true
       })
     },
     async loadLogs() {
