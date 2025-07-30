@@ -130,11 +130,8 @@ class AppropriationController extends Controller
         $barangayId = $request->user()->barangay_id;
         $budgetId = $request->budget_id;
 
-            return response()->json([
-                'status' => true,
-                'data' => $classes
-            ]);
-        }
+
+
 
         $classes = LibExpenseClass::with(['types.items'])
             ->where('fiscal_year_id', $request->fiscal_year_id)
