@@ -1,29 +1,14 @@
-import { defineStore } from 'pinia'
-import { api } from 'boot/axios'
-import { useAuthStore } from './auth'
+import { defineStore } from "pinia"
+import { api } from "boot/axios"
+import { useAuthStore } from "./auth"
 
-export const getAuthConfig = () => {
-  const authStore = useAuthStore()
-  if (!authStore.token) {
-    console.error('No authentication token found')
-    throw new Error('Authentication required')
-  }
-  return {
-    headers: {
-      Authorization: `Bearer ${authStore.token}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-  }
-}
-
-export const useAppropriationStore = defineStore('appropriation', {
+export const useAppropriationStore = defineStore("appropriation", {
   state: () => ({
     loading: false,
     showAllocationDialog: false,
-    searchQuery: '',
-    dateFrom: '',
-    dateTo: '',
+    searchQuery: "",
+    dateFrom: "",
+    dateTo: "",
     allocationInputs: {},
     inputValues: {},
     inputCache: {},
@@ -32,18 +17,20 @@ export const useAppropriationStore = defineStore('appropriation', {
     expenseHierarchy: [],
     rawAllocations: [],
     categoryTotals: [],
+    originalAllocations: {}, // Track original allocation amounts
+    existingAllocationsTotal: 0, // Track total of existing allocations
 
     appropriations: [],
-    fiscalYears: [], // Add this to store all fiscal years
-    currentFiscalYearId: null, // Store the current fiscal year ID
+    fiscalYears: [],
+    currentFiscalYearId: null,
     currentYear: new Date().getFullYear().toString(),
 
     allocations: [],
+    authStore: useAuthStore(), // Moved hook call inside state
   }),
 
   getters: {
     expenseClassTotals(state) {
-      // Directly return the pre-calculated totals
       return state.categoryTotals
     },
 
@@ -54,8 +41,7 @@ export const useAppropriationStore = defineStore('appropriation', {
         return items.reduce((acc, item) => {
           if (!item) return acc
 
-          // Add the current item with proper indentation
-          const prefix = depth > 0 ? '→ '.repeat(depth) : ''
+          const prefix = depth > 0 ? "→ ".repeat(depth) : ""
           const flatItem = {
             ...item,
             indent: depth,
@@ -64,7 +50,6 @@ export const useAppropriationStore = defineStore('appropriation', {
           }
           acc.push(flatItem)
 
-          // Process children if they exist
           if (item.children && Array.isArray(item.children)) {
             const childItems = flatten(item.children, depth + 1)
             acc.push(...childItems)
@@ -83,7 +68,6 @@ export const useAppropriationStore = defineStore('appropriation', {
       const query = state.searchQuery.toLowerCase()
       const matchingIds = new Set()
 
-      // First identify all matching items
       const matchingItems = this.flattenedAccounts.filter((item) => {
         const matches =
           item.name.toLowerCase().includes(query) ||
@@ -92,13 +76,10 @@ export const useAppropriationStore = defineStore('appropriation', {
         return matches
       })
 
-      // Add parent categories of matching items
       const parentCategories = this.flattenedAccounts.filter(
         (item) =>
           item.isMainCategory &&
-          this.flattenedAccounts.some(
-            (child) => child.indent > item.indent && matchingIds.has(child.id),
-          ),
+          this.flattenedAccounts.some((child) => child.indent > item.indent && matchingIds.has(child.id)),
       )
 
       return [...new Set([...matchingItems, ...parentCategories])].sort((a, b) => {
@@ -108,16 +89,17 @@ export const useAppropriationStore = defineStore('appropriation', {
       })
     },
 
-    totalAllocated() {
-      return this.flattenedAccounts.reduce((total, account) => {
+    totalAllocated(state) {
+      return state.flattenedAccounts.reduce((total, account) => {
         if (!account.amount || account.isMainCategory) return total
-        const amount = parseFloat(String(account.amount).replace(/,/g, '')) || 0
+        const amount = parseCurrency(account.amount)
         return total + amount
       }, 0)
     },
 
     remainingUnappropriated(state) {
-      return (state.selectedRow?.total || 0) - this.totalAllocated
+      const total = parseCurrency(state.selectedRow?.total || 0)
+      return Math.round((total - this.totalAllocated) * 100) / 100
     },
 
     filteredAppropriations(state) {
@@ -130,8 +112,6 @@ export const useAppropriationStore = defineStore('appropriation', {
 
         results = results.filter((item) => {
           const itemDate = new Date(item.date)
-
-          // Normalize all dates to start of the day
           const normalizedItemDate = new Date(itemDate.toDateString())
           const normalizedFromDate = fromDate ? new Date(fromDate.toDateString()) : null
           const normalizedToDate = toDate ? new Date(toDate.toDateString()) : null
@@ -146,9 +126,7 @@ export const useAppropriationStore = defineStore('appropriation', {
       // Search filtering
       if (state.searchQuery.trim()) {
         const query = state.searchQuery.toLowerCase()
-        results = results.filter((item) =>
-          Object.values(item).some((val) => String(val).toLowerCase().includes(query)),
-        )
+        results = results.filter((item) => Object.values(item).some((val) => String(val).toLowerCase().includes(query)))
       }
 
       return results
@@ -156,74 +134,63 @@ export const useAppropriationStore = defineStore('appropriation', {
   },
 
   actions: {
-    /*async getCurrentFiscalYear() {
-      try {
-        const response = await api.get('/api/barangay/fiscal-years/current', getAuthConfig())
-        return response.data.id
-      } catch (error) {
-        console.error('Failed to get current fiscal year:', error)
-        throw error
-      }
-    },*/
-
     async openAllocationDialog(row) {
       try {
-        console.log('[DEBUG] Opening allocation dialog for row:', row)
+        console.log("[DEBUG] Opening allocation dialog for row:", row)
+        console.log("[DEBUG] Raw row data:", JSON.stringify(row, null, 2))
+
+        // Ensure proper number parsing for selectedRow
+        const unappropriatedValue = row.unappropriated || row.amount || 0
+        console.log("[DEBUG] Unappropriated value before parsing:", unappropriatedValue, typeof unappropriatedValue)
 
         this.selectedRow = {
           id: row.id,
-          total: row.amount || 0,
-          unappropriated: row.unappropriated || 0,
-          description: row.description || '',
+          total: parseCurrency(row.amount || 0),
+          unappropriated: parseCurrency(unappropriatedValue),
+          description: row.description || "",
         }
 
-        this.loading = true
-        console.log('[DEBUG] Fetching expense hierarchy and existing allocations...')
+        console.log("[DEBUG] Parsed selectedRow:", this.selectedRow)
 
-        // Fetch both in parallel for better performance
+        this.loading = true
+        console.log("[DEBUG] Fetching expense hierarchy and existing allocations...")
+
         await Promise.all([this.fetchExpenseHierarchy(), this.fetchExistingAllocations(row.id)])
 
         this.showAllocationDialog = true
-        console.log('[DEBUG] Allocation dialog opened successfully with existing allocations')
+        console.log("[DEBUG] Allocation dialog opened successfully")
       } catch (error) {
-        console.error('[ERROR] in openAllocationDialog:', {
+        console.error("[ERROR] in openAllocationDialog:", {
           error: error.message,
           rowData: row,
           stack: error.stack,
         })
 
-        throw new Error(error.message || 'Failed to load allocation accounts. Please try again.')
+        throw new Error(error.message || "Failed to load allocation accounts. Please try again.")
       } finally {
         this.loading = false
-        console.log('[DEBUG] Loading state reset')
       }
     },
 
     formatDate(value) {
-      if (!value) return ''
+      if (!value) return ""
 
       const date = new Date(value)
-
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
       })
     },
 
     formatCurrency(value) {
-      if (value === null || value === undefined) return '₱0.00'
-
-      const num =
-        typeof value === 'string' ? parseFloat(value.replace(/[^0-9.-]/g, '')) : Number(value)
-
-      return isNaN(num)
-        ? '₱0.00'
-        : num.toLocaleString('en-PH', {
-            style: 'currency',
-            currency: 'PHP',
-            minimumFractionDigits: 2,
-          })
+      const num = parseCurrency(value)
+      return num.toLocaleString("en-PH", {
+        style: "currency",
+        currency: "PHP",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
     },
 
     calculateTotals() {
@@ -234,7 +201,7 @@ export const useAppropriationStore = defineStore('appropriation', {
 
     async saveAllocation() {
       if (!this.selectedRow) {
-        console.error('No selected row to save allocation for.')
+        console.error("No selected row to save allocation for.")
         return false
       }
       try {
@@ -263,30 +230,35 @@ export const useAppropriationStore = defineStore('appropriation', {
         this.showAllocationDialog = false
         return true
       } catch (error) {
-        console.error('Failed to save allocation:', error)
+        console.error("Failed to save allocation:", error)
         return false
       }
     },
 
     async addBudget(newBudget) {
       try {
-        const response = await api.post('/api/barangay/budgets/create', newBudget, getAuthConfig())
+        const response = await api.post("/api/barangay/budgets/create", newBudget, {
+          headers: {
+            Authorization: `Bearer ${this.authStore.token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+        })
 
-        // Add to local state
         const newApprop = {
           id: response.data.id,
-          date: new Date().toISOString().split('T')[0], // or use response.data.date
+          date: new Date().toISOString().split("T")[0],
           description: newBudget.description,
-          amount: parseFloat(newBudget.original_amount),
-          unappropriated: parseFloat(newBudget.original_amount),
+          amount: parseCurrency(newBudget.original_amount),
+          unappropriated: parseCurrency(newBudget.original_amount),
           allocations: [],
         }
 
         this.appropriations.push(newApprop)
         return newApprop
       } catch (error) {
-        console.error('Failed to add budget:', error)
-        throw error // Re-throw to handle in component
+        console.error("Failed to add budget:", error)
+        throw error
       }
     },
 
@@ -294,41 +266,49 @@ export const useAppropriationStore = defineStore('appropriation', {
       this.loading = true
       try {
         const currentYear = new Date().getFullYear()
-        const response = await api.get('/api/barangay/budgets', {
+        const response = await api.get("/api/barangay/budgets", {
           params: { year: currentYear },
-          headers: getAuthConfig().headers,
+          headers: {
+            Authorization: `Bearer ${this.authStore.token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
         })
 
         this.appropriations = response.data.data.map((budget) => ({
           id: budget.id,
           date: budget.date,
           description: budget.description,
-          amount: budget.amount,
-          unappropriated: budget.unappropriated,
+          amount: parseCurrency(budget.amount),
+          unappropriated: parseCurrency(budget.unappropriated),
           fiscal_year: budget.fiscal_year,
           allocations: budget.allocations,
         }))
-        // Optional: Store the total available amount if needed
-        this.totalAvailable = parseFloat(response.data.total_available) || 0
+
+        this.totalAvailable = parseCurrency(response.data.total_available || 0)
+        console.log("[DEBUG] Fetched budgets with parsed amounts:", this.appropriations)
       } catch (error) {
-        console.error('Error fetching budgets:', error)
+        console.error("Error fetching budgets:", error)
       } finally {
-        this.loading = false // Set loading to false when done
+        this.loading = false
       }
     },
+
     async initialize() {
       await this.fetchAppropriations()
     },
 
     async fetchExpenseHierarchy() {
       try {
-        // 1. Get fiscal years - response is direct array
-        const yearsResponse = await api.get('/api/barangay/fiscal-years', getAuthConfig())
-        const fiscalYears = Array.isArray(yearsResponse.data)
-          ? yearsResponse.data
-          : yearsResponse.data.data || []
+        const yearsResponse = await api.get("/api/barangay/fiscal-years", {
+          headers: {
+            Authorization: `Bearer ${this.authStore.token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+        })
+        const fiscalYears = Array.isArray(yearsResponse.data) ? yearsResponse.data : yearsResponse.data.data || []
 
-        // 2. Find current year
         const currentYear = new Date().getFullYear()
         const fiscalYear = fiscalYears.find((y) => y.year == currentYear)
 
@@ -336,110 +316,148 @@ export const useAppropriationStore = defineStore('appropriation', {
           throw new Error(`No fiscal year configuration found for ${currentYear}.
         Please contact your administrator.`)
         }
-        console.log('[DEBUG] Fetching expense hierarchy...')
-        const response = await api.get('/api/barangay/expense-hierarchy', {
+
+        console.log("[DEBUG] Fetching expense hierarchy...")
+        const response = await api.get("/api/barangay/expense-hierarchy", {
           params: { fiscal_year_id: fiscalYear.id },
-          headers: getAuthConfig().headers,
+          headers: {
+            Authorization: `Bearer ${this.authStore.token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
         })
 
-        console.log('[DEBUG] Full API response:', response)
-
-        // Extract the actual array from response.data.data
+        console.log("[DEBUG] Full API response:", response)
         this.allocations = response.data.data || []
-        console.log('[DEBUG] Extracted allocations:', this.allocations)
+        console.log("[DEBUG] Extracted allocations:", this.allocations)
       } catch (error) {
-        console.error('[ERROR] fetchExpenseHierarchy:', error)
+        console.error("[ERROR] fetchExpenseHierarchy:", error)
         throw error
       }
     },
 
     async fetchExistingAllocations(budgetId) {
       try {
-        console.log('[DEBUG] Fetching existing allocations for budget:', budgetId)
-        const response = await api.get(
-          `/api/barangay/budgets/${budgetId}/allocations`,
-          getAuthConfig(),
-        )
+        console.log("[DEBUG] Fetching existing allocations for budget:", budgetId)
+        const response = await api.get(`/api/barangay/budgets/${budgetId}/allocations`, {
+          headers: {
+            Authorization: `Bearer ${this.authStore.token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+        })
 
-        // Initialize input values from existing allocations
         const allocations = response.data.data || []
-        console.log('[DEBUG] Retrieved allocations:', allocations)
+        console.log("[DEBUG] Retrieved existing allocations:", allocations)
 
-        // Clear previous inputs
+        // Clear previous state
         this.inputCache = {}
         this.allocationInputs = {}
+        this.originalAllocations = {}
+        this.existingAllocationsTotal = 0
 
-        // Set current values from existing allocations
+        // Set current values from existing allocations and track originals
         allocations.forEach((allocation) => {
-          const id = allocation.expense_item_id || allocation.expense_type_id
+          const id = allocation.expense_item_id || allocation.expense_type_id || allocation.expense_class_id
           if (id) {
-            const amount = allocation.amount.toString()
-            this.inputCache[id] = amount
-            this.allocationInputs[id] = amount
+            const amount = parseCurrency(allocation.amount)
+            this.inputCache[id] = amount.toString()
+            this.allocationInputs[id] = amount.toString()
+            this.originalAllocations[id] = amount
+            this.existingAllocationsTotal += amount
           }
         })
 
-        console.log('[DEBUG] Initialized input values from existing allocations')
+        console.log("[DEBUG] Original allocations:", this.originalAllocations)
+        console.log("[DEBUG] Existing allocations total:", this.existingAllocationsTotal)
+        console.log("[DEBUG] Initialized input values:", this.inputCache)
       } catch (error) {
-        console.error('[ERROR] fetchExistingAllocations:', {
+        console.error("[ERROR] fetchExistingAllocations:", {
           error: error.message,
           budgetId: budgetId,
           stack: error.stack,
         })
-        // Fail silently - new allocation will start fresh
+        // Initialize empty state on error
+        this.originalAllocations = {}
+        this.existingAllocationsTotal = 0
       }
     },
 
-    // In your appropriationStore.js
     async commitAllocation(budgetId, allocations) {
       try {
+        const cleanedAllocations = allocations.map((allocation) => ({
+          ...allocation,
+          amount: parseCurrency(allocation.amount),
+        }))
+
+        const totalAmount = cleanedAllocations.reduce((sum, a) => sum + a.amount, 0)
+
+        console.log("[DEBUG] Committing allocation:")
+        console.log("- Budget ID:", budgetId)
+        console.log("- Allocations:", cleanedAllocations)
+        console.log("- Total Amount:", totalAmount)
+        console.log("- Available Budget:", this.selectedRow?.unappropriated)
+        console.log("- Existing Total:", this.existingAllocationsTotal)
+        console.log("- Net Change:", totalAmount - this.existingAllocationsTotal)
+
         const response = await api.post(
           `/api/barangay/budgets/${budgetId}/allocate`,
-          { allocations },
-          getAuthConfig(),
+          { allocations: cleanedAllocations },
+          {
+            headers: {
+              Authorization: `Bearer ${this.authStore.token}`,
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+          },
         )
 
-        // Update local state - more robust handling
+        console.log("[DEBUG] Backend response:", response.data)
+
+        // Update local state
         const budgetIndex = this.appropriations.findIndex((b) => b.id === budgetId)
         if (budgetIndex !== -1) {
-          // Use response data or fallback to calculation
-          const updatedAmount =
-            response.data?.updated_amount ??
-            this.appropriations[budgetIndex].unappropriated -
-              allocations.reduce((sum, a) => sum + a.amount, 0)
+          const netChange = totalAmount - this.existingAllocationsTotal
+          const updatedAmount = this.appropriations[budgetIndex].unappropriated - netChange
 
-          this.appropriations[budgetIndex].unappropriated = updatedAmount
+          this.appropriations[budgetIndex].unappropriated = parseCurrency(updatedAmount)
+          console.log(
+            "[DEBUG] Updated local budget unappropriated to:",
+            this.appropriations[budgetIndex].unappropriated,
+          )
         }
 
         return response.data
       } catch (error) {
-        console.error('Error committing allocation:', error)
+        console.error("[ERROR] commitAllocation:", error)
+        console.error("[ERROR] Response data:", error.response?.data)
+        console.error("[ERROR] Response status:", error.response?.status)
         throw error
       }
     },
 
-    // Modified to prevent recursion
     updateAllocationAmount(id, value) {
-      // Only update if value changed
-      if (this.inputCache[id] !== value) {
+      const parsedValue = value ? parseCurrency(value).toString() : ""
+
+      if (this.inputCache[id] !== parsedValue) {
         this.inputCache = {
           ...this.inputCache,
-          [id]: value,
+          [id]: parsedValue,
         }
         this.allocationInputs = {
           ...this.allocationInputs,
-          [id]: value,
+          [id]: parsedValue,
         }
       }
     },
 
-    // Initialize or reset input values
     initializeInputCache(allocations) {
       const cache = {}
       const processItems = (items) => {
         items.forEach((item) => {
           if (item.id) {
-            cache[item.id] = this.allocationInputs[item.id] || ''
+            const existingValue = this.allocationInputs[item.id] || ""
+            cache[item.id] = existingValue
           }
           if (item.children) {
             processItems(item.children)
@@ -453,26 +471,27 @@ export const useAppropriationStore = defineStore('appropriation', {
     calculateClassTotal(expenseClass) {
       let total = 0
       expenseClass.children?.forEach((expenseType) => {
-        // Check both the type amount and its items
-        const typeAmount = parseFloat(this.inputCache[expenseType.id] || 0)
+        const typeAmount = parseCurrency(this.inputCache[expenseType.id] || 0)
         total += typeAmount
 
         expenseType.children?.forEach((item) => {
-          const itemAmount = parseFloat(this.inputCache[item.id] || 0)
+          const itemAmount = parseCurrency(this.inputCache[item.id] || 0)
           total += itemAmount
         })
       })
-      return total
+      return Math.round(total * 100) / 100
     },
 
     async fetchAllocationHistory(id) {
       try {
-        const response = await api.get(
-          `/api/barangay/appropriations/${id}/history`,
-          getAuthConfig(),
-        )
+        const response = await api.get(`/api/barangay/appropriations/${id}/history`, {
+          headers: {
+            Authorization: `Bearer ${this.authStore.token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+        })
 
-        // Transform the data to match your frontend structure
         const latestAllocation = response.data.data.history[0] || null
 
         if (!latestAllocation) {
@@ -497,34 +516,29 @@ export const useAppropriationStore = defineStore('appropriation', {
             }
           }
 
-          // Check if this is a type-level allocation
           if (alloc.expense_type_id && !alloc.expense_item_id) {
             groupedByClass[classId].children.push({
               id: alloc.expense_type_id,
               name: alloc.expense_type_name,
-              amount: alloc.amount,
+              amount: parseCurrency(alloc.amount),
               children: [],
             })
-          }
-          // Check if this is an item-level allocation
-          else if (alloc.expense_item_id) {
-            // Find or create the type
+          } else if (alloc.expense_item_id) {
             let type = groupedByClass[classId].children.find((t) => t.id === alloc.expense_type_id)
             if (!type) {
               type = {
                 id: alloc.expense_type_id,
                 name: alloc.expense_type_name,
-                amount: 0, // Parent types don't have their own amount
+                amount: 0,
                 children: [],
               }
               groupedByClass[classId].children.push(type)
             }
 
-            // Add the item
             type.children.push({
               id: alloc.expense_item_id,
               name: alloc.expense_item_name,
-              amount: alloc.amount,
+              amount: parseCurrency(alloc.amount),
             })
           }
         })
@@ -535,7 +549,7 @@ export const useAppropriationStore = defineStore('appropriation', {
           budget: response.data.data.budget,
         }
       } catch (error) {
-        console.error('Failed to fetch allocation history:', error)
+        console.error("Failed to fetch allocation history:", error)
         throw error
       }
     },
@@ -544,30 +558,33 @@ export const useAppropriationStore = defineStore('appropriation', {
       this.rawAllocations = allocations
 
       if (!this.expenseHierarchy.length) {
-        console.warn('[WARNING] Hierarchy not loaded - fetching now')
+        console.warn("[WARNING] Hierarchy not loaded - fetching now")
         await this.fetchExpenseHierarchy()
       }
 
-      // Re-check hierarchy after await
       if (!this.expenseHierarchy.length) {
-        console.error('[ERROR] Hierarchy still not loaded after fetch')
+        console.error("[ERROR] Hierarchy still not loaded after fetch")
         return
       }
 
       this.categoryTotals = this.calculateCategoryTotals()
-      console.log('[DEBUG] Calculated totals:', this.categoryTotals)
+      console.log("[DEBUG] Calculated totals:", this.categoryTotals)
     },
+
     calculateCategoryTotals() {
       if (!this.expenseHierarchy.length || !this.rawAllocations.length) {
-        console.warn('Cannot calculate - missing data')
+        console.warn("Cannot calculate - missing data")
         return []
       }
 
-      // Create amount map
+      // Create amount map with proper parsing
       const amountMap = {}
       this.rawAllocations.forEach((alloc) => {
         const id = alloc.expense_item_id || alloc.expense_type_id || alloc.expense_class_id
-        if (id) amountMap[id] = (amountMap[id] || 0) + parseFloat(alloc.amount)
+        if (id) {
+          const amount = parseCurrency(alloc.amount)
+          amountMap[id] = (amountMap[id] || 0) + amount
+        }
       })
 
       // Calculate totals
@@ -587,28 +604,20 @@ export const useAppropriationStore = defineStore('appropriation', {
 
           return {
             name: category.name,
-            total: total,
+            total: Math.round(total * 100) / 100,
           }
         })
         .filter((cat) => cat.total > 0)
     },
-
-    /*addAppropriation(newAppropriation) {
-      this.appropriations.push({
-        id: Math.max(...this.appropriations.map((a) => a.id), 0) + 1,
-        date: newAppropriation.date,
-        description: newAppropriation.description,
-        amount: parseFloat(newAppropriation.amount),
-        unappropriated: parseFloat(newAppropriation.amount),
-        allocations: [],
-      })
-    },
-
-    updateUnappropriated(appropriationId, amount) {
-      const appropriation = this.appropriations.find((a) => a.id === appropriationId)
-      if (appropriation) {
-        appropriation.unappropriated = parseFloat(amount) // Ensure numeric value
-      }
-    },*/
   },
 })
+
+// Utility function for consistent currency parsing
+const parseCurrency = (value) => {
+  if (!value && value !== 0) return 0
+
+  const cleanValue = String(value).replace(/[₱,\s]/g, "")
+  const parsed = Number.parseFloat(cleanValue)
+
+  return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100
+}
