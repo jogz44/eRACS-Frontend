@@ -130,9 +130,6 @@ class AppropriationController extends Controller
         $barangayId = $request->user()->barangay_id;
         $budgetId = $request->budget_id;
 
-
-
-
         $classes = LibExpenseClass::with(['types.items'])
             ->where('fiscal_year_id', $request->fiscal_year_id)
             ->get()
@@ -184,7 +181,10 @@ class AppropriationController extends Controller
         'allocations' => 'required|array',
         'allocations.*.id' => 'required',
         'allocations.*.type' => 'required|in:class,type,item',
-        'allocations.*.amount' => 'required|numeric|min:0'
+        'allocations.*.amount' => 'required|numeric|min:0',
+        'allocations.*.expense_class_id' => 'nullable|integer|exists:lib_expense_classes,id',
+        'allocations.*.expense_type_id' => 'nullable|integer|exists:lib_expense_types,id',
+        'allocations.*.expense_item_id' => 'nullable|integer|exists:lib_expense_items,id'
     ]);
 
     // Get existing allocations for this budget
@@ -242,16 +242,11 @@ class AppropriationController extends Controller
                 'amount' => $allocation['amount'],
                 'transaction_date' => now(),
                 'status' => 'committed',
-                'user_id' => $request->user()->id
+                'user_id' => $request->user()->id,
+                'expense_class_id' => $allocation['expense_class_id'] ?? null,
+                'expense_type_id' => $allocation['expense_type_id'] ?? null,
+                'expense_item_id' => $allocation['expense_item_id'] ?? null
             ];
-
-            // Set the appropriate expense field
-            $field = match($allocation['type']) {
-                'class' => 'expense_class_id',
-                'type' => 'expense_type_id',
-                'item' => 'expense_item_id',
-            };
-            $appropriationData[$field] = $allocation['id'];
 
             $appropriations[] = TranAppropriation::create($appropriationData);
 
@@ -287,13 +282,17 @@ class AppropriationController extends Controller
     // In your AppropriationController.php
     public function getBudgetAllocations($budgetId)
     {
-        $allocations = TranAppropriation::where('budget_id', $budgetId)
+        $allocations = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem'])
+            ->where('budget_id', $budgetId)
             ->get()
             ->map(function($alloc) {
                 return [
                     'expense_item_id' => $alloc->expense_item_id,
                     'expense_type_id' => $alloc->expense_type_id,
                     'expense_class_id' => $alloc->expense_class_id,
+                    'expense_class_name' => $alloc->expenseClass->name ?? null,
+                    'expense_type_name' => $alloc->expenseType->name ?? null,
+                    'expense_item_name' => $alloc->expenseItem->name ?? null,
                     'amount' => (float)$alloc->amount
                 ];
             });
@@ -341,11 +340,11 @@ class AppropriationController extends Controller
                 'fiscalYear'
             ])->findOrFail($budgetId);
 
-            // Only use allocations for items
-            $itemAppropriations = $budget->tranAppropriations->whereNotNull('expense_item_id');
+            // Use all appropriations (items, types, and classes)
+            $allAppropriations = $budget->tranAppropriations;
 
             // Group by allocation date (session)
-            $groupedHistory = $itemAppropriations->groupBy(function($item) {
+            $groupedHistory = $allAppropriations->groupBy(function($item) {
                 return $item->created_at->format('Y-m-d H:i:s');
             });
 
@@ -356,21 +355,13 @@ class AppropriationController extends Controller
                     'created_at' => $allocations->first()->created_at,
                     'total_allocated' => $allocations->sum('amount'),
                     'allocations' => $allocations->map(function($alloc) {
-                        // Get hierarchy info
-                        $expenseClass = $alloc->expenseClass ??
-                                       ($alloc->expenseType->expenseClass ??
-                                       ($alloc->expenseItem->expenseType->expenseClass ?? null));
-
-                        $expenseType = $alloc->expenseType ??
-                                      ($alloc->expenseItem->expenseType ?? null);
-
                         return [
                             'id' => $alloc->id,
                             'amount' => (float)$alloc->amount,
-                            'expense_class_id' => $expenseClass->id ?? null,
-                            'expense_class_name' => $expenseClass->name ?? null,
-                            'expense_type_id' => $expenseType->id ?? null,
-                            'expense_type_name' => $expenseType->name ?? null,
+                            'expense_class_id' => $alloc->expense_class_id,
+                            'expense_class_name' => $alloc->expenseClass->name ?? null,
+                            'expense_type_id' => $alloc->expense_type_id,
+                            'expense_type_name' => $alloc->expenseType->name ?? null,
                             'expense_item_id' => $alloc->expense_item_id,
                             'expense_item_name' => $alloc->expenseItem->name ?? null,
                         ];
@@ -385,7 +376,7 @@ class AppropriationController extends Controller
                     'budget' => $budget->only(['id', 'description', 'original_amount', 'current_amount']),
                     'fiscal_year' => $budget->fiscalYear->year ?? null,
                     'history' => $history,
-                    'total_allocated_to_date' => $itemAppropriations->sum('amount')
+                    'total_allocated_to_date' => $allAppropriations->sum('amount')
                 ]
             ]);
 
@@ -403,6 +394,8 @@ class AppropriationController extends Controller
             'allocations' => 'required|array',
             'allocations.*.expense_item_id' => 'required|integer|exists:lib_expense_items,id',
             'allocations.*.amount' => 'required|numeric|min:0',
+            'allocations.*.expense_class_id' => 'nullable|integer|exists:lib_expense_classes,id',
+            'allocations.*.expense_type_id' => 'nullable|integer|exists:lib_expense_types,id',
         ]);
 
         $budget = \App\Models\Budget::findOrFail($budgetId);
@@ -429,6 +422,8 @@ class AppropriationController extends Controller
                 $budget->tranAppropriations()->create([
                     'barangay_id' => $budget->barangay_id,
                     'amount' => $alloc['amount'],
+                    'expense_class_id' => $alloc['expense_class_id'] ?? null,
+                    'expense_type_id' => $alloc['expense_type_id'] ?? null,
                     'expense_item_id' => $alloc['expense_item_id'],
                     'transaction_date' => now(),
                     'status' => 'committed',
@@ -466,8 +461,8 @@ class AppropriationController extends Controller
             // Calculate totals
             $totalAppropriation = $budgets->sum('original_amount');
             $totalObligation = $budgets->sum(function($budget) {
-                // Only sum allocations for items
-                return $budget->tranAppropriations->whereNotNull('expense_item_id')->sum('amount');
+                // Sum all allocations (items, types, and classes)
+                return $budget->tranAppropriations->sum('amount');
             });
             $totalBalance = $totalAppropriation - $totalObligation;
 
@@ -511,14 +506,10 @@ class AppropriationController extends Controller
             foreach ($expenseHierarchy as $expenseClass) {
                 $classTotal = 0;
                 foreach ($budgets as $budget) {
-                    // Only sum allocations for items under this class
-                    foreach ($expenseClass['children'] as $expenseType) {
-                        foreach ($expenseType['children'] as $expenseItem) {
-                            $classTotal += $budget->tranAppropriations
-                                ->where('expense_item_id', $expenseItem['id'])
-                                ->sum('amount');
-                        }
-                    }
+                    // Sum all allocations for this class (type-level and item-level)
+                    $classTotal += $budget->tranAppropriations
+                        ->where('expense_class_id', $expenseClass['id'])
+                        ->sum('amount');
                 }
                 if ($classTotal > 0) {
                     $classTotals[] = [
@@ -531,6 +522,66 @@ class AppropriationController extends Controller
 
             \Log::info('Class totals count: ' . count($classTotals));
 
+            // Get top expense classes by allocation amount
+            $topExpenseClasses = collect($classTotals)
+                ->sortByDesc('total')
+                ->take(5)
+                ->values()
+                ->all();
+
+            // Get recent allocations (last 10)
+            $recentAllocations = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem'])
+                ->where('barangay_id', $barangayId)
+                ->where('status', 'committed')
+                ->orderBy('created_at', 'desc')
+                ->take(10)
+                ->get()
+                ->map(function($alloc) {
+                    return [
+                        'id' => $alloc->id,
+                        'amount' => (float)$alloc->amount,
+                        'expense_class_name' => $alloc->expenseClass->name ?? 'Unknown',
+                        'expense_type_name' => $alloc->expenseType->name ?? 'Unknown',
+                        'expense_item_name' => $alloc->expenseItem->name ?? null,
+                        'allocation_type' => $alloc->expense_item_id ? 'Item' : 'Type',
+                        'created_at' => $alloc->created_at->format('Y-m-d H:i:s'),
+                    ];
+                });
+
+            // Calculate additional breakdown statistics
+            $typeLevelTotal = $budgets->sum(function($budget) {
+                return $budget->tranAppropriations
+                    ->whereNotNull('expense_type_id')
+                    ->whereNull('expense_item_id')
+                    ->sum('amount');
+            });
+            
+            $itemLevelTotal = $budgets->sum(function($budget) {
+                return $budget->tranAppropriations
+                    ->whereNotNull('expense_item_id')
+                    ->sum('amount');
+            });
+
+            // Calculate additional statistics
+            $totalAllocations = $budgets->sum(function($budget) {
+                return $budget->tranAppropriations->count();
+            });
+            
+            $typeLevelAllocations = $budgets->sum(function($budget) {
+                return $budget->tranAppropriations
+                    ->whereNotNull('expense_type_id')
+                    ->whereNull('expense_item_id')
+                    ->count();
+            });
+            
+            $itemLevelAllocations = $budgets->sum(function($budget) {
+                return $budget->tranAppropriations
+                    ->whereNotNull('expense_item_id')
+                    ->count();
+            });
+
+            $averageAllocation = $totalAllocations > 0 ? $totalObligation / $totalAllocations : 0;
+
             $response = [
                 'status' => true,
                 'data' => [
@@ -538,11 +589,19 @@ class AppropriationController extends Controller
                         'total_appropriation' => (float)$totalAppropriation,
                         'total_obligation' => (float)$totalObligation,
                         'total_balance' => (float)$totalBalance,
+                        'type_level_total' => (float)$typeLevelTotal,
+                        'item_level_total' => (float)$itemLevelTotal,
+                        'total_allocations' => (int)$totalAllocations,
+                        'type_level_allocations' => (int)$typeLevelAllocations,
+                        'item_level_allocations' => (int)$itemLevelAllocations,
+                        'average_allocation' => (float)$averageAllocation,
                     ],
                     'pie_chart_data' => [
                         'labels' => array_column($classTotals, 'name'),
                         'data' => array_column($classTotals, 'total'),
                     ],
+                    'top_expense_classes' => $topExpenseClasses,
+                    'recent_allocations' => $recentAllocations,
                     'budgets_count' => $budgets->count(),
                     'current_fiscal_year' => $currentYear,
                 ]
