@@ -255,7 +255,7 @@ public function copyToYear(Request $request, $sourceYearId)
     ]);
     AdminAuthController::logUserAction(
         Auth::guard('barangay')->user(),
-        'Accounts -> Expense Classes',
+        'Accounts -> Expense Class',
         'Created expense class "'.$request->input('name').'" for fiscal year '.(LibFiscalYear::whereKey($request->input('fiscal_year_id'))->value('year'))
     );
     return response()->json($class, 201);
@@ -303,10 +303,18 @@ public function copyToYear(Request $request, $sourceYearId)
     $this->verifyBarangayAccess();
     $barangayId = Auth::user()->barangay_id;
 
+    $logData = [];
+
     DB::transaction(function () use ($barangayId, $classId) {
         $class = LibExpenseClass::forBarangay($barangayId)
             ->with('types.items')
             ->findOrFail($classId);
+
+            
+        // Collect log details before deletion
+        $logData['class_name']  = $class->name;
+        $logData['fiscal_year'] = optional($class->fiscalYear)->year ?? 'N/A';
+
 
         // Manually delete to avoid cascade issues
         $class->types->each(function ($type) {
@@ -315,6 +323,12 @@ public function copyToYear(Request $request, $sourceYearId)
         });
 
         $class->delete();
+        
+        AdminAuthController::logUserAction(
+                Auth::guard('barangay')->user(),
+            'Accounts -> Expense Class',
+            'Deleted expense class "'.$logData['class_name'].'" in fiscal year '.$logData['fiscal_year']
+        );
     });
 
     return response()->json(['message' => 'Class deleted successfully']);
@@ -635,11 +649,6 @@ public function updateOrder(Request $request, $classId)
     $this->verifyBarangayAccess();
     $barangayId = Auth::user()->barangay_id;
 
-    // $item = LibExpenseItem::where('expense_type_id', $typeId)
-    //     ->whereHas('expenseType.expenseClass', function ($q) use ($barangayId) {
-    //         $q->where('barangay_id', $barangayId);
-    //     })
-    //     ->findOrFail($itemId);
          // Load relations so we can log details before deletion
     $item = LibExpenseItem::where('expense_type_id', $typeId)
         ->whereHas('expenseType.expenseClass', function ($q) use ($barangayId) {
