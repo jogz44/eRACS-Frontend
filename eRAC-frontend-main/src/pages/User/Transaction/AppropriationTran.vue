@@ -123,7 +123,7 @@
 
 
     <!-- Add Budget Dialog-->
-    <q-dialog v-model="showDialog">
+    <q-dialog v-model="showDialog" @keydown.enter="handleEnterKey">
       <q-card style="min-width: 400px">
         <q-card-section>
           <div class="text-h6">Add New Budget</div>
@@ -141,6 +141,7 @@
             map-options
             label="Fiscal Year"
             :rules="[(val) => !!val || 'Required']"
+            @keydown.enter="handleEnterKey"
           />
 
           <!-- Auto-filled Dates Based on Selected Year -->
@@ -152,6 +153,7 @@
             label="Start Date"
             mask="date"
             :rules="['date']"
+            @keydown.enter="handleEnterKey"
           >
             <template v-slot:append>
               <q-icon name="event" class="cursor-pointer">
@@ -163,11 +165,23 @@
           </q-input>
           <div class="q-mb-md">
             <strong>Description:</strong><br />
-            <q-input filled v-model="description" placeholder="Budget description" />
+            <q-input 
+              filled 
+              v-model="description" 
+              placeholder="Budget description" 
+              @keydown.enter="handleEnterKey"
+            />
           </div>
           <div class="q-mb-md">
             <strong>Amount:</strong><br />
-            <q-input filled v-model="amount" prefix="₱" placeholder="0.00" type="number" />
+            <q-input 
+              filled 
+              v-model="amount" 
+              prefix="₱" 
+              placeholder="0.00" 
+              type="number" 
+              @keydown.enter="handleEnterKey"
+            />
           </div>
         </q-card-section>
         <q-card-actions align="right" class="custom-actions">
@@ -782,6 +796,15 @@ const columns = [
     field: 'action',
   },
 ]
+
+const handleEnterKey = (event) => {
+  // Prevent default behavior to avoid form submission
+  event.preventDefault()
+  // Only save if the dialog is open and not currently loading
+  if (showDialog.value && !loading.value) {
+    saveBudget()
+  }
+}
 
 const addBudget = () => {
   openDialog()

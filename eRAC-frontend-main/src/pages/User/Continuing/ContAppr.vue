@@ -122,7 +122,7 @@
     </div>
 
     <!-- Dialog for Selecting Accounts -->
-    <q-dialog v-model="showContinueDialog">
+    <q-dialog v-model="showContinueDialog" @keydown.enter="handleEnterKey">
       <q-card class="responsive-dialog-card">
         <q-card-section class="dialog-header">
           <div class="text-h6">Select Accounts to Continue</div>
@@ -137,6 +137,7 @@
               v-model="searchQuery"
               placeholder="Search accounts..."
               class="responsive-search-input"
+              @keydown.enter="handleEnterKey"
             />
             <q-select
               outlined
@@ -145,6 +146,7 @@
               :options="yearOptions"
               label="Select Year"
               class="responsive-year-select"
+              @keydown.enter="handleEnterKey"
             />
           </div>
           <q-card-section class="q-pa-sm table-container">
@@ -177,6 +179,7 @@
             type="text"
             placeholder="e.g., Carried-over balances from previous year"
             class="responsive-description-input"
+            @keydown.enter="handleEnterKey"
           />
         </q-card-section>
 
@@ -185,7 +188,7 @@
           <q-btn
             label="Continue"
             class="modal-save-btn"
-            @click="continueSelected"
+            @click="handleContinueClick"
             :disable="selectedAccounts.length === 0 || !description"
           />
         </q-card-actions>
@@ -211,7 +214,7 @@
     </q-card>
 
     <!-- Add this dialog to your main component -->
-    <q-dialog v-model="showAllocationDialog" persistent>
+    <q-dialog v-model="showAllocationDialog" persistent @keydown.enter="handleAllocationEnterKey">
       <q-card class="allocation-card responsive-allocation-card">
         <q-card-section class="q-pb-sm q-pt-sm dialog-header">
           <div class="row items-center justify-between">
@@ -276,6 +279,7 @@
                         :rules="[(val) => validateAmount(val)]"
                         class="responsive-amount-input"
                         :disable="availableBudget <= 0"
+                        @keydown.enter="handleAllocationEnterKey"
                       />
                     </div>
                   </div>
@@ -290,7 +294,7 @@
           <q-btn
             label="Save"
             class="modal-save-btn"
-            @click="saveAllocation"
+            @click="handleAllocationSaveClick"
             :disable="!canSaveAllocation"
           />
         </q-card-actions>
@@ -438,6 +442,48 @@ const sampleAccounts = [
   },
 ]
 
+const validateAndContinue = () => {
+  // Check if continue dialog is open
+  if (showContinueDialog.value) {
+    // Validate required fields before continuing
+    const hasSelectedAccounts = selectedAccounts.value && selectedAccounts.value.length > 0
+    const hasDescription = description.value && description.value.trim() !== ''
+    
+    if (!hasSelectedAccounts) {
+      $q.notify({
+        type: 'negative',
+        message: 'Please select at least one account to continue',
+        icon: 'warning',
+        position: 'top',
+      })
+      return
+    }
+    
+    if (!hasDescription) {
+      $q.notify({
+        type: 'negative',
+        message: 'Please provide a description before continuing',
+        icon: 'warning',
+        position: 'top',
+      })
+      return
+    }
+    
+    // If validation passes, proceed with continue
+    continueSelected()
+  }
+}
+
+const handleEnterKey = (event) => {
+  // Prevent default behavior to avoid form submission
+  event.preventDefault()
+  validateAndContinue()
+}
+
+const handleContinueClick = () => {
+  validateAndContinue()
+}
+
 // Handles merging and pushing the summary row
 const continueSelected = () => {
   const totalAmount = selectedAccounts.value.reduce((sum, acc) => sum + acc.balance, 0)
@@ -537,6 +583,35 @@ const validateAmount = (val) => {
 const canSaveAllocation = computed(() => {
   return totalAllocated.value > 0 && totalAllocated.value <= availableBudget.value
 })
+
+const validateAndSaveAllocation = () => {
+  // Check if allocation dialog is open
+  if (showAllocationDialog.value) {
+    // Validate that allocation is possible
+    if (!canSaveAllocation.value) {
+      $q.notify({
+        type: 'negative',
+        message: 'Please ensure total allocated amount is greater than 0 and within available budget',
+        icon: 'warning',
+        position: 'top',
+      })
+      return
+    }
+    
+    // If validation passes, proceed with save
+    saveAllocation()
+  }
+}
+
+const handleAllocationEnterKey = (event) => {
+  // Prevent default behavior to avoid form submission
+  event.preventDefault()
+  validateAndSaveAllocation()
+}
+
+const handleAllocationSaveClick = () => {
+  validateAndSaveAllocation()
+}
 
 // Save allocation
 const saveAllocation = () => {
