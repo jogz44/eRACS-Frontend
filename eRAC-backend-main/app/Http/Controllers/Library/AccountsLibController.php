@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Carbon\Carbon;
+use App\Http\Controllers\AdminAuthController;
+use App\Models\BarangayUser;
 
 class AccountsLibController extends Controller
 {
@@ -85,6 +87,8 @@ public function createFiscalYear(Request $request)
             'updated_at'     => $now,
         ];
     })->all();
+    $user = Auth::guard('barangay')->user();
+    AdminAuthController::logUserAction($user, "Accounts -> New Fiscal Year", "This user created fiscal year {$year->year}");
 
     LibExpenseClass::insert($toInsert);   // single query
 
@@ -165,7 +169,14 @@ public function copyToYear(Request $request, $sourceYearId)
                 'stats' => $stats
             ]
         ]);
+        $sourceYear  = \App\Models\LibFiscalYear::findOrFail($sourceYearId);
+        $targetYear  = \App\Models\LibFiscalYear::findOrFail($request->input('target_year_id'));
 
+        AdminAuthController::logUserAction(
+            Auth::guard('barangay')->user(),
+            'Accounts -> Copy to Year',
+            "Copied selected classes from fiscal year {$sourceYear->year} to fiscal year {$targetYear->year}"
+        );
         return response()->json([
             'success' => true,
             'message' => 'Copy completed successfully',
@@ -242,7 +253,11 @@ public function copyToYear(Request $request, $sourceYearId)
         'order' => LibExpenseClass::where('fiscal_year_id', $validated['fiscal_year_id'])
             ->count()
     ]);
-
+    AdminAuthController::logUserAction(
+        Auth::guard('barangay')->user(),
+        'Accounts -> Expense Classes',
+        'Created expense class "'.$request->input('name').'" for fiscal year '.(LibFiscalYear::whereKey($request->input('fiscal_year_id'))->value('year'))
+    );
     return response()->json($class, 201);
 }
 
