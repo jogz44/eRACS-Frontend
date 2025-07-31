@@ -165,21 +165,21 @@
           </q-input>
           <div class="q-mb-md">
             <strong>Description:</strong><br />
-            <q-input 
-              filled 
-              v-model="description" 
-              placeholder="Budget description" 
+            <q-input
+              filled
+              v-model="description"
+              placeholder="Budget description"
               @keydown.enter="handleEnterKey"
             />
           </div>
           <div class="q-mb-md">
             <strong>Amount:</strong><br />
-            <q-input 
-              filled 
-              v-model="amount" 
-              prefix="₱" 
-              placeholder="0.00" 
-              type="number" 
+            <q-input
+              filled
+              v-model="amount"
+              prefix="₱"
+              placeholder="0.00"
+              type="number"
               @keydown.enter="handleEnterKey"
             />
           </div>
@@ -217,6 +217,18 @@
           </q-td>
         </template>
 
+         <template v-slot:body-cell-commit="props">
+          <q-td :props="props">
+            <q-btn
+                class="allocate-btn"
+                label="Commit"
+                @click="openAllocationDialog(props.row)"
+                :disable="props.row.unappropriated <= 0"
+              />
+          </q-td>
+
+        </template>
+
         <template v-slot:body-cell-action="props">
           <q-td :props="props">
             <div class="button-group">
@@ -228,12 +240,6 @@
               />
 
               <q-btn class="allocate-btn" icon="visibility" @click="openViewDialog(props.row)" />
-              <q-btn
-                class="allocate-btn"
-                label="Commit"
-                @click="openAllocationDialog(props.row)"
-                :disable="props.row.unappropriated <= 0"
-              />
             </div>
           </q-td>
         </template>
@@ -391,7 +397,7 @@ const initializeEditDisplayAccounts = () => {
     editDisplayAccounts.value = []
     return
   }
-  
+
   // Group allocations by class/type/item (similar to ViewCommitDialog)
   const classMap = {}
   editAllocations.value.forEach((alloc) => {
@@ -401,7 +407,7 @@ const initializeEditDisplayAccounts = () => {
     const typeName = alloc.expense_type_name || `Type ${typeId}`
     const itemId = alloc.expense_item_id
     const itemName = alloc.expense_item_name || `Item ${itemId}`
-    
+
     // Initialize class if not exists
     if (!classMap[classId]) {
       classMap[classId] = {
@@ -410,7 +416,7 @@ const initializeEditDisplayAccounts = () => {
         children: [],
       }
     }
-    
+
     // Handle type-level allocations (no item ID)
     if (typeId && !itemId) {
       // Check if type already exists
@@ -426,7 +432,7 @@ const initializeEditDisplayAccounts = () => {
         })
       }
     }
-    
+
     // Handle item-level allocations
     if (itemId) {
       let type = classMap[classId].children.find((t) => t.id === typeId)
@@ -449,7 +455,7 @@ const initializeEditDisplayAccounts = () => {
       })
     }
   })
-  
+
   // Sort classes, types, and items by id to keep order static
   const classArr = Object.values(classMap)
   classArr.forEach(cls => {
@@ -460,7 +466,7 @@ const initializeEditDisplayAccounts = () => {
       }
     })
   })
-  
+
   editDisplayAccounts.value = classArr
 }
 
@@ -495,7 +501,7 @@ const toggleEditType = (typeId) => {
       hasChildren = true
     }
   })
-  
+
   // Only toggle if the type has children
   if (hasChildren) {
     expandedEditTypes.value[typeId] = !expandedEditTypes.value[typeId]
@@ -634,14 +640,14 @@ const canEditType = (expenseType) => {
 const saveEditedAllocation = async () => {
   try {
     const allocations = []
-    
+
     // Calculate total allocation amount for validation
     let totalAllocated = 0
-    
+
     // Process both type-level and item-level allocations
     editDisplayAccounts.value.forEach((expenseClass) => {
       if (!expenseClass || !Array.isArray(expenseClass.children)) return
-      
+
       expenseClass.children.forEach((expenseType) => {
         // Handle type-level allocations (only when no items exist)
         if (canEditType(expenseType)) {
@@ -658,17 +664,17 @@ const saveEditedAllocation = async () => {
             expense_item_id: null
           })
         }
-        
+
         // If items exist, ensure type amount is 0 (type amount should be sum of items)
         if (!canEditType(expenseType) && parseCurrency(expenseType.amount) > 0) {
           throw new Error(`Cannot set amount for type "${expenseType.name}" because it has items. Type amount should be the sum of its items.`)
         }
-        
+
         // Handle item-level allocations
         if (expenseType.children && Array.isArray(expenseType.children)) {
           expenseType.children.forEach((item) => {
             if (!item) return
-            
+
             const itemAmount = parseCurrency(item.amount)
             if (itemAmount > 0) {
               totalAllocated += itemAmount
@@ -685,13 +691,13 @@ const saveEditedAllocation = async () => {
         }
       })
     })
-    
+
     // Validate against budget limit
     const availableBudget = appropriationStore.selectedRow?.unappropriated || 0
     if (totalAllocated > availableBudget) {
       throw new Error(`Total allocation (₱${totalAllocated.toFixed(2)}) exceeds available budget (₱${availableBudget.toFixed(2)})`)
     }
-    
+
     // Use the saveAllocation endpoint instead of updateAllocations
     await api.post(`/api/barangay/budgets/${appropriationStore.selectedRow.id}/allocate`, { allocations })
     $q.notify({
@@ -762,13 +768,21 @@ const columns = [
     sortable: false, // optional: disable sorting
   },
   {
-    name: 'date',
-    label: 'Date',
+    name: 'startdate',
+    label: 'Entry Date',
     field: 'date',
     align: 'left',
     sortable: true,
     format: (val) => appropriationStore.formatDate(val),
   },
+  // {
+  //   name: 'date',
+  //   label: 'Date Allocated',
+  //   field: 'date',
+  //   align: 'left',
+  //   sortable: true,
+  //   format: (val) => appropriationStore.formatDate(val),
+  // },
   {
     name: 'description',
     label: 'Description',
@@ -779,21 +793,29 @@ const columns = [
     name: 'amount',
     label: 'Amount',
     field: 'amount',
-    align: 'right',
+    align: 'left',
     format: (val) => appropriationStore.formatCurrency(val),
   },
   {
     name: 'unappropriated',
     label: 'Unappropriated',
     field: 'unappropriated',
-    align: 'right',
+    align: 'left',
     format: (val) => appropriationStore.formatCurrency(val),
   },
+
   {
     name: 'action',
     label: 'Action',
     align: 'center',
     field: 'action',
+  },
+   {
+    name: 'commit',
+    label: 'Commit',
+    field: 'commit',
+    align: 'center',
+
   },
 ]
 
@@ -924,21 +946,21 @@ const openDialog = async () => {
     max-width: 95vw !important;
     margin: 8px !important;
   }
-  
+
   .q-dialog .q-card-section {
     padding: 12px !important;
   }
-  
+
   .q-dialog .q-gutter-md {
     gap: 8px !important;
   }
-  
+
   .q-dialog .q-select,
   .q-dialog .q-input {
     width: 100% !important;
     min-width: 0 !important;
   }
-  
+
   .q-dialog .q-btn {
     min-height: 44px !important;
   }
@@ -951,21 +973,21 @@ const openDialog = async () => {
     min-width: 90vw !important;
     max-width: 90vw !important;
   }
-  
+
   .q-dialog .q-card-section {
     padding: 16px !important;
   }
-  
+
   .q-dialog .q-gutter-md {
     gap: 12px !important;
   }
-  
+
   .q-dialog .q-select,
   .q-dialog .q-input {
     width: 100% !important;
     min-width: 0 !important;
   }
-  
+
   .q-dialog .q-btn {
     min-height: 44px !important;
   }
@@ -978,15 +1000,15 @@ const openDialog = async () => {
     min-width: 80vw !important;
     max-width: 80vw !important;
   }
-  
+
   .q-dialog .q-card-section {
     padding: 20px !important;
   }
-  
+
   .q-dialog .q-gutter-md {
     gap: 16px !important;
   }
-  
+
   .q-dialog .q-select,
   .q-dialog .q-input {
     width: 100% !important;
@@ -1001,15 +1023,15 @@ const openDialog = async () => {
     min-width: 500px !important;
     max-width: 500px !important;
   }
-  
+
   .q-dialog .q-card-section {
     padding: 24px !important;
   }
-  
+
   .q-dialog .q-gutter-md {
     gap: 20px !important;
   }
-  
+
   .q-dialog .q-select,
   .q-dialog .q-input {
     width: 100% !important;

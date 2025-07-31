@@ -136,14 +136,14 @@
                             class="edit-btn"
                             @click.stop="editExpenseClass(expenseClass)"
                           />
-                          <!-- <q-btn
+                          <q-btn
                             dense
                             flat
                             round
                             icon="delete"
                             class="delete-btn"
                             @click.stop="confirmDeleteExpenseClass(expenseClass)"
-                          /> -->
+                          />
                           <q-btn
                             dense
                             flat
@@ -805,8 +805,8 @@ const showAddClassForm = () => {
 
 const validateAndSaveExpenseClass = async () => {
   if (!newExpenseClass.value || !newExpenseClass.value.trim()) {
-    $q.notify({ 
-      type: 'negative', 
+    $q.notify({
+      type: 'negative',
       message: 'Class name is required',
       position: 'top',
     })
@@ -898,11 +898,11 @@ const updateExpenseClass = async () => {
     })
   }
 }
-// const confirmDeleteExpenseClass = (expenseClass) => {
-//   itemToDelete.value = expenseClass
-//   deleteType.value = 'class'
-//   showDeleteConfirm.value = true
-// }
+const confirmDeleteExpenseClass = (expenseClass) => {
+  itemToDelete.value = expenseClass
+  deleteType.value = 'class'
+  showDeleteConfirm.value = true
+}
 
 // Methods
 const loadExpenseClassesForYear = async (yearId) => {

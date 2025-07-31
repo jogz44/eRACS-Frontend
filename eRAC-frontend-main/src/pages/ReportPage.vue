@@ -1,7 +1,6 @@
 <template>
   <q-page class="q-pa-lg report-page">
     <q-toolbar class="q-pr-md items-center" style="display: flex; flex-direction: row;">
-      <div class="text-h5 text-weight-bold">{{ authStore.user?.first_name || 'User' }}</div>
       <div class="text-h5 text-weight-bold">Current Year Reports</div>
       <q-space />
       <q-btn flat square dense style="background-color: green; border-radius: 10px;" color="white" icon="settings" @click="OpenSetupModal">
