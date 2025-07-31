@@ -99,7 +99,9 @@ export const useAppropriationStore = defineStore("appropriation", {
 
     remainingUnappropriated(state) {
       const total = parseCurrency(state.selectedRow?.total || 0)
-      return Math.round((total - this.totalAllocated) * 100) / 100
+      // Use existingAllocationsTotal instead of totalAllocated for accurate calculation
+      const existingAllocated = state.existingAllocationsTotal || 0
+      return Math.round((total - existingAllocated) * 100) / 100
     },
 
     filteredAppropriations(state) {
@@ -156,6 +158,11 @@ export const useAppropriationStore = defineStore("appropriation", {
         console.log("[DEBUG] Fetching expense hierarchy and existing allocations...")
 
         await Promise.all([this.fetchExpenseHierarchy(), this.fetchExistingAllocations(row.id)])
+
+        // Update the unappropriated amount based on existing allocations
+        if (this.selectedRow) {
+          this.selectedRow.unappropriated = this.remainingUnappropriated
+        }
 
         this.showAllocationDialog = true
         console.log("[DEBUG] Allocation dialog opened successfully")
