@@ -74,7 +74,7 @@
               flat
               icon="delete"
               class="delete-btn"
-
+              @click="deleteBank(props.row)"
               title="Edit Bank"
             />
           </q-td>
@@ -151,6 +151,16 @@
             </q-card-actions>
           </q-form>
         </q-card-section>
+      </q-card>
+    </q-dialog>
+
+    <!-- Delete Bank Dialog -->
+    <q-dialog v-model="showDeleteDialog" @keydown.enter="handleDeleteBankEnterKey">
+      <q-card style="min-width: 400px">
+        <q-card-section>
+          <div class="text-h6">Delete Bank</div>
+        </q-card-section>
+
       </q-card>
     </q-dialog>
 
@@ -415,7 +425,9 @@ const searchTerm = ref('')
 const showAddDialog = ref(false)
 const newBankName = ref('')
 const showEditDialog = ref(false)
+const showDeleteDialog = ref(false)
 const editingBank = ref({ id: null, name: '' })
+const deletingBank = ref({ id: null, name: '' })
 
 //Booklet
 const showBookletDialog = ref(false)
@@ -476,7 +488,12 @@ const addBank = async () => {
     bankStore.loading = false
   }
 }
-
+const deleteBank = (bank) => {
+  deletingBank.value = {
+    id: bank.id
+  }
+  showDeleteDialog.value = true
+}
 const editBank = (bank) => {
   editingBank.value = {
     id: bank.id,
@@ -772,6 +789,10 @@ const validateEditBank = () => {
     return false
   }
   return true
+}
+
+const handleDeleteBankEnterKey = () => {
+  
 }
 
 const handleEditBankEnterKey = () => {
