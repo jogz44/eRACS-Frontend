@@ -78,7 +78,7 @@ class BudgetAugmentationController extends Controller
             'details' => 'required|array|min:1',
             'details.*.expense_class_id' => 'required|exists:lib_expense_classes,id',
             'details.*.expense_type_id' => 'required|exists:lib_expense_types,id',
-            'details.*.expense_item_id' => 'required|exists:lib_expense_items,id',
+            'details.*.expense_item_id' => 'nullable|exists:lib_expense_items,id', // Made optional
             'details.*.amount' => 'required|numeric|min:0',
             'details.*.particulars' => 'nullable|string'
         ]);
@@ -115,7 +115,7 @@ class BudgetAugmentationController extends Controller
                     'budget_augmentation_id' => $augmentation->id,
                     'expense_class_id' => $detail['expense_class_id'],
                     'expense_type_id' => $detail['expense_type_id'],
-                    'expense_item_id' => $detail['expense_item_id'],
+                    'expense_item_id' => $detail['expense_item_id'] ?? null, // Handle null case
                     'amount' => $detail['amount'],
                     'particulars' => $detail['particulars'] ?? null
                 ]);
@@ -183,7 +183,7 @@ class BudgetAugmentationController extends Controller
             'details' => 'required|array|min:1',
             'details.*.expense_class_id' => 'required|exists:lib_expense_classes,id',
             'details.*.expense_type_id' => 'required|exists:lib_expense_types,id',
-            'details.*.expense_item_id' => 'required|exists:lib_expense_items,id',
+            'details.*.expense_item_id' => 'nullable|exists:lib_expense_items,id', // Made optional
             'details.*.amount' => 'required|numeric|min:0',
             'details.*.particulars' => 'nullable|string'
         ]);
@@ -217,7 +217,7 @@ class BudgetAugmentationController extends Controller
                     'budget_augmentation_id' => $augmentation->id,
                     'expense_class_id' => $detail['expense_class_id'],
                     'expense_type_id' => $detail['expense_type_id'],
-                    'expense_item_id' => $detail['expense_item_id'],
+                    'expense_item_id' => $detail['expense_item_id'] ?? null, // Handle null case
                     'amount' => $detail['amount'],
                     'particulars' => $detail['particulars'] ?? null
                 ]);

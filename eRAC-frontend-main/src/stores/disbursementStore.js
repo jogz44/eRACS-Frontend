@@ -80,23 +80,40 @@ export const useDisbursementStore = defineStore('disbursement', {
         if (!expenseClass.children) return acc
 
         expenseClass.children.forEach((expenseType) => {
-          if (!expenseType.children) return
-
-          expenseType.children.forEach((expenseItem) => {
+          // Include expense types with balance greater than 0
+          if (expenseType.amount && expenseType.amount > 0) {
             acc.push({
-              id: expenseItem.id,
+              id: expenseType.id,
               account: expenseClass.name,
               expenseType: expenseType.name,
-              expenseItem: expenseItem.name,
-              balance: expenseItem.amount || 0,
+              expenseItem: null,
+              balance: expenseType.amount || 0,
+              expense_class_id: expenseClass.id,
+              expense_type_id: expenseType.id,
+              expense_item_id: null, // This identifies it as an expense type
             })
+          }
+
+          // Include expense items with balance greater than 0
+          expenseType.children.forEach((expenseItem) => {
+            if (expenseItem.amount && expenseItem.amount > 0) {
+              acc.push({
+                id: expenseItem.id,
+                account: expenseClass.name,
+                expenseType: expenseType.name,
+                expenseItem: expenseItem.name,
+                balance: expenseItem.amount || 0,
+                expense_class_id: expenseClass.id,
+                expense_type_id: expenseType.id,
+                expense_item_id: expenseItem.id,
+              })
+            }
           })
         })
 
         return acc
       }, [])
-      
-      console.log('Flattened expense accounts:', flattened.length)
+
       return flattened
     },
 
@@ -446,10 +463,16 @@ export const useDisbursementStore = defineStore('disbursement', {
               orImage: null,
               orPhotoUrl: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
               serverPhotoPath: or.or_photo,
-              remarks: or.remarks || '',
               isReadOnly: true, // Mark existing OR details as read-only
             };
           });
+          
+          // Set single remarks from the latest OR detail (most recent one)
+          if (res.data.data.length > 0) {
+            // Get the latest OR detail (last in the array) for remarks
+            const latestOrDetail = res.data.data[res.data.data.length - 1];
+            this.currentLiquidation.remarks = latestOrDetail.remarks || '';
+          }
         } catch {
           this.currentLiquidation.orDetails = [];
         }
@@ -477,8 +500,14 @@ export const useDisbursementStore = defineStore('disbursement', {
             orAmount: or.or_amount,
             orImage: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
             orPhotoUrl: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
-            remarks: or.remarks || '',
           }));
+          
+          // Set single remarks from the latest OR detail (most recent one)
+          if (res.data.data.length > 0) {
+            // Get the latest OR detail (last in the array) for remarks
+            const latestOrDetail = res.data.data[res.data.data.length - 1];
+            this.currentLiquidation.remarks = latestOrDetail.remarks || '';
+          }
         } catch {
           this.currentLiquidation.orDetails = [];
         }
@@ -767,7 +796,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             orNumber: or.orNumber,
             orAmount: or.orAmount,
             orDate: or.orDate || '',
-            remarks: or.remarks || '',
+            remarks: this.currentLiquidation.remarks || '', // Use single remarks for all OR details
             orPhotoUrl: or.serverPhotoPath || '', // Use server path only
           })),
           liquidatedAmount: totalActualExpense,
@@ -832,7 +861,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             orNumber: or.orNumber,
             orAmount: or.orAmount,
             orDate: or.orDate || '',
-            remarks: or.remarks || '',
+            remarks: this.currentLiquidation.remarks || '', // Use single remarks for all OR details
             orPhotoUrl: or.serverPhotoPath || '', // Use server path only
           })),
           liquidatedAmount: totalActualExpense,
