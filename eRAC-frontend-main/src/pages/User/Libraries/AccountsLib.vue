@@ -1310,8 +1310,6 @@ watch(
 )
 
 // Delete function
-// Delete function
-// Delete function
 const confirmDelete = async () => {
   try {
     if (!itemToDelete.value?.id) {
@@ -1333,7 +1331,12 @@ const confirmDelete = async () => {
       })
     }
     else if (deleteType.value === 'type') {
-      await accountsStore.deleteExpenseType(id)
+      // For types, we need to pass the expenseClassId as well
+      const typeData = {
+        id: id,
+        expenseClassId: itemToDelete.value.expense_class_id
+      }
+      await accountsStore.deleteExpenseType(typeData)
       $q.notify({
         type: 'positive',
         message: 'Type and all associated items deleted successfully',
@@ -1341,7 +1344,13 @@ const confirmDelete = async () => {
       })
     }
     else if (deleteType.value === 'item') {
-      await accountsStore.deleteExpenseItem(id)
+      // For items, we need to pass expenseClassId and expenseTypeId as well
+      const itemData = {
+        id: id,
+        expenseClassId: itemToDelete.value.expense_class_id,
+        expenseTypeId: itemToDelete.value.expense_type_id
+      }
+      await accountsStore.deleteExpenseItem(itemData)
       $q.notify({
         type: 'positive',
         message: 'Item deleted successfully',
