@@ -44,7 +44,7 @@ public function createBank(Request $request)
 
     $bank = LibBank::create([
         'bank_name' => $validated['name'],
-        'status' => 'available',
+        'status' => 'unavailable',
         'barangay_id' => Auth::user()->barangay_id, // Add this line
     ]);
 
