@@ -24,7 +24,7 @@
             outlined
             bg-color="white"
             v-model="search"
-            placeholder="Search by ID, Name, Barangay, Position, or Username..."
+            placeholder="Search by ID, Name, or Position..."
             class="search-input"
             clearable
           >
@@ -127,7 +127,6 @@ export default {
       columns: [
         { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
         { name: 'name', label: 'Name', field: 'name', align: 'left', sortable: true  },
-        { name: 'barangay', label: 'Barangay', field: 'barangay', align: 'left', sortable: true  },
         { name: 'position', label: 'Position', field: 'position', align: 'left', sortable: true  },
         { name: 'actions', label: 'Action', field: 'actions', align: 'center' },
       ],
@@ -150,23 +149,18 @@ export default {
       if (!searchTerm) return this.users
 
       return this.users.filter(user => {
-        // Search by ID
-        const idMatch = String(user.id).includes(searchTerm)
+        // Search by ID - handle both formatted and unformatted IDs
+        const formattedId = this.formatId(user.id)
+        const idMatch = formattedId.includes(searchTerm) || String(user.id).includes(searchTerm)
 
         // Search by Name
-        const nameMatch = user.fullname.toLowerCase().includes(searchTerm)
-
-        // Search by Barangay
-        const barangayMatch = user.barangay?.toLowerCase().includes(searchTerm) || false
+        const nameMatch = user.name.toLowerCase().includes(searchTerm)
 
         // Search by Position
         const positionMatch = user.position.toLowerCase().includes(searchTerm)
 
-        // Search by Username
-        const usernameMatch = user.username.toLowerCase().includes(searchTerm)
-
         // Return true if any field matches
-        return idMatch || nameMatch || barangayMatch || positionMatch || usernameMatch
+        return idMatch || nameMatch || positionMatch
       })
     },
   },
@@ -208,7 +202,7 @@ export default {
         this.loading = false
       }
     },
-    
+
     openAccessModal(user) {
       this.accessModal.selectedUser = user
       this.accessModal.show = true
@@ -318,85 +312,85 @@ export default {
 /* Responsive Design */
 @media (max-width: 600px) {
   /* Mobile View */
-  
+
   /* Page header adjustments */
   .page-header {
     margin-bottom: 16px !important;
   }
-  
+
   .page-header .text-h5 {
     font-size: 1.2rem !important;
   }
-  
+
   /* Search input adjustments */
   .search-input {
     width: 100% !important;
     min-width: 0 !important;
   }
-  
+
   /* Table adjustments */
   .user-access-table {
     font-size: 0.8rem !important;
   }
-  
+
   .user-access-table th,
   .user-access-table td {
     padding: 8px 4px !important;
   }
-  
+
   /* Hide less important columns on mobile */
   .user-access-table th:nth-child(3),
   .user-access-table td:nth-child(3) {
     display: none !important;
   }
-  
+
   .user-access-table th:nth-child(4),
   .user-access-table td:nth-child(4) {
     display: none !important;
   }
-  
+
   /* Dialog adjustments */
   .q-dialog .q-card {
     width: 95vw !important;
     max-width: 95vw !important;
     margin: 8px !important;
   }
-  
+
   /* Access modal adjustments */
   .q-dialog .q-card[style*="width: 350px"] {
     width: 95vw !important;
     max-width: 95vw !important;
   }
-  
+
   /* Access grid adjustments */
   .access-grid {
     gap: 16px !important;
   }
-  
+
   .access-row {
     flex-direction: column !important;
     align-items: flex-start !important;
     gap: 8px !important;
   }
-  
+
   .access-label {
     font-size: 0.9rem !important;
   }
-  
+
   /* Button adjustments */
   .q-btn {
     min-height: 44px !important;
   }
-  
+
   /* Text adjustments */
   .text-h5 {
     font-size: 1.2rem !important;
   }
-  
+
   .text-h6 {
     font-size: 1.1rem !important;
   }
-  
+
   .text-subtitle1 {
     font-size: 0.9rem !important;
   }
@@ -404,79 +398,79 @@ export default {
 
 @media (min-width: 601px) and (max-width: 900px) {
   /* Small Tablet View */
-  
+
   /* Page header adjustments */
   .page-header {
     margin-bottom: 16px !important;
   }
-  
+
   .page-header .text-h5 {
     font-size: 1.3rem !important;
   }
-  
+
   /* Search input adjustments */
   .search-input {
     width: 100% !important;
     min-width: 0 !important;
   }
-  
+
   /* Table adjustments */
   .user-access-table {
     font-size: 0.85rem !important;
   }
-  
+
   .user-access-table th,
   .user-access-table td {
     padding: 8px 6px !important;
   }
-  
+
   /* Hide less important columns on small tablet */
   .user-access-table th:nth-child(3),
   .user-access-table td:nth-child(3) {
     display: none !important;
   }
-  
+
   /* Dialog adjustments */
   .q-dialog .q-card {
     width: 90vw !important;
     max-width: 90vw !important;
   }
-  
+
   /* Access modal adjustments */
   .q-dialog .q-card[style*="width: 350px"] {
     width: 90vw !important;
     max-width: 90vw !important;
   }
-  
+
   /* Access grid adjustments */
   .access-grid {
     gap: 14px !important;
   }
-  
+
   .access-row {
     flex-direction: column !important;
     align-items: flex-start !important;
     gap: 8px !important;
   }
-  
+
   .access-label {
     font-size: 0.95rem !important;
   }
-  
+
   /* Button adjustments */
   .q-btn {
     min-height: 44px !important;
   }
-  
+
   /* Text adjustments */
   .text-h5 {
     font-size: 1.3rem !important;
   }
-  
+
   .text-h6 {
     font-size: 1.2rem !important;
   }
-  
+
   .text-subtitle1 {
     font-size: 1rem !important;
   }
@@ -484,68 +478,68 @@ export default {
 
 @media (min-width: 901px) and (max-width: 1200px) {
   /* Large Tablet View */
-  
+
   /* Page header adjustments */
   .page-header {
     margin-bottom: 16px !important;
   }
-  
+
   .page-header .text-h5 {
     font-size: 1.4rem !important;
   }
-  
+
   /* Search input adjustments */
   .search-input {
     width: 400px !important;
     min-width: 400px !important;
   }
-  
+
   /* Table adjustments */
   .user-access-table {
     font-size: 0.9rem !important;
   }
-  
+
   /* Dialog adjustments */
   .q-dialog .q-card {
     width: 80vw !important;
     max-width: 80vw !important;
   }
-  
+
   /* Access modal adjustments */
   .q-dialog .q-card[style*="width: 350px"] {
     width: 80vw !important;
     max-width: 80vw !important;
   }
-  
+
   /* Access grid adjustments */
   .access-grid {
     gap: 12px !important;
   }
-  
+
   .access-row {
     flex-direction: row !important;
     align-items: center !important;
     gap: 12px !important;
   }
-  
+
   .access-label {
     font-size: 1rem !important;
   }
-  
+
   /* Button adjustments */
   .q-btn {
     min-width: 120px !important;
   }
-  
+
   /* Text adjustments */
   .text-h5 {
     font-size: 1.4rem !important;
   }
-  
+
   .text-h6 {
     font-size: 1.3rem !important;
   }
-  
+
   .text-subtitle1 {
     font-size: 1.1rem !important;
   }
@@ -553,68 +547,68 @@ export default {
 
 @media (min-width: 1201px) {
   /* Desktop View */
-  
+
   /* Page header adjustments */
   .page-header {
     margin-bottom: 16px !important;
   }
-  
+
   .page-header .text-h5 {
     font-size: 1.5rem !important;
   }
-  
+
   /* Search input adjustments */
   .search-input {
     width: 450px !important;
     min-width: 450px !important;
   }
-  
+
   /* Table adjustments */
   .user-access-table {
     font-size: 1rem !important;
   }
-  
+
   /* Dialog adjustments */
   .q-dialog .q-card {
     width: 350px !important;
     max-width: 500px !important;
   }
-  
+
   /* Access modal adjustments */
   .q-dialog .q-card[style*="width: 350px"] {
     width: 350px !important;
     max-width: 500px !important;
   }
-  
+
   /* Access grid adjustments */
   .access-grid {
     gap: 12px !important;
   }
-  
+
   .access-row {
     flex-direction: row !important;
     align-items: center !important;
     gap: 12px !important;
   }
-  
+
   .access-label {
     font-size: 1rem !important;
   }
-  
+
   /* Button adjustments */
   .q-btn {
     min-width: 120px !important;
   }
-  
+
   /* Text adjustments */
   .text-h5 {
     font-size: 1.5rem !important;
   }
-  
+
   .text-h6 {
     font-size: 1.4rem !important;
   }
-  
+
   .text-subtitle1 {
     font-size: 1.2rem !important;
   }
@@ -626,47 +620,47 @@ export default {
   .text-h5 {
     font-size: 1.2rem !important;
   }
-  
+
   .text-h6 {
     font-size: 1.1rem !important;
   }
-  
+
   .text-subtitle1 {
     font-size: 0.9rem !important;
   }
-  
+
   /* Adjust padding for better mobile experience */
   .q-pa-lg {
     padding: 12px !important;
   }
-  
+
   .q-pa-md {
     padding: 8px !important;
   }
-  
+
   /* Make buttons more touch-friendly */
   .q-btn {
     min-height: 40px !important;
   }
-  
+
   /* Adjust card margins */
   .q-card {
     margin: 4px !important;
   }
-  
+
   /* Ensure proper spacing */
   .q-mb-lg {
     margin-bottom: 16px !important;
   }
-  
+
   .q-mb-md {
     margin-bottom: 12px !important;
   }
-  
+
   .q-mb-sm {
     margin-bottom: 8px !important;
   }
-  
+
   /* Adjust card sections */
   .q-card-section {
     padding: 12px !important;
@@ -683,18 +677,18 @@ export default {
   .user-access-table {
     font-size: 0.75rem !important;
   }
-  
+
   .user-access-table th,
   .user-access-table td {
     padding: 4px 2px !important;
   }
-  
+
   /* Hide less important columns on mobile */
   .user-access-table th:nth-child(3),
   .user-access-table td:nth-child(3) {
     display: none !important;
   }
-  
+
   .user-access-table th:nth-child(4),
   .user-access-table td:nth-child(4) {
     display: none !important;
@@ -706,23 +700,23 @@ export default {
   .q-card-section {
     padding: 12px !important;
   }
-  
+
   .q-card-actions {
     padding: 8px 12px !important;
   }
-  
+
   /* Make form inputs full width on mobile */
   .q-input {
     width: 100% !important;
     min-width: 0 !important;
   }
-  
+
   /* Adjust button groups */
   .q-card-actions {
     flex-direction: column !important;
     gap: 8px !important;
   }
-  
+
   .q-card-actions .q-btn {
     width: 100% !important;
   }
@@ -733,7 +727,7 @@ export default {
   .page-header {
     margin-bottom: 12px !important;
   }
-  
+
   .page-header .text-h5 {
     font-size: 1.1rem !important;
   }
@@ -744,7 +738,7 @@ export default {
   .row.q-mb-md {
     margin-bottom: 12px !important;
   }
-  
+
   .row.q-mb-md .q-input {
     width: 100% !important;
     min-width: 0 !important;

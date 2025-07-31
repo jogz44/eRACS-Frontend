@@ -14,6 +14,8 @@ use App\Http\Middleware\AuthTokenValid;
 use App\Models\Barangay;
 use App\Models\BarangayPosition;
 use App\Models\Admin;
+use App\Http\Controllers\ReportController;
+
 
 Route::prefix('barangay')->group(function () {
     // Barangays list endpoint
@@ -118,17 +120,29 @@ Route::prefix('barangay')->group(function () {
         Route::get('/disbursements/recent-liquidated', [DisbursementController::class, 'recentLiquidated']);
         // All Disbursements for barangay
         Route::get('disbursements', [DisbursementController::class, 'index']);
+        // Create new disbursement
+        Route::post('disbursements', [DisbursementController::class, 'store']);
+        // Update disbursement
+        Route::put('disbursements/{id}', [DisbursementController::class, 'update']);
         // Get single disbursement
         Route::get('disbursements/{id}', [DisbursementController::class, 'show']);
         // Liquidate a disbursement
         Route::patch('disbursements/{id}/liquidate', [DisbursementController::class, 'liquidate']);
         // Fetch OR Details for a disbursement
         Route::get('disbursements/{id}/or-details', [DisbursementController::class, 'getOrDetails']);
+        // Save OR Details for a disbursement
+        Route::post('disbursements/{id}/or-details', [DisbursementController::class, 'saveOrDetails']);
+        // Upload OR photo
+        Route::post('disbursements/or-photo/upload', [DisbursementController::class, 'uploadOrPhoto']);
+        // Delete OR photo
+        Route::delete('disbursements/or-photo/delete', [DisbursementController::class, 'deleteOrPhoto']);
         // Budget Augmentation endpoints
         Route::get('budget-augmentations/available-budgets', [BudgetAugmentationController::class, 'getAvailableBudgets']);
         Route::apiResource('budget-augmentations', BudgetAugmentationController::class);
 
-
+        // Report routes aka Preview and PDF download by Dan Steve
+        Route::get('/rac/current', [ReportController::class, 'index']);         // JSON preview
+        Route::get('/rac/current/pdf', [ReportController::class, 'exportPdf']); // PDF download
 
     });
 
@@ -136,6 +150,7 @@ Route::prefix('barangay')->group(function () {
 
 Route::prefix('admin')->group(function () {
     Route::post('/login', [AdminAuthController::class, 'login']);
+
 
     // Just use Sanctum's default auth
     Route::middleware('auth:sanctum')->group(function () {
@@ -158,4 +173,8 @@ Route::prefix('admin')->group(function () {
     Route::get('/admin/users', [AdminAuthController::class, 'getUsersWithPermissions']);
     Route::post('/admin/user-access/{id}', [AdminAuthController::class, 'updateUserPermissions']);
     Route::get('/admin/logs', [AdminAuthController::class, 'getAllLogs']);
+    
+    // Admin Individual Log Open
+    Route::get('/admin/logs/{user}/{day}', [AdminAuthController::class, 'getUserLogs']);
 });
+

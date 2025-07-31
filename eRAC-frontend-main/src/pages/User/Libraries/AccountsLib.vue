@@ -118,13 +118,13 @@
                   <!--  EXPENSE CLASS -->
                     <template #header>
                       <div
-                        class="bg-green-4 q-pa-md full-width row items-center justify-between rounded-borders "
+                        class="q-pa-md full-width row items-center justify-between rounded-borders "
                         style="border: 1px solid #e0e0e0"
 
                       >
                         <div class="row items-center " >
                           <q-icon name="drag_indicator" class="drag-handle q-mr-sm" />
-                          <div class="text-body1 text-weight-medium " >{{ expenseClass.name }}</div>
+                          <div class="text-body1 text-weight-bold" >{{ expenseClass.name }}</div>
                         </div>
                         <div class="row items-center q-gutter-sm ">
                           <q-btn
@@ -189,11 +189,11 @@
                               <!-- EXPENSE TYPE -->
                                 <template #header>
                                   <div
-                                    class="bg-green-2 q-pa-sm full-width row items-center justify-between rounded-borders"
+                                    class="q-pa-sm full-width row items-center justify-between rounded-borders"
                                   >
                                     <div class="row items-center">
                                       <q-icon name="drag_indicator" class="drag-handle q-mr-sm" />
-                                      <div class="text-body2">{{ expenseType.name }}</div>
+                                      <div class="text-body2 text-weight-medium">{{ expenseType.name }}</div>
                                     </div>
                                     <div class="row items-center q-gutter-xs">
                                       <q-btn
@@ -254,7 +254,7 @@
                                         <!-- EXPENSE ITEM -->
                                         <div class="draggable-item " :data-id="item.id">
                                           <q-card flat bordered style="max-width: 100%" >
-                                            <div class="bg-green-1  q-pa-xs row items-center justify-between">
+                                            <div class="q-pa-xs row items-center justify-between">
                                               <div class="row items-center justify-center">
                                                 <q-icon
                                                   name="drag_indicator"
@@ -323,6 +323,7 @@
                 !accountsStore.years.some((y) => y.year.toString() === val) ||
                 'Year already exists',
             ]"
+            @keyup.enter="addYear"
             :disable="accountsStore.loading"
             @keydown.enter="handleYearEnterKey"
           />
@@ -377,6 +378,8 @@
             label="Type Name"
             outlined
             :rules="[(val) => !!val || 'Required']"
+            @keyup.enter="saveExpenseType"
+            @keydown.enter.prevent
           />
         </q-card-section>
         <q-card-actions align="right">
@@ -595,6 +598,8 @@
             label="Item Name"
             outlined
             :rules="[(val) => !!val || 'Name is required']"
+            @keyup.enter="saveExpenseItem"
+            @keydown.enter.prevent
           />
         </q-card-section>
         <q-card-actions align="right">
@@ -1659,20 +1664,20 @@ watch(
     height: 80vh !important;
     margin: 0 !important;
   }
-  
+
   /* Header section */
   .row.items-center.justify-between.bg-grey-3 {
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 12px !important;
   }
-  
+
   /* Year selector */
   .row.items-center.justify-between.bg-grey-3 .q-select {
     width: 100% !important;
     min-width: 0 !important;
   }
-  
+
   /* Button group */
   .row.items-center.justify-between.bg-grey-3 > div:last-child {
     display: flex !important;
@@ -1680,79 +1685,79 @@ watch(
     gap: 8px !important;
     width: 100% !important;
   }
-  
+
   .row.items-center.justify-between.bg-grey-3 .q-btn {
     width: 100% !important;
     margin: 0 !important;
   }
-  
+
   /* Search and Add Account section */
   .row.items-center.justify-between.q-mb-sm {
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 12px !important;
   }
-  
+
   .row.items-center.justify-between.q-mb-sm .q-input {
     width: 100% !important;
     min-width: 0 !important;
   }
-  
+
   .row.items-center.justify-between.q-mb-sm .q-btn {
     width: 100% !important;
   }
-  
+
   /* Expansion items */
   .q-expansion-item .row.items-center.justify-between {
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 8px !important;
   }
-  
+
   .q-expansion-item .row.items-center.justify-between > div:first-child {
     width: 100% !important;
   }
-  
+
   .q-expansion-item .row.items-center.justify-between > div:last-child {
     display: flex !important;
     justify-content: flex-end !important;
     gap: 4px !important;
   }
-  
+
   /* Type expansion items */
   .type-expansion .row.items-center.justify-between {
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 8px !important;
   }
-  
+
   .type-expansion .row.items-center.justify-between > div:first-child {
     width: 100% !important;
   }
-  
+
   .type-expansion .row.items-center.justify-between > div:last-child {
     display: flex !important;
     justify-content: flex-end !important;
     gap: 4px !important;
   }
-  
+
   /* Item cards */
   .bg-green-1 .row.items-center.justify-between {
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 8px !important;
   }
-  
+
   .bg-green-1 .row.items-center.justify-between > div:first-child {
     width: 100% !important;
   }
-  
+
   .bg-green-1 .row.items-center.justify-between > div:last-child {
     display: flex !important;
     justify-content: flex-end !important;
     gap: 4px !important;
   }
-  
+
   /* Dialog adjustments */
   .q-dialog .q-card {
     min-width: 90vw !important;
@@ -1766,20 +1771,20 @@ watch(
     max-width: 95% !important;
     height: 75vh !important;
   }
-  
+
   /* Header section */
   .row.items-center.justify-between.bg-grey-3 {
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 12px !important;
   }
-  
+
   /* Year selector */
   .row.items-center.justify-between.bg-grey-3 .q-select {
     width: 100% !important;
     min-width: 0 !important;
   }
-  
+
   /* Button group */
   .row.items-center.justify-between.bg-grey-3 > div:last-child {
     display: flex !important;
@@ -1787,27 +1792,27 @@ watch(
     gap: 8px !important;
     width: 100% !important;
   }
-  
+
   .row.items-center.justify-between.bg-grey-3 .q-btn {
     flex: 1 !important;
   }
-  
+
   /* Search and Add Account section */
   .row.items-center.justify-between.q-mb-sm {
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 12px !important;
   }
-  
+
   .row.items-center.justify-between.q-mb-sm .q-input {
     width: 100% !important;
     min-width: 0 !important;
   }
-  
+
   .row.items-center.justify-between.q-mb-sm .q-btn {
     width: 100% !important;
   }
-  
+
   /* Dialog adjustments */
   .q-dialog .q-card {
     min-width: 80vw !important;
@@ -1821,38 +1826,38 @@ watch(
     max-width: 90% !important;
     height: 72vh !important;
   }
-  
+
   /* Header section */
   .row.items-center.justify-between.bg-grey-3 {
     flex-direction: row !important;
     align-items: center !important;
     gap: 16px !important;
   }
-  
+
   /* Year selector */
   .row.items-center.justify-between.bg-grey-3 .q-select {
     width: 300px !important;
   }
-  
+
   /* Button group */
   .row.items-center.justify-between.bg-grey-3 > div:last-child {
     display: flex !important;
     flex-direction: row !important;
     gap: 8px !important;
   }
-  
+
   /* Search and Add Account section */
   .row.items-center.justify-between.q-mb-sm {
     flex-direction: row !important;
     align-items: center !important;
     gap: 16px !important;
   }
-  
+
   .row.items-center.justify-between.q-mb-sm .q-input {
     width: 300px !important;
     min-width: 300px !important;
   }
-  
+
   .row.items-center.justify-between.q-mb-sm .q-btn {
     min-width: 150px !important;
   }
@@ -1864,38 +1869,38 @@ watch(
     max-width: 1600px !important;
     height: 70vh !important;
   }
-  
+
   /* Header section */
   .row.items-center.justify-between.bg-grey-3 {
     flex-direction: row !important;
     align-items: center !important;
     gap: 16px !important;
   }
-  
+
   /* Year selector */
   .row.items-center.justify-between.bg-grey-3 .q-select {
     width: 300px !important;
   }
-  
+
   /* Button group */
   .row.items-center.justify-between.bg-grey-3 > div:last-child {
     display: flex !important;
     flex-direction: row !important;
     gap: 8px !important;
   }
-  
+
   /* Search and Add Account section */
   .row.items-center.justify-between.q-mb-sm {
     flex-direction: row !important;
     align-items: center !important;
     gap: 16px !important;
   }
-  
+
   .row.items-center.justify-between.q-mb-sm .q-input {
     width: 300px !important;
     min-width: 300px !important;
   }
-  
+
   .row.items-center.justify-between.q-mb-sm .q-btn {
     min-width: 150px !important;
   }
@@ -1907,29 +1912,29 @@ watch(
   .text-h5 {
     font-size: 1.2rem !important;
   }
-  
+
   .text-body1 {
     font-size: 0.9rem !important;
   }
-  
+
   .text-body2 {
     font-size: 0.85rem !important;
   }
-  
+
   /* Adjust padding for better mobile experience */
   .q-pa-md {
     padding: 12px !important;
   }
-  
+
   .q-pa-sm {
     padding: 8px !important;
   }
-  
+
   /* Make buttons more touch-friendly */
   .q-btn {
     min-height: 40px !important;
   }
-  
+
   /* Adjust card margins */
   .q-card {
     margin: 4px !important;

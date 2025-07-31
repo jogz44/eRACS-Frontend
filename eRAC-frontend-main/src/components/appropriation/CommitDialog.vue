@@ -15,35 +15,55 @@
       </q-card-section>
 
       <q-card-section class="q-py-lg">
-        <!-- Summary section with reduced padding -->
+        <!-- Debug Information -->
+        <div v-if="showDebugInfo" class="q-mb-md p-2 bg-grey-2 rounded">
+          <div class="text-caption">
+            <strong>Debug Info:</strong><br>
+            Available Budget: {{ debugInfo.availableBudget }}<br>
+            New Allocations Total: {{ debugInfo.newAllocationsTotal }}<br>
+            Existing Allocations Total: {{ debugInfo.existingAllocationsTotal }}<br>
+            Net Change: {{ debugInfo.netChange }}<br>
+            Will Exceed: {{ debugInfo.willExceed }}<br>
+            <br>
+            <strong>Allocation Details:</strong><br>
+            <div v-for="item in debugInfo.allocationDetails" :key="item.id" class="text-xs">
+              {{ item.name }}: ₱{{ item.currentAmount }} (was: ₱{{ item.originalAmount }}, change: ₱{{ item.change }})
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary section -->
         <div class="row q-mb-sm">
           <div class="col-md-6 col-12 q-mb-md text-weight-regular">
-            Total:
-            <strong>
-              {{
-                appropriationStore.formatCurrency(
-                  appropriationStore.appropriations.reduce((sum, app) => sum + app.amount, 0),
-                )
-              }}
-            </strong>
+            Total Budget:
+            <strong>{{ appropriationStore.formatCurrency(appropriationStore.selectedRow?.total || 0) }}</strong>
           </div>
           <div class="col-md-6 col-12 text-weight-regular">
-            Total Unappropriated:
-            <strong>
-              {{
-                appropriationStore.formatCurrency(
-                  appropriationStore.appropriations.reduce(
-                    (sum, app) => sum + app.unappropriated,
-                    0,
-                  ),
-                )
-              }}
+            Available for allocation:
+            <strong>{{ appropriationStore.formatCurrency(availableBudget) }}</strong>
+          </div>
+
+          <div class="col-md-6 col-12 q-mb-md text-weight-regular">
+            New Allocations:
+            <strong>{{ appropriationStore.formatCurrency(newAllocationsTotal) }}</strong>
+          </div>
+
+          <div class="col-md-6 col-12 q-mb-md text-weight-regular">
+            Net Change:
+            <strong
+              :class="netChange < 0 ? 'text-positive' : netChange > availableBudget ? 'text-negative' : 'text-primary'"
+            >
+              {{ appropriationStore.formatCurrency(netChange) }}
             </strong>
           </div>
 
           <div class="col-md-6 col-12 q-mb-md text-weight-regular">
-            Return Amount:
-            <strong> 0.00 </strong>
+            Remaining after changes:
+            <strong
+              :class="remainingAfterChanges < 0 ? 'text-negative' : 'text-positive'"
+            >
+              {{ appropriationStore.formatCurrency(remainingAfterChanges) }}
+            </strong>
           </div>
         </div>
 
@@ -63,7 +83,7 @@
 
         <!-- Compact Hierarchical Table -->
         <div class="hierarchical-table" style="border: 1px solid #e0e0e0; border-radius: 4px">
-          <!-- Table Header with reduced height -->
+          <!-- Table Header -->
           <div
             class="row q-table__top bg-grey-3 text-weight-bold"
             style="padding: 8px 12px; min-height: 40px"
@@ -97,7 +117,6 @@
               </div>
 
               <!-- Expense Type Rows -->
-              <!-- Expense Type Rows - Fixed -->
               <template
                 v-for="expenseType in expenseClass.children"
                 :key="'type-' + expenseType.id"
@@ -118,15 +137,18 @@
                       :model-value="expenseType.amount"
                       @update:model-value="
                         (val) => {
-                          appropriationStore.updateAllocationAmount(expenseType.id, val)
+                          appropriationStore.updateAllocationAmount(`type-${expenseType.id}`, val)
                           updateUnappropriated()
                         }
                       "
                       prefix="₱"
-                      :rules="[(val) => validateAmount(val) || 'Invalid amount']"
+                      :rules="[validateAmountRule]"
                       style="max-width: 230px; width: 100%; display: inline-block"
                       class="q-pa-none"
                       input-class="q-py-xs"
+                      type="number"
+                      step="0.01"
+                      min="0"
                     />
                   </div>
                 </div>
@@ -159,15 +181,18 @@
                             :model-value="expenseItem.amount"
                             @update:model-value="
                               (val) => {
-                                appropriationStore.updateAllocationAmount(expenseItem.id, val)
+                                appropriationStore.updateAllocationAmount(`item-${expenseItem.id}`, val)
                                 updateUnappropriated()
                               }
                             "
                             prefix="₱"
-                            :rules="[(val) => validateAmount(val) || 'Invalid amount']"
+                            :rules="[validateAmountRule]"
                             style="max-width: 230px; width: 100%; display: inline-block"
                             class="q-pa-none"
                             input-class="q-py-xs"
+                            type="number"
+                            step="0.01"
+                            min="0"
                           />
                         </div>
                       </div>
@@ -183,13 +208,18 @@
       <q-card-actions align="right" class="q-pa-sm">
         <q-btn flat label="Cancel" color="secondary" v-close-popup />
         <q-btn
+          flat
+          label="Debug"
+          color="info"
+          size="sm"
+          @click="showDebugInfo = !showDebugInfo"
+        />
+        <q-btn
           label="Save"
           class="modal-save-btn"
           @click="submitAllocation"
           :loading="appropriationStore.loading"
-          :disable="
-            totalAllocated <= 0 || totalAllocated > appropriationStore.selectedRow?.unappropriated
-          "
+          :disable="!canSave"
         />
       </q-card-actions>
     </q-card>
@@ -200,13 +230,28 @@
 import { useQuasar } from 'quasar'
 import { useAppropriationStore } from '../../stores/appropriationStore'
 import { ref, computed } from 'vue'
+
 const appropriationStore = useAppropriationStore()
 const searchQuery = ref('')
-
+const showDebugInfo = ref(false)
 const $q = useQuasar()
-// Transform allocations for display
-// Updated displayAccounts computed property
 
+// Utility function to safely parse currency values
+const parseCurrency = (value) => {
+  if (!value && value !== 0) return 0
+
+  const cleanValue = String(value).replace(/[₱,\s]/g, '')
+  const parsed = parseFloat(cleanValue)
+
+  return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100
+}
+
+// Available budget from the selected row
+const availableBudget = computed(() => {
+  return parseCurrency(appropriationStore.selectedRow?.unappropriated || 0)
+})
+
+// Transform allocations for display
 const displayAccounts = computed(() => {
   const rawData = appropriationStore.allocations
   const allocations = Array.isArray(rawData?.data)
@@ -215,12 +260,10 @@ const displayAccounts = computed(() => {
       ? rawData
       : []
 
-  // Initialize cache once
   if (allocations.length > 0 && Object.keys(appropriationStore.inputCache).length === 0) {
     appropriationStore.initializeInputCache(allocations)
   }
 
-  // Apply search filter if query exists
   const filteredData = searchQuery.value
     ? filterBySearchQuery(allocations, searchQuery.value)
     : allocations
@@ -229,19 +272,19 @@ const displayAccounts = computed(() => {
     id: expenseClass.id,
     name: expenseClass.name,
     isMainCategory: expenseClass.isMainCategory,
-    amount: appropriationStore.inputCache[expenseClass.id] || '',
+    amount: appropriationStore.inputCache[`class-${expenseClass.id}`] || '',
     children: Array.isArray(expenseClass.children)
       ? expenseClass.children.map((expenseType) => ({
           id: expenseType.id,
           name: expenseType.name,
           isMainCategory: expenseType.isMainCategory,
-          amount: appropriationStore.inputCache[expenseType.id] || '',
+          amount: appropriationStore.inputCache[`type-${expenseType.id}`] || '',
           children: Array.isArray(expenseType.children)
             ? expenseType.children.map((item) => ({
                 id: item.id,
                 name: item.name,
                 isMainCategory: item.isMainCategory,
-                amount: appropriationStore.inputCache[item.id] || '',
+                amount: appropriationStore.inputCache[`item-${item.id}`] || '',
               }))
             : [],
         }))
@@ -253,19 +296,15 @@ const filterBySearchQuery = (allocations, query) => {
   const lowerQuery = query.toLowerCase()
 
   return allocations.filter((expenseClass) => {
-    // Keep the class if its name matches
     if (expenseClass.name.toLowerCase().includes(lowerQuery)) {
       return true
     }
 
-    // Filter children
     const filteredChildren = expenseClass.children?.filter((expenseType) => {
-      // Keep type if its name matches
       if (expenseType.name.toLowerCase().includes(lowerQuery)) {
         return true
       }
 
-      // Filter items
       if (expenseType.children) {
         expenseType.children = expenseType.children.filter((item) =>
           item.name.toLowerCase().includes(lowerQuery),
@@ -275,7 +314,6 @@ const filterBySearchQuery = (allocations, query) => {
       return false
     })
 
-    // Only keep class if it has matching children
     if (filteredChildren && filteredChildren.length > 0) {
       expenseClass.children = filteredChildren
       return true
@@ -284,14 +322,8 @@ const filterBySearchQuery = (allocations, query) => {
   })
 }
 
-// Remove the watcher completely - it's causing the recursion
-
-// Add this watcher to update the store when amounts change
-
-// Filter accounts based on search
-
-// Calculate total allocated amount
-const totalAllocated = computed(() => {
+// Calculate only NEW allocations (non-zero input values)
+const newAllocationsTotal = computed(() => {
   let total = 0
 
   if (!displayAccounts.value) return total
@@ -302,69 +334,118 @@ const totalAllocated = computed(() => {
     expenseClass.children.forEach((expenseType) => {
       if (expenseType.children?.length) {
         expenseType.children.forEach((item) => {
-          if (item.amount) {
-            const amount = parseFloat(item.amount)
-            if (!isNaN(amount)) total += amount
+          const currentAmount = parseCurrency(item.amount)
+          if (currentAmount > 0) {
+            total += currentAmount
           }
         })
-      } else if (expenseType.amount) {
-        const amount = parseFloat(expenseType.amount)
-        if (!isNaN(amount)) total += amount
+      } else {
+        const currentAmount = parseCurrency(expenseType.amount)
+        if (currentAmount > 0) {
+          total += currentAmount
+        }
       }
     })
   })
 
-  return total
+  return Math.round(total * 100) / 100
+})
+
+// Calculate net change (new allocations minus existing allocations)
+const netChange = computed(() => {
+  const existingTotal = appropriationStore.existingAllocationsTotal || 0
+  return Math.round((newAllocationsTotal.value - existingTotal) * 100) / 100
+})
+
+// Calculate remaining budget after changes
+const remainingAfterChanges = computed(() => {
+  return Math.round((availableBudget.value - netChange.value) * 100) / 100
+})
+
+// Determine if save button should be enabled
+const canSave = computed(() => {
+  const hasValidAllocation = newAllocationsTotal.value > 0
+  const withinBudget = netChange.value <= availableBudget.value
+  return hasValidAllocation && withinBudget
+})
+
+// Debug information
+const debugInfo = computed(() => {
+  const allocationDetails = []
+
+  displayAccounts.value.forEach((expenseClass) => {
+    expenseClass.children?.forEach((expenseType) => {
+      if (expenseType.children?.length) {
+        expenseType.children.forEach((item) => {
+          const currentAmount = parseCurrency(item.amount)
+          const originalAmount = appropriationStore.originalAllocations?.[`item-${item.id}`] || 0
+          if (currentAmount > 0 || originalAmount > 0) {
+            allocationDetails.push({
+              id: item.id,
+              name: item.name,
+              currentAmount: currentAmount,
+              originalAmount: originalAmount,
+              change: currentAmount - originalAmount
+            })
+          }
+        })
+      } else {
+        const currentAmount = parseCurrency(expenseType.amount)
+        const originalAmount = appropriationStore.originalAllocations?.[`type-${expenseType.id}`] || 0
+        if (currentAmount > 0 || originalAmount > 0) {
+          allocationDetails.push({
+            id: expenseType.id,
+            name: expenseType.name,
+            currentAmount: currentAmount,
+            originalAmount: originalAmount,
+            change: currentAmount - originalAmount
+          })
+        }
+      }
+    })
+  })
+
+  return {
+    availableBudget: availableBudget.value,
+    newAllocationsTotal: newAllocationsTotal.value,
+    existingAllocationsTotal: appropriationStore.existingAllocationsTotal || 0,
+    netChange: netChange.value,
+    willExceed: netChange.value > availableBudget.value,
+    allocationDetails
+  }
 })
 
 const getTypeClass = (expenseType) => {
   return expenseType.children?.length > 0 ? 'text-weight-bold' : 'text-weight-regular'
 }
-// Calculate main category totals
-/*const getMainCategoryTotal = (categoryId) => {
-  const category = appropriationStore.allocations.find((acc) => acc.id === categoryId)
-  if (!category) return 0
-
-  let total = 0
-  category.children.forEach((type) => {
-    if (type.children && type.children.length > 0) {
-      type.children.forEach((item) => {
-        if (item.amount) {
-          total += parseFloat(String(item.amount).replace(/,/g, '')) || 0
-        }
-      })
-    } else if (type.amount) {
-      total += parseFloat(String(type.amount).replace(/,/g, '')) || 0
-    }
-  })
-  return total
-}*/
 
 const calculateClassTotal = (expenseClass) => {
   let total = 0
 
   expenseClass.children?.forEach((expenseType) => {
-    // Add amount from expense type itself (if it has no children)
     if ((!expenseType.children || expenseType.children.length === 0) && expenseType.amount) {
-      total += parseFloat(expenseType.amount) || 0
+      total += parseCurrency(expenseType.amount)
     }
 
-    // Add amounts from expense items
     expenseType.children?.forEach((item) => {
       if (item.amount) {
-        total += parseFloat(item.amount) || 0
+        total += parseCurrency(item.amount)
       }
     })
   })
 
-  return total
+  return Math.round(total * 100) / 100
 }
 
-// Validate amount input
-const validateAmount = (val) => {
+const validateAmountRule = (val) => {
   if (!val) return true
-  const num = parseFloat(String(val).replace(/,/g, ''))
-  return !isNaN(num) && num >= 0
+
+  const parsed = parseCurrency(val)
+  if (isNaN(parsed) || parsed < 0) {
+    return 'Please enter a valid positive number'
+  }
+
+  return true
 }
 
 const submitAllocation = async () => {
@@ -372,27 +453,37 @@ const submitAllocation = async () => {
     const allocations = []
     let hasValidAllocation = false
 
-    // Build allocations array with proper validation
+    // Build allocations array - include ALL allocations (both existing and new)
     displayAccounts.value.forEach((expenseClass) => {
       expenseClass.children?.forEach((expenseType) => {
         if (expenseType.children?.length) {
           expenseType.children.forEach((item) => {
-            if (item.amount && !isNaN(parseFloat(item.amount))) {
+            const amount = parseCurrency(item.amount)
+            if (amount > 0) {
               allocations.push({
                 id: item.id,
                 type: 'item',
-                amount: parseFloat(item.amount),
+                amount: amount,
+                expense_class_id: expenseClass.id,
+                expense_type_id: expenseType.id,
+                expense_item_id: item.id
               })
               hasValidAllocation = true
             }
           })
-        } else if (expenseType.amount && !isNaN(parseFloat(expenseType.amount))) {
-          allocations.push({
-            id: expenseType.id,
-            type: 'type',
-            amount: parseFloat(expenseType.amount),
-          })
-          hasValidAllocation = true
+        } else {
+          const amount = parseCurrency(expenseType.amount)
+          if (amount > 0) {
+            allocations.push({
+              id: expenseType.id,
+              type: 'type',
+              amount: amount,
+              expense_class_id: expenseClass.id,
+              expense_type_id: expenseType.id,
+              expense_item_id: null
+            })
+            hasValidAllocation = true
+          }
         }
       })
     })
@@ -401,22 +492,37 @@ const submitAllocation = async () => {
       throw new Error('Please enter at least one valid amount')
     }
 
-    // Check against available budget
-    const available = appropriationStore.selectedRow?.unappropriated || 0
-    if (totalAllocated.value > available) {
-      throw new Error(
-        `Allocation exceeds available budget by ₱${(totalAllocated.value - available).toLocaleString()}`,
-      )
+    // Validate against net change, not total allocations
+    const tolerance = 0.01
+    const available = availableBudget.value
+    const change = netChange.value
+
+    console.log('=== ALLOCATION VALIDATION ===')
+    console.log('Available Budget:', available)
+    console.log('Net Change:', change)
+    console.log('New Allocations Total:', newAllocationsTotal.value)
+    console.log('Existing Allocations Total:', appropriationStore.existingAllocationsTotal || 0)
+    console.log('Will Exceed:', change > (available + tolerance))
+    console.log('============================')
+
+    if (change > (available + tolerance)) {
+      const errorMsg = `Net change exceeds available budget!
+        Available: ₱${available.toFixed(2)}
+        Net Change: ₱${change.toFixed(2)}
+        Difference: ₱${Math.abs(change - available).toFixed(2)}`
+
+      console.error(errorMsg)
+      throw new Error(errorMsg)
     }
 
     // Submit allocation
+    console.log('Submitting allocation to backend...')
     await appropriationStore.commitAllocation(appropriationStore.selectedRow.id, allocations)
 
     // Refresh data
     await appropriationStore.fetchBudgets()
     appropriationStore.showAllocationDialog = false
 
-    // Show success notification
     $q.notify({
       type: 'positive',
       message: 'Allocation saved successfully',
@@ -426,34 +532,28 @@ const submitAllocation = async () => {
   } catch (error) {
     console.error('[ERROR] submitAllocation:', error)
     let message = error.message || 'Failed to save allocation'
-    // If backend returns 422, show the backend message
+
     if (error.response && error.response.status === 422) {
-      message = error.response.data.message
+      const backendMessage = error.response.data.message || error.response.data.error
+      message = `Backend Error: ${backendMessage}`
+      console.log('Backend response:', error.response.data)
     }
+
     $q.notify({
       type: 'negative',
       message,
       icon: 'error',
       position: 'top',
+      timeout: 10000,
     })
   }
 }
 
-// Update method remains the same
 const updateUnappropriated = () => {
   if (appropriationStore.selectedRow) {
     appropriationStore.calculateTotals()
   }
 }
-
-const debugInfo = computed(() => ({
-  hasAllocations: appropriationStore.allocations.length > 0,
-  firstClass: appropriationStore.allocations[0] || null,
-  classChildren: appropriationStore.allocations[0]?.children || [],
-}))
-
-// Then you can check this in your component
-console.log('Debug Info:', debugInfo.value)
 </script>
 
 <style scoped>
@@ -465,5 +565,11 @@ console.log('Debug Info:', debugInfo.value)
 }
 .hierarchical-table .row:last-child {
   border-bottom: none;
+}
+.text-negative {
+  color: #c10015;
+}
+.text-positive {
+  color: #21ba45;
 }
 </style>
