@@ -277,7 +277,7 @@
                                                   round
                                                   icon="delete"
                                                   class="delete-btn"
-                                                  @click="confirmDeleteExpenseItem(item)"
+                                                  @click.stop="confirmDeleteExpenseItem(item)"
                                                 />
                                               </div>
                                             </div>
@@ -1042,11 +1042,10 @@ const updateExpenseType = async () => {
   }
 }
 
-const confirmDeleteExpenseType = async (expenseType) => {
-   itemToDelete.value = expenseType
+const confirmDeleteExpenseType = (expenseType) => {
+  itemToDelete.value = expenseType
   deleteType.value = 'type'
   showDeleteConfirm.value = true
-
 }
 
 // Expense Item related functions
@@ -1153,8 +1152,7 @@ const updateExpenseItem = async () => {
   }
 }
 
-const confirmDeleteExpenseItem = async (item) => {
-
+const confirmDeleteExpenseItem = (item) => {
   itemToDelete.value = item
   deleteType.value = 'item'
   showDeleteConfirm.value = true
