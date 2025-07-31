@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\AdminAuthController;
 
 class BankLibraryController extends Controller
 {
@@ -47,6 +48,9 @@ public function createBank(Request $request)
         'barangay_id' => Auth::user()->barangay_id, // Add this line
     ]);
 
+    
+    AdminAuthController::logUserAction(Auth::guard('barangay')->user(),'Bank Creation','Bank '.$bank->bank_name.' has been created');
+
     return response()->json([
         'id' => $bank->id,
         'name' => $bank->bank_name,
@@ -66,27 +70,25 @@ public function createBank(Request $request)
         }
 
         $validated = $request->validate([
-            'name' => 'required|string|min:3|max:255',
-            //'status' => ['required', Rule::in(['available', 'consumed'])],
+            'name' => 'required|string|min:3|max:255'
         ]);
 
+        $oldName = $bank->bank_name;
+
         $bank->update([
-            'bank_name' => $validated['name'],
-            //'status' => $validated['status'],
+            'bank_name' => $validated['name']
         ]);
+
+        AdminAuthController::logUserAction(Auth::guard('barangay')->user(),'Bank Update','Bank rename from "'.$oldName.'" to "'.$bank->bank_name.'".');
+
 
         return response()->json([
             'id' => $bank->id,
             'name' => $bank->bank_name,
-            //'status' => ucfirst($bank->status),
-            'cheques_count' => $bank->cheques()->count(),
         ]);
     }
 
-    /**
-     * Delete a bank
-     */
-   /* public function deleteBank(LibBank $bank)
+    public function deleteBank(LibBank $bank)
     {
         // Verify bank belongs to user's barangay
         if ($bank->barangay_id !== Auth::user()->barangay_id) {
@@ -103,7 +105,7 @@ public function createBank(Request $request)
         $bank->delete();
 
         return response()->json(['message' => 'Bank deleted successfully']);
-    }*/
+    }
 
     /**
      * Get all cheques for a bank
