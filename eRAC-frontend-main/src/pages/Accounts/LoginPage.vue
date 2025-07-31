@@ -1,5 +1,5 @@
 <template>
-  <q-page class="login-page">
+  <q-page class="login-page" @keydown.enter="handleEnterKey" tabindex="0">
     <q-card class="login-card">
       <div class="logo-container">
         <q-img src="src/assets/tagumlogo.png" class="logo" contain spinner-color="white" />
@@ -28,6 +28,7 @@
           :prepend-icon="'user'"
           :error="showValidation && !username"
           :error-message="showValidation && !username ? 'Username is required' : ''"
+          @keydown.enter="handleEnterKey"
         />
 
        <!-- Login Password-->
@@ -40,7 +41,7 @@
           :type="isPasswordVisible ? 'text' : 'password'"
           class="q-mt-md"
           prepend-icon="lock"
-          @keyup.enter="handleLogin"
+          @keydown.enter="handleEnterKey"
           :error="showValidation && !password"
           :error-message="showValidation && !password ? 'Password is required' : ''"
         >
@@ -63,7 +64,7 @@
           label="Sign In"
           color="green"
           class="full-width q-mt-md"
-          @click="handleLogin"
+          @click="handleLoginClick"
           :loading="isLoading"
 
         />
@@ -89,7 +90,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'stores/auth'
@@ -106,16 +107,74 @@ const isLoading = ref(false)
 const isPasswordVisible = ref(false)
 const showValidation = ref(false)
 
-const handleLogin = async () => {
+// Validation function
+const validateLogin = () => {
   showValidation.value = true
-  if (!username.value || !password.value) {
+  
+  if (!username.value) {
+    $q.notify({
+      type: 'negative',
+      message: 'Username is required',
+      position: 'top',
+    })
+    return false
+  }
+  
+  if (!password.value) {
+    $q.notify({
+      type: 'negative',
+      message: 'Password is required',
+      position: 'top',
+    })
+    return false
+  }
+  
+  return true
+}
+
+const handleLogin = async () => {
+  if (!validateLogin()) {
     return
   }
+  
   isLoading.value = true
   await authStore.login(username.value, password.value, $q, router)
   isLoading.value = false
 }
 
+const handleEnterKey = (event) => {
+  if (event) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+  console.log('Enter key pressed - triggering login')
+  handleLogin()
+}
+
+const handleLoginClick = () => {
+  handleLogin()
+}
+
+// Global keyboard event handler
+const handleGlobalKeydown = (event) => {
+  if (event.key === 'Enter') {
+    console.log('Global Enter key detected')
+    event.preventDefault()
+    event.stopPropagation()
+    handleLogin()
+  }
+}
+
+// Add and remove global event listeners
+onMounted(() => {
+  document.addEventListener('keydown', handleGlobalKeydown)
+  console.log('Global keyboard listener added')
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleGlobalKeydown)
+  console.log('Global keyboard listener removed')
+})
 
 
 const goToForgotPassword = () => router.push('/forgotpage')

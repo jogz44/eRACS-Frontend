@@ -299,28 +299,51 @@
           <div class="text-h6">Print Report</div>
         </q-card-section>
 
-        <q-card-section class="q-pt-none row">
-          <div class="q-gutter-sm">
-            <q-btn
-              label="Load Reports"
-              color="red-12"
+        <q-card-section class="q-pt-none">
+          <div class="row justify-between q-gutter-sm q-mb-md">
+            <div class="row q-gutter-sm">
+              <q-btn
+                label="Load Reports"
+                color="red-12"
+              />
+              <q-btn
+                label="Export Reports"
+                color="orange"
+              />
+            </div>
+            <q-btn 
+              label="Print" 
+              color="primary" 
+              @click="handlePrint" 
             />
-            <q-btn
-              label="Export Reports"
-              color="orange"
-            />
-                 <q-btn style="align-self: flex-end; justify-self: end;" label="Print" color="primary" @click="handlePrint" />
-
           </div>
-          <q-card-section>
-
-          </q-card-section>
-
 
           <q-separator class="q-my-md" />
           <div class="text-subtitle2 q-mb-md">Report Type: {{ printModal.reportType }}</div>
 
-
+          <!-- Activity Table -->
+          <div class="q-mt-md">
+            <div class="text-subtitle1 q-mb-sm">Activity Log</div>
+            <q-table
+              :rows="printModal.activities"
+              :columns="activityColumns"
+              row-key="id"
+              :pagination="{ rowsPerPage: 5 }"
+              flat
+              bordered
+            >
+              <template v-slot:body-cell-time="props">
+                <q-td :props="props">
+                  <div class="text-caption">{{ props.value }}</div>
+                </q-td>
+              </template>
+              <template v-slot:body-cell-description="props">
+                <q-td :props="props">
+                  <div class="text-body2">{{ props.value }}</div>
+                </q-td>
+              </template>
+            </q-table>
+          </div>
         </q-card-section>
 
         <q-card-actions align="right">
@@ -370,6 +393,28 @@ export default {
       printModal: {
         show: false,
         reportType: '',
+        activities: [
+          {
+            id: 1,
+            time: '09:30 AM',
+            description: 'Report generated successfully'
+          },
+          {
+            id: 2,
+            time: '09:25 AM',
+            description: 'Data validation completed'
+          },
+          {
+            id: 3,
+            time: '09:20 AM',
+            description: 'Report parameters configured'
+          },
+          {
+            id: 4,
+            time: '09:15 AM',
+            description: 'Print dialog opened'
+          }
+        ]
       },
       SetupModal: {
         selectedBarangay: {
@@ -483,6 +528,27 @@ export default {
         message: 'Report sent to printer successfully!',
         position: 'top'
       })
+    }
+  },
+  computed: {
+    activityColumns() {
+      return [
+        {
+          name: 'time',
+          label: 'Time',
+          field: 'time',
+          align: 'left',
+          sortable: true,
+          style: 'width: 120px'
+        },
+        {
+          name: 'description',
+          label: 'Activity Description',
+          field: 'description',
+          align: 'left',
+          sortable: true
+        }
+      ]
     }
   },
   async mounted() {

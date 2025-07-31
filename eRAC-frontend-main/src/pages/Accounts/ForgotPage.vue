@@ -1,5 +1,6 @@
 <template>
-  <q-card class="login-card">
+  <q-page class="forgot-page" @keydown.enter="handleGlobalEnterKey">
+    <q-card class="login-card">
  <div class="logo-container">
       <q-img src="src/assets/tagumlogo.png" class="logo" contain spinner-color="white" />
     </div>
@@ -20,16 +21,15 @@
         type="email"
         outlined
         dense
-
         :prepend-icon="'email'"
         :error="showValidation && !email"
         :error-message="showValidation && !email ? 'email is required' : ''"
-
+        @keydown.enter="handleGlobalEnterKey"
       />
 
       <div class="button-container">
         <q-btn @click="goToLogin" color="white" text-color="black">Cancel</q-btn>
-        <q-btn @click="handleSearch" color="green"
+        <q-btn @click="handleSearchClick" color="green"
         :loading="isLoading"
        >Search</q-btn>
       </div>
@@ -37,7 +37,8 @@
     <q-card-section class="text-center">
 
     </q-card-section>
-  </q-card>
+      </q-card>
+  </q-page>
  <div class="bottom">
   <q-footer class="text-center no-footer-bg">
     <div class="text-caption text-white">
@@ -49,7 +50,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'stores/auth'
@@ -63,17 +64,33 @@ const isLoading = ref(false)
 const showValidation = ref(false)
 
 
-const handleSearch = async () => {
-
-      showValidation.value = true
-  if (!email.value ) {
-    return
-
-}
-  // Basic validation
-
+// Validation function
+const validateSearch = () => {
+  showValidation.value = true
+  
+  if (!email.value) {
+    $q.notify({
+      type: 'negative',
+      message: 'Email is required',
+      position: 'top',
+    })
+    return false
+  }
+  
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
-    $q.notify({ type: 'warning', message: 'Please enter a valid email address' })
+    $q.notify({
+      type: 'negative',
+      message: 'Please enter a valid email address',
+      position: 'top',
+    })
+    return false
+  }
+  
+  return true
+}
+
+const handleSearch = async () => {
+  if (!validateSearch()) {
     return
   }
 
@@ -126,10 +143,53 @@ const goToResetPassword = () => {
     router.push('/')
   })
 }
+const handleGlobalEnterKey = (event) => {
+  if (event) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+  console.log('Enter key pressed - triggering search')
+  handleSearch()
+}
+
+const handleSearchClick = () => {
+  handleSearch()
+}
+
+// Global keyboard event handler
+const handleGlobalKeydown = (event) => {
+  if (event.key === 'Enter') {
+    console.log('Global Enter key detected for forgot password')
+    event.preventDefault()
+    event.stopPropagation()
+    handleSearch()
+  }
+}
+
+// Add and remove global event listeners
+onMounted(() => {
+  document.addEventListener('keydown', handleGlobalKeydown)
+  console.log('Global keyboard listener added for forgot password')
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleGlobalKeydown)
+  console.log('Global keyboard listener removed for forgot password')
+})
+
 const goToLogin = () => router.push('/')
 </script>
 
 <style scoped>
+.forgot-page {
+  overflow-y: auto !important;
+  min-height: 100vh !important;
+  padding: 20px !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
 .button-container {
   margin-top: 20px;
   display: flex;
