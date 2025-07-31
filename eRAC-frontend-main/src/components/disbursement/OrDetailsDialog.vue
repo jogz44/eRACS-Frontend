@@ -82,6 +82,7 @@
                 outlined
                 v-model="store.currentLiquidation.remarks"
                 placeholder="Enter remarks"
+                @update:model-value="handleRemarksChange"
               />
             </div>
           </div>
@@ -97,7 +98,6 @@
 
           <!-- Existing OR Details (Read-only for partial continuation) -->
           <div v-if="hasExistingOrDetails" class="q-mb-lg">
-            <div class="text-subtitle2 q-mb-md text-grey-7">Previously Saved OR Details:</div>
             <div
               v-for="(orDetail, index) in existingOrDetails"
               :key="`existing-${index}`"
@@ -154,7 +154,6 @@
 
           <!-- New OR Details (Editable) -->
           <div v-if="hasNewOrDetails" class="q-mb-lg">
-            <div class="text-subtitle2 q-mb-md text-primary">New OR Details:</div>
             <div
               v-for="(orDetail, index) in newOrDetails"
               :key="`new-${index}`"
@@ -282,7 +281,7 @@
           label="Partial" 
           color="warning" 
           @click="handlePartialLiquidation" 
-          :disable="!isValid || actualReturnAmount < 0"
+          :disable="!isValid || actualReturnAmount <= 0"
           :loading="saving"
         />
         <q-btn 
@@ -357,6 +356,18 @@ watch(
       initializeOrDetails()
     }
   },
+)
+
+// Watch remarks changes to ensure they're properly updated
+watch(
+  () => store.currentLiquidation?.remarks,
+  (newRemarks) => {
+    if (newRemarks !== undefined) {
+      // Ensure remarks are properly set in the store
+      store.currentLiquidation.remarks = newRemarks
+    }
+  },
+  { deep: true }
 )
 
 const totalActualExpense = computed(() => {
@@ -531,6 +542,12 @@ const handleDateChange = (date, index) => {
   console.log('Date changed:', date, 'for index:', index)
   store.currentLiquidation.orDetails[index].orDate = date
   calculateTotals()
+}
+
+const handleRemarksChange = (newRemarks) => {
+  // Ensure remarks are properly updated in the store
+  store.currentLiquidation.remarks = newRemarks
+  console.log('Remarks updated:', newRemarks)
 }
 
 const handlePartialLiquidation = async () => {

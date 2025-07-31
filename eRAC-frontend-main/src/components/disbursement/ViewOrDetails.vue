@@ -58,7 +58,7 @@
             <!-- Remarks -->
             <div class="q-mb-md">
               <div class="text-bold q-mb-xs">Remarks:</div>
-              <q-input outlined :model-value="store.currentLiquidation.orDetails && store.currentLiquidation.orDetails.length > 0 ? store.currentLiquidation.orDetails[0].remarks : ''" disable readonly
+              <q-input outlined :model-value="store.currentLiquidation.remarks || ''" disable readonly
                 bg-color="grey-3" />
             </div>
           </div>
