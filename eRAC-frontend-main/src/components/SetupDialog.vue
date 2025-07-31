@@ -100,9 +100,6 @@
 import { ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios'
-import { useAuthStore } from 'src/stores/auth';
-
-const authStore = useAuthStore();
 
 defineProps({
   modelValue: {
@@ -114,7 +111,7 @@ defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 // Form data
-// const barangay = ref('')
+const barangay = ref('')
 const preparedByName = ref('')
 const preparedposition = ref('')
 const notedposition = ref('')

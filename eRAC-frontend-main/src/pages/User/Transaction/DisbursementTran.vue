@@ -370,12 +370,20 @@ watch(
   { deep: true },
 )
 
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
 
 const $q = useQuasar()
 const loading = ref(false)
-const saving = ref(false)
+
+// Computed property for bank label
+const currentBankLabel = computed(() => {
+  if (store.forms.disbursement.bank_id) {
+    const selectedBank = bankStore.banks.find(bank => bank.id === store.forms.disbursement.bank_id)
+    return selectedBank ? selectedBank.name : 'Select Bank'
+  }
+  return 'Select Bank'
+})
 
 const validateAndSave = () => {
   // Check if disbursement dialog is open
@@ -406,7 +414,9 @@ const validateAndSave = () => {
 
 const handleEnterKey = (event) => {
   // Prevent default behavior to avoid form submission
-  event.preventDefault()
+  if (event) {
+    event.preventDefault()
+  }
   validateAndSave()
 }
 
@@ -436,37 +446,7 @@ const loadPendingUsers = async () => {
   }
 }
 
-const handleSaveDisbursement = async () => {
-  saving.value = true
-  try {
-    const result = await store.saveDisbursement()
-    if (result.success) {
-      $q.notify({
-        type: 'positive',
-        message: 'Disbursement saved successfully!',
-        icon: 'check_circle',
-        position: 'top',
-      })
-    } else {
-      $q.notify({
-        type: 'negative',
-        message: result.error || 'Failed to save disbursement',
-        icon: 'error',
-        position: 'top',
-      })
-    }
-  } catch (error) {
-    console.error('Error saving disbursement:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'An error occurred while saving',
-      icon: 'error',
-      position: 'top',
-    })
-  } finally {
-    saving.value = false
-  }
-}
+
 
 </script>
 
