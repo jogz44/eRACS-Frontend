@@ -65,7 +65,7 @@
         </q-table>
       </q-card-section>
       <!-- Access Modal -->
-        <q-dialog v-model="accessModal.show" persistent>
+        <q-dialog v-model="accessModal.show" persistent @keydown.enter="handleAccessEnterKey">
             <q-card style="width: 350px; max-height: 450px; overflow: hidden">
             <!-- Centered Title with Close Button -->
             <q-card-section class="relative-position">
@@ -97,7 +97,7 @@
             </q-card-section>
 
             <q-card-actions align="right">
-                <q-btn label="Save" color="primary" @click="saveAccess" />
+                <q-btn label="Save" color="primary" @click="handleAccessSaveClick" />
             </q-card-actions>
         </q-card>
       </q-dialog>
@@ -216,6 +216,44 @@ export default {
     closeAccessModal() {
       this.accessModal.show = false
     },
+    // Validation function
+    validateAccess() {
+      // Check if at least one permission is selected
+      const hasAnyPermission = Object.values(this.accessModal.permissions).some(permission => permission.value)
+      
+      if (!hasAnyPermission) {
+        this.$q.notify({
+          type: 'negative',
+          message: 'At least one permission must be selected',
+          position: 'top',
+        })
+        return false
+      }
+      
+      if (!this.accessModal.selectedUser) {
+        this.$q.notify({
+          type: 'negative',
+          message: 'No user selected',
+          position: 'top',
+        })
+        return false
+      }
+      
+      return true
+    },
+
+    handleAccessEnterKey() {
+      if (this.validateAccess()) {
+        this.saveAccess()
+      }
+    },
+
+    handleAccessSaveClick() {
+      if (this.validateAccess()) {
+        this.saveAccess()
+      }
+    },
+
     saveAccess() {
       console.log('Saving access for:', this.accessModal.selectedUser.username)
       console.log('Permissions:', this.accessModal.permissions)
@@ -223,6 +261,7 @@ export default {
       this.$q.notify({
         type: 'positive',
         message: 'Access permissions saved successfully!',
+        position: 'top',
       })
 
       this.closeAccessModal()

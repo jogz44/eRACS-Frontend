@@ -76,19 +76,20 @@
     </q-card>
 
     <!-- Add Bank Dialog -->
-    <q-dialog v-model="showAddDialog">
+    <q-dialog v-model="showAddDialog" @keydown.enter="handleAddBankEnterKey">
       <q-card style="min-width: 400px">
         <q-card-section>
           <div class="text-h6">Add New Bank</div>
         </q-card-section>
 
         <q-card-section>
-          <q-form @submit="addBank">
+          <q-form @submit="handleAddBankSaveClick">
             <q-input
               filled
               v-model="newBankName"
               label="Bank Name"
               outlined
+              @keydown.enter="handleAddBankEnterKey"
               :rules="[
                 (val) => !!val || 'Bank name is required',
                 (val) => val.length >= 3 || 'Name must be at least 3 characters',
@@ -100,8 +101,8 @@
               <q-btn flat label="Cancel" v-close-popup />
               <q-btn
                 label="Save"
-                type="submit"
                 class="modal-save-btn"
+                @click="handleAddBankSaveClick"
                 :disable="!newBankName || newBankName.length < 3"
               />
             </q-card-actions>
@@ -111,21 +112,23 @@
     </q-dialog>
 
     <!-- Add Edit Bank Dialog -->
-    <q-dialog v-model="showEditDialog">
+    <q-dialog v-model="showEditDialog" @keydown.enter="handleEditBankEnterKey">
       <q-card style="min-width: 400px">
         <q-card-section>
           <div class="text-h6">Edit Bank</div>
         </q-card-section>
 
         <q-card-section>
-          <q-form @submit="saveEditBank">
+          <q-form @submit="handleEditBankSaveClick">
             <q-input
               v-model="editingBank.name"
               label="Bank Name"
               outlined
+              @keydown.enter="handleEditBankEnterKey"
               :rules="[
                 (val) => !!val || 'Bank name is required',
                 (val) => val.length >= 3 || 'Name must be at least 3 characters',
+               
               ]"
               lazy-rules
             />
@@ -134,8 +137,8 @@
               <q-btn flat label="Cancel" v-close-popup />
               <q-btn
                 label="Save"
-                type="submit"
                 class="modal-save-btn"
+                @click="handleEditBankSaveClick"
                 :disable="!editingBank.name || editingBank.name.length < 3"
               />
             </q-card-actions>
@@ -205,7 +208,7 @@
     </q-dialog>
 
     <!-- Add Booklet Dialog -->
-    <q-dialog v-model="showAddBookletDialog">
+    <q-dialog v-model="showAddBookletDialog" @keydown.enter="handleAddBookletEnterKey">
       <q-card style="min-width: 500px">
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">Add New Booklet</div>
@@ -214,13 +217,14 @@
         </q-card-section>
 
         <q-card-section>
-          <q-form @submit="addBooklet">
+          <q-form @submit="handleAddBookletSaveClick">
             <q-input
               v-model="newBooklet.starting_cheque_numb"
               filled
               label="Starting Cheque Number"
               outlined
               class="q-mb-sm"
+              @keydown.enter="handleAddBookletEnterKey"
               :rules="[
                 (val) => !!val || 'Starting number is required',
                 (val) => val.length === 8 || 'Must be exactly 8 digits',
@@ -235,6 +239,7 @@
               label="Ending Cheque Number"
               outlined
               class="q-mb-sm"
+              @keydown.enter="handleAddBookletEnterKey"
               :rules="[
                 (val) => !!val || 'Ending number is required',
                 (val) => val.length === 8 || 'Must be exactly 8 digits',
@@ -247,8 +252,8 @@
               <q-btn label="Cancel" flat color="" v-close-popup />
               <q-btn
                 label="Save"
-                type="submit"
                 class="modal-save-btn"
+                @click="handleAddBookletSaveClick"
                 v-close-popup
                 :loading="bankStore.loading"
               />
@@ -295,7 +300,7 @@
     </q-dialog>
 
     <!-- Add Cheque Dialog -->
-    <q-dialog v-model="showAddChequeDialog">
+    <q-dialog v-model="showAddChequeDialog" @keydown.enter="handleAddChequeEnterKey">
       <q-card style="min-width: 400px">
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">Add New Cheque</div>
@@ -304,13 +309,14 @@
         </q-card-section>
 
         <q-card-section>
-          <q-form @submit="addCheque">
+          <q-form @submit="handleAddChequeSaveClick">
             <q-input
               v-model="newCheque.chequeNo"
               filled
               label="Cheque Number"
               outlined
               class="q-mb-sm"
+              @keydown.enter="handleAddChequeEnterKey"
               :rules="[
                 (val) => !!val || 'Cheque number is required',
                 (val) => val.length === 6 || 'Must be exactly 6 digits',
@@ -325,6 +331,7 @@
               outlined
               mask="####/##/##"
               class="q-mb-md"
+              @keydown.enter="handleAddChequeEnterKey"
             >
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
@@ -339,8 +346,8 @@
               <q-btn label="Cancel" flat color="" v-close-popup />
               <q-btn
                 label="Save"
-                type="submit"
                 class="modal-save-btn"
+                @click="handleAddChequeSaveClick"
                 v-close-popup
                 :loading="bankStore.loading"
               />
@@ -706,6 +713,167 @@ watch(
   { deep: true },
 )
 // DV Numbers Actions
+
+// Validation functions
+const validateAddBank = () => {
+  if (!newBankName.value) {
+    $q.notify({
+      type: 'negative',
+      message: 'Bank name is required',
+      position: 'top',
+    })
+    return false
+  }
+  if (newBankName.value.length < 3) {
+    $q.notify({
+      type: 'negative',
+      message: 'Name must be at least 3 characters',
+      position: 'top',
+    })
+    return false
+  }
+  return true
+}
+
+const handleAddBankEnterKey = () => {
+  if (validateAddBank()) {
+    addBank()
+  }
+}
+
+const handleAddBankSaveClick = () => {
+  if (validateAddBank()) {
+    addBank()
+  }
+}
+
+const validateEditBank = () => {
+  if (!editingBank.value.name) {
+    $q.notify({
+      type: 'negative',
+      message: 'Bank name is required',
+      position: 'top',
+    })
+    return false
+  }
+  if (editingBank.value.name.length < 3) {
+    $q.notify({
+      type: 'negative',
+      message: 'Name must be at least 3 characters',
+      position: 'top',
+    })
+    return false
+  }
+  return true
+}
+
+const handleEditBankEnterKey = () => {
+  if (validateEditBank()) {
+    saveEditBank()
+  }
+}
+
+const handleEditBankSaveClick = () => {
+  if (validateEditBank()) {
+    saveEditBank()
+  }
+}
+
+const validateAddBooklet = () => {
+  if (!newBooklet.value.starting_cheque_numb) {
+    $q.notify({
+      type: 'negative',
+      message: 'Starting number is required',
+      position: 'top',
+    })
+    return false
+  }
+  if (newBooklet.value.starting_cheque_numb.length !== 8) {
+    $q.notify({
+      type: 'negative',
+      message: 'Starting number must be exactly 8 digits',
+      position: 'top',
+    })
+    return false
+  }
+  if (!newBooklet.value.ending_cheque_numb) {
+    $q.notify({
+      type: 'negative',
+      message: 'Ending number is required',
+      position: 'top',
+    })
+    return false
+  }
+  if (newBooklet.value.ending_cheque_numb.length !== 8) {
+    $q.notify({
+      type: 'negative',
+      message: 'Ending number must be exactly 8 digits',
+      position: 'top',
+    })
+    return false
+  }
+  if (parseInt(newBooklet.value.starting_cheque_numb) > parseInt(newBooklet.value.ending_cheque_numb)) {
+    $q.notify({
+      type: 'negative',
+      message: 'Starting number must be less than ending number',
+      position: 'top',
+    })
+    return false
+  }
+  return true
+}
+
+const handleAddBookletEnterKey = () => {
+  if (validateAddBooklet()) {
+    addBooklet()
+  }
+}
+
+const handleAddBookletSaveClick = () => {
+  if (validateAddBooklet()) {
+    addBooklet()
+  }
+}
+
+const validateAddCheque = () => {
+  if (!newCheque.value.chequeNo) {
+    $q.notify({
+      type: 'negative',
+      message: 'Cheque number is required',
+      position: 'top',
+    })
+    return false
+  }
+  if (newCheque.value.chequeNo.length !== 6) {
+    $q.notify({
+      type: 'negative',
+      message: 'Cheque number must be exactly 6 digits',
+      position: 'top',
+    })
+    return false
+  }
+  if (!newCheque.value.date) {
+    $q.notify({
+      type: 'negative',
+      message: 'Date is required',
+      position: 'top',
+    })
+    return false
+  }
+  return true
+}
+
+const handleAddChequeEnterKey = () => {
+  if (validateAddCheque()) {
+    addCheque()
+  }
+}
+
+const handleAddChequeSaveClick = () => {
+  if (validateAddCheque()) {
+    addCheque()
+  }
+}
 </script>
 <style scoped>
 .banklib-page {

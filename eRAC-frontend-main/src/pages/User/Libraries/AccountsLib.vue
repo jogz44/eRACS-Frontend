@@ -303,7 +303,7 @@
     </q-card>
 
     <!-- Add Year Dialog -->
-    <q-dialog v-model="showAddYearDialog" persistent>
+    <q-dialog v-model="showAddYearDialog" persistent @keydown.enter="handleYearEnterKey">
       <q-card style="min-width: 300px">
         <q-card-section>
           <div class="text-h6">Add New Fiscal Year</div>
@@ -324,6 +324,7 @@
                 'Year already exists',
             ]"
             :disable="accountsStore.loading"
+            @keydown.enter="handleYearEnterKey"
           />
         </q-card-section>
 
@@ -333,7 +334,7 @@
             flat
             label="Save"
             class="modal-save-btn"
-            @click="addYear"
+            @click="handleYearSaveClick"
             :loading="accountsStore.loading"
           />
         </q-card-actions>
@@ -341,7 +342,7 @@
     </q-dialog>
 
     <!--AddExpenseClass-->
-    <q-dialog v-model="showAddClassDialog" persistent>
+    <q-dialog v-model="showAddClassDialog" persistent @keydown.enter="handleClassEnterKey">
       <q-card style="min-width: 400px">
         <q-card-section>
           <div class="text-h6">Add New Expense Class</div>
@@ -352,12 +353,12 @@
             label="Expense Class Name"
             outlined
             :rules="[(val) => !!val || 'Required']"
-            @keyup.enter="saveExpenseClass"
+            @keydown.enter="handleClassEnterKey"
           />
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Cancel" v-close-popup @click="resetClassForm" />
-          <q-btn flat label="Save" class="modal-save-btn" @click="saveExpenseClass" />
+          <q-btn flat label="Save" class="modal-save-btn" @click="handleClassSaveClick" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -737,13 +738,23 @@ const filteredExpenseClasses = computed(() => {
     .sort((a, b) => (a.order || 0) - (b.order || 0))
 })
 
-const addYear = async () => {
+const validateAndAddYear = async () => {
   const yearStr = newYear.value?.toString().trim()
 
   if (!yearStr || yearStr.length !== 4 || isNaN(yearStr)) {
     $q.notify({
       type: 'negative',
       message: 'Please enter a valid 4-digit year',
+      position: 'top',
+    })
+    return
+  }
+
+  // Check if year already exists
+  if (accountsStore.years.some((y) => y.year.toString() === yearStr)) {
+    $q.notify({
+      type: 'negative',
+      message: 'Year already exists',
       position: 'top',
     })
     return
@@ -769,15 +780,31 @@ const addYear = async () => {
   }
 }
 
+const handleYearEnterKey = (event) => {
+  // Prevent default behavior to avoid form submission
+  event.preventDefault()
+  validateAndAddYear()
+}
+
+const handleYearSaveClick = () => {
+  validateAndAddYear()
+}
+
+
+
 // Expense Class related functions
 const showAddClassForm = () => {
   newExpenseClass.value = ''
   showAddClassDialog.value = true
 }
 
-const saveExpenseClass = async () => {
-  if (!newExpenseClass.value) {
-    $q.notify({ type: 'negative', message: 'Class name is required' })
+const validateAndSaveExpenseClass = async () => {
+  if (!newExpenseClass.value || !newExpenseClass.value.trim()) {
+    $q.notify({ 
+      type: 'negative', 
+      message: 'Class name is required',
+      position: 'top',
+    })
     return
   }
 
@@ -809,6 +836,18 @@ const saveExpenseClass = async () => {
     })
   }
 }
+
+const handleClassEnterKey = (event) => {
+  // Prevent default behavior to avoid form submission
+  event.preventDefault()
+  validateAndSaveExpenseClass()
+}
+
+const handleClassSaveClick = () => {
+  validateAndSaveExpenseClass()
+}
+
+
 
 const resetClassForm = () => {
   newExpenseClass.value = ''

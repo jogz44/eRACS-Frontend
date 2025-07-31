@@ -120,7 +120,7 @@
         </q-table>
       </q-card>
       <!--Augmenation Dialog-->
-      <q-dialog v-model="store.dialogs.augmentation" persistent>
+      <q-dialog v-model="store.dialogs.augmentation" persistent @keydown.enter="handleEnterKey">
         <q-card class="responsive-dialog-card">
           <q-card-section class="dialog-header">
             <div class="text-h6">Augmentation</div>
@@ -136,6 +136,7 @@
                   dense
                   v-model="store.forms.augmentation.date"
                   mask="##/##/####"
+                  @keydown.enter="handleEnterKey"
                 >
                   <template v-slot:append>
                     <q-icon name="event" class="cursor-pointer">
@@ -149,13 +150,25 @@
               <!-- Ref No. -->
               <div class="col-md-4 col-sm-6">
                 <q-item-label class="q-mb-xs">Ref No.:</q-item-label>
-                <q-input filled outlined dense v-model="store.forms.augmentation.refNo" />
+                <q-input 
+                  filled 
+                  outlined 
+                  dense 
+                  v-model="store.forms.augmentation.refNo" 
+                  @keydown.enter="handleEnterKey"
+                />
               </div>
 
               <!-- Remarks -->
               <div class="col-md-4 col-sm-6">
                 <q-item-label class="q-mb-xs">Remarks:</q-item-label>
-                <q-input filled outlined dense v-model="store.forms.augmentation.remarks" />
+                <q-input 
+                  filled 
+                  outlined 
+                  dense 
+                  v-model="store.forms.augmentation.remarks" 
+                  @keydown.enter="handleEnterKey"
+                />
               </div>
             </div>
           </q-card-section>
@@ -216,7 +229,7 @@
               class="modal-cancel-btn"
               @click="store.closeDialog('augmentation')"
             />
-            <q-btn label="Save" class="modal-save-btn" @click="store.saveDisbursement" />
+            <q-btn label="Save" class="modal-save-btn" @click="handleSaveClick" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -330,6 +343,51 @@ import { useContAugmentationStore } from 'stores/contAugmentation'
 const $q = useQuasar()
 const store = useContAugmentationStore()
 const loading = ref(false)
+
+const validateAndSave = () => {
+  // Check if augmentation dialog is open
+  if (store.dialogs.augmentation) {
+    // Validate required fields before saving
+    const form = store.forms.augmentation
+    const hasRequiredFields = form.date && form.refNo && form.remarks
+    
+    // Check if expenses are added
+    const hasExpenses = store.Augexpenses && store.Augexpenses.length > 0
+    
+    if (!hasRequiredFields) {
+      $q.notify({
+        type: 'negative',
+        message: 'Please fill in all required fields before saving',
+        icon: 'warning',
+        position: 'top',
+      })
+      return
+    }
+    
+    if (!hasExpenses) {
+      $q.notify({
+        type: 'negative',
+        message: 'Please add at least one expense before saving',
+        icon: 'warning',
+        position: 'top',
+      })
+      return
+    }
+    
+    // If validation passes, proceed with save
+    store.saveDisbursement()
+  }
+}
+
+const handleEnterKey = (event) => {
+  // Prevent default behavior to avoid form submission
+  event.preventDefault()
+  validateAndSave()
+}
+
+const handleSaveClick = () => {
+  validateAndSave()
+}
 
 const loadPendingUsers = async () => {
   loading.value = true

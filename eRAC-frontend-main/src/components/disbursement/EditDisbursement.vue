@@ -19,6 +19,7 @@
               dense
               v-model="store.forms.disbursement.date"
               mask="##/##/####"
+
             >
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">

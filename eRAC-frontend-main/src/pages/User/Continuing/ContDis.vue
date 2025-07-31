@@ -96,7 +96,7 @@
       </div>
 
       <!--Disbursement Dialog-->
-      <q-dialog v-model="store.dialogs.disbursement" persistent>
+      <q-dialog v-model="store.dialogs.disbursement" persistent @keydown.enter="handleEnterKey">
         <q-card class="responsive-dialog-card">
           <q-card-section class="dialog-header">
             <div class="text-h6">Disbursement</div>
@@ -113,6 +113,7 @@
                   dense
                   v-model="store.forms.disbursement.date"
                   mask="##/##/####"
+                  @keydown.enter="handleEnterKey"
                 >
                   <template v-slot:append>
                     <q-icon name="event" class="cursor-pointer">
@@ -133,6 +134,7 @@
                   dense
                   v-model="store.forms.disbursement.bank"
                   :options="['BDO', 'Metro Bank', 'BPI', 'PNB']"
+                  @keydown.enter="handleEnterKey"
                 />
               </div>
 
@@ -145,18 +147,31 @@
                   dense
                   v-model="store.forms.disbursement.checkNumber"
                   :rules="[(val) => !!val || 'Field is required']"
+                  @keydown.enter="handleEnterKey"
                 />
               </div>
               <!-- DV Number Field -->
               <div class="col-md-4 col-sm-6">
                 <q-item-label class="q-mb-xs">DV Number:</q-item-label>
-                <q-input filled outlined dense v-model="store.forms.disbursement.dvNumber" />
+                <q-input 
+                  filled 
+                  outlined 
+                  dense 
+                  v-model="store.forms.disbursement.dvNumber" 
+                  @keydown.enter="handleEnterKey"
+                />
               </div>
 
               <!-- Payee Field -->
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Payee:</q-item-label>
-                <q-input filled outlined dense v-model="store.forms.disbursement.payee" />
+                <q-input 
+                  filled 
+                  outlined 
+                  dense 
+                  v-model="store.forms.disbursement.payee" 
+                  @keydown.enter="handleEnterKey"
+                />
               </div>
             </div>
           </q-card-section>
@@ -224,7 +239,7 @@
               class="modal-cancel-btn"
               @click="store.closeDialog('disbursement')"
             />
-            <q-btn label="Save" class="modal-save-btn" @click="store.saveDisbursement" />
+            <q-btn label="Save" class="modal-save-btn" @click="handleSaveClick" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -276,6 +291,55 @@ import { useQuasar } from 'quasar'
 
 const $q = useQuasar()
 const loading = ref(false)
+
+const validateAndSave = () => {
+  // Check if disbursement dialog is open
+  if (store.dialogs.disbursement) {
+    // Validate required fields before saving
+    const form = store.forms.disbursement
+    const hasRequiredFields = form.date && 
+                             form.bank && 
+                             form.checkNumber && 
+                             form.dvNumber && 
+                             form.payee
+    
+    // Check if expenses are added
+    const hasExpenses = store.expenses && store.expenses.length > 0
+    
+    if (!hasRequiredFields) {
+      $q.notify({
+        type: 'negative',
+        message: 'Please fill in all required fields before saving',
+        icon: 'warning',
+        position: 'top',
+      })
+      return
+    }
+    
+    if (!hasExpenses) {
+      $q.notify({
+        type: 'negative',
+        message: 'Please add at least one expense before saving',
+        icon: 'warning',
+        position: 'top',
+      })
+      return
+    }
+    
+    // If validation passes, proceed with save
+    store.saveDisbursement()
+  }
+}
+
+const handleEnterKey = (event) => {
+  // Prevent default behavior to avoid form submission
+  event.preventDefault()
+  validateAndSave()
+}
+
+const handleSaveClick = () => {
+  validateAndSave()
+}
 
 const loadPendingUsers = async () => {
   loading.value = true
