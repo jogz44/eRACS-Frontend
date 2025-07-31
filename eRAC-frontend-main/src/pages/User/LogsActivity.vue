@@ -8,12 +8,14 @@
       </q-card-section>
 
       <q-card-section class="q-pa-md">
-        <div class="user-info q-mb-md">
+        <div class="user-info q-mb-md ">
           <div class="text-subtitle1 text-weight-bold">{{ selectedUser?.fullname }} - {{ formatDate(selectedUser?.log_date) }}</div>
           <div class="text-caption">{{ selectedUser?.position }} - {{ selectedUser?.barangay }}</div>
         </div>
 
         <q-table
+        :table-header-style="{ position: 'sticky', top: '0', zIndex: 3, background: 'white' }"
+        class="activity-table"
           flat
           bordered
           :rows="activities"
@@ -145,7 +147,7 @@ export default {
         // For demo purposes, use sample data
         activities.value = sampleActivities
         const response = await api.get(`/api/admin/admin/logs/${props.selectedUser.id}/${props.selectedUser.log_date}`)
-        
+
         activities.value = response.data
       } catch (error) {
         console.error('Error loading activities:', error)
@@ -204,6 +206,12 @@ export default {
 
 .no-data-message {
   min-height: 200px;
+}.card-table{
+
+
+
+}.activity-table{
+  max-height: 400px;
 }
 </style>
 

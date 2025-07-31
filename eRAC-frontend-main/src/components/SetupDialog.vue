@@ -17,21 +17,12 @@
       <q-card-section></q-card-section>
 
       <q-card-section class="q-pt-none">
-<q-select
-              outlined
-              dense
-              bg-color="light-green-1"
-              v-model="barangay"
-              :options="barangayOptions"
-              label="Select Barangay"
-              color="green"
-              class="q-mb-sm"
-              emit-value
-              map-options
-              option-label="name"
-              option-value="posvalue"
-              :rules="[(val) => !!val || 'Barangay is required']"
-            />
+        <!-- Barangay -->
+    <q-input v-model="preparedByName"  >
+      <span class="position-text text-caption text-white text-weight-medium text-h5">
+         {{ authStore.user?.barangay_name }}
+      </span>
+    </q-input>
 
         <q-input v-model="preparedByName" label="Prepared by:" filled />
 
@@ -96,6 +87,9 @@
 import { ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios'
+import { useAuthStore } from 'src/stores/auth';
+
+const authStore = useAuthStore();
 
 defineProps({
   modelValue: {
@@ -107,7 +101,7 @@ defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 // Form data
-const barangay = ref('')
+// const barangay = ref('')
 const preparedByName = ref('')
 const preparedposition = ref('')
 const notedposition = ref('')
