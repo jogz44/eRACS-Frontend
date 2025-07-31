@@ -136,14 +136,14 @@
                             class="edit-btn"
                             @click.stop="editExpenseClass(expenseClass)"
                           />
-                          <!-- <q-btn
+                          <q-btn
                             dense
                             flat
                             round
                             icon="delete"
                             class="delete-btn"
                             @click.stop="confirmDeleteExpenseClass(expenseClass)"
-                          /> -->
+                          />
                           <q-btn
                             dense
                             flat
@@ -805,8 +805,8 @@ const showAddClassForm = () => {
 
 const validateAndSaveExpenseClass = async () => {
   if (!newExpenseClass.value || !newExpenseClass.value.trim()) {
-    $q.notify({ 
-      type: 'negative', 
+    $q.notify({
+      type: 'negative',
       message: 'Class name is required',
       position: 'top',
     })
@@ -898,11 +898,11 @@ const updateExpenseClass = async () => {
     })
   }
 }
-// const confirmDeleteExpenseClass = (expenseClass) => {
-//   itemToDelete.value = expenseClass
-//   deleteType.value = 'class'
-//   showDeleteConfirm.value = true
-// }
+const confirmDeleteExpenseClass = (expenseClass) => {
+  itemToDelete.value = expenseClass
+  deleteType.value = 'class'
+  showDeleteConfirm.value = true
+}
 
 // Methods
 const loadExpenseClassesForYear = async (yearId) => {
@@ -1043,20 +1043,10 @@ const updateExpenseType = async () => {
 }
 
 const confirmDeleteExpenseType = async (expenseType) => {
-  try {
-    await accountsStore.deleteExpenseType({
-      id: expenseType.id,
-      expenseClassId: expenseType.expense_class_id,
-    })
+   itemToDelete.value = expenseType
+  deleteType.value = 'type'
+  showDeleteConfirm.value = true
 
-    $q.notify({ type: 'positive', message: 'Type deleted successfully' })
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: error.message || 'Failed to delete expense type',
-      position: 'top',
-    })
-  }
 }
 
 // Expense Item related functions
@@ -1164,28 +1154,10 @@ const updateExpenseItem = async () => {
 }
 
 const confirmDeleteExpenseItem = async (item) => {
-  try {
-    // Find parent type
-    const parentType = accountsStore.expenseTypes.find((et) => et.id == item.expense_type_id)
 
-    if (!parentType) {
-      throw new Error('Parent type not found')
-    }
-
-    await accountsStore.deleteExpenseItem({
-      id: item.id,
-      expenseClassId: parentType.expense_class_id,
-      expenseTypeId: parentType.id,
-    })
-
-    $q.notify({ type: 'positive', message: 'Item deleted successfully' })
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: error.message || 'Failed to delete expense item',
-      position: 'top',
-    })
-  }
+  itemToDelete.value = item
+  deleteType.value = 'item'
+  showDeleteConfirm.value = true
 }
 
 // Helper functions
@@ -1340,23 +1312,60 @@ watch(
 )
 
 // Delete function
+// Delete function
+// Delete function
 const confirmDelete = async () => {
   try {
+    if (!itemToDelete.value?.id) {
+      throw new Error('No item selected for deletion')
+    }
+
+    // Convert ID to number and validate
+    const id = Number(itemToDelete.value.id)
+    if (isNaN(id)) {
+      throw new Error('Invalid ID format')
+    }
+
     if (deleteType.value === 'class') {
-      await accountsStore.deleteExpenseClass(itemToDelete.value.id)
+      await accountsStore.deleteExpenseClass(id)
       $q.notify({
         type: 'positive',
-        message: 'Class deleted successfully',
-        position: 'top',
+        message: 'Class and all associated types/items deleted successfully',
+        position: 'top'
       })
     }
-    showDeleteConfirm.value = false
+    else if (deleteType.value === 'type') {
+      await accountsStore.deleteExpenseType(id)
+      $q.notify({
+        type: 'positive',
+        message: 'Type and all associated items deleted successfully',
+        position: 'top'
+      })
+    }
+    else if (deleteType.value === 'item') {
+      await accountsStore.deleteExpenseItem(id)
+      $q.notify({
+        type: 'positive',
+        message: 'Item deleted successfully',
+        position: 'top'
+      })
+    }
+
+    // Refresh data
+    if (selectedYear.value) {
+      await accountsStore.fetchExpenseClasses(selectedYear.value)
+    }
+
   } catch (error) {
+    console.error('Delete error:', error)
     $q.notify({
       type: 'negative',
       message: error.message || 'Failed to delete',
       position: 'top',
+      timeout: 5000
     })
+  } finally {
+    showDeleteConfirm.value = false
   }
 }
 

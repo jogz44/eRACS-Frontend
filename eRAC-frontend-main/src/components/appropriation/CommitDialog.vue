@@ -1,8 +1,8 @@
 <template>
   <q-dialog v-model="appropriationStore.showAllocationDialog" persistent>
-    <q-card class="allocation-card" style="min-width: 1050px">
+    <q-card class="allocation-card" style="min-width: 1050px; height: 800px; font-size: medium;">
       <!-- Header with reduced padding -->
-      <q-card-section class="q-pb-sm q-pt-sm">
+      <q-card-section class="q-pb-sm q-pt-sm" >
         <div class="row items-center justify-between">
           <div class="text-h6">Allocate Amounts</div>
           <q-icon
@@ -15,24 +15,7 @@
       </q-card-section>
 
       <q-card-section class="q-py-lg">
-        <!-- Debug Information -->
-        <div v-if="showDebugInfo" class="q-mb-md p-2 bg-grey-2 rounded">
-          <div class="text-caption">
-            <strong>Debug Info:</strong><br>
-            Available Budget: {{ debugInfo.availableBudget }}<br>
-            New Allocations Total: {{ debugInfo.newAllocationsTotal }}<br>
-            Existing Allocations Total: {{ debugInfo.existingAllocationsTotal }}<br>
-            Net Change: {{ debugInfo.netChange }}<br>
-            Will Exceed: {{ debugInfo.willExceed }}<br>
-            <br>
-            <strong>Allocation Details:</strong><br>
-            <div v-for="item in debugInfo.allocationDetails" :key="item.id" class="text-xs">
-              {{ item.name }}: ₱{{ item.currentAmount }} (was: ₱{{ item.originalAmount }}, change: ₱{{ item.change }})
-            </div>
-          </div>
-        </div>
 
-        <!-- Summary section -->
         <div class="row q-mb-sm">
           <div class="col-md-6 col-12 q-mb-md text-weight-regular">
             Total Budget:
@@ -98,7 +81,7 @@
           </div>
 
           <!-- Table Body -->
-          <div class="hierarchical-body" style="max-height: 400px; overflow-y: auto">
+          <div class="hierarchical-body" style="max-height: 300px; overflow-y: auto">
             <template v-for="expenseClass in displayAccounts" :key="'class-' + expenseClass.id">
               <!-- Expense Class Row -->
               <div
@@ -207,15 +190,15 @@
 
       <q-card-actions align="right" class="q-pa-sm">
         <q-btn flat label="Cancel" color="secondary" v-close-popup />
-        <q-btn
+        <!-- <q-btn
           flat
           label="Debug"
           color="info"
           size="sm"
           @click="showDebugInfo = !showDebugInfo"
-        />
+        /> -->
         <q-btn
-          label="Save"
+          label="Allocate"
           class="modal-save-btn"
           @click="submitAllocation"
           :loading="appropriationStore.loading"
@@ -233,7 +216,7 @@ import { ref, computed } from 'vue'
 
 const appropriationStore = useAppropriationStore()
 const searchQuery = ref('')
-const showDebugInfo = ref(false)
+// const showDebugInfo = ref(false)
 const $q = useQuasar()
 
 // Utility function to safely parse currency values
@@ -369,51 +352,6 @@ const canSave = computed(() => {
   return hasValidAllocation && withinBudget
 })
 
-// Debug information
-const debugInfo = computed(() => {
-  const allocationDetails = []
-
-  displayAccounts.value.forEach((expenseClass) => {
-    expenseClass.children?.forEach((expenseType) => {
-      if (expenseType.children?.length) {
-        expenseType.children.forEach((item) => {
-          const currentAmount = parseCurrency(item.amount)
-          const originalAmount = appropriationStore.originalAllocations?.[`item-${item.id}`] || 0
-          if (currentAmount > 0 || originalAmount > 0) {
-            allocationDetails.push({
-              id: item.id,
-              name: item.name,
-              currentAmount: currentAmount,
-              originalAmount: originalAmount,
-              change: currentAmount - originalAmount
-            })
-          }
-        })
-      } else {
-        const currentAmount = parseCurrency(expenseType.amount)
-        const originalAmount = appropriationStore.originalAllocations?.[`type-${expenseType.id}`] || 0
-        if (currentAmount > 0 || originalAmount > 0) {
-          allocationDetails.push({
-            id: expenseType.id,
-            name: expenseType.name,
-            currentAmount: currentAmount,
-            originalAmount: originalAmount,
-            change: currentAmount - originalAmount
-          })
-        }
-      }
-    })
-  })
-
-  return {
-    availableBudget: availableBudget.value,
-    newAllocationsTotal: newAllocationsTotal.value,
-    existingAllocationsTotal: appropriationStore.existingAllocationsTotal || 0,
-    netChange: netChange.value,
-    willExceed: netChange.value > availableBudget.value,
-    allocationDetails
-  }
-})
 
 const getTypeClass = (expenseType) => {
   return expenseType.children?.length > 0 ? 'text-weight-bold' : 'text-weight-regular'
