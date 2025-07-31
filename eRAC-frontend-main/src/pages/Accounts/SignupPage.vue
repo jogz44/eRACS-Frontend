@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-lg no-scroll-page">
+  <q-page class="q-pa-lg no-scroll-page" @keydown.enter="handleGlobalEnterKey">
     <q-card class="signup-card">
       <!-- Logo Container -->
       <!-- Header Section -->
@@ -25,6 +25,7 @@
                 class="q-mb-sm"
                 :error="showStep1Validation && !firstName"
                 :error-message="showStep1Validation && !firstName ? 'First name is required' : ''"
+                @keyup.enter="validateStep1"
               />
               <q-input
                 outlined
@@ -36,6 +37,7 @@
                 class="q-mb-sm"
                 :error="showStep1Validation && !middleName"
                 :error-message="showStep1Validation && !middleName ? 'Middle name is required' : ''"
+                @keyup.enter="validateStep1"
               />
               <q-input
                 outlined
@@ -47,6 +49,7 @@
                 class="q-mb-md"
                 :error="showStep1Validation && !lastName"
                 :error-message="showStep1Validation && !lastName ? 'Last name is required' : ''"
+                @keyup.enter="validateStep1"
               />
               <div class="text-subtitle2 text-green-8 q-mb-xs">Suffix (Optional)</div>
               <q-input outlined dense bg-color="white" v-model="suffix" color="green" />
@@ -69,6 +72,7 @@
                 option-value="value"
                 :error="showStep1Validation && !barangay"
                 :error-message="showStep1Validation && !barangay ? 'Barangay is required' : ''"
+                @keyup.enter="validateStep1"
               />
               <div class="text-subtitle2 text-green-8 q-mb-xs">Position</div>
               <q-select
@@ -86,6 +90,7 @@
                 option-value="value"
                 :error="showStep1Validation && !position"
                 :error-message="showStep1Validation && !position ? 'Position is required' : ''"
+                @keyup.enter="validateStep1"
               />
               <q-uploader
                 v-model="uploadedFiles"
@@ -180,6 +185,7 @@
                 color="green"
                 :error="showStep2Validation && (!email || !isValidEmail(email))"
                 :error-message="getEmailErrorMessage()"
+                @keyup.enter="handleSubmit"
               >
                 <template v-slot:prepend>
                   <q-icon name="mail" />
@@ -196,6 +202,7 @@
                 color="green"
                 :error="showStep2Validation && (!username || username.length < 4)"
                 :error-message="getUsernameErrorMessage()"
+                @keyup.enter="handleSubmit"
               >
                 <template v-slot:prepend>
                   <q-icon name="person" />
@@ -216,6 +223,7 @@
                 color="green"
                 :error="showStep2Validation && (!password || password.length < 8)"
                 :error-message="getPasswordErrorMessage()"
+                @keyup.enter="handleSubmit"
               >
                 <template #append>
                   <q-icon
@@ -274,7 +282,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from 'stores/auth'
@@ -524,6 +532,46 @@ export default {
       }
     }
 
+    // Global keyboard event handler
+    const handleGlobalKeydown = (event) => {
+      if (event.key === 'Enter') {
+        console.log('Global Enter key detected for signup')
+        event.preventDefault()
+        event.stopPropagation()
+        
+        if (step.value === 1) {
+          validateStep1()
+        } else if (step.value === 2) {
+          handleSubmit()
+        }
+      }
+    }
+
+    // Global Enter key handler for the page
+    const handleGlobalEnterKey = (event) => {
+      if (event) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+      
+      if (step.value === 1) {
+        validateStep1()
+      } else if (step.value === 2) {
+        handleSubmit()
+      }
+    }
+
+    // Add and remove global event listeners
+    onMounted(() => {
+      document.addEventListener('keydown', handleGlobalKeydown)
+      console.log('Global keyboard listener added for signup')
+    })
+
+    onUnmounted(() => {
+      document.removeEventListener('keydown', handleGlobalKeydown)
+      console.log('Global keyboard listener removed for signup')
+    })
+
     return {
       step,
       firstName,
@@ -556,6 +604,7 @@ export default {
       getUsernameErrorMessage,
       getPasswordErrorMessage,
       getConfirmPasswordErrorMessage,
+      handleGlobalEnterKey,
       cardWidth: $q.screen.lt.sm ? '100%' : $q.screen.lt.md ? '80%' : '50%',
     }
   },

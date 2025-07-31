@@ -1,5 +1,5 @@
 <template>
-  <q-page class="login-page">
+  <q-page class="login-page" @keydown.enter="handleEnterKey">
     <q-card class="login-card">
       <div class="logo-container">
         <q-img src="src/assets/tagumlogo.png" class="logo" contain spinner-color="white" />
@@ -30,6 +30,7 @@
       :prepend-icon="'user'"
         :error="showValidation && !email"
       :error-message="showValidation && !email ? 'Email is required!':''"
+      @keydown.enter="handleEnterKey"
     />
       <!-- Password -->
 
@@ -45,7 +46,7 @@
       :prepend-icon="'lock'"
       :error="showValidation && !password"
       :error-message="showValidation && !password ? 'Password is required!':''"
-      @keyup.enter="handleLogin"
+      @keydown.enter="handleEnterKey"
     >
       <template #append>
         <q-icon
@@ -60,7 +61,7 @@
       label="SIGN IN"
       color="green"
       class="full-width q-mt-md"
-      @click="handleLogin"
+      @click="handleLoginClick"
       :loading="loading"
     />
   </q-card-section>
@@ -82,7 +83,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from 'stores/auth'
@@ -101,9 +102,33 @@ const goToUser = () => {
   router.push('/') // Make sure this matches your signup route
 }
 
-const handleLogin = async () => {
+// Validation function
+const validateLogin = () => {
   showValidation.value = true
-  if (!email.value || !password.value) {
+  
+  if (!email.value) {
+    $q.notify({
+      type: 'negative',
+      message: 'Email is required',
+      position: 'top',
+    })
+    return false
+  }
+  
+  if (!password.value) {
+    $q.notify({
+      type: 'negative',
+      message: 'Password is required',
+      position: 'top',
+    })
+    return false
+  }
+  
+  return true
+}
+
+const handleLogin = async () => {
+  if (!validateLogin()) {
     return
   }
   
@@ -131,6 +156,40 @@ const handleLogin = async () => {
     loading.value = false
   }
 }
+
+const handleEnterKey = (event) => {
+  if (event) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+  console.log('Enter key pressed - triggering admin login')
+  handleLogin()
+}
+
+const handleLoginClick = () => {
+  handleLogin()
+}
+
+// Global keyboard event handler
+const handleGlobalKeydown = (event) => {
+  if (event.key === 'Enter') {
+    console.log('Global Enter key detected for admin login')
+    event.preventDefault()
+    event.stopPropagation()
+    handleLogin()
+  }
+}
+
+// Add and remove global event listeners
+onMounted(() => {
+  document.addEventListener('keydown', handleGlobalKeydown)
+  console.log('Global keyboard listener added for admin login')
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleGlobalKeydown)
+  console.log('Global keyboard listener removed for admin login')
+})
 </script>
 
 <style scoped>
