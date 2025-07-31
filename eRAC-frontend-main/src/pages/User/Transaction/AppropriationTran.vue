@@ -123,7 +123,7 @@
 
 
     <!-- Add Budget Dialog-->
-    <q-dialog v-model="showDialog">
+    <q-dialog v-model="showDialog" @keydown.enter="handleEnterKey">
       <q-card style="min-width: 400px">
         <q-card-section>
           <div class="text-h6">Add New Budget</div>
@@ -141,6 +141,7 @@
             map-options
             label="Fiscal Year"
             :rules="[(val) => !!val || 'Required']"
+            @keydown.enter="handleEnterKey"
           />
 
           <!-- Auto-filled Dates Based on Selected Year -->
@@ -152,6 +153,7 @@
             label="Start Date"
             mask="date"
             :rules="['date']"
+            @keydown.enter="handleEnterKey"
           >
             <template v-slot:append>
               <q-icon name="event" class="cursor-pointer">
@@ -163,11 +165,23 @@
           </q-input>
           <div class="q-mb-md">
             <strong>Description:</strong><br />
-            <q-input filled v-model="description" placeholder="Budget description" />
+            <q-input 
+              filled 
+              v-model="description" 
+              placeholder="Budget description" 
+              @keydown.enter="handleEnterKey"
+            />
           </div>
           <div class="q-mb-md">
             <strong>Amount:</strong><br />
-            <q-input filled v-model="amount" prefix="₱" placeholder="0.00" type="number" />
+            <q-input 
+              filled 
+              v-model="amount" 
+              prefix="₱" 
+              placeholder="0.00" 
+              type="number" 
+              @keydown.enter="handleEnterKey"
+            />
           </div>
         </q-card-section>
         <q-card-actions align="right" class="custom-actions">
@@ -258,20 +272,31 @@
                     style="padding: 6px 12px; min-height: 32px; border-bottom: 1px solid #f0f0f0"
                   >
                     <div class="col-6" style="padding-left: 24px; display: flex; align-items: center">
-                      <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
                       <q-btn
                         dense
                         flat
-                        :icon="expandedEditTypes[expenseType.id] ? 'expand_more' : 'chevron_right'"
-                        @click="toggleEditType(expenseType.id)"
+                        :icon="(expenseType.children && expenseType.children.length > 0 && expandedEditTypes[expenseType.id]) ? 'expand_more' : 'chevron_right'"
+                        @click="(expenseType.children && expenseType.children.length > 0) ? toggleEditType(expenseType.id) : null"
                         class="q-mr-sm"
+                        :class="{ 'cursor-default': !expenseType.children || expenseType.children.length === 0 }"
                       />
                       <span>{{ expenseType.name }}</span>
                     </div>
                     <div class="col-6 text-right">
-                      <strong :class="{ 'text-negative': typeErrorMap[expenseType.id] }">
+                      <!-- Show input only if no items exist -->
+                      <q-input
+                        v-if="canEditType(expenseType)"
+                        v-model.number="expenseType.amount"
+                        type="number"
+                        dense
+                        min="0"
+                        style="width: 100px"
+                        :class="{ 'text-negative': typeErrorMap[expenseType.id] }"
+                      />
+                      <!-- Show read-only total if items exist -->
+                      <div v-else class="text-weight-bold">
                         {{ appropriationStore.formatCurrency(calculateTypeTotal(expenseType)) }}
-                      </strong>
+                      </div>
                     </div>
                   </div>
                   <template v-if="expandedEditTypes[expenseType.id] && expenseType.children && expenseType.children.length > 0">
@@ -311,7 +336,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, computed } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import CommitDialog from 'components/appropriation/CommitDialog.vue'
 import ViewCommitDialog from 'components/appropriation/ViewCommitDialog.vue'
@@ -358,9 +383,15 @@ const showEditAllocationDialog = ref(false)
 const editAllocations = ref([])
 const expandedEditTypes = ref({})
 const typeErrorMap = ref({})
+const editDisplayAccounts = ref([])
 
-const editDisplayAccounts = computed(() => {
-  if (!editAllocations.value || editAllocations.value.length === 0) return []
+// Function to initialize editDisplayAccounts from editAllocations
+const initializeEditDisplayAccounts = () => {
+  if (!editAllocations.value || editAllocations.value.length === 0) {
+    editDisplayAccounts.value = []
+    return
+  }
+  
   // Group allocations by class/type/item (similar to ViewCommitDialog)
   const classMap = {}
   editAllocations.value.forEach((alloc) => {
@@ -370,6 +401,7 @@ const editDisplayAccounts = computed(() => {
     const typeName = alloc.expense_type_name || `Type ${typeId}`
     const itemId = alloc.expense_item_id
     const itemName = alloc.expense_item_name || `Item ${itemId}`
+    
     // Initialize class if not exists
     if (!classMap[classId]) {
       classMap[classId] = {
@@ -378,6 +410,7 @@ const editDisplayAccounts = computed(() => {
         children: [],
       }
     }
+    
     // Handle type-level allocations (no item ID)
     if (typeId && !itemId) {
       // Check if type already exists
@@ -393,6 +426,7 @@ const editDisplayAccounts = computed(() => {
         })
       }
     }
+    
     // Handle item-level allocations
     if (itemId) {
       let type = classMap[classId].children.find((t) => t.id === typeId)
@@ -400,10 +434,13 @@ const editDisplayAccounts = computed(() => {
         type = {
           id: typeId,
           name: typeName,
-          amount: 0,
+          amount: 0, // Type amount should be 0 when items exist
           children: [],
         }
         classMap[classId].children.push(type)
+      } else {
+        // If type already exists and has items, ensure type amount is 0
+        type.amount = 0
       }
       type.children.push({
         id: itemId,
@@ -412,6 +449,7 @@ const editDisplayAccounts = computed(() => {
       })
     }
   })
+  
   // Sort classes, types, and items by id to keep order static
   const classArr = Object.values(classMap)
   classArr.forEach(cls => {
@@ -422,10 +460,11 @@ const editDisplayAccounts = computed(() => {
       }
     })
   })
-  return classArr
-})
+  
+  editDisplayAccounts.value = classArr
+}
 
-// Expand all types by default when editDisplayAccounts changes
+// Expand types with children by default when editDisplayAccounts changes
 watch(
   () => editDisplayAccounts.value,
   (newVal) => {
@@ -434,7 +473,8 @@ watch(
       newVal.forEach((expenseClass) => {
         if (expenseClass && Array.isArray(expenseClass.children)) {
           expenseClass.children.forEach((expenseType) => {
-            if (expenseType && expenseType.id) {
+            // Only expand types that have children
+            if (expenseType && expenseType.id && expenseType.children && expenseType.children.length > 0) {
               expanded[expenseType.id] = true
             }
           })
@@ -447,7 +487,19 @@ watch(
 )
 
 const toggleEditType = (typeId) => {
-  expandedEditTypes.value[typeId] = !expandedEditTypes.value[typeId]
+  // Find the expense type to check if it has children
+  let hasChildren = false
+  editDisplayAccounts.value.forEach(expenseClass => {
+    const expenseType = expenseClass.children?.find(type => type.id === typeId)
+    if (expenseType && expenseType.children && expenseType.children.length > 0) {
+      hasChildren = true
+    }
+  })
+  
+  // Only toggle if the type has children
+  if (hasChildren) {
+    expandedEditTypes.value[typeId] = !expandedEditTypes.value[typeId]
+  }
 }
 
 const openAllocationDialog = async (row) => {
@@ -490,6 +542,8 @@ const openEditAllocationDialog = async (row) => {
     // Use the most recent allocation set for editing
     const latestAllocations = allHistory.length > 0 ? allHistory[0].allocations : []
     editAllocations.value = JSON.parse(JSON.stringify(latestAllocations))
+    // Initialize the display accounts for editing
+    initializeEditDisplayAccounts()
     appropriationStore.selectedRow = row; // <-- Fix: set selectedRow for save
     showEditAllocationDialog.value = true
   } catch (error) {
@@ -507,6 +561,7 @@ const openEditAllocationDialog = async (row) => {
 const closeEditAllocationDialog = () => {
   showEditAllocationDialog.value = false
   typeErrorMap.value = {} // Clear errors on close
+  editDisplayAccounts.value = [] // Reset edit display accounts
 }
 
 // In the template, ensure:
@@ -558,47 +613,87 @@ const saveBudget = async () => {
   }
 }
 
+// Utility function to parse currency values
+const parseCurrency = (value) => {
+  if (!value && value !== 0) return 0
+  const cleanValue = String(value).replace(/[₱,\s]/g, '')
+  const parsed = parseFloat(cleanValue)
+  return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100
+}
+
 const calculateTypeTotal = (type) => {
   if (!type || !type.children) return 0
-  return type.children.reduce((sum, item) => sum + item.amount, 0)
+  return type.children.reduce((sum, item) => sum + parseCurrency(item.amount), 0)
+}
+
+// Helper function to check if a type can be edited (has no items)
+const canEditType = (expenseType) => {
+  return !expenseType.children || expenseType.children.length === 0
 }
 
 const saveEditedAllocation = async () => {
   try {
-    // Flatten editDisplayAccounts into editAllocations before saving
-    editDisplayAccounts.value.forEach((expenseClass) => {
-      if (!expenseClass || !Array.isArray(expenseClass.children)) return
-      expenseClass.children.forEach((expenseType) => {
-        if (!expenseType || !Array.isArray(expenseType.children)) return
-        expenseType.children.forEach((item) => {
-          if (!item) return
-          // Find the original allocation in editAllocations and update its amount
-          const alloc = editAllocations.value.find(
-            a => a.expense_item_id === item.id
-          )
-          if (alloc) {
-            alloc.amount = item.amount
-          }
-        })
-      })
-    })
     const allocations = []
+    
+    // Calculate total allocation amount for validation
+    let totalAllocated = 0
+    
+    // Process both type-level and item-level allocations
     editDisplayAccounts.value.forEach((expenseClass) => {
       if (!expenseClass || !Array.isArray(expenseClass.children)) return
+      
       expenseClass.children.forEach((expenseType) => {
-        if (!expenseType || !Array.isArray(expenseType.children)) return
-        expenseType.children.forEach((item) => {
-          if (!item) return
-          if (typeof item.id !== 'undefined' && item.id !== null) {
-            allocations.push({
-              expense_item_id: item.id,
-              amount: item.amount || 0,
-            })
+        // Handle type-level allocations (only when no items exist)
+        if (canEditType(expenseType)) {
+          const typeAmount = parseCurrency(expenseType.amount)
+          if (typeAmount > 0) {
+            totalAllocated += typeAmount
           }
-        })
+          allocations.push({
+            id: expenseType.id,
+            type: 'type',
+            amount: typeAmount,
+            expense_class_id: expenseClass.id,
+            expense_type_id: expenseType.id,
+            expense_item_id: null
+          })
+        }
+        
+        // If items exist, ensure type amount is 0 (type amount should be sum of items)
+        if (!canEditType(expenseType) && parseCurrency(expenseType.amount) > 0) {
+          throw new Error(`Cannot set amount for type "${expenseType.name}" because it has items. Type amount should be the sum of its items.`)
+        }
+        
+        // Handle item-level allocations
+        if (expenseType.children && Array.isArray(expenseType.children)) {
+          expenseType.children.forEach((item) => {
+            if (!item) return
+            
+            const itemAmount = parseCurrency(item.amount)
+            if (itemAmount > 0) {
+              totalAllocated += itemAmount
+            }
+            allocations.push({
+              id: item.id,
+              type: 'item',
+              amount: itemAmount,
+              expense_class_id: expenseClass.id,
+              expense_type_id: expenseType.id,
+              expense_item_id: item.id
+            })
+          })
+        }
       })
     })
-    await api.patch(`/api/barangay/budgets/${appropriationStore.selectedRow.id}/allocations`, { allocations })
+    
+    // Validate against budget limit
+    const availableBudget = appropriationStore.selectedRow?.unappropriated || 0
+    if (totalAllocated > availableBudget) {
+      throw new Error(`Total allocation (₱${totalAllocated.toFixed(2)}) exceeds available budget (₱${availableBudget.toFixed(2)})`)
+    }
+    
+    // Use the saveAllocation endpoint instead of updateAllocations
+    await api.post(`/api/barangay/budgets/${appropriationStore.selectedRow.id}/allocate`, { allocations })
     $q.notify({
       type: 'positive',
       message: 'Allocations updated',
@@ -701,6 +796,15 @@ const columns = [
     field: 'action',
   },
 ]
+
+const handleEnterKey = (event) => {
+  // Prevent default behavior to avoid form submission
+  event.preventDefault()
+  // Only save if the dialog is open and not currently loading
+  if (showDialog.value && !loading.value) {
+    saveBudget()
+  }
+}
 
 const addBudget = () => {
   openDialog()

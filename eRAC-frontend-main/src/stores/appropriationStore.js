@@ -358,12 +358,25 @@ export const useAppropriationStore = defineStore("appropriation", {
 
         // Set current values from existing allocations and track originals
         allocations.forEach((allocation) => {
-          const id = allocation.expense_item_id || allocation.expense_type_id || allocation.expense_class_id
-          if (id) {
+          let id = null
+          let key = null
+          
+          if (allocation.expense_item_id) {
+            id = allocation.expense_item_id
+            key = `item-${id}`
+          } else if (allocation.expense_type_id) {
+            id = allocation.expense_type_id
+            key = `type-${id}`
+          } else if (allocation.expense_class_id) {
+            id = allocation.expense_class_id
+            key = `class-${id}`
+          }
+          
+          if (id && key) {
             const amount = parseCurrency(allocation.amount)
-            this.inputCache[id] = amount.toString()
-            this.allocationInputs[id] = amount.toString()
-            this.originalAllocations[id] = amount
+            this.inputCache[key] = amount.toString()
+            this.allocationInputs[key] = amount.toString()
+            this.originalAllocations[key] = amount
             this.existingAllocationsTotal += amount
           }
         })
@@ -453,29 +466,33 @@ export const useAppropriationStore = defineStore("appropriation", {
 
     initializeInputCache(allocations) {
       const cache = {}
-      const processItems = (items) => {
+      const processItems = (items, level = 'item') => {
         items.forEach((item) => {
           if (item.id) {
-            const existingValue = this.allocationInputs[item.id] || ""
-            cache[item.id] = existingValue
+            const key = `${level}-${item.id}`
+            const existingValue = this.allocationInputs[key] || ""
+            cache[key] = existingValue
           }
           if (item.children) {
-            processItems(item.children)
+            // Determine the next level
+            const nextLevel = level === 'class' ? 'type' : 'item'
+            processItems(item.children, nextLevel)
           }
         })
       }
-      processItems(allocations)
+      // Start with class level
+      processItems(allocations, 'class')
       this.inputCache = cache
     },
 
     calculateClassTotal(expenseClass) {
       let total = 0
       expenseClass.children?.forEach((expenseType) => {
-        const typeAmount = parseCurrency(this.inputCache[expenseType.id] || 0)
+        const typeAmount = parseCurrency(this.inputCache[`type-${expenseType.id}`] || 0)
         total += typeAmount
 
         expenseType.children?.forEach((item) => {
-          const itemAmount = parseCurrency(this.inputCache[item.id] || 0)
+          const itemAmount = parseCurrency(this.inputCache[`item-${item.id}`] || 0)
           total += itemAmount
         })
       })

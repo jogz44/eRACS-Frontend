@@ -14,6 +14,8 @@ use App\Http\Middleware\AuthTokenValid;
 use App\Models\Barangay;
 use App\Models\BarangayPosition;
 use App\Models\Admin;
+use App\Http\Controllers\ReportController;
+
 
 Route::prefix('barangay')->group(function () {
     // Barangays list endpoint
@@ -138,7 +140,9 @@ Route::prefix('barangay')->group(function () {
         Route::get('budget-augmentations/available-budgets', [BudgetAugmentationController::class, 'getAvailableBudgets']);
         Route::apiResource('budget-augmentations', BudgetAugmentationController::class);
 
-
+        // Report routes aka Preview and PDF download by Dan Steve
+        Route::get('/rac/current', [ReportController::class, 'index']);         // JSON preview
+        Route::get('/rac/current/pdf', [ReportController::class, 'exportPdf']); // PDF download
 
     });
 
@@ -173,3 +177,4 @@ Route::prefix('admin')->group(function () {
     // Admin Individual Log Open
     Route::get('/admin/logs/{user}/{day}', [AdminAuthController::class, 'getUserLogs']);
 });
+

@@ -137,7 +137,7 @@
                       :model-value="expenseType.amount"
                       @update:model-value="
                         (val) => {
-                          appropriationStore.updateAllocationAmount(expenseType.id, val)
+                          appropriationStore.updateAllocationAmount(`type-${expenseType.id}`, val)
                           updateUnappropriated()
                         }
                       "
@@ -181,7 +181,7 @@
                             :model-value="expenseItem.amount"
                             @update:model-value="
                               (val) => {
-                                appropriationStore.updateAllocationAmount(expenseItem.id, val)
+                                appropriationStore.updateAllocationAmount(`item-${expenseItem.id}`, val)
                                 updateUnappropriated()
                               }
                             "
@@ -272,19 +272,19 @@ const displayAccounts = computed(() => {
     id: expenseClass.id,
     name: expenseClass.name,
     isMainCategory: expenseClass.isMainCategory,
-    amount: appropriationStore.inputCache[expenseClass.id] || '',
+    amount: appropriationStore.inputCache[`class-${expenseClass.id}`] || '',
     children: Array.isArray(expenseClass.children)
       ? expenseClass.children.map((expenseType) => ({
           id: expenseType.id,
           name: expenseType.name,
           isMainCategory: expenseType.isMainCategory,
-          amount: appropriationStore.inputCache[expenseType.id] || '',
+          amount: appropriationStore.inputCache[`type-${expenseType.id}`] || '',
           children: Array.isArray(expenseType.children)
             ? expenseType.children.map((item) => ({
                 id: item.id,
                 name: item.name,
                 isMainCategory: item.isMainCategory,
-                amount: appropriationStore.inputCache[item.id] || '',
+                amount: appropriationStore.inputCache[`item-${item.id}`] || '',
               }))
             : [],
         }))
@@ -378,7 +378,7 @@ const debugInfo = computed(() => {
       if (expenseType.children?.length) {
         expenseType.children.forEach((item) => {
           const currentAmount = parseCurrency(item.amount)
-          const originalAmount = appropriationStore.originalAllocations?.[item.id] || 0
+          const originalAmount = appropriationStore.originalAllocations?.[`item-${item.id}`] || 0
           if (currentAmount > 0 || originalAmount > 0) {
             allocationDetails.push({
               id: item.id,
@@ -391,7 +391,7 @@ const debugInfo = computed(() => {
         })
       } else {
         const currentAmount = parseCurrency(expenseType.amount)
-        const originalAmount = appropriationStore.originalAllocations?.[expenseType.id] || 0
+        const originalAmount = appropriationStore.originalAllocations?.[`type-${expenseType.id}`] || 0
         if (currentAmount > 0 || originalAmount > 0) {
           allocationDetails.push({
             id: expenseType.id,
@@ -464,6 +464,9 @@ const submitAllocation = async () => {
                 id: item.id,
                 type: 'item',
                 amount: amount,
+                expense_class_id: expenseClass.id,
+                expense_type_id: expenseType.id,
+                expense_item_id: item.id
               })
               hasValidAllocation = true
             }
@@ -475,6 +478,9 @@ const submitAllocation = async () => {
               id: expenseType.id,
               type: 'type',
               amount: amount,
+              expense_class_id: expenseClass.id,
+              expense_type_id: expenseType.id,
+              expense_item_id: null
             })
             hasValidAllocation = true
           }

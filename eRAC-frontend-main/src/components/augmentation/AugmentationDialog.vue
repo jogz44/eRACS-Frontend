@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-model="dialogModel" persistent>
+  <q-dialog v-model="dialogModel" persistent @keydown.enter="handleEnterKey">
     <q-card style="min-width: 1100px">
       <q-card-section>
         <div class="text-h6">Augmentation</div>
@@ -19,6 +19,7 @@
               option-value="id"
               label="Select Budget"
               :rules="[(val) => !!val || 'Budget is required']"
+              @keydown.enter="handleEnterKey"
             >
               <template v-slot:option="scope">
                 <q-item v-bind="scope.itemProps">
@@ -39,6 +40,7 @@
               dense
               v-model="store.forms.augmentation.augmentation_date"
               mask="##/##/####"
+              @keydown.enter="handleEnterKey"
             >
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
@@ -62,13 +64,20 @@
               v-model="store.forms.augmentation.refNo" 
               readonly 
               placeholder="Auto-generated"
+              @keydown.enter="handleEnterKey"
             />
           </div>
 
           <!-- Remarks -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">Remarks:</q-item-label>
-            <q-input filled outlined dense v-model="store.forms.augmentation.remarks" />
+            <q-input 
+              filled 
+              outlined 
+              dense 
+              v-model="store.forms.augmentation.remarks" 
+              @keydown.enter="handleEnterKey"
+            />
           </div>
         </div>
       </q-card-section>
@@ -135,7 +144,7 @@
           class="modal-cancel-btn"
           @click="store.closeDialog('augmentation')"
         />
-        <q-btn label="Save" class="modal-save-btn" @click="handleSave" />
+        <q-btn label="Save" class="modal-save-btn" @click="handleSaveClick" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -170,6 +179,51 @@ const handleAddExpense = async () => {
   }
   
   await store.openDialog('augExpense')
+}
+
+const validateAndSave = async () => {
+  // Check if augmentation dialog is open
+  if (dialogModel.value) {
+    // Validate required fields before saving
+    const form = store.forms.augmentation
+    const hasRequiredFields = form.budget_id && form.augmentation_date
+    
+    // Check if expenses are added
+    const hasExpenses = store.Augexpenses?.value && store.Augexpenses.value.length > 0
+    
+    if (!hasRequiredFields) {
+      $q.notify({
+        type: 'negative',
+        message: 'Please fill in all required fields (Budget and Date) before saving',
+        icon: 'warning',
+        position: 'top',
+      })
+      return
+    }
+    
+    if (!hasExpenses) {
+      $q.notify({
+        type: 'negative',
+        message: 'Please add at least one expense before saving',
+        icon: 'warning',
+        position: 'top',
+      })
+      return
+    }
+    
+    // If validation passes, proceed with save
+    await handleSave()
+  }
+}
+
+const handleEnterKey = (event) => {
+  // Prevent default behavior to avoid form submission
+  event.preventDefault()
+  validateAndSave()
+}
+
+const handleSaveClick = () => {
+  validateAndSave()
 }
 
 const handleSave = async () => {
