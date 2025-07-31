@@ -151,7 +151,7 @@ export default {
     async loadLogs() {
       this.loading = true
       try {
-        const response = await api.get(`/api/barangay/getlogs/${authStore.getUserID()}`, getAuthConfig())
+        const response = await api.get(`/api/barangay/getlogs`, getAuthConfig())
         this.logs = response.data.data
         console.log('Loaded logs:', this.logs) // Debug: Check if data is loaded
       } catch (error) {

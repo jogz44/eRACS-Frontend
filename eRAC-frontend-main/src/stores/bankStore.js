@@ -185,21 +185,14 @@ export const useBankStore = defineStore('bank', {
     },
 
     // Edit existing bank
-    // Edit existing bank
     async editBank(id, newName) {
       this.isLoading = true
       this.error = null
       try {
-        const config = this.getAuthConfig()
 
-        // Ensure we're sending the correct payload structure
-        const payload = {
-          name: newName,
-          // Include other required fields if needed by your API
-          _method: 'PUT', // Some Laravel APIs need this for PUT requests
-        }
-
-        const response = await api.put(`/api/barangay/banks/${id}`, payload, config)
+        const response = await api.put(`/api/barangay/banks/${id}`, 
+          { name: newName,
+            _method: 'PUT' }, this.getAuthConfig())
 
         // Update local state
         const index = this.banks.findIndex((bank) => bank.id === id)
@@ -207,7 +200,7 @@ export const useBankStore = defineStore('bank', {
           this.banks[index] = {
             ...this.banks[index],
             name: response.data.bank_name || response.data.name || newName,
-            status: response.data.status || this.banks[index].status,
+            status: response.data.status || 'Available',
           }
         }
 
