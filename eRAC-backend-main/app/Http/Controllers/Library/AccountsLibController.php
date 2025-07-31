@@ -62,6 +62,32 @@ public function createFiscalYear(Request $request)
         // Add this to ensure created_at is set
         'created_at' => now()
     ]);
+    
+    $rows = [
+        ['name' => 'SANGUNIANG KABATAAN (SK) - 10%',                   'order' => 0],
+        ['name' => 'PERSONAL SERVICES',                                'order' => 1],
+        ['name' => 'MOOE',                                             'order' => 2],
+        ['name' => 'LOCALLY FUNDED PROJECTS',                          'order' => 3],
+        ['name' => 'CAPITAL OUTLAY',                                   'order' => 4],
+        ['name' => 'BRGY. DISASTER RISK REDUCTION AND MANAGEMENT FUND','order' => 5],
+        ['name' => '20% DEVELOPMENT FUND',                             'order' => 6],
+    ];
+
+    $now = now();
+
+    $toInsert = collect($rows)->map(function ($row) use ($barangayId, $year, $now) {
+        return [
+            'barangay_id'    => $barangayId,
+            'fiscal_year_id' => $year->id,
+            'name'           => $row['name'],
+            'order'          => $row['order'],
+            'created_at'     => $now,
+            'updated_at'     => $now,
+        ];
+    })->all();
+
+    LibExpenseClass::insert($toInsert);   // single query
+
 
     return response()->json($year, 201);
 }
