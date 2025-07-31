@@ -283,7 +283,16 @@ public function copyToYear(Request $request, $sourceYearId)
     ]);
 
     $class = LibExpenseClass::forBarangay($barangayId)->findOrFail($classId);
+    $oldName = $class->name;                 // grab before update
     $class->update($validated);
+
+    $class->update($validated);
+    $fyYear = LibFiscalYear::whereKey($validated['fiscal_year_id'])->value('year');
+    AdminAuthController::logUserAction(
+        Auth::guard('barangay')->user(),
+        'Accounts -> Expense Classes',
+        'Updated expense class "'.$oldName.'" → "'.$class->fresh()->name.'" (ID: '.$class->id.') for fiscal year '.$fyYear
+    );
 
     return response()->json($class->fresh()->load('types'));
 }
@@ -329,6 +338,14 @@ public function updateTypeOrder(Request $request)
                 ->update(['order' => $classData['order']]);
         }
     });
+
+    // log the action
+    $updatedCount = count($request->input('classes', []));
+    AdminAuthController::logUserAction(
+        Auth::guard('barangay')->user(),
+        'Accounts -> Expense Classes',
+        "Reordered {$updatedCount} expense class(es)"
+    );
 
     return response()->json(['message' => 'Order updated successfully']);
 }
@@ -377,6 +394,17 @@ public function createExpenseType(Request $request, $classId)
             ->count()
     ]);
 
+     // ----- LOG USER ACTION -----
+    $expenseClass = LibExpenseClass::forBarangay($barangayId)->findOrFail($classId);
+    $fyYear = \App\Models\LibFiscalYear::whereKey($expenseClass->fiscal_year_id)->value('year');
+
+    AdminAuthController::logUserAction(
+        Auth::guard('barangay')->user(),
+        'Accounts -> Expense Types',
+        'Created expense type "'.$type->name.'" under class "'.$expenseClass->name.'" for fiscal year '.$fyYear
+    );
+    // ----------------------------
+
     return response()->json($type->load('items'), 201);
 }
 
@@ -403,8 +431,25 @@ public function createExpenseType(Request $request, $classId)
     $type = LibExpenseType::where('expense_class_id', $classId)
         ->whereHas('expenseClass', fn($q) => $q->where('barangay_id', $barangayId))
         ->findOrFail($typeId);
+    
+    // capture old values for the log
+    $oldName  = $type->name;
+    $oldOrder = $type->order;
 
     $type->update($validated);
+    $type->refresh(); // ensure we have latest values
+
+    // gather log context
+    $expenseClass = $type->expenseClass;
+    $fyYear = LibFiscalYear::whereKey($expenseClass->fiscal_year_id)->value('year');
+
+    
+    AdminAuthController::logUserAction(
+        Auth::guard('barangay')->user(),
+        'Accounts -> Expense Types',
+        'Updated expense type "'.$oldName.'" → "'.$type->name
+        .'" under class "'.$expenseClass->name.'" for fiscal year '.$fyYear
+    );
 
     return response()->json($type->fresh()->load('items'));
 }
@@ -415,19 +460,36 @@ public function createExpenseType(Request $request, $classId)
 {
     $this->verifyBarangayAccess();
     $barangayId = Auth::user()->barangay_id;
+    
+    // Collect details before deletion, then log after commit
+    $logData = [];
 
     DB::transaction(function () use ($barangayId, $classId, $typeId) {
         $type = LibExpenseType::where('expense_class_id', $classId)
             ->whereHas('expenseClass', function ($q) use ($barangayId) {
                 $q->where('barangay_id', $barangayId);
             })
-            ->with('items')
+            ->with(['items', 'expenseClass'])   // need class name/year for logging
             ->findOrFail($typeId);
+            
+        // Save details for the log
+        $logData['type_name']  = $type->name;
+        $logData['class_name'] = optional($type->expenseClass)->name;
+        $logData['fy_year']    = \App\Models\LibFiscalYear::whereKey(
+            optional($type->expenseClass)->fiscal_year_id
+        )->value('year');
 
         $type->items()->delete();
         $type->delete();
+    AdminAuthController::logUserAction(
+            Auth::guard('barangay')->user(),
+        'Accounts -> Expense Types',
+        'Deleted expense type "'.$logData['type_name'].'" under class "'.$logData['class_name'].'" for fiscal year '.$logData['fy_year']
+    );
+
     });
 
+    
     return response()->json(['message' => 'Type deleted successfully']);
 }
 //Sotrtable
@@ -486,6 +548,7 @@ public function updateOrder(Request $request, $classId)
             ->whereHas('expenseClass', function($query) use ($barangayId) {
                 $query->where('barangay_id', $barangayId);
             })
+        ->with('expenseClass') // eager-load for logging
             ->findOrFail($typeId);
 
         $validated = $request->validate([
@@ -503,6 +566,21 @@ public function updateOrder(Request $request, $classId)
             'name' => $validated['name'],
             'order' => $validated['order'] ?? 0
         ]);
+
+        
+        // ---- LOG USER ACTION ----
+        $expenseClass = $type->expenseClass;
+        $fyYear = \App\Models\LibFiscalYear::whereKey($expenseClass->fiscal_year_id)->value('year');
+
+        AdminAuthController::logUserAction(
+            Auth::guard('barangay')->user(),
+            'Accounts -> Expense Items',
+            'Created expense item "'.$item->name
+            .'" under type "'.$type->name
+            .'" in class "'.$expenseClass->name
+            .'" for fiscal year '.$fyYear
+        );
+        // -------------------------
 
         return response()->json($item, 201);
     }
@@ -530,8 +608,24 @@ public function updateOrder(Request $request, $classId)
             $q->where('barangay_id', $barangayId);
         })
         ->findOrFail($itemId);
+        
+    $oldName = $item->name;
 
     $item->update($validated);
+
+    // Gather log context
+    $type         = $item->expenseType ?: $item->load('expenseType.expenseClass')->expenseType;
+    $expenseClass = $type->expenseClass;
+    $fyYear       = \App\Models\LibFiscalYear::whereKey($expenseClass->fiscal_year_id)->value('year');
+
+    AdminAuthController::logUserAction(
+        Auth::guard('barangay')->user(),
+        'Accounts -> Expense Items',
+        'Updated expense item "'.$oldName.'" to "'.$item->name
+        .'" under type "'.$type->name
+        .'" in class "'.$expenseClass->name
+        .'" for fiscal year '.$fyYear
+    );
 
     return response()->json($item);
 }
@@ -541,13 +635,37 @@ public function updateOrder(Request $request, $classId)
     $this->verifyBarangayAccess();
     $barangayId = Auth::user()->barangay_id;
 
+    // $item = LibExpenseItem::where('expense_type_id', $typeId)
+    //     ->whereHas('expenseType.expenseClass', function ($q) use ($barangayId) {
+    //         $q->where('barangay_id', $barangayId);
+    //     })
+    //     ->findOrFail($itemId);
+         // Load relations so we can log details before deletion
     $item = LibExpenseItem::where('expense_type_id', $typeId)
         ->whereHas('expenseType.expenseClass', function ($q) use ($barangayId) {
             $q->where('barangay_id', $barangayId);
         })
+        ->with('expenseType.expenseClass')
         ->findOrFail($itemId);
 
+    // Collect log context BEFORE deletion
+    $itemName     = $item->name;
+    $type         = $item->expenseType;
+    $expenseClass = $type->expenseClass;
+    $fyYear       = \App\Models\LibFiscalYear::whereKey($expenseClass->fiscal_year_id)->value('year');
+
+
     $item->delete();
+
+     // Log user action
+    AdminAuthController::logUserAction(
+            Auth::guard('barangay')->user(),
+        'Accounts -> Expense Items',
+        'Deleted expense item "'.$itemName
+        .'" under type "'.$type->name
+        .'" in class "'.$expenseClass->name
+        .'" for fiscal year '.$fyYear
+    );
 
     return response()->json(['message' => 'Item deleted successfully']);
 }
