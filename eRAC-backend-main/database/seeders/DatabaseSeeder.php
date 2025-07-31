@@ -21,12 +21,5 @@ class DatabaseSeeder extends Seeder
             DisbursementSeeder::class,
             BudgetAugmentationSeeder::class,
         ]);
-
-        // Recalculate current_amount for all budgets
-        \App\Models\Budget::all()->each(function($budget) {
-            $itemAllocated = $budget->tranAppropriations()->whereNotNull('expense_item_id')->sum('amount');
-            $budget->current_amount = $budget->original_amount - $itemAllocated;
-            $budget->save();
-        });
     }
 }

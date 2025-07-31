@@ -69,9 +69,10 @@
                       flat
                       dense
                       size="sm"
-                      :icon="expandedTypes[expenseType.id] ? 'expand_more' : 'chevron_right'"
-                      @click="toggleType(expenseType.id)"
+                      :icon="(expenseType.children && expenseType.children.length > 0 && expandedTypes[expenseType.id]) ? 'expand_more' : 'chevron_right'"
+                      @click="(expenseType.children && expenseType.children.length > 0) ? toggleType(expenseType.id) : null"
                       style="min-width: 24px; margin-right: 4px;"
+                      :class="{ 'cursor-default': !expenseType.children || expenseType.children.length === 0 }"
                     />
                     <span>{{ expenseType.name }}</span>
                   </div>
@@ -175,7 +176,7 @@ const displayAccounts = computed(() => {
         type = {
           id: typeId,
           name: typeName,
-          amount: 0, // Parent types don't have their own amount when items exist
+          amount: 0,
           children: [],
         }
         classMap[classId].children.push(type)
@@ -203,7 +204,7 @@ const displayAccounts = computed(() => {
   return classArr
 })
 
-// Expand all types by default when displayAccounts changes
+// Expand types with children by default when displayAccounts changes
 watch(
   () => displayAccounts.value,
   (newVal) => {
@@ -212,7 +213,8 @@ watch(
       newVal.forEach((expenseClass) => {
         if (expenseClass && Array.isArray(expenseClass.children)) {
           expenseClass.children.forEach((expenseType) => {
-            if (expenseType && expenseType.id) {
+            // Only expand types that have children
+            if (expenseType && expenseType.id && expenseType.children && expenseType.children.length > 0) {
               expanded[expenseType.id] = true
             }
           })
@@ -225,14 +227,25 @@ watch(
 )
 
 const toggleType = (typeId) => {
-  expandedTypes.value[typeId] = !expandedTypes.value[typeId]
+  // Find the expense type to check if it has children
+  let hasChildren = false
+  displayAccounts.value.forEach(expenseClass => {
+    const expenseType = expenseClass.children?.find(type => type.id === typeId)
+    if (expenseType && expenseType.children && expenseType.children.length > 0) {
+      hasChildren = true
+    }
+  })
+  
+  // Only toggle if the type has children
+  if (hasChildren) {
+    expandedTypes.value[typeId] = !expandedTypes.value[typeId]
+  }
 }
 const calculateTypeTotal = (expenseType) => {
-  // Sum only the items under this type
-  if (!expenseType.children || expenseType.children.length === 0) {
-    return expenseType.amount || 0
-  }
-  return expenseType.children.reduce((sum, item) => sum + (item.amount || 0), 0)
+  // Sum the type's own amount plus the items under this type
+  const typeAmount = expenseType.amount || 0
+  const itemsAmount = expenseType.children?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0
+  return typeAmount + itemsAmount
 }
 const $q = useQuasar()
 
