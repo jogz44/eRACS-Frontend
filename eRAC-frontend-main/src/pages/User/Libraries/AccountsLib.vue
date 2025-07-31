@@ -303,7 +303,7 @@
     </q-card>
 
     <!-- Add Year Dialog -->
-    <q-dialog v-model="showAddYearDialog" persistent @keydown.enter="handleYearEnterKey">
+    <q-dialog v-model="showAddYearDialog" @keydown.enter="handleYearEnterKey">
       <q-card style="min-width: 300px">
         <q-card-section>
           <div class="text-h6">Add New Fiscal Year</div>
@@ -323,7 +323,6 @@
                 !accountsStore.years.some((y) => y.year.toString() === val) ||
                 'Year already exists',
             ]"
-            @keyup.enter="addYear"
             :disable="accountsStore.loading"
             @keydown.enter="handleYearEnterKey"
           />
@@ -343,7 +342,7 @@
     </q-dialog>
 
     <!--AddExpenseClass-->
-    <q-dialog v-model="showAddClassDialog" persistent @keydown.enter="handleClassEnterKey">
+    <q-dialog v-model="showAddClassDialog" @keydown.enter="handleClassEnterKey">
       <q-card style="min-width: 400px">
         <q-card-section>
           <div class="text-h6">Add New Expense Class</div>
@@ -365,7 +364,7 @@
     </q-dialog>
 
     <!--AddExpenseType-->
-    <q-dialog v-model="showAddTypeDialog" persistent>
+    <q-dialog v-model="showAddTypeDialog">
       <q-card style="min-width: 400px">
         <q-card-section>
           <!-- Dynamic header showing parent class -->
@@ -390,7 +389,7 @@
     </q-dialog>
 
     <!-- Copy to Another Year -->
-    <q-dialog v-model="showCopyDialog" persistent>
+    <q-dialog v-model="showCopyDialog">
       <q-card style="min-width: 500px">
         <q-card-section>
           <div class="text-h6">Copy to Another Year</div>
@@ -530,7 +529,7 @@
     </q-dialog>
 
     <!-- Delete Confirmation Dialog -->
-    <q-dialog v-model="showDeleteConfirm" persistent>
+    <q-dialog v-model="showDeleteConfirm">
       <q-card style="border-radius: 10px; width: 500px; padding: 20px">
         <!-- Close button -->
         <q-btn
@@ -587,7 +586,7 @@
     </q-dialog>
 
     <!-- Add Item Dialog -->
-    <q-dialog v-model="showAddItemDialog" persistent>
+    <q-dialog v-model="showAddItemDialog">
       <q-card style="min-width: 400px">
         <q-card-section>
           <div class="text-h6">Add New Expense Item</div>
@@ -1309,6 +1308,23 @@ watch(
   { deep: true },
 )
 
+// Reset all dialog states
+const resetAllDialogs = () => {
+  showDeleteConfirm.value = false
+  showAddYearDialog.value = false
+  showAddClassDialog.value = false
+  showAddTypeDialog.value = false
+  showAddItemDialog.value = false
+  showEditClassDialog.value = false
+  showEditTypeDialog.value = false
+  showEditItemDialog.value = false
+  showCopyDialog.value = false
+  
+  // Reset delete-related state
+  itemToDelete.value = null
+  deleteType.value = null
+}
+
 // Delete function
 const confirmDelete = async () => {
   try {
@@ -1372,7 +1388,11 @@ const confirmDelete = async () => {
       timeout: 5000
     })
   } finally {
-    showDeleteConfirm.value = false
+    // Reset all dialog states to ensure nothing is stuck open
+    resetAllDialogs()
+    
+    // Force a small delay to ensure dialog is fully closed
+    await nextTick()
   }
 }
 
