@@ -21,9 +21,8 @@ return new class extends Migration
         // Insert the default barangay positions
         DB::table('barangay_positions')->insert([
             ['name' => 'Barangay Captain', 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'Barangay Kagawad', 'created_at' => now(), 'updated_at' => now()],
             ['name' => 'SK Chairperson', 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'Barangay Secretary', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'SK Treasurer', 'created_at' => now(), 'updated_at' => now()],
             ['name' => 'Barangay Treasurer', 'created_at' => now(), 'updated_at' => now()],
         ]);
     }
