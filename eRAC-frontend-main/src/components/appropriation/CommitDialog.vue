@@ -1,8 +1,8 @@
 <template>
   <q-dialog v-model="appropriationStore.showAllocationDialog" persistent>
-    <q-card class="allocation-card" style="min-width: 1050px">
+    <q-card class="allocation-card" style="min-width: 1050px; height: 800px; font-size: medium;">
       <!-- Header with reduced padding -->
-      <q-card-section class="q-pb-sm q-pt-sm">
+      <q-card-section class="q-pb-sm q-pt-sm" >
         <div class="row items-center justify-between">
           <div class="text-h6">Allocate Amounts</div>
           <q-icon
@@ -98,7 +98,7 @@
           </div>
 
           <!-- Table Body -->
-          <div class="hierarchical-body" style="max-height: 400px; overflow-y: auto">
+          <div class="hierarchical-body" style="max-height: 300px; overflow-y: auto">
             <template v-for="expenseClass in displayAccounts" :key="'class-' + expenseClass.id">
               <!-- Expense Class Row -->
               <div
