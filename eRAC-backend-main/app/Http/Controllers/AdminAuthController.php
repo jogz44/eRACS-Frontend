@@ -223,6 +223,16 @@ class AdminAuthController extends Controller  // <-- This is crucial
             'updated_at' => now(),
         ]);
     }
+    // public static function logAdminAction($activity, $details = null) {
+    //     DB::table('logs')->insert([
+    //         'user_id' => 1,
+    //         'fullname' => 'Admin',
+    //         'activity' => $activity,
+    //         'details' => $details,
+    //         'created_at' => now(),
+    //         'updated_at' => now(),
+    //     ]);
+    // }
     public static function getPerBarangaysBudgets()
     {
         $data = DB::table('barangays')

@@ -36,8 +36,6 @@ class BudgetAugmentationController extends Controller
             $query->where('augmentation_date', '<=', $request->date_to);
         }
 
-
-
         $augmentations = $query->orderBy('created_at', 'desc')->get();
 
         return response()->json([
@@ -125,6 +123,12 @@ class BudgetAugmentationController extends Controller
             $budget = Budget::find($request->budget_id);
             $budget->increment('augmentation', $totalAmount);
             $budget->increment('current_amount', $totalAmount);
+
+            // AdminAuthController::logUserAction(
+            //     $user,
+            //     'Accounts -> Budget Augmentation',
+            //     'Created budget augmentation for "' . $budget->name . '" on ' . date('d/m/Y', strtotime($request->augmentation_date)) . ' with ₱' . number_format($totalAmount, 2)
+            // );
 
             return response()->json([
                 'status' => true,
