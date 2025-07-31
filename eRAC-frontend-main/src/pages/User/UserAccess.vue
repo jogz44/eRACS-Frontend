@@ -74,7 +74,7 @@
                 class="absolute-top-right"
                 flat
                 dense
-                round
+                square
                 icon="close"
                 @click="closeAccessModal"
                 />

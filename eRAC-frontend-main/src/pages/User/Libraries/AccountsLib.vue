@@ -136,14 +136,14 @@
                             class="edit-btn"
                             @click.stop="editExpenseClass(expenseClass)"
                           />
-                          <q-btn
+                          <!-- <q-btn
                             dense
                             flat
                             round
                             icon="delete"
                             class="delete-btn"
                             @click.stop="confirmDeleteExpenseClass(expenseClass)"
-                          />
+                          /> -->
                           <q-btn
                             dense
                             flat
@@ -898,11 +898,11 @@ const updateExpenseClass = async () => {
     })
   }
 }
-const confirmDeleteExpenseClass = (expenseClass) => {
-  itemToDelete.value = expenseClass
-  deleteType.value = 'class'
-  showDeleteConfirm.value = true
-}
+// const confirmDeleteExpenseClass = (expenseClass) => {
+//   itemToDelete.value = expenseClass
+//   deleteType.value = 'class'
+//   showDeleteConfirm.value = true
+// }
 
 // Methods
 const loadExpenseClassesForYear = async (yearId) => {
@@ -1275,19 +1275,19 @@ const copyClassesToYear = async () => {
       allYears: accountsStore.years,
     })
 
-    const result = await accountsStore.copyClassesToYear(
-      selectedYear.value,
-      copyTargetYear.value,
-      selectedClassesToCopy.value,
-    )
+    // const result = await accountsStore.copyClassesToYear(
+    //   selectedYear.value,
+    //   copyTargetYear.value,
+    //   selectedClassesToCopy.value,
+    // )
 
-    // Make the notification more resilient
-    const copiedClasses = result?.stats?.copied_classes || 'unknown number of'
-    const copiedTypes = result?.stats?.copied_types || 'unknown number of'
+    // // Make the notification more resilient
+    // const copiedClasses = result?.stats?.copied_classes
+    // const copiedTypes = result?.stats?.copied_types
 
     $q.notify({
       type: 'positive',
-      message: `Copied ${copiedClasses} classes and ${copiedTypes} types`,
+      message: 'Successfully Copied',
       position: 'top',
     })
 
