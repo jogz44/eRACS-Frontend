@@ -190,7 +190,7 @@ export const useBankStore = defineStore('bank', {
       this.error = null
       try {
 
-        const response = await api.put(`/api/barangay/banks/${id}`, 
+        const response = await api.put(`/api/barangay/banks/${id}`,
           { name: newName,
             _method: 'PUT' }, this.getAuthConfig())
 
@@ -216,6 +216,48 @@ export const useBankStore = defineStore('bank', {
         this.isLoading = false
       }
     },
+
+    // Delete bank
+    async deleteBank(id) {
+      this.isLoading = true
+      this.error = null
+      try {
+        const config = this.getAuthConfig()
+        await api.delete(`/api/barangay/banks/${id}`, config)
+
+        // Remove from local state
+        this.banks = this.banks.filter((bank) => bank.id !== id)
+
+        return true
+      } catch (error) {
+        this.error = error.response?.data?.message || 'Failed to delete bank'
+        console.error('Delete bank error:', error.response?.data || error)
+        throw error
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    // Delete bank
+    // async deleteBank(id) {
+    //   this.isLoading = true
+    //   this.error = null
+    //   try {
+    //     const config = this.getAuthConfig()
+    //     await api.delete(`/api/barangay/banks/${id}`, config)
+
+    //     // Remove from local state
+    //     this.banks = this.banks.filter((bank) => bank.id !== id)
+
+    //     return true
+    //   } catch (error) {
+    //     this.error = error.response?.data?.message || 'Failed to delete bank'
+    //     console.error('Delete bank error:', error.response?.data || error)
+    //     throw error
+    //   } finally {
+    //     this.isLoading = false
+    //   }
+    // },
 
     // Mark bank as consumed
     consumeBank(id) {

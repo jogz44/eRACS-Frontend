@@ -90,7 +90,7 @@ Route::prefix('barangay')->group(function () {
         Route::get('banks', [BankLibraryController::class, 'getBanks']);
         Route::post('banks', [BankLibraryController::class, 'createBank']);
         Route::put('banks/{bank}', [BankLibraryController::class, 'updateBank']);
-        //Route::delete('banks/{bank}', [AccountsLibController::class, 'deleteBank']);
+        Route::delete('banks/{bank}', [BankLibraryController::class, 'deleteBank']);
         Route::get('banks/{bank}/cheques', [BankLibraryController::class, 'getBankCheques']);
         Route::post('banks/{bank}/cheques', [BankLibraryController::class, 'createCheque']);
 
