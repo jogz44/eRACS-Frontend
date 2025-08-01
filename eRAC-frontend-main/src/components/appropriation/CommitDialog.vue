@@ -229,7 +229,7 @@ const parseCurrency = (value) => {
   return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100
 }
 
-// Available budget from the selected row
+// Available budget from the selected row (unappropriated amount)
 const availableBudget = computed(() => {
   return parseCurrency(appropriationStore.selectedRow?.unappropriated || 0)
 })
@@ -337,12 +337,31 @@ const newAllocationsTotal = computed(() => {
 // Calculate net change (new allocations minus existing allocations)
 const netChange = computed(() => {
   const existingTotal = appropriationStore.existingAllocationsTotal || 0
-  return Math.round((newAllocationsTotal.value - existingTotal) * 100) / 100
+  const netChange = Math.round((newAllocationsTotal.value - existingTotal) * 100) / 100
+  
+  // Debug logging
+  console.log('[DEBUG] Net Change Calculation:', {
+    newAllocations: newAllocationsTotal.value,
+    existingTotal: existingTotal,
+    netChange: netChange
+  })
+  
+  return netChange
 })
 
 // Calculate remaining budget after changes
 const remainingAfterChanges = computed(() => {
-  return Math.round((availableBudget.value - netChange.value) * 100) / 100
+  // Remaining = Available budget - Net change
+  const remaining = Math.round((availableBudget.value - netChange.value) * 100) / 100
+  
+  // Debug logging
+  console.log('[DEBUG] Remaining After Changes Calculation:', {
+    availableBudget: availableBudget.value,
+    netChange: netChange.value,
+    remaining: remaining
+  })
+  
+  return remaining
 })
 
 // Determine if save button should be enabled
