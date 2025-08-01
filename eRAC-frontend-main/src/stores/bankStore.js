@@ -60,13 +60,13 @@ export const useBankStore = defineStore('bank', {
     ],
 
     bookletColumns: [
-      {
-        name: 'id',
-        label: 'Id',
-        field: 'id',
-        align: 'left',
-        sortable: true,
-      },
+      // {
+      //   name: 'id',
+      //   label: 'Id',
+      //   field: 'id',
+      //   align: 'left',
+      //   sortable: true,
+      // },
 
       {
         name: 'date',

@@ -55,6 +55,7 @@
                   outlined
                   dense
                   v-model="store.forms.disbursement.bank_id"
+                  @update:model-value="store.loadChequeBookletsForBank(store.forms.disbursement.bank_id)"
                   :options="bankStore.banks"
                   option-label="name"
                   option-value="id"
@@ -74,12 +75,10 @@
                   dense
                   v-model="store.selectedBooklet"
                   @update:model-value="store.selectBooklet"
-                  :options="
-                    store.chequeBooklets.map((b) => ({
-                      label: `${b.label} (${b.range})`,
-                      value: b.range,
-                    }))
-                  "
+                  :options="store.chequeBooklets.map((b) => ({
+                    label: b.label,
+                    value: b.id
+                  }))"
                   option-label="label"
                   option-value="value"
                   emit-value
@@ -392,7 +391,7 @@ const validateAndSave = () => {
     const form = store.forms.disbursement
     const hasRequiredFields = form.date &&
                              form.bank_id &&
-                             store.selectedBooklet &&
+                             store.selectedBank &&
                              store.selectedChequeNumber &&
                              form.dvNumber &&
                              form.payee
