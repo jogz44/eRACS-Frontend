@@ -95,14 +95,24 @@ public function createBank(Request $request)
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        // Check if bank has cheques before deleting
-        if ($bank->cheques()->exists()) {
+        // Check if bank has booklets before deleting
+        if ($bank->booklets()->exists()) {
             return response()->json([
-                'message' => 'Cannot delete bank with existing cheques'
+                'message' => 'Cannot delete bank with existing booklets'
             ], 422);
         }
 
+        // Check if bank has disbursements before deleting
+        if ($bank->disbursements()->exists()) {
+            return response()->json([
+                'message' => 'Cannot delete bank with existing disbursements'
+            ], 422);
+        }
+
+        $bankName = $bank->bank_name;
         $bank->delete();
+
+        AdminAuthController::logUserAction(Auth::guard('barangay')->user(), 'Bank Deletion', 'Bank "' . $bankName . '" has been deleted.');
 
         return response()->json(['message' => 'Bank deleted successfully']);
     }

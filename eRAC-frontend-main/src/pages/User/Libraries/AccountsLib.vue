@@ -1319,7 +1319,7 @@ const resetAllDialogs = () => {
   showEditTypeDialog.value = false
   showEditItemDialog.value = false
   showCopyDialog.value = false
-  
+
   // Reset delete-related state
   itemToDelete.value = null
   deleteType.value = null
@@ -1390,7 +1390,7 @@ const confirmDelete = async () => {
   } finally {
     // Reset all dialog states to ensure nothing is stuck open
     resetAllDialogs()
-    
+
     // Force a small delay to ensure dialog is fully closed
     await nextTick()
   }

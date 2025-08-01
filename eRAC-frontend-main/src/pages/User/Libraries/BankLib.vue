@@ -135,7 +135,7 @@
               :rules="[
                 (val) => !!val || 'Bank name is required',
                 (val) => val.length >= 3 || 'Name must be at least 3 characters',
-               
+
               ]"
               lazy-rules
             />
@@ -161,6 +161,19 @@
           <div class="text-h6">Delete Bank</div>
         </q-card-section>
 
+        <q-card-section>
+          <p>Are you sure you want to delete the bank "<strong>{{ deletingBank.name }}</strong>"? This action cannot be undone.</p>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn
+            label="Delete"
+            color="negative"
+            @click="confirmDeleteBank"
+            :loading="bankStore.loading"
+          />
+        </q-card-actions>
       </q-card>
     </q-dialog>
 
@@ -490,9 +503,48 @@ const addBank = async () => {
 }
 const deleteBank = (bank) => {
   deletingBank.value = {
-    id: bank.id
+    id: bank.id,
+    name: bank.name
   }
   showDeleteDialog.value = true
+}
+
+const confirmDeleteBank = async () => {
+  if (!deletingBank.value.id) return
+
+  try {
+    bankStore.loading = true
+    await bankStore.deleteBank(deletingBank.value.id)
+    
+    showDeleteDialog.value = false
+    deletingBank.value = { id: null, name: '' }
+
+    // Refresh the list after successful deletion
+    await bankStore.fetchBanks()
+
+    $q.notify({
+      type: 'positive',
+      message: 'Bank deleted successfully',
+      position: 'top',
+    })
+  } catch (error) {
+    let errorMessage = 'Failed to delete bank'
+    
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
+    $q.notify({
+      type: 'negative',
+      message: errorMessage,
+      position: 'top',
+      timeout: 5000,
+    })
+  } finally {
+    bankStore.loading = false
+  }
 }
 const editBank = (bank) => {
   editingBank.value = {
@@ -792,7 +844,7 @@ const validateEditBank = () => {
 }
 
 const handleDeleteBankEnterKey = () => {
-  
+  confirmDeleteBank()
 }
 
 const handleEditBankEnterKey = () => {

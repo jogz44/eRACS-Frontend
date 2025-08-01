@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class LibBank extends Model
 {
@@ -23,7 +24,7 @@ class LibBank extends Model
         'updated_at' => 'datetime',
     ];
 
-    public function cheques(): HasThrough
+    public function cheques(): HasManyThrough
 {
     return $this->hasManyThrough(
         LibCheque::class,
@@ -38,6 +39,11 @@ class LibBank extends Model
     public function booklets(): HasMany
     {
         return $this->hasMany(LibBooklet::class, 'bank_id');
+    }
+
+    public function disbursements(): HasMany
+    {
+        return $this->hasMany(Disbursement::class, 'bank_id');
     }
 
     public function barangay()
