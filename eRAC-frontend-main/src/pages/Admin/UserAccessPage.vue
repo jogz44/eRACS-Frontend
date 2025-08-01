@@ -17,21 +17,53 @@
         />
       </div>
       <q-card-section>
-        <!-- Search Bar -->
-        <div class="row q-mb-md">
+        <!-- Search and Filter Bar -->
+        <div class="row q-mb-md items-center">
+          <!-- Text Search -->
           <q-input
             dense
             outlined
             bg-color="white"
-            v-model="search"
-            placeholder="Search by ID, Name, Barangay, Position, or Username..."
-            class="search-input"
-            clearable
+                         v-model="search"
+             placeholder="Search by ID or Name"
+             class="search-input q-mr-md"
+             clearable
+             @clear="onSearchClear"
           >
             <template v-slot:append>
               <q-icon name="search" />
             </template>
           </q-input>
+
+          <!-- Barangay Filter -->
+          <q-select
+            dense
+            outlined
+                         v-model="selectedBarangay"
+             :options="barangayOptions"
+             label="Filter by Barangay"
+             class="filter-select q-mr-md"
+             clearable
+             @clear="onBarangayClear"
+             emit-value
+             map-options
+             options-dense
+          />
+
+          <!-- Position Filter -->
+          <q-select
+            dense
+            outlined
+                         v-model="selectedPosition"
+             :options="positionOptions"
+             label="Filter by Position"
+             class="filter-select"
+             clearable
+             @clear="onPositionClear"
+             emit-value
+             map-options
+             options-dense
+          />
         </div>
 
         <!-- User Access Table -->
@@ -115,6 +147,8 @@ export default {
     return {
       loading: false,
       search: '',
+      selectedBarangay: null,
+      selectedPosition: null,
       users: [],
       columns: [
         { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
@@ -137,29 +171,53 @@ export default {
     }
   },
   computed: {
+    // Get unique barangay options from users
+    barangayOptions() {
+      const uniqueBarangays = [...new Set(this.users.map(user => user.barangay).filter(Boolean))]
+      return uniqueBarangays.map(barangay => ({
+        label: barangay,
+        value: barangay
+      })).sort((a, b) => a.label.localeCompare(b.label))
+    },
+
+    // Get unique position options from users
+    positionOptions() {
+      const uniquePositions = [...new Set(this.users.map(user => user.position).filter(Boolean))]
+      return uniquePositions.map(position => ({
+        label: position,
+        value: position
+      })).sort((a, b) => a.label.localeCompare(b.label))
+    },
+
     filteredUsers() {
-      const query = this.search.toLowerCase().trim()
-      if (!query) return this.users
+      let filtered = [...this.users]
 
-      return this.users.filter(user => {
-        // Search by ID
-        const idMatch = String(user.id).includes(query)
+             // Apply text search filter
+       const query = this.search.toLowerCase().trim()
+       if (query) {
+         filtered = filtered.filter(user => {
+           // Format ID both ways for matching
+           const formattedId = this.formatId(user.id) // with leading zeros (e.g., "0001")
+           const rawId = String(user.id) // without leading zeros (e.g., "1")
+           const idMatch = formattedId.includes(query) || rawId.includes(query)
 
-        // Search by Name
-        const nameMatch = user.name.toLowerCase().includes(query)
+           const nameMatch = user.name.toLowerCase().includes(query)
+           const usernameMatch = user.username.toLowerCase().includes(query)
+           return idMatch || nameMatch || usernameMatch
+         })
+       }
 
-        // Search by Barangay
-        const barangayMatch = user.barangay?.toLowerCase().includes(query) || false
+      // Apply barangay filter
+      if (this.selectedBarangay) {
+        filtered = filtered.filter(user => user.barangay === this.selectedBarangay)
+      }
 
-        // Search by Position
-        const positionMatch = user.position.toLowerCase().includes(query)
+      // Apply position filter
+      if (this.selectedPosition) {
+        filtered = filtered.filter(user => user.position === this.selectedPosition)
+      }
 
-        // Search by Username
-        const usernameMatch = user.username.toLowerCase().includes(query)
-
-        // Return true if any field matches
-        return idMatch || nameMatch || barangayMatch || positionMatch || usernameMatch
-      })
+      return filtered
     },
   },
   async mounted() {
@@ -200,7 +258,7 @@ export default {
         this.loading = false
       }
     },
-    
+
     openAccessModal(user) {
       this.accessModal.selectedUser = user
       this.accessModal.show = true
@@ -212,7 +270,7 @@ export default {
     validateAccess() {
       // Check if at least one permission is selected
       const hasAnyPermission = Object.values(this.accessModal.permissions).some(permission => permission.value)
-      
+
       if (!hasAnyPermission) {
         this.$q.notify({
           type: 'negative',
@@ -221,7 +279,7 @@ export default {
         })
         return false
       }
-      
+
       if (!this.accessModal.selectedUser) {
         this.$q.notify({
           type: 'negative',
@@ -230,7 +288,7 @@ export default {
         })
         return false
       }
-      
+
       return true
     },
 
@@ -246,25 +304,41 @@ export default {
       }
     },
 
-    saveAccess() {
-      console.log('Saving access for:', this.accessModal.selectedUser.username)
-      console.log('Permissions:', this.accessModal.permissions)
+         saveAccess() {
+       console.log('Saving access for:', this.accessModal.selectedUser.username)
+       console.log('Permissions:', this.accessModal.permissions)
 
-      this.$q.notify({
-        type: 'positive',
-        message: 'Access permissions saved successfully!',
-      })
+       this.$q.notify({
+         type: 'positive',
+         message: 'Access permissions saved successfully!',
+       })
 
-      this.closeAccessModal()
-    },
+       this.closeAccessModal()
+     },
+
+     // Clear handlers for search and filters
+     onSearchClear() {
+       this.search = ''
+     },
+
+     onBarangayClear() {
+       this.selectedBarangay = null
+     },
+
+     onPositionClear() {
+       this.selectedPosition = null
+     },
   },
 }
 </script>
 
 <style scoped>
-.search-bar {
-  width: 450px;
-  margin-bottom: 15px;
+.search-input {
+  width: 300px;
+}
+
+.filter-select {
+  width: 200px;
 }
 
 .user-table {
