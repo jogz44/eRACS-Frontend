@@ -16,20 +16,22 @@ return new class extends Migration
            $table->id();
             $table->foreignId('barangay_id')->constrained()->onDelete('cascade');
             $table->string('bank_name');
-            $table->enum('status', ['available', 'consumed', 'unavailable'])->default('available');
+            $table->enum('status', ['available', 'consumed', 'unavailable'])->default('unavailable');
             $table->timestamps();
         });
+        
 
         // Seed initial bank data for all barangays
         $barangayCount = DB::table('barangays')->count();
         $banks = ['BDO', 'Metro Bank', 'BPI'];
+        $statuses = ['available', 'unavailable', 'consumed'];
         $bankRows = [];
         for ($i = 1; $i <= $barangayCount; $i++) {
-            foreach ($banks as $bank) {
+            foreach ($banks as $index => $bank) {
                 $bankRows[] = [
                     'barangay_id' => $i,
                     'bank_name' => $bank,
-                    'status' => 'available',
+                    'status' => $statuses[$index],
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
