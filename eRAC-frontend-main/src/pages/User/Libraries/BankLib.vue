@@ -52,17 +52,25 @@
           </q-td>
         </template>
 
-        <template v-slot:body-cell-actions="props">
-          <q-td :props="props" class="q-gutter-xs">
+          <template #body-cell-view="props">
+          <q-td :props="props">
             <q-btn
               flat
-              icon="list"
-              dense
+              label="Manage Cheques"
               round
+              style="background-color: green;"
+              color="white"
               class="allocate-btn"
               @click="showBookletDetails(props.row)"
-              title="View Cheques"
+              title="Manage Cheques"
             />
+          </q-td>
+        </template>
+
+
+        <template v-slot:body-cell-actions="props">
+          <q-td :props="props" class="q-gutter-xs">
+
             <q-btn
               flat
               icon="edit"
@@ -75,7 +83,7 @@
               icon="delete"
               class="delete-btn"
               @click="deleteBank(props.row)"
-              title="Edit Bank"
+              title="Delete Bank"
             />
           </q-td>
         </template>
@@ -109,7 +117,7 @@
               <q-btn
                 label="Save"
                 class="modal-save-btn"
-                @click="handleAddBankSaveClick"
+                @click="handleAddBankSaveClick,loadPendingUsers"
                 :disable="!newBankName || newBankName.length < 3"
               />
             </q-card-actions>
@@ -419,7 +427,9 @@ const tableRefreshKey = ref(0)
 
 // Initialize data
 onMounted(async () => {
+
   try {
+      console.log('Columns:', bankStore.columns)
     console.log('Fetching banks...')
     await bankStore.fetchBanks()
     console.log('Banks after fetch:', bankStore.banks)
@@ -515,7 +525,7 @@ const confirmDeleteBank = async () => {
   try {
     bankStore.loading = true
     await bankStore.deleteBank(deletingBank.value.id)
-    
+
     showDeleteDialog.value = false
     deletingBank.value = { id: null, name: '' }
 
@@ -529,13 +539,13 @@ const confirmDeleteBank = async () => {
     })
   } catch (error) {
     let errorMessage = 'Failed to delete bank'
-    
+
     if (error.response?.data?.message) {
       errorMessage = error.response.data.message
     } else if (error.message) {
       errorMessage = error.message
     }
-    
+
     $q.notify({
       type: 'negative',
       message: errorMessage,

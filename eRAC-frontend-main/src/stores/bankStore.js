@@ -23,7 +23,17 @@ export const useBankStore = defineStore('bank', {
         align: 'center',
         format: (val) => (val === 'Available' ? 'Available' : 'Consumed'),
       },
-      { name: 'actions', label: 'Actions', align: 'center' },
+      { name: 'view',
+      label: 'Cheques',
+      field: 'view',
+     align: 'center',
+      sortable: false
+       },
+      { name: 'actions',
+        label: 'Actions',
+        align: 'center'
+      },
+
     ],
     chequeColumns: [
       {
