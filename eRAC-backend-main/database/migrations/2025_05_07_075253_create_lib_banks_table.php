@@ -16,7 +16,7 @@ return new class extends Migration
            $table->id();
             $table->foreignId('barangay_id')->constrained()->onDelete('cascade');
             $table->string('bank_name');
-            $table->enum('status', ['available', 'consumed'])->default('available');
+            $table->enum('status', ['available', 'consumed', 'unavailable'])->default('available');
             $table->timestamps();
         });
 
