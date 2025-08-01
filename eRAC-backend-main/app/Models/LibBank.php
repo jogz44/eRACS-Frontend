@@ -41,6 +41,12 @@ class LibBank extends Model
         return $this->hasMany(LibBooklet::class, 'bank_id');
     }
 
+    public function bookletsWithAvailableCheques(): HasMany
+    {
+        return $this->hasMany(LibBooklet::class, 'bank_id')
+                ->where('status', '!=', 'consumed');
+    }
+
     public function disbursements(): HasMany
     {
         return $this->hasMany(Disbursement::class, 'bank_id');

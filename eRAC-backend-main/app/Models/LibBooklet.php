@@ -23,7 +23,6 @@ class LibBooklet extends Model
         'ending_cheque_numb',
         'status'
     ];
-
     public function bank(): BelongsTo
     {
         return $this->belongsTo(LibBank::class);

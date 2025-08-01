@@ -19,6 +19,7 @@ class BankLibraryController extends Controller
      */
     public function getBanks(Request $request)
 {
+    $this->updateBanksStatus();
     $banks = LibBank::where('barangay_id', Auth::user()->barangay_id)
         ->withCount('booklets') // Count booklets instead of cheques
         ->get()
@@ -50,7 +51,8 @@ public function createBank(Request $request)
 
     
     AdminAuthController::logUserAction(Auth::guard('barangay')->user(),'Bank Creation','Bank '.$bank->bank_name.' has been created');
-
+    
+    $this->updateBanksStatus();
     return response()->json([
         'id' => $bank->id,
         'name' => $bank->bank_name,
@@ -58,6 +60,25 @@ public function createBank(Request $request)
         'cheques_count' => 0,
     ], 201);
 }
+    public function updateBanksStatus(){
+        $banks = LibBank::where('barangay_id', Auth::user()->barangay_id)->get();
+
+        foreach ($banks as $bank) {
+            $totalBooklets = $bank->booklets()->count();
+
+            if ($totalBooklets === 0) {
+                // No booklets at all
+                $bank->status = 'unavailable';
+            } else {
+                // Check if any booklet is NOT consumed
+                $hasAvailable = $bank->booklets()->where('status', '!=', 'consumed')->exists();
+
+                $bank->status = $hasAvailable ? 'available' : 'consumed';
+            }
+
+            $bank->save();
+        }
+    }
 
     /**
      * Update a bank
@@ -81,6 +102,7 @@ public function createBank(Request $request)
 
         AdminAuthController::logUserAction(Auth::guard('barangay')->user(),'Bank Update','Bank rename from "'.$oldName.'" to "'.$bank->bank_name.'".');
 
+    $this->updateBanksStatus();
 
         return response()->json([
             'id' => $bank->id,
@@ -112,8 +134,9 @@ public function createBank(Request $request)
         $bankName = $bank->bank_name;
         $bank->delete();
 
-        AdminAuthController::logUserAction(Auth::guard('barangay')->user(), 'Bank Deletion', 'Bank "' . $bankName . '" has been deleted.');
+        AdminAuthController::logUserAction(Auth::guard('barangay')->user(), 'Bank Deletion', 'Bank ' . $bankName . ' has been deleted.');
 
+    $this->updateBanksStatus();
         return response()->json(['message' => 'Bank deleted successfully']);
     }
 
@@ -333,6 +356,11 @@ public function createBooklet(Request $request, LibBank $bank)
         }
 
         DB::commit();
+        
+        AdminAuthController::logUserAction(Auth::guard('barangay')->user(), 
+        'Booklet Creation', 'Booklet ' . $booklet->booklet_numb . 
+        ' has been created with ' . $quantity . ' cheques in Bank '. $bank->bank_name);
+        $this->updateBanksStatus();
 
         return response()->json([
             'id' => $booklet->id,
