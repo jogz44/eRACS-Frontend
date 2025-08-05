@@ -105,6 +105,7 @@
               label="Bank Name"
               outlined
               @keydown.enter="handleAddBankEnterKey"
+
               :rules="[
                 (val) => !!val || 'Bank name is required',
                 (val) => val.length >= 3 || 'Name must be at least 3 characters',
@@ -192,7 +193,7 @@
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">Booklets: {{ selectedBank?.name }}</div>
           <q-space />
-          <q-btn icon="close" flat round dense v-close-popup />
+          <q-btn icon="close" flat round dense v-close-popup @click="loadPendingUsers" />
         </q-card-section>
 
         <q-card-section>
@@ -403,7 +404,7 @@ const loading = ref(false)
 const loadPendingUsers = async () => {
   loading.value = true
   try {
-    await bankStore.fetchBanks()
+    await bankStore.fetchBanks(),
     tableRefreshKey.value++
   } catch (error) {
     $q.notify({

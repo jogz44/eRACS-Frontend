@@ -1,51 +1,69 @@
 <template>
-  <q-page class="forgot-page" @keydown.enter="handleGlobalEnterKey">
-    <q-card class="login-card">
- <div class="logo-container">
-      <q-img src="src/assets/tagumlogo.png" class="logo" contain spinner-color="white" />
-    </div>
-    <q-card-section>
-      <div></div>
-    </q-card-section>
-    <q-card-section> </q-card-section>
+  <q-page class="split-login-page">
+    <!-- Left side - Photo section with overlay text -->
+    <div class="photo-section">
+      <div class="photo-container">
+        <div class="photo-overlay">
+          <div class="overlay-content">
 
-    <q-card-section class="text-center">
-      <div class="text-h5 text-green-8 text-bold">Find your account</div>
-    </q-card-section>
-    <!-- Email address-->
-    <q-card-section>
-      <q-input id="ForgotEmail"
-        color="green"
-        v-model="email"
-        label="Email Address"
-        type="email"
-        outlined
-        dense
-        :prepend-icon="'email'"
-        :error="showValidation && !email"
-        :error-message="showValidation && !email ? 'email is required' : ''"
-        @keydown.enter="handleGlobalEnterKey"
-      />
-
-      <div class="button-container">
-        <q-btn @click="goToLogin" color="white" text-color="black">Cancel</q-btn>
-        <q-btn @click="handleSearchClick" color="green"
-        :loading="isLoading"
-       >Search</q-btn>
+          </div>
+        </div>
       </div>
-    </q-card-section>
-    <q-card-section class="text-center">
-
-    </q-card-section>
-      </q-card>
-  </q-page>
- <div class="bottom">
-  <q-footer class="text-center no-footer-bg">
-    <div class="text-caption text-white">
-      © 2025 City Accounting Office, Tagum City. All rights reserved.
     </div>
-  </q-footer>
-</div>
+
+    <!-- Right side - Login form section -->
+    <div class="login-section">
+      <div class="login-container">
+        <div class="header-section">
+          <div class="office-info">
+            <q-img
+              src="src/assets/tagumlogo.png"
+              class="logo-image"
+              contain
+              style="width: 120px; height: 120px; margin: 0 auto 1rem auto;"
+            />
+            <div class="office-name">City</div>
+            <div class="office-name">Accounting</div>
+            <div class="office-name">Office</div>
+            <div class="system-name">Electronic Registry of Appropriation and Commitment (eRAC)</div>
+          </div>
+
+          <div class="signin-title">Find your account</div>
+        </div>
+
+        <div class="login-form">
+          <!-- Email input -->
+          <q-input
+            id="ForgotEmail"
+            color="green"
+            v-model="email"
+            label="Email Address"
+            type="email"
+            outlined
+            dense
+            :prepend-icon="'email'"
+            :error="showValidation && (!email || !isValidEmail(email))"
+            :error-message="showValidation && (!email || !isValidEmail(email)) ? getEmailErrorMessage() : ''"
+            @keydown.enter="handleGlobalEnterKey"
+            class="q-mb-md"
+          />
+
+          <!-- Buttons -->
+          <div class="button-container q-mb-md">
+            <q-btn @click="goToLogin" color="white" text-color="black">Cancel</q-btn>
+            <q-btn @click="handleSearchClick" color="green" :loading="isLoading">Search</q-btn>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="login-footer">
+          <div class="text-caption text-center text-grey-6">
+            © 2025 City Accounting Office, Tagum City. All rights reserved.
+          </div>
+        </div>
+      </div>
+    </div>
+  </q-page>
 
 </template>
 
@@ -55,6 +73,7 @@ import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'stores/auth'
 
+
 const router = useRouter()
 const authStore = useAuthStore()
 const $q = useQuasar()
@@ -63,29 +82,27 @@ const email = ref('')
 const isLoading = ref(false)
 const showValidation = ref(false)
 
+// Email validation helper
+const isValidEmail = (email) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+const getEmailErrorMessage = () => {
+  if (!showValidation.value) return ''
+  if (!email.value) return 'Email is required'
+  if (!isValidEmail(email.value)) return 'Please enter a valid email address'
+  return ''
+}
+
 
 // Validation function
 const validateSearch = () => {
   showValidation.value = true
-  
-  if (!email.value) {
-    $q.notify({
-      type: 'negative',
-      message: 'Email is required',
-      position: 'top',
-    })
+
+  if (!email.value || !isValidEmail(email.value)) {
     return false
   }
-  
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
-    $q.notify({
-      type: 'negative',
-      message: 'Please enter a valid email address',
-      position: 'top',
-    })
-    return false
-  }
-  
+
   return true
 }
 
@@ -181,47 +198,222 @@ const goToLogin = () => router.push('/')
 </script>
 
 <style scoped>
-.forgot-page {
-  overflow-y: auto !important;
-  min-height: 100vh !important;
-  padding: 20px !important;
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
+.split-login-page {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* Left side - Photo section */
+.photo-section {
+  flex: 2;
+  position: relative;
+  overflow: hidden;
+}
+
+.photo-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-image: url('/src/assets/cityhall.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.photo-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.overlay-content {
+  text-align: center;
+  color: white;
+  padding: 2rem;
+}
+
+.welcome-text {
+  margin-bottom: 2rem;
+}
+
+.welcome-title, .to-text, .erac-title {
+  font-size: 4rem;
+  font-weight: bold;
+  margin: 0;
+  line-height: 1;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.to-text {
+  font-size: 3rem;
+  opacity: 0.9;
+}
+
+.description-text {
+  margin-bottom: 2rem;
+}
+
+.description-line {
+  font-size: 1.5rem;
+  font-weight: 500;
+  margin: 0.2rem 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.tagline {
+  opacity: 0.8;
+}
+
+.tagline-text {
+  font-size: 1rem;
+  margin: 0.1rem 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+/* Right side - Login section */
+.login-section {
+  flex: 1;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.login-container {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.header-section {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.office-info {
+  margin-bottom: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.logo-image {
+  display: block;
+  margin: 0 auto 1rem auto;
+}
+
+.office-name {
+  font-size: 1.6rem;
+  font-weight: bold;
+  color: #2d5016;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.system-name {
+  font-size: 0.8rem;
+  color: #666;
+  font-style: italic;
+  margin-top: 0.3rem;
+}
+
+.signin-title {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #2d5016;
+  margin-top: 0.5rem;
+}
+
+.login-form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .button-container {
-  margin-top: 20px;
   display: flex;
   gap: 1rem;
   justify-content: center;
 }
 
-button {
-  padding: 10px 20px;
-  font-size: 16px;
-  cursor: pointer;
+.login-footer {
+  margin-top: auto;
+  padding-top: 2rem;
 }
 
-.login-card {
-  height: 300px;
-  width: 400px;
-  padding: 5px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255);
-  position: relative;
-  box-shadow: 0 8px 8px rgb(38, 121, 0);
-  margin-top: 120px;
+/* Responsive Design */
+@media (max-width: 768px) {
+  .split-login-page {
+    flex-direction: column;
+  }
+
+  .photo-section {
+    flex: 1;
+    height: 40vh;
+  }
+
+  .login-section {
+    flex: 1;
+    padding: 1rem;
+  }
+
+  .welcome-title, .to-text, .erac-title {
+    font-size: 2rem;
+  }
+
+  .to-text {
+    font-size: 1.5rem;
+  }
+
+  .description-line {
+    font-size: 1rem;
+  }
+
+  .tagline-text {
+    font-size: 0.9rem;
+  }
 }
 
-.logo-container {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 20px;
-  size: 10in;
-}
-.no-footer-bg {
-  background-color: transparent !important;
-  box-shadow: none !important;
+@media (max-width: 480px) {
+  .photo-section {
+    height: 30vh;
+  }
+
+  .welcome-title, .to-text, .erac-title {
+    font-size: 1.5rem;
+  }
+
+  .to-text {
+    font-size: 1.2rem;
+  }
+
+  .description-line {
+    font-size: 0.9rem;
+  }
+
+  .tagline-text {
+    font-size: 0.8rem;
+  }
+
+  .login-container {
+    max-width: 100%;
+  }
 }
 </style>

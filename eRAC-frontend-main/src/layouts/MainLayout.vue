@@ -60,7 +60,7 @@
     <!-- Nav Links - Scrollable if needed -->
     <div class="scroll nav-links q-pa-sm">
       <NavLink
-        v-for="link in navLinks"
+        v-for="link in filteredNavLinks"
         :key="link.title"
         v-bind="link"
         :expanded="expanded[link.title] || false"
@@ -132,6 +132,7 @@ const route = useRoute()
 const leftDrawerOpen = ref(false)
 const showSetupDialog = ref(false)
 const imageLoadingFailed = ref(false)
+const userPosition = computed(() => authStore.user.position_name)
 
 
 const handleImageError = (e) => (e.target.src = 'src/assets/user.png')
@@ -155,6 +156,12 @@ onMounted(async () => {
 
 watch(() => authStore.user, () => { imageLoadingFailed.value = false }, { deep: true })
 watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${newTitle} | ERACS` : 'ERACS' })
+
+const filteredNavLinks = computed(() => {
+  return navLinks.filter(link => {
+    return !link.requiresPosition || link.requiresPosition === userPosition.value
+  })
+})
 
 const navLinks = [
   { title: 'Dashboard', icon: 'dashboard', link: '/home/dashboard' },
@@ -184,10 +191,10 @@ const navLinks = [
   { title: 'Reports', icon: 'assessment', link: '/home/reports' },
 
   {
-    title: 'User Access', icon: 'admin_panel_settings', link: '/home/useraccess'
+    title: 'User Access', icon: 'admin_panel_settings', link: '/home/useraccess', requiresPosition:'Barangay Captain'
   },
   {
-    title: 'Logs', icon: 'history', link: '/home/logsview'
+    title: 'Logs', icon: 'history', link: '/home/logsview', requiresPosition:'Barangay Captain'
   }
 
 ]

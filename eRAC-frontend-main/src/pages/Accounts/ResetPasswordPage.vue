@@ -1,85 +1,112 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
-    <div class="bg-wrapper">
-      <q-page-container class="flex flex-center">
-        <q-card class="login-card">
-          <q-card-section>
-            <div></div>
-          </q-card-section>
-          <q-card-section> </q-card-section>
-
-          <q-card-section class="text-center">
-            <div class="text-h5 text-green-8 text-bold">Reset Password</div>
-            <div class="text-caption text-gray q-mt-sm">
-              Enter your new password for {{ email }}
+  <q-page class="split-login-page">
+    <!-- Left side - Photo section with overlay text -->
+    <div class="photo-section">
+      <div class="photo-container">
+        <div class="photo-overlay">
+          <div class="overlay-content">
+            <div class="welcome-text">
+              <h1 class="welcome-title">Welcome</h1>
+              <h1 class="to-text">to</h1>
+              <h1 class="erac-title">eRAC</h1>
             </div>
-          </q-card-section>
-
-          <q-card-section>
-            <!-- New Password -->
-            <q-input
-              color="green"
-              v-model="newPassword"
-              label="New Password"
-              :type="isPasswordVisible ? 'text' : 'password'"
-              outlined
-              dense
-              :prepend-icon="'lock'"
-              :error="showValidation && !newPassword"
-              :error-message="showValidation && !newPassword ? 'Password is rquired':''"
-            >
-              <template #append>
-                <q-icon
-                  :name="isPasswordVisible ? 'visibility_off' : 'visibility'"
-                  class="cursor-pointer"
-                  @click="isPasswordVisible = !isPasswordVisible"
-                />
-              </template>
-            </q-input>
-
-            <!-- Confirm New Password -->
-            <q-input
-              color="green"
-              v-model="confirmPassword"
-              label="Confirm New Password"
-              :type="isPasswordVisible2 ? 'text' : 'password'"
-              outlined
-              dense
-              class="q-mt-md"
-              :prepend-icon="'lock'"
-              :error="showValidation && !confirmPassword"
-              :error-message="showValidation && !confirmPassword ? 'Password is rquired':''"
-              :rules="[
-                (val) => val === newPassword || 'Passwords do not match',
-              ]"
-
-
-            >
-              <template #append>
-                <q-icon
-                  :name="isPasswordVisible2 ? 'visibility_off' : 'visibility'"
-                  class="cursor-pointer"
-                  @click="isPasswordVisible2 = !isPasswordVisible2"
-                />
-              </template>
-            </q-input>
-
-            <div class="button-container">
-              <q-btn @click="goToLogin" flat color="grey"
-              >Cancel</q-btn>
-              <q-btn @click="handleResetPassword"
-              olor="green"
-              :loading="isLoading"
-              >
-
-                Reset Password
-              </q-btn>
+            <div class="description-text">
+              <p class="description-line">Electronic</p>
+              <p class="description-line">Registry of</p>
+              <p class="description-line">Appropriation</p>
+              <p class="description-line">and</p>
+              <p class="description-line">Commitment</p>
             </div>
-          </q-card-section>
-        </q-card>
-      </q-page-container>
+
+          </div>
+        </div>
+      </div>
     </div>
-  </q-layout>
+
+    <!-- Right side - Reset form section -->
+    <div class="login-section">
+      <div class="login-container">
+        <div class="header-section">
+          <div class="office-info">
+            <q-img
+              src="src/assets/tagumlogo.png"
+              class="logo-image"
+              contain
+              style="width: 120px; height: 120px; margin: 0 auto 1rem auto;"
+            />
+            <div class="office-name">City</div>
+            <div class="office-name">Accounting</div>
+            <div class="office-name">Office</div>
+            <div class="system-name">Electronic Registry of Appropriation and Commitment (eRAC)</div>
+          </div>
+
+          <div class="signin-title">Reset Password</div>
+          <div class="reset-subtitle">Enter your new password for {{ email }}</div>
+        </div>
+
+        <div class="login-form">
+          <!-- New Password -->
+          <q-input
+            color="green"
+            v-model="newPassword"
+            label="New Password"
+            :type="isPasswordVisible ? 'text' : 'password'"
+            outlined
+            dense
+            :prepend-icon="'lock'"
+            :error="showValidation && (!newPassword || newPassword.length < 8)"
+            :error-message="showValidation && (!newPassword || newPassword.length < 8) ? getPasswordErrorMessage() : ''"
+            class="q-mb-md"
+          >
+            <template #append>
+              <q-icon
+                :name="isPasswordVisible ? 'visibility_off' : 'visibility'"
+                class="cursor-pointer"
+                @click="isPasswordVisible = !isPasswordVisible"
+              />
+            </template>
+          </q-input>
+
+          <!-- Confirm New Password -->
+          <q-input
+            color="green"
+            v-model="confirmPassword"
+            label="Confirm New Password"
+            :type="isPasswordVisible2 ? 'text' : 'password'"
+            outlined
+            dense
+            :prepend-icon="'lock'"
+            :error="showValidation && (!confirmPassword || newPassword !== confirmPassword)"
+            :error-message="showValidation && (!confirmPassword || newPassword !== confirmPassword) ? getConfirmPasswordErrorMessage() : ''"
+            class="q-mb-md"
+          >
+            <template #append>
+              <q-icon
+                :name="isPasswordVisible2 ? 'visibility_off' : 'visibility'"
+                class="cursor-pointer"
+                @click="isPasswordVisible2 = !isPasswordVisible2"
+              />
+            </template>
+          </q-input>
+
+          <!-- Buttons -->
+          <div class="button-container q-mb-md">
+            <q-btn @click="goToLogin" flat color="grey">Cancel</q-btn>
+            <q-btn @click="handleResetPassword" color="green" :loading="isLoading">
+              Reset Password
+            </q-btn>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="login-footer">
+          <div class="text-caption text-center text-grey-6">
+            © 2025 City Accounting Office, Tagum City. All rights reserved.
+          </div>
+        </div>
+      </div>
+    </div>
+  </q-page>
 </template>
 
 <script setup>
@@ -87,6 +114,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'stores/auth'
+
 
 const router = useRouter()
 const route = useRoute()
@@ -106,6 +134,21 @@ const isLoading = ref(false)
 const isPasswordVisible = ref(false)
 const isPasswordVisible2 = ref(false)
 const showValidation = ref(false)
+
+// Validation helper functions
+const getPasswordErrorMessage = () => {
+  if (!showValidation.value) return ''
+  if (!newPassword.value) return 'Password is required'
+  if (newPassword.value.length < 8) return 'Password must be at least 8 characters'
+  return ''
+}
+
+const getConfirmPasswordErrorMessage = () => {
+  if (!showValidation.value) return ''
+  if (!confirmPassword.value) return 'Please confirm your password'
+  if (newPassword.value !== confirmPassword.value) return 'Passwords do not match'
+  return ''
+}
 
 onMounted(() => {
   console.log('ResetPasswordPage mounted')
@@ -131,24 +174,10 @@ onMounted(() => {
 
 
 const handleResetPassword = async () => {
+  showValidation.value = true
+
   // Basic validations
-
-      showValidation.value = true
-  if (!email.value ) {
-    return
-
-} else if (newPassword.value.length < 8) {
-    $q.notify({ type: 'warning', message: 'Password must be at least 8 characters' })
-    return
-  }
-
-  if (!confirmPassword.value) {
-    $q.notify({ type: 'warning', message: 'Please confirm your password' })
-    return
-  }
-
-  if (newPassword.value !== confirmPassword.value) {
-    $q.notify({ type: 'warning', message: 'Passwords do not match' })
+  if (!email.value || !newPassword.value || newPassword.value.length < 8 || !confirmPassword.value || newPassword.value !== confirmPassword.value) {
     return
   }
 
@@ -190,32 +219,228 @@ const goToLogin = () => router.push('/')
 </script>
 
 <style scoped>
+.split-login-page {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* Left side - Photo section */
+.photo-section {
+  flex: 2;
+  position: relative;
+  overflow: hidden;
+}
+
+.photo-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-image: url('/src/assets/cityhall.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.photo-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.overlay-content {
+  text-align: center;
+  color: white;
+  padding: 2rem;
+}
+
+.welcome-text {
+  margin-bottom: 2rem;
+}
+
+.welcome-title, .to-text, .erac-title {
+  font-size: 4rem;
+  font-weight: bold;
+  margin: 0;
+  line-height: 1;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.to-text {
+  font-size: 3rem;
+  opacity: 0.9;
+}
+
+.description-text {
+  margin-bottom: 2rem;
+}
+
+.description-line {
+  font-size: 1.5rem;
+  font-weight: 500;
+  margin: 0.2rem 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.tagline {
+  opacity: 0.8;
+}
+
+.tagline-text {
+  font-size: 1rem;
+  margin: 0.1rem 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+/* Right side - Login section */
+.login-section {
+  flex: 1;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.login-container {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.header-section {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.office-info {
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.logo-image {
+  display: block;
+  margin: 0 auto 1rem auto;
+}
+
+.office-name {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #2d5016;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.system-name {
+  font-size: 0.9rem;
+  color: #666;
+  font-style: italic;
+  margin-top: 0.5rem;
+}
+
+.signin-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #2d5016;
+  margin-top: 1rem;
+}
+
+.reset-subtitle {
+  font-size: 0.9rem;
+  color: #666;
+  margin-top: 0.5rem;
+}
+
+.login-form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
 .button-container {
-  margin-top: 20px;
   display: flex;
   gap: 1rem;
   justify-content: center;
 }
 
-.login-card {
-  height: 400px;
-  width: 400px;
-  padding: 5px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255);
-  position: relative;
-  box-shadow: 0 8px 8px rgb(38, 121, 0);
-  margin-top: 120px;
+.login-footer {
+  margin-top: auto;
+  padding-top: 2rem;
 }
 
-.bg-wrapper {
-  position: relative;
-  min-height: 100vh;
-  background: url('src/assets/cityhall.jpg') no-repeat center center;
-  background-size: cover;
+/* Responsive Design */
+@media (max-width: 768px) {
+  .split-login-page {
+    flex-direction: column;
+  }
+
+  .photo-section {
+    flex: 1;
+    height: 40vh;
+  }
+
+  .login-section {
+    flex: 1;
+    padding: 1rem;
+  }
+
+  .welcome-title, .to-text, .erac-title {
+    font-size: 2rem;
+  }
+
+  .to-text {
+    font-size: 1.5rem;
+  }
+
+  .description-line {
+    font-size: 1rem;
+  }
+
+  .tagline-text {
+    font-size: 0.9rem;
+  }
 }
 
-.q-page-container {
-  background: transparent;
+@media (max-width: 480px) {
+  .photo-section {
+    height: 30vh;
+  }
+
+  .welcome-title, .to-text, .erac-title {
+    font-size: 1.5rem;
+  }
+
+  .to-text {
+    font-size: 1.2rem;
+  }
+
+  .description-line {
+    font-size: 0.9rem;
+  }
+
+  .tagline-text {
+    font-size: 0.8rem;
+  }
+
+  .login-container {
+    max-width: 100%;
+  }
 }
 </style>
