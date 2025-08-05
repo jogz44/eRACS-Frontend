@@ -73,7 +73,7 @@
         </div>
         <!-- Sticky Footer -->
         <div class="drawer-footer q-mt-auto q-pa-xs">
-          <div class="text-caption text-grey items-center q-pa-sm footer-avatar">
+          <div class="text-caption text-white items-center q-pa-sm footer-avatar">
             <q-list separator>
               <div class="footer-user row items-center q-gutter-sm q-pa-sm">
                 <!-- Avatar -->
@@ -83,11 +83,11 @@
                 </q-avatar>
                 <!-- Name & Position -->
                 <div class="column">
-                  <span class="text-caption text-white text-weight-bold ">
+                  <span class="Custom-text text-caption text-white text-weight-bold ">
                     User
 
                   </span>
-                  <span class="text-caption text-black text-weight-medium text-h5"  >
+                  <span  class="position-text text-caption text-white text-weight-medium text-h5"  >
                    ADMIN
                   </span>
                 </div>
@@ -293,5 +293,9 @@ watch(
   }
 }.toolbar{
   background-color: #187C19;
+}.drawer-footer{
+   font-style: italic;
+  font-size: smaller;
+
 }
 </style>

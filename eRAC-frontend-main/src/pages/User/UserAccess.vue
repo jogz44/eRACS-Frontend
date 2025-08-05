@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-lg">
+  <q-page class="q-pa-lg" style="background-color: whitesmoke;">
     <div class="page-header q-mb-lg">
       <div class="row items-center justify-between">
         <div class="text-h5 text-weight-bold">
@@ -205,7 +205,7 @@ export default {
 
     openAccessModal(user) {
       this.accessModal.selectedUser = user
-      
+
       // Load existing permissions or set defaults
       const permissions = user.permissions || {
         view: true,
@@ -214,14 +214,14 @@ export default {
         delete: false,
         print: true,
       }
-      
+
       // Update modal permissions
       this.accessModal.permissions.view.value = permissions.view
       this.accessModal.permissions.add.value = permissions.add
       this.accessModal.permissions.edit.value = permissions.edit
       this.accessModal.permissions.delete.value = permissions.delete
       this.accessModal.permissions.print.value = permissions.print
-      
+
       this.accessModal.show = true
     },
     closeAccessModal() {
@@ -231,7 +231,7 @@ export default {
     validateAccess() {
       // Check if at least one permission is selected
       const hasAnyPermission = Object.values(this.accessModal.permissions).some(permission => permission.value)
-      
+
       if (!hasAnyPermission) {
         this.$q.notify({
           type: 'negative',
@@ -240,7 +240,7 @@ export default {
         })
         return false
       }
-      
+
       if (!this.accessModal.selectedUser) {
         this.$q.notify({
           type: 'negative',
@@ -249,7 +249,7 @@ export default {
         })
         return false
       }
-      
+
       return true
     },
 

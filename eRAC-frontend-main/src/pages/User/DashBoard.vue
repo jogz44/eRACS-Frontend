@@ -69,11 +69,12 @@
           :rows="chartStore.recentDisbursementRows"
           :columns="chartStore.recentDisbursementColumns"
           row-key="id"
+
           flat
           bordered
           :pagination="{ rowsPerPage: 4 }"
           class="disbursement-table responsive-table"
-          style="overflow-x:auto;"
+          style="overflow-x:auto; height: 320px;"
         >
           <!-- Highlight fully liquidated rows -->
         </q-table>
@@ -315,6 +316,6 @@ onMounted(() => {
   margin-top: -10px;
 }
 .dashboard-page{
-  background: #D9D9D9;
+  background: whitesmoke;
 }
 </style>

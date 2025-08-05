@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-lg">
+  <q-page class="q-pa-lg" style="background-color: whitesmoke;">
     <div class="page-header q-mb-lg">
       <div class="row items-center justify-between">
         <div class="text-h5 text-weight-bold">
@@ -17,21 +17,64 @@
         />
       </div>
       <q-card-section>
-        <!-- Search Bar -->
-        <div class="row q-mb-md">
+        <!-- Search and Filter Bar -->
+        <div class="row q-mb-md items-center">
+          <!-- Text Search -->
           <q-input
             dense
             outlined
             bg-color="white"
             v-model="search"
-            placeholder="Search by ID, Name, Barangay, Position, or Username..."
-            class="search-input"
+            placeholder="Search by ID or Name"
+            class="search-input q-mr-md"
             clearable
+            @clear="onSearchClear"
           >
             <template v-slot:append>
               <q-icon name="search" />
             </template>
           </q-input>
+
+          <!-- Barangay Filter -->
+          <q-select
+            dense
+            outlined
+            v-model="selectedBarangay"
+            :options="barangayOptions"
+            label="Filter by Barangay"
+            class="filter-select q-mr-md"
+            clearable
+            @clear="onBarangayClear"
+            emit-value
+            map-options
+            options-dense
+          />
+
+          <!-- Position Filter -->
+          <q-select
+            dense
+            outlined
+            v-model="selectedPosition"
+            :options="positionOptions"
+            label="Filter by Position"
+            class="filter-select q-mr-md"
+            clearable
+            @clear="onPositionClear"
+            emit-value
+            map-options
+            options-dense
+          />
+
+          <!-- Clear All Filters Button -->
+          <q-btn
+            dense
+            outlined
+            color="red-10"
+            icon="clear_all"
+            label="Clear All"
+            @click="clearAllFilters"
+            class="clear-all-btn"
+          />
         </div>
 
         <!-- User Access Table -->
@@ -115,6 +158,8 @@ export default {
     return {
       loading: false,
       search: '',
+      selectedBarangay: null,
+      selectedPosition: null,
       users: [],
       columns: [
         { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
@@ -137,29 +182,53 @@ export default {
     }
   },
   computed: {
+    // Get unique barangay options from users
+    barangayOptions() {
+      const uniqueBarangays = [...new Set(this.users.map(user => user.barangay).filter(Boolean))]
+      return uniqueBarangays.map(barangay => ({
+        label: barangay,
+        value: barangay
+      })).sort((a, b) => a.label.localeCompare(b.label))
+    },
+
+    // Get unique position options from users
+    positionOptions() {
+      const uniquePositions = [...new Set(this.users.map(user => user.position).filter(Boolean))]
+      return uniquePositions.map(position => ({
+        label: position,
+        value: position
+      })).sort((a, b) => a.label.localeCompare(b.label))
+    },
+
     filteredUsers() {
-      const query = this.search.toLowerCase().trim()
-      if (!query) return this.users
+      let filtered = [...this.users]
 
-      return this.users.filter(user => {
-        // Search by ID
-        const idMatch = String(user.id).includes(query)
+             // Apply text search filter
+       const query = this.search.toLowerCase().trim()
+       if (query) {
+         filtered = filtered.filter(user => {
+           // Format ID both ways for matching
+           const formattedId = this.formatId(user.id) // with leading zeros (e.g., "0001")
+           const rawId = String(user.id) // without leading zeros (e.g., "1")
+           const idMatch = formattedId.includes(query) || rawId.includes(query)
 
-        // Search by Name
-        const nameMatch = user.name.toLowerCase().includes(query)
+           const nameMatch = user.name.toLowerCase().includes(query)
+           const usernameMatch = user.username.toLowerCase().includes(query)
+           return idMatch || nameMatch || usernameMatch
+         })
+       }
 
-        // Search by Barangay
-        const barangayMatch = user.barangay?.toLowerCase().includes(query) || false
+      // Apply barangay filter
+      if (this.selectedBarangay) {
+        filtered = filtered.filter(user => user.barangay === this.selectedBarangay)
+      }
 
-        // Search by Position
-        const positionMatch = user.position.toLowerCase().includes(query)
+      // Apply position filter
+      if (this.selectedPosition) {
+        filtered = filtered.filter(user => user.position === this.selectedPosition)
+      }
 
-        // Search by Username
-        const usernameMatch = user.username.toLowerCase().includes(query)
-
-        // Return true if any field matches
-        return idMatch || nameMatch || barangayMatch || positionMatch || usernameMatch
-      })
+      return filtered
     },
   },
   async mounted() {
@@ -200,10 +269,10 @@ export default {
         this.loading = false
       }
     },
-    
+
     openAccessModal(user) {
       this.accessModal.selectedUser = user
-      
+
       // Load existing permissions or set defaults
       const permissions = user.permissions || {
         view: true,
@@ -212,14 +281,14 @@ export default {
         delete: false,
         print: true,
       }
-      
+
       // Update modal permissions
       this.accessModal.permissions.view.value = permissions.view
       this.accessModal.permissions.add.value = permissions.add
       this.accessModal.permissions.edit.value = permissions.edit
       this.accessModal.permissions.delete.value = permissions.delete
       this.accessModal.permissions.print.value = permissions.print
-      
+
       this.accessModal.show = true
     },
     closeAccessModal() {
@@ -229,7 +298,7 @@ export default {
     validateAccess() {
       // Check if at least one permission is selected
       const hasAnyPermission = Object.values(this.accessModal.permissions).some(permission => permission.value)
-      
+
       if (!hasAnyPermission) {
         this.$q.notify({
           type: 'negative',
@@ -238,7 +307,7 @@ export default {
         })
         return false
       }
-      
+
       if (!this.accessModal.selectedUser) {
         this.$q.notify({
           type: 'negative',
@@ -247,7 +316,7 @@ export default {
         })
         return false
       }
-      
+
       return true
     },
 
@@ -262,57 +331,37 @@ export default {
         this.saveAccess()
       }
     },
-
-    async saveAccess() {
-      try {
-        console.log('Saving access for:', this.accessModal.selectedUser.username)
-        console.log('Permissions:', this.accessModal.permissions)
-
-        // Convert permissions to API format
-        const permissions = {
-          view: this.accessModal.permissions.view.value,
-          add: this.accessModal.permissions.add.value,
-          edit: this.accessModal.permissions.edit.value,
-          delete: this.accessModal.permissions.delete.value,
-          print: this.accessModal.permissions.print.value,
-        }
-
-        const response = await api.post(`/api/admin/user-access/${this.accessModal.selectedUser.id}`, {
-          permissions
-        })
-
-        if (response.data.status === 'success') {
-          this.$q.notify({
-            type: 'positive',
-            message: 'Access permissions saved successfully!',
-          })
-
-          // Update the user's permissions in the local list
-          const userIndex = this.users.findIndex(u => u.id === this.accessModal.selectedUser.id)
-          if (userIndex !== -1) {
-            this.users[userIndex].permissions = permissions
-          }
-
-          this.closeAccessModal()
-        } else {
-          throw new Error(response.data.message || 'Failed to save permissions')
-        }
-      } catch (error) {
-        console.error('Error saving permissions:', error)
-        this.$q.notify({
-          type: 'negative',
-          message: error.response?.data?.message || 'Failed to save permissions. Please try again.',
-        })
-      }
+    // Filter clear methods
+    onSearchClear() {
+      this.search = ''
     },
+    onBarangayClear() {
+      this.selectedBarangay = null
+    },
+    onPositionClear() {
+      this.selectedPosition = null
+    },
+    clearAllFilters() {
+      this.search = ''
+      this.selectedBarangay = null
+      this.selectedPosition = null
+    },
+
   },
 }
 </script>
 
 <style scoped>
-.search-bar {
-  width: 450px;
-  margin-bottom: 15px;
+.search-input {
+  width: 300px;
+}
+
+.filter-select {
+  width: 200px;
+}
+
+.clear-all-btn {
+  min-width: 120px;
 }
 
 .user-table {
@@ -355,8 +404,19 @@ export default {
   color: #333;
 }
 
+/* Make filter backgrounds white */
+:deep(.q-input) {
+  background-color: white !important;
+}
+
+:deep(.q-select) {
+  background-color: white !important;
+}
+
 @media (max-width: 600px) {
-  .search-input {
+  .search-input,
+  .filter-select,
+  .clear-all-btn {
     width: 100%;
   }
 }

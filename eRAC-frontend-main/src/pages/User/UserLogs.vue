@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-lg">
+  <q-page class="q-pa-lg" style="background-color: whitesmoke;">
     <div class="page-header q-mb-lg">
       <div class="text-h5 text-weight-bold">User Log Activities</div>
       <LogsActivity
@@ -248,65 +248,65 @@ export default {
 /* Responsive Design */
 @media (max-width: 600px) {
   /* Mobile View */
-  
+
   /* Page header adjustments */
   .page-header {
     margin-bottom: 16px !important;
   }
-  
+
   .page-header .text-h5 {
     font-size: 1.2rem !important;
   }
-  
+
   /* Header row adjustments */
   .row.items-center.justify-between {
     flex-direction: column !important;
     align-items: flex-start !important;
     gap: 12px !important;
   }
-  
+
   /* Search input adjustments */
   .search-input {
     width: 100% !important;
     min-width: 0 !important;
   }
-  
+
   /* Table adjustments */
   .logs-table {
     font-size: 0.8rem !important;
   }
-  
+
   .logs-table th,
   .logs-table td {
     padding: 8px 4px !important;
   }
-  
+
   /* Hide less important columns on mobile */
   .logs-table th:nth-child(1),
   .logs-table td:nth-child(1) {
     display: none !important;
   }
-  
+
   /* Keep date column visible on mobile */
   /* .logs-table th:nth-child(3),
   .logs-table td:nth-child(3) {
     display: none !important;
   } */
-  
+
   /* Button adjustments */
   .q-btn {
     min-height: 44px !important;
   }
-  
+
   /* Text adjustments */
   .text-h5 {
     font-size: 1.2rem !important;
   }
-  
+
   .text-h6 {
     font-size: 1.1rem !important;
   }
-  
+
   .text-subtitle1 {
     font-size: 0.9rem !important;
   }
@@ -314,59 +314,59 @@ export default {
 
 @media (min-width: 601px) and (max-width: 900px) {
   /* Small Tablet View */
-  
+
   /* Page header adjustments */
   .page-header {
     margin-bottom: 16px !important;
   }
-  
+
   .page-header .text-h5 {
     font-size: 1.3rem !important;
   }
-  
+
   /* Header row adjustments */
   .row.items-center.justify-between {
     flex-direction: row !important;
     align-items: center !important;
     gap: 16px !important;
   }
-  
+
   /* Search input adjustments */
   .search-input {
     width: 100% !important;
     min-width: 0 !important;
   }
-  
+
   /* Table adjustments */
   .logs-table {
     font-size: 0.85rem !important;
   }
-  
+
   .logs-table th,
   .logs-table td {
     padding: 8px 6px !important;
   }
-  
+
   /* Hide less important columns on small tablet */
   .logs-table th:nth-child(1),
   .logs-table td:nth-child(1) {
     display: none !important;
   }
-  
+
   /* Button adjustments */
   .q-btn {
     min-height: 44px !important;
   }
-  
+
   /* Text adjustments */
   .text-h5 {
     font-size: 1.3rem !important;
   }
-  
+
   .text-h6 {
     font-size: 1.2rem !important;
   }
-  
+
   .text-subtitle1 {
     font-size: 1rem !important;
   }
@@ -374,48 +374,48 @@ export default {
 
 @media (min-width: 901px) and (max-width: 1200px) {
   /* Large Tablet View */
-  
+
   /* Page header adjustments */
   .page-header {
     margin-bottom: 16px !important;
   }
-  
+
   .page-header .text-h5 {
     font-size: 1.4rem !important;
   }
-  
+
   /* Header row adjustments */
   .row.items-center.justify-between {
     flex-direction: row !important;
     align-items: center !important;
     gap: 16px !important;
   }
-  
+
   /* Search input adjustments */
   .search-input {
     width: 400px !important;
     min-width: 400px !important;
   }
-  
+
   /* Table adjustments */
   .logs-table {
     font-size: 0.9rem !important;
   }
-  
+
   /* Button adjustments */
   .q-btn {
     min-width: 120px !important;
   }
-  
+
   /* Text adjustments */
   .text-h5 {
     font-size: 1.4rem !important;
   }
-  
+
   .text-h6 {
     font-size: 1.3rem !important;
   }
-  
+
   .text-subtitle1 {
     font-size: 1.1rem !important;
   }
@@ -423,48 +423,48 @@ export default {
 
 @media (min-width: 1201px) {
   /* Desktop View */
-  
+
   /* Page header adjustments */
   .page-header {
     margin-bottom: 16px !important;
   }
-  
+
   .page-header .text-h5 {
     font-size: 1.5rem !important;
   }
-  
+
   /* Header row adjustments */
   .row.items-center.justify-between {
     flex-direction: row !important;
     align-items: center !important;
     gap: 16px !important;
   }
-  
+
   /* Search input adjustments */
   .search-input {
     width: 450px !important;
     min-width: 450px !important;
   }
-  
+
   /* Table adjustments */
   .logs-table {
     font-size: 1rem !important;
   }
-  
+
   /* Button adjustments */
   .q-btn {
     min-width: 120px !important;
   }
-  
+
   /* Text adjustments */
   .text-h5 {
     font-size: 1.5rem !important;
   }
-  
+
   .text-h6 {
     font-size: 1.4rem !important;
   }
-  
+
   .text-subtitle1 {
     font-size: 1.2rem !important;
   }
@@ -476,47 +476,47 @@ export default {
   .text-h5 {
     font-size: 1.2rem !important;
   }
-  
+
   .text-h6 {
     font-size: 1.1rem !important;
   }
-  
+
   .text-subtitle1 {
     font-size: 0.9rem !important;
   }
-  
+
   /* Adjust padding for better mobile experience */
   .q-pa-lg {
     padding: 12px !important;
   }
-  
+
   .q-pa-md {
     padding: 8px !important;
   }
-  
+
   /* Make buttons more touch-friendly */
   .q-btn {
     min-height: 40px !important;
   }
-  
+
   /* Adjust card margins */
   .q-card {
     margin: 4px !important;
   }
-  
+
   /* Ensure proper spacing */
   .q-mb-lg {
     margin-bottom: 16px !important;
   }
-  
+
   .q-mb-md {
     margin-bottom: 12px !important;
   }
-  
+
   .q-mb-sm {
     margin-bottom: 8px !important;
   }
-  
+
   /* Adjust card sections */
   .q-card-section {
     padding: 12px !important;
@@ -533,18 +533,18 @@ export default {
   .logs-table {
     font-size: 0.75rem !important;
   }
-  
+
   .logs-table th,
   .logs-table td {
     padding: 4px 2px !important;
   }
-  
+
   /* Hide less important columns on mobile */
   .logs-table th:nth-child(1),
   .logs-table td:nth-child(1) {
     display: none !important;
   }
-  
+
   /* Keep date column visible on mobile */
   /* .logs-table th:nth-child(3),
   .logs-table td:nth-child(3) {
@@ -557,23 +557,23 @@ export default {
   .q-card-section {
     padding: 12px !important;
   }
-  
+
   .q-card-actions {
     padding: 8px 12px !important;
   }
-  
+
   /* Make form inputs full width on mobile */
   .q-input {
     width: 100% !important;
     min-width: 0 !important;
   }
-  
+
   /* Adjust button groups */
   .q-card-actions {
     flex-direction: column !important;
     gap: 8px !important;
   }
-  
+
   .q-card-actions .q-btn {
     width: 100% !important;
   }
@@ -584,7 +584,7 @@ export default {
   .page-header {
     margin-bottom: 12px !important;
   }
-  
+
   .page-header .text-h5 {
     font-size: 1.1rem !important;
   }
@@ -595,7 +595,7 @@ export default {
   .row.q-mb-md {
     margin-bottom: 12px !important;
   }
-  
+
   .row.q-mb-md .q-input {
     width: 100% !important;
     min-width: 0 !important;
@@ -609,7 +609,7 @@ export default {
     align-items: flex-start !important;
     gap: 12px !important;
   }
-  
+
   .row.items-center.justify-between .q-btn {
     align-self: flex-end !important;
   }
@@ -621,7 +621,7 @@ export default {
     align-items: center !important;
     gap: 16px !important;
   }
-  
+
   .row.items-center.justify-between .q-btn {
     flex-shrink: 0 !important;
   }
@@ -633,7 +633,7 @@ export default {
     width: 100% !important;
     min-width: 0 !important;
   }
-  
+
   .actions-column .q-btn .q-btn__content {
     font-size: 0.8rem !important;
   }
@@ -643,7 +643,7 @@ export default {
   .actions-column .q-btn {
     min-width: 120px !important;
   }
-  
+
   .actions-column .q-btn .q-btn__content {
     font-size: 0.85rem !important;
   }
