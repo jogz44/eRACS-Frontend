@@ -26,10 +26,21 @@
           v-model="searchQuery"
           class="custom-search-input"
         >
+
           <template v-slot:append>
             <q-icon name="search" />
           </template>
         </q-input>
+         <!-- Clear All Filters Button -->
+        <q-btn
+          dense
+          outlined
+          color="red-10"
+          icon="clear_all"
+          label="Clear All"
+          @click="clearAllFilters"
+          class="clear-all-btn"
+        />
         <q-space />
         <q-input
           bg-color="white"
@@ -66,6 +77,17 @@
           </template>
         </q-input>
         <q-btn label="Continue Accounts" @click="showContinueDialog = true" color="secondary" style="min-width: 180px;" />
+
+        <!-- Clear All Filters Button -->
+        <q-btn
+          dense
+          outlined
+          color="red-10"
+          icon="clear_all"
+          label="Clear All"
+          @click="clearAllFilters"
+          class="clear-all-btn"
+        />
       </div>
       <!-- iPad: Search input in one row, From/To/Add in a single row below -->
       <div class="ipad-search-row" style="display: none;">
@@ -118,6 +140,8 @@
           </template>
         </q-input>
         <q-btn label="Continue Accounts" @click="showContinueDialog = true" color="secondary" style="min-width: 180px;" />
+
+
       </div>
     </div>
 
@@ -329,6 +353,12 @@ const loadPendingUsers = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const clearAllFilters = () => {
+  searchQuery.value = ''
+  dateFrom.value = ''
+  dateTo.value = ''
 }
 import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
@@ -675,6 +705,10 @@ defineExpose({
 
 .custom-search-input {
   min-width: 450px;
+}
+
+.clear-all-btn {
+  min-width: 120px;
 }
 @media (max-width: 600px) {
   .custom-search-input {

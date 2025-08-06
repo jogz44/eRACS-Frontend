@@ -93,6 +93,17 @@
               :disable="!selectedYear"
               class="col-auto allocate-btn"
             />
+            
+            <!-- Clear All Filters Button -->
+            <q-btn
+              dense
+              outlined
+              color="red-10"
+              icon="clear_all"
+              label="Clear All"
+              @click="clearAllFilters"
+              class="clear-all-btn"
+            />
           </div>
 
           <!-- Account Entries Exapandable -->
@@ -651,6 +662,10 @@ const loadPendingUsers = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const clearAllFilters = () => {
+  searchQuery.value = ''
 }
 import Sortable from 'sortablejs'
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
@@ -1690,6 +1705,10 @@ watch(
 
 .accountslib-page {
   background-color: #D9D9D9;
+}
+
+.clear-all-btn {
+  min-width: 120px;
 }
 
 /* Responsive Design */

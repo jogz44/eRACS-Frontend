@@ -19,6 +19,10 @@
       <q-item-section v-if="hasChildren" class="dropdown-icon-section">
         <q-icon :name="isExpanded ? 'expand_less' : 'expand_more'" />
       </q-item-section>
+
+      <q-item-section v-if="isPanelTrigger" class="dropdown-icon-section">
+        <q-icon name="chevron_right" />
+      </q-item-section>
     </q-item>
 
     <!-- Child Items with minimal scrollbar -->
@@ -37,7 +41,7 @@
             active-class="modern-submenu-active"
           >
             <q-item-section avatar class="tree-icon">
-              <q-icon name="circle" size="6px" />
+              <div class="colored-dot" :class="getDotColor(child.title)"></div>
             </q-item-section>
             <q-item-section>
               <q-item-label>{{ child.title }}</q-item-label>
@@ -74,19 +78,39 @@ const props = defineProps({
   expandedChildren: { type: Object, default: () => ({}) },
 })
 
-const emit = defineEmits(['toggle'])
+const emit = defineEmits(['toggle', 'panel-trigger'])
 
 const hasChildren = computed(() => props.children.length > 0)
 const hasDirectLink = computed(() => props.link && !hasChildren.value)
 const isExpanded = computed(() => props.expanded)
+const isPanelTrigger = computed(() =>
+  (props.title === 'Transactions' || props.title === 'Libraries') && !hasChildren.value
+)
 
 const isChildExpanded = (childTitle) => props.expandedChildren?.[childTitle] || false
+
+const getDotColor = (title) => {
+  const colorMap = {
+    'Appropriation': 'dot-pink',
+    'Disbursement': 'dot-red',
+    'Augmentation': 'dot-blue',
+    'Accounts': 'dot-light-blue',
+    'Bank': 'dot-green',
+    'Current': 'dot-orange',
+    'Continuing': 'dot-purple'
+  }
+  return colorMap[title] || 'dot-grey'
+}
 
 const handleClick = (event) => {
   if (hasChildren.value) {
     event.preventDefault()
     event.stopPropagation()
     emit('toggle', props.title)
+  } else if (isPanelTrigger.value) {
+    event.preventDefault()
+    event.stopPropagation()
+    emit('panel-trigger', props.title.toLowerCase())
   }
 }
 </script>
@@ -94,7 +118,6 @@ const handleClick = (event) => {
 <style scoped>
 .active-menu {
   background-color: #0E780E !important;
-
   color: white !important;
 }
 
@@ -137,9 +160,7 @@ const handleClick = (event) => {
   max-width: 100%;
 }
 
-/* Connecting Line */
 .modern-tree-menu:before {
-
   content: '';
   position: absolute;
   left: 16px;
@@ -155,7 +176,6 @@ const handleClick = (event) => {
   );
 }
 
-/* Submenu Items */
 .modern-submenu {
   padding: 8px 14px;
   margin: 5px 0;
@@ -193,6 +213,22 @@ const handleClick = (event) => {
   color: white;
 }
 
+.colored-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-pink { background-color: #ff6b9d; }
+.dot-red { background-color: #ff5a5a; }
+.dot-blue { background-color: #4a90e2; }
+.dot-light-blue { background-color: #7ed3f4; }
+.dot-green { background-color: #4caf50; }
+.dot-orange { background-color: #ff9800; }
+.dot-purple { background-color: #9c27b0; }
+.dot-grey { background-color: #9e9e9e; }
+
 .q-slide-transition {
   transition: all 0.1s ease;
 }
@@ -205,7 +241,6 @@ const handleClick = (event) => {
   margin-left: 8px;
 }
 
-/* Minimal Scrollbar Styling */
 ::v-deep(.scroll-minimal::-webkit-scrollbar) {
   width: 6px;
 }
@@ -246,7 +281,12 @@ const handleClick = (event) => {
   .tree-icon {
     min-width: 18px;
   }
+  .colored-dot {
+    width: 6px;
+    height: 6px;
+  }
 }
+
 @media (max-width: 500px) {
   .nav-menu {
     font-size: 13px;
@@ -255,6 +295,10 @@ const handleClick = (event) => {
   .modern-submenu {
     font-size: 11px;
     padding: 4px 4px;
+  }
+  .colored-dot {
+    width: 5px;
+    height: 5px;
   }
 }
 </style>

@@ -92,6 +92,17 @@
             class="add-table-btn"
             @click="store.openDialog('disbursement')"
           />
+          
+          <!-- Clear All Filters Button -->
+          <q-btn
+            dense
+            outlined
+            color="red-10"
+            icon="clear_all"
+            label="Clear All"
+            @click="clearAllFilters"
+            class="clear-all-btn"
+          />
         </div>
       </div>
 
@@ -365,6 +376,12 @@ const loadPendingUsers = async () => {
     loading.value = false
   }
 }
+
+const clearAllFilters = () => {
+  store.searchQuery = ''
+  store.dateFrom = ''
+  store.dateTo = ''
+}
 import { ref } from 'vue'
 import { useContDisbursementStore } from 'stores/contDisburseStore'
 import ContLiquidateDialog from 'components/contDisburse/ContOrDetails.vue'
@@ -381,6 +398,10 @@ const store = useContDisbursementStore()
 
 .custom-search-input {
   min-width: 450px;
+}
+
+.clear-all-btn {
+  min-width: 120px;
 }
 
 /* Responsive styles to match Continuing Appropriation */

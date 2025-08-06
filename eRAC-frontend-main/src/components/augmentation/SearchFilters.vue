@@ -18,32 +18,21 @@
         bg-color="white"
         outlined
         dense
-        label="From"
-        v-model="store.dateFrom"
-        mask="##/##/####"
-        class="custom-date-from"
+        :model-value="dateRangeDisplay"
+        label="Date Range"
+        class="custom-date-range"
+        clearable
+        @clear="onDateRangeClear"
+        readonly
       >
         <template v-slot:append>
           <q-icon name="event" class="calend-icon">
             <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-              <q-date v-model="store.dateFrom" mask="DD/MM/YYYY" />
-            </q-popup-proxy>
-          </q-icon>
-        </template>
-      </q-input>
-      <q-input
-        bg-color="white"
-        outlined
-        dense
-        label="To"
-        v-model="store.dateTo"
-        mask="##/##/####"
-        class="custom-date-to"
-      >
-        <template v-slot:append>
-          <q-icon name="event" class="calend-icon">
-            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-              <q-date v-model="store.dateTo" mask="DD/MM/YYYY" />
+              <q-date
+                v-model="dateRange"
+                range
+                @update:model-value="onDateRangeChange"
+              />
             </q-popup-proxy>
           </q-icon>
         </template>
@@ -56,16 +45,70 @@
         color="primary"
         style="min-width: 180px;"
       />
+      
+      <!-- Clear All Filters Button -->
+      <q-btn
+        dense
+        outlined
+        color="red-10"
+        icon="clear_all"
+        label="Clear All"
+        @click="clearAllFilters"
+        class="clear-all-btn"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
 import { useAugmentationStore } from 'stores/augmentation'
+
 const store = useAugmentationStore()
+const dateRange = ref(null)
+
+const dateRangeDisplay = computed(() => {
+  if (!dateRange.value || !dateRange.value.from || !dateRange.value.to) {
+    return ''
+  }
+  const fromDate = new Date(dateRange.value.from).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  })
+  const toDate = new Date(dateRange.value.to).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  })
+  return `${fromDate} - ${toDate}`
+})
 
 const handleOpenDialog = async () => {
   await store.openDialog('augmentation')
+}
+
+const onDateRangeChange = (newRange) => {
+  if (newRange && newRange.from && newRange.to) {
+    // Convert date format from YYYY/MM/DD to DD/MM/YYYY
+    const fromDate = new Date(newRange.from)
+    const toDate = new Date(newRange.to)
+    
+    store.dateFrom = fromDate.toLocaleDateString('en-GB') // DD/MM/YYYY format
+    store.dateTo = toDate.toLocaleDateString('en-GB') // DD/MM/YYYY format
+  } else {
+    store.dateFrom = ''
+    store.dateTo = ''
+  }
+}
+
+const onDateRangeClear = () => {
+  dateRange.value = null
+  store.dateFrom = ''
+  store.dateTo = ''
+}
+
+const clearAllFilters = () => {
+  store.searchQuery = ''
+  store.dateFrom = ''
+  store.dateTo = ''
+  dateRange.value = null
 }
 </script>
 
@@ -87,6 +130,10 @@ const handleOpenDialog = async () => {
 /* Using the deep selector (Vue 3 syntax) */
 .q-mb-md :deep(.q-input .q-field__control) {
   border-radius: 12px;
+}
+
+.clear-all-btn {
+  min-width: 120px;
 }
 @media (max-width: 900px) {
   .row.q-gutter-sm {
@@ -125,11 +172,10 @@ const handleOpenDialog = async () => {
     min-width: 0 !important;
     max-width: 700px !important;
   }
-  .custom-date-from,
-  .custom-date-to {
-    width: 220px !important;
+  .custom-date-range {
+    width: 250px !important;
     min-width: 0 !important;
-    max-width: 300px !important;
+    max-width: 350px !important;
   }
 }
 </style>

@@ -17,21 +17,49 @@
         />
       </div>
       <q-card-section>
-        <!-- Search Bar -->
-        <div class="row q-mb-md">
+        <!-- Search and Filter Bar -->
+        <div class="row q-mb-md items-center">
+          <!-- Text Search -->
           <q-input
             dense
             outlined
             bg-color="white"
             v-model="search"
             placeholder="Search by ID, Name, or Position..."
-            class="search-input"
+            class="search-input q-mr-md"
             clearable
+            @clear="onSearchClear"
           >
             <template v-slot:append>
               <q-icon name="search" />
             </template>
           </q-input>
+
+          <!-- Position Filter -->
+          <q-select
+            dense
+            outlined
+            v-model="selectedPosition"
+            :options="positionOptions"
+            label="Filter by Position"
+            class="filter-select q-mr-md"
+            clearable
+            @clear="onPositionClear"
+            emit-value
+            map-options
+            options-dense
+          />
+
+          <!-- Clear All Filters Button -->
+          <q-btn
+            dense
+            outlined
+            color="red-10"
+            icon="clear_all"
+            label="Clear All"
+            @click="clearAllFilters"
+            class="clear-all-btn"
+          />
         </div>
 
         <!-- User Access Table -->
@@ -114,6 +142,7 @@ export default {
   data() {
     return {
       search: '',
+      selectedPosition: null,
       users: [],
       deleteModal: {
         show: false,
@@ -144,24 +173,43 @@ export default {
     }
   },
   computed: {
+    // Get unique position options from users
+    positionOptions() {
+      const uniquePositions = [...new Set(this.users.map(user => user.position).filter(Boolean))]
+      return uniquePositions.map(position => ({
+        label: position,
+        value: position
+      })).sort((a, b) => a.label.localeCompare(b.label))
+    },
+
     filteredUsers() {
+      let filtered = [...this.users]
+
+      // Apply text search filter
       const searchTerm = this.search.toLowerCase().trim()
-      if (!searchTerm) return this.users
+      if (searchTerm) {
+        filtered = filtered.filter(user => {
+          // Search by ID - handle both formatted and unformatted IDs
+          const formattedId = this.formatId(user.id)
+          const idMatch = formattedId.includes(searchTerm) || String(user.id).includes(searchTerm)
 
-      return this.users.filter(user => {
-        // Search by ID - handle both formatted and unformatted IDs
-        const formattedId = this.formatId(user.id)
-        const idMatch = formattedId.includes(searchTerm) || String(user.id).includes(searchTerm)
+          // Search by Name
+          const nameMatch = user.name.toLowerCase().includes(searchTerm)
 
-        // Search by Name
-        const nameMatch = user.name.toLowerCase().includes(searchTerm)
+          // Search by Position
+          const positionMatch = user.position.toLowerCase().includes(searchTerm)
 
-        // Search by Position
-        const positionMatch = user.position.toLowerCase().includes(searchTerm)
+          // Return true if any field matches
+          return idMatch || nameMatch || positionMatch
+        })
+      }
 
-        // Return true if any field matches
-        return idMatch || nameMatch || positionMatch
-      })
+      // Apply position filter
+      if (this.selectedPosition) {
+        filtered = filtered.filter(user => user.position === this.selectedPosition)
+      }
+
+      return filtered
     },
   },
   async mounted() {
@@ -309,14 +357,32 @@ export default {
         })
       }
     },
+    // Filter clear methods
+    onSearchClear() {
+      this.search = ''
+    },
+    onPositionClear() {
+      this.selectedPosition = null
+    },
+    clearAllFilters() {
+      this.search = ''
+      this.selectedPosition = null
+    },
   },
 }
 </script>
 
 <style scoped>
-.search-bar {
-  width: 450px;
-  margin-bottom: 15px;
+.search-input {
+  width: 300px;
+}
+
+.filter-select {
+  width: 200px;
+}
+
+.clear-all-btn {
+  min-width: 120px;
 }
 
 .user-table {

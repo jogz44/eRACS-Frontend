@@ -93,6 +93,17 @@
           class="add-table-btn"
           @click="store.openDialog('augmentation')"
         />
+        
+        <!-- Clear All Filters Button -->
+        <q-btn
+          dense
+          outlined
+          color="red-10"
+          icon="clear_all"
+          label="Clear All"
+          @click="clearAllFilters"
+          class="clear-all-btn"
+        />
       </div>
       <div class="justify-end q-mb-md"></div>
 
@@ -413,6 +424,12 @@ const loadPendingUsers = async () => {
     loading.value = false
   }
 }
+
+const clearAllFilters = () => {
+  store.searchQuery = ''
+  store.dateFrom = ''
+  store.dateTo = ''
+}
 </script>
 
 <style scoped>
@@ -423,6 +440,10 @@ const loadPendingUsers = async () => {
 
 .custom-search-input {
   min-width: 450px;
+}
+
+.clear-all-btn {
+  min-width: 120px;
 }
 
 /* Responsive styles to match Continuing Appropriation */
