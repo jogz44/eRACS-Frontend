@@ -11,10 +11,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     expenses: [], // Initialize expenses array
     expenseSearch: '',
     currentItem: null,
-    chequeBooklets: [
-      { label: 'Booklet 1', range: '20000150-20000200' },
-      { label: 'Booklet 2', range: '20000201-20000250' },
-    ],
+    chequeBooklets: [], // Will be populated from selected bank
     availableChequeNumbers: [],
     selectedBooklet: null,
     selectedChequeNumber: null,
@@ -38,6 +35,12 @@ export const useDisbursementStore = defineStore('disbursement', {
       orDetails: false,
       viewOrDetails: false,
     },
+
+    // Loading states
+    loading: false,
+    bankLoading: false,
+    bookletLoading: false,
+    expenseTypeLoading: false,
 
     // Form data
     forms: {
@@ -76,44 +79,56 @@ export const useDisbursementStore = defineStore('disbursement', {
         return []
       }
 
+      console.log('Processing expenseData in expenseAccounts getter:', state.expenseData)
+
       const flattened = state.expenseData.reduce((acc, expenseClass) => {
-        if (!expenseClass.children) return acc
+        if (!expenseClass.children) {
+          console.log(`No children for expense class: ${expenseClass.name}`)
+          return acc
+        }
+
+        console.log(`Processing expense class: ${expenseClass.name} with ${expenseClass.children.length} children`)
 
         expenseClass.children.forEach((expenseType) => {
-          // Include expense types with balance greater than 0
-          if (expenseType.amount && expenseType.amount > 0) {
-            acc.push({
-              id: expenseType.id,
-              account: expenseClass.name,
-              expenseType: expenseType.name,
-              expenseItem: null,
-              balance: expenseType.amount || 0,
-              expense_class_id: expenseClass.id,
-              expense_type_id: expenseType.id,
-              expense_item_id: null, // This identifies it as an expense type
+          // Include all expense types (not just those with balance > 0)
+          const expenseTypeEntry = {
+            id: expenseType.id,
+            account: expenseClass.name,
+            expenseType: expenseType.name,
+            expenseItem: null,
+            balance: expenseType.amount || 0,
+            expense_class_id: expenseClass.id,
+            expense_type_id: expenseType.id,
+            expense_item_id: null, // This identifies it as an expense type
+          }
+          acc.push(expenseTypeEntry)
+          console.log(`Added expense type: ${expenseType.name}`)
+
+          // Include expense items with balance greater than 0 (if they exist)
+          if (expenseType.children && expenseType.children.length > 0) {
+            expenseType.children.forEach((expenseItem) => {
+              if (expenseItem.amount && expenseItem.amount > 0) {
+                const expenseItemEntry = {
+                  id: expenseItem.id,
+                  account: expenseClass.name,
+                  expenseType: expenseType.name,
+                  expenseItem: expenseItem.name,
+                  balance: expenseItem.amount || 0,
+                  expense_class_id: expenseClass.id,
+                  expense_type_id: expenseType.id,
+                  expense_item_id: expenseItem.id,
+                }
+                acc.push(expenseItemEntry)
+                console.log(`Added expense item: ${expenseItem.name}`)
+              }
             })
           }
-
-          // Include expense items with balance greater than 0
-          expenseType.children.forEach((expenseItem) => {
-            if (expenseItem.amount && expenseItem.amount > 0) {
-              acc.push({
-                id: expenseItem.id,
-                account: expenseClass.name,
-                expenseType: expenseType.name,
-                expenseItem: expenseItem.name,
-                balance: expenseItem.amount || 0,
-                expense_class_id: expenseClass.id,
-                expense_type_id: expenseType.id,
-                expense_item_id: expenseItem.id,
-              })
-            }
-          })
         })
 
         return acc
       }, [])
 
+      console.log(`Total expense accounts returned: ${flattened.length}`)
       return flattened
     },
 
@@ -233,16 +248,22 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     filteredExpenseAccounts(state) {
-      if (!state.expenseSearch.trim()) return this.expenseAccounts
+      if (!state.expenseSearch.trim()) {
+        console.log('No search query, returning all expense accounts:', this.expenseAccounts.length)
+        return this.expenseAccounts
+      }
 
       const query = state.expenseSearch.toLowerCase()
-      return this.expenseAccounts.filter(
+      const filtered = this.expenseAccounts.filter(
         (item) =>
           item.account.toLowerCase().includes(query) ||
           item.expenseType.toLowerCase().includes(query) ||
-          item.expenseItem.toLowerCase().includes(query) ||
+          (item.expenseItem && item.expenseItem.toLowerCase().includes(query)) ||
           (item.description && item.description.toLowerCase().includes(query)),
       )
+      
+      console.log(`Filtered expense accounts for query "${query}":`, filtered.length)
+      return filtered
     },
 
     aging: () => (dateString) => {
@@ -257,14 +278,19 @@ export const useDisbursementStore = defineStore('disbursement', {
   },
 
   actions: {
-    // Fetch expense hierarchy from appropriation store
-
+    // Fetch expense hierarchy from appropriation store and accounts library store
     async fetchExpenseAccounts() {
       try {
         console.log('Starting to fetch expense accounts...')
+        
+        // Fetch from appropriation store for budget allocations
         const appropriationStore = useAppropriationStore()
         await appropriationStore.fetchExpenseHierarchy()
         this.expenseData = appropriationStore.allocations || []
+        
+        // Fetch expense types from accounts library store
+        await this.fetchExpenseTypesFromAccountsLib()
+        
         console.log('Fetched expense data:', this.expenseData)
         console.log('Number of expense classes:', this.expenseData.length)
         if (this.expenseData.length > 0) {
@@ -273,6 +299,151 @@ export const useDisbursementStore = defineStore('disbursement', {
       } catch (error) {
         console.error('Error fetching expense accounts:', error)
         this.expenseData = []
+      }
+    },
+
+    // New method to fetch expense types from accounts library store
+    async fetchExpenseTypesFromAccountsLib() {
+      try {
+        this.expenseTypeLoading = true
+        console.log('Fetching expense types from accounts library...')
+        
+        // Dynamically import to avoid circular dependencies
+        const { useAccountsLibraryStore } = await import('./accountsLibstore')
+        const accountsStore = useAccountsLibraryStore()
+        
+        // Fetch years if not already loaded
+        if (!accountsStore.years.length) {
+          console.log('Fetching years from accounts library...')
+          await accountsStore.fetchYears()
+        }
+        
+        // Fetch expense classes for the current year
+        if (accountsStore.selectedYear) {
+          console.log('Fetching expense classes for year:', accountsStore.selectedYear)
+          await accountsStore.fetchExpenseClasses(accountsStore.selectedYear)
+          
+          console.log('Available expense classes:', accountsStore.expenseClasses)
+          
+          // Fetch expense types for each class
+          for (const expenseClass of accountsStore.expenseClasses) {
+            try {
+              console.log(`Fetching types for class: ${expenseClass.name} (ID: ${expenseClass.id})`)
+              await accountsStore.fetchExpenseTypes(expenseClass.id)
+            } catch (error) {
+              console.warn(`Failed to fetch types for class ${expenseClass.id}:`, error)
+            }
+          }
+          
+          console.log('All expense types fetched:', accountsStore.expenseTypes)
+          
+          // Integrate expense types into expenseData
+          this.integrateExpenseTypesFromAccountsLib(accountsStore)
+        } else {
+          console.warn('No selected year in accounts library store')
+        }
+      } catch (error) {
+        console.error('Error fetching expense types from accounts library:', error)
+        throw error
+      } finally {
+        this.expenseTypeLoading = false
+      }
+    },
+
+    // Integrate expense types from accounts library into expenseData
+    integrateExpenseTypesFromAccountsLib(accountsStore) {
+      try {
+        console.log('Integrating expense types from accounts library...')
+        console.log('Available expense types:', accountsStore.expenseTypes)
+        console.log('Available expense classes:', accountsStore.expenseClasses)
+        console.log('Current expenseData:', this.expenseData)
+        
+        // If no expense types are available, return early
+        if (!accountsStore.expenseTypes || accountsStore.expenseTypes.length === 0) {
+          console.log('No expense types available from accounts library')
+          return
+        }
+        
+        // Create a map of expense classes by name for easier lookup
+        const classMap = new Map()
+        this.expenseData.forEach(expenseClass => {
+          classMap.set(expenseClass.name, expenseClass)
+        })
+        
+        // Group expense types by class
+        const typesByClass = new Map()
+        accountsStore.expenseTypes.forEach(type => {
+          const classId = type.expense_class_id
+          if (!typesByClass.has(classId)) {
+            typesByClass.set(classId, [])
+          }
+          typesByClass.get(classId).push(type)
+        })
+        
+        console.log('Types grouped by class:', typesByClass)
+        
+        // Integrate types into existing expenseData
+        typesByClass.forEach((types, classId) => {
+          const expenseClass = accountsStore.expenseClasses.find(c => c.id == classId)
+          if (expenseClass) {
+            console.log(`Processing class: ${expenseClass.name} with ${types.length} types`)
+            
+            // Find corresponding class in expenseData
+            const existingClass = this.expenseData.find(c => c.name === expenseClass.name)
+            
+            if (existingClass) {
+              // Add types to existing class
+              if (!existingClass.children) {
+                existingClass.children = []
+              }
+              
+              types.forEach(type => {
+                // Check if type already exists
+                const existingType = existingClass.children.find(t => t.id === type.id)
+                if (!existingType) {
+                  existingClass.children.push({
+                    id: type.id,
+                    name: type.name,
+                    expense_class_id: type.expense_class_id,
+                    order: type.order || 0,
+                    amount: 0, // Will be populated from appropriation data if available
+                    children: [] // Initialize empty children array for items
+                  })
+                  console.log(`Added expense type: ${type.name} to class: ${expenseClass.name}`)
+                }
+              })
+            } else {
+              // Create new class if it doesn't exist
+              const newClass = {
+                id: expenseClass.id,
+                name: expenseClass.name,
+                fiscal_year_id: expenseClass.fiscal_year_id,
+                children: types.map(type => ({
+                  id: type.id,
+                  name: type.name,
+                  expense_class_id: type.expense_class_id,
+                  order: type.order || 0,
+                  amount: 0,
+                  children: []
+                }))
+              }
+              this.expenseData.push(newClass)
+              console.log(`Created new expense class: ${expenseClass.name} with ${types.length} types`)
+            }
+          }
+        })
+        
+        console.log('Successfully integrated expense types:', this.expenseData)
+        
+        // Debug: Check if expense types are now available
+        const totalTypes = this.expenseData.reduce((total, expenseClass) => {
+          return total + (expenseClass.children ? expenseClass.children.length : 0)
+        }, 0)
+        console.log(`Total expense types after integration: ${totalTypes}`)
+        
+      } catch (error) {
+        console.error('Error integrating expense types:', error)
+        throw error
       }
     },
 
@@ -392,19 +563,111 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
-    selectBooklet(range) {
+    async selectBooklet(range) {
+      this.bookletLoading = true
       this.selectedBooklet = range
-      const [start, end] = range.split('-').map(Number)
-      this.availableChequeNumbers = Array.from({ length: end - start }, (_, i) =>
-        (start + 1 + i).toString(),
-      )
       this.selectedChequeNumber = null
       this.forms.disbursement.chequeNumber = null
+      this.availableChequeNumbers = []
+
+      if (range) {
+        try {
+          const [start, end] = range.split('-').map(Number)
+          
+          // Generate available cheque numbers for the selected range
+          this.availableChequeNumbers = Array.from({ length: end - start + 1 }, (_, i) =>
+            (start + i).toString().padStart(8, '0'),
+          )
+
+          // If we have a selected booklet, we might want to fetch the actual cheques
+          // to check which ones are already used
+          if (this.forms.disbursement.bank_id) {
+            try {
+              const { useBankStore } = await import('./bankStore')
+              const bankStore = useBankStore()
+              
+              // Find the selected booklet
+              const selectedBookletData = this.chequeBooklets.find(b => b.value === range)
+              if (selectedBookletData && selectedBookletData.booklet) {
+                // Fetch cheques for this booklet to check status
+                const response = await bankStore.fetchBookletCheques(selectedBookletData.booklet.id)
+                
+                // Extract cheques from the response
+                const cheques = response.cheques || response.data || []
+                
+                // Filter out used cheques
+                const unusedCheques = cheques.filter(cheque => 
+                  cheque.status?.toLowerCase() === 'unused'
+                )
+                
+                // Update available cheque numbers to only show unused ones
+                if (unusedCheques.length > 0) {
+                  this.availableChequeNumbers = unusedCheques.map(cheque => 
+                    cheque.chequeNo || cheque.cheque_number
+                  )
+                }
+              }
+            } catch (error) {
+              console.error('Error fetching cheques for booklet:', error)
+              // If we can't fetch cheques, just use the generated range
+            }
+          }
+        } catch (error) {
+          console.error('Error processing booklet selection:', error)
+          // Reset booklet selection on error
+          this.selectedBooklet = null
+          this.availableChequeNumbers = []
+          throw error
+        } finally {
+          this.bookletLoading = false
+        }
+      } else {
+        this.bookletLoading = false
+      }
     },
 
     selectChequeNumber(number) {
       this.selectedChequeNumber = number
       this.forms.disbursement.chequeNumber = number
+    },
+
+    // New method to handle bank selection
+    async selectBank(bankId) {
+      this.bankLoading = true
+      this.forms.disbursement.bank_id = bankId
+      this.selectedBooklet = null
+      this.selectedChequeNumber = null
+      this.forms.disbursement.chequeNumber = null
+      this.chequeBooklets = []
+      this.availableChequeNumbers = []
+
+      if (bankId) {
+        try {
+          // Import bankStore dynamically to avoid circular dependency
+          const { useBankStore } = await import('./bankStore')
+          const bankStore = useBankStore()
+          
+          // Fetch booklets for the selected bank
+          const booklets = await bankStore.fetchBankBooklets(bankId)
+          
+          // Transform booklets for the select component
+          this.chequeBooklets = booklets.map(booklet => ({
+            label: `Booklet ${booklet.booklet_numb || booklet.id} (${booklet.starting_cheque_numb}-${booklet.ending_cheque_numb})`,
+            value: `${booklet.starting_cheque_numb}-${booklet.ending_cheque_numb}`,
+            booklet: booklet
+          }))
+        } catch (error) {
+          console.error('Error fetching booklets for bank:', error)
+          // Reset bank selection on error
+          this.forms.disbursement.bank_id = null
+          this.chequeBooklets = []
+          throw error
+        } finally {
+          this.bankLoading = false
+        }
+      } else {
+        this.bankLoading = false
+      }
     },
 
     // Dialog Actions
@@ -519,13 +782,26 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     // Update openExpenseDetail to match your current structure
     openExpenseDetail(item) {
+      // Create a proper account display string
+      let accountDisplay = item.account
+      if (item.expenseType) {
+        accountDisplay += ` > ${item.expenseType}`
+      }
+      if (item.expenseItem) {
+        accountDisplay += ` > ${item.expenseItem}`
+      }
+
       this.forms.expense = {
-        account: `${item.account} > ${item.expenseType} > ${item.expenseItem}`,
+        account: accountDisplay,
         accountId: item.id,
-        balance: item.balance,
+        balance: item.balance || 0,
         particulars: '',
         amount: 0,
         disbursementId: this.currentItem?.id || null,
+        // Store additional information for backend
+        expense_class_id: item.expense_class_id,
+        expense_type_id: item.expense_type_id,
+        expense_item_id: item.expense_item_id,
       }
       this.dialogs.expense = false
       this.dialogs.expenseDetail = true
@@ -536,6 +812,23 @@ export const useDisbursementStore = defineStore('disbursement', {
       try {
         const authStore = useAuthStore()
         const token = authStore.token
+
+        // Validate required fields
+        if (!this.forms.disbursement.bank_id) {
+          throw new Error('Please select a bank')
+        }
+        if (!this.forms.disbursement.chequeNumber) {
+          throw new Error('Please select a cheque number')
+        }
+        if (!this.forms.disbursement.dvNumber) {
+          throw new Error('Please enter a DV number')
+        }
+        if (!this.forms.disbursement.payee) {
+          throw new Error('Please enter a payee')
+        }
+        if (this.expenses.length === 0) {
+          throw new Error('Please add at least one expense')
+        }
 
         // Prepare the payload
         const payload = {
@@ -548,7 +841,10 @@ export const useDisbursementStore = defineStore('disbursement', {
           expenses: this.expenses.map(expense => ({
             accountId: expense.accountId,
             amount: expense.amount,
-            particular: expense.particular
+            particular: expense.particular,
+            expense_class_id: expense.expense_class_id,
+            expense_type_id: expense.expense_type_id,
+            expense_item_id: expense.expense_item_id,
           }))
         }
 
@@ -577,7 +873,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         console.error('Failed to save disbursement:', error)
         return { 
           success: false, 
-          error: error.response?.data?.message || 'Failed to save disbursement' 
+          error: error.response?.data?.message || error.message || 'Failed to save disbursement' 
         }
       }
     },
@@ -610,6 +906,10 @@ export const useDisbursementStore = defineStore('disbursement', {
         accountName: this.forms.expense.account,
         amount: amount,
         particular: this.forms.expense.particulars,
+        // Store additional expense type information
+        expense_class_id: this.forms.expense.expense_class_id,
+        expense_type_id: this.forms.expense.expense_type_id,
+        expense_item_id: this.forms.expense.expense_item_id,
       })
 
       this.expenses = [...this.expenses]
@@ -659,12 +959,17 @@ export const useDisbursementStore = defineStore('disbursement', {
         this.forms.disbursement = {
           date: '',
           dvNumber: '',
-          chequeNumber: '', // Add this line
+          chequeNumber: '',
           bank_id: '',
           payee: '',
           amount: '',
         }
         this.expenses = []
+        // Reset bank-related selections
+        this.selectedBooklet = null
+        this.selectedChequeNumber = null
+        this.chequeBooklets = []
+        this.availableChequeNumbers = []
       } else if (formName === 'expense') {
         this.forms.expense = {
           account: '',

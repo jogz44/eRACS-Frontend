@@ -13,7 +13,7 @@
           <q-icon name="search" />
         </template>
       </q-input>
-      <q-space />
+
       <q-input
         bg-color="white"
         outlined
@@ -37,17 +37,7 @@
           </q-icon>
         </template>
       </q-input>
-      <q-btn
-        label="Add"
-        icon="add"
-        class="add-table-btn"
-        @click="handleOpenDialog"
-        color="primary"
-        style="min-width: 180px;"
-      />
-      
-      <!-- Clear All Filters Button -->
-      <q-btn
+        <q-btn
         dense
         outlined
         color="red-10"
@@ -56,6 +46,18 @@
         @click="clearAllFilters"
         class="clear-all-btn"
       />
+       <q-space />
+      <q-btn
+        label="Add"
+        icon="add"
+        class="add-table-btn"
+        @click="handleOpenDialog"
+        color="primary"
+        style="min-width: 180px;"
+      />
+
+      <!-- Clear All Filters Button -->
+
     </div>
   </div>
 </template>
@@ -89,7 +91,7 @@ const onDateRangeChange = (newRange) => {
     // Convert date format from YYYY/MM/DD to DD/MM/YYYY
     const fromDate = new Date(newRange.from)
     const toDate = new Date(newRange.to)
-    
+
     store.dateFrom = fromDate.toLocaleDateString('en-GB') // DD/MM/YYYY format
     store.dateTo = toDate.toLocaleDateString('en-GB') // DD/MM/YYYY format
   } else {

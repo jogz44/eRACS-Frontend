@@ -61,6 +61,8 @@
                   emit-value
                   map-options
                   :label="currentBankLabel"
+                  :loading="store.bankLoading"
+                  @update:model-value="handleBankSelection"
                   @keydown.enter="handleEnterKey"
                 />
               </div>
@@ -73,19 +75,16 @@
                   outlined
                   dense
                   v-model="store.selectedBooklet"
-                  @update:model-value="store.selectBooklet"
-                  :options="
-                    store.chequeBooklets.map((b) => ({
-                      label: `${b.label} (${b.range})`,
-                      value: b.range,
-                    }))
-                  "
+                  @update:model-value="handleBookletSelection"
+                  :options="store.chequeBooklets"
                   option-label="label"
                   option-value="value"
                   emit-value
                   map-options
-                  label="Choose Booklet"
+                  :label="store.chequeBooklets.length === 0 ? 'No booklets available' : 'Choose Booklet'"
                   class="q-mb-sm"
+                  :loading="store.bookletLoading"
+                  :disable="!store.forms.disbursement.bank_id || store.chequeBooklets.length === 0"
                   @keydown.enter="handleEnterKey"
                 />
 
@@ -96,8 +95,8 @@
                   v-model="store.selectedChequeNumber"
                   @update:model-value="store.selectChequeNumber"
                   :options="store.availableChequeNumbers"
-                  :disable="!store.selectedBooklet"
-                  label="Select Cheque Number"
+                  :disable="!store.selectedBooklet || store.availableChequeNumbers.length === 0"
+                  :label="store.availableChequeNumbers.length === 0 ? 'No cheques available' : 'Select Cheque Number'"
                   @keydown.enter="handleEnterKey"
                 />
               </div>
@@ -218,7 +217,7 @@
               :rows="store.filteredExpenseAccounts"
               :columns="store.expenseAccountColumns"
               row-key="id"
-              :loading="store.loading"
+              :loading="store.loading || store.expenseTypeLoading"
               :filter="store.expenseSearch"
             >
               <template v-slot:body-cell-action="props">
@@ -354,10 +353,24 @@ const store = useDisbursementStore()
 const bankStore = useBankStore()
 
 onMounted(async () => {
-  await store.fetchDisbursementAccounts?.(); // keep existing
-  await store.fetchDisbursements();
-  if (!bankStore.banks.length) {
-    await bankStore.fetchBanks()
+  try {
+    // Load expense accounts (which now includes expense types from accounts library)
+    await store.fetchExpenseAccounts()
+
+    // Load disbursements
+    await store.fetchDisbursements()
+
+    // Load banks if not already loaded
+    if (!bankStore.banks.length) {
+      await bankStore.fetchBanks()
+    }
+  } catch (error) {
+    console.error('Error during component initialization:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to load initial data: ' + error.message,
+      position: 'top',
+    })
   }
 })
 
@@ -384,6 +397,36 @@ const currentBankLabel = computed(() => {
   }
   return 'Select Bank'
 })
+
+const handleBankSelection = async (bankId) => {
+  if (bankId) {
+    try {
+      await store.selectBank(bankId)
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: `Failed to load booklets for selected bank: ${error.message}`,
+        icon: 'error',
+        position: 'top',
+      })
+    }
+  }
+}
+
+const handleBookletSelection = async (bookletRange) => {
+  if (bookletRange) {
+    try {
+      await store.selectBooklet(bookletRange)
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: `Failed to load cheques for selected booklet: ${error.message}`,
+        icon: 'error',
+        position: 'top',
+      })
+    }
+  }
+}
 
 const validateAndSave = () => {
   // Check if disbursement dialog is open
@@ -452,7 +495,7 @@ const loadPendingUsers = async () => {
 
 <style scoped>
 .disbursement-page {
-  background-color: #D9D9D9; /* Light gray background */
+  background-color: whitesmoke; /* Light gray background */
   min-height: 100vh; /* Ensure full height */
 }
 
@@ -661,5 +704,8 @@ const loadPendingUsers = async () => {
     min-width: 40px !important;
     height: 40px !important;
   }
+}.page-header {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 16px;
 }
 </style>

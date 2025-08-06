@@ -60,7 +60,7 @@
 
           color="red-10"
           icon="clear_all"
-          label="Clear"
+          label="Clear All"
           @click="clearAllFilters"
           class="clear-all-btn"
         />
@@ -902,7 +902,7 @@ const openDialog = async () => {
   border-radius: 8px;
 }
 .appropriation-page {
-  background-color: #D9D9D9; /* Light gray background */
+  background-color: whitesmoke; /* Light gray background */
   min-height: 100vh; /* Ensure full height */
 }
 .custom-search-input {
@@ -910,7 +910,7 @@ const openDialog = async () => {
 }
 
 .clear-all-btn {
-  min-width: 100px;
+  min-width: 120px;
 }
 @media (max-width: 600px) {
   .custom-search-input {

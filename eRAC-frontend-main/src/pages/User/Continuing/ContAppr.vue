@@ -42,7 +42,7 @@
           class="clear-all-btn"
         />
         <q-space />
-        <q-input
+        <!-- <q-input
           bg-color="white"
           outlined
           dense
@@ -75,19 +75,9 @@
               </q-popup-proxy>
             </q-icon>
           </template>
-        </q-input>
+        </q-input> -->
         <q-btn label="Continue Accounts" @click="showContinueDialog = true" color="secondary" style="min-width: 180px;" />
 
-        <!-- Clear All Filters Button -->
-        <q-btn
-          dense
-          outlined
-          color="red-10"
-          icon="clear_all"
-          label="Clear All"
-          @click="clearAllFilters"
-          class="clear-all-btn"
-        />
       </div>
       <!-- iPad: Search input in one row, From/To/Add in a single row below -->
       <div class="ipad-search-row" style="display: none;">
@@ -105,7 +95,7 @@
         </q-input>
       </div>
       <div class="row items-center q-gutter-sm ipad-dateadd-row" style="display: none;">
-        <q-input
+        <!-- <q-input
           bg-color="white"
           outlined
           dense
@@ -121,7 +111,7 @@
               </q-popup-proxy>
             </q-icon>
           </template>
-        </q-input>
+        </q-input> -->
         <q-input
           bg-color="white"
           outlined
@@ -699,7 +689,7 @@ defineExpose({
   color: #666;
 }
 .cont-appr{
-  background-color: #D9D9D9; /* Light gray background */
+  background-color: whitesmoke; /* Light gray background */
   min-height: 100vh; /* Ensure full height */
 }
 
@@ -1153,5 +1143,8 @@ defineExpose({
   .q-card-section {
     padding: 8px;
   }
+}.page-header {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 16px;
 }
 </style>

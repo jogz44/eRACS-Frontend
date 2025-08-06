@@ -19,7 +19,7 @@
         <q-toolbar-title
           v-if="$q.screen.gt.sm"
           class="welcome-title"
-          style="color: white; font-weight: bold"
+          style="color: white; font-weight: bold ;"
         >
           Barangay {{ authStore.user?.barangay_name }}
         </q-toolbar-title>
@@ -39,14 +39,14 @@
       <div class="drawer-content">
         <!-- Logo & Title Section -->
         <div class="logo-section">
-          <q-item class="column items-center q-pt-md">
+          <q-item class="row items-center q-pt-md" style="padding: 5px;">
             <img
               src="src/assets/tagumlogo.png"
               alt="ERACS Logo"
               style="width: 100px; height: 75px; max-width: 100%; height: auto;"
               class="q-mb-sm"
             />
-            <q-item-label class="eracs-title text-center" style="font-size: medium;color: black;">
+            <q-item-label class="eracs-title text-center" style="font-size: small;color: black; font-style: normal;">
               Electronic Registry of Appropriation and Commitment (eRAC)
             </q-item-label>
           </q-item>
@@ -345,12 +345,13 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
 <style>
 .custom-card-drawer {
   position: sticky;
-  background: rgb(255, 255, 255);
+  background:linear-gradient(30deg,#187C19,#E0FFE7,#187C19);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   padding-top: 0;
   overflow: hidden;
   overflow-x: hidden;
   border-right: 1px solid #e0e0e0;
+
 
 }
 
@@ -363,7 +364,8 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
   background: #0E780E;
   justify-content: center;
   /* border-bottom: 1px solid #e0e0e0; */
-
+  border-left: black;
+  margin-left: -2px;
 
 }
 
@@ -397,13 +399,13 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
 .logo-section {
   position: relative;
   padding: 16px;
-  /* border-bottom: 1px solid rgba(255, 255, 255, 0.1); */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .section-title {
   font-size: 12px;
   font-weight: 600;
-  color: #666;
+  color:black;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 12px 16px 4px 16px;
@@ -468,7 +470,8 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
   width: 280px;
   height: auto;
   max-height: 600px;
-  background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 50%, #d4edda 100%);
+   /* background:linear-gradient(30deg,#187C19,#E0FFE7,#187C19); */
+  background: linear-gradient(30deg, #187C19 0%, #E0FFE7 50%, #187C19 100%);
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
   z-index: 3000;
   transform: translate(-100%, -50%);
@@ -476,7 +479,7 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
   display: flex;
   flex-direction: column;
   border-radius: 0 12px 12px 0;
-  border: 1px solid rgba(76, 175, 80, 0.2);
+  /* border: 1px solid rgba(76, 175, 80, 0.2); */
 }
 
 .sliding-panel.panel-open {
@@ -514,19 +517,19 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
 .panel-title {
   font-size: 16px;
   font-weight: 600;
-  color: #2e7d32;
+  color: black;
   text-shadow: none;
 }
 
 .close-btn {
-  color: rgba(76, 175, 80, 0.7);
+  color: black;
   transition: all 0.2s ease;
   background-color: rgba(76, 175, 80, 0.1);
   border-radius: 50%;
 }
 
 .close-btn:hover {
-  color: #2e7d32;
+  color: #1a5c1d;
   background-color: rgba(76, 175, 80, 0.2);
   transform: scale(1.1);
 }
@@ -544,12 +547,12 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
 .panel-section-title {
   font-size: 12px;
   font-weight: 600;
-  color: #4caf50;
+  color: black;
   text-transform: uppercase;
   letter-spacing: 0.8px;
   margin-bottom: 8px;
   padding-bottom: 4px;
-  border-bottom: 1px solid rgba(76, 175, 80, 0.2);
+  border-bottom: 1px solid black
 }
 
 .panel-item {
@@ -580,8 +583,9 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
 }
 
 .favorites-section {
-  /* border-top: 1px solid #e0e0e0; */
+  border-top: 1px solid black;
   padding-top: 8px;
+  height: 230px;
 }
 
 .favorites-list {
@@ -627,7 +631,7 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
 }
 
 .saved-searches-section {
-  /* border-top: 1px solid #e0e0e0; */
+  border-top: 1px solid black;
   padding-top: 8px;
 }
 

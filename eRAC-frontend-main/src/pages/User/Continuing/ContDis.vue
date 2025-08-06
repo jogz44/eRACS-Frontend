@@ -33,6 +33,15 @@
               <q-icon name="search" />
             </template>
           </q-input>
+              <q-btn
+            dense
+            outlined
+            color="red-10"
+            icon="clear_all"
+            label="Clear All"
+            @click="clearAllFilters"
+            class="clear-all-btn"
+          />
 
           <div class="t q-px-xl"></div>
 
@@ -92,17 +101,9 @@
             class="add-table-btn"
             @click="store.openDialog('disbursement')"
           />
-          
+
           <!-- Clear All Filters Button -->
-          <q-btn
-            dense
-            outlined
-            color="red-10"
-            icon="clear_all"
-            label="Clear All"
-            @click="clearAllFilters"
-            class="clear-all-btn"
-          />
+
         </div>
       </div>
 
@@ -164,11 +165,11 @@
               <!-- DV Number Field -->
               <div class="col-md-4 col-sm-6">
                 <q-item-label class="q-mb-xs">DV Number:</q-item-label>
-                <q-input 
-                  filled 
-                  outlined 
-                  dense 
-                  v-model="store.forms.disbursement.dvNumber" 
+                <q-input
+                  filled
+                  outlined
+                  dense
+                  v-model="store.forms.disbursement.dvNumber"
                   @keydown.enter="handleEnterKey"
                 />
               </div>
@@ -176,11 +177,11 @@
               <!-- Payee Field -->
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Payee:</q-item-label>
-                <q-input 
-                  filled 
-                  outlined 
-                  dense 
-                  v-model="store.forms.disbursement.payee" 
+                <q-input
+                  filled
+                  outlined
+                  dense
+                  v-model="store.forms.disbursement.payee"
                   @keydown.enter="handleEnterKey"
                 />
               </div>
@@ -308,15 +309,15 @@ const validateAndSave = () => {
   if (store.dialogs.disbursement) {
     // Validate required fields before saving
     const form = store.forms.disbursement
-    const hasRequiredFields = form.date && 
-                             form.bank && 
-                             form.checkNumber && 
-                             form.dvNumber && 
+    const hasRequiredFields = form.date &&
+                             form.bank &&
+                             form.checkNumber &&
+                             form.dvNumber &&
                              form.payee
-    
+
     // Check if expenses are added
     const hasExpenses = store.expenses && store.expenses.length > 0
-    
+
     if (!hasRequiredFields) {
       $q.notify({
         type: 'negative',
@@ -326,7 +327,7 @@ const validateAndSave = () => {
       })
       return
     }
-    
+
     if (!hasExpenses) {
       $q.notify({
         type: 'negative',
@@ -336,7 +337,7 @@ const validateAndSave = () => {
       })
       return
     }
-    
+
     // If validation passes, proceed with save
     store.saveDisbursement()
   }
@@ -392,7 +393,7 @@ const store = useContDisbursementStore()
 
 <style scoped>
 .contdis-page {
-  background-color: #D9D9D9; /* Light gray background */
+  background-color: whitesmoke; /* Light gray background */
   min-height: 100vh; /* Ensure full height */
 }
 
@@ -819,7 +820,7 @@ const store = useContDisbursementStore()
     flex-direction: column;
     gap: 2px;
   }
-  
+
   .button-group .q-btn {
     width: 100%;
     justify-content: center;
@@ -831,7 +832,7 @@ const store = useContDisbursementStore()
   .q-table {
     font-size: 12px;
   }
-  
+
   .q-table th,
   .q-table td {
     padding: 4px 6px;
@@ -971,5 +972,8 @@ const store = useContDisbursementStore()
     font-size: 12px !important;
     padding: 6px !important;
   }
+}.page-header {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 16px;
 }
 </style>
