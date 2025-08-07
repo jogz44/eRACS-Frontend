@@ -172,7 +172,7 @@ export default {
       if (!this.dateRange || !this.dateRange.from || !this.dateRange.to) {
         return ''
       }
-      
+
       const fromDate = new Date(this.dateRange.from).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -224,11 +224,11 @@ export default {
           const logDate = new Date(log.created_at)
           const fromDate = new Date(this.dateRange.from)
           const toDate = new Date(this.dateRange.to)
-          
+
           // Set time to start of day for from date and end of day for to date
           fromDate.setHours(0, 0, 0, 0)
           toDate.setHours(23, 59, 59, 999)
-          
+
           return logDate >= fromDate && logDate <= toDate
         })
       }
@@ -815,4 +815,5 @@ export default {
     padding: 12px 8px !important;
   }
 }
+
 </style>

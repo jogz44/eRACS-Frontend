@@ -249,7 +249,7 @@
           <div class="text-h6">Edit Allocation</div>
         </q-card-section>
         <q-card-section>
-          <div class="hierarchical-table" style="border: 1px solid #e0e0e0; border-radius: 4px">
+          <div class="hierarchical-table" style="border: 1px solid #e0e0e0; border-radius: 3px">
             <div
               class="row q-table__top bg-grey-3 text-weight-bold"
               style="padding: 8px 12px; min-height: 40px"

@@ -80,10 +80,22 @@
               class="col-md-4 col-sm-6 col-xs-12"
               style="min-width: 300px"
             >
+
               <template #append>
                 <q-icon name="search" />
               </template>
+
             </q-input>
+               <!-- <q-btn
+              dense
+              outlined
+              color="red-10"
+              icon="clear_all"
+              label="Clear All"
+              @click="clearAllFilters"
+              class="clear-all-btn"
+            /> -->
+
 
             <!-- Add Account Button  -->
             <q-btn
@@ -95,15 +107,7 @@
             />
 
             <!-- Clear All Filters Button -->
-            <q-btn
-              dense
-              outlined
-              color="red-10"
-              icon="clear_all"
-              label="Clear All"
-              @click="clearAllFilters"
-              class="clear-all-btn"
-            />
+
           </div>
 
           <!-- Account Entries Exapandable -->
@@ -664,9 +668,9 @@ const loadPendingUsers = async () => {
   }
 }
 
-const clearAllFilters = () => {
-  searchQuery.value = ''
-}
+// const clearAllFilters = () => {
+//   searchQuery.value = ''
+// }
 import Sortable from 'sortablejs'
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useQuasar } from 'quasar'

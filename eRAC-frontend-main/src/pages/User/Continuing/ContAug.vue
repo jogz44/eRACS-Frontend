@@ -1,9 +1,9 @@
 <template>
   <q-page class="q-pa-lg contaug-page">
     <div class="page-header q-mb-lg">
-       <div class="row items-center justify-between">
-      <div class="text-h5 text-weight-bold">Continuing Augmentation</div>
-       <q-btn
+      <div class="row items-center justify-between">
+        <div class="text-h5 text-weight-bold">Continuing Augmentation</div>
+        <q-btn
           icon="refresh"
           color="primary"
           flat
@@ -12,44 +12,43 @@
           :loading="loading"
           title="Refresh pending users"
         />
-        </div>
-</div>
+      </div>
+    </div>
 
     <div class="q-mb-md">
       <div class="justify-end q-mb-md"></div>
       <div class="row items-center justify-between q-gutter-sm all-in-one-row">
-        <!-- Search Input -->
-        <q-input
-        bg-color="white"
-          outlined
-          dense
-          placeholder="Search..."
-          v-model="store.searchQuery"
-          class=" custom-search-input"
-          style="min-width: 450px"
-        >
-          <template v-slot:append>
-            <q-icon name="search" />
-          </template>
-        </q-input>
-          <!-- Clear All Filters Button -->
-        <q-btn
-          dense
-          outlined
-          color="red-10"
-          icon="clear_all"
-          label="Clear All"
-          @click="clearAllFilters"
-          class="clear-all-btn"
-        />
+        <!-- Search and Clear Button Group -->
+        <div class="row items-center q-gutter-sm search-group">
+          <q-input
+            bg-color="white"
+            outlined
+            dense
+            placeholder="Search..."
+            v-model="store.searchQuery"
+            class="search-input"
+          >
+            <template v-slot:append>
+              <q-icon name="search" />
+            </template>
+          </q-input>
 
-        <div class="t q-px-xl"></div>
+          <q-btn
+            dense
+            outlined
+            color="red-10"
+            icon="clear_all"
+            label="Clear All"
+            @click="clearAllFilters"
+            class="clear-btn"
+          />
+        </div>
 
         <!-- Date Range Group -->
-        <div class="row items-center justify-between">
+        <div class="row items-center q-gutter-sm date-group">
           <!-- From Date -->
           <!-- <q-input
-          bg-color="white"
+            bg-color="white"
             outlined
             label="From"
             dense
@@ -67,13 +66,9 @@
             </template>
           </q-input> -->
 
-          <!-- To Label -->
-          <div class="t q-px-xs"></div>
-          <div class="t q-px-xs"></div>
-
           <!-- To Date -->
           <!-- <q-input
-          bg-color="white"
+            bg-color="white"
             outlined
             label="To"
             dense
@@ -92,20 +87,15 @@
           </q-input> -->
         </div>
 
-        <div class="t q-px-xs"></div>
-
-        <div class="t q-px-xs"></div>
-
-        <!-- Add Button Disbursement -->
+        <!-- Add Button Augmentation -->
         <q-btn
           label="Add"
           icon="add"
           class="add-table-btn"
           @click="store.openDialog('augmentation')"
         />
-
-
       </div>
+
       <div class="justify-end q-mb-md"></div>
 
       <!--Augmentation Main Table-->
@@ -131,7 +121,8 @@
           </template>
         </q-table>
       </q-card>
-      <!--Augmenation Dialog-->
+
+      <!--Augmentation Dialog-->
       <q-dialog v-model="store.dialogs.augmentation" persistent @keydown.enter="handleEnterKey">
         <q-card class="responsive-dialog-card">
           <q-card-section class="dialog-header">
@@ -170,7 +161,6 @@
                   @keydown.enter="handleEnterKey"
                 />
               </div>
-
               <!-- Remarks -->
               <div class="col-md-4 col-sm-6">
                 <q-item-label class="q-mb-xs">Remarks:</q-item-label>
@@ -184,7 +174,6 @@
               </div>
             </div>
           </q-card-section>
-
           <!-- Add Expense Button -->
           <q-card-section class="dialog-content">
             <div class="row justify-end q-mb-md">
@@ -195,7 +184,6 @@
                 @click="store.openDialog('augExpense')"
               />
             </div>
-
             <!-- Expense Table -->
             <q-table
               :rows="store.Augexpenses"
@@ -233,7 +221,6 @@
               <q-input filled outlined readonly="true" dense prefix="₱" class="responsive-amount-input" />
             </div>
           </q-card-section>
-
           <q-card-actions align="right" class="dialog-actions">
             <q-btn
               flat
@@ -252,7 +239,6 @@
           <q-card-section class="dialog-header">
             <div class="text-h6">Select Expense Account</div>
           </q-card-section>
-
           <q-card-section class="dialog-content">
             <q-input
               outlined
@@ -265,7 +251,6 @@
                 <q-icon name="search" />
               </template>
             </q-input>
-
             <!-- Expense Account Selection Table -->
             <q-table
               :rows="store.AugexpenseAccounts"
@@ -286,7 +271,6 @@
               </template>
             </q-table>
           </q-card-section>
-
           <q-card-actions align="right" class="dialog-actions">
             <q-btn flat label="Cancel" color="negative" @click="store.closeDialog('augExpense')" />
           </q-card-actions>
@@ -299,7 +283,6 @@
           <q-card-section class="dialog-header">
             <div class="text-h6">Add Expense</div>
           </q-card-section>
-
           <q-card-section class="dialog-content">
             <!-- Display selected account info -->
             <div class="text-subtitle1 q-mb-sm">
@@ -308,7 +291,6 @@
             <div class="text-subtitle1 q-mb-md">
               <strong>Balance:</strong> ₱{{ store.forms.augExpense.balance.toLocaleString() }}
             </div>
-
             <!-- Particulars Field -->
             <q-input
               outlined
@@ -319,7 +301,6 @@
               type="textarea"
               autogrow
             />
-
             <!-- Amount Field -->
             <q-input
               outlined
@@ -331,7 +312,6 @@
               type="number"
             />
           </q-card-section>
-
           <q-card-actions align="right" class="dialog-actions">
             <q-btn
               flat
@@ -439,6 +419,32 @@ const clearAllFilters = () => {
   min-height: 100vh; /* Ensure full height */
 }
 
+/* Search Group Styles - NEW */
+.search-group {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.search-input {
+  min-width: 300px;
+  max-width: 450px;
+}
+
+.clear-btn {
+  min-width: 120px;
+  white-space: nowrap;
+}
+
+.date-group {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.add-table-btn {
+  min-width: 100px;
+}
+
+/* Legacy styles for backward compatibility */
 .custom-search-input {
   min-width: 450px;
 }
@@ -449,6 +455,23 @@ const clearAllFilters = () => {
 
 /* Responsive styles to match Continuing Appropriation */
 @media (max-width: 600px) {
+  .search-group {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+
+  .search-input {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .clear-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
   .custom-search-input {
     min-width: 0 !important;
     width: 100% !important;
@@ -457,6 +480,17 @@ const clearAllFilters = () => {
 }
 
 @media (min-width: 601px) and (max-width: 900px) {
+  .search-group {
+    flex: 1;
+    max-width: 600px;
+  }
+
+  .search-input {
+    flex: 1;
+    min-width: 250px;
+    max-width: 400px;
+  }
+
   .custom-search-input {
     min-width: 0 !important;
     width: 100% !important;
@@ -480,6 +514,7 @@ const clearAllFilters = () => {
     flex-direction: column !important;
     align-items: stretch !important;
     width: 100% !important;
+    gap: 12px !important;
   }
   .row.items-center.justify-between.q-gutter-sm > * {
     margin-bottom: 8px !important;
@@ -520,6 +555,17 @@ const clearAllFilters = () => {
 }
 
 @media (min-width: 768px) and (max-width: 1024px) {
+  .search-group {
+    flex: 1;
+    max-width: 600px;
+  }
+
+  .search-input {
+    flex: 1;
+    min-width: 250px;
+    max-width: 400px;
+  }
+
   /* Force the main container to stack */
   .row.items-center.justify-between.q-gutter-sm {
     flex-direction: column !important;
@@ -567,6 +613,14 @@ const clearAllFilters = () => {
 }
 
 @media (min-width: 1025px) {
+  .search-group {
+    flex: 0 0 auto;
+  }
+
+  .search-input {
+    width: 350px;
+  }
+
   .custom-search-input {
     width: 400px !important;
     min-width: 0 !important;
@@ -623,35 +677,28 @@ const clearAllFilters = () => {
     max-width: 80vw;
     max-height: 60vh;
   }
-
   .responsive-search-input {
     width: 100%;
     max-width: 100%;
   }
-
   .responsive-amount-input {
     max-width: 100%;
   }
-
   .responsive-table {
     font-size: 12px;
   }
-
   /* Align form fields width for mobile */
   .dialog-content .row.q-col-gutter-md .col-md-4 {
     width: 100% !important;
     margin-bottom: 12px;
   }
-
   .dialog-content .row.q-col-gutter-md .col-md-4:last-child {
     margin-bottom: 0;
   }
-
   /* Ensure all form inputs have consistent width on mobile */
   .dialog-content .q-input {
     width: 100% !important;
   }
-
   /* Make q-table more responsive and visible */
   .q-table {
     font-size: 11px !important;
@@ -659,14 +706,12 @@ const clearAllFilters = () => {
     border-radius: 4px;
     margin: 8px 0;
   }
-
   .q-table thead {
     position: sticky !important;
     top: 0 !important;
     z-index: 10 !important;
     background-color: #f5f5f5 !important;
   }
-
   .q-table th {
     padding: 8px 4px !important;
     font-size: 11px !important;
@@ -676,21 +721,17 @@ const clearAllFilters = () => {
     top: 0 !important;
     z-index: 10 !important;
   }
-
   .q-table td {
     padding: 6px 4px !important;
     font-size: 11px !important;
     vertical-align: middle !important;
   }
-
   .q-table tbody tr {
     border-bottom: 1px solid #f0f0f0 !important;
   }
-
   .q-table tbody tr:hover {
     background-color: #f8f8f8 !important;
   }
-
   /* Reduce table height on mobile to leave space for buttons */
   .responsive-table {
     max-height: 120px;
@@ -699,25 +740,21 @@ const clearAllFilters = () => {
     border-radius: 4px;
     margin: 8px 0;
   }
-
   /* Ensure table body scrolls while header stays fixed */
   .q-table__container {
     max-height: 120px;
     overflow-y: auto;
   }
-
   .q-table__container thead {
     position: sticky !important;
     top: 0 !important;
     z-index: 10 !important;
     background-color: #f5f5f5 !important;
   }
-
   .dialog-content {
     max-height: 40vh;
     overflow-y: auto;
   }
-
   /* Ensure dialog actions are always visible */
   .dialog-actions {
     position: sticky;
@@ -728,53 +765,43 @@ const clearAllFilters = () => {
     z-index: 10;
     margin-top: 8px;
   }
-
   /* Reduce padding in dialog sections for mobile */
   .dialog-header {
     padding: 8px;
   }
-
   .dialog-content {
     padding: 8px;
     padding-bottom: 6px;
   }
-
   /* Make buttons more prominent on mobile */
   .dialog-actions .q-btn {
     min-height: 36px;
     font-size: 14px;
     font-weight: 500;
   }
-
   /* Ensure proper spacing for the dialog */
   .q-dialog__inner {
     padding: 12px;
   }
-
   /* Reduce spacing between elements */
   .q-mb-md {
     margin-bottom: 8px !important;
   }
-
   .q-mt-md {
     margin-top: 8px !important;
   }
-
   /* Reduce table pagination height */
   .q-table__bottom {
     padding: 4px 8px;
     font-size: 10px !important;
   }
-
   /* Improve table pagination controls */
   .q-table__bottom .q-field {
     font-size: 10px !important;
   }
-
   .q-table__bottom .q-select {
     font-size: 10px !important;
   }
-
   /* Add spacing around table */
   .q-table-container {
     margin: 8px 0;
@@ -782,14 +809,12 @@ const clearAllFilters = () => {
     border-radius: 4px;
     overflow: hidden;
   }
-
   /* Improve button group spacing in table */
   .button-group {
     display: flex;
     gap: 2px;
     flex-wrap: wrap;
   }
-
   .button-group .q-btn {
     min-width: 28px;
     min-height: 28px;
@@ -804,15 +829,12 @@ const clearAllFilters = () => {
     max-width: 85vw;
     max-height: 80vh;
   }
-
   .responsive-search-input {
     min-width: 300px;
   }
-
   .responsive-amount-input {
     max-width: 250px;
   }
-
   .responsive-table {
     font-size: 13px;
   }
@@ -825,11 +847,9 @@ const clearAllFilters = () => {
     max-width: 85vw;
     max-height: 80vh;
   }
-
   .responsive-search-input {
     min-width: 350px;
   }
-
   .responsive-amount-input {
     max-width: 300px;
   }
@@ -842,11 +862,9 @@ const clearAllFilters = () => {
     max-width: 80vw;
     max-height: 75vh;
   }
-
   .responsive-search-input {
     min-width: 400px;
   }
-
   .responsive-amount-input {
     max-width: 350px;
   }
@@ -884,7 +902,6 @@ const clearAllFilters = () => {
     flex-direction: column;
     gap: 2px;
   }
-
   .button-group .q-btn {
     width: 100%;
     justify-content: center;
@@ -896,7 +913,6 @@ const clearAllFilters = () => {
   .q-table {
     font-size: 12px;
   }
-
   .q-table th,
   .q-table td {
     padding: 4px 6px;
@@ -919,6 +935,7 @@ const clearAllFilters = () => {
     padding: 8px;
   }
 }
+
 .page-header {
   border-bottom: 1px solid #e0e0e0;
   padding-bottom: 16px;
