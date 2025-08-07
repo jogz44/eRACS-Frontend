@@ -6,16 +6,19 @@
           User Control
           <span class="text-caption q-ml-sm">({{ users.length }} users)</span>
         </div>
+
         <q-btn
+
           icon="refresh"
           color="primary"
           flat
           round
           @click="loadAcceptedUsers"
           :loading="loading"
-          title="Refresh accepted users"
+          class="refresh-button"
         />
       </div>
+        </div>
       <q-card-section>
         <!-- Search and Filter Bar -->
         <div class="row q-mb-md items-center">
@@ -44,6 +47,7 @@
             label="Filter by Position"
             class="filter-select q-mr-md"
             clearable
+            bg-color="white"
             @clear="onPositionClear"
             emit-value
             map-options
@@ -129,7 +133,7 @@
             </q-card-actions>
         </q-card>
       </q-dialog>
-    </div>
+
   </q-page>
 </template>
 
@@ -858,5 +862,8 @@ export default {
     width: 100% !important;
     min-width: 0 !important;
   }
+}.page-header{
+ border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 16px;
 }
 </style>

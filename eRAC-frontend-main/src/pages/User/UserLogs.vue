@@ -2,6 +2,7 @@
   <q-page class="q-pa-lg" style="background-color: whitesmoke;">
     <div class="page-header q-mb-lg">
       <div class="text-h5 text-weight-bold">User Log Activities</div>
+      </div>
       <LogsActivity
         v-model="showLogsActivity"
         :selected-user="selectedLog"
@@ -38,6 +39,7 @@
             emit-value
             map-options
             options-dense
+            bg-color="white"
           />
 
           <!-- Date Range Filter -->
@@ -50,6 +52,7 @@
             clearable
             @clear="onDateRangeClear"
             readonly
+            bg-color="white"
           >
             <template v-slot:append>
               <q-icon name="event" class="cursor-pointer">
@@ -108,7 +111,7 @@
           </template>
         </q-table>
       </q-card-section>
-    </div>
+
   </q-page>
 </template>
 
@@ -814,6 +817,10 @@ export default {
     font-size: 1rem !important;
     padding: 12px 8px !important;
   }
+}
+.page-header {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 16px;
 }
 
 </style>
