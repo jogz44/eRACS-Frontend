@@ -1,8 +1,8 @@
 <template>
-  <q-page class="q-pa-lg" style="background-color: whitesmoke;">
-    <div class="page-header q-mb-lg">
+  <q-page class="q-pa-md pending-page">
+    <div class="page-header q-mb-md">
       <div class="row items-center justify-between">
-        <div class="text-h5 text-weight-bold">
+        <div class="text-h6 text-weight-medium">
           User Control Pending
           <span class="text-caption q-ml-sm">({{ users.length }} users)</span>
         </div>
@@ -10,240 +10,198 @@
           icon="refresh"
           color="primary"
           flat
-          round
+          dense
           @click="loadPendingUsers"
           :loading="loading"
-          title="Refresh pending users"
         />
       </div>
-      <q-card-section>
-        <!-- Search and Filter Bar -->
-        <div class="row q-mb-md items-center">
-          <!-- Text Search -->
-          <q-input
-            dense
-            outlined
-            bg-color="white"
-            v-model="search"
-            placeholder="Search by ID, Name, Username, Email, or Position..."
-            class="search-input q-mr-md"
-            clearable
-            @clear="onSearchClear"
-          >
-            <template v-slot:append>
-              <q-icon name="search" />
-            </template>
-          </q-input>
+    </div>
 
-          <!-- Barangay Filter -->
-          <q-select
-            dense
-            outlined
-            v-model="selectedBarangay"
-            :options="barangayOptions"
-            label="Filter by Barangay"
-            class="filter-select q-mr-md"
-            clearable
-            @clear="onBarangayClear"
-            emit-value
-            map-options
-            options-dense
-          />
-
-          <!-- Position Filter -->
-          <q-select
-            dense
-            outlined
-            v-model="selectedPosition"
-            :options="positionOptions"
-            label="Filter by Position"
-            class="filter-select q-mr-md"
-            clearable
-            @clear="onPositionClear"
-            emit-value
-            map-options
-            options-dense
-          />
-
-          <!-- Clear All Filters Button -->
-          <q-btn
-            dense
-            outlined
-            color="red-10"
-            icon="clear_all"
-            label="Clear All"
-            @click="clearAllFilters"
-            class="clear-all-btn"
-          />
-
-
-        </div>
-
-        <!-- User Table -->
-        <q-table
-          flat
-          bordered
-          :rows="filteredUsers"
-          :columns="columns"
-          row-key="id"
-          :loading="loading"
-          class="user-table"
-          :pagination="{ rowsPerPage: 10 }"
+    <div class="q-mb-sm">
+      <div class="row items-center q-gutter-sm">
+        <q-input
+          outlined
+          dense
+          v-model="search"
+          placeholder="Search by ID, Name, Username, Email, or Position..."
+          style="min-width: 300px"
+          clearable
+          @clear="onSearchClear"
         >
-          <template v-slot:body-cell-id="props">
-            <q-td :props="props">
-              {{ formatId(props.row.id) }}
-            </q-td>
+          <template v-slot:append>
+            <q-icon name="search" />
           </template>
-          <!-- Custom Actions Column -->
-          <template v-slot:body-cell-action="props">
-            <q-td :props="props" class="action-buttons">
+        </q-input>
+
+        <q-select
+          outlined
+          dense
+          v-model="selectedBarangay"
+          :options="barangayOptions"
+          label="Filter by Barangay"
+          style="min-width: 200px"
+          clearable
+          @clear="onBarangayClear"
+          emit-value
+          map-options
+        />
+
+        <q-select
+          outlined
+          dense
+          v-model="selectedPosition"
+          :options="positionOptions"
+          label="Filter by Position"
+          style="min-width: 200px"
+          clearable
+          @clear="onPositionClear"
+          emit-value
+          map-options
+        />
+
+        <q-btn
+          dense
+          outlined
+          color="negative"
+          icon="clear"
+          @click="clearAllFilters"
+        />
+      </div>
+    </div>
+
+    <q-card flat bordered>
+      <q-table
+        flat
+        :rows="filteredUsers"
+        :columns="columns"
+        row-key="id"
+        :loading="loading"
+        :pagination="{ rowsPerPage: 10 }"
+      >
+        <template v-slot:body-cell-id="props">
+          <q-td :props="props">
+            {{ formatId(props.row.id) }}
+          </q-td>
+        </template>
+
+        <template v-slot:body-cell-action="props">
+          <q-td :props="props">
+            <div class="q-gutter-xs">
               <q-btn
                 dense
-                round
-                flat
+                icon="close"
                 color="red"
-                icon="cancel"
-                size="sm"
                 @click="openCancelModal(props.row)"
               />
               <q-btn
                 dense
-                round
-                flat
+                icon="check"
                 color="green"
-                icon="check_circle"
-                size="sm"
-                class="q-mx-sm"
                 @click="openAcceptModal(props.row)"
               />
               <q-btn
                 dense
-                round
-                flat
-                color="blue-8"
                 icon="visibility"
-                size="sm"
-                class="q-mx-sm"
+                color="blue"
                 @click="openViewModal(props.row)"
               />
-            </q-td>
-          </template>
-        </q-table>
-      </q-card-section>
-      <!-- Cancel Confirmation Modal -->
-      <q-dialog v-model="cancelModal.show" persistent>
-        <q-card style="min-width: 350px">
-          <q-card-section class="column items-center">
-            <div class="text-h6 q-mb-md">Are you sure you want to remove</div>
-            <div class="text-h6 text-weight-bold q-mb-md">
-              {{ cancelModal.selectedRow?.username }} ?
             </div>
-          </q-card-section>
+          </q-td>
+        </template>
+      </q-table>
+    </q-card>
 
-          <q-card-actions align="center" class="q-pb-md">
+    <!-- Cancel Confirmation Modal -->
+    <q-dialog v-model="cancelModal.show" persistent>
+      <q-card style="min-width: 350px">
+        <q-card-section class="text-center">
+          <div class="text-h6 q-mb-md">Are you sure you want to remove</div>
+          <div class="text-h6 text-weight-medium q-mb-md">
+            {{ cancelModal.selectedRow?.username }}?
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="center" class="q-pa-md">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn
+            label="Yes"
+            color="negative"
+            @click="confirmCancel"
+            :loading="cancelModal.loading"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Accept Confirmation Modal -->
+    <q-dialog v-model="acceptModal.show" persistent>
+      <q-card style="min-width: 350px">
+        <q-card-section class="text-center">
+          <div class="text-h6 q-mb-md">Are you sure you want to accept</div>
+          <div class="text-h6 text-weight-medium q-mb-md">
+            {{ acceptModal.selectedRow?.username }}?
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="center" class="q-pa-md">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn
+            label="Confirm"
+            color="positive"
+            @click="confirmAccept"
+            :loading="acceptModal.loading"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- View Details Modal -->
+    <q-dialog v-model="viewModal.show" persistent>
+      <q-card style="min-width: 400px; max-width: 500px">
+        <q-card-section class="q-pb-none">
+          <div class="row items-center justify-between">
+            <div class="text-h6">Sign Up Details</div>
             <q-btn
-              unelevated
-              label="Yes"
-              color="red"
-              @click="confirmCancel"
-              :loading="cancelModal.loading"
-              class="q-mx-sm"
-              style="min-width: 80px"
-            />
-            <q-btn
-              unelevated
-              label="Cancel"
-              color="grey-8"
+              flat
+              dense
+              round
+              icon="close"
               v-close-popup
-              class="q-mx-sm"
-              style="min-width: 80px"
             />
-          </q-card-actions>
-        </q-card>
-      </q-dialog>
+          </div>
+        </q-card-section>
 
-      <!-- Accept Confirmation Modal -->
-      <q-dialog v-model="acceptModal.show" persistent>
-        <q-card style="min-width: 350px">
-          <q-card-section class="column items-center">
-            <div class="text-h6 q-mb-md">Are you sure you want to accept</div>
-            <div class="text-h6 text-weight-bold q-mb-md">
-              {{ acceptModal.selectedRow?.username }}?
-            </div>
-          </q-card-section>
+        <q-card-section>
+          <div class="q-gutter-sm">
+            <div><strong>Name:</strong> {{ viewModal.selectedRow?.name }}</div>
+            <div><strong>Barangay:</strong> {{ viewModal.selectedRow?.barangay }}</div>
+            <div><strong>Position:</strong> {{ viewModal.selectedRow?.position?.name }}</div>
+            <div><strong>Username:</strong> {{ viewModal.selectedRow?.username }}</div>
+            <div><strong>Email:</strong> {{ viewModal.selectedRow?.email }}</div>
+            <div><strong>Request Date:</strong> {{ viewModal.selectedRow?.created_at }}</div>
+          </div>
 
-          <q-card-actions align="center" class="q-pb-md">
-            <q-btn
-              unelevated
-              label="Confirm"
-              color="green"
-              @click="confirmAccept"
-              :loading="acceptModal.loading"
-              class="q-mx-sm"
-              style="min-width: 80px"
+          <div class="q-mt-md">
+            <div class="text-subtitle2 q-mb-sm"><strong>Picture:</strong></div>
+            <q-img
+              :src="viewModal.selectedRow?.avatar || 'https://www.w3schools.com/w3images/avatar2.png'"
+              style="max-width: 200px; border-radius: 8px"
+              spinner-color="grey-5"
+              contain
             />
-            <q-btn
-              unelevated
-              label="Cancel"
-              color="grey-8"
-              v-close-popup
-              class="q-mx-sm"
-              style="min-width: 80px"
-            />
-          </q-card-actions>
-        </q-card>
-      </q-dialog>
-      <!-- View Details Modal -->
-      <q-dialog v-model="viewModal.show" persistent>
-        <q-card style="min-width: 350px; max-width: 450px">
-          <q-card-section>
-            <div class="text-h6 text-center q-mb-md">SIGN UP DETAILS</div>
+          </div>
+        </q-card-section>
 
-            <div class="q-mb-sm">
-              <strong>Name:<br /></strong> {{ viewModal.selectedRow?.name }}
-            </div>
-            <div class="q-mb-sm">
-              <strong>Barangay:<br /></strong> {{ viewModal.selectedRow?.barangay }}
-            </div>
-            <div class="q-mb-sm">
-              <strong>Position:<br /></strong> {{ viewModal.selectedRow?.position?.name }}
-            </div>
-            <div class="q-mb-sm">
-              <strong>Username:<br /></strong> {{ viewModal.selectedRow?.username }}
-            </div>
-            <div class="q-mb-sm">
-              <strong>Email:<br /></strong> {{ viewModal.selectedRow?.email }}
-            </div>
-            <div class="q-mb-sm">
-              <strong>Request Date:<br /></strong> {{ viewModal.selectedRow?.created_at }}
-            </div>
-            <div class="q-mt-md">
-              <strong>Picture<br /></strong>
-            </div>
-            <div class="q-mt-sm flex" style="align-items: flex-start; gap: 20px">
-              <q-img
-                :src="viewModal.selectedRow?.avatar || 'https://www.w3schools.com/w3images/avatar2.png'"
-                style="max-width: 200px; border-radius: 8px"
-                spinner-color="grey-5"
-                contain
-              />
-            </div>
-          </q-card-section>
-
-          <q-card-actions align="right" class="q-pb-md q-pr-md">
-            <q-btn unelevated label="Close" color="blue-9" v-close-popup style="min-width: 80px" />
-          </q-card-actions>
-        </q-card>
-      </q-dialog>
-    </div>
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn label="Close" color="primary" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
 <script>
 import { api } from 'boot/axios'
-
-//import { useUserControlStore } from 'stores/userControlStore'
 
 export default {
   data() {
@@ -255,10 +213,10 @@ export default {
       loading: false,
       columns: [
         { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
-        { name: 'name', label: 'Name', field: 'name', align: 'left', sortable: true  },
-        { name: 'barangay', label: 'Barangay', field: 'barangay', align: 'left', sortable: true  },
-        { name: 'position', label: 'Position', field: 'position', align: 'left', sortable: true  },
-        { name: 'username', label: 'Username', field: 'username', align: 'left', sortable: true  },
+        { name: 'name', label: 'Name', field: 'name', align: 'left', sortable: true },
+        { name: 'barangay', label: 'Barangay', field: 'barangay', align: 'left', sortable: true },
+        { name: 'position', label: 'Position', field: 'position', align: 'left', sortable: true },
+        { name: 'username', label: 'Username', field: 'username', align: 'left', sortable: true },
         { name: 'email', label: 'Email', field: 'email', align: 'left' },
         { name: 'action', label: 'Action', field: 'action', align: 'center' },
       ],
@@ -279,7 +237,6 @@ export default {
     }
   },
   computed: {
-    // Get unique barangay options from users
     barangayOptions() {
       const uniqueBarangays = [...new Set(this.users.map(user => user.barangay).filter(Boolean))]
       return uniqueBarangays.map(barangay => ({
@@ -288,7 +245,6 @@ export default {
       })).sort((a, b) => a.label.localeCompare(b.label))
     },
 
-    // Get unique position options from users
     positionOptions() {
       const uniquePositions = [...new Set(this.users.map(user => user.position).filter(Boolean))]
       return uniquePositions.map(position => ({
@@ -297,46 +253,35 @@ export default {
       })).sort((a, b) => a.label.localeCompare(b.label))
     },
 
-
-
     filteredUsers() {
       let filtered = [...this.users]
 
-      // Apply text search filter
       const query = this.search.toLowerCase().trim()
       if (query) {
         filtered = filtered.filter(user => {
-          // Format ID both ways for matching
-          const formattedId = this.formatId(user.id) // with leading zeros (e.g., "0001")
-          const rawId = String(user.id) // without leading zeros (e.g., "1")
+          const formattedId = this.formatId(user.id)
+          const rawId = String(user.id)
           const idMatch = formattedId.includes(query) || rawId.includes(query)
-
           const nameMatch = user.name.toLowerCase().includes(query)
           const usernameMatch = user.username.toLowerCase().includes(query)
           const emailMatch = user.email.toLowerCase().includes(query)
           const positionMatch = (user.position || '').toLowerCase().includes(query)
-
           return idMatch || nameMatch || usernameMatch || emailMatch || positionMatch
         })
       }
 
-      // Apply barangay filter
       if (this.selectedBarangay) {
         filtered = filtered.filter(user => user.barangay === this.selectedBarangay)
       }
 
-      // Apply position filter
       if (this.selectedPosition) {
         filtered = filtered.filter(user => user.position === this.selectedPosition)
       }
-
-
 
       return filtered
     },
   },
   async mounted() {
-    // Try to load from localStorage first
     const cached = localStorage.getItem('pendingUsers');
     if (cached) {
       try {
@@ -345,25 +290,28 @@ export default {
         this.users = [];
       }
     }
-    // Always fetch latest from API
     await this.loadPendingUsers();
   },
   activated() {
-    // Refresh data when component is activated (when navigating to this page)
     this.loadPendingUsers()
   },
   methods: {
     formatId(id) {
-      return id.toString().padStart(4, '0')  // e.g. 1 -> "0001"
+      return id.toString().padStart(4, '0')
     },
     async loadPendingUsers() {
       this.loading = true
       try {
         const response = await api.get('/api/admin/users/pending')
         this.users = response.data
-        // Persist to localStorage
         localStorage.setItem('pendingUsers', JSON.stringify(this.users));
-      }  finally {
+      } //catch (error) {
+       // this.$q.notify({
+        //  type: 'negative',
+       //   message: 'Failed to load pending users',
+       //   position: 'top',
+       // })
+      finally {
         this.loading = false
       }
     },
@@ -383,11 +331,9 @@ export default {
       this.cancelModal.loading = true
       try {
         await api.delete(`/api/admin/users/${this.cancelModal.selectedRow.id}`)
-        // Remove from local array
         this.users = this.users.filter(
           (user) => user.id !== this.cancelModal.selectedRow.id,
         )
-        // Update localStorage
         localStorage.setItem('pendingUsers', JSON.stringify(this.users));
         this.$q.notify({
           type: 'positive',
@@ -411,20 +357,15 @@ export default {
       this.acceptModal.loading = true
       try {
         await api.patch(`/api/admin/users/${this.acceptModal.selectedRow.id}/approve`)
-        // Remove from local array (user is now approved and should appear in accepted list)
         this.users = this.users.filter(
           (user) => user.id !== this.acceptModal.selectedRow.id,
         )
-        // Update localStorage
         localStorage.setItem('pendingUsers', JSON.stringify(this.users));
         this.$q.notify({
           type: 'positive',
           message: 'User accepted successfully! The user will now appear in the Accepted list.',
           position: 'top',
         })
-        //Notify the store that a user was accepted
-        //const userControlStore = useUserControlStore()
-        //userControlStore.userAccepted(this.acceptModal.selectedRow)
       } catch (error) {
         console.error('Error approving user:', error)
         this.$q.notify({
@@ -438,7 +379,6 @@ export default {
         this.acceptModal.loading = false
       }
     },
-    // Filter clear methods
     onSearchClear() {
       this.search = ''
     },
@@ -453,59 +393,34 @@ export default {
       this.selectedBarangay = null
       this.selectedPosition = null
     },
-
   },
 }
 </script>
 
 <style scoped>
-.search-input {
-  width: 300px;
+.pending-page {
+  background-color: #fafafa;
+  min-height: 100vh;
 }
 
-.filter-select {
-  width: 200px;
+.page-header {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 8px;
 }
 
-.clear-all-btn {
-  min-width: 120px;
-}
-
-
-
-.user-table {
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-:deep(.q-table tbody td) {
-  padding: 8px 16px;
-}
-
-.action-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-}
-
-/* Make filter backgrounds white */
-:deep(.q-input) {
-  background-color: white !important;
-}
-
-:deep(.q-select) {
-  background-color: white !important;
-}
-
-@media (max-width: 1000px) {
-  .search-input,
-  .filter-select,
-  .clear-all-btn {
-    width: 100%;
+@media (max-width: 768px) {
+  .q-pa-md {
+    padding: 8px;
   }
 
-  .action-buttons {
-    flex-wrap: wrap;
+  .row.items-center.q-gutter-sm {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .row.items-center.q-gutter-sm > * {
+    margin-bottom: 8px;
+    width: 100%;
   }
 }
 </style>
