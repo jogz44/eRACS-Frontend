@@ -30,7 +30,7 @@
           </template>
         </q-input>
         <q-btn label="Add" icon="add" class="add-table-btn" @click="showAddDialog = true" />
-        
+
         <!-- Clear All Filters Button -->
         <q-btn
           dense
@@ -983,7 +983,7 @@ const handleAddChequeSaveClick = () => {
 </script>
 <style scoped>
 .banklib-page {
-  background-color: #D9D9D9; /* Light gray background */
+  background-color: whitesmoke; /* Light gray background */
   min-height: 100vh; /* Ensure full height */
 }
 
@@ -1417,5 +1417,9 @@ const handleAddChequeSaveClick = () => {
   .q-card-actions .q-btn {
     width: 100% !important;
   }
+}
+.page-header {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 16px;
 }
 </style>

@@ -17,7 +17,7 @@
 
     <div class="q-mb-md">
       <div class="justify-end q-mb-md"></div>
-      <div class="row items-center justify-between q-gutter-sm">
+      <div class="row items-center justify-between q-gutter-sm all-in-one-row">
         <!-- Search Input -->
         <q-input
         bg-color="white"
@@ -25,13 +25,23 @@
           dense
           placeholder="Search..."
           v-model="store.searchQuery"
-          class="col-md-3 col-sm-5 custom-search-input"
+          class=" custom-search-input"
           style="min-width: 450px"
         >
           <template v-slot:append>
             <q-icon name="search" />
           </template>
         </q-input>
+          <!-- Clear All Filters Button -->
+        <q-btn
+          dense
+          outlined
+          color="red-10"
+          icon="clear_all"
+          label="Clear All"
+          @click="clearAllFilters"
+          class="clear-all-btn"
+        />
 
         <div class="t q-px-xl"></div>
 
@@ -93,17 +103,8 @@
           class="add-table-btn"
           @click="store.openDialog('augmentation')"
         />
-        
-        <!-- Clear All Filters Button -->
-        <q-btn
-          dense
-          outlined
-          color="red-10"
-          icon="clear_all"
-          label="Clear All"
-          @click="clearAllFilters"
-          class="clear-all-btn"
-        />
+
+
       </div>
       <div class="justify-end q-mb-md"></div>
 
@@ -161,11 +162,11 @@
               <!-- Ref No. -->
               <div class="col-md-4 col-sm-6">
                 <q-item-label class="q-mb-xs">Ref No.:</q-item-label>
-                <q-input 
-                  filled 
-                  outlined 
-                  dense 
-                  v-model="store.forms.augmentation.refNo" 
+                <q-input
+                  filled
+                  outlined
+                  dense
+                  v-model="store.forms.augmentation.refNo"
                   @keydown.enter="handleEnterKey"
                 />
               </div>
@@ -173,11 +174,11 @@
               <!-- Remarks -->
               <div class="col-md-4 col-sm-6">
                 <q-item-label class="q-mb-xs">Remarks:</q-item-label>
-                <q-input 
-                  filled 
-                  outlined 
-                  dense 
-                  v-model="store.forms.augmentation.remarks" 
+                <q-input
+                  filled
+                  outlined
+                  dense
+                  v-model="store.forms.augmentation.remarks"
                   @keydown.enter="handleEnterKey"
                 />
               </div>
@@ -361,10 +362,10 @@ const validateAndSave = () => {
     // Validate required fields before saving
     const form = store.forms.augmentation
     const hasRequiredFields = form.date && form.refNo && form.remarks
-    
+
     // Check if expenses are added
     const hasExpenses = store.Augexpenses && store.Augexpenses.length > 0
-    
+
     if (!hasRequiredFields) {
       $q.notify({
         type: 'negative',
@@ -374,7 +375,7 @@ const validateAndSave = () => {
       })
       return
     }
-    
+
     if (!hasExpenses) {
       $q.notify({
         type: 'negative',
@@ -384,7 +385,7 @@ const validateAndSave = () => {
       })
       return
     }
-    
+
     // If validation passes, proceed with save
     store.saveDisbursement()
   }
@@ -434,7 +435,7 @@ const clearAllFilters = () => {
 
 <style scoped>
 .contaug-page {
-  background-color: #D9D9D9; /* Light gray background */
+  background-color: whitesmoke; /* Light gray background */
   min-height: 100vh; /* Ensure full height */
 }
 
@@ -883,7 +884,7 @@ const clearAllFilters = () => {
     flex-direction: column;
     gap: 2px;
   }
-  
+
   .button-group .q-btn {
     width: 100%;
     justify-content: center;
@@ -895,7 +896,7 @@ const clearAllFilters = () => {
   .q-table {
     font-size: 12px;
   }
-  
+
   .q-table th,
   .q-table td {
     padding: 4px 6px;
@@ -917,5 +918,9 @@ const clearAllFilters = () => {
   .q-card-section {
     padding: 8px;
   }
+}
+.page-header {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 16px;
 }
 </style>

@@ -93,7 +93,7 @@
               :disable="!selectedYear"
               class="col-auto allocate-btn"
             />
-            
+
             <!-- Clear All Filters Button -->
             <q-btn
               dense
@@ -1704,7 +1704,7 @@ watch(
 }
 
 .accountslib-page {
-  background-color: #D9D9D9;
+  background-color: whitesmoke;
 }
 
 .clear-all-btn {
@@ -2003,5 +2003,9 @@ watch(
 
 .q-gutter-xs > * {
   margin-bottom: 4px !important;
+}
+.page-header {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 16px;
 }
 </style>

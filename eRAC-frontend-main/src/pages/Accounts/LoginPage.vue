@@ -29,13 +29,15 @@
     <div class="login-section">
       <div class="login-container">
                 <div class="header-section">
-          <div class="office-info">
-            <div class="divide row"> <q-img
+          <div class="office-info ">
+            <div class="divide row">
+              <q-img
               src="src/assets/tagumlogo.png"
               class="logo-image"
               contain
               style="width: 120px; height: 120px; margin: 0 auto 1rem auto;"
             />
+
 
           </div>
           <div class="office-name">City</div>

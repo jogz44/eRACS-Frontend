@@ -675,7 +675,7 @@ defineExpose({
 
 /* Using the deep selector (Vue 3 syntax) */
 .q-mb-md :deep(.q-input .q-field__control) {
-  border-radius: 8px;
+  border-radius: 3px;
 }
 
 /* Button styles */
@@ -694,7 +694,10 @@ defineExpose({
 }
 
 .custom-search-input {
-  min-width: 450px;
+ width: 400px !important;
+    min-width: 0 !important;
+    max-width: 1200px !important;
+
 }
 
 .clear-all-btn {

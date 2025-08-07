@@ -66,7 +66,7 @@
         />
         <q-space />
 
-        <q-btn label="Add" icon="add" color="primary" style="min-width: 180px;" @click="addBudget" />
+        <q-btn label="Add" icon="add" color="primary" style="min-width: 150px; border-radius: 3px; font-size: small !important;" @click="addBudget"/>
 
         <!-- Clear All Filters Button -->
 
@@ -899,14 +899,16 @@ const openDialog = async () => {
 
 /* Using the deep selector (Vue 3 syntax) */
 .q-mb-md :deep(.q-input .q-field__control) {
-  border-radius: 8px;
+  border-radius: 3px;
 }
 .appropriation-page {
   background-color: whitesmoke; /* Light gray background */
   min-height: 100vh; /* Ensure full height */
 }
 .custom-search-input {
-  min-width: 450px;
+ width: 400px !important;
+    min-width: 0 !important;
+    max-width: 1200px !important;
 }
 
 .clear-all-btn {
@@ -958,9 +960,10 @@ const openDialog = async () => {
   }
   .custom-date-range {
     flex: 1 1 0 !important;
-    min-width: 200px !important;
-    width: auto !important;
-    max-width: 100% !important;
+    width: 250px !important;
+    min-width: 0 !important;
+    max-width: 350px !important;
+
   }
 }
 @media (max-width: 767px), (min-width: 1025px) {
@@ -975,6 +978,11 @@ const openDialog = async () => {
     display: none !important;
   }
 }
+ .custom-date-range {
+    width: 250px !important;
+    min-width: 0 !important;
+    max-width: 350px !important;
+  }
 
 /* Responsive Dialog - Only sizing adjustments */
 @media (max-width: 600px) {

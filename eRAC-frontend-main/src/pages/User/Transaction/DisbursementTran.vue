@@ -134,6 +134,7 @@
                 class="add-table-btn"
                 icon="add"
                 @click="store.openDialog('expense')"
+
               />
             </div>
             <!-- Expense Table -->

@@ -243,8 +243,9 @@ const favorites = ref([
 // Saved searches data
 const savedSearches = ref([
   //  { title: 'Accounts', link: '/home/libraries/accounts', icon: 'settings' },
+    { title: 'User Control', link: '/home/useraccess', icon: 'admin_panel_settings' },
   { title: 'Log Activities', link: '/home/logsview', icon: 'history' },
-  { title: 'User Control', link: '/home/useraccess', icon: 'admin_panel_settings' },
+
 
 ])
 

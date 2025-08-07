@@ -6,7 +6,7 @@
         bg-color="white"
         outlined
         dense
-        placeholder="Search..."
+        placeholder="Search Description..."
         v-model="store.searchQuery"
         class="custom-search-input"
       >
@@ -54,7 +54,7 @@
         class="add-table-btn"
         @click="$emit('add')"
         color="primary"
-        style="min-width: 180px;"
+        style="min-width: 150px; border-radius: 3px; font-size: small !important;"
       />
 
       <!-- Clear All Filters Button -->
@@ -127,7 +127,7 @@ const clearAllFilters = () => {
 
 /* Using the deep selector (Vue 3 syntax) */
 .q-mb-md :deep(.q-input .q-field__control) {
-  border-radius: 10px;
+  border-radius: 3px;
 }
 
 .clear-all-btn {

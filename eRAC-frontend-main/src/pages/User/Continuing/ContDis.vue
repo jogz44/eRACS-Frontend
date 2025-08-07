@@ -24,7 +24,7 @@
             bg-color="white"
             outlined
             dense
-            placeholder="Search..."
+            placeholder="Search Description..."
             v-model="store.searchQuery"
             class="col-md-3 col-sm-5 custom-search-input"
             style="min-width: 450px"
