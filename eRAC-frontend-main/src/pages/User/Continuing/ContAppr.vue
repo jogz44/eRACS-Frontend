@@ -448,7 +448,7 @@ const validateAndContinue = () => {
     // Validate required fields before continuing
     const hasSelectedAccounts = selectedAccounts.value && selectedAccounts.value.length > 0
     const hasDescription = description.value && description.value.trim() !== ''
-    
+
     if (!hasSelectedAccounts) {
       $q.notify({
         type: 'negative',
@@ -458,7 +458,7 @@ const validateAndContinue = () => {
       })
       return
     }
-    
+
     if (!hasDescription) {
       $q.notify({
         type: 'negative',
@@ -468,7 +468,7 @@ const validateAndContinue = () => {
       })
       return
     }
-    
+
     // If validation passes, proceed with continue
     continueSelected()
   }
@@ -597,7 +597,7 @@ const validateAndSaveAllocation = () => {
       })
       return
     }
-    
+
     // If validation passes, proceed with save
     saveAllocation()
   }
@@ -1085,7 +1085,7 @@ defineExpose({
     flex-direction: column;
     gap: 2px;
   }
-  
+
   .button-group .q-btn {
     width: 100%;
     justify-content: center;
@@ -1097,7 +1097,7 @@ defineExpose({
   .q-table {
     font-size: 12px;
   }
-  
+
   .q-table th,
   .q-table td {
     padding: 4px 6px;

@@ -224,7 +224,7 @@
         </q-card-section>
 
         <!-- Setup Info -->
-        <q-card-section class="q-pt-none">
+        <q-card-section class="q-pt-none" style="padding: 1rem;">
           <!-- Welcome Message -->
 
 
@@ -240,17 +240,20 @@
           <!-- Prepared By Section -->
           <q-input
             filled
-            v-model="SetupModal.Preparedby"
             label="Prepared by"
+            v-model="SetupModal.Preparedby"
+
             class="q-mb-md"
-            readonly
+
           />
-          <q-input
+          <q-select
             filled
+
+            :options="positionOptions"
             v-model="SetupModal.Preparedposition"
             label="Position"
             class="q-mb-md"
-            readonly
+
           />
 
           <!-- Noted By Section -->
@@ -310,10 +313,10 @@
                 color="orange"
               />
             </div>
-            <q-btn 
-              label="Print" 
-              color="primary" 
-              @click="handlePrint" 
+            <q-btn
+              label="Print"
+              color="primary"
+              @click="handlePrint"
             />
           </div>
 
@@ -447,8 +450,8 @@ export default {
       this.SetupModal.selectedBarangay.barangay_name = this.authStore.user?.barangay_name || ''
 
       // Pre-fill with current user's information
-      this.SetupModal.Preparedby = this.authStore.user?.first_name + ' ' + (this.authStore.user?.last_name || '')
-      this.SetupModal.Preparedposition = this.authStore.user?.position + ' ' + (this.authStore.user?.position_name || '')
+      // this.SetupModal.Preparedby = this.authStore.user?.first_name + ' ' + (this.authStore.user?.last_name || '')
+      // this.SetupModal.Preparedposition = this.authStore.user?.position + ' ' + (this.authStore.user?.position_name || '')
       // this.SetupModal.Certifiedby = this.authStore.user?.first_name + ' ' + (this.authStore.user?.last_name || '')
 
       this.SetupModal.show = true

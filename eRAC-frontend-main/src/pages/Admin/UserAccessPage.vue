@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-lg">
+  <q-page class="q-pa-lg" style="background-color: whitesmoke;">
     <div class="page-header q-mb-lg">
       <div class="row items-center justify-between">
         <div class="text-h5 text-weight-bold">
@@ -24,11 +24,11 @@
             dense
             outlined
             bg-color="white"
-                         v-model="search"
-             placeholder="Search by ID or Name"
-             class="search-input q-mr-md"
-             clearable
-             @clear="onSearchClear"
+            v-model="search"
+            placeholder="Search by ID or Name"
+            class="search-input q-mr-md"
+            clearable
+            @clear="onSearchClear"
           >
             <template v-slot:append>
               <q-icon name="search" />
@@ -39,30 +39,41 @@
           <q-select
             dense
             outlined
-                         v-model="selectedBarangay"
-             :options="barangayOptions"
-             label="Filter by Barangay"
-             class="filter-select q-mr-md"
-             clearable
-             @clear="onBarangayClear"
-             emit-value
-             map-options
-             options-dense
+            v-model="selectedBarangay"
+            :options="barangayOptions"
+            label="Filter by Barangay"
+            class="filter-select q-mr-md"
+            clearable
+            @clear="onBarangayClear"
+            emit-value
+            map-options
+            options-dense
           />
 
           <!-- Position Filter -->
           <q-select
             dense
             outlined
-                         v-model="selectedPosition"
-             :options="positionOptions"
-             label="Filter by Position"
-             class="filter-select"
-             clearable
-             @clear="onPositionClear"
-             emit-value
-             map-options
-             options-dense
+            v-model="selectedPosition"
+            :options="positionOptions"
+            label="Filter by Position"
+            class="filter-select q-mr-md"
+            clearable
+            @clear="onPositionClear"
+            emit-value
+            map-options
+            options-dense
+          />
+
+          <!-- Clear All Filters Button -->
+          <q-btn
+            dense
+            outlined
+            color="red-10"
+            icon="clear_all"
+            label="Clear All"
+            @click="clearAllFilters"
+            class="clear-all-btn"
           />
         </div>
 
@@ -216,7 +227,6 @@ export default {
       if (this.selectedPosition) {
         filtered = filtered.filter(user => user.position === this.selectedPosition)
       }
-
       return filtered
     },
   },
@@ -261,6 +271,23 @@ export default {
 
     openAccessModal(user) {
       this.accessModal.selectedUser = user
+
+      // Load existing permissions or set defaults
+      const permissions = user.permissions || {
+        view: true,
+        add: true,
+        edit: true,
+        delete: false,
+        print: true,
+      }
+
+      // Update modal permissions
+      this.accessModal.permissions.view.value = permissions.view
+      this.accessModal.permissions.add.value = permissions.add
+      this.accessModal.permissions.edit.value = permissions.edit
+      this.accessModal.permissions.delete.value = permissions.delete
+      this.accessModal.permissions.print.value = permissions.print
+
       this.accessModal.show = true
     },
     closeAccessModal() {
@@ -303,31 +330,22 @@ export default {
         this.saveAccess()
       }
     },
-
-         saveAccess() {
-       console.log('Saving access for:', this.accessModal.selectedUser.username)
-       console.log('Permissions:', this.accessModal.permissions)
-
-       this.$q.notify({
-         type: 'positive',
-         message: 'Access permissions saved successfully!',
-       })
-
-       this.closeAccessModal()
-     },
-
-     // Clear handlers for search and filters
-     onSearchClear() {
-       this.search = ''
-     },
-
-     onBarangayClear() {
-       this.selectedBarangay = null
-     },
-
-     onPositionClear() {
-       this.selectedPosition = null
-     },
+    
+    // Filter clear methods
+    onSearchClear() {
+      this.search = ''
+    },
+    onBarangayClear() {
+      this.selectedBarangay = null
+    },
+    onPositionClear() {
+      this.selectedPosition = null
+    },
+    clearAllFilters() {
+      this.search = ''
+      this.selectedBarangay = null
+      this.selectedPosition = null
+    },
   },
 }
 </script>
@@ -339,6 +357,10 @@ export default {
 
 .filter-select {
   width: 200px;
+}
+
+.clear-all-btn {
+  min-width: 120px;
 }
 
 .user-table {
@@ -381,8 +403,19 @@ export default {
   color: #333;
 }
 
+/* Make filter backgrounds white */
+:deep(.q-input) {
+  background-color: white !important;
+}
+
+:deep(.q-select) {
+  background-color: white !important;
+}
+
 @media (max-width: 600px) {
-  .search-input {
+  .search-input,
+  .filter-select,
+  .clear-all-btn {
     width: 100%;
   }
 }

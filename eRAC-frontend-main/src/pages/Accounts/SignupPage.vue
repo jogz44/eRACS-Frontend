@@ -1,12 +1,38 @@
 <template>
-  <q-page class="q-pa-lg no-scroll-page" @keydown.enter="handleGlobalEnterKey">
-    <q-card class="signup-card">
-      <!-- Logo Container -->
-      <!-- Header Section -->
-      <q-card-section class="text-center header-section" style="">
-        <div></div>
-        <div class="text-h6 text-green-8 text-bold text-gray">Create an Account</div>
-      </q-card-section>
+  <q-page class="split-login-page">
+    <!-- Left side - Photo section with overlay text -->
+    <div class="photo-section">
+      <div class="photo-container">
+                 <div class="photo-overlay">
+           <div class="overlay-content">
+
+           </div>
+         </div>
+      </div>
+    </div>
+
+    <!-- Right side - Signup form section -->
+    <div class="login-section">
+      <div class="login-container">
+        <div class="header-section">
+          <div class="office-info">
+            <q-img
+              src="src/assets/tagumlogo.png"
+              class="logo-image"
+              contain
+              style="width: 80px; height: 80px; margin: 0 auto 0.5rem auto;"
+            />
+            <div class="office-name">City</div>
+            <div class="office-name">Accounting</div>
+            <div class="office-name">Office</div>
+            <div class="system-name">Electronic Registry of Appropriation and Commitment (eRAC)</div>
+          </div>
+
+          <div class="signin-title">Create an Account</div>
+        </div>
+
+        <div class="signup-form">
+          <q-card class="signup-card">
       <!-- Horizontal Stepper -->
       <q-stepper v-model="step" color="green" keep-alive>
         <!-- Step 1: Personal Information -->
@@ -271,12 +297,15 @@
         </q-step>
       </q-stepper>
     </q-card>
-    <div class="bottom">
-      <q-footer class="text-center no-footer-bg">
-        <div class="text-caption text-white">
-          © 2025 City Accounting Office, Tagum City. All rights reserved.
         </div>
-      </q-footer>
+
+        <!-- Footer -->
+        <div class="login-footer">
+          <div class="text-caption text-center text-grey-6">
+            © 2025 City Accounting Office, Tagum City. All rights reserved.
+          </div>
+        </div>
+      </div>
     </div>
   </q-page>
 </template>
@@ -538,7 +567,7 @@ export default {
         console.log('Global Enter key detected for signup')
         event.preventDefault()
         event.stopPropagation()
-        
+
         if (step.value === 1) {
           validateStep1()
         } else if (step.value === 2) {
@@ -553,7 +582,7 @@ export default {
         event.preventDefault()
         event.stopPropagation()
       }
-      
+
       if (step.value === 1) {
         validateStep1()
       } else if (step.value === 2) {
@@ -612,18 +641,208 @@ export default {
 </script>
 
 <style scoped>
-.signup-card {
-  width: 700px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255);
+.split-login-page {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* Left side - Photo section */
+.photo-section {
+  flex: 2;
   position: relative;
-  box-shadow: 0 4px 8px rgb(38, 121, 0);
-  margin-top: 10px;
-  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.photo-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-image: url('/src/assets/cityhall.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.photo-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.overlay-content {
+  text-align: center;
+  color: white;
+  padding: 2rem;
+}
+
+.welcome-text {
+  margin-bottom: 2rem;
+}
+
+.welcome-title, .to-text, .erac-title {
+  font-size: 4rem;
+  font-weight: bold;
+  margin: 0;
+  line-height: 1;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.to-text {
+  font-size: 3rem;
+  opacity: 0.9;
+}
+
+.description-text {
+  margin-bottom: 2rem;
+}
+
+.description-line {
+  font-size: 1.5rem;
+  font-weight: 500;
+  margin: 0.2rem 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.tagline {
+  opacity: 0.8;
+}
+
+.tagline-text {
+  font-size: 1rem;
+  margin: 0.1rem 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+/* Right side - Login section */
+ .login-section {
+   flex: 1;
+   background: white;
+   display: flex;
+   align-items: stretch;
+   justify-content: center;
+   padding: 2rem;
+   overflow: hidden;
+ }
+
+.login-container {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .header-section {
-  margin-top: 60px;
+  text-align: center;
+  margin-bottom: 1rem;
+  flex-shrink: 0;
+  padding: 0.5rem 0;
+}
+
+.office-info {
+  margin-bottom: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.logo-image {
+  display: block;
+  margin: 0 auto 1rem auto;
+}
+
+.office-name {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: #2d5016;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.system-name {
+  font-size: 0.8rem;
+  color: #666;
+  font-style: italic;
+  margin-top: 0.3rem;
+}
+
+.signin-title {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #2d5016;
+  margin-top: 0.5rem;
+}
+
+.signup-form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.signup-card {
+  flex: 1;
+  border-radius: 10px;
+  background: rgba(255, 255, 255);
+  box-shadow: 0 2px 4px rgba(38, 121, 0, 0.3);
+  margin: 0;
+  padding: 0.5rem;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.q-stepper {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.q-stepper .q-stepper__content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.q-stepper .q-stepper__nav {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding: 1rem 0;
+  background: white;
+  z-index: 10;
+}
+
+/* Ensure stepper navigation is always visible */
+.q-stepper-navigation {
+  padding: 1rem 0 !important;
+  margin-top: 1rem !important;
+  border-top: 1px solid #e0e0e0;
+  background: white;
+  position: sticky;
+  bottom: 0;
+  z-index: 100;
+}
+
+.login-footer {
+  margin-top: 0.5rem;
+  flex-shrink: 0;
+  padding: 0.5rem 0;
 }
 
 .text-gray {
@@ -643,20 +862,66 @@ export default {
   color: #e5e5e5;
 }
 
-.no-footer-bg {
-  background-color: transparent !important;
-  box-shadow: none !important;
+/* Responsive Design */
+@media (max-width: 768px) {
+  .split-login-page {
+    flex-direction: column;
+  }
+
+  .photo-section {
+    flex: 1;
+    height: 30vh;
+  }
+
+  .login-section {
+    flex: 1;
+    padding: 0.5rem;
+  }
+
+  .welcome-title, .to-text, .erac-title {
+    font-size: 2rem;
+  }
+
+  .to-text {
+    font-size: 1.5rem;
+  }
+
+  .description-line {
+    font-size: 1rem;
+  }
+
+  .tagline-text {
+    font-size: 0.9rem;
+  }
 }
 
-.no-scroll-page {
-  overflow: hidden;
-  height: 100v;
-}
+@media (max-width: 480px) {
+  .photo-section {
+    height: 25vh;
+  }
 
-.logo-container {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 20px;
-  size: 10in;
+  .welcome-title, .to-text, .erac-title {
+    font-size: 1.5rem;
+  }
+
+  .to-text {
+    font-size: 1.2rem;
+  }
+
+  .description-line {
+    font-size: 0.9rem;
+  }
+
+  .tagline-text {
+    font-size: 0.8rem;
+  }
+
+  .login-container {
+    max-width: 100%;
+  }
+
+  .signup-card {
+    padding: 0.5rem;
+  }
 }
 </style>

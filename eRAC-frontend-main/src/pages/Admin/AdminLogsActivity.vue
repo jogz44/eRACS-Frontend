@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-model="dialogModel" persistent>
+  <q-dialog v-model="dialogModel" persistent  >
     <q-card class="card-table" style="width: 1000px; max-width: 90vw;">
       <q-card-section class="row items-center q-pb-none">
         <div class="text-h6">User Activities</div>
@@ -145,7 +145,7 @@ export default {
         // For demo purposes, use sample data
         activities.value = sampleActivities
         const response = await api.get(`/api/admin/admin/logs/${props.selectedUser.id}/${props.selectedUser.log_date}`)
-        
+
         activities.value = response.data
       } catch (error) {
         console.error('Error loading activities:', error)

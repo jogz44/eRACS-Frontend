@@ -184,6 +184,16 @@ export const useAuthStore = defineStore('auth', {
         localStorage.setItem('user_data', JSON.stringify(response.data.user))
         localStorage.setItem('barangay_token', response.data.access_token)
 
+        // Load user permissions after successful login
+        try {
+          const { usePermissionsStore } = await import('./permissionsStore')
+          const permissionsStore = usePermissionsStore()
+          await permissionsStore.loadUserPermissions()
+        } catch (permError) {
+          console.warn('Failed to load user permissions:', permError)
+          // Don't fail login if permissions fail to load
+        }
+
         $q.notify({
           type: 'positive',
           message: 'Login successful!',
@@ -219,6 +229,15 @@ export const useAuthStore = defineStore('auth', {
         this.user = null
         this.token = null
         localStorage.removeItem('barangay_token')
+        
+        // Reset permissions on logout
+        try {
+          const { usePermissionsStore } = await import('./permissionsStore')
+          const permissionsStore = usePermissionsStore()
+          permissionsStore.reset()
+        } catch (permError) {
+          console.warn('Failed to reset permissions:', permError)
+        }
       }
     },
 

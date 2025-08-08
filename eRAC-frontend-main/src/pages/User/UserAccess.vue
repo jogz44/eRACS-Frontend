@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-lg">
+  <q-page class="q-pa-lg" style="background-color: whitesmoke;">
     <div class="page-header q-mb-lg">
       <div class="row items-center justify-between">
         <div class="text-h5 text-weight-bold">
@@ -205,6 +205,23 @@ export default {
 
     openAccessModal(user) {
       this.accessModal.selectedUser = user
+
+      // Load existing permissions or set defaults
+      const permissions = user.permissions || {
+        view: true,
+        add: true,
+        edit: true,
+        delete: false,
+        print: true,
+      }
+
+      // Update modal permissions
+      this.accessModal.permissions.view.value = permissions.view
+      this.accessModal.permissions.add.value = permissions.add
+      this.accessModal.permissions.edit.value = permissions.edit
+      this.accessModal.permissions.delete.value = permissions.delete
+      this.accessModal.permissions.print.value = permissions.print
+
       this.accessModal.show = true
     },
     closeAccessModal() {
@@ -214,7 +231,7 @@ export default {
     validateAccess() {
       // Check if at least one permission is selected
       const hasAnyPermission = Object.values(this.accessModal.permissions).some(permission => permission.value)
-      
+
       if (!hasAnyPermission) {
         this.$q.notify({
           type: 'negative',
@@ -223,7 +240,7 @@ export default {
         })
         return false
       }
-      
+
       if (!this.accessModal.selectedUser) {
         this.$q.notify({
           type: 'negative',
@@ -232,7 +249,7 @@ export default {
         })
         return false
       }
-      
+
       return true
     },
 
@@ -248,17 +265,49 @@ export default {
       }
     },
 
-    saveAccess() {
-      console.log('Saving access for:', this.accessModal.selectedUser.username)
-      console.log('Permissions:', this.accessModal.permissions)
+    async saveAccess() {
+      try {
+        console.log('Saving access for:', this.accessModal.selectedUser.username)
+        console.log('Permissions:', this.accessModal.permissions)
 
-      this.$q.notify({
-        type: 'positive',
-        message: 'Access permissions saved successfully!',
-        position: 'top',
-      })
+        // Convert permissions to API format
+        const permissions = {
+          view: this.accessModal.permissions.view.value,
+          add: this.accessModal.permissions.add.value,
+          edit: this.accessModal.permissions.edit.value,
+          delete: this.accessModal.permissions.delete.value,
+          print: this.accessModal.permissions.print.value,
+        }
 
-      this.closeAccessModal()
+        const response = await api.post(`/api/user-access/${this.accessModal.selectedUser.id}`, {
+          permissions
+        })
+
+        if (response.data.status === 'success') {
+          this.$q.notify({
+            type: 'positive',
+            message: 'Access permissions saved successfully!',
+            position: 'top',
+          })
+
+          // Update the user's permissions in the local list
+          const userIndex = this.users.findIndex(u => u.id === this.accessModal.selectedUser.id)
+          if (userIndex !== -1) {
+            this.users[userIndex].permissions = permissions
+          }
+
+          this.closeAccessModal()
+        } else {
+          throw new Error(response.data.message || 'Failed to save permissions')
+        }
+      } catch (error) {
+        console.error('Error saving permissions:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: error.response?.data?.message || 'Failed to save permissions. Please try again.',
+          position: 'top',
+        })
+      }
     },
   },
 }

@@ -1,7 +1,7 @@
 <template>
-  <q-page class="q-pa-lg">
+  <q-page class="q-pa-lg" style="background-color: whitesmoke;">
     <!-- Summary Cards -->
-    <div class="row q-col-gutter-lg q-mb-md">
+    <div class="row q-col-gutter-lg q-mb-md ">
       <div class="col-12 col-sm-6 col-md-4">
         <q-card class="summary-card cursor-pointer" @click="onCardClick('budget')" v-ripple>
           <div class="card-top-strip"></div>
@@ -161,7 +161,7 @@ export default {
     onMounted(() => {
       startAutoRefresh()
     })
-    
+
 
     const onCardClick = (type) => {
       this.$q.notify({

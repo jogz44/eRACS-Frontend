@@ -1,4 +1,13 @@
 /* app global css */
+
+/* Preload background image to prevent loading delays */
+html {
+  background-image: url('/src/assets/cityhall.jpg');
+  background-size: 0 0;
+  background-repeat: no-repeat;
+  background-position: -9999px -9999px;
+}
+
 body {
   font-family: 'Plus Jakarta Sans';
   color: #131212; /* Change text color globally */
