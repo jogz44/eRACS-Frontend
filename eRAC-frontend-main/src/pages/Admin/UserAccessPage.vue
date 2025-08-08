@@ -1,8 +1,8 @@
 <template>
-  <q-page class="q-pa-lg" style="background-color: whitesmoke;">
-    <div class="page-header q-mb-lg">
+  <q-page class="q-pa-md admin-access-page">
+    <div class="page-header q-mb-md">
       <div class="row items-center justify-between">
-        <div class="text-h5 text-weight-bold">
+        <div class="text-h6 text-weight-medium">
           User Control
           <span class="text-caption q-ml-sm">({{ users.length }} users)</span>
         </div>
@@ -10,141 +10,132 @@
           icon="refresh"
           color="primary"
           flat
-          round
+          dense
           @click="loadAcceptedUsers"
           :loading="loading"
-          title="Refresh accepted users"
         />
       </div>
-      <q-card-section>
-        <!-- Search and Filter Bar -->
-        <div class="row q-mb-md items-center">
-          <!-- Text Search -->
-          <q-input
-            dense
-            outlined
-            bg-color="white"
-            v-model="search"
-            placeholder="Search by ID or Name"
-            class="search-input q-mr-md"
-            clearable
-            @clear="onSearchClear"
-          >
-            <template v-slot:append>
-              <q-icon name="search" />
-            </template>
-          </q-input>
-
-          <!-- Barangay Filter -->
-          <q-select
-            dense
-            outlined
-            v-model="selectedBarangay"
-            :options="barangayOptions"
-            label="Filter by Barangay"
-            class="filter-select q-mr-md"
-            clearable
-            @clear="onBarangayClear"
-            emit-value
-            map-options
-            options-dense
-          />
-
-          <!-- Position Filter -->
-          <q-select
-            dense
-            outlined
-            v-model="selectedPosition"
-            :options="positionOptions"
-            label="Filter by Position"
-            class="filter-select q-mr-md"
-            clearable
-            @clear="onPositionClear"
-            emit-value
-            map-options
-            options-dense
-          />
-
-          <!-- Clear All Filters Button -->
-          <q-btn
-            dense
-            outlined
-            color="red-10"
-            icon="clear_all"
-            label="Clear All"
-            @click="clearAllFilters"
-            class="clear-all-btn"
-          />
-        </div>
-
-        <!-- User Access Table -->
-        <q-table
-          flat
-          bordered
-          :rows="filteredUsers"
-          :columns="columns"
-          row-key="id"
-          :loading="loading"
-          class="user-access-table"
-          :pagination="{ rowsPerPage: 10 }"
-          :rows-per-page-options="[10, 25, 50, 100]"
-        >
-          <template v-slot:body-cell-id="props">
-            <q-td :props="props">
-              {{ formatId(props.row.id) }}
-            </q-td>
-          </template>
-          <template v-slot:body-cell-actions="props">
-            <q-td :props="props" class="actions-column">
-              <q-btn
-                label="ACCESS"
-                color="green"
-                size="sm"
-                @click="openAccessModal(props.row)"
-                class="access-button"
-              />
-            </q-td>
-          </template>
-        </q-table>
-      </q-card-section>
-      <!-- Access Modal -->
-        <q-dialog v-model="accessModal.show" persistent @keydown.enter="handleAccessEnterKey">
-            <q-card style="width: 350px; max-height: 450px; overflow: hidden">
-            <!-- Centered Title with Close Button -->
-            <q-card-section class="relative-position">
-                <div class="text-h6 text-center full-width">Manage User Access</div>
-                <q-btn
-                class="absolute-top-right"
-                flat
-                dense
-                round
-                icon="close"
-                @click="closeAccessModal"
-                />
-                <div class="text-subtitle1 q-mt-sm text-start">
-                Username: <strong>{{ accessModal.selectedUser?.username || 'N/A' }}</strong>
-                </div>
-            </q-card-section>
-
-            <q-card-section>
-                <div class="access-grid">
-                <div
-                    v-for="(permission, key) in accessModal.permissions"
-                    :key="key"
-                    class="access-row"
-                >
-                    <span class="access-label">{{ permission.label }}</span>
-                    <q-toggle v-model="permission.value" color="primary" />
-                </div>
-                </div>
-            </q-card-section>
-
-            <q-card-actions align="right">
-                <q-btn label="Save" color="primary" @click="handleAccessSaveClick" />
-            </q-card-actions>
-        </q-card>
-      </q-dialog>
     </div>
+
+    <div class="q-mb-sm">
+      <div class="row items-center q-gutter-sm">
+        <q-input
+          outlined
+          dense
+          v-model="search"
+          placeholder="Search by ID or Name"
+          style="min-width: 300px"
+          clearable
+          @clear="onSearchClear"
+        >
+          <template v-slot:append>
+            <q-icon name="search" />
+          </template>
+        </q-input>
+
+        <q-select
+          outlined
+          dense
+          v-model="selectedBarangay"
+          :options="barangayOptions"
+          label="Filter by Barangay"
+          style="min-width: 200px"
+          clearable
+          @clear="onBarangayClear"
+          emit-value
+          map-options
+        />
+
+        <q-select
+          outlined
+          dense
+          v-model="selectedPosition"
+          :options="positionOptions"
+          label="Filter by Position"
+          style="min-width: 200px"
+          clearable
+          @clear="onPositionClear"
+          emit-value
+          map-options
+        />
+
+        <q-btn
+          dense
+          outlined
+          color="negative"
+          icon="clear"
+          @click="clearAllFilters"
+        />
+      </div>
+    </div>
+
+    <q-card flat bordered>
+      <q-table
+        flat
+        :rows="filteredUsers"
+        :columns="columns"
+        row-key="id"
+        :loading="loading"
+        :pagination="{ rowsPerPage: 10 }"
+        :rows-per-page-options="[10, 25, 50, 100]"
+      >
+        <template v-slot:body-cell-id="props">
+          <q-td :props="props">
+            {{ formatId(props.row.id) }}
+          </q-td>
+        </template>
+
+        <template v-slot:body-cell-actions="props">
+          <q-td :props="props">
+            <q-btn
+              label="Access"
+              color="primary"
+              dense
+              @click="openAccessModal(props.row)"
+            />
+          </q-td>
+        </template>
+      </q-table>
+    </q-card>
+
+    <!-- Access Modal -->
+    <q-dialog v-model="accessModal.show" persistent @keydown.enter="handleAccessEnterKey">
+      <q-card style="min-width: 400px">
+        <q-card-section class="q-pb-none">
+          <div class="row items-center justify-between">
+            <div class="text-h6">Manage User Access</div>
+            <q-btn
+              flat
+              dense
+              round
+              icon="close"
+              @click="closeAccessModal"
+            />
+          </div>
+          <div class="text-subtitle2 q-mt-sm">
+            Username: <strong>{{ accessModal.selectedUser?.username || 'N/A' }}</strong>
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <div class="q-gutter-sm">
+            <div
+              v-for="(permission, key) in accessModal.permissions"
+              :key="key"
+              class="row items-center justify-between"
+            >
+              <span class="text-body2">{{ permission.label }}</span>
+              <q-toggle v-model="permission.value" color="primary" />
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" @click="closeAccessModal" />
+          <q-btn label="Save" color="primary" @click="handleAccessSaveClick" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -163,9 +154,9 @@ export default {
       users: [],
       columns: [
         { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
-        { name: 'name', label: 'Name', field: 'name', align: 'left', sortable: true  },
-        { name: 'barangay', label: 'Barangay', field: 'barangay', align: 'left', sortable: true  },
-        { name: 'position', label: 'Position', field: 'position', align: 'left', sortable: true  },
+        { name: 'name', label: 'Name', field: 'name', align: 'left', sortable: true },
+        { name: 'barangay', label: 'Barangay', field: 'barangay', align: 'left', sortable: true },
+        { name: 'position', label: 'Position', field: 'position', align: 'left', sortable: true },
         { name: 'actions', label: 'Action', field: 'actions', align: 'center' },
       ],
       accessModal: {
@@ -182,7 +173,6 @@ export default {
     }
   },
   computed: {
-    // Get unique barangay options from users
     barangayOptions() {
       const uniqueBarangays = [...new Set(this.users.map(user => user.barangay).filter(Boolean))]
       return uniqueBarangays.map(barangay => ({
@@ -191,7 +181,6 @@ export default {
       })).sort((a, b) => a.label.localeCompare(b.label))
     },
 
-    // Get unique position options from users
     positionOptions() {
       const uniquePositions = [...new Set(this.users.map(user => user.position).filter(Boolean))]
       return uniquePositions.map(position => ({
@@ -203,27 +192,22 @@ export default {
     filteredUsers() {
       let filtered = [...this.users]
 
-             // Apply text search filter
-       const query = this.search.toLowerCase().trim()
-       if (query) {
-         filtered = filtered.filter(user => {
-           // Format ID both ways for matching
-           const formattedId = this.formatId(user.id) // with leading zeros (e.g., "0001")
-           const rawId = String(user.id) // without leading zeros (e.g., "1")
-           const idMatch = formattedId.includes(query) || rawId.includes(query)
+      const query = this.search.toLowerCase().trim()
+      if (query) {
+        filtered = filtered.filter(user => {
+          const formattedId = this.formatId(user.id)
+          const rawId = String(user.id)
+          const idMatch = formattedId.includes(query) || rawId.includes(query)
+          const nameMatch = user.name.toLowerCase().includes(query)
+          const usernameMatch = user.username.toLowerCase().includes(query)
+          return idMatch || nameMatch || usernameMatch
+        })
+      }
 
-           const nameMatch = user.name.toLowerCase().includes(query)
-           const usernameMatch = user.username.toLowerCase().includes(query)
-           return idMatch || nameMatch || usernameMatch
-         })
-       }
-
-      // Apply barangay filter
       if (this.selectedBarangay) {
         filtered = filtered.filter(user => user.barangay === this.selectedBarangay)
       }
 
-      // Apply position filter
       if (this.selectedPosition) {
         filtered = filtered.filter(user => user.position === this.selectedPosition)
       }
@@ -231,7 +215,6 @@ export default {
     },
   },
   async mounted() {
-    // Try to load from localStorage first
     const cached = localStorage.getItem('acceptedUsers');
     if (cached) {
       try {
@@ -240,31 +223,32 @@ export default {
         this.users = [];
       }
     }
-    // Always fetch latest from API
     await this.loadAcceptedUsers();
   },
   activated() {
-    // Check if there was a recent user acceptance action
     const userControlStore = useUserControlStore()
     if (userControlStore.hasRecentAction('user_accepted')) {
-      // Auto-refresh if a user was recently accepted
       this.loadAcceptedUsers()
       userControlStore.clearLastAction()
     }
   },
   methods: {
     formatId(id) {
-      return id.toString().padStart(4, '0')  // e.g. 1 -> "0001"
+      return id.toString().padStart(4, '0')
     },
     async loadAcceptedUsers() {
       this.loading = true
       try {
         const response = await api.get('/api/admin/users/accepted')
         this.users = response.data
-        // Persist to localStorage
         localStorage.setItem('acceptedUsers', JSON.stringify(this.users));
-
-      } finally {
+      } //catch (error) {
+        //this.$q.notify({
+       //   type: 'negative',
+      //    message: 'Failed to load users',
+      //    position: 'top',
+      //  })
+      finally {
         this.loading = false
       }
     },
@@ -272,7 +256,6 @@ export default {
     openAccessModal(user) {
       this.accessModal.selectedUser = user
 
-      // Load existing permissions or set defaults
       const permissions = user.permissions || {
         view: true,
         add: true,
@@ -281,7 +264,6 @@ export default {
         print: true,
       }
 
-      // Update modal permissions
       this.accessModal.permissions.view.value = permissions.view
       this.accessModal.permissions.add.value = permissions.add
       this.accessModal.permissions.edit.value = permissions.edit
@@ -293,9 +275,7 @@ export default {
     closeAccessModal() {
       this.accessModal.show = false
     },
-    // Validation function
     validateAccess() {
-      // Check if at least one permission is selected
       const hasAnyPermission = Object.values(this.accessModal.permissions).some(permission => permission.value)
 
       if (!hasAnyPermission) {
@@ -330,6 +310,46 @@ export default {
         this.saveAccess()
       }
     },
+
+    async saveAccess() {
+      try {
+        const permissions = {
+          view: this.accessModal.permissions.view.value,
+          add: this.accessModal.permissions.add.value,
+          edit: this.accessModal.permissions.edit.value,
+          delete: this.accessModal.permissions.delete.value,
+          print: this.accessModal.permissions.print.value,
+        }
+
+        const response = await api.post(`/api/user-access/${this.accessModal.selectedUser.id}`, {
+          permissions
+        })
+
+        if (response.data.status === 'success') {
+          this.$q.notify({
+            type: 'positive',
+            message: 'Access permissions saved successfully!',
+            position: 'top',
+          })
+
+          const userIndex = this.users.findIndex(u => u.id === this.accessModal.selectedUser.id)
+          if (userIndex !== -1) {
+            this.users[userIndex].permissions = permissions
+          }
+
+          this.closeAccessModal()
+        } else {
+          throw new Error(response.data.message || 'Failed to save permissions')
+        }
+      } catch (error) {
+        console.error('Error saving permissions:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: error.response?.data?.message || 'Failed to save permissions. Please try again.',
+          position: 'top',
+        })
+      }
+    },
     
     // Filter clear methods
     onSearchClear() {
@@ -351,71 +371,28 @@ export default {
 </script>
 
 <style scoped>
-.search-input {
-  width: 300px;
+.admin-access-page {
+  background-color: #fafafa;
+  min-height: 100vh;
 }
 
-.filter-select {
-  width: 200px;
+.page-header {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 8px;
 }
 
-.clear-all-btn {
-  min-width: 120px;
-}
+@media (max-width: 768px) {
+  .q-pa-md {
+    padding: 8px;
+  }
 
-.user-table {
-  border-radius: 10px;
-  overflow: hidden;
-}
+  .row.items-center.q-gutter-sm {
+    flex-direction: column;
+    align-items: stretch;
+  }
 
-:deep(.q-table tbody td) {
-  padding: 8px 16px;
-}
-
-.access-button {
-  text-transform: uppercase;
-  font-weight: 500;
-}
-
-:deep(.q-table th) {
-  font-weight: bold;
-  background-color: #f5f5f5 !important;
-}
-
-:deep(.q-table td) {
-  height: 48px;
-}
-
-.access-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.access-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.access-label {
-  font-size: 1rem;
-  color: #333;
-}
-
-/* Make filter backgrounds white */
-:deep(.q-input) {
-  background-color: white !important;
-}
-
-:deep(.q-select) {
-  background-color: white !important;
-}
-
-@media (max-width: 600px) {
-  .search-input,
-  .filter-select,
-  .clear-all-btn {
+  .row.items-center.q-gutter-sm > * {
+    margin-bottom: 8px;
     width: 100%;
   }
 }

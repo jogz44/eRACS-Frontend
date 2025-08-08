@@ -1,57 +1,59 @@
 <template>
-  <q-page class="q-pa-lg banklib-page">
-    <div class="page-header q-mb-lg">
+  <q-page class="q-pa-md banklib-page">
+    <div class="page-header q-mb-md">
       <div class="row items-center justify-between">
-      <div class="text-h5 text-weight-bold">Bank Library</div>
-  <q-btn
+        <div class="text-h6 text-weight-medium">Bank Library</div>
+        <q-btn
           icon="refresh"
           color="primary"
           flat
-          round
+          dense
           @click="loadPendingUsers"
           :loading="loading"
-          title="Refresh pending users"
         />
-        </div>
-        </div>
-    <div class="q-mb-md">
-      <div class="row items-center justify-between q-gutter-sm">
+      </div>
+    </div>
+
+    <div class="q-mb-sm">
+      <div class="row items-center q-gutter-sm">
         <q-input
-          bg-color="white"
           outlined
           dense
           placeholder="Search banks..."
-          class="col-md-3 col-sm-5 custom-search-input"
-          style="min-width: 450px"
           v-model="searchTerm"
+          style="min-width: 300px"
         >
           <template v-slot:append>
             <q-icon name="search" />
           </template>
         </q-input>
-        <q-btn label="Add" icon="add" class="add-table-btn" @click="showAddDialog = true" />
 
-        <!-- Clear All Filters Button -->
         <q-btn
           dense
           outlined
-          color="red-10"
-          icon="clear_all"
-          label="Clear All"
+          color="negative"
+          icon="clear"
           @click="clearAllFilters"
-          class="clear-all-btn"
+        />
+
+        <q-space />
+
+        <q-btn
+          label="Add"
+          icon="add"
+          color="primary"
+          @click="showAddDialog = true"
         />
       </div>
     </div>
 
-    <q-card>
+    <q-card flat bordered>
       <q-table
         :key="tableRefreshKey"
         :rows="filteredBanks"
         :columns="bankStore.columns"
         row-key="id"
         flat
-        bordered
         :loading="bankStore.isLoading"
       >
         <template v-slot:body-cell-status="props">
@@ -63,38 +65,30 @@
           </q-td>
         </template>
 
-          <template #body-cell-view="props">
+        <template #body-cell-view="props">
           <q-td :props="props">
             <q-btn
-              flat
+              dense
               label="Manage Cheques"
-              round
-              style="background-color: green;"
-              color="white"
-              class="allocate-btn"
+              color="primary"
               @click="showBookletDetails(props.row)"
-              title="Manage Cheques"
             />
           </q-td>
         </template>
 
-
         <template v-slot:body-cell-actions="props">
           <q-td :props="props" class="q-gutter-xs">
-
             <q-btn
-              flat
+              dense
               icon="edit"
-              class="edit-btn"
+              color="orange"
               @click="editBank(props.row)"
-              title="Edit Bank"
             />
             <q-btn
-              flat
+              dense
               icon="delete"
-              class="delete-btn"
+              color="red"
               @click="deleteBank(props.row)"
-              title="Delete Bank"
             />
           </q-td>
         </template>
@@ -104,44 +98,42 @@
     <!-- Add Bank Dialog -->
     <q-dialog v-model="showAddDialog" @keydown.enter="handleAddBankEnterKey">
       <q-card style="min-width: 400px">
-        <q-card-section>
+        <q-card-section class="q-pb-none">
           <div class="text-h6">Add New Bank</div>
         </q-card-section>
 
         <q-card-section>
           <q-form @submit="handleAddBankSaveClick">
             <q-input
-              filled
               v-model="newBankName"
               label="Bank Name"
               outlined
               @keydown.enter="handleAddBankEnterKey"
-
               :rules="[
                 (val) => !!val || 'Bank name is required',
                 (val) => val.length >= 3 || 'Name must be at least 3 characters',
               ]"
               lazy-rules
             />
-
-            <q-card-actions align="right" class="q-mt-md">
-              <q-btn flat label="Cancel" v-close-popup />
-              <q-btn
-                label="Save"
-                class="modal-save-btn"
-                @click="handleAddBankSaveClick,loadPendingUsers"
-                :disable="!newBankName || newBankName.length < 3"
-              />
-            </q-card-actions>
           </q-form>
         </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn
+            label="Save"
+            color="primary"
+            @click="handleAddBankSaveClick"
+            :disable="!newBankName || newBankName.length < 3"
+          />
+        </q-card-actions>
       </q-card>
     </q-dialog>
 
-    <!-- Add Edit Bank Dialog -->
+    <!-- Edit Bank Dialog -->
     <q-dialog v-model="showEditDialog" @keydown.enter="handleEditBankEnterKey">
       <q-card style="min-width: 400px">
-        <q-card-section>
+        <q-card-section class="q-pb-none">
           <div class="text-h6">Edit Bank</div>
         </q-card-section>
 
@@ -155,37 +147,40 @@
               :rules="[
                 (val) => !!val || 'Bank name is required',
                 (val) => val.length >= 3 || 'Name must be at least 3 characters',
-
               ]"
               lazy-rules
             />
-
-            <q-card-actions align="right" class="q-mt-md">
-              <q-btn flat label="Cancel" v-close-popup />
-              <q-btn
-                label="Save"
-                class="modal-save-btn"
-                @click="handleEditBankSaveClick"
-                :disable="!editingBank.name || editingBank.name.length < 3"
-              />
-            </q-card-actions>
           </q-form>
         </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn
+            label="Save"
+            color="primary"
+            @click="handleEditBankSaveClick"
+            :disable="!editingBank.name || editingBank.name.length < 3"
+          />
+        </q-card-actions>
       </q-card>
     </q-dialog>
 
     <!-- Delete Bank Dialog -->
     <q-dialog v-model="showDeleteDialog" @keydown.enter="handleDeleteBankEnterKey">
       <q-card style="min-width: 400px">
-        <q-card-section>
+        <q-card-section class="text-center">
+          <q-icon name="delete" size="48px" color="negative" />
+        </q-card-section>
+
+        <q-card-section class="text-center q-pt-none">
           <div class="text-h6">Delete Bank</div>
         </q-card-section>
 
-        <q-card-section>
-          <p>Are you sure you want to delete the bank "<strong>{{ deletingBank.name }}</strong>"? This action cannot be undone.</p>
+        <q-card-section class="text-center q-pt-none">
+          Are you sure you want to delete the bank "<strong>{{ deletingBank.name }}</strong>"? This action cannot be undone.
         </q-card-section>
 
-        <q-card-actions align="right">
+        <q-card-actions align="center" class="q-pa-md">
           <q-btn flat label="Cancel" v-close-popup />
           <q-btn
             label="Delete"
@@ -198,9 +193,8 @@
     </q-dialog>
 
     <!-- Booklet Details Dialog -->
-
     <q-dialog v-model="showBookletDialog" persistent>
-      <q-card style="min-width: 950px">
+      <q-card style="min-width: 800px">
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">Booklets: {{ selectedBank?.name }}</div>
           <q-space />
@@ -216,8 +210,7 @@
               placeholder="Search Booklet..."
               outlined
               clearable
-              style="width: 400px"
-              class="q-mr-sm"
+              style="width: 300px"
             >
               <template v-slot:append>
                 <q-icon name="search" />
@@ -227,7 +220,7 @@
             <q-space />
             <q-btn
               label="Add"
-              class="add-table-btn"
+              color="primary"
               icon="add"
               @click="showAddBookletDialog = true"
             />
@@ -270,7 +263,6 @@
           <q-form @submit="handleAddBookletSaveClick">
             <q-input
               v-model="newBooklet.starting_cheque_numb"
-              filled
               label="Starting Cheque Number"
               outlined
               class="q-mb-sm"
@@ -285,7 +277,6 @@
 
             <q-input
               v-model="newBooklet.ending_cheque_numb"
-              filled
               label="Ending Cheque Number"
               outlined
               class="q-mb-sm"
@@ -297,26 +288,25 @@
               maxlength="8"
               mask="########"
             />
-
-            <q-card-actions align="right">
-              <q-btn label="Cancel" flat color="" v-close-popup />
-              <q-btn
-                label="Save"
-                class="modal-save-btn"
-                @click="handleAddBookletSaveClick"
-                v-close-popup
-                :loading="bankStore.loading"
-              />
-            </q-card-actions>
           </q-form>
         </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn label="Cancel" flat v-close-popup />
+          <q-btn
+            label="Save"
+            color="primary"
+            @click="handleAddBookletSaveClick"
+            v-close-popup
+            :loading="bankStore.loading"
+          />
+        </q-card-actions>
       </q-card>
     </q-dialog>
 
     <!-- Cheque Details Dialog -->
-    <!-- Cheque Dialog (shows when clicking a booklet) -->
     <q-dialog v-model="showChequeDialog" persistent>
-      <q-card style="min-width: 800px">
+      <q-card style="min-width: 700px">
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">Cheques: {{ selectedBooklet?.booklet_numb }}</div>
           <q-space />
@@ -362,7 +352,6 @@
           <q-form @submit="handleAddChequeSaveClick">
             <q-input
               v-model="newCheque.chequeNo"
-              filled
               label="Cheque Number"
               outlined
               class="q-mb-sm"
@@ -391,19 +380,19 @@
                 </q-icon>
               </template>
             </q-input>
-
-            <q-card-actions align="right">
-              <q-btn label="Cancel" flat color="" v-close-popup />
-              <q-btn
-                label="Save"
-                class="modal-save-btn"
-                @click="handleAddChequeSaveClick"
-                v-close-popup
-                :loading="bankStore.loading"
-              />
-            </q-card-actions>
           </q-form>
         </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn label="Cancel" flat v-close-popup />
+          <q-btn
+            label="Save"
+            color="primary"
+            @click="handleAddChequeSaveClick"
+            v-close-popup
+            :loading="bankStore.loading"
+          />
+        </q-card-actions>
       </q-card>
     </q-dialog>
   </q-page>
@@ -415,7 +404,7 @@ const loading = ref(false)
 const loadPendingUsers = async () => {
   loading.value = true
   try {
-    await bankStore.fetchBanks(),
+    await bankStore.fetchBanks()
     tableRefreshKey.value++
   } catch (error) {
     $q.notify({
@@ -432,6 +421,7 @@ const loadPendingUsers = async () => {
 const clearAllFilters = () => {
   searchTerm.value = ''
 }
+
 import { useBankStore } from 'src/stores/bankStore'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
@@ -441,11 +431,9 @@ const bankStore = useBankStore()
 
 const tableRefreshKey = ref(0)
 
-// Initialize data
 onMounted(async () => {
-
   try {
-      console.log('Columns:', bankStore.columns)
+    console.log('Columns:', bankStore.columns)
     console.log('Fetching banks...')
     await bankStore.fetchBanks()
     console.log('Banks after fetch:', bankStore.banks)
@@ -459,6 +447,7 @@ onMounted(async () => {
     })
   }
 })
+
 // Search and Bank Management
 const searchTerm = ref('')
 const showAddDialog = ref(false)
@@ -509,7 +498,6 @@ const addBank = async () => {
     showAddDialog.value = false
     newBankName.value = ''
 
-    // Refresh the list after successful addition
     await bankStore.fetchBanks()
 
     $q.notify({
@@ -527,6 +515,7 @@ const addBank = async () => {
     bankStore.loading = false
   }
 }
+
 const deleteBank = (bank) => {
   deletingBank.value = {
     id: bank.id,
@@ -545,7 +534,6 @@ const confirmDeleteBank = async () => {
     showDeleteDialog.value = false
     deletingBank.value = { id: null, name: '' }
 
-    // Refresh the list after successful deletion
     await bankStore.fetchBanks()
 
     $q.notify({
@@ -572,6 +560,7 @@ const confirmDeleteBank = async () => {
     bankStore.loading = false
   }
 }
+
 const editBank = (bank) => {
   editingBank.value = {
     id: bank.id,
@@ -587,7 +576,6 @@ const saveEditBank = async () => {
     await bankStore.editBank(editingBank.value.id, editingBank.value.name)
     showEditDialog.value = false
 
-    // Refresh the list to ensure consistency with server
     await bankStore.fetchBanks()
 
     $q.notify({
@@ -605,19 +593,15 @@ const saveEditBank = async () => {
 //Booklet Actions
 const showBookletDetails = async (bank) => {
   try {
-    // Initialize with empty array
     selectedBank.value = {
       ...bank,
       booklets: [],
     }
 
-    // Fetch and await the booklets
     const booklets = await bankStore.fetchBankBooklets(bank.id)
 
-    // Assign the booklets directly
     selectedBank.value.booklets = [...booklets]
 
-    // Debug: verify the final data
     console.log(
       'Final booklets to display:',
       JSON.parse(JSON.stringify(selectedBank.value.booklets)),
@@ -634,7 +618,6 @@ const showBookletDetails = async (bank) => {
 
 const addBooklet = async () => {
   try {
-    // Validate before submitting
     const start = parseInt(newBooklet.value.starting_cheque_numb)
     const end = parseInt(newBooklet.value.ending_cheque_numb)
 
@@ -646,7 +629,6 @@ const addBooklet = async () => {
     resetBookletForm()
     showAddBookletDialog.value = false
 
-    // Refresh the booklet list
     const response = await bankStore.fetchBankBooklets(selectedBank.value.id)
     selectedBank.value.booklets = response
 
@@ -702,7 +684,6 @@ const filteredBooklets = computed(() => {
 
   let results = selectedBank.value.booklets
 
-  // Search by booklet number or other fields
   if (search.value) {
     const searchTerm = search.value.toLowerCase()
     results = results.filter(
@@ -713,11 +694,9 @@ const filteredBooklets = computed(() => {
     )
   }
 
-  // Additional search by specific cheque number
   if (chequeNumberSearch.value) {
     const chequeTerm = chequeNumberSearch.value.toLowerCase()
     results = results.filter((booklet) => {
-      // Check if cheque number falls within this booklet's range
       const start = booklet.starting_cheque_numb
       const end = booklet.ending_cheque_numb
       const target = chequeTerm.padStart(8, '0')
@@ -730,18 +709,16 @@ const filteredBooklets = computed(() => {
 })
 
 // Cheque Actions
-// Cheque Actions
-// Update your showChequeDetails function
 const showChequeDetails = async (booklet) => {
   try {
-    console.log('Booklet object received:', booklet) // Debug the booklet object
+    console.log('Booklet object received:', booklet)
 
     if (!booklet?.id) {
       throw new Error(`Invalid booklet data: ${JSON.stringify(booklet)}`)
     }
 
     selectedBooklet.value = {
-      id: Number(booklet.id), // Ensure numeric ID
+      id: Number(booklet.id),
       booklet_numb: booklet.booklet_numb,
       cheques: [],
     }
@@ -778,10 +755,9 @@ const addCheque = async () => {
     resetChequeForm()
     showAddChequeDialog.value = false
 
-    // Refresh the cheque list after adding
     const response = await bankStore.fetchBankCheques(selectedBank.value.id)
     selectedBank.value.cheques = (response.cheques || []).map((cheque) => ({
-      chequeNo: cheque.chequeNo, // ✅ Use the normalized key
+      chequeNo: cheque.chequeNo,
       status: cheque.status,
       date: cheque.date,
       dvs: cheque.dvs || [],
@@ -806,7 +782,6 @@ const resetChequeForm = () => {
   }
 }
 
-// Add this watcher
 watch(
   () => bankStore.banks,
   (newVal) => {
@@ -814,7 +789,6 @@ watch(
   },
   { deep: true },
 )
-// DV Numbers Actions
 
 // Validation functions
 const validateAddBank = () => {
@@ -981,445 +955,31 @@ const handleAddChequeSaveClick = () => {
   }
 }
 </script>
+
 <style scoped>
 .banklib-page {
-  background-color: whitesmoke; /* Light gray background */
-  min-height: 100vh; /* Ensure full height */
+  background-color: #fafafa;
+  min-height: 100vh;
 }
 
-.clear-all-btn {
-  min-width: 120px;
-}
-
-/* Responsive Design */
-@media (max-width: 600px) {
-  /* Mobile View */
-
-  /* Search and Add section */
-  .row.items-center.justify-between.q-gutter-sm {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 12px !important;
-    width: 100% !important;
-  }
-
-  .row.items-center.justify-between.q-gutter-sm .q-input {
-    width: 100% !important;
-    min-width: 0 !important;
-  }
-
-  .row.items-center.justify-between.q-gutter-sm .q-btn {
-    width: 100% !important;
-  }
-
-  /* Table adjustments */
-  .q-table {
-    font-size: 0.8rem !important;
-  }
-
-  .q-table th,
-  .q-table td {
-    padding: 8px 4px !important;
-  }
-
-  /* Dialog adjustments */
-  .q-dialog .q-card {
-    min-width: 95vw !important;
-    max-width: 98vw !important;
-    margin: 8px !important;
-  }
-
-  /* Booklet dialog */
-  .q-dialog .q-card[style*="min-width: 950px"] {
-    min-width: 95vw !important;
-    max-width: 98vw !important;
-  }
-
-  /* Cheque dialog */
-  .q-dialog .q-card[style*="min-width: 800px"] {
-    min-width: 95vw !important;
-    max-width: 98vw !important;
-  }
-
-  /* Add booklet dialog */
-  .q-dialog .q-card[style*="min-width: 500px"] {
-    min-width: 95vw !important;
-    max-width: 98vw !important;
-  }
-
-  /* Add bank dialog */
-  .q-dialog .q-card[style*="min-width: 400px"] {
-    min-width: 95vw !important;
-    max-width: 98vw !important;
-  }
-
-  /* Dialog content adjustments */
-  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 12px !important;
-  }
-
-  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm .q-input {
-    width: 100% !important;
-    min-width: 0 !important;
-  }
-
-  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm .q-btn {
-    width: 100% !important;
-  }
-
-  /* Text adjustments */
-  .text-h5 {
-    font-size: 1.2rem !important;
-  }
-
-  .text-h6 {
-    font-size: 1.1rem !important;
-  }
-
-  /* Button adjustments */
-  .q-btn {
-    min-height: 44px !important;
-  }
-
-  /* Badge adjustments */
-  .q-badge {
-    font-size: 0.7rem !important;
-    padding: 4px 6px !important;
-  }
-}
-
-@media (min-width: 601px) and (max-width: 900px) {
-  /* Small Tablet View */
-
-  /* Search and Add section */
-  .row.items-center.justify-between.q-gutter-sm {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 12px !important;
-    width: 100% !important;
-  }
-
-  .row.items-center.justify-between.q-gutter-sm .q-input {
-    width: 100% !important;
-    min-width: 0 !important;
-  }
-
-  .row.items-center.justify-between.q-gutter-sm .q-btn {
-    width: 100% !important;
-  }
-
-  /* Table adjustments */
-  .q-table {
-    font-size: 0.85rem !important;
-  }
-
-  /* Dialog adjustments */
-  .q-dialog .q-card {
-    min-width: 90vw !important;
-    max-width: 95vw !important;
-  }
-
-  /* Booklet dialog */
-  .q-dialog .q-card[style*="min-width: 950px"] {
-    min-width: 90vw !important;
-    max-width: 95vw !important;
-  }
-
-  /* Cheque dialog */
-  .q-dialog .q-card[style*="min-width: 800px"] {
-    min-width: 90vw !important;
-    max-width: 95vw !important;
-  }
-
-  /* Add booklet dialog */
-  .q-dialog .q-card[style*="min-width: 500px"] {
-    min-width: 90vw !important;
-    max-width: 95vw !important;
-  }
-
-  /* Add bank dialog */
-  .q-dialog .q-card[style*="min-width: 400px"] {
-    min-width: 90vw !important;
-    max-width: 95vw !important;
-  }
-
-  /* Dialog content adjustments */
-  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 12px !important;
-  }
-
-  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm .q-input {
-    width: 100% !important;
-    min-width: 0 !important;
-  }
-
-  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm .q-btn {
-    width: 100% !important;
-  }
-
-  /* Text adjustments */
-  .text-h5 {
-    font-size: 1.3rem !important;
-  }
-
-  .text-h6 {
-    font-size: 1.2rem !important;
-  }
-}
-
-@media (min-width: 901px) and (max-width: 1200px) {
-  /* Large Tablet View */
-
-  /* Search and Add section */
-  .row.items-center.justify-between.q-gutter-sm {
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 16px !important;
-    width: 100% !important;
-  }
-
-  .row.items-center.justify-between.q-gutter-sm .q-input {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 400px !important;
-  }
-
-  .row.items-center.justify-between.q-gutter-sm .q-btn {
-    min-width: 120px !important;
-  }
-
-  /* Dialog adjustments */
-  .q-dialog .q-card {
-    min-width: 80vw !important;
-    max-width: 90vw !important;
-  }
-
-  /* Booklet dialog */
-  .q-dialog .q-card[style*="min-width: 950px"] {
-    min-width: 80vw !important;
-    max-width: 90vw !important;
-  }
-
-  /* Cheque dialog */
-  .q-dialog .q-card[style*="min-width: 800px"] {
-    min-width: 80vw !important;
-    max-width: 90vw !important;
-  }
-
-  /* Add booklet dialog */
-  .q-dialog .q-card[style*="min-width: 500px"] {
-    min-width: 80vw !important;
-    max-width: 90vw !important;
-  }
-
-  /* Add bank dialog */
-  .q-dialog .q-card[style*="min-width: 400px"] {
-    min-width: 80vw !important;
-    max-width: 90vw !important;
-  }
-
-  /* Dialog content adjustments */
-  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm {
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 16px !important;
-  }
-
-  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm .q-input {
-    width: 300px !important;
-    min-width: 300px !important;
-  }
-
-  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm .q-btn {
-    min-width: 100px !important;
-  }
-}
-
-@media (min-width: 1201px) {
-  /* Desktop View */
-
-  /* Search and Add section */
-  .row.items-center.justify-between.q-gutter-sm {
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 16px !important;
-  }
-
-  .row.items-center.justify-between.q-gutter-sm .q-input {
-    width: 450px !important;
-    min-width: 450px !important;
-  }
-
-  .row.items-center.justify-between.q-gutter-sm .q-btn {
-    min-width: 120px !important;
-  }
-
-  /* Dialog adjustments */
-  .q-dialog .q-card {
-    min-width: 400px !important;
-    max-width: 600px !important;
-  }
-
-  /* Booklet dialog */
-  .q-dialog .q-card[style*="min-width: 950px"] {
-    min-width: 950px !important;
-    max-width: 1200px !important;
-  }
-
-  /* Cheque dialog */
-  .q-dialog .q-card[style*="min-width: 800px"] {
-    min-width: 800px !important;
-    max-width: 1000px !important;
-  }
-
-  /* Add booklet dialog */
-  .q-dialog .q-card[style*="min-width: 500px"] {
-    min-width: 500px !important;
-    max-width: 700px !important;
-  }
-
-  /* Add bank dialog */
-  .q-dialog .q-card[style*="min-width: 400px"] {
-    min-width: 400px !important;
-    max-width: 600px !important;
-  }
-
-  /* Dialog content adjustments */
-  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm {
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 16px !important;
-  }
-
-  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm .q-input {
-    width: 400px !important;
-    min-width: 400px !important;
-  }
-
-  .q-card-section .row.items-center.q-mb-sm.q-gutter-sm .q-btn {
-    min-width: 100px !important;
-  }
-}
-
-/* General responsive improvements */
-@media (max-width: 900px) {
-  /* Adjust text sizes for better readability */
-  .text-h5 {
-    font-size: 1.2rem !important;
-  }
-
-  .text-h6 {
-    font-size: 1.1rem !important;
-  }
-
-  /* Adjust padding for better mobile experience */
-  .q-pa-lg {
-    padding: 12px !important;
-  }
-
-  .q-pa-md {
-    padding: 8px !important;
-  }
-
-  /* Make buttons more touch-friendly */
-  .q-btn {
-    min-height: 40px !important;
-  }
-
-  /* Adjust table for mobile */
-  .q-table {
-    font-size: 0.8rem !important;
-  }
-
-  .q-table th,
-  .q-table td {
-    padding: 6px 4px !important;
-  }
-
-  /* Adjust badges for mobile */
-  .q-badge {
-    font-size: 0.7rem !important;
-    padding: 2px 4px !important;
-  }
-
-  /* Adjust card margins */
-  .q-card {
-    margin: 4px !important;
-  }
-
-  /* Ensure proper spacing */
-  .q-mb-lg {
-    margin-bottom: 16px !important;
-  }
-
-  .q-mb-md {
-    margin-bottom: 12px !important;
-  }
-
-  .q-mb-sm {
-    margin-bottom: 8px !important;
-  }
-}
-
-/* Ensure proper spacing in all views */
-.q-gutter-sm > * {
-  margin-bottom: 8px !important;
-}
-
-.q-gutter-xs > * {
-  margin-bottom: 4px !important;
-}
-
-/* Table responsive improvements */
-@media (max-width: 600px) {
-  .q-table {
-    font-size: 0.75rem !important;
-  }
-
-  .q-table th,
-  .q-table td {
-    padding: 4px 2px !important;
-  }
-
-  /* Hide less important columns on mobile */
-  .q-table th:nth-child(3),
-  .q-table td:nth-child(3) {
-    display: none !important;
-  }
-}
-
-/* Dialog content responsive */
-@media (max-width: 600px) {
-  .q-card-section {
-    padding: 12px !important;
-  }
-
-  .q-card-actions {
-    padding: 8px 12px !important;
-  }
-
-  /* Make form inputs full width on mobile */
-  .q-input {
-    width: 100% !important;
-    min-width: 0 !important;
-  }
-
-  /* Adjust button groups */
-  .q-card-actions {
-    flex-direction: column !important;
-    gap: 8px !important;
-  }
-
-  .q-card-actions .q-btn {
-    width: 100% !important;
-  }
-}
 .page-header {
   border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 16px;
+  padding-bottom: 8px;
+}
+
+@media (max-width: 768px) {
+  .q-pa-md {
+    padding: 8px;
+  }
+
+  .row.items-center.q-gutter-sm {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .row.items-center.q-gutter-sm > * {
+    margin-bottom: 8px;
+    width: 100%;
+  }
 }
 </style>

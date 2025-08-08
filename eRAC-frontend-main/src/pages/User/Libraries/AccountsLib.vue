@@ -1,34 +1,29 @@
 <template>
-  <q-page class="q-pa-lg accountslib-page">
-    <div class="page-header q-mb-lg">
-         <div class="row items-center justify-between">
-      <div class="text-h5 text-weight-bold">Accounts Library</div>
-          <q-btn
+  <q-page class="q-pa-md accountslib-page">
+    <div class="page-header q-mb-md">
+      <div class="row items-center justify-between">
+        <div class="text-h6 text-weight-medium">Accounts Library</div>
+        <q-btn
           icon="refresh"
           color="primary"
           flat
-          round
+          dense
           @click="loadPendingUsers"
           :loading="loading"
-          title="Refresh pending users"
         />
+      </div>
     </div>
-  </div>
-    <!-- Top Controls -->
-    <!-- Main Card -->
-    <q-card
-      class="q-pa-none shadow-3 rounded-borders q-mx-auto Main-card"
-      style="overflow: hidden; max-width: 1600px; height: 70vh"
-    >
+
+    <q-card flat bordered class="main-card">
       <!-- Header Section -->
-      <div class="row items-center justify-between bg-grey-3 q-pa-md">
+      <div class="row items-center justify-between q-pa-md bg-grey-1">
         <q-select
           v-model="selectedYear"
           :options="accountsStore.yearOptions"
           label="Select Year"
           outlined
           dense
-          style="width: 300px"
+          style="width: 250px"
           :loading="accountsStore.loading"
           :disable="accountsStore.loading || !accountsStore.yearOptions.length"
           emit-value
@@ -38,23 +33,15 @@
             <span v-if="selectedYearDisplay">
               {{ selectedYearDisplay }}
             </span>
-            <span v-else class="text-grey"> Current Year: {{ currentYearDisplay }} </span>
-          </template>
-          <template
-            v-if="accountsStore.yearOptions.length === 0 && !accountsStore.loading"
-            #no-option
-          >
-            <q-item>
-              <q-item-section class="text-grey">No years available</q-item-section>
-            </q-item>
+            <span v-else class="text-grey">Current Year: {{ currentYearDisplay }}</span>
           </template>
         </q-select>
 
-        <div>
+        <div class="q-gutter-sm">
           <q-btn
             icon="add"
             label="Add Year"
-            class="allocate-btn"
+            color="primary"
             @click="showAddYearDialog = true"
           />
           <q-btn
@@ -62,275 +49,235 @@
             label="Copy to Another Year"
             @click="showCopyDialog = true"
             :disable="!selectedYear || yearOptions.length < 2"
-            class="q-ml-sm allocate-btn"
+            color="secondary"
           />
         </div>
       </div>
 
-      <q-card flat class="q-pt-xs rounded-borders bg-white">
-        <!-- Add Account Button -->
-        <div class="scroll-content q-pa-md">
-          <div class="row items-center justify-between q-mb-sm">
-            <!-- Search Input (left-aligned) -->
-            <q-input
-              v-model="searchQuery"
-              dense
-              outlined
-              placeholder="Search..."
-              class="col-md-4 col-sm-6 col-xs-12"
-              style="min-width: 300px"
+      <q-card-section class="q-pa-md">
+        <div class="row items-center justify-between q-mb-sm">
+          <q-input
+            v-model="searchQuery"
+            dense
+            outlined
+            placeholder="Search..."
+            style="min-width: 250px"
+          >
+            <template #append>
+              <q-icon name="search" />
+            </template>
+          </q-input>
+
+          <q-btn
+            icon="add"
+            label="Add Account"
+            @click="showAddClassForm"
+            :disable="!selectedYear"
+            color="primary"
+          />
+        </div>
+
+        <!-- Account Entries -->
+        <div ref="sortableContainer" style="max-height: 60vh; overflow-y: auto">
+          <template v-for="expenseClass in filteredExpenseClasses" :key="expenseClass.id">
+            <div
+              class="draggable-item"
+              :data-id="expenseClass.id"
+              @mouseover="hoveredClass = expenseClass.id"
+              @mouseleave="hoveredClass = null"
             >
-
-              <template #append>
-                <q-icon name="search" />
-              </template>
-
-            </q-input>
-               <!-- <q-btn
-              dense
-              outlined
-              color="red-10"
-              icon="clear_all"
-              label="Clear All"
-              @click="clearAllFilters"
-              class="clear-all-btn"
-            /> -->
-
-
-            <!-- Add Account Button  -->
-            <q-btn
-              icon="add"
-              label="Add Account"
-              @click="showAddClassForm"
-              :disable="!selectedYear"
-              class="col-auto allocate-btn"
-            />
-
-            <!-- Clear All Filters Button -->
-
-          </div>
-
-          <!-- Account Entries Exapandable -->
-          <div ref="sortableContainer" style="max-height: calc(70vh - 150px); overflow-y: auto" >
-            <template v-for="expenseClass in filteredExpenseClasses" :key="expenseClass.id">
-              <div
-                class="draggable-item"
-                :data-id="expenseClass.id"
-                @mouseover="hoveredClass = expenseClass.id"
-                @mouseleave="hoveredClass = null"
-
-              >
-                <q-card flat bordered class="q-mb-sm shadow-1">
-                  <q-expansion-item
-                    :model-value="expandedClasses[expenseClass.id]"
-                    @update:model-value="toggleExpansion(expenseClass.id)"
-                    class="rounded-borders"
-                    header-class="q-pa-none"
-                    expand-icon-class="hidden"
-                    dense
-
-                  >
-                  <!--  EXPENSE CLASS -->
-                    <template #header>
-                      <div
-                        class="q-pa-md full-width row items-center justify-between rounded-borders "
-                        style="border: 1px solid #e0e0e0"
-
-                      >
-                        <div class="row items-center " >
-                          <q-icon name="drag_indicator" class="drag-handle q-mr-sm" />
-                          <div class="text-body1 text-weight-bold" >{{ expenseClass.name }}</div>
-                        </div>
-                        <div class="row items-center q-gutter-sm ">
-                          <q-btn
-
-                            dense
-                            flat
-                            round
-                            icon="edit"
-                            class="edit-btn"
-                            @click.stop="editExpenseClass(expenseClass)"
-                          />
-                          <q-btn
-                            dense
-                            flat
-                            round
-                            icon="delete"
-                            class="delete-btn"
-                            @click.stop="confirmDeleteExpenseClass(expenseClass)"
-                          />
-                          <q-btn
-                            dense
-                            flat
-                            round
-                            icon="add"
-                            class="allocate-btn"
-                            @click.stop="showAddTypeForm(expenseClass)"
-                          />
-                          <q-icon
-                            :name="expandedClasses[expenseClass.id] ? 'expand_less' : 'expand_more'"
-                            color="grey"
-                          />
-                        </div>
+              <q-card flat bordered class="q-mb-xs">
+                <q-expansion-item
+                  :model-value="expandedClasses[expenseClass.id]"
+                  @update:model-value="toggleExpansion(expenseClass.id)"
+                  header-class="q-pa-none"
+                  expand-icon-class="hidden"
+                  dense
+                >
+                  <template #header>
+                    <div class="q-pa-sm full-width row items-center justify-between">
+                      <div class="row items-center">
+                        <q-icon name="drag_indicator" class="drag-handle q-mr-sm text-grey-6" />
+                        <div class="text-body2 text-weight-medium">{{ expenseClass.name }}</div>
                       </div>
-                    </template>
-
-                    <!-- Expanded Content (with drag for types) -->
-                    <div class="q-pa-md ">
-                      <div class="text-subtitle1 text-weight-medium q-mb-xs "></div>
-                      <div class="text-caption text-grey-7 q-mb-md ">
-                        Expenses under {{ expenseClass.name }}
-                      </div>
-
-                      <!--Expense Type-->
-                      <div
-
-                        :ref="(el) => initTypeContainer(el, expenseClass.id)"
-                        class="type-container"
-
-                      >
-                        <template
-                          v-for="expenseType in getExpenseTypesForClass(expenseClass.id)"
-                          :key="expenseType.id"
-                        >
-                          <div class="draggable-type" :data-id="expenseType.id">
-                            <q-card flat bordered class="q-mb-xs shadow-1">
-                              <q-expansion-item
-                                v-model="expandedTypes[expenseType.id]"
-                                class="type-expansion"
-                                header-class="q-pa-none"
-                                expand-icon-class="hidden"
-                              >
-                              <!-- EXPENSE TYPE -->
-                                <template #header>
-                                  <div
-                                    class="q-pa-sm full-width row items-center justify-between rounded-borders"
-                                  >
-                                    <div class="row items-center">
-                                      <q-icon name="drag_indicator" class="drag-handle q-mr-sm" />
-                                      <div class="text-body2 text-weight-medium">{{ expenseType.name }}</div>
-                                    </div>
-                                    <div class="row items-center q-gutter-xs">
-                                      <q-btn
-                                        dense
-                                        flat
-                                        round
-                                        icon="edit"
-                                        class="edit-btn"
-                                        @click.stop="editExpenseType(expenseType)"
-                                      />
-                                      <q-btn
-                                        dense
-                                        flat
-                                        round
-                                        icon="delete"
-                                        class="delete-btn"
-                                        @click.stop="confirmDeleteExpenseType(expenseType)"
-                                      />
-                                      <q-btn
-                                        dense
-                                        flat
-                                        round
-                                        icon="add"
-                                        class="allocate-btn"
-                                        @click.stop="showAddItemDialogForType(expenseType)"
-                                      />
-                                      <q-icon
-                                        :name="
-                                          expandedTypes[expenseType.id]
-                                            ? 'expand_less'
-                                            : 'expand_more'
-                                        "
-                                        color="grey"
-                                        class="q-ml-xs"
-                                      />
-                                    </div>
-                                  </div>
-                                </template>
-
-                                <!-- Expense Items List as Expansion Item -->
-                                <div class="q-ml-lg">
-                                  <div class=" text-caption text-grey-7 q-mb-md q-ml-md">
-                                    Expenses under {{ expenseType.name }}
-                                  </div>
-                                  <div class="q-p-xs item-container ">
-                                    <div
-                                      :ref="
-                                        (el) => {
-                                          if (el) initItemContainer(el, expenseType.id)
-                                        }
-                                      "
-                                      class="item-container "
-                                    >
-                                      <template
-                                        v-for="item in getExpenseItemsForType(expenseType.id)"
-                                        :key="item.id"
-                                      >
-                                        <!-- EXPENSE ITEM -->
-                                        <div class="draggable-item " :data-id="item.id">
-                                          <q-card flat bordered style="max-width: 100%" >
-                                            <div class="q-pa-xs row items-center justify-between">
-                                              <div class="row items-center justify-center">
-                                                <q-icon
-                                                  name="drag_indicator"
-                                                  class="drag-handle q-mr-sm"
-                                                />
-                                                <div class="text-body2">{{ item.name }}</div>
-                                              </div>
-                                              <div class="row no-wrap items-center">
-                                                <q-btn
-                                                  dense
-                                                  flat
-                                                  round
-                                                  icon="edit"
-                                                  class="edit-btn"
-                                                  @click="editExpenseItem(item)"
-                                                />
-                                                <q-btn
-                                                  dense
-                                                  flat
-                                                  round
-                                                  icon="delete"
-                                                  class="delete-btn"
-                                                  @click.stop="confirmDeleteExpenseItem(item)"
-                                                />
-                                              </div>
-                                            </div>
-                                          </q-card>
-                                        </div>
-                                      </template>
-                                    </div>
-                                  </div>
-                                </div>
-                              </q-expansion-item>
-                            </q-card>
-                          </div>
-                        </template>
+                      <div class="row items-center q-gutter-xs">
+                        <q-btn
+                          dense
+                          flat
+                          round
+                          icon="edit"
+                          color="orange"
+                          @click.stop="editExpenseClass(expenseClass)"
+                        />
+                        <q-btn
+                          dense
+                          flat
+                          round
+                          icon="delete"
+                          color="red"
+                          @click.stop="confirmDeleteExpenseClass(expenseClass)"
+                        />
+                        <q-btn
+                          dense
+                          flat
+                          round
+                          icon="add"
+                          color="primary"
+                          @click.stop="showAddTypeForm(expenseClass)"
+                        />
+                        <q-icon
+                          :name="expandedClasses[expenseClass.id] ? 'expand_less' : 'expand_more'"
+                          color="grey"
+                        />
                       </div>
                     </div>
-                  </q-expansion-item>
-                </q-card>
-              </div>
-            </template>
-          </div>
+                  </template>
+
+                  <!-- Expanded Content -->
+                  <div class="q-pa-sm">
+                    <div class="text-caption text-grey-7 q-mb-sm">
+                      Expenses under {{ expenseClass.name }}
+                    </div>
+
+                    <div
+                      :ref="(el) => initTypeContainer(el, expenseClass.id)"
+                      class="type-container"
+                    >
+                      <template
+                        v-for="expenseType in getExpenseTypesForClass(expenseClass.id)"
+                        :key="expenseType.id"
+                      >
+                        <div class="draggable-type" :data-id="expenseType.id">
+                          <q-card flat bordered class="q-mb-xs">
+                            <q-expansion-item
+                              v-model="expandedTypes[expenseType.id]"
+                              class="type-expansion"
+                              header-class="q-pa-none"
+                              expand-icon-class="hidden"
+                            >
+                              <template #header>
+                                <div class="q-pa-xs full-width row items-center justify-between">
+                                  <div class="row items-center">
+                                    <q-icon name="drag_indicator" class="drag-handle q-mr-sm text-grey-6" />
+                                    <div class="text-body2">{{ expenseType.name }}</div>
+                                  </div>
+                                  <div class="row items-center q-gutter-xs">
+                                    <q-btn
+                                      dense
+                                      flat
+                                      round
+                                      icon="edit"
+                                      color="orange"
+                                      @click.stop="editExpenseType(expenseType)"
+                                    />
+                                    <q-btn
+                                      dense
+                                      flat
+                                      round
+                                      icon="delete"
+                                      color="red"
+                                      @click.stop="confirmDeleteExpenseType(expenseType)"
+                                    />
+                                    <q-btn
+                                      dense
+                                      flat
+                                      round
+                                      icon="add"
+                                      color="primary"
+                                      @click.stop="showAddItemDialogForType(expenseType)"
+                                    />
+                                    <q-icon
+                                      :name="
+                                        expandedTypes[expenseType.id]
+                                          ? 'expand_less'
+                                          : 'expand_more'
+                                      "
+                                      color="grey"
+                                    />
+                                  </div>
+                                </div>
+                              </template>
+
+                              <!-- Expense Items List -->
+                              <div class="q-ml-md">
+                                <div class="text-caption text-grey-7 q-mb-sm q-ml-sm">
+                                  Expenses under {{ expenseType.name }}
+                                </div>
+                                <div class="q-pa-xs item-container">
+                                  <div
+                                    :ref="
+                                      (el) => {
+                                        if (el) initItemContainer(el, expenseType.id)
+                                      }
+                                    "
+                                    class="item-container"
+                                  >
+                                    <template
+                                      v-for="item in getExpenseItemsForType(expenseType.id)"
+                                      :key="item.id"
+                                    >
+                                      <div class="draggable-item" :data-id="item.id">
+                                        <q-card flat bordered>
+                                          <div class="q-pa-xs row items-center justify-between">
+                                            <div class="row items-center">
+                                              <q-icon
+                                                name="drag_indicator"
+                                                class="drag-handle q-mr-sm text-grey-6"
+                                              />
+                                              <div class="text-body2">{{ item.name }}</div>
+                                            </div>
+                                            <div class="row no-wrap items-center q-gutter-xs">
+                                              <q-btn
+                                                dense
+                                                flat
+                                                round
+                                                icon="edit"
+                                                color="orange"
+                                                @click="editExpenseItem(item)"
+                                              />
+                                              <q-btn
+                                                dense
+                                                flat
+                                                round
+                                                icon="delete"
+                                                color="red"
+                                                @click.stop="confirmDeleteExpenseItem(item)"
+                                              />
+                                            </div>
+                                          </div>
+                                        </q-card>
+                                      </div>
+                                    </template>
+                                  </div>
+                                </div>
+                              </div>
+                            </q-expansion-item>
+                          </q-card>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </q-expansion-item>
+              </q-card>
+            </div>
+          </template>
         </div>
-      </q-card>
+      </q-card-section>
     </q-card>
 
     <!-- Add Year Dialog -->
     <q-dialog v-model="showAddYearDialog" @keydown.enter="handleYearEnterKey">
       <q-card style="min-width: 300px">
-        <q-card-section>
+        <q-card-section class="q-pb-none">
           <div class="text-h6">Add New Fiscal Year</div>
         </q-card-section>
 
         <q-card-section>
           <q-input
             v-model="newYear"
-            filled
+            outlined
             label="Year (YYYY)"
             mask="####"
-            outlined
             :rules="[
               (val) => !!val || 'Year is required',
               (val) => val?.length === 4 || 'Must be 4 digits',
@@ -343,12 +290,11 @@
           />
         </q-card-section>
 
-        <q-card-actions align="right">
-          <q-btn flat label="Cancel" color="black" :disable="accountsStore.loading" v-close-popup />
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" :disable="accountsStore.loading" v-close-popup />
           <q-btn
-            flat
             label="Save"
-            class="modal-save-btn"
+            color="primary"
             @click="handleYearSaveClick"
             :loading="accountsStore.loading"
           />
@@ -356,10 +302,10 @@
       </q-card>
     </q-dialog>
 
-    <!--AddExpenseClass-->
+    <!-- Add Expense Class Dialog -->
     <q-dialog v-model="showAddClassDialog" @keydown.enter="handleClassEnterKey">
       <q-card style="min-width: 400px">
-        <q-card-section>
+        <q-card-section class="q-pb-none">
           <div class="text-h6">Add New Expense Class</div>
         </q-card-section>
         <q-card-section>
@@ -371,22 +317,20 @@
             @keydown.enter="handleClassEnterKey"
           />
         </q-card-section>
-        <q-card-actions align="right">
+        <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancel" v-close-popup @click="resetClassForm" />
-          <q-btn flat label="Save" class="modal-save-btn" @click="handleClassSaveClick" />
+          <q-btn label="Save" color="primary" @click="handleClassSaveClick" />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
-    <!--AddExpenseType-->
+    <!-- Add Expense Type Dialog -->
     <q-dialog v-model="showAddTypeDialog">
       <q-card style="min-width: 400px">
-        <q-card-section>
-          <!-- Dynamic header showing parent class -->
+        <q-card-section class="q-pb-none">
           <div class="text-h6">Add New Expense Type in {{ getSelectedClassName() }}</div>
         </q-card-section>
         <q-card-section>
-          <!-- Simple input (no select options) -->
           <q-input
             v-model="newExpenseType.name"
             label="Type Name"
@@ -396,17 +340,17 @@
             @keydown.enter.prevent
           />
         </q-card-section>
-        <q-card-actions align="right">
+        <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancel" v-close-popup @click="resetTypeForm" />
-          <q-btn flat label="Save" class="modal-save-btn" @click="saveExpenseType" />
+          <q-btn label="Save" color="primary" @click="saveExpenseType" />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
-    <!-- Copy to Another Year -->
+    <!-- Copy to Another Year Dialog -->
     <q-dialog v-model="showCopyDialog">
       <q-card style="min-width: 500px">
-        <q-card-section>
+        <q-card-section class="q-pb-none">
           <div class="text-h6">Copy to Another Year</div>
         </q-card-section>
 
@@ -424,13 +368,6 @@
             :rules="[(val) => !!val || 'Required']"
             @update:model-value="checkForDuplicates"
           />
-          <template v-slot:selected>
-            {{
-              copyTargetYear
-                ? yearOptions.find((y) => y.value === copyTargetYear)?.label
-                : 'Select year'
-            }}
-          </template>
 
           <div v-if="duplicateWarning" class="text-warning q-mt-sm q-mb-sm">
             <q-icon name="warning" /> {{ duplicateWarning }}
@@ -438,7 +375,6 @@
 
           <div class="text-subtitle2 q-mt-md q-mb-sm">Select Classes to Copy:</div>
 
-          <!-- Add Select All checkbox -->
           <q-item tag="label" class="q-mb-sm">
             <q-item-section side>
               <q-checkbox
@@ -484,12 +420,11 @@
           </q-list>
         </q-card-section>
 
-        <q-card-actions align="right">
-          <q-btn flat label="Cancel" color="primary" v-close-popup />
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" v-close-popup />
           <q-btn
-            flat
             label="Copy"
-            class="modal-save-btn"
+            color="primary"
             @click="copyClassesToYear"
             :loading="accountsStore.loading"
           />
@@ -497,10 +432,10 @@
       </q-card>
     </q-dialog>
 
-    <!-- Edit Dialogs in Expense Class -->
+    <!-- Edit Dialogs -->
     <q-dialog v-model="showEditClassDialog">
       <q-card style="min-width: 400px">
-        <q-card-section>
+        <q-card-section class="q-pb-none">
           <div class="text-h6">Edit Expense Class</div>
         </q-card-section>
 
@@ -513,9 +448,9 @@
           />
         </q-card-section>
 
-        <q-card-actions align="right">
-          <q-btn flat label="Cancel" color="primary" v-close-popup />
-          <q-btn flat label="Save" color="primary" @click="updateExpenseClass" v-close-popup />
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn label="Save" color="primary" @click="updateExpenseClass" v-close-popup />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -523,7 +458,7 @@
     <!-- Edit Expense Type Dialog -->
     <q-dialog v-model="showEditTypeDialog">
       <q-card style="min-width: 400px">
-        <q-card-section>
+        <q-card-section class="q-pb-none">
           <div class="text-h6">Edit Expense Type</div>
         </q-card-section>
 
@@ -536,66 +471,31 @@
           />
         </q-card-section>
 
-        <q-card-actions align="right">
-          <q-btn flat label="Cancel" color="primary" v-close-popup />
-          <q-btn flat label="Save" color="primary" @click="updateExpenseType" v-close-popup />
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn label="Save" color="primary" @click="updateExpenseType" v-close-popup />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
     <!-- Delete Confirmation Dialog -->
     <q-dialog v-model="showDeleteConfirm">
-      <q-card style="border-radius: 10px; width: 500px; padding: 20px">
-        <!-- Close button -->
-        <q-btn
-          flat
-          round
-          icon="close"
-          style="position: absolute; top: 10px; right: 10px; color: #888"
-          v-close-popup
-        />
-
-        <!-- Icon section -->
+      <q-card style="min-width: 400px">
         <q-card-section class="text-center">
-          <q-icon
-            name="delete"
-            size="40px"
-            style="background-color: #ffe6e6; color: #ff4d4d; border-radius: 50%; padding: 15px"
-          />
+          <q-icon name="delete" size="48px" color="negative" />
         </q-card-section>
 
-        <!-- Title section -->
-        <q-card-section class="text-center" style="padding-top: 0">
-          <div class="text-h6" style="font-weight: bold; color: #333">Confirm Delete</div>
+        <q-card-section class="text-center q-pt-none">
+          <div class="text-h6">Confirm Delete</div>
         </q-card-section>
 
-        <!-- Description section -->
-        <q-card-section class="text-center" style="padding-top: 0; color: #555">
-          Are you sure you want to delete {{ itemToDelete?.name }}?<br />
+        <q-card-section class="text-center q-pt-none">
+          Are you sure you want to delete {{ itemToDelete?.name }}?
         </q-card-section>
 
-        <!-- Action buttons -->
-        <q-card-actions align="center" style="padding-bottom: 20px">
-          <q-btn
-            flat
-            label="Cancel"
-            style="
-              border: 1px solid #ccc;
-              border-radius: 10px;
-              padding: 8px 40px;
-              margin-right: 20px;
-              color: #333;
-              background-color: #fff;
-            "
-            v-close-popup
-          />
-          <q-btn
-            flat
-            label="Delete"
-            style="border-radius: 10px; padding: 8px 40px; color: #fff; background-color: #d32f2f"
-            @click="confirmDelete"
-            v-close-popup
-          />
+        <q-card-actions align="center" class="q-pa-md">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn label="Delete" color="negative" @click="confirmDelete" v-close-popup />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -603,7 +503,7 @@
     <!-- Add Item Dialog -->
     <q-dialog v-model="showAddItemDialog">
       <q-card style="min-width: 400px">
-        <q-card-section>
+        <q-card-section class="q-pb-none">
           <div class="text-h6">Add New Expense Item</div>
         </q-card-section>
         <q-card-section>
@@ -616,9 +516,9 @@
             @keydown.enter.prevent
           />
         </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Cancel" color="primary" v-close-popup />
-          <q-btn flat label="Save" class="modal-save-btn" @click="saveExpenseItem" />
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn label="Save" color="primary" @click="saveExpenseItem" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -626,7 +526,7 @@
     <!-- Edit Item Dialog -->
     <q-dialog v-model="showEditItemDialog">
       <q-card style="min-width: 300px">
-        <q-card-section>
+        <q-card-section class="q-pb-none">
           <div class="text-h6">Edit Expense Item</div>
         </q-card-section>
         <q-card-section>
@@ -637,15 +537,15 @@
             :rules="[(val) => !!val || 'Name is required']"
           />
         </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Cancel" color="primary" v-close-popup />
-          <q-btn flat label="Save" color="primary" @click="updateExpenseItem" v-close-popup />
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn label="Save" color="primary" @click="updateExpenseItem" v-close-popup />
         </q-card-actions>
       </q-card>
     </q-dialog>
-    <!-- (Same as previous implementation) -->
   </q-page>
 </template>
+
 <script setup>
 const loading = ref(false)
 
@@ -668,9 +568,6 @@ const loadPendingUsers = async () => {
   }
 }
 
-// const clearAllFilters = () => {
-//   searchQuery.value = ''
-// }
 import Sortable from 'sortablejs'
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
@@ -709,13 +606,11 @@ const expandedClasses = ref({})
 const currentParentClass = ref(null)
 
 // Expense Types
-//const expenseTypes = ref([])
 const newExpenseType = ref({ name: '', classId: null })
 const editingExpenseType = ref(null)
 const expandedTypes = ref({})
 
 // Expense Items
-//const expenseItems = ref([])
 const currentParentType = ref(null)
 const newExpenseItem = ref({ name: '', typeId: null })
 const editingExpenseItem = ref(null)
@@ -750,7 +645,7 @@ const filteredExpenseClasses = computed(() => {
   if (!selectedYear.value) return []
 
   return accountsStore.expenseClasses
-    .filter((ec) => ec.year == selectedYear.value) // Note: == for string/number comparison
+    .filter((ec) => ec.year == selectedYear.value)
     .filter(
       (ec) =>
         ec.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
@@ -773,7 +668,6 @@ const validateAndAddYear = async () => {
     return
   }
 
-  // Check if year already exists
   if (accountsStore.years.some((y) => y.year.toString() === yearStr)) {
     $q.notify({
       type: 'negative',
@@ -790,7 +684,7 @@ const validateAndAddYear = async () => {
       message: `Year ${yearStr} added successfully`,
       position: 'top',
     })
-    newYear.value = new Date().getFullYear().toString() // Reset to current year
+    newYear.value = new Date().getFullYear().toString()
     showAddYearDialog.value = false
     await accountsStore.fetchYears()
     selectedYear.value = yearStr
@@ -804,7 +698,6 @@ const validateAndAddYear = async () => {
 }
 
 const handleYearEnterKey = (event) => {
-  // Prevent default behavior to avoid form submission
   event.preventDefault()
   validateAndAddYear()
 }
@@ -812,8 +705,6 @@ const handleYearEnterKey = (event) => {
 const handleYearSaveClick = () => {
   validateAndAddYear()
 }
-
-
 
 // Expense Class related functions
 const showAddClassForm = () => {
@@ -841,7 +732,6 @@ const validateAndSaveExpenseClass = async () => {
   }
 
   try {
-    // Convert to uppercase
     const upperCaseName = newExpenseClass.value.toUpperCase()
 
     await accountsStore.createExpenseClass({
@@ -861,7 +751,6 @@ const validateAndSaveExpenseClass = async () => {
 }
 
 const handleClassEnterKey = (event) => {
-  // Prevent default behavior to avoid form submission
   event.preventDefault()
   validateAndSaveExpenseClass()
 }
@@ -869,8 +758,6 @@ const handleClassEnterKey = (event) => {
 const handleClassSaveClick = () => {
   validateAndSaveExpenseClass()
 }
-
-
 
 const resetClassForm = () => {
   newExpenseClass.value = ''
@@ -893,7 +780,6 @@ const updateExpenseClass = async () => {
       throw new Error('Selected year not found in database')
     }
 
-    // Convert to uppercase
     const upperCaseName = editingExpenseClass.value.name.toUpperCase()
 
     await accountsStore.updateExpenseClass({
@@ -916,6 +802,7 @@ const updateExpenseClass = async () => {
     })
   }
 }
+
 const confirmDeleteExpenseClass = (expenseClass) => {
   itemToDelete.value = expenseClass
   deleteType.value = 'class'
@@ -940,7 +827,6 @@ const handleSortEnd = (evt) => {
   const [movedItem] = items.splice(evt.oldIndex, 1)
   items.splice(evt.newIndex, 0, movedItem)
 
-  // Update order locally only
   items.forEach((item, index) => {
     const foundClass = accountsStore.expenseClasses.find((c) => c.id === item.id)
     if (foundClass) {
@@ -954,6 +840,7 @@ const handleSortEnd = (evt) => {
     timeout: 1000,
   })
 }
+
 // Expense Type related functions
 const showAddTypeForm = (expenseClass) => {
   currentParentClass.value = expenseClass
@@ -967,7 +854,6 @@ const getSelectedClassName = () => {
 
 const saveExpenseType = async () => {
   try {
-    // Debug logs
     console.log('Current parent class:', currentParentClass.value)
     console.log('Selected year:', selectedYear.value)
     console.log('New type name:', newExpenseType.value.name)
@@ -980,7 +866,6 @@ const saveExpenseType = async () => {
       throw new Error('Parent class not selected')
     }
 
-    // Find the fiscal year (using ID from selectedYear)
     const fiscalYear = accountsStore.years.find((y) => y.id == selectedYear.value)
     console.log('Found fiscal year:', fiscalYear)
 
@@ -988,10 +873,8 @@ const saveExpenseType = async () => {
       throw new Error('Selected year not found in database')
     }
 
-    // Convert to uppercase
     const upperCaseName = newExpenseType.value.name.toUpperCase()
 
-    // Add the new type
     const newType = await accountsStore.createExpenseType({
       name: upperCaseName,
       expenseClassId: currentParentClass.value.id,
@@ -1001,7 +884,6 @@ const saveExpenseType = async () => {
 
     console.log('Successfully created type:', newType)
 
-    // Manually add to local state if needed
     if (!accountsStore.expenseTypes.some((t) => t.id === newType.id)) {
       accountsStore.expenseTypes.push({
         id: newType.id,
@@ -1015,7 +897,6 @@ const saveExpenseType = async () => {
     $q.notify({ type: 'positive', message: 'Type added successfully' })
     resetTypeForm()
 
-    // Force update the display
     await nextTick()
   } catch (error) {
     console.error('Error adding expense type:', error)
@@ -1039,7 +920,6 @@ const editExpenseType = (expenseType) => {
 
 const updateExpenseType = async () => {
   try {
-    // Convert to uppercase
     const upperCaseName = editingExpenseType.value.name.toUpperCase()
 
     await accountsStore.updateExpenseType({
@@ -1067,7 +947,6 @@ const confirmDeleteExpenseType = (expenseType) => {
 }
 
 // Expense Item related functions
-
 const resetItemForm = () => {
   newExpenseItem.value = { name: '', typeId: null }
   currentParentType.value = null
@@ -1075,7 +954,6 @@ const resetItemForm = () => {
 }
 
 const showAddItemDialogForType = (expenseType) => {
-  // Debug log to verify the parent type
   console.log('Setting parent type for new item:', {
     typeId: expenseType.id,
     typeName: expenseType.name,
@@ -1086,7 +964,6 @@ const showAddItemDialogForType = (expenseType) => {
   newExpenseItem.value = {
     name: '',
     typeId: expenseType.id,
-    // Include class ID for better debugging
     expense_class_id: expenseType.expense_class_id,
   }
   showAddItemDialog.value = true
@@ -1103,7 +980,6 @@ const saveExpenseItem = async () => {
       throw new Error('Parent type not selected')
     }
 
-    // Capitalize first letter of each word
     const capitalizedName = newExpenseItem.value.name
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -1186,7 +1062,6 @@ const getExpenseTypesForClass = computed(() => (classId) => {
     return []
   }
 
-  // Find the fiscal year to get the year value
   const fiscalYear = accountsStore.years.find((y) => y.id == selectedYear.value)
   const yearValue = fiscalYear?.year?.toString()
 
@@ -1207,7 +1082,6 @@ const getExpenseItemsForType = (typeId) => {
     return []
   }
 
-  // Find the fiscal year to get the year value
   const fiscalYear = accountsStore.years.find((y) => y.id == selectedYear.value)
   const yearValue = fiscalYear?.year?.toString()
 
@@ -1223,12 +1097,6 @@ const classExistsInYear = (className, year) => {
     (ec) => ec.name.toLowerCase() === className.toLowerCase() && ec.year === year,
   )
 }
-
-/*const typeExistsInClass = (typeName, classId) => {
-  return expenseTypes.value.some(
-    (et) => et.name.toLowerCase() === typeName.toLowerCase() && et.classId === classId,
-  )
-}*/
 
 // Copy related functions
 const checkForDuplicates = () => {
@@ -1263,28 +1131,16 @@ const copyClassesToYear = async () => {
       allYears: accountsStore.years,
     })
 
-    // const result = await accountsStore.copyClassesToYear(
-    //   selectedYear.value,
-    //   copyTargetYear.value,
-    //   selectedClassesToCopy.value,
-    // )
-
-    // // Make the notification more resilient
-    // const copiedClasses = result?.stats?.copied_classes
-    // const copiedTypes = result?.stats?.copied_types
-
     $q.notify({
       type: 'positive',
       message: 'Successfully Copied',
       position: 'top',
     })
 
-    // Reset dialog
     selectedClassesToCopy.value = []
     copyTargetYear.value = null
     showCopyDialog.value = false
 
-    // Refresh data
     await accountsStore.fetchExpenseClasses(selectedYear.value)
   } catch (error) {
     console.error('Copy failed:', error)
@@ -1304,18 +1160,14 @@ const availableClassesToCopy = computed(() => {
   )
 })
 
-// Method to toggle select all
 const toggleSelectAll = () => {
   if (allSelected.value) {
-    // Select all available (non-disabled) classes
     selectedClassesToCopy.value = availableClassesToCopy.value.map((ec) => ec.id)
   } else {
-    // Clear selection
     selectedClassesToCopy.value = []
   }
 }
 
-// Watch for changes in selection to update the "Select All" checkbox state
 watch(
   selectedClassesToCopy,
   (newVal) => {
@@ -1327,7 +1179,6 @@ watch(
   { deep: true },
 )
 
-// Reset all dialog states
 const resetAllDialogs = () => {
   showDeleteConfirm.value = false
   showAddYearDialog.value = false
@@ -1339,19 +1190,16 @@ const resetAllDialogs = () => {
   showEditItemDialog.value = false
   showCopyDialog.value = false
 
-  // Reset delete-related state
   itemToDelete.value = null
   deleteType.value = null
 }
 
-// Delete function
 const confirmDelete = async () => {
   try {
     if (!itemToDelete.value?.id) {
       throw new Error('No item selected for deletion')
     }
 
-    // Convert ID to number and validate
     const id = Number(itemToDelete.value.id)
     if (isNaN(id)) {
       throw new Error('Invalid ID format')
@@ -1366,7 +1214,6 @@ const confirmDelete = async () => {
       })
     }
     else if (deleteType.value === 'type') {
-      // For types, we need to pass the expenseClassId as well
       const typeData = {
         id: id,
         expenseClassId: itemToDelete.value.expense_class_id
@@ -1379,7 +1226,6 @@ const confirmDelete = async () => {
       })
     }
     else if (deleteType.value === 'item') {
-      // For items, we need to pass expenseClassId and expenseTypeId as well
       const itemData = {
         id: id,
         expenseClassId: itemToDelete.value.expense_class_id,
@@ -1393,7 +1239,6 @@ const confirmDelete = async () => {
       })
     }
 
-    // Refresh data
     if (selectedYear.value) {
       await accountsStore.fetchExpenseClasses(selectedYear.value)
     }
@@ -1407,10 +1252,7 @@ const confirmDelete = async () => {
       timeout: 5000
     })
   } finally {
-    // Reset all dialog states to ensure nothing is stuck open
     resetAllDialogs()
-
-    // Force a small delay to ensure dialog is fully closed
     await nextTick()
   }
 }
@@ -1424,7 +1266,6 @@ const initTypeContainer = (el, classId) => {
       ghostClass: 'sortable-ghost',
       chosenClass: 'sortable-chosen',
       onEnd: async (evt) => {
-        // Call the computed function as a function
         const types = [...(getExpenseTypesForClass.value(classId) || [])]
 
         if (!types.length) {
@@ -1497,7 +1338,7 @@ const initItemContainer = (el, typeId) => {
             ),
           )
         } catch (error) {
-          console.error('Failed to save item order:', error) // Now using the error
+          console.error('Failed to save item order:', error)
           $q.notify({
             type: 'negative',
             message: 'Failed to save item order: ' + error.message,
@@ -1516,19 +1357,16 @@ const toggleExpansion = async (classId) => {
   const newExpanded = { ...expandedClasses.value }
 
   if (!newExpanded[classId]) {
-    // Close all other classes
     Object.keys(newExpanded).forEach((id) => {
       newExpanded[id] = false
     })
     newExpanded[classId] = true
 
     try {
-      // Load types only if we have a selected year
       if (selectedYear.value) {
         console.log('Fetching types for class:', classId)
         await accountsStore.fetchExpenseTypes(classId)
 
-        // After types are loaded, fetch items for the first type (or skip if already fetched)
         if (accountsStore.expenseTypes.length > 0) {
           const fiscalYear = accountsStore.years.find((y) => y.id == accountsStore.selectedYear)
           const yearValue = fiscalYear?.year?.toString() || ''
@@ -1538,7 +1376,6 @@ const toggleExpansion = async (classId) => {
           )
 
           if (firstType) {
-            // ✅ Check if items are already fetched
             const alreadyFetchedItems = accountsStore.expenseItems.some(
               (item) =>
                 item.expense_class_id == classId &&
@@ -1604,8 +1441,6 @@ onMounted(async () => {
   })
 })
 
-// Add this in your component's setu
-
 watch(selectedYear, (newYear) => {
   if (newYear) {
     loadExpenseClassesForYear(newYear)
@@ -1655,34 +1490,23 @@ watch(
   { deep: true },
 )
 </script>
+
 <style scoped>
-/* Hover effects for edit/delete buttons */
-/* In your style section */
-.q-expansion-item:hover {
-  background-color: #f5f5f5;
+.accountslib-page {
+  background-color: #fafafa;
+  min-height: 100vh;
 }
 
-.expense-type-item:hover {
-  background-color: #f0f0f0;
+.page-header {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 8px;
 }
 
-.hover-effect {
-  background-color: #f5f5f5;
-  transition: background-color 0.3s;
+.main-card {
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-.type-hover-effect {
-  background-color: #f0f0f0;
-  transition: background-color 0.3s;
-}
-.actions {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-/* Add these to your existing styles */
 .draggable-item,
 .draggable-type {
   cursor: grab;
@@ -1707,309 +1531,19 @@ watch(
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.accountslib-page {
-  background-color: whitesmoke;
-}
-
-.clear-all-btn {
-  min-width: 120px;
-}
-
-/* Responsive Design */
-@media (max-width: 600px) {
-  /* Mobile View */
-  .Main-card {
-    max-width: 100% !important;
-    height: 80vh !important;
-    margin: 0 !important;
-  }
-
-  /* Header section */
-  .row.items-center.justify-between.bg-grey-3 {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 12px !important;
-  }
-
-  /* Year selector */
-  .row.items-center.justify-between.bg-grey-3 .q-select {
-    width: 100% !important;
-    min-width: 0 !important;
-  }
-
-  /* Button group */
-  .row.items-center.justify-between.bg-grey-3 > div:last-child {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 8px !important;
-    width: 100% !important;
-  }
-
-  .row.items-center.justify-between.bg-grey-3 .q-btn {
-    width: 100% !important;
-    margin: 0 !important;
-  }
-
-  /* Search and Add Account section */
-  .row.items-center.justify-between.q-mb-sm {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 12px !important;
-  }
-
-  .row.items-center.justify-between.q-mb-sm .q-input {
-    width: 100% !important;
-    min-width: 0 !important;
-  }
-
-  .row.items-center.justify-between.q-mb-sm .q-btn {
-    width: 100% !important;
-  }
-
-  /* Expansion items */
-  .q-expansion-item .row.items-center.justify-between {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 8px !important;
-  }
-
-  .q-expansion-item .row.items-center.justify-between > div:first-child {
-    width: 100% !important;
-  }
-
-  .q-expansion-item .row.items-center.justify-between > div:last-child {
-    display: flex !important;
-    justify-content: flex-end !important;
-    gap: 4px !important;
-  }
-
-  /* Type expansion items */
-  .type-expansion .row.items-center.justify-between {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 8px !important;
-  }
-
-  .type-expansion .row.items-center.justify-between > div:first-child {
-    width: 100% !important;
-  }
-
-  .type-expansion .row.items-center.justify-between > div:last-child {
-    display: flex !important;
-    justify-content: flex-end !important;
-    gap: 4px !important;
-  }
-
-  /* Item cards */
-  .bg-green-1 .row.items-center.justify-between {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 8px !important;
-  }
-
-  .bg-green-1 .row.items-center.justify-between > div:first-child {
-    width: 100% !important;
-  }
-
-  .bg-green-1 .row.items-center.justify-between > div:last-child {
-    display: flex !important;
-    justify-content: flex-end !important;
-    gap: 4px !important;
-  }
-
-  /* Dialog adjustments */
-  .q-dialog .q-card {
-    min-width: 90vw !important;
-    max-width: 95vw !important;
-  }
-}
-
-@media (min-width: 601px) and (max-width: 900px) {
-  /* Small Tablet View */
-  .Main-card {
-    max-width: 95% !important;
-    height: 75vh !important;
-  }
-
-  /* Header section */
-  .row.items-center.justify-between.bg-grey-3 {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 12px !important;
-  }
-
-  /* Year selector */
-  .row.items-center.justify-between.bg-grey-3 .q-select {
-    width: 100% !important;
-    min-width: 0 !important;
-  }
-
-  /* Button group */
-  .row.items-center.justify-between.bg-grey-3 > div:last-child {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 8px !important;
-    width: 100% !important;
-  }
-
-  .row.items-center.justify-between.bg-grey-3 .q-btn {
-    flex: 1 !important;
-  }
-
-  /* Search and Add Account section */
-  .row.items-center.justify-between.q-mb-sm {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 12px !important;
-  }
-
-  .row.items-center.justify-between.q-mb-sm .q-input {
-    width: 100% !important;
-    min-width: 0 !important;
-  }
-
-  .row.items-center.justify-between.q-mb-sm .q-btn {
-    width: 100% !important;
-  }
-
-  /* Dialog adjustments */
-  .q-dialog .q-card {
-    min-width: 80vw !important;
-    max-width: 90vw !important;
-  }
-}
-
-@media (min-width: 901px) and (max-width: 1200px) {
-  /* Large Tablet View */
-  .Main-card {
-    max-width: 90% !important;
-    height: 72vh !important;
-  }
-
-  /* Header section */
-  .row.items-center.justify-between.bg-grey-3 {
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 16px !important;
-  }
-
-  /* Year selector */
-  .row.items-center.justify-between.bg-grey-3 .q-select {
-    width: 300px !important;
-  }
-
-  /* Button group */
-  .row.items-center.justify-between.bg-grey-3 > div:last-child {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 8px !important;
-  }
-
-  /* Search and Add Account section */
-  .row.items-center.justify-between.q-mb-sm {
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 16px !important;
-  }
-
-  .row.items-center.justify-between.q-mb-sm .q-input {
-    width: 300px !important;
-    min-width: 300px !important;
-  }
-
-  .row.items-center.justify-between.q-mb-sm .q-btn {
-    min-width: 150px !important;
-  }
-}
-
-@media (min-width: 1201px) {
-  /* Desktop View */
-  .Main-card {
-    max-width: 1600px !important;
-    height: 70vh !important;
-  }
-
-  /* Header section */
-  .row.items-center.justify-between.bg-grey-3 {
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 16px !important;
-  }
-
-  /* Year selector */
-  .row.items-center.justify-between.bg-grey-3 .q-select {
-    width: 300px !important;
-  }
-
-  /* Button group */
-  .row.items-center.justify-between.bg-grey-3 > div:last-child {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 8px !important;
-  }
-
-  /* Search and Add Account section */
-  .row.items-center.justify-between.q-mb-sm {
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 16px !important;
-  }
-
-  .row.items-center.justify-between.q-mb-sm .q-input {
-    width: 300px !important;
-    min-width: 300px !important;
-  }
-
-  .row.items-center.justify-between.q-mb-sm .q-btn {
-    min-width: 150px !important;
-  }
-}
-
-/* General responsive improvements */
-@media (max-width: 900px) {
-  /* Adjust text sizes for better readability */
-  .text-h5 {
-    font-size: 1.2rem !important;
-  }
-
-  .text-body1 {
-    font-size: 0.9rem !important;
-  }
-
-  .text-body2 {
-    font-size: 0.85rem !important;
-  }
-
-  /* Adjust padding for better mobile experience */
+@media (max-width: 768px) {
   .q-pa-md {
-    padding: 12px !important;
+    padding: 8px;
   }
 
-  .q-pa-sm {
-    padding: 8px !important;
+  .row.items-center.justify-between {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
   }
 
-  /* Make buttons more touch-friendly */
-  .q-btn {
-    min-height: 40px !important;
+  .q-gutter-sm > * {
+    margin-bottom: 8px;
   }
-
-  /* Adjust card margins */
-  .q-card {
-    margin: 4px !important;
-  }
-}
-
-/* Ensure proper spacing in all views */
-.q-gutter-sm > * {
-  margin-bottom: 8px !important;
-}
-
-.q-gutter-xs > * {
-  margin-bottom: 4px !important;
-}
-.page-header {
-  border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 16px;
 }
 </style>
