@@ -227,7 +227,6 @@ export default {
       if (this.selectedPosition) {
         filtered = filtered.filter(user => user.position === this.selectedPosition)
       }
-
       return filtered
     },
   },
@@ -331,6 +330,7 @@ export default {
         this.saveAccess()
       }
     },
+    
     // Filter clear methods
     onSearchClear() {
       this.search = ''
@@ -346,7 +346,6 @@ export default {
       this.selectedBarangay = null
       this.selectedPosition = null
     },
-
   },
 }
 </script>
