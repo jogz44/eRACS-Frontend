@@ -103,6 +103,7 @@
                 <q-input
                   outlined
                   dense
+                  :disable="true"
                   v-model="store.forms.disbursement.dvNumber"
                   @keydown.enter="handleEnterKey"
                 />

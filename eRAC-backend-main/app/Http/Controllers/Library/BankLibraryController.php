@@ -348,34 +348,34 @@ public function createBooklet(Request $request, LibBank $bank)
     }
 
     $validated = $request->validate([
+        'booklet_numb' => 'required|string|size:8|regex:/^[0-9]+$/',
         'starting_cheque_numb' => 'required|string|size:8|regex:/^[0-9]+$/',
-        'ending_cheque_numb' => 'required|string|size:8|regex:/^[0-9]+$/',
+        'quantity' => 'required|integer|min:1|max:50',
     ]);
 
     // Convert to integers for validation
+    $bookletNumb = (int)$validated['booklet_numb'];
     $start = (int)$validated['starting_cheque_numb'];
-    $end = (int)$validated['ending_cheque_numb'];
+    $quantity = (int)$validated['quantity'];
+
+    // Calculate ending cheque number
+    $end = $start + $quantity - 1;
 
     // Validate range
-    if ($start > $end) {
-        return response()->json(['message' => 'Starting number must be less than ending number'], 422);
-    }
-    if (($end - $start + 1) > 50) {
+    if ($quantity > 50) {
         return response()->json(['message' => 'Maximum 50 cheques per booklet'], 422);
     }
-
-    // Calculate quantity
-    $quantity = $end - $start + 1;
 
     // Start database transaction
     DB::beginTransaction();
     try {
         // Create the booklet first (without cheques)
         $booklet = $bank->booklets()->create([
-            'booklet_numb' => $validated['starting_cheque_numb'] . '-' . $validated['ending_cheque_numb'],
+            //'booklet_numb' => $validated['starting_cheque_numb'] . '-' . $validated['ending_cheque_numb'],
+            'booklet_numb' => $validated['booklet_numb'],
             'starting_cheque_numb' => $validated['starting_cheque_numb'],
-            'ending_cheque_numb' => $validated['ending_cheque_numb'],
-            'quantity' => $quantity,
+            'ending_cheque_numb' => $end,
+            'quantity' => $validated['quantity'],
             'status' => 'unused',
         ]);
 

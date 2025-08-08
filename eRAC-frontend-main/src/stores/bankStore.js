@@ -210,7 +210,7 @@ export const useBankStore = defineStore('bank', {
           this.banks[index] = {
             ...this.banks[index],
             name: response.data.bank_name || response.data.name || newName,
-            status: response.data.status || 'Available',
+            status: response.data.status || 'Unavailable',
           }
         }
 
@@ -330,20 +330,24 @@ export const useBankStore = defineStore('bank', {
         // Convert to numbers for validation
         const start = parseInt(bookletData.starting_cheque_numb)
         const end = parseInt(bookletData.ending_cheque_numb)
+        const quantity = parseInt(bookletData.quantity)
 
-        // Client-side validation
+        // Validate quantity
+        if (quantity < 1 || quantity > 50) {
+          throw new Error('Quantity must be between 1 and 50')
+        }
+
+        // Client-side validationw Error('Booklet number must be numeric')
         if (isNaN(start) || isNaN(end)) {
           throw new Error('Cheque numbers must be numeric')
-        }
-        if (start > end) {
-          throw new Error('Starting number must be less than ending number')
         }
 
         const response = await api.post(
           `/api/barangay/banks/${bankId}/booklets`,
           {
+            booklet_numb: bookletData.booklet_numb,
             starting_cheque_numb: bookletData.starting_cheque_numb,
-            ending_cheque_numb: bookletData.ending_cheque_numb,
+            quantity: bookletData.quantity,
           },
           config,
         )
