@@ -18,7 +18,7 @@ export const useAugmentationStore = defineStore('augmentation', () => {
 
   // Combine all actions
   const actions = {
-    ...useDialogActions(state, augmentationActions.fetchExpenseAccounts, augmentationActions.fetchAvailableBudgets, augmentationActions.resetForm),
+    ...useDialogActions(state, augmentationActions.fetchExpenseAccounts, augmentationActions.resetForm),
     ...useFormActions(state),
     ...augmentationActions,
     //...useExpenseActions(state),

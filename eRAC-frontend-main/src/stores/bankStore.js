@@ -155,7 +155,6 @@ export const useBankStore = defineStore('bank', {
           booklets: bank.booklets || [], // Changed from cheques
         }))
 
-        console.log('Stored banks:', this.banks)
         return this.banks
       } catch (error) {
         console.error('Error:', error)
@@ -284,9 +283,6 @@ export const useBankStore = defineStore('bank', {
         const config = this.getAuthConfig()
         const response = await api.get(`/api/barangay/banks/${bankId}/booklets`, config)
 
-        // Debug: log the raw response
-        console.log('Raw API response:', response.data)
-
         // Extract booklets from the correct path
         const apiBooklets = response.data?.data?.booklets || []
 
@@ -302,7 +298,6 @@ export const useBankStore = defineStore('bank', {
           booklet_numb: booklet.booklet_numb, // Added this line
         }))
 
-        console.log('Processed booklets:', processedBooklets)
         return processedBooklets // Return the array directly
       } catch (error) {
         console.error('Error fetching booklets:', error)
@@ -377,9 +372,6 @@ export const useBankStore = defineStore('bank', {
 
         const config = this.getAuthConfig()
         const response = await api.get(`/api/barangay/booklets/${id}/cheques`, config)
-
-        // Debug raw response
-        console.log('API response:', response.data)
 
         // Handle different response structures
         const rawCheques =

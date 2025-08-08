@@ -6,7 +6,6 @@ import { reactive } from 'vue'
 // Helper function with better debugging
 const getAuthConfig = () => {
   const authStore = useAuthStore()
-  console.log('Current auth token:', authStore.token ? 'Token exists' : 'No token')
 
   if (!authStore.token) {
     console.warn('No authentication token found')
@@ -108,9 +107,6 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
           `/api/barangay/expense-classes?fiscal_year_id=${fiscalYearId}`,
           getAuthConfig(),
         )
-
-        // Debugging log
-        console.log('API Response:', response)
 
         // Handle the nested response structure
         const apiData = response.data?.data // This is your {status, message, data} object
@@ -276,8 +272,6 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
       this.loading = true
 
       try {
-        console.log(`Fetching types for class ${expenseClassId} with year ${this.selectedYear}`)
-
         const response = await api.get(
           `/api/barangay/expense-classes/${expenseClassId}/types`,
           getAuthConfig(),
@@ -307,8 +301,6 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
             year: yearValue,
           })),
         )
-
-        console.log('Updated expense types:', this.expenseTypes)
 
         // ✅ Mark as fetched only after success
         this.fetchedTypes.add(key)

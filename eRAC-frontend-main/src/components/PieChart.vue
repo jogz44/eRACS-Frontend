@@ -36,10 +36,6 @@ export default defineComponent({
           return
         }
 
-        console.log('Rendering chart with data:', props.chartData)
-        console.log('Chart labels:', props.chartData.labels)
-        console.log('Chart datasets:', props.chartData.datasets)
-
         // Validate data
         if (!props.chartData.labels || !props.chartData.datasets || !props.chartData.datasets[0]) {
           console.error('Invalid chart data structure')
@@ -72,7 +68,6 @@ export default defineComponent({
         })
 
         chartError.value = null
-        console.log('Chart rendered successfully with data:', props.chartData)
       } catch (error) {
         console.error('Error rendering chart:', error)
         chartError.value = 'Error rendering chart: ' + error.message

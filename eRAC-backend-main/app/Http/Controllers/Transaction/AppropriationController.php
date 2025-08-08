@@ -134,15 +134,39 @@ class AppropriationController extends Controller
             ->where('fiscal_year_id', $request->fiscal_year_id)
             ->get()
             ->map(function($class) use ($barangayId, $budgetId) {
+                // Calculate allocated amount for this expense class
+                $classQuery = TranAppropriation::where('barangay_id', $barangayId)
+                    ->where('expense_class_id', $class->id)
+                    ->where('status', 'committed');
+
+                if ($budgetId) {
+                    $classQuery->where('budget_id', $budgetId);
+                }
+
+                $classAllocatedAmount = $classQuery->sum('amount');
+
                 return [
                     'id' => $class->id,
                     'name' => $class->name,
                     'isMainCategory' => true,
+                    'amount' => (float) $classAllocatedAmount,
                     'children' => $class->types->map(function($type) use ($barangayId, $budgetId) {
+                        // Calculate allocated amount for this expense type
+                        $typeQuery = TranAppropriation::where('barangay_id', $barangayId)
+                            ->where('expense_type_id', $type->id)
+                            ->where('status', 'committed');
+
+                        if ($budgetId) {
+                            $typeQuery->where('budget_id', $budgetId);
+                        }
+
+                        $typeAllocatedAmount = $typeQuery->sum('amount');
+
                         return [
                             'id' => $type->id,
                             'name' => $type->name,
                             'isMainCategory' => false,
+                            'amount' => (float) $typeAllocatedAmount,
                             'children' => $type->items->map(function($item) use ($barangayId, $budgetId) {
                                 // Get the allocated amount for this expense item
                                 $query = TranAppropriation::where('barangay_id', $barangayId)

@@ -47,7 +47,6 @@ class BudgetAugmentationController extends Controller
                     'augmentation_date' => $augmentation->augmentation_date->format('Y-m-d'),
                     'total_amount' => (float)$augmentation->total_amount,
                     'remarks' => $augmentation->remarks,
-                    'budget_description' => $augmentation->budget->description ?? '',
                     'details' => $augmentation->details->map(function($detail) {
                         return [
                             'id' => $detail->id,
@@ -70,7 +69,6 @@ class BudgetAugmentationController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'budget_id' => 'required|exists:budgets,id',
             'augmentation_date' => 'required|date',
             'remarks' => 'nullable|string',
             'details' => 'required|array|min:1',
@@ -96,10 +94,22 @@ class BudgetAugmentationController extends Controller
             // Calculate total amount
             $totalAmount = collect($request->details)->sum('amount');
 
+            // Get the default budget for the barangay (first available budget)
+            $defaultBudget = Budget::where('barangay_id', $request->user()->barangay_id)
+                ->where('current_amount', '>', 0)
+                ->first();
+
+            if (!$defaultBudget) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'No available budget found for augmentation'
+                ], 422);
+            }
+
             // Create budget augmentation
             $augmentation = BudgetAugmentation::create([
                 'barangay_id' => $request->user()->barangay_id,
-                'budget_id' => $request->budget_id,
+                'budget_id' => $defaultBudget->id,
                 'ref_number' => $refNumber,
                 'augmentation_date' => $request->augmentation_date,
                 'total_amount' => $totalAmount,
@@ -120,14 +130,13 @@ class BudgetAugmentationController extends Controller
             }
 
             // Update budget augmentation amount
-            $budget = Budget::find($request->budget_id);
-            $budget->increment('augmentation', $totalAmount);
-            $budget->increment('current_amount', $totalAmount);
+            $defaultBudget->increment('augmentation', $totalAmount);
+            $defaultBudget->increment('current_amount', $totalAmount);
 
             // AdminAuthController::logUserAction(
             //     $user,
             //     'Accounts -> Budget Augmentation',
-            //     'Created budget augmentation for "' . $budget->name . '" on ' . date('d/m/Y', strtotime($request->augmentation_date)) . ' with ₱' . number_format($totalAmount, 2)
+            //     'Created budget augmentation for "' . $defaultBudget->name . '" on ' . date('d/m/Y', strtotime($request->augmentation_date)) . ' with ₱' . number_format($totalAmount, 2)
             // );
 
             return response()->json([
@@ -265,26 +274,4 @@ class BudgetAugmentationController extends Controller
         });
     }
 
-    /**
-     * Get available budgets for augmentation
-     */
-    public function getAvailableBudgets(Request $request)
-    {
-        $budgets = Budget::where('barangay_id', $request->user()->barangay_id)
-            ->where('current_amount', '>', 0)
-            ->get()
-            ->map(function($budget) {
-                return [
-                    'id' => $budget->id,
-                    'description' => $budget->description,
-                    'current_amount' => (float)$budget->current_amount,
-                    'fiscal_year' => $budget->fiscalYear->year ?? ''
-                ];
-            });
-
-        return response()->json([
-            'status' => true,
-            'data' => $budgets
-        ]);
-    }
 } 
