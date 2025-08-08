@@ -4,7 +4,6 @@ export function useFormActions(state) {
 
     if (formName === 'augmentation') {
       state.forms.value.augmentation = {
-        budget_id: null,
         augmentation_date: '',
         remarks: '',
         refNo: '',

@@ -138,12 +138,9 @@ export const useAppropriationStore = defineStore("appropriation", {
   actions: {
     async openAllocationDialog(row) {
       try {
-        console.log("[DEBUG] Opening allocation dialog for row:", row)
-        console.log("[DEBUG] Raw row data:", JSON.stringify(row, null, 2))
 
         // Ensure proper number parsing for selectedRow
         const unappropriatedValue = row.unappropriated || row.amount || 0
-        console.log("[DEBUG] Unappropriated value before parsing:", unappropriatedValue, typeof unappropriatedValue)
 
         this.selectedRow = {
           id: row.id,
@@ -152,10 +149,7 @@ export const useAppropriationStore = defineStore("appropriation", {
           description: row.description || "",
         }
 
-        console.log("[DEBUG] Parsed selectedRow:", this.selectedRow)
-
         this.loading = true
-        console.log("[DEBUG] Fetching expense hierarchy and existing allocations...")
 
         await Promise.all([this.fetchExpenseHierarchy(), this.fetchExistingAllocations(row.id)])
 
@@ -165,7 +159,7 @@ export const useAppropriationStore = defineStore("appropriation", {
         }
 
         this.showAllocationDialog = true
-        console.log("[DEBUG] Allocation dialog opened successfully")
+        
       } catch (error) {
         console.error("[ERROR] in openAllocationDialog:", {
           error: error.message,
@@ -293,7 +287,6 @@ export const useAppropriationStore = defineStore("appropriation", {
         }))
 
         this.totalAvailable = parseCurrency(response.data.total_available || 0)
-        console.log("[DEBUG] Fetched budgets with parsed amounts:", this.appropriations)
       } catch (error) {
         console.error("Error fetching budgets:", error)
       } finally {
@@ -324,7 +317,6 @@ export const useAppropriationStore = defineStore("appropriation", {
         Please contact your administrator.`)
         }
 
-        console.log("[DEBUG] Fetching expense hierarchy...")
         const response = await api.get("/api/barangay/expense-hierarchy", {
           params: { fiscal_year_id: fiscalYear.id },
           headers: {
@@ -334,9 +326,7 @@ export const useAppropriationStore = defineStore("appropriation", {
           },
         })
 
-        console.log("[DEBUG] Full API response:", response)
         this.allocations = response.data.data || []
-        console.log("[DEBUG] Extracted allocations:", this.allocations)
       } catch (error) {
         console.error("[ERROR] fetchExpenseHierarchy:", error)
         throw error
@@ -345,7 +335,6 @@ export const useAppropriationStore = defineStore("appropriation", {
 
     async fetchExistingAllocations(budgetId) {
       try {
-        console.log("[DEBUG] Fetching existing allocations for budget:", budgetId)
         const response = await api.get(`/api/barangay/budgets/${budgetId}/allocations`, {
           headers: {
             Authorization: `Bearer ${this.authStore.token}`,
@@ -355,7 +344,6 @@ export const useAppropriationStore = defineStore("appropriation", {
         })
 
         const allocations = response.data.data || []
-        console.log("[DEBUG] Retrieved existing allocations:", allocations)
 
         // Clear previous state
         this.inputCache = {}
@@ -388,9 +376,6 @@ export const useAppropriationStore = defineStore("appropriation", {
           }
         })
 
-        console.log("[DEBUG] Original allocations:", this.originalAllocations)
-        console.log("[DEBUG] Existing allocations total:", this.existingAllocationsTotal)
-        console.log("[DEBUG] Initialized input values:", this.inputCache)
       } catch (error) {
         console.error("[ERROR] fetchExistingAllocations:", {
           error: error.message,
@@ -431,8 +416,6 @@ export const useAppropriationStore = defineStore("appropriation", {
             },
           },
         )
-
-        console.log("[DEBUG] Backend response:", response.data)
 
         // Update local state
         const budgetIndex = this.appropriations.findIndex((b) => b.id === budgetId)
@@ -592,7 +575,6 @@ export const useAppropriationStore = defineStore("appropriation", {
       }
 
       this.categoryTotals = this.calculateCategoryTotals()
-      console.log("[DEBUG] Calculated totals:", this.categoryTotals)
     },
 
     calculateCategoryTotals() {

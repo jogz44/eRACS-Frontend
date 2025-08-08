@@ -677,8 +677,6 @@ const saveEditedAllocation = async () => {
 onMounted(async () => {
   try {
     await appropriationStore.fetchBudgets()
-    console.log('Appropriations:', appropriationStore.appropriations)
-    console.log('Total Available:', appropriationStore.totalAvailable)
   } catch (error) {
     $q.notify({
       type: 'negative',

@@ -138,7 +138,6 @@ Route::prefix('barangay')->group(function () {
         // Delete OR photo
         Route::delete('disbursements/or-photo/delete', [DisbursementController::class, 'deleteOrPhoto']);
         // Budget Augmentation endpoints
-        Route::get('budget-augmentations/available-budgets', [BudgetAugmentationController::class, 'getAvailableBudgets']);
         Route::apiResource('budget-augmentations', BudgetAugmentationController::class);
 
         // Report routes aka Preview and PDF download by Dan Steve

@@ -14,9 +14,6 @@ export function initialState() {
     dateTo: ref(''),
     expenseSearch: ref(''),
 
-    // Available budgets
-    availableBudgets: ref([]),
-
     // Pagination
     pagination: ref({
       rowsPerPage: 10,
@@ -30,7 +27,6 @@ export function initialState() {
 
     forms: ref({
       augmentation: ref({
-        budget_id: null,
         augmentation_date: '',
         remarks: '',
         refNo: '',

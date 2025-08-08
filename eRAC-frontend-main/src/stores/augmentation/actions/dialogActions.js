@@ -1,4 +1,4 @@
-export function useDialogActions(state, fetchExpenseAccounts, fetchAvailableBudgets, resetForm) {
+export function useDialogActions(state, fetchExpenseAccounts, resetForm) {
   const openDialog = async (dialogName) => {
     if (!state.dialogs?.value) {
       console.error('Dialogs state is not initialized')
@@ -13,9 +13,6 @@ export function useDialogActions(state, fetchExpenseAccounts, fetchAvailableBudg
       state.Augexpenses.value = []
       state.currentItem.value = null
       
-      // Fetch available budgets
-      await fetchAvailableBudgets()
-      
       // Set default date to today after form reset
       const today = new Date()
       const dd = String(today.getDate()).padStart(2, '0')
@@ -25,20 +22,8 @@ export function useDialogActions(state, fetchExpenseAccounts, fetchAvailableBudg
       // Set the date directly to the form
       state.forms.value.augmentation.augmentation_date = `${dd}/${mm}/${yyyy}`
     } else if (dialogName === 'augExpense') {
-      // Get the selected budget ID
-      const selectedBudget = state.forms.value?.augmentation?.budget_id
-      
-      if (!selectedBudget) {
-        console.warn('No budget selected. Please select a budget first.')
-        // You can add a notification here if you have access to Quasar's $q
-        return
-      }
-      
-      // Extract the budget ID (it might be an object or just the ID)
-      const selectedBudgetId = typeof selectedBudget === 'object' ? selectedBudget.id : selectedBudget
-      
-      // Fetch expense accounts for the selected budget
-      await fetchExpenseAccounts(selectedBudgetId)
+      // Fetch expense accounts
+      await fetchExpenseAccounts()
     }
     
     state.dialogs.value[dialogName] = true

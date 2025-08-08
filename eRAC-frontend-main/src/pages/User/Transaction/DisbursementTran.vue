@@ -2,14 +2,15 @@
   <q-page class="q-pa-md disbursement-page">
     <div class="page-header q-mb-md">
       <div class="row items-center justify-between">
-        <div class="text-h6 text-weight-medium">Disbursement Transaction</div>
+        <div class="text-h6 text-weight-medium">
+          Disbursement Transaction
+        </div>
         <q-btn
           icon="refresh"
           color="primary"
           flat
           dense
           @click="loadPendingUsers"
-          :loading="loading"
         />
       </div>
     </div>
@@ -291,6 +292,7 @@
           :columns="store.disbursementColumns"
           row-key="id"
           :pagination="store.pagination"
+          :loading="loading"
           flat
         >
           <template v-slot:body-cell-action="props">
@@ -330,7 +332,7 @@
 </template>
 
 <script setup>
-import { watch, onMounted } from 'vue'
+import { watch, onMounted, onActivated } from 'vue'
 import SearchFilters from 'components/disbursement/SearchFilters.vue'
 import OrDetailsDialog from 'components/disbursement/OrDetailsDialog.vue'
 import ViewOrDetails from 'components/disbursement/ViewOrDetails.vue'
@@ -341,24 +343,58 @@ import { useBankStore } from 'stores/bankStore'
 const store = useDisbursementStore()
 const bankStore = useBankStore()
 
-onMounted(async () => {
+// Function to load all data
+const loadAllData = async () => {
+  console.log('Loading all disbursement data...')
+  loading.value = true
+  
   try {
-    await store.fetchExpenseAccounts()
-    await store.fetchDisbursements()
-
-    if (!bankStore.banks.length) {
-      await bankStore.fetchBanks()
+    // Fetch all necessary data in parallel for better performance
+    const promises = [
+      store.fetchDisbursements(),
+      store.fetchExpenseAccounts(),
+      bankStore.fetchBanks()
+    ]
+    
+    await Promise.all(promises)
+    
+    // Show success notification only if not in loading state
+    if (!loading.value) {
+      $q.notify({
+        type: 'positive',
+        message: 'Disbursement data loaded successfully!',
+        icon: 'check_circle',
+        position: 'top',
+        timeout: 2000
+      })
     }
+    
   } catch (error) {
-    console.error('Error during component initialization:', error)
+    console.error('Error during data loading:', error)
     $q.notify({
       type: 'negative',
-      message: 'Failed to load initial data: ' + error.message,
+      message: 'Failed to load disbursement data: ' + (error.message || 'Unknown error'),
+      icon: 'error',
       position: 'top',
+      timeout: 5000
     })
+  } finally {
+    loading.value = false
   }
+}
+
+onMounted(async () => {
+  console.log('DisbursementTran component mounted - starting data refresh...')
+  await loadAllData()
 })
 
+// Refresh data when component is activated (when navigating back to this page)
+onActivated(async () => {
+  console.log('DisbursementTran component activated - refreshing data...')
+  await loadAllData()
+})
+
+// Watch for expenses changes
 watch(
   () => store.expenses,
   (newExpenses) => {
@@ -467,23 +503,24 @@ const handleSaveClick = () => {
 const loadPendingUsers = async () => {
   loading.value = true
   try {
-    await store.fetchDisbursements()
+    await loadAllData()
     $q.notify({
       type: 'positive',
       message: 'Disbursements refreshed!',
       icon: 'refresh',
       position: 'top',
+      timeout: 3000
     })
   } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: error.response?.data?.message || 'Failed to refresh disbursements',
-      icon: 'error',
-      position: 'top',
-    })
-  } finally {
-    loading.value = false
-  }
+      $q.notify({
+        type: 'negative',
+        message: error.response?.data?.message || 'Failed to refresh disbursements',
+        icon: 'error',
+        position: 'top',
+      })
+    } finally {
+      loading.value = false
+    }
 }
 </script>
 

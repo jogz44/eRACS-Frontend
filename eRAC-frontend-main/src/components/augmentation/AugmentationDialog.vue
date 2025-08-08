@@ -6,31 +6,6 @@
       </q-card-section>
       <q-card-section>
         <div class="row q-col-gutter-md">
-          <!-- Budget Selection -->
-          <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">Budget:</q-item-label>
-            <q-select
-              filled
-              outlined
-              dense
-              v-model="store.forms.augmentation.budget_id"
-              :options="store.availableBudgets"
-              option-label="description"
-              option-value="id"
-              label="Select Budget"
-              :rules="[(val) => !!val || 'Budget is required']"
-              @keydown.enter="handleEnterKey"
-            >
-              <template v-slot:option="scope">
-                <q-item v-bind="scope.itemProps">
-                  <q-item-section>
-                    <q-item-label>{{ scope.opt.description }}</q-item-label>
-                    <q-item-label caption>₱{{ scope.opt.current_amount?.toLocaleString() }} - {{ scope.opt.fiscal_year }}</q-item-label>
-                  </q-item-section>
-                </q-item>
-              </template>
-            </q-select>
-          </div>
           <!-- Date Field -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">Date:</q-item-label>
@@ -151,7 +126,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useAugmentationStore } from 'stores/augmentation'
 import { useQuasar } from 'quasar'
 
@@ -167,17 +142,7 @@ const dialogModel = computed({
     }
   }
 })
-
 const handleAddExpense = async () => {
-  if (!store.forms.augmentation.budget_id) {
-    $q.notify({
-      type: 'negative',
-      message: 'Please select a budget first',
-      position: 'top'
-    })
-    return
-  }
-  
   await store.openDialog('augExpense')
 }
 
@@ -186,7 +151,7 @@ const validateAndSave = async () => {
   if (dialogModel.value) {
     // Validate required fields before saving
     const form = store.forms.augmentation
-    const hasRequiredFields = form.budget_id && form.augmentation_date
+    const hasRequiredFields = form.augmentation_date && form.remarks 
     
     // Check if expenses are added
     const hasExpenses = store.Augexpenses?.value && store.Augexpenses.value.length > 0
@@ -194,7 +159,7 @@ const validateAndSave = async () => {
     if (!hasRequiredFields) {
       $q.notify({
         type: 'negative',
-        message: 'Please fill in all required fields (Budget and Date) before saving',
+        message: 'Please fill in all required fields before saving',
         icon: 'warning',
         position: 'top',
       })
@@ -227,14 +192,6 @@ const handleSaveClick = () => {
 }
 
 const handleSave = async () => {
-  if (!store.forms.augmentation.budget_id) {
-    $q.notify({
-      type: 'negative',
-      message: 'Please select a budget',
-      position: 'top'
-    })
-    return
-  }
 
   if (!store.Augexpenses?.value || store.Augexpenses.value.length === 0) {
     $q.notify({
@@ -269,12 +226,6 @@ const handleSave = async () => {
     })
   }
 }
-
-onMounted(async () => {
-  await store.fetchAvailableBudgets()
-  console.log('Available budgets in dialog:', store.availableBudgets)
-})
-
 
 </script>
 
