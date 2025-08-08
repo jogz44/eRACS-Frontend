@@ -34,8 +34,8 @@
                   dense
                   v-model="store.forms.disbursement.date"
                   mask="##/##/####"
-                  :readonly="true" 
-                  :disable="true"  
+                  :readonly="true"
+                  :disable="true"
                   @keydown.enter="handleEnterKey"
                 >
                   <template v-slot:append>
@@ -86,9 +86,9 @@
                 <q-input
                   outlined
                   dense
-                  v-model="store.selectedChequeNumber"
+                  v-model="store.availableChequeNumbers[0]"
                   :disable="true"
-                  :label="store.availableChequeNumbers.length === 0 ? 'No cheques available' : store.availableChequeNumbers[0]"
+
                   @keydown.enter="handleEnterKey"
                 ></q-input>
               </div>
