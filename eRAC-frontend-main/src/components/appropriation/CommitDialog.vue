@@ -337,11 +337,12 @@ const newAllocationsTotal = computed(() => {
 // Calculate net change (new allocations minus existing allocations)
 const netChange = computed(() => {
   const existingTotal = appropriationStore.existingAllocationsTotal || 0
-  const netChange = Math.round((newAllocationsTotal.value - existingTotal) * 100) / 100
+  const newTotal = newAllocationsTotal.value
+  const netChange = Math.round((newTotal - existingTotal) * 100) / 100
   
   // Debug logging
   console.log('[DEBUG] Net Change Calculation:', {
-    newAllocations: newAllocationsTotal.value,
+    newAllocations: newTotal,
     existingTotal: existingTotal,
     netChange: netChange
   })
@@ -367,8 +368,19 @@ const remainingAfterChanges = computed(() => {
 // Determine if save button should be enabled
 const canSave = computed(() => {
   const hasValidAllocation = newAllocationsTotal.value > 0
-  const withinBudget = netChange.value <= availableBudget.value
-  return hasValidAllocation && withinBudget
+  const withinBudget = netChange.value <= (availableBudget.value + 0.01) // Small tolerance
+  const hasValidAmounts = newAllocationsTotal.value >= 0
+  
+  console.log('[DEBUG] canSave calculation:', {
+    hasValidAllocation,
+    withinBudget,
+    hasValidAmounts,
+    newAllocationsTotal: newAllocationsTotal.value,
+    netChange: netChange.value,
+    availableBudget: availableBudget.value
+  })
+  
+  return hasValidAllocation && withinBudget && hasValidAmounts
 })
 
 
@@ -449,24 +461,32 @@ const submitAllocation = async () => {
       throw new Error('Please enter at least one valid amount')
     }
 
-    // Validate against net change, not total allocations
-    const tolerance = 0.01
-    const available = availableBudget.value
-    const change = netChange.value
+    // Calculate total new allocation amount
+    const totalNewAllocation = allocations.reduce((sum, allocation) => sum + allocation.amount, 0)
+    
+    // Get existing allocations total
+    const existingTotal = appropriationStore.existingAllocationsTotal || 0
+    
+    // Calculate the actual amount being allocated (new allocations - existing allocations)
+    const actualAllocationAmount = totalNewAllocation - existingTotal
 
     console.log('=== ALLOCATION VALIDATION ===')
-    console.log('Available Budget:', available)
-    console.log('Net Change:', change)
-    console.log('New Allocations Total:', newAllocationsTotal.value)
-    console.log('Existing Allocations Total:', appropriationStore.existingAllocationsTotal || 0)
-    console.log('Will Exceed:', change > (available + tolerance))
+    console.log('Available Budget:', availableBudget.value)
+    console.log('Total New Allocation:', totalNewAllocation)
+    console.log('Existing Allocations Total:', existingTotal)
+    console.log('Actual Allocation Amount:', actualAllocationAmount)
+    console.log('Will Exceed:', actualAllocationAmount > availableBudget.value)
     console.log('============================')
 
-    if (change > (available + tolerance)) {
-      const errorMsg = `Net change exceeds available budget!
-        Available: ₱${available.toFixed(2)}
-        Net Change: ₱${change.toFixed(2)}
-        Difference: ₱${Math.abs(change - available).toFixed(2)}`
+    // Validate that the actual allocation amount doesn't exceed available budget
+    const tolerance = 0.01 // Small tolerance for floating-point precision
+    if (actualAllocationAmount > (availableBudget.value + tolerance)) {
+      const errorMsg = `Allocation amount exceeds available budget!
+        Available Budget: ₱${availableBudget.value.toFixed(2)}
+        New Allocation Total: ₱${totalNewAllocation.toFixed(2)}
+        Existing Allocations: ₱${existingTotal.toFixed(2)}
+        Net Allocation Amount: ₱${actualAllocationAmount.toFixed(2)}
+        Excess Amount: ₱${(actualAllocationAmount - availableBudget.value).toFixed(2)}`
 
       console.error(errorMsg)
       throw new Error(errorMsg)
@@ -498,10 +518,9 @@ const submitAllocation = async () => {
 
     $q.notify({
       type: 'negative',
-      message,
+      message: message,
       icon: 'error',
       position: 'top',
-      timeout: 10000,
     })
   }
 }

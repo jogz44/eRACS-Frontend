@@ -7,21 +7,73 @@
         :selected-user="selectedLog"
       />
       <q-card-section>
-        <!-- Search Field -->
-        <div class="row q-mb-md">
+        <!-- Search and Filter Bar -->
+        <div class="row q-mb-md items-center">
+          <!-- Text Search -->
           <q-input
             dense
             outlined
             bg-color="white"
             v-model="searchQuery"
             placeholder="Search by ID, Name, or Date..."
-            class="search-input"
+            class="search-input q-mr-md"
             clearable
+            @clear="onSearchClear"
           >
             <template v-slot:append>
               <q-icon name="search" />
             </template>
           </q-input>
+
+          <!-- Position Filter -->
+          <q-select
+            dense
+            outlined
+            v-model="selectedPosition"
+            :options="positionOptions"
+            label="Filter by Position"
+            class="filter-select q-mr-md"
+            clearable
+            @clear="onPositionClear"
+            emit-value
+            map-options
+            options-dense
+          />
+
+          <!-- Date Range Filter -->
+          <q-input
+            dense
+            outlined
+            :model-value="dateRangeDisplay"
+            label="Date Range"
+            class="date-range-input q-mr-md"
+            clearable
+            @clear="onDateRangeClear"
+            readonly
+          >
+            <template v-slot:append>
+              <q-icon name="event" class="cursor-pointer">
+                <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                  <q-date
+                    v-model="dateRange"
+                    range
+                    @update:model-value="onDateRangeChange"
+                  />
+                </q-popup-proxy>
+              </q-icon>
+            </template>
+          </q-input>
+
+          <!-- Clear All Filters Button -->
+          <q-btn
+            dense
+            outlined
+            color="red-10"
+            icon="clear_all"
+            label="Clear All"
+            @click="clearAllFilters"
+            class="clear-all-btn"
+          />
         </div>
 
         <!-- Logs Table -->
@@ -94,6 +146,8 @@ export default {
       selectedLog: null,
       loading: false,
       searchQuery: '',
+      selectedPosition: null,
+      dateRange: null,
       logs: [],
       columns: [
         { name: 'id', label: 'ID', field: 'id', align: 'center', sortable: true, headerAlign: 'center' },
@@ -104,29 +158,82 @@ export default {
     }
   },
   computed: {
-    filteredLogs() {
-      const query = this.searchQuery.toLowerCase().trim()
-      if (!query) return this.logs
+    // Get unique position options from logs
+    positionOptions() {
+      const uniquePositions = [...new Set(this.logs.map(log => log.position).filter(Boolean))]
+      return uniquePositions.map(position => ({
+        label: position,
+        value: position
+      })).sort((a, b) => a.label.localeCompare(b.label))
+    },
 
-      return this.logs.filter(log => {
-        // Search by ID
-        const idMatch = String(log.id).includes(query)
+    // Format date range for display
+    dateRangeDisplay() {
+      if (!this.dateRange || !this.dateRange.from || !this.dateRange.to) {
+        return ''
+      }
 
-        // Search by Name
-        const nameMatch = log.fullname.toLowerCase().includes(query)
-
-        // Search by Date (only match the date part, not time)
-        const date = new Date(log.created_at)
-        const dateString = date.toLocaleDateString('en-US', {
-          month: 'long',
-          day: 'numeric',
-          year: 'numeric'
-        })
-        const dateMatch = dateString.toLowerCase().includes(query)
-
-        // Return true if any of the fields match
-        return idMatch || nameMatch || dateMatch
+      const fromDate = new Date(this.dateRange.from).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
       })
+      const toDate = new Date(this.dateRange.to).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      })
+      return `${fromDate} - ${toDate}`
+    },
+
+    filteredLogs() {
+      let filtered = [...this.logs]
+
+      // Apply text search filter
+      const query = this.searchQuery.toLowerCase().trim()
+      if (query) {
+        filtered = filtered.filter(log => {
+          // Search by ID
+          const idMatch = String(log.id).includes(query)
+
+          // Search by Name
+          const nameMatch = log.fullname.toLowerCase().includes(query)
+
+          // Search by Date (only match the date part, not time)
+          const date = new Date(log.created_at)
+          const dateString = date.toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+          })
+          const dateMatch = dateString.toLowerCase().includes(query)
+
+          // Return true if any of the fields match
+          return idMatch || nameMatch || dateMatch
+        })
+      }
+
+      // Apply position filter
+      if (this.selectedPosition) {
+        filtered = filtered.filter(log => log.position === this.selectedPosition)
+      }
+
+      // Apply date range filter
+      if (this.dateRange && this.dateRange.from && this.dateRange.to) {
+        filtered = filtered.filter(log => {
+          const logDate = new Date(log.created_at)
+          const fromDate = new Date(this.dateRange.from)
+          const toDate = new Date(this.dateRange.to)
+
+          // Set time to start of day for from date and end of day for to date
+          fromDate.setHours(0, 0, 0, 0)
+          toDate.setHours(23, 59, 59, 999)
+
+          return logDate >= fromDate && logDate <= toDate
+        })
+      }
+
+      return filtered
     },
   },
   async mounted() {
@@ -170,13 +277,44 @@ export default {
       console.log('Opening modal for row:', row)
       // TODO: Implement modal logic
     },
+    // Filter clear methods
+    onSearchClear() {
+      this.searchQuery = ''
+    },
+    onPositionClear() {
+      this.selectedPosition = null
+    },
+    onDateRangeClear() {
+      this.dateRange = null
+    },
+    onDateRangeChange() {
+      // This method is called when the date range is updated
+      // The filtering is handled automatically by the computed property
+    },
+    clearAllFilters() {
+      this.searchQuery = ''
+      this.selectedPosition = null
+      this.dateRange = null
+    },
   },
 }
 </script>
 
 <style scoped>
 .search-input {
-  width: 450px;
+  width: 300px;
+}
+
+.filter-select {
+  width: 200px;
+}
+
+.date-range-input {
+  width: 200px;
+}
+
+.clear-all-btn {
+  min-width: 120px;
 }
 
 .logs-table {
@@ -677,4 +815,5 @@ export default {
     padding: 12px 8px !important;
   }
 }
+
 </style>

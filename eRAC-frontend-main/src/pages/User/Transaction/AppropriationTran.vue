@@ -30,42 +30,46 @@
             <q-icon name="search" />
           </template>
         </q-input>
+          <q-input
+          bg-color="white"
+          outlined
+          dense
+          :model-value="dateRangeDisplay"
+          label="Date Range"
+          class="custom-date-range"
+          clearable
+          @clear="onDateRangeClear"
+          readonly
+        >
+          <template v-slot:append>
+            <q-icon name="event" class="calend-icon">
+              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                <q-date
+                  v-model="dateRange"
+                  range
+                  @update:model-value="onDateRangeChange"
+                />
+              </q-popup-proxy>
+            </q-icon>
+          </template>
+        </q-input>
+         <!-- Clear All Filters Button -->
+        <q-btn
+          dense
+          outlined
+
+          color="red-10"
+          icon="clear_all"
+          label="Clear All"
+          @click="clearAllFilters"
+          class="clear-all-btn"
+        />
         <q-space />
-        <q-input
-          bg-color="white"
-          outlined
-          dense
-          label="From"
-          v-model="appropriationStore.dateFrom"
-          mask="##/##/####"
-          class="custom-date-from"
-        >
-          <template v-slot:append>
-            <q-icon name="event" class="calend-icon">
-              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                <q-date v-model="appropriationStore.dateFrom" mask="DD/MM/YYYY" />
-              </q-popup-proxy>
-            </q-icon>
-          </template>
-        </q-input>
-        <q-input
-          bg-color="white"
-          outlined
-          dense
-          label="To"
-          v-model="appropriationStore.dateTo"
-          mask="##/##/####"
-          class="custom-date-to"
-        >
-          <template v-slot:append>
-            <q-icon name="event" class="calend-icon">
-              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                <q-date v-model="appropriationStore.dateTo" mask="DD/MM/YYYY" />
-              </q-popup-proxy>
-            </q-icon>
-          </template>
-        </q-input>
-        <q-btn label="Add" icon="add" color="primary" style="min-width: 180px;" @click="addBudget" />
+
+        <q-btn label="Add" icon="add" color="primary" style="min-width: 150px; border-radius: 3px; font-size: small !important;" @click="addBudget"/>
+
+        <!-- Clear All Filters Button -->
+
       </div>
       <!-- iPad: Search input in one row, From/To/Add in a single row below -->
       <div class="ipad-search-row" style="display: none;">
@@ -87,37 +91,28 @@
           bg-color="white"
           outlined
           dense
-          label="From"
-          v-model="appropriationStore.dateFrom"
-          mask="##/##/####"
-          class="custom-date-from"
+          :model-value="dateRangeDisplay"
+          label="Date Range"
+          class="custom-date-range"
+          clearable
+          @clear="onDateRangeClear"
+          readonly
         >
           <template v-slot:append>
             <q-icon name="event" class="calend-icon">
               <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                <q-date v-model="appropriationStore.dateFrom" mask="DD/MM/YYYY" />
-              </q-popup-proxy>
-            </q-icon>
-          </template>
-        </q-input>
-        <q-input
-          bg-color="white"
-          outlined
-          dense
-          label="To"
-          v-model="appropriationStore.dateTo"
-          mask="##/##/####"
-          class="custom-date-to"
-        >
-          <template v-slot:append>
-            <q-icon name="event" class="calend-icon">
-              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                <q-date v-model="appropriationStore.dateTo" mask="DD/MM/YYYY" />
+                <q-date
+                  v-model="dateRange"
+                  range
+                  @update:model-value="onDateRangeChange"
+                />
               </q-popup-proxy>
             </q-icon>
           </template>
         </q-input>
         <q-btn label="Add" icon="add" color="primary" style="min-width: 180px;" @click="addBudget" />
+
+
       </div>
     </div>
 
@@ -254,7 +249,7 @@
           <div class="text-h6">Edit Allocation</div>
         </q-card-section>
         <q-card-section>
-          <div class="hierarchical-table" style="border: 1px solid #e0e0e0; border-radius: 4px">
+          <div class="hierarchical-table" style="border: 1px solid #e0e0e0; border-radius: 3px">
             <div
               class="row q-table__top bg-grey-3 text-weight-bold"
               style="padding: 8px 12px; min-height: 40px"
@@ -342,7 +337,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import CommitDialog from 'components/appropriation/CommitDialog.vue'
 import ViewCommitDialog from 'components/appropriation/ViewCommitDialog.vue'
@@ -362,6 +357,7 @@ const endDate = ref('')
 const description = ref('')
 const amount = ref(null)
 const loading = ref(false)
+const dateRange = ref(null)
 
 const loadPendingUsers = async () => {
   loading.value = true
@@ -383,6 +379,46 @@ const loadPendingUsers = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const dateRangeDisplay = computed(() => {
+  if (!dateRange.value || !dateRange.value.from || !dateRange.value.to) {
+    return ''
+  }
+  const fromDate = new Date(dateRange.value.from).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  })
+  const toDate = new Date(dateRange.value.to).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  })
+  return `${fromDate} - ${toDate}`
+})
+
+const onDateRangeChange = (newRange) => {
+  if (newRange && newRange.from && newRange.to) {
+    // Convert date format from YYYY/MM/DD to DD/MM/YYYY
+    const fromDate = new Date(newRange.from)
+    const toDate = new Date(newRange.to)
+
+    appropriationStore.dateFrom = fromDate.toLocaleDateString('en-GB') // DD/MM/YYYY format
+    appropriationStore.dateTo = toDate.toLocaleDateString('en-GB') // DD/MM/YYYY format
+  } else {
+    appropriationStore.dateFrom = ''
+    appropriationStore.dateTo = ''
+  }
+}
+
+const onDateRangeClear = () => {
+  dateRange.value = null
+  appropriationStore.dateFrom = ''
+  appropriationStore.dateTo = ''
+}
+
+const clearAllFilters = () => {
+  appropriationStore.searchQuery = ''
+  appropriationStore.dateFrom = ''
+  appropriationStore.dateTo = ''
+  dateRange.value = null
 }
 
 const showEditAllocationDialog = ref(false)
@@ -863,14 +899,20 @@ const openDialog = async () => {
 
 /* Using the deep selector (Vue 3 syntax) */
 .q-mb-md :deep(.q-input .q-field__control) {
-  border-radius: 8px;
+  border-radius: 3px;
 }
 .appropriation-page {
-  background-color: #D9D9D9; /* Light gray background */
+  background-color: whitesmoke; /* Light gray background */
   min-height: 100vh; /* Ensure full height */
 }
 .custom-search-input {
-  min-width: 450px;
+ width: 400px !important;
+    min-width: 0 !important;
+    max-width: 1200px !important;
+}
+
+.clear-all-btn {
+  min-width: 120px;
 }
 @media (max-width: 600px) {
   .custom-search-input {
@@ -916,12 +958,12 @@ const openDialog = async () => {
     gap: 16px;
     margin-bottom: 8px;
   }
-  .custom-date-from,
-  .custom-date-to {
+  .custom-date-range {
     flex: 1 1 0 !important;
-    min-width: 120px !important;
-    width: auto !important;
-    max-width: 100% !important;
+    width: 250px !important;
+    min-width: 0 !important;
+    max-width: 350px !important;
+
   }
 }
 @media (max-width: 767px), (min-width: 1025px) {
@@ -936,6 +978,11 @@ const openDialog = async () => {
     display: none !important;
   }
 }
+ .custom-date-range {
+    width: 250px !important;
+    min-width: 0 !important;
+    max-width: 350px !important;
+  }
 
 /* Responsive Dialog - Only sizing adjustments */
 @media (max-width: 600px) {

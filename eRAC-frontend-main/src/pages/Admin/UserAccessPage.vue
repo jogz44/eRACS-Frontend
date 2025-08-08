@@ -3,7 +3,7 @@
     <div class="page-header q-mb-lg">
       <div class="row items-center justify-between">
         <div class="text-h5 text-weight-bold">
-          User Control Accepted
+          User Control
           <span class="text-caption q-ml-sm">({{ users.length }} users)</span>
         </div>
         <q-btn

@@ -1,9 +1,9 @@
 <template>
   <q-page class="q-pa-lg contdis-page">
     <div class="page-header q-mb-lg">
-       <div class="row items-center justify-between">
-      <div class="text-h5 text-weight-bold">Continuing Disbursement</div>
-          <q-btn
+      <div class="row items-center justify-between">
+        <div class="text-h5 text-weight-bold">Continuing Disbursement</div>
+        <q-btn
           icon="refresh"
           color="primary"
           flat
@@ -12,32 +12,40 @@
           :loading="loading"
           title="Refresh pending users"
         />
-        </div>
-</div>
-
+      </div>
+    </div>
 
     <div class="q-mb-md">
       <div class="justify-end q-mb-md">
         <div class="row items-center justify-between q-gutter-sm">
-          <!-- Search Input -->
-          <q-input
-            bg-color="white"
-            outlined
-            dense
-            placeholder="Search..."
-            v-model="store.searchQuery"
-            class="col-md-3 col-sm-5 custom-search-input"
-            style="min-width: 450px"
-          >
-            <template v-slot:append>
-              <q-icon name="search" />
-            </template>
-          </q-input>
+          <!-- Search and Clear Button Group -->
+          <div class="row items-center q-gutter-sm search-group">
+            <q-input
+              bg-color="white"
+              outlined
+              dense
+              placeholder="Search Description..."
+              v-model="store.searchQuery"
+              class="search-input"
+            >
+              <template v-slot:append>
+                <q-icon name="search" />
+              </template>
+            </q-input>
 
-          <div class="t q-px-xl"></div>
+            <q-btn
+              dense
+              outlined
+              color="red-10"
+              icon="clear_all"
+              label="Clear All"
+              @click="clearAllFilters"
+              class="clear-btn"
+            />
+          </div>
 
           <!-- Date Range Group -->
-          <div class="row items-center justify-between">
+          <div class="row items-center q-gutter-sm date-group">
             <!-- From Date -->
             <!-- <q-input
               bg-color="white"
@@ -58,13 +66,9 @@
               </template>
             </q-input> -->
 
-            <!-- To Label -->
-            <div class="t q-px-xs"></div>
-            <div class="t q-px-xs"></div>
-
             <!-- To Date -->
             <!-- <q-input
-             bg-color="white"
+              bg-color="white"
               outlined
               label="To"
               dense
@@ -83,8 +87,6 @@
             </q-input> -->
           </div>
 
-          <div class="t q-px-xs"></div>
-
           <!-- Add Button Disbursement -->
           <q-btn
             label="Add"
@@ -101,7 +103,6 @@
           <q-card-section class="dialog-header">
             <div class="text-h6">Disbursement</div>
           </q-card-section>
-
           <q-card-section class="dialog-content">
             <div class="row q-col-gutter-md">
               <!-- Date Field -->
@@ -124,7 +125,6 @@
                   </template>
                 </q-input>
               </div>
-
               <!-- Bank Field -->
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Bank:</q-item-label>
@@ -137,7 +137,6 @@
                   @keydown.enter="handleEnterKey"
                 />
               </div>
-
               <!-- Check Number Field -->
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Cheque Number:</q-item-label>
@@ -153,29 +152,27 @@
               <!-- DV Number Field -->
               <div class="col-md-4 col-sm-6">
                 <q-item-label class="q-mb-xs">DV Number:</q-item-label>
-                <q-input 
-                  filled 
-                  outlined 
-                  dense 
-                  v-model="store.forms.disbursement.dvNumber" 
+                <q-input
+                  filled
+                  outlined
+                  dense
+                  v-model="store.forms.disbursement.dvNumber"
                   @keydown.enter="handleEnterKey"
                 />
               </div>
-
               <!-- Payee Field -->
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Payee:</q-item-label>
-                <q-input 
-                  filled 
-                  outlined 
-                  dense 
-                  v-model="store.forms.disbursement.payee" 
+                <q-input
+                  filled
+                  outlined
+                  dense
+                  v-model="store.forms.disbursement.payee"
                   @keydown.enter="handleEnterKey"
                 />
               </div>
             </div>
           </q-card-section>
-
           <!-- Add Expense Button -->
           <q-card-section class="dialog-content">
             <div class="row justify-end q-mb-md">
@@ -217,7 +214,6 @@
                 </q-td>
               </template>
             </q-table>
-
             <!-- Amount Display -->
             <div class="q-mt-md">
               <q-item-label class="q-mb-xs">Amount:</q-item-label>
@@ -231,7 +227,6 @@
               />
             </div>
           </q-card-section>
-
           <q-card-actions align="right" class="dialog-actions">
             <q-btn
               flat
@@ -265,7 +260,6 @@
                   icon="visibility"
                   @click="store.openViewOrDetails(props.row)"
                 />
-
                 <q-btn
                   outlined
                   label="Liquidate"
@@ -279,7 +273,6 @@
       </q-card>
 
       <ContLiquidateDialog v-model="store.dialogs.orDetails" />
-
       <!-- View Only Dialog -->
       <ContViewOr v-model="store.dialogs.viewOrDetails" />
     </div>
@@ -288,24 +281,29 @@
 
 <script setup>
 import { useQuasar } from 'quasar'
+import { ref } from 'vue'
+import { useContDisbursementStore } from 'stores/contDisburseStore'
+import ContLiquidateDialog from 'components/contDisburse/ContOrDetails.vue'
+import ContViewOr from 'components/contDisburse/ContViewOr.vue'
 
 const $q = useQuasar()
 const loading = ref(false)
+const store = useContDisbursementStore()
 
 const validateAndSave = () => {
   // Check if disbursement dialog is open
   if (store.dialogs.disbursement) {
     // Validate required fields before saving
     const form = store.forms.disbursement
-    const hasRequiredFields = form.date && 
-                             form.bank && 
-                             form.checkNumber && 
-                             form.dvNumber && 
+    const hasRequiredFields = form.date &&
+                             form.bank &&
+                             form.checkNumber &&
+                             form.dvNumber &&
                              form.payee
-    
+
     // Check if expenses are added
     const hasExpenses = store.expenses && store.expenses.length > 0
-    
+
     if (!hasRequiredFields) {
       $q.notify({
         type: 'negative',
@@ -315,7 +313,7 @@ const validateAndSave = () => {
       })
       return
     }
-    
+
     if (!hasExpenses) {
       $q.notify({
         type: 'negative',
@@ -325,7 +323,7 @@ const validateAndSave = () => {
       })
       return
     }
-    
+
     // If validation passes, proceed with save
     store.saveDisbursement()
   }
@@ -365,26 +363,77 @@ const loadPendingUsers = async () => {
     loading.value = false
   }
 }
-import { ref } from 'vue'
-import { useContDisbursementStore } from 'stores/contDisburseStore'
-import ContLiquidateDialog from 'components/contDisburse/ContOrDetails.vue'
-import ContViewOr from 'components/contDisburse/ContViewOr.vue'
 
-const store = useContDisbursementStore()
+const clearAllFilters = () => {
+  store.searchQuery = ''
+  store.dateFrom = ''
+  store.dateTo = ''
+}
 </script>
 
 <style scoped>
 .contdis-page {
-  background-color: #D9D9D9; /* Light gray background */
+  background-color: whitesmoke; /* Light gray background */
   min-height: 100vh; /* Ensure full height */
 }
 
+/* Search Group Styles - NEW */
+.search-group {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.search-input {
+  min-width: 300px;
+  max-width: 450px;
+}
+
+.clear-btn {
+  min-width: 120px;
+  white-space: nowrap;
+}
+
+.date-group {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.add-table-btn {
+  min-width: 100px;
+}
+
+/* Legacy styles for backward compatibility */
 .custom-search-input {
-  min-width: 450px;
+ width: 400px !important;
+    min-width: 0 !important;
+    max-width: 1200px !important;
+
+
+}
+
+.clear-all-btn {
+  min-width: 120px;
 }
 
 /* Responsive styles to match Continuing Appropriation */
 @media (max-width: 600px) {
+  .search-group {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+
+  .search-input {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .clear-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
   .custom-search-input {
     min-width: 0 !important;
     width: 100% !important;
@@ -393,6 +442,17 @@ const store = useContDisbursementStore()
 }
 
 @media (min-width: 601px) and (max-width: 900px) {
+  .search-group {
+    flex: 1;
+    max-width: 600px;
+  }
+
+  .search-input {
+    flex: 1;
+    min-width: 250px;
+    max-width: 400px;
+  }
+
   .custom-search-input {
     min-width: 0 !important;
     width: 100% !important;
@@ -416,6 +476,7 @@ const store = useContDisbursementStore()
     flex-direction: column !important;
     align-items: stretch !important;
     width: 100% !important;
+    gap: 12px !important;
   }
   .row.items-center.justify-between.q-gutter-sm > * {
     margin-bottom: 8px !important;
@@ -456,6 +517,17 @@ const store = useContDisbursementStore()
 }
 
 @media (min-width: 768px) and (max-width: 1024px) {
+  .search-group {
+    flex: 1;
+    max-width: 600px;
+  }
+
+  .search-input {
+    flex: 1;
+    min-width: 250px;
+    max-width: 400px;
+  }
+
   /* Force the main container to stack */
   .row.items-center.justify-between.q-gutter-sm {
     flex-direction: column !important;
@@ -503,6 +575,14 @@ const store = useContDisbursementStore()
 }
 
 @media (min-width: 1025px) {
+  .search-group {
+    flex: 0 0 auto;
+  }
+
+  .search-input {
+    width: 350px;
+  }
+
   .custom-search-input {
     width: 400px !important;
     min-width: 0 !important;
@@ -556,15 +636,12 @@ const store = useContDisbursementStore()
     display: flex;
     flex-direction: column;
   }
-
   .responsive-amount-input {
     max-width: 100%;
   }
-
   .responsive-table {
     font-size: 12px;
   }
-
   /* Align form fields width for mobile */
   .dialog-content .row.q-col-gutter-md .col-md-4,
   .dialog-content .row.q-col-gutter-md .col-sm-6,
@@ -572,19 +649,16 @@ const store = useContDisbursementStore()
     width: 100% !important;
     margin-bottom: 2px;
   }
-
   .dialog-content .row.q-col-gutter-md .col-md-4:last-child,
   .dialog-content .row.q-col-gutter-md .col-sm-6:last-child,
   .dialog-content .row.q-col-gutter-md .col-sm-12:last-child {
     margin-bottom: 0;
   }
-
   /* Ensure all form inputs have consistent width on mobile */
   .dialog-content .q-input,
   .dialog-content .q-select {
     width: 100% !important;
   }
-
   /* Make q-table more responsive and visible */
   .q-table {
     font-size: 9px !important;
@@ -592,14 +666,12 @@ const store = useContDisbursementStore()
     border-radius: 4px;
     margin: 2px 0;
   }
-
   .q-table thead {
     position: sticky !important;
     top: 0 !important;
     z-index: 10 !important;
     background-color: #f5f5f5 !important;
   }
-
   .q-table th {
     padding: 2px 1px !important;
     font-size: 8px !important;
@@ -609,21 +681,17 @@ const store = useContDisbursementStore()
     top: 0 !important;
     z-index: 10 !important;
   }
-
   .q-table td {
     padding: 1px 1px !important;
     font-size: 8px !important;
     vertical-align: middle !important;
   }
-
   .q-table tbody tr {
     border-bottom: 1px solid #f0f0f0 !important;
   }
-
   .q-table tbody tr:hover {
     background-color: #f8f8f8 !important;
   }
-
   /* Make table scrollable with fixed height */
   .responsive-table {
     max-height: 80px;
@@ -632,13 +700,11 @@ const store = useContDisbursementStore()
     border-radius: 4px;
     margin: 2px 0;
   }
-
   /* Ensure table body scrolls while header stays fixed */
   .q-table__container {
     max-height: 80px;
     overflow-y: auto;
   }
-
   /* Make dialog content scrollable */
   .dialog-content {
     flex: 1;
@@ -646,7 +712,6 @@ const store = useContDisbursementStore()
     max-height: none;
     padding: 2px;
   }
-
   /* Ensure dialog actions are always visible */
   .dialog-actions {
     position: sticky;
@@ -658,49 +723,40 @@ const store = useContDisbursementStore()
     margin-top: 0;
     flex-shrink: 0;
   }
-
   /* Reduce padding in dialog sections for mobile */
   .dialog-header {
     padding: 2px;
     flex-shrink: 0;
   }
-
   /* Make buttons more prominent on mobile */
   .dialog-actions .q-btn {
     min-height: 25px;
     font-size: 10px;
     font-weight: 500;
   }
-
   /* Ensure proper spacing for the dialog */
   .q-dialog__inner {
     padding: 2px;
   }
-
   /* Reduce spacing between elements */
   .q-mb-md {
     margin-bottom: 1px !important;
   }
-
   .q-mt-md {
     margin-top: 1px !important;
   }
-
   /* Reduce table pagination height */
   .q-table__bottom {
     padding: 1px 2px;
     font-size: 6px !important;
   }
-
   /* Improve table pagination controls */
   .q-table__bottom .q-field {
     font-size: 6px !important;
   }
-
   .q-table__bottom .q-select {
     font-size: 6px !important;
   }
-
   /* Add spacing around table */
   .q-table-container {
     margin: 2px 0;
@@ -708,14 +764,12 @@ const store = useContDisbursementStore()
     border-radius: 4px;
     overflow: hidden;
   }
-
   /* Improve button group spacing in table */
   .button-group {
     display: flex;
     gap: 1px;
     flex-wrap: wrap;
   }
-
   .button-group .q-btn {
     min-width: 18px;
     min-height: 18px;
@@ -730,11 +784,9 @@ const store = useContDisbursementStore()
     max-width: 85vw;
     max-height: 80vh;
   }
-
   .responsive-amount-input {
     max-width: 250px;
   }
-
   .responsive-table {
     font-size: 13px;
   }
@@ -747,7 +799,6 @@ const store = useContDisbursementStore()
     max-width: 85vw;
     max-height: 80vh;
   }
-
   .responsive-amount-input {
     max-width: 300px;
   }
@@ -760,7 +811,6 @@ const store = useContDisbursementStore()
     max-width: 80vw;
     max-height: 75vh;
   }
-
   .responsive-amount-input {
     max-width: 350px;
   }
@@ -798,7 +848,6 @@ const store = useContDisbursementStore()
     flex-direction: column;
     gap: 2px;
   }
-  
   .button-group .q-btn {
     width: 100%;
     justify-content: center;
@@ -810,7 +859,6 @@ const store = useContDisbursementStore()
   .q-table {
     font-size: 12px;
   }
-  
   .q-table th,
   .q-table td {
     padding: 4px 6px;
@@ -843,21 +891,18 @@ const store = useContDisbursementStore()
     display: flex !important;
     flex-direction: column !important;
   }
-
   .dialog-header {
     flex-shrink: 0 !important;
     padding: 12px !important;
     font-size: 14px !important;
     font-weight: 600 !important;
   }
-
   .dialog-content {
     flex: 1 !important;
     overflow-y: auto !important;
     max-height: none !important;
     padding: 8px !important;
   }
-
   .dialog-actions {
     flex-shrink: 0 !important;
     position: sticky !important;
@@ -867,19 +912,16 @@ const store = useContDisbursementStore()
     padding: 8px 12px !important;
     border-top: 1px solid #e0e0e0 !important;
   }
-
   .dialog-actions .q-btn {
     min-height: 36px !important;
     font-size: 14px !important;
     padding: 0 16px !important;
   }
-
   /* Form fields take full width on mobile */
   .col-md-4, .col-sm-6, .col-sm-12 {
     width: 100% !important;
     margin-bottom: 12px !important;
   }
-
   /* Make table scrollable with fixed height */
   .responsive-table {
     max-height: 120px !important;
@@ -888,13 +930,11 @@ const store = useContDisbursementStore()
     border-radius: 4px !important;
     margin: 4px 0 !important;
   }
-
   /* Ensure table body scrolls while header stays fixed */
   .q-table__container {
     max-height: 120px !important;
     overflow-y: auto !important;
   }
-
   /* Make table header sticky */
   .q-table thead {
     position: sticky !important;
@@ -902,7 +942,6 @@ const store = useContDisbursementStore()
     z-index: 10 !important;
     background-color: #f5f5f5 !important;
   }
-
   .q-table th {
     position: sticky !important;
     top: 0 !important;
@@ -912,26 +951,21 @@ const store = useContDisbursementStore()
     font-size: 10px !important;
     font-weight: 600 !important;
   }
-
   .q-table td {
     padding: 2px 1px !important;
     font-size: 9px !important;
   }
-
   .q-table tbody tr {
     border-bottom: 1px solid #e0e0e0 !important;
   }
-
   .q-table tbody tr:hover {
     background-color: #f8f9fa !important;
   }
-
   /* Adjust table pagination */
   .q-table__bottom {
     font-size: 8px !important;
     padding: 4px !important;
   }
-
   /* Adjust button groups */
   .button-group .q-btn {
     min-width: 20px !important;
@@ -939,16 +973,19 @@ const store = useContDisbursementStore()
     font-size: 10px !important;
     padding: 2px !important;
   }
-
   /* Input fields */
   .responsive-amount-input {
     font-size: 12px !important;
     padding: 6px !important;
   }
-
   .responsive-search-input {
     font-size: 12px !important;
     padding: 6px !important;
   }
+}
+
+.page-header {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 16px;
 }
 </style>

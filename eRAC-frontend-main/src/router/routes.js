@@ -32,8 +32,14 @@ const routes = [
 
   {
     path: '/reset-password',
-    name: 'ResetPassword',
-    component: () => import('src/pages/Accounts/ResetPasswordPage.vue'),
+    component: () => import('layouts/LoginLayout.vue'),
+    children: [
+      {
+        name: 'ResetPassword',
+        path: '',
+        component: () => import('src/pages/Accounts/ResetPasswordPage.vue'),
+      },
+    ],
   },
 
   {

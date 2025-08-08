@@ -80,10 +80,22 @@
               class="col-md-4 col-sm-6 col-xs-12"
               style="min-width: 300px"
             >
+
               <template #append>
                 <q-icon name="search" />
               </template>
+
             </q-input>
+               <!-- <q-btn
+              dense
+              outlined
+              color="red-10"
+              icon="clear_all"
+              label="Clear All"
+              @click="clearAllFilters"
+              class="clear-all-btn"
+            /> -->
+
 
             <!-- Add Account Button  -->
             <q-btn
@@ -93,6 +105,9 @@
               :disable="!selectedYear"
               class="col-auto allocate-btn"
             />
+
+            <!-- Clear All Filters Button -->
+
           </div>
 
           <!-- Account Entries Exapandable -->
@@ -652,6 +667,10 @@ const loadPendingUsers = async () => {
     loading.value = false
   }
 }
+
+// const clearAllFilters = () => {
+//   searchQuery.value = ''
+// }
 import Sortable from 'sortablejs'
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
@@ -1689,7 +1708,11 @@ watch(
 }
 
 .accountslib-page {
-  background-color: #D9D9D9;
+  background-color: whitesmoke;
+}
+
+.clear-all-btn {
+  min-width: 120px;
 }
 
 /* Responsive Design */
@@ -1984,5 +2007,9 @@ watch(
 
 .q-gutter-xs > * {
   margin-bottom: 4px !important;
+}
+.page-header {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 16px;
 }
 </style>

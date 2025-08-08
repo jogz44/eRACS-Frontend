@@ -26,12 +26,23 @@
           v-model="searchQuery"
           class="custom-search-input"
         >
+
           <template v-slot:append>
             <q-icon name="search" />
           </template>
         </q-input>
+         <!-- Clear All Filters Button -->
+        <q-btn
+          dense
+          outlined
+          color="red-10"
+          icon="clear_all"
+          label="Clear All"
+          @click="clearAllFilters"
+          class="clear-all-btn"
+        />
         <q-space />
-        <q-input
+        <!-- <q-input
           bg-color="white"
           outlined
           dense
@@ -64,8 +75,9 @@
               </q-popup-proxy>
             </q-icon>
           </template>
-        </q-input>
+        </q-input> -->
         <q-btn label="Continue Accounts" @click="showContinueDialog = true" color="secondary" style="min-width: 180px;" />
+
       </div>
       <!-- iPad: Search input in one row, From/To/Add in a single row below -->
       <div class="ipad-search-row" style="display: none;">
@@ -83,7 +95,7 @@
         </q-input>
       </div>
       <div class="row items-center q-gutter-sm ipad-dateadd-row" style="display: none;">
-        <q-input
+        <!-- <q-input
           bg-color="white"
           outlined
           dense
@@ -99,7 +111,7 @@
               </q-popup-proxy>
             </q-icon>
           </template>
-        </q-input>
+        </q-input> -->
         <q-input
           bg-color="white"
           outlined
@@ -118,6 +130,8 @@
           </template>
         </q-input>
         <q-btn label="Continue Accounts" @click="showContinueDialog = true" color="secondary" style="min-width: 180px;" />
+
+
       </div>
     </div>
 
@@ -329,6 +343,12 @@ const loadPendingUsers = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const clearAllFilters = () => {
+  searchQuery.value = ''
+  dateFrom.value = ''
+  dateTo.value = ''
 }
 import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
@@ -655,7 +675,7 @@ defineExpose({
 
 /* Using the deep selector (Vue 3 syntax) */
 .q-mb-md :deep(.q-input .q-field__control) {
-  border-radius: 8px;
+  border-radius: 3px;
 }
 
 /* Button styles */
@@ -669,12 +689,19 @@ defineExpose({
   color: #666;
 }
 .cont-appr{
-  background-color: #D9D9D9; /* Light gray background */
+  background-color: whitesmoke; /* Light gray background */
   min-height: 100vh; /* Ensure full height */
 }
 
 .custom-search-input {
-  min-width: 450px;
+ width: 400px !important;
+    min-width: 0 !important;
+    max-width: 1200px !important;
+
+}
+
+.clear-all-btn {
+  min-width: 120px;
 }
 @media (max-width: 600px) {
   .custom-search-input {
@@ -1119,5 +1146,8 @@ defineExpose({
   .q-card-section {
     padding: 8px;
   }
+}.page-header {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 16px;
 }
 </style>

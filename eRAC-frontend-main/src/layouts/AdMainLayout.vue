@@ -1,110 +1,116 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <!-- HEADER (unchanged) -->
+    <!-- HEADER -->
     <q-header elevated class="custom-header">
-      <q-toolbar class="justify-between toolbar" style="padding: 0 20px">
+      <q-toolbar class="q-pr-md items-center" style="display: flex; flex-direction: row;">
+        <q-btn
+          flat
+          round
+          dense
+          icon="menu"
+          class="q-mr-sm"
+          v-if="$q.screen.lt.md"
+          @click="leftDrawerOpen = !leftDrawerOpen"
+        />
+        <div v-if="$q.screen.lt.md && authStore.admin?.name" class="barangay-mobile-title text-weight-bold q-mr-md">
+          Welcome, {{ authStore.admin?.name || 'Admin' }}
+        </div>
+        <q-space v-if="$q.screen.lt.md" />
         <q-toolbar-title
           v-if="$q.screen.gt.sm"
-          class="title"
-          style="color: white; font-weight: bold"
-
+          class="welcome-title"
+          style="color: white; font-weight: bold ;"
         >
           Welcome, {{ authStore.admin?.name || 'Admin' }}
         </q-toolbar-title>
-        <q-space />
-        <!-- <q-btn flat round dense icon="menu" class="q-mr-sm" style="color: white">
-          <q-menu transition-show="jump-down" transition-hide="jump-up">
-            <q-list class="q-pa-sm" style="min-width: 180px">
-              <q-item class="q-mb-sm" clickable v-ripple>
-                <q-item-section>
-                  <div class="text-subtitle2">Admin</div>
-                  <div class="text-caption text-grey">
-                    {{ authStore.admin?.email || 'Administrator' }}
-                  </div>
-                </q-item-section>
-              </q-item>
-              <q-separator />
-              <q-item clickable v-close-popup @click="handleLogout">
-                <q-item-section avatar>
-                  <q-icon name="logout" />
-                </q-item-section>
-                <q-item-section>Logout</q-item-section>
-              </q-item>
-            </q-list>
-          </q-menu>
-        </q-btn> -->
       </q-toolbar>
-    </q-header >
+    </q-header>
 
-    <!-- DRAWER (match MainLayout.vue) -->
+    <!-- DRAWER -->
     <q-drawer
       v-model="leftDrawerOpen"
       :width="$q.screen.lt.md ? 220 : 300"
-      :breakpoint="mobile"
+      :breakpoint="767"
       :show-if-above="$q.screen.gt.sm"
       bordered
       class="custom-card-drawer drawer-fixed"
       :class="{ 'drawer-mobile': $q.screen.lt.md }"
     >
       <div class="drawer-content">
-        <!-- Logo & Title -->
-        <q-list>
-          <q-item class="column items-center q-pt-md">
+        <!-- Logo & Title Section -->
+        <div class="logo-section">
+          <q-item class="row items-center q-pt-md" style="padding: 5px;">
             <img
               src="src/assets/tagumlogo.png"
               alt="ERACS Logo"
-              style="width: 80px; height: 75px; max-width: 100%; height: auto;"
-              class="q-mb-sm w-20 h-auto"
+              style="width: 100px; height: 75px; max-width: 100%; height: auto;"
+              class="q-mb-sm"
             />
-            <q-item-label class="eracs-title text-center text-sm md:text-base" style="font-size: medium;">
+            <q-item-label class="eracs-title text-center" style="font-size: small;color: black; font-style: normal;">
               Electronic Registry of Appropriation and Commitment (eRAC)
             </q-item-label>
           </q-item>
-        </q-list>
-        <!-- Nav Links - Scrollable if needed -->
-        <div class="scroll nav-links q-pa-sm" style = "max-height: 70hv; overflow-y: auto;">
-          <NavLink
-            v-for="link in navLinks"
-            :key="link.title"
-            v-bind="link"
-            :expanded="expanded[link.title] || false"
-            @toggle="toggleExpand(link.title)"
-          />
         </div>
+
+        <!-- Favorites Section -->
+        <div class="favorites-section">
+          <div class="section-title">Main Functions</div>
+          <div class="favorites-list q-pa-sm ">
+            <div
+              v-for="favorite in favorites"
+              :key="favorite.title"
+              class="favorite-item"
+              @click="navigateToFavorite(favorite.link)"
+            >
+              <q-icon :name="favorite.icon" size="16px" />
+              <span class="favorite-title">{{ favorite.title }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Saved Searches Section -->
+        <div class="saved-searches-section">
+          <div class="section-title">User Management</div>
+          <div class="saved-searches-list q-pa-sm">
+            <div
+              v-for="search in savedSearches"
+              :key="search.title"
+              class="saved-search-item"
+              @click="navigateToSearch(search.link)"
+            >
+              <q-icon :name="search.icon" size="16px" />
+              <span class="search-title">{{ search.title }}</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Sticky Footer -->
         <div class="drawer-footer q-mt-auto q-pa-xs">
-          <div class="text-caption text-white items-center q-pa-sm footer-avatar">
-            <q-list separator>
-              <div class="footer-user row items-center q-gutter-sm q-pa-sm">
-                <!-- Avatar -->
-                <q-avatar  size="$q.screen.lt.md ? '32px' : '45px'"
-                class="q-avatar--xs md:q-avatar--md">
-                  <img   src="src/assets/admin.png"/>
-                </q-avatar>
-                <!-- Name & Position -->
-                <div class="column">
-                  <span class="Custom-text text-caption text-white text-weight-bold ">
-                    User
-
-                  </span>
-                  <span  class="position-text text-caption text-white text-weight-medium text-h5"  >
-                   ADMIN
-                  </span>
-                </div>
-                <!-- Logout Icon -->
-                <q-space />
-                <q-btn
-                  flat
-                  round
-                  dense
-                  icon="logout"
-                  color="white"
-                  @click="handleLogout"
-                  class="logout-btn"
-                  size="md"
-                />
+          <div class="text-caption text-grey items-center q-pa-sm footer-avatar">
+            <div class="footer-user q-pa-sm">
+              <q-avatar size="$q.screen.lt.md ? '32px' : '45px'">
+                <img src="src/assets/admin.png" style="max-width: 100%; height: auto;" />
+              </q-avatar>
+              <div class="footer-user-info">
+                <span class="Custom-text text-caption text-white text-weight-bold">
+                  {{ authStore.admin?.name || 'Admin' }}
+                </span>
+                <span class="position-text text-caption text-white text-weight-medium text-h5">
+                  ADMIN
+                </span>
               </div>
-            </q-list>
+              <q-space />
+              <q-btn
+                icon="logout"
+                color="white"
+                flat
+                round
+                dense
+                @click="handleLogout"
+              >
+                <q-tooltip>Log Out</q-tooltip>
+              </q-btn>
+            </div>
           </div>
         </div>
       </div>
@@ -123,7 +129,6 @@ import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'stores/auth'
-import NavLink from 'components/Nav/NavLink.vue'
 import { api } from 'boot/axios'
 
 const $q = useQuasar()
@@ -131,40 +136,26 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const leftDrawerOpen = ref(false)
-const navLinks = [
-  {
-    title: 'Dashboard',
-    icon: 'dashboard',
-    link: '/admin/dashboard',
-  },
-  {
-    title: 'User Control',
-    icon: 'people',
-    children: [
-      { title: 'Pending', link: '/admin/usercontrol/pending' },
-      { title: 'Accepted', link: '/admin/usercontrol/accepted' },
-    ],
-  },
-  {
-    title: 'User Access',
-    icon: 'admin_panel_settings',
-    link: '/admin/userAccess',
-  },
-  {
-    title: 'Logs',
-    icon: 'history',
-    link: '/admin/logs',
-  },
-]
 
-const expanded = ref({
-  'User Control': false,
-})
+// Favorites data - Admin functions
+const favorites = ref([
+  { title: 'Dashboard', link: '/admin/dashboard', icon: 'dashboard' },
+  { title: 'Logs', link: '/admin/logs', icon: 'history' }
+])
 
-const toggleExpand = (title) => {
-  if (Object.hasOwn(expanded.value, title)) {
-    expanded.value[title] = !expanded.value[title]
-  }
+// Saved searches data - Additional admin functions
+const savedSearches = ref([
+ { title: 'User Access', link: '/admin/userAccess', icon: 'admin_panel_settings' },
+  { title: 'Pending Users', link: '/admin/usercontrol/pending', icon: 'pending' },
+  { title: 'Accepted Users', link: '/admin/usercontrol/accepted', icon: 'check_circle' }
+])
+
+const navigateToFavorite = (link) => {
+  router.push(link)
+}
+
+const navigateToSearch = (link) => {
+  router.push(link)
 }
 
 const handleLogout = async () => {
@@ -195,6 +186,7 @@ onMounted(() => {
     router.replace('/admin/login')
   }
 })
+
 watch(
   () => authStore.adminToken,
   (token) => {
@@ -208,94 +200,235 @@ watch(
 <style>
 .custom-card-drawer {
   position: sticky;
-  background: linear-gradient(#E0FFE7, #589b16,#187C19);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-  padding-top: 30px;
+  background:linear-gradient(30deg,#187C19,#E0FFE7,#187C19);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding-top: 0;
   overflow: hidden;
   overflow-x: hidden;
+  border-right: 1px solid #e0e0e0;
 }
+
+.Custom-text {
+  font-size: 18px;
+  color: black !important;
+}
+
+.custom-header {
+  background: #0E780E;
+  justify-content: center;
+  border-left: black;
+  margin-left: -2px;
+}
+
+.eracs-title {
+  color: black;
+  font-size: 0.95rem;
+  font-weight: bolder;
+  text-align: center;
+}
+
+.nav-links {
+  color: black;
+  padding: 0;
+  margin: 0;
+  overflow-x: hidden;
+}
+
 .drawer-fixed {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
+
 .drawer-content {
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-}.nav-links {
-  color: white;
-  padding: 10px;
-  margin: 10px;
-  overflow-x: hidden;
 }
+
+.logo-section {
+  position: relative;
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color:black;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 16px 2px 16px;
+  margin-top: 0;
+}
+
+.favorites-section {
+  border-top: 1px solid black;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.favorites-list {
+  padding: 0 8px;
+  width: 95%;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+.favorite-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  margin: 4px 0;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: white !important;
+  background-color: #69B31E;
+  box-shadow: 0 4px 8px rgba(82, 140, 24, 0.4);
+}
+
+.favorite-item:hover {
+  background-color: #0E780E;
+}
+
+.favorite-title {
+  margin-left: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  color: white !important;
+}
+
+.saved-searches-section {
+  border-top: 1px solid black;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.saved-searches-list {
+  padding: 0 8px;
+  color: white !important;
+  width: 95%;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+.saved-search-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  margin: 4px 0;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: white !important;
+  background-color: #69B31E;
+  box-shadow: 0 4px 8px rgba(82, 140, 24, 0.4);
+}
+
+.saved-search-item:hover {
+  background-color: #0E780E;
+}
+
+.search-title {
+  margin-left: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  color: white !important;
+}
+
 .drawer-content .nav-links {
   flex: 1 1 auto;
   overflow-y: auto;
 }
+
 .drawer-footer {
   justify-content: space-between;
   flex-shrink: 0;
-  padding-left: 20px;
-  background-color:#187C19;
-
+  background-color: #0E780E;
+  height: 12%;
 }
+
 .avatar-footer {
   display: flex;
   justify-content: end;
   align-items: center;
   padding: 10px;
 }
-@media (max-width: 767px) {
-  .custom-card-drawer {
-    width: 100vw !important;
-    min-width: 0 !important;
-    max-width: 100vw !important;
-    left: 0 !important;
-    border-radius: 0 !important;
-    padding-top: 10px;
-  }
-  .drawer-content {
-    padding: 0 4px;
-  }
-  .drawer-footer {
-    padding-left: 4px;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .footer-user {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .eracs-title {
-    color: rgba(2, 2, 2, 0.7);
-  font-size: 0.95rem;
-  font-weight: bolder;
-  text-align: center;
-  }.eracs-title {
-    font-size: 0.8rem;
-  }
-  .nav-links {
-    margin: 0;
-    padding: 4px;
+
+.barangay-mobile-title {
+  font-size: 1.1rem;
+  color: white;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+}
+
+@media (min-width: 992px) {
+  .barangay-mobile-title {
+    display: none !important;
   }
 }
+
+.footer-user {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+}
+
+.footer-user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+  text-align: left;
+}
+
+.footer-avatar-center {
+  margin-bottom: 0;
+}
+
+@media (max-width: 767px) {
+  .footer-user {
+    gap: 8px;
+    padding-left: 0;
+    padding-right: 0;
+    justify-content: flex-start;
+  }
+
+  .footer-user-info {
+    font-size: 0.9em;
+  }
+
+  .footer-avatar-center q-avatar {
+    width: 32px !important;
+    height: 32px !important;
+  }
+}
+
 @media (max-width: 500px) {
-  .eracs-title {
-    font-size: 0.7rem;
+  .footer-user-info {
+    font-size: 0.8em;
   }
-  .custom-header {
-    font-size: 0.9rem;
-    padding: 0 4px;
 
-
+  .footer-avatar-center q-avatar {
+    width: 28px !important;
+    height: 28px !important;
   }
-}.toolbar{
-  background-color: #187C19;
-}.drawer-footer{
-   font-style: italic;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.position-text {
+  font-style: italic;
   font-size: smaller;
-
+  color: white !important;
 }
 </style>

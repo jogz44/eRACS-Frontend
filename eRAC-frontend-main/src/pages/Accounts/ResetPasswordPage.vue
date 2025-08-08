@@ -41,7 +41,7 @@
           </div>
 
           <div class="signin-title">Reset Password</div>
-          <div class="reset-subtitle">Enter your new password for {{ email }}</div>
+          <div class="reset-subtitle">Enter your new password for {{ email || 'your account' }}</div>
         </div>
 
         <div class="login-form">
@@ -159,6 +159,19 @@ onMounted(() => {
   email.value = route.params.email || route.query.email || ''
   console.log('Email value:', email.value)
 
+  // Temporarily comment out the redirect to see if the component renders
+  // if (!email.value) {
+  //   console.log('No email found, redirecting to forgot page')
+  //   $q.notify({
+  //     type: 'negative',
+  //     message: 'Email is required for password reset',
+  //     position: 'top',
+  //   })
+  //   router.push('/forgotpage')
+  // } else {
+  //   console.log('Email found, staying on reset page')
+  // }
+  
   if (!email.value) {
     console.log('No email found, redirecting to forgot page')
     $q.notify({
