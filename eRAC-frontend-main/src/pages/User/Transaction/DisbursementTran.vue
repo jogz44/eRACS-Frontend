@@ -35,14 +35,12 @@
                   dense
                   v-model="store.forms.disbursement.date"
                   mask="##/##/####"
+                  :readonly="true"
+                  :disable="true"
                   @keydown.enter="handleEnterKey"
                 >
                   <template v-slot:append>
-                    <q-icon name="event" class="cursor-pointer">
-                      <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                        <q-date v-model="store.forms.disbursement.date" mask="DD/MM/YYYY" />
-                      </q-popup-proxy>
-                    </q-icon>
+                    <q-icon name="event" class="cursor-not-allowed" />
                   </template>
                 </q-input>
               </div>
@@ -69,7 +67,7 @@
               <!-- Check Number Field -->
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Cheque Number:</q-item-label>
-                <q-select
+                <!-- <q-input
                   outlined
                   dense
                   v-model="store.selectedBooklet"
@@ -82,20 +80,18 @@
                   :label="store.chequeBooklets.length === 0 ? 'No booklets available' : 'Choose Booklet'"
                   class="q-mb-sm"
                   :loading="store.bookletLoading"
-                  :disable="!store.forms.disbursement.bank_id || store.chequeBooklets.length === 0"
+                  :disable="true"
                   @keydown.enter="handleEnterKey"
-                />
+                /> -->
 
-                <q-select
+                <q-input
                   outlined
                   dense
                   v-model="store.selectedChequeNumber"
-                  @update:model-value="store.selectChequeNumber"
-                  :options="store.availableChequeNumbers"
-                  :disable="!store.selectedBooklet || store.availableChequeNumbers.length === 0"
-                  :label="store.availableChequeNumbers.length === 0 ? 'No cheques available' : 'Select Cheque Number'"
+                  :disable="true"
+
                   @keydown.enter="handleEnterKey"
-                />
+                ></q-input>
               </div>
 
               <!-- DV Number Field -->
@@ -104,6 +100,7 @@
                 <q-input
                   outlined
                   dense
+                  :disable="true"
                   v-model="store.forms.disbursement.dvNumber"
                   @keydown.enter="handleEnterKey"
                 />
@@ -407,13 +404,23 @@ watch(
   { deep: true },
 )
 
-// Watch for disbursements changes to update the table
+// Watch for changes in the selected bank to update the cheque booklets
 watch(
-  () => store.disbursements,
-  (newDisbursements) => {
-    console.log('Disbursements updated:', newDisbursements.length, 'items')
+  () => store.forms.disbursement.bank_id,
+  async (newBankId) => {
+    if (newBankId) {
+      try {
+        await store.loadChequeBookletsForBank(newBankId)
+      } catch (error) {
+        $q.notify({
+          type: 'negative',
+          message: `Failed to load cheque booklets for selected bank: ${error.message}`,
+          icon: 'error',
+          position: 'top',
+        })
+      }
+    }
   },
-  { deep: true },
 )
 
 import { ref, computed } from 'vue'
@@ -445,31 +452,30 @@ const handleBankSelection = async (bankId) => {
   }
 }
 
-const handleBookletSelection = async (bookletRange) => {
-  if (bookletRange) {
-    try {
-      await store.selectBooklet(bookletRange)
-    } catch (error) {
-      $q.notify({
-        type: 'negative',
-        message: `Failed to load cheques for selected booklet: ${error.message}`,
-        icon: 'error',
-        position: 'top',
-      })
-    }
-  }
-}
+// const handleBookletSelection = async (bookletRange) => {
+//   if (bookletRange) {
+//     try {
+//       await store.selectBooklet(bookletRange)
+//     } catch (error) {
+//       $q.notify({
+//         type: 'negative',
+//         message: `Failed to load cheques for selected booklet: ${error.message}`,
+//         icon: 'error',
+//         position: 'top',
+//       })
+//     }
+//   }
+// }
 
 const validateAndSave = () => {
   if (store.dialogs.disbursement) {
     const form = store.forms.disbursement
     const hasRequiredFields = form.date &&
                              form.bank_id &&
-                             store.selectedBooklet &&
                              store.selectedChequeNumber &&
                              form.dvNumber &&
                              form.payee
-
+    console.log('Here dshkfdkjs :',store.selectedChequeNumber  )
     if (hasRequiredFields && !store.loading) {
       store.saveDisbursement()
     } else {

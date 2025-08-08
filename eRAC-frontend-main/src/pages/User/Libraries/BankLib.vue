@@ -261,16 +261,19 @@
 
         <q-card-section>
           <q-form @submit="handleAddBookletSaveClick">
+            
             <q-input
-            class="q-mb-sm quantity-input"
-            label="Quantity"
-            outlined
-            style="width: 140px ;"
-            :rules="[
-              (val) => !!val || 'Quantity is required',
-              (val) => val > 0 || 'Must be greater than 0',
-            ]"
-
+              v-model="newBooklet.booklet_numb"
+              label="Booklet Number"
+              outlined
+              class="q-mb-sm"
+              @keydown.enter="handleAddBookletEnterKey"
+              :rules="[
+                (val) => !!val || 'Booklet number is required',
+                (val) => val.length === 8 || 'Must be exactly 8 digits',
+              ]"
+              maxlength="8"
+              mask="########"
             />
             <q-input
               v-model="newBooklet.starting_cheque_numb"
@@ -286,11 +289,23 @@
               mask="########"
             />
 
+            <q-input
+            v-model="newBooklet.quantity"
+            class="q-mb-sm quantity-input"
+            label="Quantity"
+            outlined
+            style="width: 140px ;"
+            :rules="[
+              (val) => !!val || 'Quantity is required',
+              (val) => val > 0 || 'Must be greater than 0',
+            ]"
+            />
 
             <q-input
               v-model="newBooklet.ending_cheque_numb"
               label="Ending Cheque Number"
               outlined
+              :disable="true"
               class="q-mb-sm"
               @keydown.enter="handleAddBookletEnterKey"
               :rules="[
@@ -300,16 +315,6 @@
               maxlength="8"
               mask="########"
             />
-               <q-input
-              v-model="bookletnumber.booklet_numb"
-              label="Booklet Number"
-              outlined
-              class="q-mb-sm booklet-number-input"
-              :rules="[
-                (val) => !!val || 'Booklet number is required',
-                (val) => val.length === 8 || 'Must be exactly 8 digits',
-              ]"
-              />
 
           </q-form>
         </q-card-section>
@@ -479,14 +484,13 @@ const showEditDialog = ref(false)
 const showDeleteDialog = ref(false)
 const editingBank = ref({ id: null, name: '' })
 const deletingBank = ref({ id: null, name: '' })
-const bookletnumber = ref ({
-  booklet_numb: ''
-})
 
 //Booklet
 const showBookletDialog = ref(false)
 const showAddBookletDialog = ref(false)
 const newBooklet = ref({
+  quantity: 1,
+  booklet_numb: '',
   starting_cheque_numb: '',
   ending_cheque_numb: '',
 })
@@ -647,8 +651,11 @@ const addBooklet = async () => {
     const start = parseInt(newBooklet.value.starting_cheque_numb)
     const end = parseInt(newBooklet.value.ending_cheque_numb)
 
-    if (start > end) {
-      throw new Error('Starting number must be less than ending number')
+    if (newBooklet.value.quantity > 50) {
+      throw new Error('Quantity must not exceed 50')
+    }
+    if (newBooklet.value.quantity <= 0) {
+      throw new Error('Quantity must be greater than 0')
     }
 
     await bankStore.addBooklet(selectedBank.value.id, newBooklet.value)
@@ -674,6 +681,7 @@ const addBooklet = async () => {
 
 const resetBookletForm = () => {
   newBooklet.value = {
+    booklet_numb: '',
     starting_cheque_numb: '',
     ending_cheque_numb: '',
   }
@@ -815,6 +823,20 @@ watch(
   },
   { deep: true },
 )
+watch(
+  [() => newBooklet.value.starting_cheque_numb, () => newBooklet.value.quantity],
+  ([start, qty]) => {
+    const startNum = parseInt(start, 10);
+    const quantityNum = parseInt(qty, 10);
+
+    if (!isNaN(startNum) && !isNaN(quantityNum) && quantityNum > 0) {
+      const end = startNum + quantityNum - 1;
+      newBooklet.value.ending_cheque_numb = end.toString().padStart(8, '0');
+    } else {
+      newBooklet.value.ending_cheque_numb = '';
+    }
+  }
+);
 
 // Validation functions
 const validateAddBank = () => {

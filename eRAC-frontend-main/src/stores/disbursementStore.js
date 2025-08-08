@@ -578,7 +578,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           if (selectedBooklet) {
             this.selectedBooklet = selectedBooklet.range
             this.selectBooklet(selectedBooklet.range)
-            this.selectedChequeNumber = disbursement.cheque_number
+            this.selectedChequeNumber = this.availableChequeNumbers[0] || null
           }
 
           // Set expenses to empty array since backend doesn't include them yet
@@ -684,13 +684,10 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
-    selectChequeNumber(number) {
-      this.selectedChequeNumber = number
-      this.forms.disbursement.chequeNumber = number
-    },
-
     // New method to handle bank selection
     async selectBank(bankId) {
+      
+
       this.bankLoading = true
       this.forms.disbursement.bank_id = bankId
       this.selectedBooklet = null
@@ -714,6 +711,19 @@ export const useDisbursementStore = defineStore('disbursement', {
             value: `${booklet.starting_cheque_numb}-${booklet.ending_cheque_numb}`,
             booklet: booklet
           }))
+
+          // Automatically select the first booklet if available
+          if (this.chequeBooklets.length > 0) {
+            this.selectedBooklet = this.chequeBooklets[0].value
+            this.selectBooklet(this.selectedBooklet)
+            
+          }
+          
+          // Automatically select the first cheque if available
+          this.selectedChequeNumber = this.availableChequeNumbers[0] || null
+          this.forms.disbursement.chequeNumber = 0
+
+          
         } catch (error) {
           console.error('Error fetching booklets for bank:', error)
           // Reset bank selection on error
@@ -870,12 +880,12 @@ export const useDisbursementStore = defineStore('disbursement', {
       try {
         const authStore = useAuthStore()
         const token = authStore.token
-
+        
         // Validate required fields
         if (!this.forms.disbursement.bank_id) {
           throw new Error('Please select a bank')
         }
-        if (!this.forms.disbursement.chequeNumber) {
+        if (!this.selectedChequeNumber ) {
           throw new Error('Please select a cheque number')
         }
         if (!this.forms.disbursement.dvNumber) {
@@ -892,7 +902,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         const payload = {
           date: this.forms.disbursement.date,
           dv_number: this.forms.disbursement.dvNumber,
-          cheque_number: this.forms.disbursement.chequeNumber,
+          cheque_number: this.selectedChequeNumber ,
           bank_id: this.forms.disbursement.bank_id,
           payee: this.forms.disbursement.payee,
           dv_amount: this.totalExpensesAmount,
