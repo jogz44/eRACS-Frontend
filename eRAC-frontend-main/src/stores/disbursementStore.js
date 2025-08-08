@@ -608,7 +608,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           if (selectedBooklet) {
             this.selectedBooklet = selectedBooklet.range
             this.selectBooklet(selectedBooklet.range)
-            this.selectedChequeNumber = disbursement.cheque_number
+            this.selectedChequeNumber = this.availableChequeNumbers[0] || null
           }
 
           // Set expenses to empty array since backend doesn't include them yet
@@ -714,11 +714,6 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
-    selectChequeNumber(number) {
-      this.selectedChequeNumber = number
-      this.forms.disbursement.chequeNumber = number
-    },
-
     // New method to handle bank selection
     async selectBank(bankId) {
       
@@ -755,7 +750,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           }
           
           // Automatically select the first cheque if available
-          this.selectedChequeNumber = 0
+          this.selectedChequeNumber = this.availableChequeNumbers[0] || null
           this.forms.disbursement.chequeNumber = 0
 
           
@@ -915,12 +910,12 @@ export const useDisbursementStore = defineStore('disbursement', {
       try {
         const authStore = useAuthStore()
         const token = authStore.token
-
+        
         // Validate required fields
         if (!this.forms.disbursement.bank_id) {
           throw new Error('Please select a bank')
         }
-        if (!this.forms.disbursement.chequeNumber) {
+        if (!this.selectedChequeNumber ) {
           throw new Error('Please select a cheque number')
         }
         if (!this.forms.disbursement.dvNumber) {
@@ -937,7 +932,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         const payload = {
           date: this.forms.disbursement.date,
           dv_number: this.forms.disbursement.dvNumber,
-          cheque_number: this.forms.disbursement.chequeNumber,
+          cheque_number: this.selectedChequeNumber ,
           bank_id: this.forms.disbursement.bank_id,
           payee: this.forms.disbursement.payee,
           dv_amount: this.totalExpensesAmount,

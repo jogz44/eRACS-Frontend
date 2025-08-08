@@ -86,7 +86,7 @@
                 <q-input
                   outlined
                   dense
-                  v-model="store.availableChequeNumbers[0]"
+                  v-model="store.selectedChequeNumber"
                   :disable="true"
 
                   @keydown.enter="handleEnterKey"
@@ -436,11 +436,10 @@ const validateAndSave = () => {
     const form = store.forms.disbursement
     const hasRequiredFields = form.date &&
                              form.bank_id &&
-                             form.chequeNumber &&
+                             store.selectedChequeNumber &&
                              form.dvNumber &&
                              form.payee
-    // console.log('Validating form:', form, 'Has required fields:', hasRequiredFields)
-    console.log('Here dshkfdkjs :',form.chequeNumber )
+    console.log('Here dshkfdkjs :',store.selectedChequeNumber  )
     if (hasRequiredFields && !store.loading) {
       store.saveDisbursement()
     } else {
