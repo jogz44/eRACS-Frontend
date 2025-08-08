@@ -29,7 +29,7 @@ class DisbursementSeeder extends Seeder
                 $disb = Disbursement::create([
                     'barangay_id' => $barangay->id,
                     'date' => $now->copy()->subDays($i),
-                    'dv_number' => 'DV-25-07-' . str_pad($disbursementIndex, 2, '0', STR_PAD_LEFT),
+                    'dv_number' => 'DV-25-07-' . str_pad($disbursementIndex, 3, '0', STR_PAD_LEFT),
                     'cheque_number' => '20000' . (150 + $disbursementIndex),
                     'bank_id' => $bankId,
                     'payee' => 'Payee ' . $disbursementIndex,

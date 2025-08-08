@@ -34,14 +34,12 @@
                   dense
                   v-model="store.forms.disbursement.date"
                   mask="##/##/####"
+                  :readonly="true" 
+                  :disable="true"  
                   @keydown.enter="handleEnterKey"
                 >
                   <template v-slot:append>
-                    <q-icon name="event" class="cursor-pointer">
-                      <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                        <q-date v-model="store.forms.disbursement.date" mask="DD/MM/YYYY" />
-                      </q-popup-proxy>
-                    </q-icon>
+                    <q-icon name="event" class="cursor-not-allowed" />
                   </template>
                 </q-input>
               </div>
@@ -438,11 +436,11 @@ const validateAndSave = () => {
     const form = store.forms.disbursement
     const hasRequiredFields = form.date &&
                              form.bank_id &&
-                             store.selectedBooklet &&
-                             store.selectedChequeNumber &&
+                             form.chequeNumber &&
                              form.dvNumber &&
                              form.payee
-
+    // console.log('Validating form:', form, 'Has required fields:', hasRequiredFields)
+    console.log('Here dshkfdkjs :',form.chequeNumber )
     if (hasRequiredFields && !store.loading) {
       store.saveDisbursement()
     } else {
