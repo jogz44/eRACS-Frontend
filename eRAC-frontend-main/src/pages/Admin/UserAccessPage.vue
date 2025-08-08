@@ -211,7 +211,6 @@ export default {
       if (this.selectedPosition) {
         filtered = filtered.filter(user => user.position === this.selectedPosition)
       }
-
       return filtered
     },
   },
@@ -351,6 +350,8 @@ export default {
         })
       }
     },
+    
+    // Filter clear methods
     onSearchClear() {
       this.search = ''
     },
