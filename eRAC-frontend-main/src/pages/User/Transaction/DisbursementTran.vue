@@ -11,7 +11,6 @@
           flat
           dense
           @click="loadPendingUsers"
-          :loading="loading"
         />
       </div>
     </div>

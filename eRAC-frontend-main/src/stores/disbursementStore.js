@@ -81,15 +81,11 @@ export const useDisbursementStore = defineStore('disbursement', {
         return []
       }
 
-      console.log('Processing expenseData in expenseAccounts getter:', state.expenseData)
-
       const flattened = state.expenseData.reduce((acc, expenseClass) => {
         if (!expenseClass.children) {
           console.log(`No children for expense class: ${expenseClass.name}`)
           return acc
         }
-
-        console.log(`Processing expense class: ${expenseClass.name} with ${expenseClass.children.length} children`)
 
         expenseClass.children.forEach((expenseType) => {
           // Check if this expense type has any expense items with balance > 0
@@ -136,7 +132,6 @@ export const useDisbursementStore = defineStore('disbursement', {
         return acc
       }, [])
 
-      console.log(`Total expense accounts returned: ${flattened.length}`)
       return flattened
     },
 
@@ -269,8 +264,6 @@ export const useDisbursementStore = defineStore('disbursement', {
           (item.expenseItem && item.expenseItem.toLowerCase().includes(query)) ||
           (item.description && item.description.toLowerCase().includes(query)),
       )
-      
-      console.log(`Filtered expense accounts for query "${query}":`, filtered.length)
       return filtered
     },
 
@@ -289,7 +282,6 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Fetch expense hierarchy from appropriation store and accounts library store
     async fetchExpenseAccounts() {
       try {
-        console.log('Starting to fetch expense accounts...')
         
         // Fetch from appropriation store for budget allocations
         const appropriationStore = useAppropriationStore()
@@ -299,11 +291,6 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Fetch expense types from accounts library store
         await this.fetchExpenseTypesFromAccountsLib()
         
-        console.log('Fetched expense data:', this.expenseData)
-        console.log('Number of expense classes:', this.expenseData.length)
-        if (this.expenseData.length > 0) {
-          console.log('First expense class:', this.expenseData[0])
-        }
       } catch (error) {
         console.error('Error fetching expense accounts:', error)
         this.expenseData = []
@@ -314,7 +301,6 @@ export const useDisbursementStore = defineStore('disbursement', {
     async fetchExpenseTypesFromAccountsLib() {
       try {
         this.expenseTypeLoading = true
-        console.log('Fetching expense types from accounts library...')
         
         // Dynamically import to avoid circular dependencies
         const { useAccountsLibraryStore } = await import('./accountsLibstore')
@@ -322,28 +308,21 @@ export const useDisbursementStore = defineStore('disbursement', {
         
         // Fetch years if not already loaded
         if (!accountsStore.years.length) {
-          console.log('Fetching years from accounts library...')
           await accountsStore.fetchYears()
         }
         
         // Fetch expense classes for the current year
         if (accountsStore.selectedYear) {
-          console.log('Fetching expense classes for year:', accountsStore.selectedYear)
           await accountsStore.fetchExpenseClasses(accountsStore.selectedYear)
-          
-          console.log('Available expense classes:', accountsStore.expenseClasses)
           
           // Fetch expense types for each class
           for (const expenseClass of accountsStore.expenseClasses) {
             try {
-              console.log(`Fetching types for class: ${expenseClass.name} (ID: ${expenseClass.id})`)
               await accountsStore.fetchExpenseTypes(expenseClass.id)
             } catch (error) {
               console.warn(`Failed to fetch types for class ${expenseClass.id}:`, error)
             }
           }
-          
-          console.log('All expense types fetched:', accountsStore.expenseTypes)
           
           // Integrate expense types into expenseData
           this.integrateExpenseTypesFromAccountsLib(accountsStore)
@@ -361,10 +340,6 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Integrate expense types from accounts library into expenseData
     integrateExpenseTypesFromAccountsLib(accountsStore) {
       try {
-        console.log('Integrating expense types from accounts library...')
-        console.log('Available expense types:', accountsStore.expenseTypes)
-        console.log('Available expense classes:', accountsStore.expenseClasses)
-        console.log('Current expenseData:', this.expenseData)
         
         // If no expense types are available, return early
         if (!accountsStore.expenseTypes || accountsStore.expenseTypes.length === 0) {
@@ -388,13 +363,10 @@ export const useDisbursementStore = defineStore('disbursement', {
           typesByClass.get(classId).push(type)
         })
         
-        console.log('Types grouped by class:', typesByClass)
-        
         // Integrate types into existing expenseData
         typesByClass.forEach((types, classId) => {
           const expenseClass = accountsStore.expenseClasses.find(c => c.id == classId)
           if (expenseClass) {
-            console.log(`Processing class: ${expenseClass.name} with ${types.length} types`)
             
             // Find corresponding class in expenseData
             const existingClass = this.expenseData.find(c => c.name === expenseClass.name)
@@ -440,15 +412,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             }
           }
         })
-        
-        console.log('Successfully integrated expense types:', this.expenseData)
-        
-        // Debug: Check if expense types are now available
-        const totalTypes = this.expenseData.reduce((total, expenseClass) => {
-          return total + (expenseClass.children ? expenseClass.children.length : 0)
-        }, 0)
-        console.log(`Total expense types after integration: ${totalTypes}`)
-        
+       
       } catch (error) {
         console.error('Error integrating expense types:', error)
         throw error
@@ -942,8 +906,6 @@ export const useDisbursementStore = defineStore('disbursement', {
           }))
         }
 
-        console.log('Saving disbursement with payload:', payload)
-
         const response = await api.post('/api/barangay/disbursements', payload, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -1110,8 +1072,6 @@ export const useDisbursementStore = defineStore('disbursement', {
           }))
         }
 
-        console.log('Updating disbursement with payload:', payload)
-
         const response = await api.put(`/api/barangay/disbursements/${this.currentItem.id}`, payload, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -1202,9 +1162,6 @@ export const useDisbursementStore = defineStore('disbursement', {
           liquidatedAmount: totalActualExpense,
         }
 
-        console.log('Saving OR details with payload:', payload)
-        console.log('Current liquidation orDetails:', this.currentLiquidation.orDetails)
-
         const response = await api.post(`/api/barangay/disbursements/${this.currentLiquidation.id}/or-details`, payload, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -1267,8 +1224,6 @@ export const useDisbursementStore = defineStore('disbursement', {
           liquidatedAmount: totalActualExpense,
           isPartial: true, // Flag to indicate partial liquidation
         }
-
-        console.log('Saving partial OR details with payload:', payload)
 
         const response = await api.post(`/api/barangay/disbursements/${this.currentLiquidation.id}/or-details`, payload, {
           headers: {

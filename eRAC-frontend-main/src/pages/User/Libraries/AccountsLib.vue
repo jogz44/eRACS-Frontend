@@ -854,9 +854,6 @@ const getSelectedClassName = () => {
 
 const saveExpenseType = async () => {
   try {
-    console.log('Current parent class:', currentParentClass.value)
-    console.log('Selected year:', selectedYear.value)
-    console.log('New type name:', newExpenseType.value.name)
 
     if (!newExpenseType.value.name) {
       throw new Error('Type name is required')
@@ -1064,12 +1061,6 @@ const getExpenseTypesForClass = computed(() => (classId) => {
 
   const fiscalYear = accountsStore.years.find((y) => y.id == selectedYear.value)
   const yearValue = fiscalYear?.year?.toString()
-
-  console.log('Filtering types for:', {
-    classId,
-    yearValue,
-    allTypes: accountsStore.expenseTypes,
-  })
 
   return accountsStore.expenseTypes
     .filter((et) => et.expense_class_id == classId && et.year == yearValue)
