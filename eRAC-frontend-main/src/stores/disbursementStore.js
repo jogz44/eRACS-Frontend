@@ -721,6 +721,8 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     // New method to handle bank selection
     async selectBank(bankId) {
+      
+
       this.bankLoading = true
       this.forms.disbursement.bank_id = bankId
       this.selectedBooklet = null
@@ -744,6 +746,19 @@ export const useDisbursementStore = defineStore('disbursement', {
             value: `${booklet.starting_cheque_numb}-${booklet.ending_cheque_numb}`,
             booklet: booklet
           }))
+
+          // Automatically select the first booklet if available
+          if (this.chequeBooklets.length > 0) {
+            this.selectedBooklet = this.chequeBooklets[0].value
+            this.selectBooklet(this.selectedBooklet)
+            
+          }
+          
+          // Automatically select the first cheque if available
+          this.selectedChequeNumber = 0
+          this.forms.disbursement.chequeNumber = 0
+
+          
         } catch (error) {
           console.error('Error fetching booklets for bank:', error)
           // Reset bank selection on error

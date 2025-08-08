@@ -68,7 +68,7 @@
               <!-- Check Number Field -->
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Cheque Number:</q-item-label>
-                <q-select
+                <!-- <q-input
                   outlined
                   dense
                   v-model="store.selectedBooklet"
@@ -81,20 +81,18 @@
                   :label="store.chequeBooklets.length === 0 ? 'No booklets available' : 'Choose Booklet'"
                   class="q-mb-sm"
                   :loading="store.bookletLoading"
-                  :disable="!store.forms.disbursement.bank_id || store.chequeBooklets.length === 0"
+                  :disable="true"
                   @keydown.enter="handleEnterKey"
-                />
+                /> -->
 
-                <q-select
+                <q-input
                   outlined
                   dense
                   v-model="store.selectedChequeNumber"
-                  @update:model-value="store.selectChequeNumber"
-                  :options="store.availableChequeNumbers"
-                  :disable="!store.selectedBooklet || store.availableChequeNumbers.length === 0"
-                  :label="store.availableChequeNumbers.length === 0 ? 'No cheques available' : 'Select Cheque Number'"
+                  :disable="true"
+                  :label="store.availableChequeNumbers.length === 0 ? 'No cheques available' : store.availableChequeNumbers[0]"
                   @keydown.enter="handleEnterKey"
-                />
+                ></q-input>
               </div>
 
               <!-- DV Number Field -->
@@ -372,6 +370,25 @@ watch(
   { deep: true },
 )
 
+// Watch for changes in the selected bank to update the cheque booklets
+watch(
+  () => store.forms.disbursement.bank_id,
+  async (newBankId) => {
+    if (newBankId) {
+      try {
+        await store.loadChequeBookletsForBank(newBankId)
+      } catch (error) {
+        $q.notify({
+          type: 'negative',
+          message: `Failed to load cheque booklets for selected bank: ${error.message}`,
+          icon: 'error',
+          position: 'top',
+        })
+      }
+    }
+  },
+)
+
 import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
 
@@ -401,20 +418,20 @@ const handleBankSelection = async (bankId) => {
   }
 }
 
-const handleBookletSelection = async (bookletRange) => {
-  if (bookletRange) {
-    try {
-      await store.selectBooklet(bookletRange)
-    } catch (error) {
-      $q.notify({
-        type: 'negative',
-        message: `Failed to load cheques for selected booklet: ${error.message}`,
-        icon: 'error',
-        position: 'top',
-      })
-    }
-  }
-}
+// const handleBookletSelection = async (bookletRange) => {
+//   if (bookletRange) {
+//     try {
+//       await store.selectBooklet(bookletRange)
+//     } catch (error) {
+//       $q.notify({
+//         type: 'negative',
+//         message: `Failed to load cheques for selected booklet: ${error.message}`,
+//         icon: 'error',
+//         position: 'top',
+//       })
+//     }
+//   }
+// }
 
 const validateAndSave = () => {
   if (store.dialogs.disbursement) {
