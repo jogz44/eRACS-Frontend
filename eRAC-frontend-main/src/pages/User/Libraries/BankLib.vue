@@ -262,6 +262,17 @@
         <q-card-section>
           <q-form @submit="handleAddBookletSaveClick">
             <q-input
+            class="q-mb-sm quantity-input"
+            label="Quantity"
+            outlined
+            style="width: 140px ;"
+            :rules="[
+              (val) => !!val || 'Quantity is required',
+              (val) => val > 0 || 'Must be greater than 0',
+            ]"
+
+            />
+            <q-input
               v-model="newBooklet.starting_cheque_numb"
               label="Starting Cheque Number"
               outlined
@@ -274,6 +285,7 @@
               maxlength="8"
               mask="########"
             />
+
 
             <q-input
               v-model="newBooklet.ending_cheque_numb"
@@ -288,6 +300,17 @@
               maxlength="8"
               mask="########"
             />
+               <q-input
+              v-model="bookletnumber.booklet_numb"
+              label="Booklet Number"
+              outlined
+              class="q-mb-sm booklet-number-input"
+              :rules="[
+                (val) => !!val || 'Booklet number is required',
+                (val) => val.length === 8 || 'Must be exactly 8 digits',
+              ]"
+              />
+
           </q-form>
         </q-card-section>
 
@@ -456,6 +479,9 @@ const showEditDialog = ref(false)
 const showDeleteDialog = ref(false)
 const editingBank = ref({ id: null, name: '' })
 const deletingBank = ref({ id: null, name: '' })
+const bookletnumber = ref ({
+  booklet_numb: ''
+})
 
 //Booklet
 const showBookletDialog = ref(false)
