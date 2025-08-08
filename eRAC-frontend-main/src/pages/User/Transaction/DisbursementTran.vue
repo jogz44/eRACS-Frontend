@@ -55,6 +55,7 @@
                   outlined
                   dense
                   v-model="store.forms.disbursement.bank_id"
+                  @update:model-value="store.loadChequeBookletsForBank(store.forms.disbursement.bank_id)"
                   :options="bankStore.banks"
                   option-label="name"
                   option-value="id"
@@ -436,7 +437,7 @@ const validateAndSave = () => {
     const form = store.forms.disbursement
     const hasRequiredFields = form.date &&
                              form.bank_id &&
-                             store.selectedBooklet &&
+                             store.selectedBank &&
                              store.selectedChequeNumber &&
                              form.dvNumber &&
                              form.payee

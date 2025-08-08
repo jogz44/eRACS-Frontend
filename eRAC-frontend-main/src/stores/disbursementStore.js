@@ -11,8 +11,10 @@ export const useDisbursementStore = defineStore('disbursement', {
     expenses: [], // Initialize expenses array
     expenseSearch: '',
     currentItem: null,
+
     chequeBooklets: [], // Will be populated from selected bank
     availableChequeNumbers: [],
+    selectedBank: null,
     selectedBooklet: null,
     selectedChequeNumber: null,
     disbursements: [], // <-- Remove static data, will be loaded from API
@@ -516,6 +518,92 @@ export const useDisbursementStore = defineStore('disbursement', {
             const [start, end] = booklet.range.split('-').map(Number)
             return chequeNum >= start && chequeNum <= end
           })
+
+          // if (disbursement.bank_id) {
+          //   // Set selected bank and set chequeBooklets
+          //   //this.selectedBank = disbursement.bank_id ? Number(disbursement.bank_id) : null
+          //   const bankData = await api.get(`/api/barangay/banks/${disbursement.bank_id}/available-cheques`, {
+          //     headers: {
+          //       Authorization: `Bearer ${token}`,
+          //       Accept: 'application/json',
+          //     },
+          //   });
+          //   this.chequeBooklets = bankData.data.data || [];
+
+          //   // Sample Output of bankData.data
+          //   // {
+          //   //   "status": true,
+          //   //   "message": "Available booklets and cheques retrieved successfully",
+          //   //   "data": [
+          //   //     {
+          //   //       "id": 1,
+          //   //       "date": "2025-08-01",
+          //   //       "booklet_numb": "10000001-10000005",
+          //   //       "status": "unused",
+          //   //       "cheques": [
+          //   //         {
+          //   //           "id": 1,
+          //   //           "cheque_number": "10000001",
+          //   //           "status": "unused"
+          //   //         },
+          //   //         {
+          //   //           "id": 2,
+          //   //           "cheque_number": "10000002",
+          //   //           "status": "unused"
+          //   //         },
+          //   //         {
+          //   //           "id": 3,
+          //   //           "cheque_number": "10000003",
+          //   //           "status": "unused"
+          //   //         },
+          //   //         {
+          //   //           "id": 4,
+          //   //           "cheque_number": "10000004",
+          //   //           "status": "unused"
+          //   //         },
+          //   //         {
+          //   //           "id": 5,
+          //   //           "cheque_number": "10000005",
+          //   //           "status": "unused"
+          //   //         }
+          //   //       ]
+          //   //     },
+          //   //     {
+          //   //       "id": 8,
+          //   //       "date": "2025-08-01",
+          //   //       "booklet_numb": "10000030-10000033",
+          //   //       "status": "unused",
+          //   //       "cheques": [
+          //   //         {
+          //   //           "id": 13,
+          //   //           "cheque_number": "10000030",
+          //   //           "status": "unused"
+          //   //         },
+          //   //         {
+          //   //           "id": 14,
+          //   //           "cheque_number": "10000031",
+          //   //           "status": "unused"
+          //   //         },
+          //   //         {
+          //   //           "id": 15,
+          //   //           "cheque_number": "10000032",
+          //   //           "status": "unused"
+          //   //         },
+          //   //         {
+          //   //           "id": 16,
+          //   //           "cheque_number": "10000033",
+          //   //           "status": "unused"
+          //   //         }
+          //   //       ]
+          //   //     }
+          //   //   ]
+          //   // }
+          //   // chequeBooklets: [
+          //   //   { label: 'Booklet 1', range: '20000150-20000200' },
+          //   //   { label: 'Booklet 2', range: '20000201-20000250' },
+          //   // ],
+          //   // availableChequeNumbers: [],
+          // }
 
           if (selectedBooklet) {
             this.selectedBooklet = selectedBooklet.range
@@ -1047,6 +1135,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     resetEditDisbursement() {
       this.currentItem = null
       this.expenses = []
+      this.selectedBank = null
       this.selectedBooklet = null
       this.selectedChequeNumber = null
       this.availableChequeNumbers = []
@@ -1259,6 +1348,50 @@ export const useDisbursementStore = defineStore('disbursement', {
         return { success: true };
       } catch (error) {
         return { success: false, error: error.message };
+      }
+    },
+
+    async loadChequeBookletsForBank(newBankId) {
+      try {
+        const authStore = useAuthStore();
+        const token = authStore.token;
+        const bankData = await api.get(`/api/barangay/banks/${newBankId}/available-cheques`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+        const data = bankData.data.data || [];
+
+        // Map the cheque booklets for select options
+        this.chequeBooklets = data.map(booklet => ({
+          label: booklet.booklet_numb,
+          value: booklet.id
+        }));
+
+        // Optionally store all cheque data for later filtering
+        this.bookletCheques = data.reduce((acc, booklet) => {
+          acc[booklet.id] = booklet.cheques;
+          return acc;
+        }, {});
+
+        // Reset selections
+        this.selectedBank = 1;
+        this.selectedBooklet = null;
+        this.availableChequeNumbers = [];
+      } catch (error) {
+        console.error('Failed to load cheque booklets:', error);
+        this.chequeBooklets = [];
+        this.selectedBooklet = null;
+        this.availableChequeNumbers = [];
+        // Notify user if $q is available (Quasar)
+        if (typeof this.$q !== 'undefined') {
+          this.$q.notify({
+            type: 'negative',
+            message: 'Failed to load cheque booklets. Please try again.',
+            position: 'top'
+          });
+        }
       }
     },
   },
