@@ -30,7 +30,7 @@
             clearable
             @clear="onSearchClear"
           >
-            <template v-slot:prepend>
+            <template v-slot:append>
               <q-icon name="search" />
             </template>
           </q-input>

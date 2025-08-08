@@ -267,6 +267,7 @@ watch(
   border-top: 1px solid black;
   padding-top: 8px;
   padding-bottom: 8px;
+
 }
 
 .favorites-list {

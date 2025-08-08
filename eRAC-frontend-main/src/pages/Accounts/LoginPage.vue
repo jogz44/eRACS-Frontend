@@ -1,21 +1,20 @@
 <template>
-  <q-page class="split-login-page">
+  <q-page class="split-login-page" >
         <!-- Left side - Photo section with overlay text -->
     <div class="photo-section">
       <div class="photo-container">
         <div class="photo-overlay">
           <div class="overlay-content">
             <div class="welcome-text">
-              <h1 class="welcome-title">Welcome</h1>
-              <h1 class="to-text">to</h1>
-              <h1 class="erac-title">eRAC</h1>
+              <h5 class="welcome-title">Welcome</h5>
+              <h5 class="to-text">to</h5>
+              <h5 class="erac-title">eRAC</h5>
             </div>
             <div class="description-text">
-              <p class="description-line">Electronic</p>
-              <p class="description-line">Registry of</p>
-              <p class="description-line">Appropriation</p>
-              <p class="description-line">and</p>
-              <p class="description-line">Commitment</p>
+              <p class="description-line">Electronic Registry</p>
+              <p class="description-line"> of</p>
+              <p class="description-line">Appropriation and Commitment</p>
+
             </div>
             <div class="tagline">
 
@@ -243,7 +242,7 @@ const goToAdmin = () => router.push('/admin/login')
   position: relative;
   width: 100%;
   height: 100%;
-  background-image: url('/src/assets/cityhall.jpg');
+  /* background-image: url('/src/assets/cityhall.jpg'); */
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -255,7 +254,7 @@ const goToAdmin = () => router.push('/admin/login')
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;

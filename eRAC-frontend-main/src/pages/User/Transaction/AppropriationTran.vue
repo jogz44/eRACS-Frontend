@@ -9,7 +9,7 @@
           color="primary"
           flat
           round
-          @click="loadPendingUsers"
+          @click="loadAppropriation "
           :loading="loading"
 
         />
@@ -193,6 +193,7 @@
         :columns="columns"
         :loading="appropriationStore.loading"
         row-key="id"
+
       >
 
         <template v-slot:body-cell-index="props">
@@ -359,7 +360,7 @@ const amount = ref(null)
 const loading = ref(false)
 const dateRange = ref(null)
 
-const loadPendingUsers = async () => {
+const loadAppropriation = async () => {
   loading.value = true
   try {
     await appropriationStore.fetchBudgets()

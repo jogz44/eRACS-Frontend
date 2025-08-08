@@ -270,6 +270,7 @@
               icon="print"
               label="Print"
               class="full-width"
+              style="width: 100px;"
               @click="openPrintModal('continuing-sacb')"
             />
           </div>
@@ -693,5 +694,7 @@ export default {
   .subsection-title {
     font-size: 1rem;
   }
+}.q-input{
+  background-color: white;
 }
 </style>
