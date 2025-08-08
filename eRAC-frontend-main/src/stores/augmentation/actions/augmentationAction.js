@@ -28,24 +28,7 @@ export function useAugmentationActions(state) {
     }
   }
 
-  const fetchAvailableBudgets = async () => {
-    try {
-      const token = authStore.token
-      const response = await api.get('/api/barangay/budget-augmentations/available-budgets', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/json',
-        }
-      })
-
-      state.availableBudgets.value = response.data.data || []
-    } catch (error) {
-      console.error('Failed to fetch available budgets:', error)
-      state.availableBudgets.value = []
-    }
-  }
-
-  const fetchExpenseAccounts = async (budgetId = null) => {
+  const fetchExpenseAccounts = async () => {
     try {
       const token = authStore.token
       
@@ -68,11 +51,6 @@ export function useAugmentationActions(state) {
       
       const params = {
         fiscal_year_id: currentFiscalYear.id
-      }
-      
-      // Add budget_id to params if provided
-      if (budgetId) {
-        params.budget_id = budgetId
       }
       
       const response = await api.get('/api/barangay/expense-hierarchy', {
@@ -124,9 +102,6 @@ export function useAugmentationActions(state) {
     try {
       const token = authStore.token
       const payload = {
-        budget_id: typeof state.forms.value.augmentation.budget_id === 'object' 
-          ? state.forms.value.augmentation.budget_id.id 
-          : state.forms.value.augmentation.budget_id,
         augmentation_date: state.forms.value.augmentation.augmentation_date,
         remarks: state.forms.value.augmentation.remarks,
         details: state.Augexpenses.value.map(expense => ({
@@ -256,23 +231,13 @@ export function useAugmentationActions(state) {
 
   const editAugmentation = async (row) => {
     try {
-      // Fetch available budgets first
-      await fetchAvailableBudgets()
-      
       const augmentation = await fetchAugmentationById(row.id)
       if (augmentation) {
         // Convert date format from YYYY-MM-DD to DD/MM/YYYY for frontend
         const dateParts = augmentation.augmentation_date.split('-')
         const formattedDate = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : augmentation.augmentation_date
         
-        // Safely convert budget_id to number, handle null/undefined/empty values
-        const budgetId = augmentation.budget_id ? Number(augmentation.budget_id) : null
-        
-        // Find the matching budget object from availableBudgets
-        const matchingBudget = state.availableBudgets.value.find(budget => budget.id === budgetId)
-        
         state.forms.value.augmentation = {
-          budget_id: matchingBudget, // Use the full budget object for q-select
           augmentation_date: formattedDate,
           remarks: augmentation.remarks || '',
           refNo: augmentation.ref_number || '',
@@ -290,7 +255,6 @@ export function useAugmentationActions(state) {
   const resetForm = (formName) => {
     if (formName === 'augmentation') {
       state.forms.value.augmentation = {
-        budget_id: null,
         augmentation_date: '',
         remarks: '',
         refNo: '',
@@ -310,7 +274,6 @@ export function useAugmentationActions(state) {
 
   return {
     fetchAugmentations,
-    fetchAvailableBudgets,
     fetchExpenseAccounts,
     saveAugmentation,
     updateAugmentation,

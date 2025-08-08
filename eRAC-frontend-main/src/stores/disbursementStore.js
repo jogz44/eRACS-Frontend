@@ -92,22 +92,12 @@ export const useDisbursementStore = defineStore('disbursement', {
         console.log(`Processing expense class: ${expenseClass.name} with ${expenseClass.children.length} children`)
 
         expenseClass.children.forEach((expenseType) => {
-          // Include all expense types (not just those with balance > 0)
-          const expenseTypeEntry = {
-            id: expenseType.id,
-            account: expenseClass.name,
-            expenseType: expenseType.name,
-            expenseItem: null,
-            balance: expenseType.amount || 0,
-            expense_class_id: expenseClass.id,
-            expense_type_id: expenseType.id,
-            expense_item_id: null, // This identifies it as an expense type
-          }
-          acc.push(expenseTypeEntry)
-          console.log(`Added expense type: ${expenseType.name}`)
+          // Check if this expense type has any expense items with balance > 0
+          const hasExpenseItemsWithBalance = expenseType.children && 
+            expenseType.children.some(item => item.amount && item.amount > 0);
 
-          // Include expense items with balance greater than 0 (if they exist)
-          if (expenseType.children && expenseType.children.length > 0) {
+          if (hasExpenseItemsWithBalance) {
+            // If expense type has items with balance, only show the items (not the type)
             expenseType.children.forEach((expenseItem) => {
               if (expenseItem.amount && expenseItem.amount > 0) {
                 const expenseItemEntry = {
@@ -121,9 +111,25 @@ export const useDisbursementStore = defineStore('disbursement', {
                   expense_item_id: expenseItem.id,
                 }
                 acc.push(expenseItemEntry)
-                console.log(`Added expense item: ${expenseItem.name}`)
+                console.log(`Added expense item: ${expenseItem.name} with balance: ${expenseItem.amount}`)
               }
             })
+          } else {
+            // If expense type has no items with balance, show the type itself (if it has balance)
+            if (expenseType.amount && expenseType.amount > 0) {
+              const expenseTypeEntry = {
+                id: expenseType.id,
+                account: expenseClass.name,
+                expenseType: expenseType.name,
+                expenseItem: null,
+                balance: expenseType.amount || 0,
+                expense_class_id: expenseClass.id,
+                expense_type_id: expenseType.id,
+                expense_item_id: null, // This identifies it as an expense type
+              }
+              acc.push(expenseTypeEntry)
+              console.log(`Added expense type: ${expenseType.name} with balance: ${expenseType.amount}`)
+            }
           }
         })
 

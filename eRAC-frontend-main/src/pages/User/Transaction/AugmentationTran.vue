@@ -61,10 +61,7 @@ const loadPendingUsers = async () => {
 }
 
 onMounted(async () => {
-  await Promise.all([
-    store.fetchAugmentations(),
-    store.fetchAvailableBudgets()
-  ])
+  await store.fetchAugmentations()
 })
 </script>
 
