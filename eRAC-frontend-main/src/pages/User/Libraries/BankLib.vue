@@ -261,7 +261,7 @@
 
         <q-card-section>
           <q-form @submit="handleAddBookletSaveClick">
-            
+
             <q-input
               v-model="newBooklet.booklet_numb"
               label="Booklet Number"
