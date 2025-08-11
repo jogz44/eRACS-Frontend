@@ -79,10 +79,10 @@
               v-for="search in savedSearches"
               :key="search.title"
               class="saved-search-item"
-              :class="{ 'restricted-item': !isBarangayCaptain && (search.link === '/home/logsview' || search.link === '/home/useraccess') }"
+              :class="{ 'restricted-item': !hasAccessToRestrictedFeatures && (search.link === '/home/logsview' || search.link === '/home/useraccess') }"
               @click="navigateToSearch(search.link)"
             >
-              <q-icon :name="!isBarangayCaptain && (search.link === '/home/logsview' || search.link === '/home/useraccess') ? 'lock' : search.icon" size="16px" />
+              <q-icon :name="!hasAccessToRestrictedFeatures && (search.link === '/home/logsview' || search.link === '/home/useraccess') ? 'lock' : search.icon" size="16px" />
               <span class="search-title">{{ search.title }}</span>
             </div>
           </div>
@@ -227,9 +227,13 @@ const showSetupDialog = ref(false)
 const imageLoadingFailed = ref(false)
 const activePanel = ref(null)
 
-// Computed property to check if user is barangay captain
-const isBarangayCaptain = computed(() => {
-  return authStore.user?.position_name?.toLowerCase().trim() === 'barangay captain'
+// Computed property to check if user has access to restricted features
+const hasAccessToRestrictedFeatures = computed(() => {
+  const restrictedPositions = [
+    'barangay captain'
+  ]
+  const userPosition = authStore.user?.position_name?.toLowerCase().trim()
+  return restrictedPositions.includes(userPosition)
 })
 
 // Favorites data
@@ -259,11 +263,11 @@ const navigateToFavorite = (link) => {
 const navigateToSearch = (link) => {
   // Check if the link requires barangay captain permission
   if (link === '/home/logsview' || link === '/home/useraccess') {
-    if (!isBarangayCaptain.value) {
+    if (!hasAccessToRestrictedFeatures.value) {
       $q.notify({
         type: 'negative',
         message: 'Access Denied',
-        caption: 'You are not permitted to access this. Only Barangay Captains can access this resource.',
+        caption: 'You do not have permission to access this resource.',
         position: 'top',
         timeout: 5000
       })
