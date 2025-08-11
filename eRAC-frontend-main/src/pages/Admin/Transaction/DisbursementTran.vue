@@ -2,15 +2,14 @@
   <q-page class="q-pa-md disbursement-page">
     <div class="page-header q-mb-md">
       <div class="row items-center justify-between">
-        <div class="text-h6 text-weight-medium">
-          Disbursement Transaction
-        </div>
+        <div class="text-h6 text-weight-medium">Disbursement Transaction</div>
         <q-btn
           icon="refresh"
           color="primary"
           flat
           dense
           @click="loadPendingUsers"
+          :loading="loading"
         />
       </div>
     </div>
@@ -87,7 +86,7 @@
                 <q-input
                   outlined
                   dense
-                  v-model="store.selectedChequeNumber"
+                  v-model="store.availableChequeNumbers[0]"
                   :disable="true"
                   @keydown.enter="handleEnterKey"
                 ></q-input>
@@ -121,12 +120,12 @@
           <!-- Add Expense Button -->
           <q-card-section>
             <div class="row justify-end q-mb-md">
-              <q-btn
+              <!-- <q-btn
                 label="Add"
                 color="primary"
                 icon="add"
                 @click="store.openDialog('expense')"
-              />
+              /> -->
             </div>
 
             <!-- Expense Table -->
@@ -291,7 +290,6 @@
           :columns="store.disbursementColumns"
           row-key="id"
           :pagination="store.pagination"
-          :loading="loading"
           flat
         >
           <template v-slot:body-cell-action="props">
@@ -331,7 +329,7 @@
 </template>
 
 <script setup>
-import { watch, onMounted, onActivated } from 'vue'
+import { watch, onMounted } from 'vue'
 import SearchFilters from 'components/disbursement/SearchFilters.vue'
 import OrDetailsDialog from 'components/disbursement/OrDetailsDialog.vue'
 import ViewOrDetails from 'components/disbursement/ViewOrDetails.vue'
@@ -342,58 +340,24 @@ import { useBankStore } from 'stores/bankStore'
 const store = useDisbursementStore()
 const bankStore = useBankStore()
 
-// Function to load all data
-const loadAllData = async () => {
-  console.log('Loading all disbursement data...')
-  loading.value = true
-  
+onMounted(async () => {
   try {
-    // Fetch all necessary data in parallel for better performance
-    const promises = [
-      store.fetchDisbursements(),
-      store.fetchExpenseAccounts(),
-      bankStore.fetchBanks()
-    ]
-    
-    await Promise.all(promises)
-    
-    // Show success notification only if not in loading state
-    if (!loading.value) {
-      $q.notify({
-        type: 'positive',
-        message: 'Disbursement data loaded successfully!',
-        icon: 'check_circle',
-        position: 'top',
-        timeout: 2000
-      })
+    await store.fetchExpenseAccounts()
+    await store.fetchDisbursements()
+
+    if (!bankStore.banks.length) {
+      await bankStore.fetchBanks()
     }
-    
   } catch (error) {
-    console.error('Error during data loading:', error)
+    console.error('Error during component initialization:', error)
     $q.notify({
       type: 'negative',
-      message: 'Failed to load disbursement data: ' + (error.message || 'Unknown error'),
-      icon: 'error',
+      message: 'Failed to load initial data: ' + error.message,
       position: 'top',
-      timeout: 5000
     })
-  } finally {
-    loading.value = false
   }
-}
-
-onMounted(async () => {
-  console.log('DisbursementTran component mounted - starting data refresh...')
-  await loadAllData()
 })
 
-// Refresh data when component is activated (when navigating back to this page)
-onActivated(async () => {
-  console.log('DisbursementTran component activated - refreshing data...')
-  await loadAllData()
-})
-
-// Watch for expenses changes
 watch(
   () => store.expenses,
   (newExpenses) => {
@@ -471,10 +435,11 @@ const validateAndSave = () => {
     const form = store.forms.disbursement
     const hasRequiredFields = form.date &&
                              form.bank_id &&
-                             store.selectedBooklet &&
-                             store.selectedChequeNumber &&
+                             form.chequeNumber &&
                              form.dvNumber &&
                              form.payee
+    // console.log('Validating form:', form, 'Has required fields:', hasRequiredFields)
+    console.log('Here dshkfdkjs :',form.chequeNumber )
     if (hasRequiredFields && !store.loading) {
       store.saveDisbursement()
     } else {
@@ -502,24 +467,23 @@ const handleSaveClick = () => {
 const loadPendingUsers = async () => {
   loading.value = true
   try {
-    await loadAllData()
+    await store.fetchDisbursements()
     $q.notify({
       type: 'positive',
       message: 'Disbursements refreshed!',
       icon: 'refresh',
       position: 'top',
-      timeout: 3000
     })
   } catch (error) {
-      $q.notify({
-        type: 'negative',
-        message: error.response?.data?.message || 'Failed to refresh disbursements',
-        icon: 'error',
-        position: 'top',
-      })
-    } finally {
-      loading.value = false
-    }
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Failed to refresh disbursements',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 

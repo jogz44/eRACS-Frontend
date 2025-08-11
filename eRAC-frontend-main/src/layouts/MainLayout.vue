@@ -444,6 +444,50 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
   color: black;
 }
 
+.panel-item span {
+  margin-left: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+}
+
+.favorites-section {
+  border-top: 1px solid black;
+  padding-top: 8px;
+  height: 230px;
+}
+
+.favorites-list {
+  padding: 0 8px;
+  width: 95%;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+.favorite-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  margin: 4px 0;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: white !important;
+  background-color: #69B31E;
+  box-shadow: 0 4px 8px rgba(82, 140, 24, 0.4);
+}
+
+.favorite-item:hover {
+  background-color: #0E780E;
+}
+
+.favorite-title {
+  margin-left: 12px;
+  font-size: 15px;
+  font-weight: 500;
+ color: white !important;
+}
+
 .panel-trigger {
   background-color: #f8f8f8;
 }
@@ -576,60 +620,96 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
   box-shadow: 0 2px 8px rgba(76, 175, 80, 0.15);
 }
 
-.panel-item span {
-  margin-left: 12px;
-  font-size: 14px;
-  font-weight: 500;
-  color: white;
-}
-
-.favorites-section {
-  border-top: 1px solid black;
-  padding-top: 8px;
-  height: 230px;
-}
-
-.favorites-list {
-  padding: 0 8px;
-  width: 95%;
-  max-width: 280px;
-  margin: 0 auto;
-}
-
-.favorite-item {
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  margin: 4px 0;
-  border-radius: 3px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: white !important;
-  background-color: #69B31E;
-  box-shadow: 0 4px 8px rgba(82, 140, 24, 0.4);
-}
-
-.favorite-item:hover {
-  background-color: #0E780E;
-}
-
-.favorite-title {
-  margin-left: 12px;
-  font-size: 15px;
-  font-weight: 500;
- color: white !important;
-}
 
 .panel-indicator {
   margin-left: auto;
   color: #666;
   transition: transform 0.2s ease;
 }
+@media (max-width: 767px) {
+  .sliding-panel {
+    width: 260px;
+    max-height: 550px;
+  }
 
+  .panel-header {
+    padding: 12px 16px;
+  }
+
+  .panel-content {
+    padding: 12px 16px;
+  }
+
+  .panel-item {
+    padding: 8px 12px;
+    margin: 2px 0;
+  }
+
+  .panel-item span {
+    font-size: 13px;
+  }
+
+  .footer-user {
+    gap: 8px;
+    padding-left: 0;
+    padding-right: 0;
+    justify-content: flex-start;
+  }
+
+  .footer-user-info {
+    font-size: 0.9em;
+  }
+
+  .footer-avatar-center q-avatar {
+    width: 32px !important;
+    height: 32px !important;
+  }
+}
+
+@media (max-width: 500px) {
+  .sliding-panel {
+    width: 240px;
+    max-height: 500px;
+  }
+
+  .panel-header {
+    padding: 10px 14px;
+  }
+
+  .panel-content {
+    padding: 10px 14px;
+  }
+
+  .panel-item {
+    padding: 6px 10px;
+    margin: 2px 0;
+  }
+
+  .panel-item span {
+    font-size: 12px;
+  }
+
+  .footer-user-info {
+    font-size: 0.8em;
+  }
+
+  .footer-avatar-center q-avatar {
+    width: 28px !important;
+    height: 28px !important;
+  }
+}
+
+.full-width {
+  width: 100%;
+}
 .favorite-item:hover .panel-indicator {
   transform: translateX(2px);
   color: #69B31E;
 }
+
+/* End of Panel */
+
+
 
 .saved-searches-section {
   border-top: 1px solid black;
@@ -770,82 +850,6 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
   margin-bottom: 0;
 }
 
-@media (max-width: 767px) {
-  .sliding-panel {
-    width: 260px;
-    max-height: 550px;
-  }
-
-  .panel-header {
-    padding: 12px 16px;
-  }
-
-  .panel-content {
-    padding: 12px 16px;
-  }
-
-  .panel-item {
-    padding: 8px 12px;
-    margin: 2px 0;
-  }
-
-  .panel-item span {
-    font-size: 13px;
-  }
-
-  .footer-user {
-    gap: 8px;
-    padding-left: 0;
-    padding-right: 0;
-    justify-content: flex-start;
-  }
-
-  .footer-user-info {
-    font-size: 0.9em;
-  }
-
-  .footer-avatar-center q-avatar {
-    width: 32px !important;
-    height: 32px !important;
-  }
-}
-
-@media (max-width: 500px) {
-  .sliding-panel {
-    width: 240px;
-    max-height: 500px;
-  }
-
-  .panel-header {
-    padding: 10px 14px;
-  }
-
-  .panel-content {
-    padding: 10px 14px;
-  }
-
-  .panel-item {
-    padding: 6px 10px;
-    margin: 2px 0;
-  }
-
-  .panel-item span {
-    font-size: 12px;
-  }
-
-  .footer-user-info {
-    font-size: 0.8em;
-  }
-
-  .footer-avatar-center q-avatar {
-    width: 28px !important;
-    height: 28px !important;
-  }
-}
-
-.full-width {
-  width: 100%;
-}
 
 .position-text {
   font-style: italic;

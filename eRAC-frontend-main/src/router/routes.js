@@ -188,6 +188,40 @@ const routes = [
         component: () => import('pages/Admin/LogsPage.vue'),
         meta: { title: 'Logs' },
       },
+      // Current Transactions
+      {
+        path: 'disbursement',
+        name: 'adminDisbursement',
+        component: () => import('pages/Admin/Transaction/DisbursementTran.vue'),
+      },
+      {
+        path: 'appropriation',
+        name: 'adminAppropriation',
+        component: () => import('pages/Admin/Transaction/AppropriationTran.vue'),
+      },
+      {
+        path: 'augmentation',
+        name: 'adminAugmentation',
+        component: () => import('pages/Admin/Transaction/AugmentationTran.vue'),
+      },
+      // Continuing Transactions
+      {
+        path: 'contAugmentation',
+        name: 'AdminAugmentation',
+        component: () => import('pages/Admin/Continuing/ContAug.vue'),
+      },
+      {
+        path: 'contAppropriation',
+        name: 'AdminAppropriation',
+        component: () => import('pages/Admin/Continuing/ContAppr.vue'),
+      },
+      {
+        path: 'contDisbursement',
+        name: 'AdminDisbursement',
+        component: () => import('pages/Admin/Continuing/ContDis.vue'),
+      },
+
+
     ],
   },
 
