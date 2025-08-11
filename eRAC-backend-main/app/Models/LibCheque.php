@@ -14,7 +14,7 @@ class LibCheque extends Model
         'bank_id',
         'booklet_id',
         'cheque_number',
-        'cheque_status'
+        'status'
     ];
 
     public function bank(): BelongsTo
