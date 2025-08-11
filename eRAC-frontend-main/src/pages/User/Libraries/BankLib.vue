@@ -358,7 +358,7 @@
               <q-td :props="props">
                 <q-badge
                   :color="(props.row.status || '').toLowerCase() === 'unused' ? 'green' : 'orange'"
-                  :label="(props.row.status || '').toLowerCase() === 'unused' ? 'Unused' : 'Used'"
+                  :label="(props.row.status || '').toLowerCase() === 'unused' ? 'Unused' : 'Issued'"
                 />
               </q-td>
             </template>

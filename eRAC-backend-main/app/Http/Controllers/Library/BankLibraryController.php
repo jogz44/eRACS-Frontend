@@ -163,6 +163,7 @@ public function createBank(Request $request)
             }
 
             $cheques = $booklet->cheques()
+                ->with('disbursement')
                 ->get()
                 ->map(function ($cheque) {
                     return [
@@ -170,7 +171,7 @@ public function createBank(Request $request)
                         'cheque_number' => $cheque->cheque_number,
                         'cheque_status' => $cheque->status,
                         'created_at' => $cheque->created_at->format('Y-m-d'),
-                        'dvs' => []
+                        'dvn' => $cheque->disbursement->dv_number ?? 'none', // null if no match
                     ];
                 });
 
