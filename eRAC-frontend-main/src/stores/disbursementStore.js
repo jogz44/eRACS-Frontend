@@ -1355,6 +1355,34 @@ export const useDisbursementStore = defineStore('disbursement', {
         }
       }
     },
+
+    async deleteDisbursement(id) {
+      try {
+        const authStore = useAuthStore();
+        const token = authStore.token;
+        
+        const response = await api.delete(`/api/barangay/disbursements/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+        
+        if (response.data.status) {
+          // Remove the disbursement from the local array
+          this.disbursements = this.disbursements.filter(d => d.id !== id);
+          return { success: true, message: response.data.message };
+        } else {
+          return { success: false, message: response.data.message };
+        }
+      } catch (error) {
+        console.error('Failed to delete disbursement:', error);
+        return { 
+          success: false, 
+          message: error.response?.data?.message || 'Failed to delete disbursement' 
+        };
+      }
+    },
   },
 })
 

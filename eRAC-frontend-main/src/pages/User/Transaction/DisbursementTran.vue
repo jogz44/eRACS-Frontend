@@ -321,6 +321,13 @@
                   v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
                   @click="store.openOrDetailsDialog(props.row)"
                 />
+                <q-btn
+                  dense
+                  icon="delete"
+                  color="red"
+                  v-if="(props.row.status === 'Pending' || props.row.status === 'Partial') && getAgingDays(props.row.aging) <= 1"
+                  @click="handleDeleteDisbursement(props.row)"
+                />
               </div>
             </q-td>
           </template>
@@ -515,6 +522,65 @@ const loadPendingUsers = async () => {
     } finally {
       loading.value = false
     }
+}
+
+// Helper function to extract numeric days from aging string
+const getAgingDays = (agingString) => {
+  if (!agingString) return 0
+  const match = agingString.match(/(\d+)\s*days?/)
+  return match ? parseInt(match[1]) : 0
+}
+
+// Handle delete disbursement
+const handleDeleteDisbursement = (row) => {
+  // Show confirmation dialog
+  $q.dialog({
+    title: 'Confirm Delete',
+    message: `Are you sure you want to delete disbursement ${row.dvNumber}?`,
+    persistent: true,
+    ok: {
+      label: 'Delete',
+      color: 'negative',
+      flat: false
+    },
+    cancel: {
+      label: 'Cancel',
+      color: 'grey',
+      flat: true
+    }
+  }).onOk(async () => {
+    // This will only execute when user clicks OK
+    try {
+      const result = await store.deleteDisbursement(row.id)
+      
+      if (result.success) {
+        $q.notify({
+          type: 'positive',
+          message: result.message || 'Disbursement deleted successfully!',
+          icon: 'check_circle',
+          position: 'top',
+          timeout: 3000
+        })
+      } else {
+        $q.notify({
+          type: 'negative',
+          message: result.message || 'Failed to delete disbursement',
+          icon: 'error',
+          position: 'top',
+          timeout: 5000
+        })
+      }
+    } catch (error) {
+      console.error('Error deleting disbursement:', error)
+      $q.notify({
+        type: 'negative',
+        message: 'An error occurred while deleting the disbursement',
+        icon: 'error',
+        position: 'top',
+        timeout: 5000
+      })
+    }
+  })
 }
 </script>
 

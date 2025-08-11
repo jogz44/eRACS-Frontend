@@ -129,6 +129,8 @@ Route::prefix('barangay')->group(function () {
         Route::get('disbursements/{id}', [DisbursementController::class, 'show']);
         // Liquidate a disbursement
         Route::patch('disbursements/{id}/liquidate', [DisbursementController::class, 'liquidate']);
+        // Delete a disbursement
+        Route::delete('disbursements/{id}', [DisbursementController::class, 'destroy']);
         // Fetch OR Details for a disbursement
         Route::get('disbursements/{id}/or-details', [DisbursementController::class, 'getOrDetails']);
         // Save OR Details for a disbursement
