@@ -6,17 +6,18 @@
         <div class="photo-overlay">
           <div class="overlay-content">
             <div class="welcome-text">
-              <h1 class="welcome-title">Welcome</h1>
-              <h1 class="to-text">to</h1>
-              <h1 class="erac-title">eRAC</h1>
+              <h5 class="welcome-title">Welcome</h5>
+              <h5 class="to-text">to</h5>
+              <h5 class="erac-title">eRAC</h5>
             </div>
             <div class="description-text">
-              <p class="description-line">Electronic</p>
-              <p class="description-line">Registry of</p>
-              <p class="description-line">Appropriation</p>
-              <p class="description-line">and</p>
-              <p class="description-line">Commitment</p>
+              <p class="description-line">Electronic Registry</p>
+              <p class="description-line"> of</p>
+              <p class="description-line">Appropriation and Commitment</p>
+
             </div>
+            <div class="tagline">
+                </div>
 
           </div>
         </div>

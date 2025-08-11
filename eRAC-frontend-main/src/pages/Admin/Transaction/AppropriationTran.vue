@@ -172,7 +172,7 @@
             <q-btn
               dense
               label="Commit"
-              color="primary"
+              :color="props.row.unappropriated <= 0 ? 'primary' : 'grey-4'"
               @click="openAllocationDialog(props.row)"
               :disable="props.row.unappropriated <= 0"
             />
