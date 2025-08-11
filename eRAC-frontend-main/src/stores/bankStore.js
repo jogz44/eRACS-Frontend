@@ -44,9 +44,9 @@ export const useBankStore = defineStore('bank', {
         sortable: true,
       },
       {
-        name: 'dvNo',
+        name: 'dvn',
         label: 'DV Number',
-        field: 'dvNo',
+        field: 'dvn',
         align: 'left',
         sortable: true,
       },
@@ -57,7 +57,7 @@ export const useBankStore = defineStore('bank', {
         align: 'center',
         format: (val) => {
           const status = (val || '').toLowerCase()
-          return status === 'unused' ? 'Unused' : 'Used'
+          return status === 'unused' ? 'Issued' : 'Used'
         },
       },
       {
@@ -387,9 +387,9 @@ export const useBankStore = defineStore('bank', {
 
         const cheques = rawCheques.map((c) => ({
           chequeNo: c.chequeNo || c.cheque_number || '',
-          status: c.status || c.cheque_status || 'unused',
+          status: c.status || c.cheque_status || 'error',
           date: c.date || c.created_at || '',
-          dvs: c.dvs || [],
+          dvn: c.dvn || 'error',
         }))
 
         return {
