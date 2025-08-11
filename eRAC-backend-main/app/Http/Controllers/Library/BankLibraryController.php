@@ -168,7 +168,7 @@ public function createBank(Request $request)
                     return [
                         'id' => $cheque->id,
                         'cheque_number' => $cheque->cheque_number,
-                        'cheque_status' => $cheque->cheque_status,
+                        'cheque_status' => $cheque->status,
                         'created_at' => $cheque->created_at->format('Y-m-d'),
                         'dvs' => []
                     ];
