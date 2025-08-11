@@ -731,6 +731,9 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Dialog Actions
     async openDialog(dialogName) {
       if (dialogName === 'disbursement') {
+        // Reset the form first to clear any previous data
+        this.resetForm('disbursement')
+        
         const today = new Date()
         const dd = String(today.getDate()).padStart(2, '0')
         const mm = String(today.getMonth() + 1).padStart(2, '0')
@@ -955,13 +958,38 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Expense Actions
     saveExpense() {
       const amount = Number(this.forms.expense.amount) || 0
+      const particulars = this.forms.expense.particulars?.trim() || ''
+
+      // Validate particulars
+      if (!particulars) {
+        throw new Error('Particulars is required')
+      }
+
+      // Validate amount
+      if (amount <= 0) {
+        throw new Error('Amount must be greater than 0')
+      }
+
+      // Validate amount against available balance
+      const availableBalance = this.forms.expense.balance || 0
+      
+      // Calculate total amount already allocated to this account in current disbursement
+      const existingAmountForAccount = this.expenses
+        .filter(expense => expense.accountId === this.forms.expense.accountId)
+        .reduce((total, expense) => total + Number(expense.amount), 0)
+      
+      const remainingBalance = availableBalance - existingAmountForAccount
+      
+      if (amount > remainingBalance) {
+        throw new Error(`Amount exceeds available balance. Available: ₱${remainingBalance.toLocaleString()}, Requested: ₱${amount.toLocaleString()}`)
+      }
 
       this.expenses.push({
         id: Date.now(),
         accountId: this.forms.expense.accountId,
         accountName: this.forms.expense.account,
         amount: amount,
-        particular: this.forms.expense.particulars,
+        particular: particulars,
         // Store additional expense type information
         expense_class_id: this.forms.expense.expense_class_id,
         expense_type_id: this.forms.expense.expense_type_id,

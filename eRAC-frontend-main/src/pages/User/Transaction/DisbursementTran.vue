@@ -285,7 +285,7 @@
               label="Cancel"
               @click="store.closeDialog('expenseDetail')"
             />
-            <q-btn label="Save" @click="store.saveExpense" color="primary" />
+              <q-btn label="Save" @click="handleSaveExpense" color="primary" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -519,6 +519,28 @@ const handleAddExpense = async () => {
     })
   } finally {
     addingExpense.value = false
+  }
+}
+
+const handleSaveExpense = () => {
+  try {
+    store.saveExpense()
+    $q.notify({
+      type: 'positive',
+      message: 'Expense added successfully!',
+      icon: 'check_circle',
+      position: 'top',
+      timeout: 3000
+    })
+  } catch (error) {
+    console.error('Error saving expense:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to save expense',
+      icon: 'error',
+      position: 'top',
+      timeout: 5000
+    })
   }
 }
 
