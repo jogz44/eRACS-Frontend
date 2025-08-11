@@ -472,10 +472,10 @@ const validateAndSave = () => {
     const form = store.forms.disbursement
     const hasRequiredFields = form.date &&
                              form.bank_id &&
+                             store.selectedBooklet &&
                              store.selectedChequeNumber &&
                              form.dvNumber &&
                              form.payee
-    console.log('Here dshkfdkjs :',store.selectedChequeNumber  )
     if (hasRequiredFields && !store.loading) {
       store.saveDisbursement()
     } else {

@@ -903,6 +903,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           date: this.forms.disbursement.date,
           dv_number: this.forms.disbursement.dvNumber,
           cheque_number: this.selectedChequeNumber ,
+          cheque_booklet: this.chequeBooklets[0].booklet.id,
           bank_id: this.forms.disbursement.bank_id,
           payee: this.forms.disbursement.payee,
           dv_amount: this.totalExpensesAmount,

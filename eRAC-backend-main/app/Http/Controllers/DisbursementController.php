@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Disbursement;
+use App\Models\LibCheque;
 use App\Models\DisbursementOrDetail;
 use Illuminate\Http\Request;
 
@@ -89,6 +90,17 @@ class DisbursementController extends Controller
                 'dv_amount' => $request->dv_amount,
                 'status' => 'Pending',
             ]);
+
+            // update the selected lib_cheque_numbers status to 'Used'
+            $chequeNumber = $request->cheque_number;
+            $cheque = LibCheque::where('cheque_number', $chequeNumber)
+                ->where('booklet_id', $request->cheque_booklet) // Assuming cheque_booklet is passed in the request
+                ->where('status', 'unused')
+                ->firstorFail();
+            $cheque->update([
+                'status' => 'issued',
+            ]);
+
 
             // Save expenses if provided
             if ($request->has('expenses') && is_array($request->expenses)) {
