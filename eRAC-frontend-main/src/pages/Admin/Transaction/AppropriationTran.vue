@@ -300,7 +300,10 @@ const accountLibraryStore = useAccountsLibraryStore()
 const appropriationStore = useAppropriationStore()
 
 const showDialog = ref(false)
-const selectedFiscalYear = ref(null)
+const selectedFiscalYear = computed({
+  get: () => appropriationStore.selectedFiscalYear,
+  set: (value) => appropriationStore.setSelectedFiscalYear(value)
+})
 const startDate = ref('')
 const endDate = ref('')
 const description = ref('')
@@ -366,6 +369,12 @@ const clearAllFilters = () => {
   appropriationStore.dateFrom = ''
   appropriationStore.dateTo = ''
   dateRange.value = null
+  // Reset fiscal year to current year if available, otherwise first available year
+  const currentYear = new Date().getFullYear().toString()
+  const defaultYear = appropriationStore.fiscalYears.includes(currentYear)
+    ? currentYear
+    : appropriationStore.fiscalYears[0]
+  appropriationStore.setSelectedFiscalYear(defaultYear)
 }
 
 const showEditAllocationDialog = ref(false)
@@ -674,15 +683,14 @@ const saveEditedAllocation = async () => {
   }
 }
 
+
 onMounted(async () => {
   try {
-    await appropriationStore.fetchBudgets()
-    console.log('Appropriations:', appropriationStore.appropriations)
-    console.log('Total Available:', appropriationStore.totalAvailable)
+    await appropriationStore.initialize()
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: error.response?.data?.message || 'Failed to load budgets',
+      message: error.response?.data?.message || 'Failed to load data',
       icon: 'error',
       position: 'top',
     })
