@@ -12,6 +12,8 @@ export const useDisbursementStore = defineStore('disbursement', {
     expenseSearch: '',
     currentItem: null,
 
+    autoBookletID: null, // Automatically generated cheque booklet after selecting a bank
+    autoCheque: null, // Automatically generated cheque number after selecting a bank
     chequeBooklets: [], // Will be populated from selected bank
     availableChequeNumbers: [],
     selectedBank: null,
@@ -89,7 +91,7 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         expenseClass.children.forEach((expenseType) => {
           // Check if this expense type has any expense items with balance > 0
-          const hasExpenseItemsWithBalance = expenseType.children && 
+          const hasExpenseItemsWithBalance = expenseType.children &&
             expenseType.children.some(item => item.amount && item.amount > 0);
 
           if (hasExpenseItemsWithBalance) {
@@ -157,9 +159,10 @@ export const useDisbursementStore = defineStore('disbursement', {
         align: 'left',
         sortable: true,
       },
-      { name: 'aging', label: 'Aging', field: 'aging', align: 'left', sortable: true },
-      { name: 'status', label: 'Status', field: 'status', align: 'left', sortable: true },
+      { name: 'aging', label: 'Aging', field: 'aging', align: 'center', sortable: true },
+      { name: 'status', label: 'Status', field: 'status', align: 'center', sortable: true },
       { name: 'action', label: 'Action', field: '', align: 'center' },
+      { name: 'liquidate', label: 'Liquidate', field: '', align: 'center' },
     ],
 
     expenseColumns: () => [
@@ -287,17 +290,17 @@ export const useDisbursementStore = defineStore('disbursement', {
           console.log('Expense accounts already loaded, skipping fetch')
           return
         }
-        
+
         // Fetch from appropriation store for budget allocations
         const appropriationStore = useAppropriationStore()
         await appropriationStore.fetchExpenseHierarchy()
         this.expenseData = appropriationStore.allocations || []
-        
+
         // Fetch expense types from accounts library store (non-blocking)
         this.fetchExpenseTypesFromAccountsLib().catch(error => {
           console.warn('Failed to fetch expense types:', error)
         })
-        
+
       } catch (error) {
         console.error('Error fetching expense accounts:', error)
         this.expenseData = []
@@ -308,17 +311,17 @@ export const useDisbursementStore = defineStore('disbursement', {
     async refreshExpenseAccountsInBackground() {
       try {
         console.log('Refreshing expense accounts in background...')
-        
+
         // Fetch from appropriation store for budget allocations
         const appropriationStore = useAppropriationStore()
         await appropriationStore.fetchExpenseHierarchy()
         this.expenseData = appropriationStore.allocations || []
-        
+
         // Fetch expense types from accounts library store (non-blocking)
         this.fetchExpenseTypesFromAccountsLib().catch(error => {
           console.warn('Failed to fetch expense types in background:', error)
         })
-        
+
         console.log('Expense accounts refreshed in background')
       } catch (error) {
         console.warn('Failed to refresh expense accounts in background:', error)
@@ -329,20 +332,20 @@ export const useDisbursementStore = defineStore('disbursement', {
     async fetchExpenseTypesFromAccountsLib() {
       try {
         this.expenseTypeLoading = true
-        
+
         // Dynamically import to avoid circular dependencies
         const { useAccountsLibraryStore } = await import('./accountsLibstore')
         const accountsStore = useAccountsLibraryStore()
-        
+
         // Fetch years if not already loaded
         if (!accountsStore.years.length) {
           await accountsStore.fetchYears()
         }
-        
+
         // Fetch expense classes for the current year
         if (accountsStore.selectedYear) {
           await accountsStore.fetchExpenseClasses(accountsStore.selectedYear)
-          
+
           // Fetch expense types for all classes in parallel instead of sequentially
           const typePromises = accountsStore.expenseClasses.map(async (expenseClass) => {
             try {
@@ -352,9 +355,9 @@ export const useDisbursementStore = defineStore('disbursement', {
               return null
             }
           })
-          
+
           await Promise.all(typePromises)
-          
+
           // Integrate expense types into expenseData
           this.integrateExpenseTypesFromAccountsLib(accountsStore)
         } else {
@@ -371,19 +374,19 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Integrate expense types from accounts library into expenseData
     integrateExpenseTypesFromAccountsLib(accountsStore) {
       try {
-        
+
         // If no expense types are available, return early
         if (!accountsStore.expenseTypes || accountsStore.expenseTypes.length === 0) {
           console.log('No expense types available from accounts library')
           return
         }
-        
+
         // Create a map of expense classes by name for easier lookup
         const classMap = new Map()
         this.expenseData.forEach(expenseClass => {
           classMap.set(expenseClass.name, expenseClass)
         })
-        
+
         // Group expense types by class
         const typesByClass = new Map()
         accountsStore.expenseTypes.forEach(type => {
@@ -393,21 +396,21 @@ export const useDisbursementStore = defineStore('disbursement', {
           }
           typesByClass.get(classId).push(type)
         })
-        
+
         // Integrate types into existing expenseData
         typesByClass.forEach((types, classId) => {
           const expenseClass = accountsStore.expenseClasses.find(c => c.id == classId)
           if (expenseClass) {
-            
+
             // Find corresponding class in expenseData
             const existingClass = this.expenseData.find(c => c.name === expenseClass.name)
-            
+
             if (existingClass) {
               // Add types to existing class
               if (!existingClass.children) {
                 existingClass.children = []
               }
-              
+
               types.forEach(type => {
                 // Check if type already exists
                 const existingType = existingClass.children.find(t => t.id === type.id)
@@ -443,7 +446,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             }
           }
         })
-       
+
       } catch (error) {
         console.error('Error integrating expense types:', error)
         throw error
@@ -466,7 +469,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           date: d.date,
           dvNumber: d.dv_number,
           chequeNumber: d.cheque_number,
-          bank: d.bank_name, 
+          bank: d.bank_name,
           payee: d.payee,
           dvAmount: d.dv_amount,
           status: d.status,
@@ -506,7 +509,7 @@ export const useDisbursementStore = defineStore('disbursement', {
               // 'YYYY-MM-DD'
               const [yyyy, mm, dd] = dateStr.split('-');
               return `${mm}/${dd}/${yyyy}`;
-            } 
+            }
             else if (dateStr.includes('/')) {
               return dateStr;
             }
@@ -514,103 +517,12 @@ export const useDisbursementStore = defineStore('disbursement', {
           }
 
           // Find and set the selected booklet based on the cheque number
-          const chequeNum = parseInt(disbursement.cheque_number)
-          const selectedBooklet = this.chequeBooklets.find((booklet) => {
-            const [start, end] = booklet.range.split('-').map(Number)
-            return chequeNum >= start && chequeNum <= end
-          })
+          // const chequeNum = parseInt(disbursement.cheque_number)
+          // const selectedBooklet = this.chequeBooklets.find((booklet) => {
+          //   const [start, end] = booklet.range.split('-').map(Number)
+          //   return chequeNum >= start && chequeNum <= end
+          // })
 
-          // if (disbursement.bank_id) {
-          //   // Set selected bank and set chequeBooklets
-          //   //this.selectedBank = disbursement.bank_id ? Number(disbursement.bank_id) : null
-          //   const bankData = await api.get(`/api/barangay/banks/${disbursement.bank_id}/available-cheques`, {
-          //     headers: {
-          //       Authorization: `Bearer ${token}`,
-          //       Accept: 'application/json',
-          //     },
-          //   });
-          //   this.chequeBooklets = bankData.data.data || [];
-
-          //   // Sample Output of bankData.data
-          //   // {
-          //   //   "status": true,
-          //   //   "message": "Available booklets and cheques retrieved successfully",
-          //   //   "data": [
-          //   //     {
-          //   //       "id": 1,
-          //   //       "date": "2025-08-01",
-          //   //       "booklet_numb": "10000001-10000005",
-          //   //       "status": "unused",
-          //   //       "cheques": [
-          //   //         {
-          //   //           "id": 1,
-          //   //           "cheque_number": "10000001",
-          //   //           "status": "unused"
-          //   //         },
-          //   //         {
-          //   //           "id": 2,
-          //   //           "cheque_number": "10000002",
-          //   //           "status": "unused"
-          //   //         },
-          //   //         {
-          //   //           "id": 3,
-          //   //           "cheque_number": "10000003",
-          //   //           "status": "unused"
-          //   //         },
-          //   //         {
-          //   //           "id": 4,
-          //   //           "cheque_number": "10000004",
-          //   //           "status": "unused"
-          //   //         },
-          //   //         {
-          //   //           "id": 5,
-          //   //           "cheque_number": "10000005",
-          //   //           "status": "unused"
-          //   //         }
-          //   //       ]
-          //   //     },
-          //   //     {
-          //   //       "id": 8,
-          //   //       "date": "2025-08-01",
-          //   //       "booklet_numb": "10000030-10000033",
-          //   //       "status": "unused",
-          //   //       "cheques": [
-          //   //         {
-          //   //           "id": 13,
-          //   //           "cheque_number": "10000030",
-          //   //           "status": "unused"
-          //   //         },
-          //   //         {
-          //   //           "id": 14,
-          //   //           "cheque_number": "10000031",
-          //   //           "status": "unused"
-          //   //         },
-          //   //         {
-          //   //           "id": 15,
-          //   //           "cheque_number": "10000032",
-          //   //           "status": "unused"
-          //   //         },
-          //   //         {
-          //   //           "id": 16,
-          //   //           "cheque_number": "10000033",
-          //   //           "status": "unused"
-          //   //         }
-          //   //       ]
-          //   //     }
-          //   //   ]
-          //   // }
-          //   // chequeBooklets: [
-          //   //   { label: 'Booklet 1', range: '20000150-20000200' },
-          //   //   { label: 'Booklet 2', range: '20000201-20000250' },
-          //   // ],
-          //   // availableChequeNumbers: [],
-          // }
-
-          if (selectedBooklet) {
-            this.selectedBooklet = selectedBooklet.range
-            this.selectBooklet(selectedBooklet.range)
-            this.selectedChequeNumber = this.availableChequeNumbers[0] || null
-          }
 
           // Set expenses to empty array since backend doesn't include them yet
           this.expenses = []
@@ -651,7 +563,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         return false;
       }
     },
-
+    
     async selectBooklet(range) {
       this.bookletLoading = true
       this.selectedBooklet = range
@@ -662,7 +574,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       if (range) {
         try {
           const [start, end] = range.split('-').map(Number)
-          
+
           // Generate available cheque numbers for the selected range
           this.availableChequeNumbers = Array.from({ length: end - start + 1 }, (_, i) =>
             (start + i).toString().padStart(8, '0'),
@@ -674,24 +586,24 @@ export const useDisbursementStore = defineStore('disbursement', {
             try {
               const { useBankStore } = await import('./bankStore')
               const bankStore = useBankStore()
-              
+
               // Find the selected booklet
               const selectedBookletData = this.chequeBooklets.find(b => b.value === range)
               if (selectedBookletData && selectedBookletData.booklet) {
                 // Fetch cheques for this booklet to check status
                 const response = await bankStore.fetchBookletCheques(selectedBookletData.booklet.id)
-                
+
                 // Extract cheques from the response
                 const cheques = response.cheques || response.data || []
-                
+
                 // Filter out used cheques
-                const unusedCheques = cheques.filter(cheque => 
+                const unusedCheques = cheques.filter(cheque =>
                   cheque.status?.toLowerCase() === 'unused'
                 )
-                
+
                 // Update available cheque numbers to only show unused ones
                 if (unusedCheques.length > 0) {
-                  this.availableChequeNumbers = unusedCheques.map(cheque => 
+                  this.availableChequeNumbers = unusedCheques.map(cheque =>
                     cheque.chequeNo || cheque.cheque_number
                   )
                 }
@@ -717,13 +629,11 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     // New method to handle bank selection
     async selectBank(bankId) {
-      
-
       this.bankLoading = true
       this.forms.disbursement.bank_id = bankId
-      this.selectedBooklet = null
-      this.selectedChequeNumber = null
       this.forms.disbursement.chequeNumber = null
+      this.autoBookletID = null
+      this.autoCheque = null
       this.chequeBooklets = []
       this.availableChequeNumbers = []
 
@@ -732,12 +642,21 @@ export const useDisbursementStore = defineStore('disbursement', {
           // Import bankStore dynamically to avoid circular dependency
           const { useBankStore } = await import('./bankStore')
           const bankStore = useBankStore()
-          
+
           // Fetch booklets for the selected bank
           const booklets = await bankStore.fetchBankBooklets(bankId)
+          const authStore = useAuthStore();
+          const token = authStore.token;
+          const bankData = await api.get(`/api/barangay/banks/${bankId}/available-cheques`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
+          });
+          const data = bankData.data.data || [];
           
           // Transform booklets for the select component
-          this.chequeBooklets = booklets.map(booklet => ({
+          this.chequeBooklets = data.map(booklet => ({
             label: `Booklet ${booklet.booklet_numb || booklet.id} (${booklet.starting_cheque_numb}-${booklet.ending_cheque_numb})`,
             value: `${booklet.starting_cheque_numb}-${booklet.ending_cheque_numb}`,
             booklet: booklet
@@ -747,14 +666,17 @@ export const useDisbursementStore = defineStore('disbursement', {
           if (this.chequeBooklets.length > 0) {
             this.selectedBooklet = this.chequeBooklets[0].value
             this.selectBooklet(this.selectedBooklet)
-            
+
           }
-          
+
+          console.log('Fetched cheque booklets:', this.chequeBooklets[0].booklet.id)
+
           // Automatically select the first cheque if available
-          this.selectedChequeNumber = this.availableChequeNumbers[0] || null
+          this.autoBookletID = this.chequeBooklets[0].booklet.id || null
+          this.autoCheque = this.chequeBooklets[0].booklet.cheques[0].cheque_number || null
           this.forms.disbursement.chequeNumber = 0
 
-          
+
         } catch (error) {
           console.error('Error fetching booklets for bank:', error)
           // Reset bank selection on error
@@ -774,7 +696,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       if (dialogName === 'disbursement') {
         // Reset the form first to clear any previous data
         this.resetForm('disbursement')
-        
+
         const today = new Date()
         const dd = String(today.getDate()).padStart(2, '0')
         const mm = String(today.getMonth() + 1).padStart(2, '0')
@@ -807,7 +729,7 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     async openOrDetailsDialog(item) {
       this.currentLiquidation = JSON.parse(JSON.stringify(item));
-      
+
       // Fetch existing OR Details from backend if this is a partial liquidation
       if (item.id && item.status === 'Partial') {
         try {
@@ -822,7 +744,7 @@ export const useDisbursementStore = defineStore('disbursement', {
                 formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
               }
             }
-            
+
             return {
               orDate: formattedDate,
               orNumber: or.or_number,
@@ -833,7 +755,7 @@ export const useDisbursementStore = defineStore('disbursement', {
               isReadOnly: true, // Mark existing OR details as read-only
             };
           });
-          
+
           // Set single remarks from the latest OR detail (most recent one)
           if (res.data.data.length > 0) {
             // Get the latest OR detail (last in the array) for remarks
@@ -847,7 +769,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         // For new liquidations, initialize empty - component will add initial row
         this.currentLiquidation.orDetails = [];
       }
-      
+
       this.dialogs.orDetails = true;
     },
 
@@ -868,7 +790,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             orImage: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
             orPhotoUrl: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
           }));
-          
+
           // Set single remarks from the latest OR detail (most recent one)
           if (res.data.data.length > 0) {
             // Get the latest OR detail (last in the array) for remarks
@@ -916,16 +838,10 @@ export const useDisbursementStore = defineStore('disbursement', {
       try {
         const authStore = useAuthStore()
         const token = authStore.token
-        
+
         // Validate required fields
         if (!this.forms.disbursement.bank_id) {
           throw new Error('Please select a bank')
-        }
-        if (!this.selectedChequeNumber ) {
-          throw new Error('Please select a cheque number')
-        }
-        if (!this.forms.disbursement.dvNumber) {
-          throw new Error('Please enter a DV number')
         }
         if (!this.forms.disbursement.payee) {
           throw new Error('Please enter a payee')
@@ -938,8 +854,8 @@ export const useDisbursementStore = defineStore('disbursement', {
         const payload = {
           date: this.forms.disbursement.date,
           dv_number: this.forms.disbursement.dvNumber,
-          cheque_number: this.selectedChequeNumber ,
-          cheque_booklet: this.chequeBooklets[0].booklet.id,
+          cheque_number: this.autoCheque ,
+          cheque_booklet: this.autoBookletID,
           bank_id: this.forms.disbursement.bank_id,
           payee: this.forms.disbursement.payee,
           dv_amount: this.totalExpensesAmount,
@@ -977,9 +893,9 @@ export const useDisbursementStore = defineStore('disbursement', {
         return { success: true, data: response.data.data }
       } catch (error) {
         console.error('Failed to save disbursement:', error)
-        return { 
-          success: false, 
-          error: error.response?.data?.message || error.message || 'Failed to save disbursement' 
+        return {
+          success: false,
+          error: error.response?.data?.message || error.message || 'Failed to save disbursement'
         }
       }
     },
@@ -1019,14 +935,14 @@ export const useDisbursementStore = defineStore('disbursement', {
 
       // Validate amount against available balance
       const availableBalance = this.forms.expense.balance || 0
-      
+
       // Calculate total amount already allocated to this account in current disbursement
       const existingAmountForAccount = this.expenses
         .filter(expense => expense.accountId === this.forms.expense.accountId)
         .reduce((total, expense) => total + Number(expense.amount), 0)
-      
+
       const remainingBalance = availableBalance - existingAmountForAccount
-      
+
       if (amount > remainingBalance) {
         throw new Error(`Amount exceeds available balance. Available: ₱${remainingBalance.toLocaleString()}, Requested: ₱${amount.toLocaleString()}`)
       }
@@ -1077,7 +993,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         // 'YYYY-MM-DD'
         const [yyyy, mm, dd] = dateStr.split('-');
         return `${dd}/${mm}/${yyyy}`;
-      } 
+      }
       else if (dateStr.includes('/')) {
         return dateStr;
       }
@@ -1097,8 +1013,8 @@ export const useDisbursementStore = defineStore('disbursement', {
         }
         this.expenses = []
         // Reset bank-related selections
-        this.selectedBooklet = null
-        this.selectedChequeNumber = null
+        this.autoBookletID = null
+        this.autoCheque = null
         this.chequeBooklets = []
         this.availableChequeNumbers = []
       } else if (formName === 'expense') {
@@ -1169,9 +1085,9 @@ export const useDisbursementStore = defineStore('disbursement', {
         return { success: true, data: response.data.data }
       } catch (error) {
         console.error('Failed to update disbursement:', error)
-        return { 
-          success: false, 
-          error: error.response?.data?.message || 'Failed to update disbursement' 
+        return {
+          success: false,
+          error: error.response?.data?.message || 'Failed to update disbursement'
         }
       }
     },
@@ -1180,8 +1096,8 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.currentItem = null
       this.expenses = []
       this.selectedBank = null
-      this.selectedBooklet = null
-      this.selectedChequeNumber = null
+      this.autoBookletID = null
+      this.autoCheque = null
       this.availableChequeNumbers = []
       // Reset form data
       this.forms.disbursement = {
@@ -1210,7 +1126,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
 
       // Check if all OR details are complete
-      const allOrDetailsComplete = this.currentLiquidation.orDetails?.every(or => 
+      const allOrDetailsComplete = this.currentLiquidation.orDetails?.every(or =>
         or.orNumber && or.orAmount && or.orDate && or.orPhotoUrl
       )
 
@@ -1258,9 +1174,9 @@ export const useDisbursementStore = defineStore('disbursement', {
         return { success: true, data: response.data.data }
       } catch (error) {
         console.error('Failed to save OR details:', error)
-        return { 
-          success: false, 
-          error: error.response?.data?.message || 'Failed to save OR details' 
+        return {
+          success: false,
+          error: error.response?.data?.message || 'Failed to save OR details'
         }
       }
     },
@@ -1272,7 +1188,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
 
       // Check if all OR details are complete
-      const allOrDetailsComplete = this.currentLiquidation.orDetails?.every(or => 
+      const allOrDetailsComplete = this.currentLiquidation.orDetails?.every(or =>
         or.orNumber && or.orAmount && or.orDate && or.orPhotoUrl
       )
 
@@ -1321,9 +1237,9 @@ export const useDisbursementStore = defineStore('disbursement', {
         return { success: true, data: response.data.data }
       } catch (error) {
         console.error('Failed to save partial OR details:', error)
-        return { 
-          success: false, 
-          error: error.response?.data?.message || 'Failed to save partial OR details' 
+        return {
+          success: false,
+          error: error.response?.data?.message || 'Failed to save partial OR details'
         }
       }
     },
@@ -1378,11 +1294,11 @@ export const useDisbursementStore = defineStore('disbursement', {
       try {
         const authStore = useAuthStore()
         const token = authStore.token
-        
+
         const formData = new FormData();
         formData.append('photo', file, file.name);
         const response = await api.post('/api/barangay/disbursements/or-photo/upload', formData, {
-          headers: { 
+          headers: {
             'Content-Type': 'multipart/form-data',
             'Authorization': `Bearer ${token}`,
           },
@@ -1402,78 +1318,35 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
-    async loadChequeBookletsForBank(newBankId) {
-      try {
-        const authStore = useAuthStore();
-        const token = authStore.token;
-        const bankData = await api.get(`/api/barangay/banks/${newBankId}/available-cheques`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-          },
-        });
-        const data = bankData.data.data || [];
-
-        // Map the cheque booklets for select options
-        this.chequeBooklets = data.map(booklet => ({
-          label: booklet.booklet_numb,
-          value: booklet.id
-        }));
-
-        // Optionally store all cheque data for later filtering
-        this.bookletCheques = data.reduce((acc, booklet) => {
-          acc[booklet.id] = booklet.cheques;
-          return acc;
-        }, {});
-
-        // Reset selections
-        this.selectedBank = 1;
-        this.selectedBooklet = null;
-        this.availableChequeNumbers = [];
-      } catch (error) {
-        console.error('Failed to load cheque booklets:', error);
-        this.chequeBooklets = [];
-        this.selectedBooklet = null;
-        this.availableChequeNumbers = [];
-        // Notify user if $q is available (Quasar)
-        if (typeof this.$q !== 'undefined') {
-          this.$q.notify({
-            type: 'negative',
-            message: 'Failed to load cheque booklets. Please try again.',
-            position: 'top'
-          });
-        }
-      }
-    },
 
     async deleteDisbursement(id) {
       try {
         const authStore = useAuthStore();
         const token = authStore.token;
-        
+
         const response = await api.delete(`/api/barangay/disbursements/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',
           },
         });
-        
+
         if (response.data.status) {
           // Remove the disbursement from the local array
           this.disbursements = this.disbursements.filter(d => d.id !== id);
-          
+
           // Refresh expense accounts in background to ensure latest data
           this.refreshExpenseAccountsInBackground()
-          
+
           return { success: true, message: response.data.message };
         } else {
           return { success: false, message: response.data.message };
         }
       } catch (error) {
         console.error('Failed to delete disbursement:', error);
-        return { 
-          success: false, 
-          message: error.response?.data?.message || 'Failed to delete disbursement' 
+        return {
+          success: false,
+          message: error.response?.data?.message || 'Failed to delete disbursement'
         };
       }
     },

@@ -295,26 +295,26 @@
           <template v-slot:body-cell-action="props">
             <q-td :props="props">
               <div class="q-gutter-xs">
-                <q-btn
+                <!-- <q-btn
                   dense
                   icon="edit"
                   color="orange"
                   v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
                   @click="store.openEditDisbursement(props.row)"
-                />
+                /> -->
                 <q-btn
                   dense
                   icon="visibility"
                   color="blue"
                   @click="store.openViewOrDetails(props.row)"
                 />
-                <q-btn
+                <!-- <q-btn
                   dense
                   label="Liquidate"
                   color="primary"
                   v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
                   @click="store.openOrDetailsDialog(props.row)"
-                />
+                /> -->
               </div>
             </q-td>
           </template>
@@ -330,7 +330,7 @@
 
 <script setup>
 import { watch, onMounted } from 'vue'
-import SearchFilters from 'components/disbursement/SearchFilters.vue'
+import SearchFilters from 'pages/Admin/SearchFilters.vue'
 import OrDetailsDialog from 'components/disbursement/OrDetailsDialog.vue'
 import ViewOrDetails from 'components/disbursement/ViewOrDetails.vue'
 import EditDisbursement from 'components/disbursement/EditDisbursement.vue'

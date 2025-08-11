@@ -68,27 +68,11 @@
               <!-- Check Number Field -->
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Cheque Number:</q-item-label>
-                <!-- <q-input
-                  outlined
-                  dense
-                  v-model="store.selectedBooklet"
-                  @update:model-value="handleBookletSelection"
-                  :options="store.chequeBooklets"
-                  option-label="label"
-                  option-value="value"
-                  emit-value
-                  map-options
-                  :label="store.chequeBooklets.length === 0 ? 'No booklets available' : 'Choose Booklet'"
-                  class="q-mb-sm"
-                  :loading="store.bookletLoading"
-                  :disable="true"
-                  @keydown.enter="handleEnterKey"
-                /> -->
 
                 <q-input
                   outlined
                   dense
-                  v-model="store.selectedChequeNumber"
+                  v-model="store.autoCheque"
                   :disable="true"
                   @keydown.enter="handleEnterKey"
                 ></q-input>
@@ -299,12 +283,12 @@
         >
           <template v-slot:body-cell-action="props">
             <q-td :props="props">
-              <div class="q-gutter-xs">
+              <div class="row q-gutter-xs items-center justify-center">
                 <q-btn
                   dense
                   icon="edit"
-                  color="orange"
-                  v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
+                  :color="props.row.status === 'Pending' || props.row.status === 'Partial' ? 'orange' : 'grey'"
+                  :disable="props.row.status !== 'Pending' && props.row.status !== 'Partial'"
                   @click="store.openEditDisbursement(props.row)"
                 />
                 <q-btn
@@ -313,6 +297,20 @@
                   color="blue"
                   @click="store.openViewOrDetails(props.row)"
                 />
+
+                <q-btn
+                  dense
+                  icon="delete"
+                  :color="canDelete(props.row) ? 'red' : 'grey'"
+                  :disable="getAgingDays(props.row.aging) >= 1"
+                  @click.stop="() => canDelete(props.row) && handleDeleteDisbursement(props.row)"
+                />
+              </div>
+            </q-td>
+          </template>
+
+          <template v-slot:body-cell-liquidate="props">
+            <q-td :props="props">
                 <q-btn
                   dense
                   label="Liquidate"
@@ -320,17 +318,12 @@
                   v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
                   @click="store.openOrDetailsDialog(props.row)"
                 />
-                <q-btn
-                  dense
-                  icon="delete"
-                  color="red"
-                  v-if="(props.row.status === 'Pending' || props.row.status === 'Partial') && getAgingDays(props.row.aging) <= 1"
-                  @click="handleDeleteDisbursement(props.row)"
-                />
-              </div>
             </q-td>
           </template>
+
         </q-table>
+
+
       </q-card>
 
       <OrDetailsDialog v-model="store.dialogs.orDetails" />
@@ -352,25 +345,34 @@ import { useBankStore } from 'stores/bankStore'
 const store = useDisbursementStore()
 const bankStore = useBankStore()
 
+
+function canDelete(row) {
+  const aging = Number(getAgingDays(row.aging)) // coerce to number
+  if (Number.isNaN(aging)) return false
+  return (row.status === 'Pending' || row.status === 'Partial') && aging < 1
+
+
+}
+
 // Function to load all data with optimized loading strategy
 const loadAllData = async () => {
   console.log('Loading all disbursement data...')
   loading.value = true
-  
+
   try {
     // Load critical data first (disbursements and banks) in parallel
     const criticalPromises = [
       store.fetchDisbursements(),
       bankStore.fetchBanks()
     ]
-    
+
     await Promise.all(criticalPromises)
-    
+
     // Load expense accounts in background (non-blocking)
     store.fetchExpenseAccounts().catch(error => {
       console.warn('Failed to load expense accounts in background:', error)
     })
-    
+
     // Show success notification only if not initial load
     if (!initialLoading.value) {
       $q.notify({
@@ -381,7 +383,7 @@ const loadAllData = async () => {
         timeout: 2000
       })
     }
-    
+
   } catch (error) {
     console.error('Error during data loading:', error)
     if (!initialLoading.value) {
@@ -405,7 +407,7 @@ let expenseRefreshInterval = null
 onMounted(async () => {
   console.log('DisbursementTran component mounted - starting data refresh...')
   await loadAllData()
-  
+
   // Set up periodic refresh for expense accounts (every 2 minutes)
   expenseRefreshInterval = setInterval(() => {
     // Only refresh if expense dialog is open or if we have expense data
@@ -439,24 +441,6 @@ watch(
   { deep: true },
 )
 
-// Watch for changes in the selected bank to update the cheque booklets
-watch(
-  () => store.forms.disbursement.bank_id,
-  async (newBankId) => {
-    if (newBankId) {
-      try {
-        await store.loadChequeBookletsForBank(newBankId)
-      } catch (error) {
-        $q.notify({
-          type: 'negative',
-          message: `Failed to load cheque booklets for selected bank: ${error.message}`,
-          icon: 'error',
-          position: 'top',
-        })
-      }
-    }
-  },
-)
 
 // Auto-refresh expense accounts when the expense dialog is opened
 watch(
@@ -520,8 +504,6 @@ const validateAndSave = () => {
     const form = store.forms.disbursement
     const hasRequiredFields = form.date &&
                              form.bank_id &&
-                             store.selectedBooklet &&
-                             store.selectedChequeNumber &&
                              form.dvNumber &&
                              form.payee
     if (hasRequiredFields && !store.loading) {
@@ -605,9 +587,9 @@ const loadPendingUsers = async () => {
       store.fetchDisbursements(),
       bankStore.fetchBanks()
     ]
-    
+
     await Promise.all(refreshPromises)
-    
+
     $q.notify({
       type: 'positive',
       message: 'Disbursements refreshed!',
@@ -655,7 +637,7 @@ const handleDeleteDisbursement = (row) => {
     // This will only execute when user clicks OK
     try {
       const result = await store.deleteDisbursement(row.id)
-      
+
       if (result.success) {
         $q.notify({
           type: 'positive',

@@ -58,15 +58,9 @@
           @click="clearAllFilters"
         />
 
-        <q-space />
 
-        <q-btn
-          label="Add"
-          icon="add"
-          color="primary"
-          @click="store.openDialog('disbursement')"
-        />
       </div>
+
 
       <!-- Disbursement Dialog -->
       <q-dialog v-model="store.dialogs.disbursement" persistent @keydown.enter="handleEnterKey">
@@ -223,24 +217,24 @@
           <template v-slot:body-cell-action="props">
             <q-td :props="props">
               <div class="q-gutter-xs">
-                <q-btn
+                <!-- <q-btn
                   dense
                   icon="edit"
                   color="orange"
                   @click="store.openEditDisbursement(props.row)"
-                />
+                /> -->
                 <q-btn
                   dense
                   icon="visibility"
                   color="blue"
                   @click="store.openViewOrDetails(props.row)"
                 />
-                <q-btn
+                <!-- <q-btn
                   dense
                   label="Liquidate"
                   color="primary"
                   @click="store.openOrDetailsDialog(props.row)"
-                />
+                /> -->
               </div>
             </q-td>
           </template>

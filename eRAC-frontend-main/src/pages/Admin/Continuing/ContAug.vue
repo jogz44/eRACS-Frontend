@@ -59,13 +59,13 @@
         />
 
         <q-space />
-
+<!--
         <q-btn
           label="Add"
           icon="add"
           color="primary"
           @click="store.openDialog('augmentation')"
-        />
+        /> -->
       </div>
 
       <!-- Augmentation Main Table -->
@@ -80,12 +80,12 @@
           <template v-slot:body-cell-action="props">
             <q-td :props="props">
               <div class="q-gutter-xs">
-                <q-btn
+                <!-- <q-btn
                   dense
                   icon="edit"
                   color="orange"
                   @click="store.editDisbursement(props.row)"
-                />
+                /> -->
                 <q-btn
                   dense
                   icon="visibility"
