@@ -798,7 +798,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           this.currentLiquidation.orDetails = [];
         }
       } else {
-        // For new liquidations, initialize empty
+        // For new liquidations, initialize empty - component will add initial row
         this.currentLiquidation.orDetails = [];
       }
       
@@ -1255,10 +1255,22 @@ export const useDisbursementStore = defineStore('disbursement', {
         this.currentLiquidation.orDetails = []
       }
 
+      // Get today's date in DD/MM/YYYY format
+      const today = new Date()
+      const dd = String(today.getDate()).padStart(2, '0')
+      const mm = String(today.getMonth() + 1).padStart(2, '0')
+      const yyyy = today.getFullYear()
+      const todayFormatted = `${dd}/${mm}/${yyyy}`
+
       this.currentLiquidation.orDetails.push({
         orNumber: '',
         orAmount: '',
+        orDate: todayFormatted,
         orImage: null,
+        orPhotoUrl: null,
+        serverPhotoPath: null,
+        remarks: '',
+        isReadOnly: false,
       })
 
       this.calculateTotals()
