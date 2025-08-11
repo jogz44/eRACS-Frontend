@@ -12,6 +12,8 @@ export const useDisbursementStore = defineStore('disbursement', {
     expenseSearch: '',
     currentItem: null,
 
+    autoBookletID: null, // Automatically generated cheque booklet after selecting a bank
+    autoCheque: null, // Automatically generated cheque number after selecting a bank
     chequeBooklets: [], // Will be populated from selected bank
     availableChequeNumbers: [],
     selectedBank: null,
@@ -514,103 +516,12 @@ export const useDisbursementStore = defineStore('disbursement', {
           }
 
           // Find and set the selected booklet based on the cheque number
-          const chequeNum = parseInt(disbursement.cheque_number)
-          const selectedBooklet = this.chequeBooklets.find((booklet) => {
-            const [start, end] = booklet.range.split('-').map(Number)
-            return chequeNum >= start && chequeNum <= end
-          })
+          // const chequeNum = parseInt(disbursement.cheque_number)
+          // const selectedBooklet = this.chequeBooklets.find((booklet) => {
+          //   const [start, end] = booklet.range.split('-').map(Number)
+          //   return chequeNum >= start && chequeNum <= end
+          // })
 
-          // if (disbursement.bank_id) {
-          //   // Set selected bank and set chequeBooklets
-          //   //this.selectedBank = disbursement.bank_id ? Number(disbursement.bank_id) : null
-          //   const bankData = await api.get(`/api/barangay/banks/${disbursement.bank_id}/available-cheques`, {
-          //     headers: {
-          //       Authorization: `Bearer ${token}`,
-          //       Accept: 'application/json',
-          //     },
-          //   });
-          //   this.chequeBooklets = bankData.data.data || [];
-
-          //   // Sample Output of bankData.data
-          //   // {
-          //   //   "status": true,
-          //   //   "message": "Available booklets and cheques retrieved successfully",
-          //   //   "data": [
-          //   //     {
-          //   //       "id": 1,
-          //   //       "date": "2025-08-01",
-          //   //       "booklet_numb": "10000001-10000005",
-          //   //       "status": "unused",
-          //   //       "cheques": [
-          //   //         {
-          //   //           "id": 1,
-          //   //           "cheque_number": "10000001",
-          //   //           "status": "unused"
-          //   //         },
-          //   //         {
-          //   //           "id": 2,
-          //   //           "cheque_number": "10000002",
-          //   //           "status": "unused"
-          //   //         },
-          //   //         {
-          //   //           "id": 3,
-          //   //           "cheque_number": "10000003",
-          //   //           "status": "unused"
-          //   //         },
-          //   //         {
-          //   //           "id": 4,
-          //   //           "cheque_number": "10000004",
-          //   //           "status": "unused"
-          //   //         },
-          //   //         {
-          //   //           "id": 5,
-          //   //           "cheque_number": "10000005",
-          //   //           "status": "unused"
-          //   //         }
-          //   //       ]
-          //   //     },
-          //   //     {
-          //   //       "id": 8,
-          //   //       "date": "2025-08-01",
-          //   //       "booklet_numb": "10000030-10000033",
-          //   //       "status": "unused",
-          //   //       "cheques": [
-          //   //         {
-          //   //           "id": 13,
-          //   //           "cheque_number": "10000030",
-          //   //           "status": "unused"
-          //   //         },
-          //   //         {
-          //   //           "id": 14,
-          //   //           "cheque_number": "10000031",
-          //   //           "status": "unused"
-          //   //         },
-          //   //         {
-          //   //           "id": 15,
-          //   //           "cheque_number": "10000032",
-          //   //           "status": "unused"
-          //   //         },
-          //   //         {
-          //   //           "id": 16,
-          //   //           "cheque_number": "10000033",
-          //   //           "status": "unused"
-          //   //         }
-          //   //       ]
-          //   //     }
-          //   //   ]
-          //   // }
-          //   // chequeBooklets: [
-          //   //   { label: 'Booklet 1', range: '20000150-20000200' },
-          //   //   { label: 'Booklet 2', range: '20000201-20000250' },
-          //   // ],
-          //   // availableChequeNumbers: [],
-          // }
-
-          if (selectedBooklet) {
-            this.selectedBooklet = selectedBooklet.range
-            this.selectBooklet(selectedBooklet.range)
-            this.selectedChequeNumber = this.availableChequeNumbers[0] || null
-          }
 
           // Set expenses to empty array since backend doesn't include them yet
           this.expenses = []
@@ -652,78 +563,13 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
-    async selectBooklet(range) {
-      this.bookletLoading = true
-      this.selectedBooklet = range
-      this.selectedChequeNumber = null
-      this.forms.disbursement.chequeNumber = null
-      this.availableChequeNumbers = []
-
-      if (range) {
-        try {
-          const [start, end] = range.split('-').map(Number)
-          
-          // Generate available cheque numbers for the selected range
-          this.availableChequeNumbers = Array.from({ length: end - start + 1 }, (_, i) =>
-            (start + i).toString().padStart(8, '0'),
-          )
-
-          // If we have a selected booklet, we might want to fetch the actual cheques
-          // to check which ones are already used
-          if (this.forms.disbursement.bank_id) {
-            try {
-              const { useBankStore } = await import('./bankStore')
-              const bankStore = useBankStore()
-              
-              // Find the selected booklet
-              const selectedBookletData = this.chequeBooklets.find(b => b.value === range)
-              if (selectedBookletData && selectedBookletData.booklet) {
-                // Fetch cheques for this booklet to check status
-                const response = await bankStore.fetchBookletCheques(selectedBookletData.booklet.id)
-                
-                // Extract cheques from the response
-                const cheques = response.cheques || response.data || []
-                
-                // Filter out used cheques
-                const unusedCheques = cheques.filter(cheque => 
-                  cheque.status?.toLowerCase() === 'unused'
-                )
-                
-                // Update available cheque numbers to only show unused ones
-                if (unusedCheques.length > 0) {
-                  this.availableChequeNumbers = unusedCheques.map(cheque => 
-                    cheque.chequeNo || cheque.cheque_number
-                  )
-                }
-              }
-            } catch (error) {
-              console.error('Error fetching cheques for booklet:', error)
-              // If we can't fetch cheques, just use the generated range
-            }
-          }
-        } catch (error) {
-          console.error('Error processing booklet selection:', error)
-          // Reset booklet selection on error
-          this.selectedBooklet = null
-          this.availableChequeNumbers = []
-          throw error
-        } finally {
-          this.bookletLoading = false
-        }
-      } else {
-        this.bookletLoading = false
-      }
-    },
-
     // New method to handle bank selection
     async selectBank(bankId) {
-      
-
       this.bankLoading = true
       this.forms.disbursement.bank_id = bankId
-      this.selectedBooklet = null
-      this.selectedChequeNumber = null
       this.forms.disbursement.chequeNumber = null
+      this.autoBookletID = null
+      this.autoCheque = null
       this.chequeBooklets = []
       this.availableChequeNumbers = []
 
@@ -745,8 +591,10 @@ export const useDisbursementStore = defineStore('disbursement', {
             value: `${booklet.starting_cheque_numb}-${booklet.ending_cheque_numb}`,
             booklet: booklet
           }))
+          console.log('Fetched cheque booklets:', this.chequeBooklets[0].booklet.id)
           // Automatically select the first cheque if available
-          this.selectedChequeNumber = this.chequeBooklets[0].booklet.cheques[0].cheque_number || null
+          this.autoBookletID = this.chequeBooklets[0].booklet.id || null
+          this.autoCheque = this.chequeBooklets[0].booklet.cheques[0].cheque_number || null
           this.forms.disbursement.chequeNumber = 0
 
           
@@ -916,12 +764,6 @@ export const useDisbursementStore = defineStore('disbursement', {
         if (!this.forms.disbursement.bank_id) {
           throw new Error('Please select a bank')
         }
-        if (!this.selectedChequeNumber ) {
-          throw new Error('Please select a cheque number')
-        }
-        if (!this.forms.disbursement.dvNumber) {
-          throw new Error('Please enter a DV number')
-        }
         if (!this.forms.disbursement.payee) {
           throw new Error('Please enter a payee')
         }
@@ -933,8 +775,8 @@ export const useDisbursementStore = defineStore('disbursement', {
         const payload = {
           date: this.forms.disbursement.date,
           dv_number: this.forms.disbursement.dvNumber,
-          cheque_number: this.selectedChequeNumber ,
-          cheque_booklet: this.chequeBooklets[0].booklet.id,
+          cheque_number: this.autoCheque ,
+          cheque_booklet: this.autoBookletID,
           bank_id: this.forms.disbursement.bank_id,
           payee: this.forms.disbursement.payee,
           dv_amount: this.totalExpensesAmount,
@@ -1092,8 +934,8 @@ export const useDisbursementStore = defineStore('disbursement', {
         }
         this.expenses = []
         // Reset bank-related selections
-        this.selectedBooklet = null
-        this.selectedChequeNumber = null
+        this.autoBookletID = null
+        this.autoCheque = null
         this.chequeBooklets = []
         this.availableChequeNumbers = []
       } else if (formName === 'expense') {
@@ -1175,8 +1017,8 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.currentItem = null
       this.expenses = []
       this.selectedBank = null
-      this.selectedBooklet = null
-      this.selectedChequeNumber = null
+      this.autoBookletID = null
+      this.autoCheque = null
       this.availableChequeNumbers = []
       // Reset form data
       this.forms.disbursement = {
@@ -1397,51 +1239,6 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
-    async loadChequeBookletsForBank(newBankId) {
-      try {
-        const authStore = useAuthStore();
-        const token = authStore.token;
-        const bankData = await api.get(`/api/barangay/banks/${newBankId}/available-cheques`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-          },
-        });
-        const data = bankData.data.data || [];
-        console.log('Cheque booklets loaded:', data);
-
-        // Map the cheque booklets for select options
-        this.chequeBooklets = data.map(booklet => ({
-          label: booklet.booklet_numb,
-          value: booklet.id
-        }));
-
-        // Optionally store all cheque data for later filtering
-        this.bookletCheques = data.reduce((acc, booklet) => {
-          acc[booklet.id] = booklet.cheques;
-          
-          return acc;
-        }, {});
-
-        // Reset selections
-        this.selectedBank = 1;
-        this.selectedBooklet = null;
-        this.availableChequeNumbers = [];
-      } catch (error) {
-        console.error('Failed to load cheque booklets:', error);
-        this.chequeBooklets = [];
-        this.selectedBooklet = null;
-        this.availableChequeNumbers = [];
-        // Notify user if $q is available (Quasar)
-        if (typeof this.$q !== 'undefined') {
-          this.$q.notify({
-            type: 'negative',
-            message: 'Failed to load cheque booklets. Please try again.',
-            position: 'top'
-          });
-        }
-      }
-    },
 
     async deleteDisbursement(id) {
       try {

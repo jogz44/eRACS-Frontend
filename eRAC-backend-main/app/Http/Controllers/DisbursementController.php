@@ -304,7 +304,7 @@ class DisbursementController extends Controller
             if ($user && isset($user->barangay_id)) {
                 $query->where('barangay_id', $user->barangay_id);
             }
-            
+            $query->orderByDesc('created_at');
             $disbursement = $query->find($id);
             
             if (!$disbursement) {
@@ -317,17 +317,17 @@ class DisbursementController extends Controller
             return response()->json([
                 'status' => true,
                 'data' => [
-            'id' => $disbursement->id,
-            'date' => $disbursement->date,
-            'dv_number' => $disbursement->dv_number,
-            'cheque_number' => $disbursement->cheque_number,
-            'bank_id' => $disbursement->bank_id,
-            'bank_name' => $disbursement->bank ? $disbursement->bank->bank_name : null,
-            'payee' => $disbursement->payee,
-            'dv_amount' => $disbursement->dv_amount,
-            'status' => $disbursement->status,
-            'created_at' => $disbursement->created_at,
-            'updated_at' => $disbursement->updated_at,
+                'id' => $disbursement->id,
+                'date' => $disbursement->date,
+                'dv_number' => $disbursement->dv_number,
+                'cheque_number' => $disbursement->cheque_number,
+                'bank_id' => $disbursement->bank_id,
+                'bank_name' => $disbursement->bank ? $disbursement->bank->bank_name : null,
+                'payee' => $disbursement->payee,
+                'dv_amount' => $disbursement->dv_amount,
+                'status' => $disbursement->status,
+                'created_at' => $disbursement->created_at,
+                'updated_at' => $disbursement->updated_at,
                 ]
             ]);
         } catch (\Exception $e) {
