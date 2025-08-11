@@ -5,6 +5,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Library\LibBank;
+use App\Models\Library\LibBooklet;
+use App\Models\Disbursement;
 
 class LibCheque extends Model
 {
@@ -25,5 +28,9 @@ class LibCheque extends Model
     public function booklet(): BelongsTo
     {
         return $this->belongsTo(LibBooklet::class);
+    }
+    public function disbursement()
+    {
+        return $this->hasOne(Disbursement::class, 'cheque_number', 'cheque_number');
     }
 }

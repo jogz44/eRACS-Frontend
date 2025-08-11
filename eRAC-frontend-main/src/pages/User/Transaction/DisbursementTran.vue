@@ -68,27 +68,11 @@
               <!-- Check Number Field -->
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Cheque Number:</q-item-label>
-                <!-- <q-input
-                  outlined
-                  dense
-                  v-model="store.selectedBooklet"
-                  @update:model-value="handleBookletSelection"
-                  :options="store.chequeBooklets"
-                  option-label="label"
-                  option-value="value"
-                  emit-value
-                  map-options
-                  :label="store.chequeBooklets.length === 0 ? 'No booklets available' : 'Choose Booklet'"
-                  class="q-mb-sm"
-                  :loading="store.bookletLoading"
-                  :disable="true"
-                  @keydown.enter="handleEnterKey"
-                /> -->
 
                 <q-input
                   outlined
                   dense
-                  v-model="store.selectedChequeNumber"
+                  v-model="store.autoCheque"
                   :disable="true"
                   @keydown.enter="handleEnterKey"
                 ></q-input>
@@ -439,24 +423,6 @@ watch(
   { deep: true },
 )
 
-// Watch for changes in the selected bank to update the cheque booklets
-watch(
-  () => store.forms.disbursement.bank_id,
-  async (newBankId) => {
-    if (newBankId) {
-      try {
-        await store.loadChequeBookletsForBank(newBankId)
-      } catch (error) {
-        $q.notify({
-          type: 'negative',
-          message: `Failed to load cheque booklets for selected bank: ${error.message}`,
-          icon: 'error',
-          position: 'top',
-        })
-      }
-    }
-  },
-)
 
 // Auto-refresh expense accounts when the expense dialog is opened
 watch(
@@ -520,8 +486,6 @@ const validateAndSave = () => {
     const form = store.forms.disbursement
     const hasRequiredFields = form.date &&
                              form.bank_id &&
-                             store.selectedBooklet &&
-                             store.selectedChequeNumber &&
                              form.dvNumber &&
                              form.payee
     if (hasRequiredFields && !store.loading) {
