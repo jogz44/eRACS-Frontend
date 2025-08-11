@@ -3,6 +3,7 @@
     <div class="page-header q-mb-md">
       <div class="row items-center justify-between">
         <div class="text-h6 text-weight-medium">Appropriation Transaction</div>
+
         <q-btn
           icon="refresh"
           color="primary"
@@ -11,7 +12,9 @@
           @click="loadAppropriation"
           :loading="loading"
         />
+
       </div>
+
     </div>
 
     <div class="q-mb-sm">
@@ -179,13 +182,13 @@
         <template v-slot:body-cell-action="props">
           <q-td :props="props">
             <div class="q-gutter-xs">
-              <q-btn
+              <!-- <q-btn
                 dense
                 icon="edit"
                 color="orange"
                 @click="openEditAllocationDialog(props.row)"
                 :disable="!props.row.allocations || props.row.allocations.length === 0"
-              />
+              /> -->
               <q-btn
                 dense
                 icon="visibility"
@@ -369,81 +372,81 @@ const clearAllFilters = () => {
 }
 
 const showEditAllocationDialog = ref(false)
-const editAllocations = ref([])
+// const editAllocations = ref([])
 const expandedEditTypes = ref({})
 const typeErrorMap = ref({})
 const editDisplayAccounts = ref([])
 
-const initializeEditDisplayAccounts = () => {
-  if (!editAllocations.value || editAllocations.value.length === 0) {
-    editDisplayAccounts.value = []
-    return
-  }
+// const initializeEditDisplayAccounts = () => {
+//   if (!editAllocations.value || editAllocations.value.length === 0) {
+//     editDisplayAccounts.value = []
+//     return
+//   }
 
-  const classMap = {}
-  editAllocations.value.forEach((alloc) => {
-    const classId = alloc.expense_class_id || 'unclassified'
-    const className = alloc.expense_class_name || 'Unclassified'
-    const typeId = alloc.expense_type_id
-    const typeName = alloc.expense_type_name || `Type ${typeId}`
-    const itemId = alloc.expense_item_id
-    const itemName = alloc.expense_item_name || `Item ${itemId}`
+//   const classMap = {}
+//   editAllocations.value.forEach((alloc) => {
+//     const classId = alloc.expense_class_id || 'unclassified'
+//     const className = alloc.expense_class_name || 'Unclassified'
+//     const typeId = alloc.expense_type_id
+//     const typeName = alloc.expense_type_name || `Type ${typeId}`
+//     const itemId = alloc.expense_item_id
+//     const itemName = alloc.expense_item_name || `Item ${itemId}`
 
-    if (!classMap[classId]) {
-      classMap[classId] = {
-        id: classId,
-        name: className,
-        children: [],
-      }
-    }
+//     if (!classMap[classId]) {
+//       classMap[classId] = {
+//         id: classId,
+//         name: className,
+//         children: [],
+//       }
+//     }
 
-    if (typeId && !itemId) {
-      const existingType = classMap[classId].children.find((t) => t.id === typeId)
-      if (existingType) {
-        existingType.amount += alloc.amount
-      } else {
-        classMap[classId].children.push({
-          id: typeId,
-          name: typeName,
-          amount: alloc.amount,
-          children: [],
-        })
-      }
-    }
+//     if (typeId && !itemId) {
+//       const existingType = classMap[classId].children.find((t) => t.id === typeId)
+//       if (existingType) {
+//         existingType.amount += alloc.amount
+//       } else {
+//         classMap[classId].children.push({
+//           id: typeId,
+//           name: typeName,
+//           amount: alloc.amount,
+//           children: [],
+//         })
+//       }
+//     }
 
-    if (itemId) {
-      let type = classMap[classId].children.find((t) => t.id === typeId)
-      if (!type) {
-        type = {
-          id: typeId,
-          name: typeName,
-          amount: 0,
-          children: [],
-        }
-        classMap[classId].children.push(type)
-      } else {
-        type.amount = 0
-      }
-      type.children.push({
-        id: itemId,
-        name: itemName,
-        amount: alloc.amount,
-      })
-    }
-  })
+//     if (itemId) {
+//       let type = classMap[classId].children.find((t) => t.id === typeId)
+//       if (!type) {
+//         type = {
+//           id: typeId,
+//           name: typeName,
+//           amount: 0,
+//           children: [],
+//         }
+//         classMap[classId].children.push(type)
+//       } else {
+//         type.amount = 0
+//       }
+//       type.children.push({
+//         id: itemId,
+//         name: itemName,
+//         amount: alloc.amount,
+//       })
+//     }
+//   })
 
-  const classArr = Object.values(classMap)
-  classArr.forEach(cls => {
-    cls.children.sort((a, b) => a.id - b.id)
-    cls.children.forEach(type => {
-      if (type.children) {
-        type.children.sort((a, b) => a.id - b.id)
-      }
-    })
-  })
+//   const classArr = Object.values(classMap)
+//   classArr.forEach(cls => {
+//     cls.children.sort((a, b) => a.id - b.id)
+//     cls.children.forEach(type => {
+//       if (type.children) {
+//         type.children.sort((a, b) => a.id - b.id)
+//       }
+//     })
+//   })
 
-  editDisplayAccounts.value = classArr
-}
+//   editDisplayAccounts.value = classArr
+// }
 
 watch(
   () => editDisplayAccounts.value,
@@ -505,25 +508,25 @@ watch(selectedFiscalYear, (newYearId) => {
   }
 })
 
-const openEditAllocationDialog = async (row) => {
-  try {
-    const response = await api.get(`/api/barangay/budgets/${row.id}/history`)
-    const allHistory = response.data.data?.history || []
-    const latestAllocations = allHistory.length > 0 ? allHistory[0].allocations : []
-    editAllocations.value = JSON.parse(JSON.stringify(latestAllocations))
-    initializeEditDisplayAccounts()
-    appropriationStore.selectedRow = row
-    showEditAllocationDialog.value = true
-  } catch (error) {
-    console.error('Failed to load allocation details for editing:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Failed to load allocation details for editing',
-      icon: 'error',
-      position: 'top',
-    })
-  }
-}
+// const openEditAllocationDialog = async (row) => {
+//   try {
+//     const response = await api.get(`/api/barangay/budgets/${row.id}/history`)
+//     const allHistory = response.data.data?.history || []
+//     const latestAllocations = allHistory.length > 0 ? allHistory[0].allocations : []
+//     editAllocations.value = JSON.parse(JSON.stringify(latestAllocations))
+//     initializeEditDisplayAccounts()
+//     appropriationStore.selectedRow = row
+//     showEditAllocationDialog.value = true
+//   } catch (error) {
+//     console.error('Failed to load allocation details for editing:', error)
+//     $q.notify({
+//       type: 'negative',
+//       message: 'Failed to load allocation details for editing',
+//       icon: 'error',
+//       position: 'top',
+//     })
+//   }
+// }
 
 const closeEditAllocationDialog = () => {
   showEditAllocationDialog.value = false

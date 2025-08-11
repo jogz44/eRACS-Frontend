@@ -38,11 +38,11 @@
 
         <q-space />
 
-        <q-btn
+        <!-- <q-btn
           label="Continue Accounts"
           @click="showContinueDialog = true"
           color="secondary"
-        />
+        /> -->
       </div>
     </div>
 
@@ -133,12 +133,12 @@
                 color="blue"
                 @click="viewDetails(props.row)"
               />
-              <q-btn
+              <!-- <q-btn
                 dense
                 label="Commit"
                 color="primary"
                 @click="openAllocationDialog(props.row)"
-              />
+              /> -->
             </div>
           </q-td>
         </template>
