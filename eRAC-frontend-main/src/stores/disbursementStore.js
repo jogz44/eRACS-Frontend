@@ -563,7 +563,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         return false;
       }
     },
-    
+
     async selectBooklet(range) {
       this.bookletLoading = true
       this.selectedBooklet = range
@@ -639,12 +639,8 @@ export const useDisbursementStore = defineStore('disbursement', {
 
       if (bankId) {
         try {
-          // Import bankStore dynamically to avoid circular dependency
-          const { useBankStore } = await import('./bankStore')
-          const bankStore = useBankStore()
 
           // Fetch booklets for the selected bank
-          const booklets = await bankStore.fetchBankBooklets(bankId)
           const authStore = useAuthStore();
           const token = authStore.token;
           const bankData = await api.get(`/api/barangay/banks/${bankId}/available-cheques`, {
@@ -654,7 +650,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             },
           });
           const data = bankData.data.data || [];
-          
+
           // Transform booklets for the select component
           this.chequeBooklets = data.map(booklet => ({
             label: `Booklet ${booklet.booklet_numb || booklet.id} (${booklet.starting_cheque_numb}-${booklet.ending_cheque_numb})`,
