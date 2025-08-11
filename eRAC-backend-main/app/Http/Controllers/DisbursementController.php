@@ -415,4 +415,41 @@ class DisbursementController extends Controller
         $disbursement->save();
         return response()->json(['status' => true, 'data' => $disbursement]);
     }
+
+    // DELETE /api/barangay/disbursements/{id}
+    public function destroy(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+            
+            // Find the disbursement and ensure it belongs to the user's barangay
+            $disbursement = Disbursement::where('id', $id)
+                ->where('barangay_id', $user->barangay_id)
+                ->firstOrFail();
+            
+            // Check if disbursement can be deleted (only if status is Pending)
+            if ($disbursement->status !== 'Pending') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Only pending disbursements can be deleted'
+                ], 400);
+            }
+            
+            // Delete the disbursement
+            $disbursement->delete();
+            
+            return response()->json([
+                'status' => true,
+                'message' => 'Disbursement deleted successfully'
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error deleting disbursement: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to delete disbursement',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 } 

@@ -282,14 +282,14 @@
           color="warning" 
           @click="handlePartialLiquidation" 
           :disable="!isValid || actualReturnAmount <= 0"
-          :loading="saving"
+          :loading="savingPartial"
         />
         <q-btn 
           label="Submit" 
           color="green" 
           @click="handleSaveOrDetails" 
           :disable="!canSubmit"
-          :loading="saving"
+          :loading="savingSubmit"
         />
       </q-card-actions>
     </q-card>
@@ -302,7 +302,8 @@ import { useDisbursementStore } from 'stores/disbursementStore'
 import { useQuasar } from 'quasar'
 
 const $q = useQuasar()
-const saving = ref(false)
+const savingPartial = ref(false)
+const savingSubmit = ref(false)
 
 const store = useDisbursementStore()
 const newOrImageInputs = ref([])
@@ -551,7 +552,7 @@ const handleRemarksChange = (newRemarks) => {
 }
 
 const handlePartialLiquidation = async () => {
-  saving.value = true
+  savingPartial.value = true
   try {
     // First, upload all photos that haven't been uploaded yet (only for new OR details)
     for (let i = 0; i < store.currentLiquidation.orDetails.length; i++) {
@@ -606,12 +607,12 @@ const handlePartialLiquidation = async () => {
       position: 'top',
     })
   } finally {
-    saving.value = false
+    savingPartial.value = false
   }
 }
 
 const handleSaveOrDetails = async () => {
-  saving.value = true
+  savingSubmit.value = true
   try {
     // First, upload all photos that haven't been uploaded yet (only for new OR details)
     for (let i = 0; i < store.currentLiquidation.orDetails.length; i++) {
@@ -666,7 +667,7 @@ const handleSaveOrDetails = async () => {
       position: 'top',
     })
   } finally {
-    saving.value = false
+    savingSubmit.value = false
   }
 }
 </script>

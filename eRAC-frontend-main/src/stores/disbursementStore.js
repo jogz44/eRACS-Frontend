@@ -282,18 +282,46 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Fetch expense hierarchy from appropriation store and accounts library store
     async fetchExpenseAccounts() {
       try {
+        // Only fetch if not already loaded to avoid unnecessary API calls
+        if (this.expenseData.length > 0 && !this.expenseTypeLoading) {
+          console.log('Expense accounts already loaded, skipping fetch')
+          return
+        }
         
         // Fetch from appropriation store for budget allocations
         const appropriationStore = useAppropriationStore()
         await appropriationStore.fetchExpenseHierarchy()
         this.expenseData = appropriationStore.allocations || []
         
-        // Fetch expense types from accounts library store
-        await this.fetchExpenseTypesFromAccountsLib()
+        // Fetch expense types from accounts library store (non-blocking)
+        this.fetchExpenseTypesFromAccountsLib().catch(error => {
+          console.warn('Failed to fetch expense types:', error)
+        })
         
       } catch (error) {
         console.error('Error fetching expense accounts:', error)
         this.expenseData = []
+      }
+    },
+
+    // Background refresh method for expense accounts
+    async refreshExpenseAccountsInBackground() {
+      try {
+        console.log('Refreshing expense accounts in background...')
+        
+        // Fetch from appropriation store for budget allocations
+        const appropriationStore = useAppropriationStore()
+        await appropriationStore.fetchExpenseHierarchy()
+        this.expenseData = appropriationStore.allocations || []
+        
+        // Fetch expense types from accounts library store (non-blocking)
+        this.fetchExpenseTypesFromAccountsLib().catch(error => {
+          console.warn('Failed to fetch expense types in background:', error)
+        })
+        
+        console.log('Expense accounts refreshed in background')
+      } catch (error) {
+        console.warn('Failed to refresh expense accounts in background:', error)
       }
     },
 
@@ -315,14 +343,17 @@ export const useDisbursementStore = defineStore('disbursement', {
         if (accountsStore.selectedYear) {
           await accountsStore.fetchExpenseClasses(accountsStore.selectedYear)
           
-          // Fetch expense types for each class
-          for (const expenseClass of accountsStore.expenseClasses) {
+          // Fetch expense types for all classes in parallel instead of sequentially
+          const typePromises = accountsStore.expenseClasses.map(async (expenseClass) => {
             try {
-              await accountsStore.fetchExpenseTypes(expenseClass.id)
+              return await accountsStore.fetchExpenseTypes(expenseClass.id)
             } catch (error) {
               console.warn(`Failed to fetch types for class ${expenseClass.id}:`, error)
+              return null
             }
-          }
+          })
+          
+          await Promise.all(typePromises)
           
           // Integrate expense types into expenseData
           this.integrateExpenseTypesFromAccountsLib(accountsStore)
@@ -741,6 +772,9 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Dialog Actions
     async openDialog(dialogName) {
       if (dialogName === 'disbursement') {
+        // Reset the form first to clear any previous data
+        this.resetForm('disbursement')
+        
         const today = new Date()
         const dd = String(today.getDate()).padStart(2, '0')
         const mm = String(today.getMonth() + 1).padStart(2, '0')
@@ -759,8 +793,10 @@ export const useDisbursementStore = defineStore('disbursement', {
         }, 0)
         this.forms.disbursement.dvNumber = `DV-${String(yyyy).slice(-2)}-${mm}-${String(lastDV + 1).padStart(3, '0')}`
       } else if (dialogName === 'expense') {
-        // Fetch expense accounts when opening expense dialog
-        await this.fetchExpenseAccounts()
+        // Only fetch expense accounts if not already loaded
+        if (this.expenseData.length === 0) {
+          await this.fetchExpenseAccounts()
+        }
       }
       this.dialogs[dialogName] = true
     },
@@ -808,7 +844,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           this.currentLiquidation.orDetails = [];
         }
       } else {
-        // For new liquidations, initialize empty
+        // For new liquidations, initialize empty - component will add initial row
         this.currentLiquidation.orDetails = [];
       }
       
@@ -929,6 +965,9 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Refresh the disbursements list
         await this.fetchDisbursements()
 
+        // Refresh expense accounts in background to ensure latest data
+        this.refreshExpenseAccountsInBackground()
+
         // Reset the form and generate new DV number
         this.resetForm('disbursement')
         this.expenses = []
@@ -966,13 +1005,38 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Expense Actions
     saveExpense() {
       const amount = Number(this.forms.expense.amount) || 0
+      const particulars = this.forms.expense.particulars?.trim() || ''
+
+      // Validate particulars
+      if (!particulars) {
+        throw new Error('Particulars is required')
+      }
+
+      // Validate amount
+      if (amount <= 0) {
+        throw new Error('Amount must be greater than 0')
+      }
+
+      // Validate amount against available balance
+      const availableBalance = this.forms.expense.balance || 0
+      
+      // Calculate total amount already allocated to this account in current disbursement
+      const existingAmountForAccount = this.expenses
+        .filter(expense => expense.accountId === this.forms.expense.accountId)
+        .reduce((total, expense) => total + Number(expense.amount), 0)
+      
+      const remainingBalance = availableBalance - existingAmountForAccount
+      
+      if (amount > remainingBalance) {
+        throw new Error(`Amount exceeds available balance. Available: ₱${remainingBalance.toLocaleString()}, Requested: ₱${amount.toLocaleString()}`)
+      }
 
       this.expenses.push({
         id: Date.now(),
         accountId: this.forms.expense.accountId,
         accountName: this.forms.expense.account,
         amount: amount,
-        particular: this.forms.expense.particulars,
+        particular: particulars,
         // Store additional expense type information
         expense_class_id: this.forms.expense.expense_class_id,
         expense_type_id: this.forms.expense.expense_type_id,
@@ -1094,6 +1158,9 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Refresh the disbursements list
         await this.fetchDisbursements()
+
+        // Refresh expense accounts in background to ensure latest data
+        this.refreshExpenseAccountsInBackground()
 
         // Close dialog and reset
         this.closeDialog('editDisbursement')
@@ -1266,10 +1333,22 @@ export const useDisbursementStore = defineStore('disbursement', {
         this.currentLiquidation.orDetails = []
       }
 
+      // Get today's date in DD/MM/YYYY format
+      const today = new Date()
+      const dd = String(today.getDate()).padStart(2, '0')
+      const mm = String(today.getMonth() + 1).padStart(2, '0')
+      const yyyy = today.getFullYear()
+      const todayFormatted = `${dd}/${mm}/${yyyy}`
+
       this.currentLiquidation.orDetails.push({
         orNumber: '',
         orAmount: '',
+        orDate: todayFormatted,
         orImage: null,
+        orPhotoUrl: null,
+        serverPhotoPath: null,
+        remarks: '',
+        isReadOnly: false,
       })
 
       this.calculateTotals()
@@ -1364,6 +1443,38 @@ export const useDisbursementStore = defineStore('disbursement', {
             position: 'top'
           });
         }
+      }
+    },
+
+    async deleteDisbursement(id) {
+      try {
+        const authStore = useAuthStore();
+        const token = authStore.token;
+        
+        const response = await api.delete(`/api/barangay/disbursements/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+        
+        if (response.data.status) {
+          // Remove the disbursement from the local array
+          this.disbursements = this.disbursements.filter(d => d.id !== id);
+          
+          // Refresh expense accounts in background to ensure latest data
+          this.refreshExpenseAccountsInBackground()
+          
+          return { success: true, message: response.data.message };
+        } else {
+          return { success: false, message: response.data.message };
+        }
+      } catch (error) {
+        console.error('Failed to delete disbursement:', error);
+        return { 
+          success: false, 
+          message: error.response?.data?.message || 'Failed to delete disbursement' 
+        };
       }
     },
   },
