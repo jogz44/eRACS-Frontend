@@ -11,6 +11,7 @@
           flat
           dense
           @click="loadPendingUsers"
+          :loading="loading"
         />
       </div>
     </div>
@@ -125,12 +126,13 @@
           <!-- Add Expense Button -->
           <q-card-section>
             <div class="row justify-end q-mb-md">
-              <q-btn
-                label="Add"
-                color="primary"
-                icon="add"
-                @click="store.openDialog('expense')"
-              />
+                             <q-btn
+                 label="Add"
+                 color="primary"
+                 icon="add"
+                 @click="handleAddExpense"
+                 :loading="addingExpense"
+               />
             </div>
 
             <!-- Expense Table -->
@@ -428,6 +430,7 @@ import { useQuasar } from 'quasar'
 
 const $q = useQuasar()
 const loading = ref(false)
+const addingExpense = ref(false)
 
 const currentBankLabel = computed(() => {
   if (store.forms.disbursement.bank_id) {
@@ -499,6 +502,24 @@ const handleEnterKey = (event) => {
 
 const handleSaveClick = () => {
   validateAndSave()
+}
+
+const handleAddExpense = async () => {
+  addingExpense.value = true
+  try {
+    await store.openDialog('expense')
+  } catch (error) {
+    console.error('Error opening expense dialog:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to open expense dialog',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000
+    })
+  } finally {
+    addingExpense.value = false
+  }
 }
 
 const loadPendingUsers = async () => {
