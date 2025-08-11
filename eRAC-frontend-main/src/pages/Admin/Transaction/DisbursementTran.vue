@@ -120,12 +120,12 @@
           <!-- Add Expense Button -->
           <q-card-section>
             <div class="row justify-end q-mb-md">
-              <q-btn
+              <!-- <q-btn
                 label="Add"
                 color="primary"
                 icon="add"
                 @click="store.openDialog('expense')"
-              />
+              /> -->
             </div>
 
             <!-- Expense Table -->
