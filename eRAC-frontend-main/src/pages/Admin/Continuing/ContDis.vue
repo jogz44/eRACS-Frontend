@@ -28,6 +28,28 @@
           </template>
         </q-input>
 
+        <!-- Fiscal Year Filter -->
+        <q-select
+          outlined
+          dense
+          v-model="selectedFiscalYear"
+          :options="appropriationStore.fiscalYearOptions"
+          label="Fiscal Year"
+          style="min-width: 180px"
+          emit-value
+          map-options
+          :loading="appropriationStore.loading"
+          @update:model-value="onFiscalYearChange"
+        >
+          <template v-slot:no-option>
+            <q-item>
+              <q-item-section class="text-grey">
+                No fiscal years found
+              </q-item-section>
+            </q-item>
+          </template>
+        </q-select>
+
         <q-btn
           dense
           outlined
@@ -227,14 +249,36 @@
 
 <script setup>
 import { useQuasar } from 'quasar'
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useContDisbursementStore } from 'stores/contDisburseStore'
+import { useAppropriationStore } from 'stores/appropriationStore'
 import ContLiquidateDialog from 'components/contDisburse/ContOrDetails.vue'
 import ContViewOr from 'components/contDisburse/ContViewOr.vue'
 
 const $q = useQuasar()
 const loading = ref(false)
 const store = useContDisbursementStore()
+const appropriationStore = useAppropriationStore()
+
+const selectedFiscalYear = computed({
+  get: () => appropriationStore.selectedFiscalYear,
+  set: (value) => appropriationStore.setSelectedFiscalYear(value)
+})
+
+const onFiscalYearChange = (value) => {
+  if (value !== appropriationStore.selectedFiscalYear) {
+    appropriationStore.setSelectedFiscalYear(value)
+    loadPendingUsers() // Refresh data when fiscal year changes
+  }
+}
+
+onMounted(async () => {
+  try {
+    await appropriationStore.initialize()
+  } catch (error) {
+    console.error('Failed to initialize fiscal years:', error)
+  }
+})
 
 const validateAndSave = () => {
   if (store.dialogs.disbursement) {
@@ -306,6 +350,12 @@ const clearAllFilters = () => {
   store.searchQuery = ''
   store.dateFrom = ''
   store.dateTo = ''
+  // Reset fiscal year to current year if available, otherwise first available year
+  const currentYear = new Date().getFullYear().toString()
+  const defaultYear = appropriationStore.fiscalYears.includes(currentYear)
+    ? currentYear
+    : appropriationStore.fiscalYears[0]
+  appropriationStore.setSelectedFiscalYear(defaultYear)
 }
 </script>
 

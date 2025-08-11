@@ -48,8 +48,10 @@ Route::prefix('barangay')->group(function () {
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
     Route::middleware(['auth:sanctum', 'auth.barangay'])->group(function () {
-        Route::post('/setlogs', [AdminAuthController::class, 'logUserAction']);
-        Route::get('/getlogs', [AuthController::class, 'getBarangayLogs']);
+        Route::middleware(['check.role'])->group(function () {
+            Route::post('/setlogs', [AdminAuthController::class, 'logUserAction']);
+            Route::get('/getlogs', [AuthController::class, 'getBarangayLogs']);
+        });
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/user', [AuthController::class, 'user']);
 
@@ -172,11 +174,13 @@ Route::prefix('admin')->group(function () {
     Route::get('/per-barangay-budgets',[AdminAuthController::class, 'getPerBarangaysBudgets']);
 
     // Admin user access and logs endpoints
-    Route::get('/admin/users', [AdminAuthController::class, 'getUsersWithPermissions']);
-    Route::post('/admin/user-access/{id}', [AdminAuthController::class, 'updateUserPermissions']);
-    Route::get('/admin/logs', [AdminAuthController::class, 'getAllLogs']);
-    
-    // Admin Individual Log Open
-    Route::get('/admin/logs/{user}/{day}', [AdminAuthController::class, 'getUserLogs']);
+    Route::middleware(['check.role'])->group(function () {
+        Route::get('/admin/users', [AdminAuthController::class, 'getUsersWithPermissions']);
+        Route::post('/admin/user-access/{id}', [AdminAuthController::class, 'updateUserPermissions']);
+        Route::get('/admin/logs', [AdminAuthController::class, 'getAllLogs']);
+
+        // Admin Individual Log Open
+        Route::get('/admin/logs/{user}/{day}', [AdminAuthController::class, 'getUserLogs']);
+    });
 });
 
