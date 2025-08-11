@@ -729,29 +729,24 @@ export const useDisbursementStore = defineStore('disbursement', {
 
       if (bankId) {
         try {
-          // Import bankStore dynamically to avoid circular dependency
-          const { useBankStore } = await import('./bankStore')
-          const bankStore = useBankStore()
-          
-          // Fetch booklets for the selected bank
-          const booklets = await bankStore.fetchBankBooklets(bankId)
+          const authStore = useAuthStore();
+          const token = authStore.token;
+          const bankData = await api.get(`/api/barangay/banks/${bankId}/available-cheques`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
+          });
+          const data = bankData.data.data || [];
           
           // Transform booklets for the select component
-          this.chequeBooklets = booklets.map(booklet => ({
+          this.chequeBooklets = data.map(booklet => ({
             label: `Booklet ${booklet.booklet_numb || booklet.id} (${booklet.starting_cheque_numb}-${booklet.ending_cheque_numb})`,
             value: `${booklet.starting_cheque_numb}-${booklet.ending_cheque_numb}`,
             booklet: booklet
           }))
-
-          // Automatically select the first booklet if available
-          if (this.chequeBooklets.length > 0) {
-            this.selectedBooklet = this.chequeBooklets[0].value
-            this.selectBooklet(this.selectedBooklet)
-            
-          }
-          
           // Automatically select the first cheque if available
-          this.selectedChequeNumber = this.availableChequeNumbers[0] || null
+          this.selectedChequeNumber = this.chequeBooklets[0].booklet.cheques[0].cheque_number || null
           this.forms.disbursement.chequeNumber = 0
 
           
@@ -1413,6 +1408,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           },
         });
         const data = bankData.data.data || [];
+        console.log('Cheque booklets loaded:', data);
 
         // Map the cheque booklets for select options
         this.chequeBooklets = data.map(booklet => ({
@@ -1423,6 +1419,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Optionally store all cheque data for later filtering
         this.bookletCheques = data.reduce((acc, booklet) => {
           acc[booklet.id] = booklet.cheques;
+          
           return acc;
         }, {});
 
