@@ -282,18 +282,46 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Fetch expense hierarchy from appropriation store and accounts library store
     async fetchExpenseAccounts() {
       try {
+        // Only fetch if not already loaded to avoid unnecessary API calls
+        if (this.expenseData.length > 0 && !this.expenseTypeLoading) {
+          console.log('Expense accounts already loaded, skipping fetch')
+          return
+        }
         
         // Fetch from appropriation store for budget allocations
         const appropriationStore = useAppropriationStore()
         await appropriationStore.fetchExpenseHierarchy()
         this.expenseData = appropriationStore.allocations || []
         
-        // Fetch expense types from accounts library store
-        await this.fetchExpenseTypesFromAccountsLib()
+        // Fetch expense types from accounts library store (non-blocking)
+        this.fetchExpenseTypesFromAccountsLib().catch(error => {
+          console.warn('Failed to fetch expense types:', error)
+        })
         
       } catch (error) {
         console.error('Error fetching expense accounts:', error)
         this.expenseData = []
+      }
+    },
+
+    // Background refresh method for expense accounts
+    async refreshExpenseAccountsInBackground() {
+      try {
+        console.log('Refreshing expense accounts in background...')
+        
+        // Fetch from appropriation store for budget allocations
+        const appropriationStore = useAppropriationStore()
+        await appropriationStore.fetchExpenseHierarchy()
+        this.expenseData = appropriationStore.allocations || []
+        
+        // Fetch expense types from accounts library store (non-blocking)
+        this.fetchExpenseTypesFromAccountsLib().catch(error => {
+          console.warn('Failed to fetch expense types in background:', error)
+        })
+        
+        console.log('Expense accounts refreshed in background')
+      } catch (error) {
+        console.warn('Failed to refresh expense accounts in background:', error)
       }
     },
 
@@ -315,14 +343,17 @@ export const useDisbursementStore = defineStore('disbursement', {
         if (accountsStore.selectedYear) {
           await accountsStore.fetchExpenseClasses(accountsStore.selectedYear)
           
-          // Fetch expense types for each class
-          for (const expenseClass of accountsStore.expenseClasses) {
+          // Fetch expense types for all classes in parallel instead of sequentially
+          const typePromises = accountsStore.expenseClasses.map(async (expenseClass) => {
             try {
-              await accountsStore.fetchExpenseTypes(expenseClass.id)
+              return await accountsStore.fetchExpenseTypes(expenseClass.id)
             } catch (error) {
               console.warn(`Failed to fetch types for class ${expenseClass.id}:`, error)
+              return null
             }
-          }
+          })
+          
+          await Promise.all(typePromises)
           
           // Integrate expense types into expenseData
           this.integrateExpenseTypesFromAccountsLib(accountsStore)
@@ -752,8 +783,10 @@ export const useDisbursementStore = defineStore('disbursement', {
         }, 0)
         this.forms.disbursement.dvNumber = `DV-${String(yyyy).slice(-2)}-${mm}-${String(lastDV + 1).padStart(3, '0')}`
       } else if (dialogName === 'expense') {
-        // Fetch expense accounts when opening expense dialog
-        await this.fetchExpenseAccounts()
+        // Only fetch expense accounts if not already loaded
+        if (this.expenseData.length === 0) {
+          await this.fetchExpenseAccounts()
+        }
       }
       this.dialogs[dialogName] = true
     },
@@ -920,6 +953,9 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Refresh the disbursements list
         await this.fetchDisbursements()
+
+        // Refresh expense accounts in background to ensure latest data
+        this.refreshExpenseAccountsInBackground()
 
         // Reset the form and generate new DV number
         this.resetForm('disbursement')
@@ -1111,6 +1147,9 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Refresh the disbursements list
         await this.fetchDisbursements()
+
+        // Refresh expense accounts in background to ensure latest data
+        this.refreshExpenseAccountsInBackground()
 
         // Close dialog and reset
         this.closeDialog('editDisbursement')
@@ -1411,6 +1450,10 @@ export const useDisbursementStore = defineStore('disbursement', {
         if (response.data.status) {
           // Remove the disbursement from the local array
           this.disbursements = this.disbursements.filter(d => d.id !== id);
+          
+          // Refresh expense accounts in background to ensure latest data
+          this.refreshExpenseAccountsInBackground()
+          
           return { success: true, message: response.data.message };
         } else {
           return { success: false, message: response.data.message };

@@ -126,13 +126,14 @@
           <!-- Add Expense Button -->
           <q-card-section>
             <div class="row justify-end q-mb-md">
-                             <q-btn
-                 label="Add"
-                 color="primary"
-                 icon="add"
-                 @click="handleAddExpense"
-                 :loading="addingExpense"
-               />
+              <q-btn
+                label="Add"
+                color="primary"
+                icon="add"
+                @click="handleAddExpense"
+                @mouseenter="preloadExpenseAccounts"
+                :loading="addingExpense || store.expenseTypeLoading"
+              />
             </div>
 
             <!-- Expense Table -->
@@ -344,7 +345,7 @@
 </template>
 
 <script setup>
-import { watch, onMounted, onActivated } from 'vue'
+import { watch, onMounted, onActivated, onUnmounted } from 'vue'
 import SearchFilters from 'components/disbursement/SearchFilters.vue'
 import OrDetailsDialog from 'components/disbursement/OrDetailsDialog.vue'
 import ViewOrDetails from 'components/disbursement/ViewOrDetails.vue'
@@ -355,23 +356,27 @@ import { useBankStore } from 'stores/bankStore'
 const store = useDisbursementStore()
 const bankStore = useBankStore()
 
-// Function to load all data
+// Function to load all data with optimized loading strategy
 const loadAllData = async () => {
   console.log('Loading all disbursement data...')
   loading.value = true
   
   try {
-    // Fetch all necessary data in parallel for better performance
-    const promises = [
+    // Load critical data first (disbursements and banks) in parallel
+    const criticalPromises = [
       store.fetchDisbursements(),
-      store.fetchExpenseAccounts(),
       bankStore.fetchBanks()
     ]
     
-    await Promise.all(promises)
+    await Promise.all(criticalPromises)
     
-    // Show success notification only if not in loading state
-    if (!loading.value) {
+    // Load expense accounts in background (non-blocking)
+    store.fetchExpenseAccounts().catch(error => {
+      console.warn('Failed to load expense accounts in background:', error)
+    })
+    
+    // Show success notification only if not initial load
+    if (!initialLoading.value) {
       $q.notify({
         type: 'positive',
         message: 'Disbursement data loaded successfully!',
@@ -383,27 +388,49 @@ const loadAllData = async () => {
     
   } catch (error) {
     console.error('Error during data loading:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Failed to load disbursement data: ' + (error.message || 'Unknown error'),
-      icon: 'error',
-      position: 'top',
-      timeout: 5000
-    })
+    if (!initialLoading.value) {
+      $q.notify({
+        type: 'negative',
+        message: 'Failed to load disbursement data: ' + (error.message || 'Unknown error'),
+        icon: 'error',
+        position: 'top',
+        timeout: 5000
+      })
+    }
   } finally {
     loading.value = false
+    initialLoading.value = false
   }
 }
+
+// Set up periodic refresh for expense accounts
+let expenseRefreshInterval = null
 
 onMounted(async () => {
   console.log('DisbursementTran component mounted - starting data refresh...')
   await loadAllData()
+  
+  // Set up periodic refresh for expense accounts (every 2 minutes)
+  expenseRefreshInterval = setInterval(() => {
+    // Only refresh if expense dialog is open or if we have expense data
+    if (store.dialogs.expense || store.expenseData.length > 0) {
+      store.refreshExpenseAccountsInBackground()
+    }
+  }, 120000) // 2 minutes
 })
 
 // Refresh data when component is activated (when navigating back to this page)
 onActivated(async () => {
   console.log('DisbursementTran component activated - refreshing data...')
   await loadAllData()
+})
+
+// Clean up interval when component is unmounted
+onUnmounted(() => {
+  if (expenseRefreshInterval) {
+    clearInterval(expenseRefreshInterval)
+    expenseRefreshInterval = null
+  }
 })
 
 // Watch for expenses changes
@@ -425,12 +452,24 @@ watch(
   { deep: true },
 )
 
+// Auto-refresh expense accounts when the expense dialog is opened
+watch(
+  () => store.dialogs.expense,
+  async (isOpen) => {
+    if (isOpen) {
+      // Refresh expense accounts when dialog opens to ensure latest data
+      store.refreshExpenseAccountsInBackground()
+    }
+  }
+)
+
 import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
 
 const $q = useQuasar()
 const loading = ref(false)
 const addingExpense = ref(false)
+const initialLoading = ref(true)
 
 const currentBankLabel = computed(() => {
   if (store.forms.disbursement.bank_id) {
@@ -504,6 +543,15 @@ const handleSaveClick = () => {
   validateAndSave()
 }
 
+const preloadExpenseAccounts = () => {
+  // Preload expense accounts when user hovers over Add button
+  if (store.expenseData.length === 0 && !store.expenseTypeLoading) {
+    store.fetchExpenseAccounts().catch(error => {
+      console.warn('Failed to preload expense accounts:', error)
+    })
+  }
+}
+
 const handleAddExpense = async () => {
   addingExpense.value = true
   try {
@@ -547,7 +595,14 @@ const handleSaveExpense = () => {
 const loadPendingUsers = async () => {
   loading.value = true
   try {
-    await loadAllData()
+    // Only refresh disbursements and banks, skip expense accounts for faster refresh
+    const refreshPromises = [
+      store.fetchDisbursements(),
+      bankStore.fetchBanks()
+    ]
+    
+    await Promise.all(refreshPromises)
+    
     $q.notify({
       type: 'positive',
       message: 'Disbursements refreshed!',
@@ -556,15 +611,15 @@ const loadPendingUsers = async () => {
       timeout: 3000
     })
   } catch (error) {
-      $q.notify({
-        type: 'negative',
-        message: error.response?.data?.message || 'Failed to refresh disbursements',
-        icon: 'error',
-        position: 'top',
-      })
-    } finally {
-      loading.value = false
-    }
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Failed to refresh disbursements',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    loading.value = false
+  }
 }
 
 // Helper function to extract numeric days from aging string
