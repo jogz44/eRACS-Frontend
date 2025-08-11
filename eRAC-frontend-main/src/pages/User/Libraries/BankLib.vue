@@ -261,7 +261,7 @@
 
         <q-card-section>
           <q-form @submit="handleAddBookletSaveClick">
-            
+
             <q-input
               v-model="newBooklet.booklet_numb"
               label="Booklet Number"
@@ -354,14 +354,7 @@
             wrap-cells
             virtual-scroll
           >
-            <template v-slot:body-cell-status="props">
-              <q-td :props="props">
-                <q-badge
-                  :color="(props.row.status || '').toLowerCase() === 'unused' ? 'green' : 'orange'"
-                  :label="(props.row.status || '').toLowerCase() === 'unused' ? 'Unused' : 'Used'"
-                />
-              </q-td>
-            </template>
+
           </q-table>
         </q-card-section>
       </q-card>

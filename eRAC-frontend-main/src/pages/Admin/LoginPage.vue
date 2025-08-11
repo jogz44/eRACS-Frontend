@@ -5,6 +5,19 @@
       <div class="photo-container">
         <div class="photo-overlay">
           <div class="overlay-content">
+                  <div class="welcome-text">
+              <h5 class="welcome-title">Welcome</h5>
+              <h5 class="to-text">to</h5>
+              <h5 class="erac-title">eRAC</h5>
+            </div>
+            <div class="description-text">
+              <p class="description-line">Electronic Registry</p>
+              <p class="description-line"> of</p>
+              <p class="description-line">Appropriation and Commitment</p>
+
+            </div>
+            <div class="tagline">
+</div>
             <!-- <div class="welcome-text">
               <h1 class="welcome-title">Welcome</h1>
               <h1 class="to-text">to</h1>
