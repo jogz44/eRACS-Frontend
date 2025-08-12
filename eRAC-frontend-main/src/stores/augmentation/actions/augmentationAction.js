@@ -28,31 +28,24 @@ export function useAugmentationActions(state) {
     }
   }
 
+  // --- UPDATED: Fetch and flatten expense accounts like disbursement ---
   const fetchExpenseAccounts = async () => {
     try {
+      state.expenseAccountsLoading.value = true
       const token = authStore.token
-      
-      // First, get the current fiscal year
+      // Get the current fiscal year
       const fiscalYearResponse = await api.get('/api/barangay/fiscal-years', {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: 'application/json',
         }
       })
-      
       if (!fiscalYearResponse.data.data || fiscalYearResponse.data.data.length === 0) {
-        console.error('No fiscal years found')
         state.AugexpenseAccounts.value = []
         return
       }
-      
-      // Get the most recent fiscal year
-      const currentFiscalYear = fiscalYearResponse.data.data[0] // Assuming it's sorted by year desc
-      
-      const params = {
-        fiscal_year_id: currentFiscalYear.id
-      }
-      
+      const currentFiscalYear = fiscalYearResponse.data.data[0]
+      const params = { fiscal_year_id: currentFiscalYear.id }
       const response = await api.get('/api/barangay/expense-hierarchy', {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -60,41 +53,57 @@ export function useAugmentationActions(state) {
         },
         params
       })
-
-      // Transform the expense hierarchy into a flat list for selection
-      const expenseAccounts = []
-      if (response.data.data) {
-        response.data.data.forEach(expenseClass => {
-          if (expenseClass.children) {
-            expenseClass.children.forEach(expenseType => {
-              if (expenseType.children) {
-                expenseType.children.forEach(expenseItem => {
-                  const balance = expenseItem.amount || 0
-                  // Only include accounts with balance greater than 0
-                  if (balance > 0) {
-                    expenseAccounts.push({
-                      id: expenseItem.id,
-                      expense_class_id: expenseClass.id,
-                      expense_type_id: expenseType.id,
-                      expense_item_id: expenseItem.id,
-                      expense_class: expenseClass.name,
-                      expense_type: expenseType.name,
-                      expense_item: expenseItem.name,
-                      account: `${expenseClass.name} > ${expenseType.name} > ${expenseItem.name}`,
-                      balance: balance
-                    })
-                  }
+      // Store the hierarchy for possible future use
+      state.expenseData = response.data.data || []
+      // Flatten for dialog selection (same as disbursement)
+      const flattened = []
+      if (state.expenseData && state.expenseData.length > 0) {
+        state.expenseData.forEach(expenseClass => {
+          if (!expenseClass.children) return
+          expenseClass.children.forEach(expenseType => {
+            // Check if this expense type has any expense items with balance > 0
+            const hasExpenseItemsWithBalance = expenseType.children && 
+              expenseType.children.some(item => item.amount && item.amount > 0)
+            if (hasExpenseItemsWithBalance) {
+              // If expense type has items with balance, only show the items (not the type)
+              expenseType.children.forEach(expenseItem => {
+                if (expenseItem.amount && expenseItem.amount > 0) {
+                  flattened.push({
+                    id: expenseItem.id,
+                    account: expenseClass.name,
+                    expenseType: expenseType.name,
+                    expenseItem: expenseItem.name,
+                    balance: expenseItem.amount || 0,
+                    expense_class_id: expenseClass.id,
+                    expense_type_id: expenseType.id,
+                    expense_item_id: expenseItem.id,
+                  })
+                }
+              })
+            } else {
+              // If expense type has no items with balance, show the type itself (if it has balance)
+              if (expenseType.amount && expenseType.amount > 0) {
+                flattened.push({
+                  id: expenseType.id,
+                  account: expenseClass.name,
+                  expenseType: expenseType.name,
+                  expenseItem: null,
+                  balance: expenseType.amount || 0,
+                  expense_class_id: expenseClass.id,
+                  expense_type_id: expenseType.id,
+                  expense_item_id: null,
                 })
               }
-            })
-          }
+            }
+          })
         })
       }
-      
-      state.AugexpenseAccounts.value = expenseAccounts
+      state.AugexpenseAccounts.value = flattened
     } catch (error) {
       console.error('Failed to fetch expense accounts:', error)
       state.AugexpenseAccounts.value = []
+    } finally {
+      state.expenseAccountsLoading.value = false
     }
   }
 
@@ -254,11 +263,19 @@ export function useAugmentationActions(state) {
 
   const resetForm = (formName) => {
     if (formName === 'augmentation') {
+      // Reset the augmentation form
       state.forms.value.augmentation = {
         augmentation_date: '',
         remarks: '',
         refNo: '',
       }
+      
+      // Clear all related state
+      state.Augexpenses.value = []
+      state.currentItem.value = null
+      
+      // Generate fresh defaults including new ref number
+      generateNewAugmentationDefaults()
     } else if (formName === 'augExpense') {
       state.forms.value.augExpense = {
         expense_class_id: null,
@@ -272,6 +289,29 @@ export function useAugmentationActions(state) {
     }
   }
 
+  const generateNewAugmentationDefaults = () => {
+    const today = new Date()
+    const dd = String(today.getDate()).padStart(2, '0')
+    const mm = String(today.getMonth() + 1).padStart(2, '0')
+    const yyyy = today.getFullYear()
+
+    // Generate new ref number
+    const lastRef = state.augmentation.value.reduce((max, a) => {
+      const num = parseInt(a.ref_number?.split('-')?.pop()) || 0
+      return Math.max(max, num)
+    }, 0)
+    const newRefNumber = `AUG-${String(yyyy).slice(-2)}-${mm}-${String(lastRef + 1).padStart(3, '0')}`
+
+    // Update form with new defaults
+    state.forms.value.augmentation.augmentation_date = `${dd}/${mm}/${yyyy}`
+    state.forms.value.augmentation.refNo = newRefNumber
+  }
+
+  const refreshAugmentationDialog = () => {
+    // Completely reset all augmentation dialog state
+    resetForm('augmentation')
+  }
+
   return {
     fetchAugmentations,
     fetchExpenseAccounts,
@@ -281,5 +321,7 @@ export function useAugmentationActions(state) {
     fetchAugmentationById,
     editAugmentation,
     resetForm,
+    generateNewAugmentationDefaults,
+    refreshAugmentationDialog,
   }
 }

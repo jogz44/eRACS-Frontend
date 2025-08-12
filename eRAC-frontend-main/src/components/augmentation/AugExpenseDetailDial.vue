@@ -24,7 +24,7 @@
           type="textarea"
           autogrow
         />
-
+        
         <!-- Amount Field -->
         <q-input
           outlined
@@ -44,7 +44,7 @@
           color="negative"
           @click="store.closeDialog('AugexpenseDetail')"
         />
-        <q-btn label="Save" color="primary" @click="store.saveExpense" />
+        <q-btn label="Save" color="primary" @click="handleSave" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -52,8 +52,22 @@
 
 <script setup>
 import { useAugmentationStore } from 'stores/augmentation'
-
+import { useQuasar } from 'quasar'
 const store = useAugmentationStore()
+const $q = useQuasar()
+
+function handleSave() {
+  try {
+    store.saveExpense()
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to add expense',
+      position: 'top',
+      icon: 'error',
+    })
+  }
+}
 </script>
 
 <style scoped>

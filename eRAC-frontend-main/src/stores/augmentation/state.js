@@ -8,6 +8,9 @@ export function initialState() {
 
     AugexpenseAccounts: ref([]),
 
+    // Loading states
+    expenseAccountsLoading: ref(false),
+
     // Search/filters
     searchQuery: ref(''),
     dateFrom: ref(''),

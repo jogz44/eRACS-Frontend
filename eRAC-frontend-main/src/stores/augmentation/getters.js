@@ -33,11 +33,11 @@ export function useGetters(state) {
       align: 'left',
       sortable: true,
     },
-    { 
-      name: 'amount', 
-      label: 'Amount', 
-      field: 'amount', 
-      align: 'left', 
+    {
+      name: 'amount',
+      label: 'Amount',
+      field: 'amount',
+      align: 'left',
       sortable: true,
       format: (val) => `₱${val ? val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}`,
     },
@@ -46,12 +46,15 @@ export function useGetters(state) {
   ])
 
   const AugexpenseAccountColumns = computed(() => [
-    { name: 'account', label: 'Account', field: 'account', align: 'left', sortable: true },
+    { name: 'expense_class', label: 'Expense Class', field: 'account', align: 'left', sortable: true },
+    { name: 'expense_type', label: 'Expense Type', field: 'expenseType', align: 'left', sortable: true },
+    { name: 'expense_item', label: 'Expense Item', field: 'expenseItem', align: 'left', sortable: true },
     {
       name: 'balance',
       label: 'Balance',
-      field: (row) => `₱${row.balance.toLocaleString()}`,
-      align: 'left',
+      field: 'balance',
+      format: (val) => `₱${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      align: 'right',
       sortable: true,
     },
     { name: 'action', label: 'Action', field: '', align: 'center' },
@@ -67,10 +70,29 @@ export function useGetters(state) {
     })
   })
 
+  const totalExpensesAmount = computed(() => {
+    console.log('totalExpensesAmount getter called')
+    console.log('Augexpenses value:', state.Augexpenses.value)
+    if (!state.Augexpenses.value || state.Augexpenses.value.length === 0) {
+      console.log('No expenses, returning 0')
+      return 0
+    }
+    const total = state.Augexpenses.value.reduce((total, expense) => {
+      const amount =
+        typeof expense.amount === 'string'
+          ? parseFloat(expense.amount.replace(/[^0-9.]/g, ''))
+          : expense.amount
+      return total + (Number(amount) || 0)
+    }, 0)
+    console.log('Calculated total:', total)
+    return total
+  })
+
   return {
     augmentationColumns,
     expenseAugColumns,
     AugexpenseAccountColumns,
     filteredAugmentations,
+    totalExpensesAmount,
   }
 }
