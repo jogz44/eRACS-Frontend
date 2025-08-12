@@ -2,8 +2,10 @@
   <q-layout view="lHh Lpr lFf">
     <!-- HEADER -->
     <q-header elevated class="custom-header">
-      <q-toolbar class="q-pr-md items-center" style="display: flex; flex-direction: row;">
+      <q-toolbar class="q-pr-md items-center" style="justify-content: space-between;">
+         <div style="display: flex; align-items: center;">
         <q-btn
+           v-if="$q.screen.lt.md && authStore.admin?.name"
           flat
           round
           dense
@@ -21,7 +23,25 @@
           style="color: white; font-weight: bold ;"
         >
           Welcome, {{ authStore.admin?.name || 'Admin' }}
+
         </q-toolbar-title>
+        </div>
+
+        <q-space/>
+
+        <q-select
+          outlined
+          dense
+          bg-color="light-green-1"
+          label="Select Barangay"
+          color="green"
+          class="q-mb-sm q-pt-sm"
+          style="width: 200px;"
+          emit-value
+          map-options
+          option-label="name"
+          option-value="value"
+        />
       </q-toolbar>
     </q-header>
 
@@ -184,11 +204,13 @@ import { useQuasar } from 'quasar'
 import { useAuthStore } from 'stores/auth'
 import { api } from 'boot/axios'
 
+
 const $q = useQuasar()
 const router = useRouter()
 const authStore = useAuthStore()
 const leftDrawerOpen = ref(false)
 const activePanel = ref(null)
+// const barangayOptions = ref([])
 
 // Admin functions data
 const favorites = ref([
