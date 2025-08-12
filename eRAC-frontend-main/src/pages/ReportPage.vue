@@ -3,17 +3,6 @@
     <!-- Main Header with bottom border -->
     <div class="section-header q-mb-xl">
       <div class="section-title">Current Year Reports</div>
-      <q-space />
-      <q-btn
-        flat
-        dense
-        class="setup-btn"
-        color="primary"
-        icon="settings"
-        @click="OpenSetupModal"
-      >
-        Setup
-      </q-btn>
     </div>
 
     <SetupDialog v-model="showSetupDialog" />
@@ -77,10 +66,10 @@
           <div class="col-12 col-sm-6 col-md-2">
             <q-btn
               color="primary"
-              icon="print"
-              label="Print"
+              icon="settings"
+              label="Generate Report"
               class="full-width"
-              @click="openPrintModal('current-rac')"
+              @click="openRACModal('current-rac')"
             />
           </div>
         </div>
@@ -135,10 +124,10 @@
           <div class="col-12 col-sm-12 col-md-4">
             <q-btn
               color="primary"
-              icon="print"
-              label="Print"
+              icon="settings"
+              label="Generate Report"
               class="full-width"
-              @click="openPrintModal('current-sacb')"
+              @click="openSACBModal('current-sacb')"
             />
           </div>
         </div>
@@ -209,10 +198,10 @@
           <div class="col-12 col-sm-6 col-md-2">
             <q-btn
               color="primary"
-              icon="print"
-              label="Print"
+              icon="settings"
+              label="Generate Report"
               class="full-width"
-              @click="openPrintModal('continuing-rac')"
+              @click="openRACModal('continuing-rac')"
             />
           </div>
         </div>
@@ -267,99 +256,92 @@
           <div class="col-12 col-sm-12 col-md-4">
             <q-btn
               color="primary"
-              icon="print"
-              label="Print"
+              icon="settings"
+              label="Generate Report"
               class="full-width"
               style="width: 100px;"
-              @click="openPrintModal('continuing-sacb')"
+              @click="openSACBModal('continuing-sacb')"
             />
           </div>
         </div>
       </q-card-section>
     </q-card>
 
-    <!-- Setup Modal -->
-    <q-dialog v-model="SetupModal.show" persistent>
-      <q-card class="setup-modal">
-        <q-card-section class="q-pb-none">
-          <div class="text-h6">Print Report Setup</div>
-        </q-card-section>
-
-        <q-card-section>
-          <q-input
-            outlined
-            dense
-            v-model="SetupModal.selectedBarangay.barangay_name"
-            label="Barangay"
-            readonly
-            class="q-mb-md"
-          />
-
-          <q-input
-            outlined
-            dense
-            label="Prepared by"
-            v-model="SetupModal.Preparedby"
-            class="q-mb-md"
-          />
-
-          <q-select
-            outlined
-            dense
-            :options="positionOptions"
-            v-model="SetupModal.Preparedposition"
-            label="Position"
-            class="q-mb-md"
-          />
-
-          <q-input
-            outlined
-            dense
-            v-model="SetupModal.Notedby"
-            label="Noted by"
-            class="q-mb-md"
-          />
-
-          <q-select
-            outlined
-            dense
-            v-model="SetupModal.Notedposition"
-            :options="positionOptions"
-            label="Position"
-            class="q-mb-md"
-          />
-
-          <q-input
-            outlined
-            dense
-            v-model="SetupModal.Certifiedby"
-            label="Certified by"
-            class="q-mb-md"
-          />
-
-          <q-select
-            outlined
-            dense
-            v-model="SetupModal.Certifiedposition"
-            :options="positionOptions"
-            label="Position"
-          />
-        </q-card-section>
-
-        <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" color="grey-7" @click="closeSetupModal" />
-          <q-btn unelevated label="Save" color="primary" @click="saveSetupModal" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-
-    <!-- Print Modal -->
-    <q-dialog v-model="printModal.show" persistent>
+    <!-- SACB Modal -->
+    <q-dialog v-model="SACBModal.show" persistent>
       <q-card class="print-modal">
         <q-card-section class="q-pb-none">
-          <div class="text-h6">Print Report</div>
+          <div class="text-h6">
+            {{ SACBModal.reportType }}</div>
         </q-card-section>
 
+        <q-card-section class="q-pb-none">
+          <div class="text-h6">Barangay {{ this.authStore.user?.barangay_name }}</div>
+          <div class="text-h6">Print Report Setup</div>
+
+          <!-- Prepared by and Position (side by side) -->
+          <div class="row q-mb-md q-col-gutter-md ">
+            <div class="col-6">
+              <q-input
+                outlined
+                dense
+                label="Prepared by"
+                v-model="SetupModal.Preparedby"
+              />
+            </div>
+            <div class="col-6">
+              <q-select
+                outlined
+                dense
+                :options="positionOptions"
+                v-model="SetupModal.Preparedposition"
+                label="Position"
+              />
+            </div>
+          </div>
+
+          <!-- Noted by and Position (side by side) -->
+          <div class="row q-mb-md q-col-gutter-md">
+            <div class="col-6">
+              <q-input
+                outlined
+                dense
+                v-model="SetupModal.Notedby"
+                label="Noted by"
+              />
+            </div>
+            <div class="col-6">
+              <q-select
+                outlined
+                dense
+                v-model="SetupModal.Notedposition"
+                :options="positionOptions"
+                label="Position"
+              />
+            </div>
+          </div>
+
+          <!-- Certified by and Position (side by side) -->
+          <div class="row q-mb-md q-col-gutter-md">
+            <div class="col-6">
+              <q-input
+                outlined
+                dense
+                label="Certified by"
+                v-model="SetupModal.Certifiedby"
+              />
+            </div>
+            <div class="col-6">
+              <q-select
+                outlined
+                dense
+                v-model="SetupModal.Certifiedposition"
+                :options="positionOptions"
+                label="Position"
+              />
+            </div>
+          </div>
+        </q-card-section>
         <q-card-section>
           <div class="row justify-between q-gutter-sm q-mb-md">
             <div class="row q-gutter-sm">
@@ -374,24 +356,18 @@
                 color="green"
               />
             </div>
-            <q-btn
-              unelevated
-              label="Print"
-              color="primary"
-              @click="handlePrint"
-            />
           </div>
 
           <q-separator class="q-my-md" />
 
           <div class="text-subtitle2 q-mb-md text-grey-7">
-            Report Type: {{ printModal.reportType }}
+            Report Type: {{ SACBModal.reportType }}
           </div>
 
           <div class="q-mt-md">
             <div class="text-subtitle1 q-mb-sm">Activity Log</div>
             <q-table
-              :rows="printModal.activities"
+              :rows="SACBModal.activities"
               :columns="activityColumns"
               row-key="id"
               :pagination="{ rowsPerPage: 5 }"
@@ -413,7 +389,64 @@
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" color="grey-7" @click="closePrintModal" />
+          <q-btn flat label="Cancel" color="grey-7" @click="closeSACBModal" />
+          <q-btn
+            unelevated
+            label="Print"
+            color="primary"
+            @click="handlePrint"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- RAC Modal -->
+
+    <q-dialog v-model="RACModal.show" persistent>
+      <q-card class="print-modal">
+        <q-card-section class="q-pb-none">
+          <div class="text-h6">
+            {{ RACModal.reportType }}</div>
+        </q-card-section>
+
+        <q-card-section class="q-pb-none">
+          <div class="text-h6">Barangay {{ this.authStore.user?.barangay_name }}</div>
+        </q-card-section>
+
+
+        <q-card-section>
+          <div class="q-mt-md">
+            <div class="text-subtitle1 q-mb-sm">Activity Log</div>
+            <q-table
+              :rows="RACModal.activities"
+              :columns="activityColumns"
+              row-key="id"
+              :pagination="{ rowsPerPage: 5 }"
+              flat
+              bordered
+            >
+              <template v-slot:body-cell-time="props">
+                <q-td :props="props">
+                  <div class="text-caption">{{ props.value }}</div>
+                </q-td>
+              </template>
+              <template v-slot:body-cell-description="props">
+                <q-td :props="props">
+                  <div class="text-body2">{{ props.value }}</div>
+                </q-td>
+              </template>
+            </q-table>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" color="grey-7" @click="closeRACModal" />
+          <q-btn
+            unelevated
+            label="Print"
+            color="primary"
+            @click="handleRACPrint"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -454,7 +487,34 @@ export default {
       sacbDateToCont: null,
       expenseCategoryCont: null,
       expenseOptionsCont: ['Select Expense Class...', 'Capital Outlay'],
-      printModal: {
+
+      RACModal: {
+        show: false,
+        reportType: '',
+        activities: [
+          {
+            id: 1,
+            time: '09:30 AM',
+            description: 'Report generated successfully'
+          },
+          {
+            id: 2,
+            time: '09:25 AM',
+            description: 'Data validation completed'
+          },
+          {
+            id: 3,
+            time: '09:20 AM',
+            description: 'Report parameters configured'
+          },
+          {
+            id: 4,
+            time: '09:15 AM',
+            description: 'Print dialog opened'
+          }
+        ]
+      },
+      SACBModal: {
         show: false,
         reportType: '',
         activities: [
@@ -513,6 +573,28 @@ export default {
     closeSetupModal() {
       this.SetupModal.show = false
     },
+    async loadExpenseOptions() {
+      try {
+        const response = await api.get('/api/barangay/expense-classes',useAuthStore().getAuthHeader())
+        
+        // Extract the array
+        const expenseClasses = response.data?.data?.data || [];
+
+        this.expenseOptionsCurrent = expenseClasses.map(expense => ({
+          label: expense.name,
+          value: expense.id
+        }));
+
+        this.expenseOptionsCont = expenseClasses.map(expense => ({
+          label: expense.name,
+          value: expense.id
+        }));
+      } catch (error) {
+        console.error('Failed to load expense classes:', error)
+        this.expenseOptionsCurrent = ['Select Expense Class...']
+        this.expenseOptionsCont = ['Select Expense Class...']
+      }
+    },
     async saveSetupModal() {
       try {
         console.log('Setup saved:', this.SetupModal)
@@ -541,20 +623,25 @@ export default {
       } catch (error) {
         console.error('Failed to load positions:', error)
         this.positionOptions = [
-          { label: 'Punong Barangay', value: 'Punong Barangay' },
-          { label: 'Barangay Secretary', value: 'Barangay Secretary' },
-          { label: 'Barangay Treasurer', value: 'Barangay Treasurer' },
-          { label: 'Barangay Councilor', value: 'Barangay Councilor' }
         ]
       }
     },
-    openPrintModal(reportType) {
-      this.printModal.reportType = this.getReportTypeLabel(reportType)
-      this.printModal.show = true
+    openSACBModal(reportType) {
+      this.SACBModal.reportType = this.getReportTypeLabel(reportType)
+      this.SACBModal.show = true
     },
-    closePrintModal() {
-      this.printModal.show = false
+    closeSACBModal() {
+      this.SACBModal.show = false
     },
+    openRACModal(reportType) {
+      //need check 
+      this.RACModal.reportType = this.getReportTypeLabel(reportType)
+      this.RACModal.show = true
+    },
+    closeRACModal() {
+      this.RACModal.show = false
+    },
+
     getReportTypeLabel(type) {
       const labels = {
         'current-rac': 'Current Year - Registry of Appropriation and Commitment (RAC)',
@@ -564,9 +651,18 @@ export default {
       }
       return labels[type] || 'Unknown Report'
     },
-    handlePrint() {
-      console.log('Printing report:', this.printModal.reportType)
-      this.closePrintModal()
+    handleSACBPrint() {
+      console.log('Printing report:', this.SACBModal.reportType)
+      this.closeSACBModal()
+      this.$q.notify({
+        type: 'positive',
+        message: 'Report sent to printer successfully!',
+        position: 'top'
+      })
+    },
+    handleRACPrint() {
+      console.log('Printing report:', this.RACModal.reportType)
+      this.closeRACModal()
       this.$q.notify({
         type: 'positive',
         message: 'Report sent to printer successfully!',
@@ -596,6 +692,7 @@ export default {
     }
   },
   async mounted() {
+    await this.loadExpenseOptions()
     await this.loadPositionOptions()
   }
 }

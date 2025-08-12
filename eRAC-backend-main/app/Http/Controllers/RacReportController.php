@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\TranAppropriation;
 
 class RacReportController extends Controller
 {
@@ -12,26 +13,28 @@ class RacReportController extends Controller
         $data = $request->validate([
             'from' => 'required|date',
             'to'   => 'required|date|after_or_equal:from',
-            'user_id' => 'required|integer',
-            'noted_by_id' => 'required|integer',
-            'certified_by_id' => 'required|integer',
-            'expence_id' => 'required|integer',
-
+            'expense_class_id' => 'required|integer',
         ]);
 
         //change Order to your actual model
         // and adjust the fields accordingly
-        $q = Order::query()->whereBetween('date', [$data['from'], $data['to']]);
+        $q = TranAppropriation::query()->whereBetween('transaction_date', [$data['from'], $data['to']]);
 
-        if (!empty($data['expence_id'])) {
-            $q->where('expence_id', $data['expence_id']);
-        }
+        $q->where('expense_class_id', $data['expense_class_id']);
 
-        $rows = $q->orderBy('date')->get()->map(fn($o) => [
-            'date' => $o->date->toDateString(),
-            'student' => $o->student_name,
-            'class_id' => $o->class_id,
+        $rows = $q->orderBy('transaction_date')->get()->map(fn($o) => [
+            'id' => $o->id,
+            'expense_type_id' => $o->expense_type_id,
+            'expense_item_id' => $o->expense_item_id,
+            'expense_type_name' => $o->expenseType->name ?? null,
+            'expense_item_name' => $o->expenseItem->name ?? null,
+            'transaction_date' => $o->transaction_date->toDateString(),
             'amount' => (float)$o->amount,
+
+            'status' => $o->status,
+            'user_id' => $o->user_id,
+            'barangay_id' => $o->barangay_id,
+            'budget_id' => $o->budget_id,
         ])->values();
 
         $summary = [
