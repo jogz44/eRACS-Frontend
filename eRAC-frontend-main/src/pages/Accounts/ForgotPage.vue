@@ -27,7 +27,7 @@
 
     <!-- Right side - Login form section -->
     <div class="login-section">
-      <div class="login-container">
+      <div class="login-container q-pt-md">
         <div class="header-section">
           <div class="office-info">
             <q-img
@@ -36,9 +36,7 @@
               contain
               style="width: 120px; height: 120px; margin: 0 auto 1rem auto;"
             />
-            <div class="office-name">City</div>
-            <div class="office-name">Accounting</div>
-            <div class="office-name">Office</div>
+             <div class="office-name">City Accounting Office</div>
             <div class="system-name">Electronic Registry of Appropriation and Commitment (eRAC)</div>
           </div>
 
@@ -345,7 +343,7 @@ const goToLogin = () => router.push('/')
   font-size: 0.8rem;
   color: #666;
   font-style: italic;
-  margin-top: 0.3rem;
+  margin-top: 0.5rem;
 }
 
 .signin-title {

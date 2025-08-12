@@ -32,13 +32,15 @@
         <q-select
           outlined
           dense
-          bg-color="light-green-1"
+          bg-color="light-green-1 "
           label="Select Barangay"
           color="green"
           class="q-mb-sm q-pt-sm"
           style="width: 200px;"
           emit-value
           map-options
+          v-model="barangay"
+          :options="barangayOptions"
           option-label="name"
           option-value="value"
         />
@@ -210,7 +212,24 @@ const router = useRouter()
 const authStore = useAuthStore()
 const leftDrawerOpen = ref(false)
 const activePanel = ref(null)
-// const barangayOptions = ref([])
+const barangayOptions = ref([])
+const barangay = ref('')
+
+onMounted(async () => {
+  try {
+    // Load barangay options
+    const response = await api.get('/api/barangay/barangays')
+    if (response.data && Array.isArray(response.data)) {
+      barangayOptions.value = response.data.map((b) => ({
+        name: b.name,
+        value: b.name,
+      }))
+    }  } catch (error) {
+    console.error('Error loading setup data:', error)
+    // Don't show notification if it might break the page
+    // Just log the error for debugging
+  }
+})
 
 // Admin functions data
 const favorites = ref([
