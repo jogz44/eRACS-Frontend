@@ -267,17 +267,16 @@
       </q-card-section>
     </q-card>
 
-    <!-- RAC Modal -->
-
     <!-- SACB Modal -->
     <q-dialog v-model="SACBModal.show" persistent>
       <q-card class="print-modal">
         <q-card-section class="q-pb-none">
           <div class="text-h6">
-            Report Type: {{ SACBModal.reportType }}</div>
+            {{ SACBModal.reportType }}</div>
         </q-card-section>
 
         <q-card-section class="q-pb-none">
+          <div class="text-h6">Barangay {{ this.authStore.user?.barangay_name }}</div>
           <div class="text-h6">Print Report Setup</div>
 
           <!-- Prepared by and Position (side by side) -->
@@ -407,36 +406,15 @@
       <q-card class="print-modal">
         <q-card-section class="q-pb-none">
           <div class="text-h6">
-            Report Type: {{ RACModal.reportType }}</div>
+            {{ RACModal.reportType }}</div>
         </q-card-section>
 
         <q-card-section class="q-pb-none">
-          <div class="text-h6">Print Report Setup</div>
+          <div class="text-h6">Barangay {{ this.authStore.user?.barangay_name }}</div>
         </q-card-section>
 
 
         <q-card-section>
-          <div class="row justify-between q-gutter-sm q-mb-md">
-            <div class="row q-gutter-sm">
-              <q-btn
-                outline
-                label="Load Reports"
-                color="orange"
-              />
-              <q-btn
-                outline
-                label="Export Reports"
-                color="green"
-              />
-            </div>
-          </div>
-
-          <q-separator class="q-my-md" />
-
-          <div class="text-subtitle2 q-mb-md text-grey-7">
-            Report Type: {{ RACModal.reportType }}
-          </div>
-
           <div class="q-mt-md">
             <div class="text-subtitle1 q-mb-sm">Activity Log</div>
             <q-table
@@ -623,10 +601,6 @@ export default {
       } catch (error) {
         console.error('Failed to load positions:', error)
         this.positionOptions = [
-          { label: 'Punong Barangay', value: 'Punong Barangay' },
-          { label: 'Barangay Secretary', value: 'Barangay Secretary' },
-          { label: 'Barangay Treasurer', value: 'Barangay Treasurer' },
-          { label: 'Barangay Councilor', value: 'Barangay Councilor' }
         ]
       }
     },
