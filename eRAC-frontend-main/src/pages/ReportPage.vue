@@ -573,6 +573,28 @@ export default {
     closeSetupModal() {
       this.SetupModal.show = false
     },
+    async loadExpenseOptions() {
+      try {
+        const response = await api.get('/api/barangay/expense-classes',useAuthStore().getAuthHeader())
+        
+        // Extract the array
+        const expenseClasses = response.data?.data?.data || [];
+
+        this.expenseOptionsCurrent = expenseClasses.map(expense => ({
+          label: expense.name,
+          value: expense.id
+        }));
+
+        this.expenseOptionsCont = expenseClasses.map(expense => ({
+          label: expense.name,
+          value: expense.id
+        }));
+      } catch (error) {
+        console.error('Failed to load expense classes:', error)
+        this.expenseOptionsCurrent = ['Select Expense Class...']
+        this.expenseOptionsCont = ['Select Expense Class...']
+      }
+    },
     async saveSetupModal() {
       try {
         console.log('Setup saved:', this.SetupModal)
@@ -612,6 +634,7 @@ export default {
       this.SACBModal.show = false
     },
     openRACModal(reportType) {
+      //need check 
       this.RACModal.reportType = this.getReportTypeLabel(reportType)
       this.RACModal.show = true
     },
@@ -669,6 +692,7 @@ export default {
     }
   },
   async mounted() {
+    await this.loadExpenseOptions()
     await this.loadPositionOptions()
   }
 }

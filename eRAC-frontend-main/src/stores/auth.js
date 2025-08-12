@@ -1,9 +1,6 @@
 import { defineStore } from 'pinia'
 import { api } from 'boot/axios'
 
-
-
-
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     // User state
@@ -257,6 +254,14 @@ export const useAuthStore = defineStore('auth', {
       } catch (error) {
         console.error('Session validation failed:', error)
         this.clearAuth()
+      }
+    },
+
+    getAuthHeader() {
+      return {
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+        },
       }
     },
 
