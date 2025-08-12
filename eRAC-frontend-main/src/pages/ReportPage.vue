@@ -394,7 +394,7 @@
             unelevated
             label="Print"
             color="primary"
-            @click="handlePrint"
+            @click="handleSACBPrint"
           />
         </q-card-actions>
       </q-card>
@@ -418,7 +418,7 @@
           <div class="q-mt-md">
             <div class="text-subtitle1 q-mb-sm">Activity Log</div>
             <q-table
-              :rows="RACModal.activities"
+              :rows="RACModal.report"
               :columns="activityColumns"
               row-key="id"
               :pagination="{ rowsPerPage: 5 }"
@@ -452,251 +452,162 @@
     </q-dialog>
   </q-page>
 </template>
-
-<script>
+<script setup>
+import { ref, reactive, computed, onMounted } from 'vue'
 import SetupDialog from 'components/SetupDialog.vue'
-import { useAuthStore } from 'src/stores/auth'
-import { api } from 'boot/axios'
 import { useQuasar } from 'quasar'
+import { useReportStore } from 'src/stores/reportStore'
 
-export default {
-  name: 'FinancialDashboard',
-  components: {
-    SetupDialog
-  },
-  setup() {
-    const authStore = useAuthStore()
-    const $q = useQuasar()
-    return {
-      authStore,
-      $q
-    }
-  },
-  data() {
-    return {
-      showSetupDialog: false,
-      racDateFromCurrent: null,
-      racDateToCurrent: null,
-      sacbDateFromCurrent: null,
-      sacbDateToCurrent: null,
-      expenseCategoryCurrent: null,
-      expenseOptionsCurrent: ['Select Expense Class...', 'Class A', 'Class B', 'Class C'],
-      racDateFromCont: null,
-      racDateToCont: null,
-      sacbDateFromCont: null,
-      sacbDateToCont: null,
-      expenseCategoryCont: null,
-      expenseOptionsCont: ['Select Expense Class...', 'Capital Outlay'],
+// stores & composables
+const $q = useQuasar()
+const reportStore = useReportStore()
 
-      RACModal: {
-        show: false,
-        reportType: '',
-        activities: [
-          {
-            id: 1,
-            time: '09:30 AM',
-            description: 'Report generated successfully'
-          },
-          {
-            id: 2,
-            time: '09:25 AM',
-            description: 'Data validation completed'
-          },
-          {
-            id: 3,
-            time: '09:20 AM',
-            description: 'Report parameters configured'
-          },
-          {
-            id: 4,
-            time: '09:15 AM',
-            description: 'Print dialog opened'
-          }
-        ]
-      },
-      SACBModal: {
-        show: false,
-        reportType: '',
-        activities: [
-          {
-            id: 1,
-            time: '09:30 AM',
-            description: 'Report generated successfully'
-          },
-          {
-            id: 2,
-            time: '09:25 AM',
-            description: 'Data validation completed'
-          },
-          {
-            id: 3,
-            time: '09:20 AM',
-            description: 'Report parameters configured'
-          },
-          {
-            id: 4,
-            time: '09:15 AM',
-            description: 'Print dialog opened'
-          }
-        ]
-      },
-      SetupModal: {
-        selectedBarangay: {
-          barangay_name: ''
-        },
-        selectedpreparedby: null,
-        selectedpreparedpos: null,
-        selectednotedby: null,
-        selectednotedpos: null,
-        selectedcertifiedby: null,
-        selectedcertifiedpos: null,
-        show: false,
-        Position: '',
-        Preparedby: '',
-        Preparedposition: '',
-        Notedby: '',
-        Notedposition: '',
-        Certifiedby: '',
-        Certifiedposition: '',
-      },
-      positionOptions: []
-    }
-  },
-  methods: {
-    openSetupDialog() {
-      this.showSetupDialog = true
-    },
-    OpenSetupModal() {
-      this.SetupModal.selectedBarangay.barangay_name = this.authStore.user?.barangay_name || ''
-      this.SetupModal.show = true
-    },
-    closeSetupModal() {
-      this.SetupModal.show = false
-    },
-    async loadExpenseOptions() {
-      try {
-        const response = await api.get('/api/barangay/expense-classes',useAuthStore().getAuthHeader())
-        
-        // Extract the array
-        const expenseClasses = response.data?.data?.data || [];
+/* -------------------- STATE -------------------- */
+const showSetupDialog = ref(false)
 
-        this.expenseOptionsCurrent = expenseClasses.map(expense => ({
-          label: expense.name,
-          value: expense.id
-        }));
+// Dates & categories
+const current = reactive({
+  racFrom: null,
+  racTo: null,
+  sacbFrom: null,
+  sacbTo: null,
+  expenseCategory: null,
+  expenseOptions: ['Select Expense Class...', 'Class A', 'Class B', 'Class C']
+})
 
-        this.expenseOptionsCont = expenseClasses.map(expense => ({
-          label: expense.name,
-          value: expense.id
-        }));
-      } catch (error) {
-        console.error('Failed to load expense classes:', error)
-        this.expenseOptionsCurrent = ['Select Expense Class...']
-        this.expenseOptionsCont = ['Select Expense Class...']
-      }
-    },
-    async saveSetupModal() {
-      try {
-        console.log('Setup saved:', this.SetupModal)
-        this.$q.notify({
-          type: 'positive',
-          message: 'Setup configuration saved successfully!',
-          position: 'top'
-        })
-        this.closeSetupModal()
-      } catch (error) {
-        console.error(error)
-        this.$q.notify({
-          type: 'negative',
-          message: 'Failed to save setup configuration',
-          position: 'top'
-        })
-      }
-    },
-    async loadPositionOptions() {
-      try {
-        const response = await api.get('/api/barangay/positions')
-        this.positionOptions = response.data.map((position) => ({
-          label: position.name,
-          value: position.name
-        }))
-      } catch (error) {
-        console.error('Failed to load positions:', error)
-        this.positionOptions = [
-        ]
-      }
-    },
-    openSACBModal(reportType) {
-      this.SACBModal.reportType = this.getReportTypeLabel(reportType)
-      this.SACBModal.show = true
-    },
-    closeSACBModal() {
-      this.SACBModal.show = false
-    },
-    openRACModal(reportType) {
-      //need check 
-      this.RACModal.reportType = this.getReportTypeLabel(reportType)
-      this.RACModal.show = true
-    },
-    closeRACModal() {
-      this.RACModal.show = false
-    },
+const continuing = reactive({
+  racFrom: null,
+  racTo: null,
+  sacbFrom: null,
+  sacbTo: null,
+  expenseCategory: null,
+  expenseOptions: ['Select Expense Class...', 'Capital Outlay']
+})
 
-    getReportTypeLabel(type) {
-      const labels = {
-        'current-rac': 'Current Year - Registry of Appropriation and Commitment (RAC)',
-        'current-sacb': 'Current Year - Status of Appropriation and Obligation (SACB)',
-        'continuing-rac': 'Continuing Reports - Registry of Appropriation and Commitment (RAC)',
-        'continuing-sacb': 'Continuing Reports - Status of Appropriation and Obligation (SACB)'
-      }
-      return labels[type] || 'Unknown Report'
-    },
-    handleSACBPrint() {
-      console.log('Printing report:', this.SACBModal.reportType)
-      this.closeSACBModal()
-      this.$q.notify({
-        type: 'positive',
-        message: 'Report sent to printer successfully!',
-        position: 'top'
-      })
-    },
-    handleRACPrint() {
-      console.log('Printing report:', this.RACModal.reportType)
-      this.closeRACModal()
-      this.$q.notify({
-        type: 'positive',
-        message: 'Report sent to printer successfully!',
-        position: 'top'
-      })
-    }
-  },
-  computed: {
-    activityColumns() {
-      return [
-        {
-          name: 'time',
-          label: 'Time',
-          field: 'time',
-          align: 'left',
-          sortable: true,
-          style: 'width: 120px'
-        },
-        {
-          name: 'description',
-          label: 'Activity Description',
-          field: 'description',
-          align: 'left',
-          sortable: true
-        }
-      ]
-    }
-  },
-  async mounted() {
-    await this.loadExpenseOptions()
-    await this.loadPositionOptions()
+// Modals
+const RACModal = reactive({
+  show: false,
+  reportType: '',
+  report: [
+    { id: 1, time: '09:30 AM', description: 'Report generated successfully' },
+    { id: 2, time: '09:25 AM', description: 'Data validation completed' },
+    { id: 3, time: '09:20 AM', description: 'Report parameters configured' },
+    { id: 4, time: '09:15 AM', description: 'Print dialog opened' }
+  ]
+})
+
+const SACBModal = reactive({
+  show: false,
+  reportType: '',
+  activities: [
+    { id: 1, time: '09:30 AM', description: 'Report generated successfully' },
+    { id: 2, time: '09:25 AM', description: 'Data validation completed' },
+    { id: 3, time: '09:20 AM', description: 'Report parameters configured' },
+    { id: 4, time: '09:15 AM', description: 'Print dialog opened' }
+  ]
+})
+
+const SetupModal = reactive({
+  selectedBarangay: { barangay_name: '' },
+  selectedpreparedby: null,
+  selectedpreparedpos: null,
+  selectednotedby: null,
+  selectednotedpos: null,
+  selectedcertifiedby: null,
+  selectedcertifiedpos: null,
+  show: false,
+  Position: '',
+  Preparedby: '',
+  Preparedposition: '',
+  Notedby: '',
+  Notedposition: '',
+  Certifiedby: '',
+  Certifiedposition: ''
+})
+
+const positionOptions = ref([])
+
+
+const loadExpenseOptions = async () => {
+  try {
+    await reportStore.loadExpenseOptions()
+    current.expenseOptions = reportStore.expenseOptionsCurrent
+  } catch (error) {
+    console.error('Failed to load expense classes:', error)
+    current.expenseOptions = ['Select Expense Class...']
+    continuing.expenseOptions = ['Select Expense Class...']
   }
 }
+
+const loadPositionOptions = async () => {
+  try {
+    await reportStore.loadPositionOptions()
+    positionOptions.value = reportStore.positionOptions
+  } catch (error) {
+    console.error('Failed to load positions:', error)
+    positionOptions.value = []
+  }
+}
+
+const openSACBModal = (type) => {
+  SACBModal.reportType = getReportTypeLabel(type)
+  SACBModal.show = true
+}
+
+const closeSACBModal = () => { SACBModal.show = false }
+
+const openRACModal = (type) => {
+  if (!current.racFrom || !current.racTo) {
+    return notifyError('Please select both From and To dates.')
+  }
+  if (current.racFrom >= current.racTo) {
+    return notifyError('The From date must be before the To date.')
+  }
+  if (!current.expenseCategory) {
+    return notifyError('Please select an Expense Category.')
+  }
+  RACModal.reportType = getReportTypeLabel(type)
+  RACModal.show = true
+}
+
+const closeRACModal = () => { RACModal.show = false }
+
+const getReportTypeLabel = (type) => ({
+  'current-rac': 'Current Year - Registry of Appropriation and Commitment (RAC)',
+  'current-sacb': 'Current Year - Status of Appropriation and Obligation (SACB)',
+  'continuing-rac': 'Continuing Reports - Registry of Appropriation and Commitment (RAC)',
+  'continuing-sacb': 'Continuing Reports - Status of Appropriation and Obligation (SACB)'
+}[type] || 'Unknown Report')
+
+const handleSACBPrint = () => {
+  console.log('Printing report:', SACBModal.reportType)
+  closeSACBModal()
+  notifySuccess('Report sent to printer successfully!')
+}
+
+const handleRACPrint = () => {
+  console.log('Printing report:', RACModal.reportType)
+  closeRACModal()
+  notifySuccess('Report sent to printer successfully!')
+}
+
+/* -------------------- HELPERS -------------------- */
+const notifyError = (msg) => $q.notify({ type: 'negative', message: msg, position: 'top' })
+const notifySuccess = (msg) => $q.notify({ type: 'positive', message: msg, position: 'top' })
+
+/* -------------------- COMPUTED -------------------- */
+const activityColumns = computed(() => [
+  { name: 'time', label: 'Time', field: 'time', align: 'left', sortable: true, style: 'width: 120px' },
+  { name: 'description', label: 'Activity Description', field: 'description', align: 'left', sortable: true }
+])
+
+/* -------------------- LIFECYCLE -------------------- */
+onMounted(async () => {
+  await loadExpenseOptions()
+  await loadPositionOptions()
+})
 </script>
+
 
 <style scoped>
 .report-page {
