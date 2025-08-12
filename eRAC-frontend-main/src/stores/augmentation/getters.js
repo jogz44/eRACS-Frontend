@@ -27,9 +27,16 @@ export function useGetters(state) {
   const expenseAugColumns = computed(() => [
     { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
     {
-      name: 'account',
-      label: 'Account Name',
-      field: 'account',
+      name: 'from_expense',
+      label: 'From Expense',
+      field: 'from_expense',
+      align: 'left',
+      sortable: true,
+    },
+    {
+      name: 'to_expense',
+      label: 'To Expense',
+      field: 'to_expense',
       align: 'left',
       sortable: true,
     },

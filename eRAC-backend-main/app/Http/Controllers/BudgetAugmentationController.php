@@ -12,55 +12,102 @@ use Illuminate\Support\Facades\Validator;
 class BudgetAugmentationController extends Controller
 {
     /**
+     * Helper method to build account names without extra separators
+     */
+    private function buildAccountName($expenseClass, $expenseType, $expenseItem)
+    {
+        $parts = [];
+        if ($expenseClass && $expenseClass->name) $parts[] = $expenseClass->name;
+        if ($expenseType && $expenseType->name) $parts[] = $expenseType->name;
+        if ($expenseItem && $expenseItem->name) $parts[] = $expenseItem->name;
+        return implode(' > ', $parts);
+    }
+
+    /**
+     * Helper method to map detail to response format
+     */
+    private function mapDetailToResponse($detail)
+    {
+        return [
+            'id' => $detail->id,
+            'account' => $this->buildAccountName($detail->fromExpenseClass, $detail->fromExpenseType, $detail->fromExpenseItem),
+            'expense_class_id' => $detail->from_expense_class_id,
+            'expense_type_id' => $detail->from_expense_type_id,
+            'expense_item_id' => $detail->from_expense_item_id,
+            'expense_class' => $detail->fromExpenseClass ? $detail->fromExpenseClass->name : '',
+            'expense_type' => $detail->fromExpenseType ? $detail->fromExpenseType->name : '',
+            'expense_item' => $detail->fromExpenseItem ? $detail->fromExpenseItem->name : '',
+            'transfer_to_expense_class_id' => $detail->transfer_to_expense_class_id,
+            'transfer_to_expense_type_id' => $detail->transfer_to_expense_type_id,
+            'transfer_to_expense_item_id' => $detail->transfer_to_expense_item_id,
+            'transfer_to_expense_class' => $detail->transferToExpenseClass ? $detail->transferToExpenseClass->name : '',
+            'transfer_to_expense_type' => $detail->transferToExpenseType ? $detail->transferToExpenseType->name : '',
+            'transfer_to_expense_item' => $detail->transferToExpenseItem ? $detail->transferToExpenseItem->name : '',
+            'amount' => (float)$detail->amount,
+            'particulars' => $detail->particulars
+        ];
+    }
+
+    /**
      * Display a listing of budget augmentations
      */
     public function index(Request $request)
     {
-        $query = BudgetAugmentation::with(['budget', 'details.expenseClass', 'details.expenseType', 'details.expenseItem'])
-            ->forBarangay($request->user()->barangay_id);
+        try {
+            $query = BudgetAugmentation::with([
+                'budget', 
+                'details.fromExpenseClass', 
+                'details.fromExpenseType', 
+                'details.fromExpenseItem',
+                'details.transferToExpenseClass',
+                'details.transferToExpenseType',
+                'details.transferToExpenseItem'
+            ])->forBarangay($request->user()->barangay_id);
 
-        // Apply filters
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('ref_number', 'like', "%{$search}%")
-                  ->orWhere('remarks', 'like', "%{$search}%");
-            });
+            // Apply filters
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('ref_number', 'like', "%{$search}%")
+                      ->orWhere('remarks', 'like', "%{$search}%");
+                });
+            }
+
+            if ($request->filled('date_from')) {
+                $query->where('augmentation_date', '>=', $request->date_from);
+            }
+
+            if ($request->filled('date_to')) {
+                $query->where('augmentation_date', '<=', $request->date_to);
+            }
+
+            $augmentations = $query->orderBy('created_at', 'desc')->get();
+
+            return response()->json([
+                'status' => true,
+                'data' => $augmentations->map(function($augmentation) {
+                    return [
+                        'id' => $augmentation->id,
+                        'ref_number' => $augmentation->ref_number,
+                        'augmentation_date' => $augmentation->augmentation_date->format('Y-m-d'),
+                        'total_amount' => (float)$augmentation->total_amount,
+                        'remarks' => $augmentation->remarks,
+                        'details' => $augmentation->details->map(function($detail) {
+                            return $this->mapDetailToResponse($detail);
+                        })
+                    ];
+                })
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('BudgetAugmentation index error: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            return response()->json([
+                'status' => false,
+                'message' => 'An error occurred while fetching augmentations',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        if ($request->filled('date_from')) {
-            $query->where('augmentation_date', '>=', $request->date_from);
-        }
-
-        if ($request->filled('date_to')) {
-            $query->where('augmentation_date', '<=', $request->date_to);
-        }
-
-        $augmentations = $query->orderBy('created_at', 'desc')->get();
-
-        return response()->json([
-            'status' => true,
-            'data' => $augmentations->map(function($augmentation) {
-                return [
-                    'id' => $augmentation->id,
-                    'ref_number' => $augmentation->ref_number,
-                    'augmentation_date' => $augmentation->augmentation_date->format('Y-m-d'),
-                    'total_amount' => (float)$augmentation->total_amount,
-                    'remarks' => $augmentation->remarks,
-                    'details' => $augmentation->details->map(function($detail) {
-                        return [
-                            'id' => $detail->id,
-                            'account' => ($detail->expenseClass->name ?? '') . ' > ' . ($detail->expenseType->name ?? '') . ' > ' . ($detail->expenseItem->name ?? ''),
-                            'expense_class' => $detail->expenseClass->name ?? '',
-                            'expense_type' => $detail->expenseType->name ?? '',
-                            'expense_item' => $detail->expenseItem->name ?? '',
-                            'amount' => (float)$detail->amount,
-                            'particulars' => $detail->particulars
-                        ];
-                    })
-                ];
-            })
-        ]);
     }
 
     /**
@@ -72,9 +119,12 @@ class BudgetAugmentationController extends Controller
             'augmentation_date' => 'required|date',
             'remarks' => 'nullable|string',
             'details' => 'required|array|min:1',
-            'details.*.expense_class_id' => 'required|exists:lib_expense_classes,id',
-            'details.*.expense_type_id' => 'required|exists:lib_expense_types,id',
-            'details.*.expense_item_id' => 'nullable|exists:lib_expense_items,id', // Made optional
+            'details.*.from_expense_class_id' => 'required|exists:lib_expense_classes,id',
+            'details.*.from_expense_type_id' => 'required|exists:lib_expense_types,id',
+            'details.*.from_expense_item_id' => 'nullable|exists:lib_expense_items,id',
+            'details.*.transfer_to_expense_class_id' => 'required|exists:lib_expense_classes,id',
+            'details.*.transfer_to_expense_type_id' => 'required|exists:lib_expense_types,id',
+            'details.*.transfer_to_expense_item_id' => 'nullable|exists:lib_expense_items,id',
             'details.*.amount' => 'required|numeric|min:0',
             'details.*.particulars' => 'nullable|string'
         ]);
@@ -121,9 +171,12 @@ class BudgetAugmentationController extends Controller
             foreach ($request->details as $detail) {
                 BudgetAugmentationDetail::create([
                     'budget_augmentation_id' => $augmentation->id,
-                    'expense_class_id' => $detail['expense_class_id'],
-                    'expense_type_id' => $detail['expense_type_id'],
-                    'expense_item_id' => $detail['expense_item_id'] ?? null, // Handle null case
+                    'from_expense_class_id' => $detail['from_expense_class_id'],
+                    'from_expense_type_id' => $detail['from_expense_type_id'],
+                    'from_expense_item_id' => $detail['from_expense_item_id'] ?? null,
+                    'transfer_to_expense_class_id' => $detail['transfer_to_expense_class_id'],
+                    'transfer_to_expense_type_id' => $detail['transfer_to_expense_type_id'],
+                    'transfer_to_expense_item_id' => $detail['transfer_to_expense_item_id'] ?? null,
                     'amount' => $detail['amount'],
                     'particulars' => $detail['particulars'] ?? null
                 ]);
@@ -132,12 +185,6 @@ class BudgetAugmentationController extends Controller
             // Update budget augmentation amount
             $defaultBudget->increment('augmentation', $totalAmount);
             $defaultBudget->increment('current_amount', $totalAmount);
-
-            // AdminAuthController::logUserAction(
-            //     $user,
-            //     'Accounts -> Budget Augmentation',
-            //     'Created budget augmentation for "' . $defaultBudget->name . '" on ' . date('d/m/Y', strtotime($request->augmentation_date)) . ' with ₱' . number_format($totalAmount, 2)
-            // );
 
             return response()->json([
                 'status' => true,
@@ -152,8 +199,15 @@ class BudgetAugmentationController extends Controller
      */
     public function show($id)
     {
-        $augmentation = BudgetAugmentation::with(['budget', 'details.expenseClass', 'details.expenseType', 'details.expenseItem'])
-            ->findOrFail($id);
+        $augmentation = BudgetAugmentation::with([
+            'budget', 
+            'details.fromExpenseClass', 
+            'details.fromExpenseType', 
+            'details.fromExpenseItem',
+            'details.transferToExpenseClass',
+            'details.transferToExpenseType',
+            'details.transferToExpenseItem'
+        ])->findOrFail($id);
 
         return response()->json([
             'status' => true,
@@ -166,18 +220,7 @@ class BudgetAugmentationController extends Controller
                 'budget_id' => $augmentation->budget_id,
                 'budget_description' => $augmentation->budget->description ?? '',
                 'details' => $augmentation->details->map(function($detail) {
-                    return [
-                        'id' => $detail->id,
-                        'account' => ($detail->expenseClass->name ?? '') . ' > ' . ($detail->expenseType->name ?? '') . ' > ' . ($detail->expenseItem->name ?? ''),
-                        'expense_class_id' => $detail->expense_class_id,
-                        'expense_type_id' => $detail->expense_type_id,
-                        'expense_item_id' => $detail->expense_item_id,
-                        'expense_class' => $detail->expenseClass->name ?? '',
-                        'expense_type' => $detail->expenseType->name ?? '',
-                        'expense_item' => $detail->expenseItem->name ?? '',
-                        'amount' => (float)$detail->amount,
-                        'particulars' => $detail->particulars
-                    ];
+                    return $this->mapDetailToResponse($detail);
                 })
             ]
         ]);
@@ -194,9 +237,12 @@ class BudgetAugmentationController extends Controller
             'augmentation_date' => 'required|date',
             'remarks' => 'nullable|string',
             'details' => 'required|array|min:1',
-            'details.*.expense_class_id' => 'required|exists:lib_expense_classes,id',
-            'details.*.expense_type_id' => 'required|exists:lib_expense_types,id',
-            'details.*.expense_item_id' => 'nullable|exists:lib_expense_items,id', // Made optional
+            'details.*.from_expense_class_id' => 'required|exists:lib_expense_classes,id',
+            'details.*.from_expense_type_id' => 'required|exists:lib_expense_types,id',
+            'details.*.from_expense_item_id' => 'nullable|exists:lib_expense_items,id',
+            'details.*.transfer_to_expense_class_id' => 'required|exists:lib_expense_classes,id',
+            'details.*.transfer_to_expense_type_id' => 'required|exists:lib_expense_types,id',
+            'details.*.transfer_to_expense_item_id' => 'nullable|exists:lib_expense_items,id',
             'details.*.amount' => 'required|numeric|min:0',
             'details.*.particulars' => 'nullable|string'
         ]);
@@ -228,9 +274,12 @@ class BudgetAugmentationController extends Controller
             foreach ($request->details as $detail) {
                 BudgetAugmentationDetail::create([
                     'budget_augmentation_id' => $augmentation->id,
-                    'expense_class_id' => $detail['expense_class_id'],
-                    'expense_type_id' => $detail['expense_type_id'],
-                    'expense_item_id' => $detail['expense_item_id'] ?? null, // Handle null case
+                    'from_expense_class_id' => $detail['from_expense_class_id'],
+                    'from_expense_type_id' => $detail['from_expense_type_id'],
+                    'from_expense_item_id' => $detail['from_expense_item_id'] ?? null,
+                    'transfer_to_expense_class_id' => $detail['transfer_to_expense_class_id'],
+                    'transfer_to_expense_type_id' => $detail['transfer_to_expense_type_id'],
+                    'transfer_to_expense_item_id' => $detail['transfer_to_expense_item_id'] ?? null,
                     'amount' => $detail['amount'],
                     'particulars' => $detail['particulars'] ?? null
                 ]);
@@ -273,5 +322,4 @@ class BudgetAugmentationController extends Controller
             ]);
         });
     }
-
 } 

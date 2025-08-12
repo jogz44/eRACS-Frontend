@@ -27,58 +27,62 @@ export function useFormActions(state) {
     if (!augExpense) {
       throw new Error('Expense form is not initialized')
     }
+    
     const particulars = augExpense.particulars?.trim() || ''
     const amount = Number(augExpense.amount) || 0
+    
+    // Validate that both from and to expenses are selected
+    if (!augExpense.from_expense || !augExpense.to_expense) {
+      throw new Error('Both From Expense and To Expense must be selected')
+    }
+    
     // Validate particulars
     if (!particulars) {
       throw new Error('Particulars is required')
     }
+    
     // Validate amount
     if (amount <= 0) {
       throw new Error('Amount must be greater than 0')
     }
+    
     // Validate amount against available balance
     const availableBalance = augExpense.balance || 0
-    // Calculate total amount already allocated to this account in current augmentation
-    const accountKey = `${augExpense.expense_class_id}-${augExpense.expense_type_id}-${augExpense.expense_item_id}`
+    const accountKey = `${augExpense.from_expense_class_id}-${augExpense.from_expense_type_id}-${augExpense.from_expense_item_id}`
     const existingAmountForAccount = (state.Augexpenses.value || [])
-      .filter(expense => `${expense.expense_class_id}-${expense.expense_type_id}-${expense.expense_item_id}` === accountKey)
+      .filter(expense => `${expense.from_expense_class_id}-${expense.from_expense_type_id}-${expense.from_expense_item_id}` === accountKey)
       .reduce((total, expense) => total + Number(expense.amount), 0)
     const remainingBalance = availableBalance - existingAmountForAccount
+    
     if (amount > remainingBalance) {
       throw new Error(`Amount exceeds available balance. Available: ₱${remainingBalance.toLocaleString()}, Requested: ₱${amount.toLocaleString()}`)
     }
-    
-    // Construct the account name from the selected expense details
-    const parts = []
-    if (augExpense.expense_class) parts.push(augExpense.expense_class)
-    if (augExpense.expense_type) parts.push(augExpense.expense_type)
-    if (augExpense.expense_item) parts.push(augExpense.expense_item)
-    const accountName = parts.join(' > ')
     
     // Add expense
     const newId = (state.Augexpenses.value && state.Augexpenses.value.length > 0) 
       ? Math.max(...state.Augexpenses.value.map(e => e.id)) + 1 
       : 1
+      
     const expenseData = {
       id: newId,
-      expense_class_id: augExpense.expense_class_id,
-      expense_type_id: augExpense.expense_type_id,
-      expense_item_id: augExpense.expense_item_id,
-      account: accountName, // Use the constructed account name for display
+      from_expense_class_id: augExpense.from_expense_class_id,
+      from_expense_type_id: augExpense.from_expense_type_id,
+      from_expense_item_id: augExpense.from_expense_item_id,
+      to_expense_class_id: augExpense.to_expense_class_id,
+      to_expense_type_id: augExpense.to_expense_type_id,
+      to_expense_item_id: augExpense.to_expense_item_id,
+      from_expense: augExpense.from_expense,
+      to_expense: augExpense.to_expense,
       amount: amount,
       particulars: particulars,
     }
+    
     if (!state.Augexpenses.value) {
       state.Augexpenses.value = []
     }
-    state.Augexpenses.value.push(expenseData)
-    console.log('Expense added:', expenseData)
-    console.log('Current expenses array:', state.Augexpenses.value)
-    console.log('Expenses count:', state.Augexpenses.value.length)
     
+    state.Augexpenses.value.push(expenseData)
     state.Augexpenses.value = [...state.Augexpenses.value]
-    console.log('After force update - expenses count:', state.Augexpenses.value.length)
     
     state.dialogs.value.AugexpenseDetail = false
     resetForm('augExpense')
@@ -88,13 +92,19 @@ export function useFormActions(state) {
     if (!state.Augexpenses.value) {
       state.Augexpenses.value = []
     }
+    
     const index = state.Augexpenses.value.findIndex((e) => e.id === row.id)
     if (index !== -1) {
       state.Augexpenses.value[index] = {
         ...row,
-        expense_class: row.expense_class,
-        expense_type: row.expense_type,
-        expense_item: row.expense_item,
+        from_expense: row.from_expense,
+        to_expense: row.to_expense,
+        from_expense_class_id: row.from_expense_class_id,
+        from_expense_type_id: row.from_expense_type_id,
+        from_expense_item_id: row.from_expense_item_id,
+        to_expense_class_id: row.to_expense_class_id,
+        to_expense_type_id: row.to_expense_type_id,
+        to_expense_item_id: row.to_expense_item_id,
       }
       state.Augexpenses.value = [...state.Augexpenses.value]
     }
@@ -103,27 +113,13 @@ export function useFormActions(state) {
   const deleteItem = (id) => {
     if (!state.Augexpenses.value) {
       state.Augexpenses.value = []
-      return
     }
-    console.log('deleteItem called with id:', id, 'type:', typeof id)
-    console.log('Before delete - expenses count:', state.Augexpenses.value.length)
-    console.log('Current expenses:', state.Augexpenses.value)
     
-    // Ensure id is a number for comparison
-    const numericId = Number(id)
-    console.log('Numeric ID:', numericId)
-    
-    // Filter out the expense with the matching ID
-    const filteredExpenses = state.Augexpenses.value.filter((e) => Number(e.id) !== numericId)
-    console.log('Filtered expenses:', filteredExpenses)
-    
-    // Update the state
-    state.Augexpenses.value = filteredExpenses
-    console.log('After delete - expenses count:', state.Augexpenses.value.length)
-    console.log('Remaining expenses:', state.Augexpenses.value)
-    
-    // Force update by creating a new array reference
-    state.Augexpenses.value = [...state.Augexpenses.value]
+    const index = state.Augexpenses.value.findIndex((e) => e.id === Number(id))
+    if (index !== -1) {
+      state.Augexpenses.value.splice(index, 1)
+      state.Augexpenses.value = [...state.Augexpenses.value]
+    }
   }
 
   return {

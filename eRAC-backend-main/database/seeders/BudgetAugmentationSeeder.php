@@ -118,19 +118,44 @@ class BudgetAugmentationSeeder extends Seeder
             // Create augmentation detail
             $detailData = [
                 'budget_augmentation_id' => $augmentation->id,
-                'expense_class_id' => $appropriation->expense_class_id,
-                'expense_type_id' => $appropriation->expense_type_id,
+                'from_expense_class_id' => $appropriation->expense_class_id,
+                'from_expense_type_id' => $appropriation->expense_type_id,
                 'amount' => $augmentationAmount,
                 'particulars' => $this->generateParticularsForAppropriation($appropriation, $j, $augmentationAmount)
             ];
 
-            // Only set expense_item_id if it exists
+            // Only set from_expense_item_id if it exists
             if ($appropriation->expense_item_id) {
-                $detailData['expense_item_id'] = $appropriation->expense_item_id;
+                $detailData['from_expense_item_id'] = $appropriation->expense_item_id;
             }
 
-            BudgetAugmentationDetail::create($detailData);
-            $detailsCreated++;
+            // All augmentations are transfers - find a different appropriation to transfer to
+            $transferToAppropriation = $augmentableAppropriations->filter(function($app) use ($appropriation) {
+                // Must be different from the current appropriation
+                return $app->id !== $appropriation->id &&
+                       // Must have different expense structure
+                       ($app->expense_class_id !== $appropriation->expense_class_id ||
+                        $app->expense_type_id !== $appropriation->expense_type_id ||
+                        $app->expense_item_id !== $appropriation->expense_item_id);
+            })->first();
+            
+            // Only create augmentation if we found a different appropriation to transfer to
+            if ($transferToAppropriation) {
+                $detailData['transfer_to_expense_class_id'] = $transferToAppropriation->expense_class_id;
+                $detailData['transfer_to_expense_type_id'] = $transferToAppropriation->expense_type_id;
+                
+                if ($transferToAppropriation->expense_item_id) {
+                    $detailData['transfer_to_expense_item_id'] = $transferToAppropriation->expense_item_id;
+                }
+                
+                // Update particulars to indicate it's a transfer
+                $detailData['particulars'] = "Transfer from " . $this->getExpenseDescription($appropriation) . " to " . $this->getExpenseDescription($transferToAppropriation) . " (₱" . number_format($augmentationAmount, 2) . ")";
+                
+                // Create the augmentation detail
+                BudgetAugmentationDetail::create($detailData);
+                $detailsCreated++;
+            }
+            // If no different appropriation found, skip creating this augmentation
         }
 
         // Only proceed if we created at least 2 details with positive amount
@@ -155,12 +180,12 @@ class BudgetAugmentationSeeder extends Seeder
         $existingAugmentations = BudgetAugmentationDetail::whereHas('budgetAugmentation', function($query) use ($budget) {
             $query->where('budget_id', $budget->id);
         })->where(function($query) use ($appropriation) {
-            $query->where('expense_class_id', $appropriation->expense_class_id)
-                  ->where('expense_type_id', $appropriation->expense_type_id);
+            $query->where('from_expense_class_id', $appropriation->expense_class_id)
+                  ->where('from_expense_type_id', $appropriation->expense_type_id);
             
             // If appropriation has an expense item, also check by expense item
             if ($appropriation->expense_item_id) {
-                $query->orWhere('expense_item_id', $appropriation->expense_item_id);
+                $query->orWhere('from_expense_item_id', $appropriation->expense_item_id);
             }
         })->sum('amount');
         
@@ -207,5 +232,22 @@ class BudgetAugmentationSeeder extends Seeder
         ];
         
         return $particulars[array_rand($particulars)];
+    }
+
+    private function getExpenseDescription($appropriation)
+    {
+        $expenseClass = $appropriation->expenseClass;
+        $expenseType = $appropriation->expenseType;
+        $expenseItem = $appropriation->expenseItem;
+
+        if ($expenseItem && $expenseItem->name) {
+            return $expenseItem->name;
+        } elseif ($expenseType && $expenseType->name) {
+            return $expenseType->name;
+        } elseif ($expenseClass && $expenseClass->name) {
+            return $expenseClass->name;
+        } else {
+            return 'Budget Item';
+        }
     }
 } 
