@@ -3,17 +3,6 @@
     <!-- Main Header with bottom border -->
     <div class="section-header q-mb-xl">
       <div class="section-title">Current Year Reports</div>
-      <q-space />
-      <q-btn
-        flat
-        dense
-        class="setup-btn"
-        color="primary"
-        icon="settings"
-        @click="OpenSetupModal"
-      >
-        Setup
-      </q-btn>
     </div>
 
     <SetupDialog v-model="showSetupDialog" />
@@ -77,8 +66,8 @@
           <div class="col-12 col-sm-6 col-md-2">
             <q-btn
               color="primary"
-              icon="print"
-              label="Print"
+              icon="settings"
+              label="Generate Report"
               class="full-width"
               @click="openPrintModal('current-rac')"
             />
@@ -135,8 +124,8 @@
           <div class="col-12 col-sm-12 col-md-4">
             <q-btn
               color="primary"
-              icon="print"
-              label="Print"
+              icon="settings"
+              label="Generate Report"
               class="full-width"
               @click="openPrintModal('current-sacb')"
             />
@@ -209,8 +198,8 @@
           <div class="col-12 col-sm-6 col-md-2">
             <q-btn
               color="primary"
-              icon="print"
-              label="Print"
+              icon="settings"
+              label="Generate Report"
               class="full-width"
               @click="openPrintModal('continuing-rac')"
             />
@@ -267,8 +256,8 @@
           <div class="col-12 col-sm-12 col-md-4">
             <q-btn
               color="primary"
-              icon="print"
-              label="Print"
+              icon="settings"
+              label="Generate Report"
               class="full-width"
               style="width: 100px;"
               @click="openPrintModal('continuing-sacb')"
@@ -277,10 +266,15 @@
         </div>
       </q-card-section>
     </q-card>
-
-    <!-- Setup Modal -->
-    <q-dialog v-model="SetupModal.show" persistent>
-      <q-card class="setup-modal">
+    
+    <!-- SACB Modal -->
+    <q-dialog v-model="printModal.show" persistent>
+      <q-card class="print-modal">
+        <q-card-section class="q-pb-none">
+          <div class="text-h6">
+            Report Type: {{ printModal.reportType }}</div>
+        </q-card-section>
+        
         <q-card-section class="q-pb-none">
           <div class="text-h6">Print Report Setup</div>
         </q-card-section>
@@ -345,21 +339,6 @@
             label="Position"
           />
         </q-card-section>
-
-        <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" color="grey-7" @click="closeSetupModal" />
-          <q-btn unelevated label="Save" color="primary" @click="saveSetupModal" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-
-    <!-- Print Modal -->
-    <q-dialog v-model="printModal.show" persistent>
-      <q-card class="print-modal">
-        <q-card-section class="q-pb-none">
-          <div class="text-h6">Print Report</div>
-        </q-card-section>
-
         <q-card-section>
           <div class="row justify-between q-gutter-sm q-mb-md">
             <div class="row q-gutter-sm">
@@ -374,12 +353,6 @@
                 color="green"
               />
             </div>
-            <q-btn
-              unelevated
-              label="Print"
-              color="primary"
-              @click="handlePrint"
-            />
           </div>
 
           <q-separator class="q-my-md" />
@@ -414,6 +387,143 @@
 
         <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancel" color="grey-7" @click="closePrintModal" />
+          <q-btn
+            unelevated
+            label="Print"
+            color="primary"
+            @click="handlePrint"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+    
+    <!-- RAC Modal -->
+     
+    <q-dialog v-model="printModal.show" persistent>
+      <q-card class="print-modal">
+        <q-card-section class="q-pb-none">
+          <div class="text-h6">
+            Report Type: {{ printModal.reportType }}</div>
+        </q-card-section>
+        
+        <q-card-section class="q-pb-none">
+          <div class="text-h6">Print Report Setup</div>
+        </q-card-section>
+
+        <q-card-section>
+          <q-input
+            outlined
+            dense
+            v-model="SetupModal.selectedBarangay.barangay_name"
+            label="Barangay"
+            readonly
+            class="q-mb-md"
+          />
+
+          <q-input
+            outlined
+            dense
+            label="Prepared by"
+            v-model="SetupModal.Preparedby"
+            class="q-mb-md"
+          />
+
+          <q-select
+            outlined
+            dense
+            :options="positionOptions"
+            v-model="SetupModal.Preparedposition"
+            label="Position"
+            class="q-mb-md"
+          />
+
+          <q-input
+            outlined
+            dense
+            v-model="SetupModal.Notedby"
+            label="Noted by"
+            class="q-mb-md"
+          />
+
+          <q-select
+            outlined
+            dense
+            v-model="SetupModal.Notedposition"
+            :options="positionOptions"
+            label="Position"
+            class="q-mb-md"
+          />
+
+          <q-input
+            outlined
+            dense
+            v-model="SetupModal.Certifiedby"
+            label="Certified by"
+            class="q-mb-md"
+          />
+
+          <q-select
+            outlined
+            dense
+            v-model="SetupModal.Certifiedposition"
+            :options="positionOptions"
+            label="Position"
+          />
+        </q-card-section>
+        <q-card-section>
+          <div class="row justify-between q-gutter-sm q-mb-md">
+            <div class="row q-gutter-sm">
+              <q-btn
+                outline
+                label="Load Reports"
+                color="orange"
+              />
+              <q-btn
+                outline
+                label="Export Reports"
+                color="green"
+              />
+            </div>
+          </div>
+
+          <q-separator class="q-my-md" />
+
+          <div class="text-subtitle2 q-mb-md text-grey-7">
+            Report Type: {{ printModal.reportType }}
+          </div>
+
+          <div class="q-mt-md">
+            <div class="text-subtitle1 q-mb-sm">Activity Log</div>
+            <q-table
+              :rows="printModal.activities"
+              :columns="activityColumns"
+              row-key="id"
+              :pagination="{ rowsPerPage: 5 }"
+              flat
+              bordered
+            >
+              <template v-slot:body-cell-time="props">
+                <q-td :props="props">
+                  <div class="text-caption">{{ props.value }}</div>
+                </q-td>
+              </template>
+              <template v-slot:body-cell-description="props">
+                <q-td :props="props">
+                  <div class="text-body2">{{ props.value }}</div>
+                </q-td>
+              </template>
+            </q-table>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" color="grey-7" @click="closePrintModal" />
+          <q-btn
+            unelevated
+            label="Print"
+            color="primary"
+            @click="handlePrint"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
