@@ -1,8 +1,8 @@
 import { defineStore } from "pinia";
-import { api } from 'src/boot/axios'
+import { api } from 'boot/axios'
 import { useAuthStore } from './auth'
 
-export const useReportStore = defineStore("report", {
+export const useReportStore = defineStore("reportStore", {
   state: () => ({
     barangayID: '',
 
@@ -28,23 +28,45 @@ export const useReportStore = defineStore("report", {
     loadingRAC: false,
     loadingSACB: false,
     }),
-  getters: {
+  getters: {},
+  actions: {
+    getAuthConfig() {
+      const authStore = useAuthStore()
+      if (!authStore.token) {
+        throw new Error('Authentication token not found')
+      }
+      return {
+        headers: {
+          Authorization: `Bearer ${authStore.token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      }
+    },
     async loadPositionsOptions() {
-        const authStore = useAuthStore()
-        const positions = await api.get('/api/barangay/positions', authStore.getAuthHeader())
+        const config = this.getAuthConfig()
+        const positions = await api.get('/api/barangay/positions', config)
         return positions.data.data.map(pos => ({
           label: pos.name,
           value: pos.id
         }))
       },
-    async loadExpenseOptions() {
-        const authStore = useAuthStore()
-        const expenseClasses = await api.get('/api/barangay/expense-classes', authStore.getAuthHeader())
-        return expenseClasses.data.data.map(exp => ({
-          label: exp.name,
-          value: exp.id
-        }))
+    async fetchExpenseClass() {
+      try{
+        const config = this.getAuthConfig();
+        const expenseClasses = await api.get('/api/barangay/expense-classes', config);
+
+        const list = expenseClasses?.data?.data?.data || [];
+
+        this.expenseOptionsCurrent = list.map(expense => ({
+          id: expense.id,
+          name: expense.name
+        }));
+        return this.expenseOptionsCurrent
+      } catch (error) {
+        console.error('Error:', error)
+        throw error
       }
-    },
-  actions: {}
+      }
+    }
 })

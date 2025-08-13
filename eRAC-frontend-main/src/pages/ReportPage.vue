@@ -59,7 +59,11 @@
               dense
               v-model="expenseCategoryCurrent"
               label="Expense Category"
-              :options="expenseOptionsCurrent"
+              :options="reportStore.expenseOptionsCurrent"
+              emit-value
+              map-options
+              option-label="name"
+              option-value="id"
             />
           </div>
 
@@ -453,10 +457,10 @@
   </q-page>
 </template>
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted,onActivated } from 'vue'
 import SetupDialog from 'components/SetupDialog.vue'
 import { useQuasar } from 'quasar'
-import { useReportStore } from 'src/stores/reportStore'
+import { useReportStore } from 'stores/reportStore'
 
 // stores & composables
 const $q = useQuasar()
@@ -473,15 +477,6 @@ const current = reactive({
   sacbTo: null,
   expenseCategory: null,
   expenseOptions: ['Select Expense Class...', 'Class A', 'Class B', 'Class C']
-})
-
-const continuing = reactive({
-  racFrom: null,
-  racTo: null,
-  sacbFrom: null,
-  sacbTo: null,
-  expenseCategory: null,
-  expenseOptions: ['Select Expense Class...', 'Capital Outlay']
 })
 
 // Modals
@@ -528,24 +523,17 @@ const SetupModal = reactive({
 const positionOptions = ref([])
 
 
-const loadExpenseOptions = async () => {
-  try {
-    await reportStore.loadExpenseOptions()
-    current.expenseOptions = reportStore.expenseOptionsCurrent
-  } catch (error) {
-    console.error('Failed to load expense classes:', error)
-    current.expenseOptions = ['Select Expense Class...']
-    continuing.expenseOptions = ['Select Expense Class...']
-  }
-}
+const loadAllData = async () => {
+  try{
+    
+    const criticalPromises = [
+      reportStore.fetchExpenseClass(),
+    ]
 
-const loadPositionOptions = async () => {
-  try {
-    await reportStore.loadPositionOptions()
-    positionOptions.value = reportStore.positionOptions
-  } catch (error) {
-    console.error('Failed to load positions:', error)
-    positionOptions.value = []
+    await Promise.all(criticalPromises)
+  }catch (error) {
+    console.error('Error loading data:', error)
+    notifyError('Failed to load data. Please try again later.')
   }
 }
 
@@ -603,8 +591,10 @@ const activityColumns = computed(() => [
 
 /* -------------------- LIFECYCLE -------------------- */
 onMounted(async () => {
-  await loadExpenseOptions()
-  await loadPositionOptions()
+  await loadAllData()
+})
+onActivated(async () => {
+  await loadAllData()
 })
 </script>
 

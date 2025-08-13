@@ -5,8 +5,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Models\Library\LibBank;
-use App\Models\Library\LibBooklet;
+use App\Models\LibBank;
+use App\Models\LibBooklet;
 use App\Models\Disbursement;
 
 class LibCheque extends Model
