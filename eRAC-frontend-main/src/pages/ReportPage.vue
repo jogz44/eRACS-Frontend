@@ -241,12 +241,6 @@
         </q-card-section>
 
         <q-card-section>
-          <div class="row justify-between q-gutter-sm q-mb-md">
-            <div class="row q-gutter-sm">
-              <q-btn outline label="Load Reports" color="orange" />
-              <q-btn outline label="Export Reports" color="green" />
-            </div>
-          </div>
 
           <q-separator class="q-my-md" />
 
@@ -274,6 +268,7 @@
 
         <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancel" color="grey-7" @click="closeSACBModal" />
+          <q-btn outline label="Export Reports" color="green" />
           <q-btn unelevated label="Print" color="primary" @click="handleSACBPrint" />
         </q-card-actions>
       </q-card>
@@ -281,8 +276,17 @@
 
     <!-- RAC Modal -->
 
-    <q-dialog v-model="RACModal.show" persistent>
-      <q-card class="print-modal">
+    <q-dialog v-model="RACModal.show" 
+      maximized transition-show="slide-up" transition-hide="slide-down">
+      <q-card class="bg-transparent column full-height">
+        <!-- Header menu -->
+        <q-card-actions align="right" class="q-pa-md bg-grey-2">
+          <q-btn flat label="Cancel" color="grey-7" @click="closeRACModal" />
+          <q-btn outline label="Export Reports" color="green" />
+          <q-btn unelevated label="Print" color="primary" @click="handleRACPrint" />
+        </q-card-actions>
+
+        <q-card class="print-modal">
         <q-card-section class="q-pb-none">
           <div class="text-h6">
             {{ RACModal.reportType }}</div>
@@ -311,13 +315,9 @@
             </q-table>
           </div>
         </q-card-section>
-
-        <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" color="grey-7" @click="closeRACModal" />
-          <q-btn unelevated label="Print" color="primary" @click="handleRACPrint" />
-        </q-card-actions>
       </q-card>
 
+      </q-card>
     </q-dialog>
   </q-page>
 </template>
