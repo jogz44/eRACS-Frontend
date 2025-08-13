@@ -16,95 +16,105 @@
 
     <SetupDialog v-model="showSetupDialog" />
 
-    <!-- Current Year Reports Card -->
-    <q-card class="report-card q-mb-xl" flat bordered>
-      <q-card-section class="q-pb-none q-pt-lg">
-        <div class="subsection-title">Registry of Appropriation and Commitment (RAC)</div>
-      </q-card-section>
+        <!-- Current Year Reports Row -->
+    <div class="row q-col-gutter-md q-mb-xl">
+      <!-- RAC Card -->
+      <div class="col-12 col-md-6">
+        <q-card class="report-card full-height" flat bordered>
+          <q-card-section class="q-pb-none q-pt-lg">
+            <div class="subsection-title">Registry of Appropriation and Commitment (RAC)</div>
+          </q-card-section>
 
-      <q-card-section class="q-pt-md q-pb-lg">
-        <div class="row q-col-gutter-lg items-end">
-          <div class="col-12 col-sm-6 col-md-4">
-              <q-input
-        bg-color="white"
-        outlined
-        dense
-        :model-value="dateRangeDisplay"
-        label="Date Range"
-        class="custom-date-range"
-        clearable
-        @clear="onDateRangeClear"
-        readonly
-      >
-        <template v-slot:append>
-          <q-icon name="event" class="calend-icon">
-            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-              <q-date
-                v-model="dateRange"
-                range
-                @update:model-value="onDateRangeChange"
-              />
-            </q-popup-proxy>
-          </q-icon>
-        </template>
-      </q-input>
-          </div>
+          <q-card-section class="q-pt-md q-pb-lg">
+            <div class="row items-end justify-between">
+              <div class="row items-end">
+                <div class="col-auto" style="min-width: 300px;">
+                  <q-input
+                    bg-color="white"
+                    outlined
+                    dense
+                    :model-value="dateRangeDisplay"
+                    label="Date Range"
+                    class="custom-date-range"
+                    clearable
+                    @clear="onDateRangeClear"
+                    readonly
+                  >
+                    <template v-slot:append>
+                      <q-icon name="event" class="calend-icon">
+                        <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                          <q-date
+                            v-model="dateRange"
+                            range
+                            @update:model-value="onDateRangeChange"
+                          />
+                        </q-popup-proxy>
+                      </q-icon>
+                    </template>
+                  </q-input>
+                </div>
 
+                <div class="col-auto q-ml-md" style="min-width: 300px;">
+                  <q-select outlined dense v-model="reportStore.expenseSelectedCurrent" label="Expense Category"
+                    :options="reportStore.expenseOptionsCurrent" map-options option-label="name" option-value="id" />
+                </div>
+              </div>
 
-          <div class="col-12 col-sm-6 col-md-4">
-            <q-select outlined dense v-model="reportStore.expenseSelectedCurrent" label="Expense Category"
-              :options="reportStore.expenseOptionsCurrent" map-options option-label="name" option-value="id" />
-          </div>
+              <div class="col-auto q-mt-sm">
+                <q-btn color="primary" icon="settings" label="Generate Report"
+                  @click="openRACModal('current-rac')" />
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
 
-          <div class="col-12 col-sm-6 col-md-4">
-            <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-              @click="openRACModal('current-rac')" />
-          </div>
-        </div>
-      </q-card-section>
+      <!-- SACB Card -->
+      <div class="col-12 col-md-6">
+        <q-card class="report-card full-height" flat bordered>
+          <q-card-section class="q-pb-none q-pt-lg">
+            <div class="subsection-title">Status of Appropriation and Obligation (SACB)</div>
+          </q-card-section>
 
-      <q-separator class="q-my-lg" />
+          <q-card-section class="q-pt-md q-pb-lg">
+            <div class="row items-end justify-between">
+              <div class="row items-end">
+                <div class="col-auto" style="min-width: 250px;">
+                  <q-input
+                    bg-color="white"
+                    outlined
+                    dense
+                    :model-value="currentSacbDateRangeDisplay"
+                    label="Date Range"
+                    class="custom-date-range"
+                    clearable
+                    @clear="onCurrentSacbDateRangeClear"
+                    readonly
+                  >
+                    <template v-slot:append>
+                      <q-icon name="event" class="calend-icon">
+                        <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                          <q-date
+                            v-model="currentSacbDateRange"
+                            range
+                            @update:model-value="onCurrentSacbDateRangeChange"
+                          />
+                        </q-popup-proxy>
+                      </q-icon>
+                    </template>
+                  </q-input>
+                </div>
+              </div>
 
-      <q-card-section class="q-pb-none q-pt-lg">
-        <div class="subsection-title">Status of Appropriation and Obligation (SACB)</div>
-      </q-card-section>
-
-      <q-card-section class="q-pt-md q-pb-lg">
-        <div class="row q-col-gutter-lg items-end">
-          <div class="col-12 col-sm-6 col-md-6">
-                   <q-input
-        bg-color="white"
-        outlined
-        dense
-        :model-value="currentSacbDateRangeDisplay"
-        label="Date Range"
-        class="custom-date-range"
-        clearable
-        @clear="onCurrentSacbDateRangeClear"
-        readonly
-      >
-        <template v-slot:append>
-          <q-icon name="event" class="calend-icon">
-            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-              <q-date
-                v-model="currentSacbDateRange"
-                range
-                @update:model-value="onCurrentSacbDateRangeChange"
-              />
-            </q-popup-proxy>
-          </q-icon>
-        </template>
-      </q-input>
-          </div>
-
-
-          <div class="col-12 col-sm-6 col-md-6">
-            <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-              @click="openSACBModal('current-sacb')" />
-          </div>
-        </div>
-      </q-card-section>
-    </q-card>
+              <div class="col-auto q-mt-sm">
+                <q-btn color="primary" icon="settings" label="Generate Report"
+                  @click="openSACBModal('current-sacb')" />
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
 
     <!-- Continuing Reports Header with bottom border -->
     <div class="section-header q-mb-xl">
@@ -118,40 +128,42 @@
       </q-card-section>
 
       <q-card-section class="q-pt-md q-pb-lg">
-        <div class="row q-col-gutter-lg items-end">
-          <div class="col-12 col-sm-6 col-md-4">
-            <q-input
-              bg-color="white"
-              outlined
-              dense
-              :model-value="continuingDateRangeDisplay"
-              label="Date Range"
-              class="custom-date-range"
-              clearable
-              @clear="onContinuingDateRangeClear"
-              readonly
-            >
-              <template v-slot:append>
-                <q-icon name="event" class="calend-icon">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date
-                      v-model="continuingDateRange"
-                      range
-                      @update:model-value="onContinuingDateRangeChange"
-                    />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
+        <div class="row items-end justify-between">
+          <div class="row items-end">
+            <div class="col-auto" style="min-width: 250px;">
+              <q-input
+                bg-color="white"
+                outlined
+                dense
+                :model-value="continuingDateRangeDisplay"
+                label="Date Range"
+                class="custom-date-range"
+                clearable
+                @clear="onContinuingDateRangeClear"
+                readonly
+              >
+                <template v-slot:append>
+                  <q-icon name="event" class="calend-icon">
+                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                      <q-date
+                        v-model="continuingDateRange"
+                        range
+                        @update:model-value="onContinuingDateRangeChange"
+                      />
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+              </q-input>
+            </div>
+
+            <div class="col-auto q-ml-md" style="min-width: 300px;">
+              <q-select outlined dense v-model="reportStore.expenseSelectedContinuing" label="Expense Category"
+                map-options :options="reportStore.expenseOptionsContinuing" option-value="id" option-label="name" />
+            </div>
           </div>
 
-          <div class="col-12 col-sm-6 col-md-4">
-            <q-select outlined dense v-model="reportStore.expenseSelectedContinuing" label="Expense Category"
-              map-options :options="reportStore.expenseOptionsContinuing" option-value="id" option-label="name" />
-          </div>
-
-          <div class="col-12 col-sm-6 col-md-4">
-            <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
+          <div class="col-auto">
+            <q-btn color="primary" icon="settings" label="Generate Report"
               @click="openRACModal('continuing-rac')" />
           </div>
         </div>
@@ -164,35 +176,37 @@
       </q-card-section>
 
       <q-card-section class="q-pt-md q-pb-lg">
-        <div class="row q-col-gutter-lg items-end">
-          <div class="col-12 col-sm-6 col-md-6">
-            <q-input
-              bg-color="white"
-              outlined
-              dense
-              :model-value="continuingSacbDateRangeDisplay"
-              label="Date Range"
-              class="custom-date-range"
-              clearable
-              @clear="onContinuingSacbDateRangeClear"
-              readonly
-            >
-              <template v-slot:append>
-                <q-icon name="event" class="calend-icon">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date
-                      v-model="continuingSacbDateRange"
-                      range
-                      @update:model-value="onContinuingSacbDateRangeChange"
-                    />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
+        <div class="row items-end justify-between">
+          <div class="row items-end">
+            <div class="col-auto" style="min-width: 250px;">
+              <q-input
+                bg-color="white"
+                outlined
+                dense
+                :model-value="continuingSacbDateRangeDisplay"
+                label="Date Range"
+                class="custom-date-range"
+                clearable
+                @clear="onContinuingSacbDateRangeClear"
+                readonly
+              >
+                <template v-slot:append>
+                  <q-icon name="event" class="calend-icon">
+                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                      <q-date
+                        v-model="continuingSacbDateRange"
+                        range
+                        @update:model-value="onContinuingSacbDateRangeChange"
+                      />
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+              </q-input>
+            </div>
           </div>
 
-          <div class="col-12 col-sm-6 col-md-6">
-            <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
+          <div class="col-auto">
+            <q-btn color="primary" icon="settings" label="Generate Report"
               @click="openSACBModal('continuing-sacb')" />
           </div>
         </div>
@@ -276,7 +290,7 @@
 
     <!-- RAC Modal -->
 
-    <q-dialog v-model="RACModal.show" 
+    <q-dialog v-model="RACModal.show"
       maximized transition-show="slide-up" transition-hide="slide-down">
       <q-card class="bg-transparent column full-height">
         <!-- Header menu -->
