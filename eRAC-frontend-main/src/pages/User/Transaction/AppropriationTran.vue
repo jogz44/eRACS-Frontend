@@ -71,6 +71,8 @@
           icon="add"
           color="primary"
           @click="addBudget"
+          :loading="addLoading"
+          :disable="addLoading"
         />
       </div>
     </div>
@@ -132,7 +134,7 @@
 
         <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancel" v-close-popup />
-          <q-btn label="Save" color="primary" @click="saveBudget" :loading="loading" />
+          <q-btn label="Save" color="primary" @click="saveBudget" :loading="addLoading" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -293,7 +295,6 @@ import ViewCommitDialog from 'components/appropriation/ViewCommitDialog.vue'
 import { useAppropriationStore } from 'stores/appropriationStore'
 import { useAccountsLibraryStore } from 'stores/accountsLibstore'
 import { api } from 'src/boot/axios'
-// import SearchFilters from 'src/components/appropriation/SearchFilters.vue'
 
 const $q = useQuasar()
 const accountLibraryStore = useAccountsLibraryStore()
@@ -306,6 +307,7 @@ const endDate = ref('')
 const description = ref('')
 const amount = ref(null)
 const loading = ref(false)
+const addLoading = ref(false)
 const dateRange = ref(null)
 
 const loadAppropriation = async () => {
@@ -532,7 +534,7 @@ const closeEditAllocationDialog = () => {
 }
 
 const saveBudget = async () => {
-  loading.value = true
+  addLoading.value = true
   try {
     const payload = {
       fiscal_year_id: selectedFiscalYear.value,
@@ -563,7 +565,7 @@ const saveBudget = async () => {
       position: 'top',
     })
   } finally {
-    loading.value = false
+    addLoading.value = false
   }
 }
 
@@ -739,13 +741,26 @@ const columns = [
 
 const handleEnterKey = (event) => {
   event.preventDefault()
-  if (showDialog.value && !loading.value) {
+  if (showDialog.value && !addLoading.value) {
     saveBudget()
   }
 }
 
-const addBudget = () => {
-  openDialog()
+const addBudget = async () => {
+  addLoading.value = true
+  try {
+    await openDialog()
+  } catch (error) {
+    console.error('Error opening dialog:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to open dialog',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    addLoading.value = false
+  }
 }
 
 const openDialog = async () => {

@@ -53,6 +53,8 @@
         class="add-table-btn"
         @click="handleOpenDialog"
         color="primary"
+        :loading="store.loading.addDialog"
+        :disable="store.loading.addDialog"
         style="min-width: 150px; border-radius: 3px; font-size: small !important;"
       />
 

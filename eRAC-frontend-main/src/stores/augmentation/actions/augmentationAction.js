@@ -99,6 +99,7 @@ export function useAugmentationActions(state) {
   }
 
   const saveAugmentation = async () => {
+    state.loading.value.saveAugmentation = true
     try {
       const token = authStore.token
       const payload = {
@@ -147,6 +148,8 @@ export function useAugmentationActions(state) {
         success: false, 
         error: error.response?.data?.message || 'Failed to save augmentation' 
       }
+    } finally {
+      state.loading.value.saveAugmentation = false
     }
   }
 

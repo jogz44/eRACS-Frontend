@@ -65,6 +65,8 @@
             class="add-table-btn"
             icon="add"
             @click="handleAddExpense"
+            :loading="store.loading.addExpense"
+            :disable="store.loading.addExpense"
           />
         </div>
 
@@ -118,8 +120,15 @@
           label="Cancel"
           class="modal-cancel-btn"
           @click="store.closeDialog('augmentation')"
+          :disable="store.loading.saveAugmentation"
         />
-        <q-btn label="Save" class="modal-save-btn" @click="handleSaveClick" />
+        <q-btn 
+          label="Save" 
+          class="modal-save-btn" 
+          @click="handleSaveClick"
+          :loading="store.loading.saveAugmentation"
+          :disable="store.loading.saveAugmentation"
+        />
       </q-card-actions>
     </q-card>
   </q-dialog>

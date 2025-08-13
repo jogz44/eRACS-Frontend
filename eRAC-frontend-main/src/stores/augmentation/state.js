@@ -42,5 +42,12 @@ export function initialState() {
         amount: 0,
       }),
     }),
+
+    // Loading states
+    loading: ref({
+      addDialog: false,
+      saveAugmentation: false,
+      addExpense: false,
+    }),
   }
 }
