@@ -25,16 +25,31 @@
       <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-4">
-            <q-input bg-color="white" outlined dense :model-value="dateRangeDisplay" label="Date Range"
-              class="custom-date-range" clearable @clear="onDateRangeClear" readonly>
-              <template v-slot:append>
-                <q-icon name="event" class="calend-icon">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="dateRange" range @update:model-value="onDateRangeChange" />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
+
+              <q-input
+        bg-color="white"
+        outlined
+        dense
+        :model-value="dateRangeDisplay"
+        label="Date Range"
+        class="custom-date-range"
+        clearable
+        @clear="onDateRangeClear"
+        readonly
+      >
+        <template v-slot:append>
+          <q-icon name="event" class="calend-icon">
+            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+              <q-date
+                v-model="dateRange"
+                range
+                @update:model-value="onDateRangeChange"
+              />
+            </q-popup-proxy>
+          </q-icon>
+        </template>
+      </q-input>
+
           </div>
 
 
@@ -59,16 +74,31 @@
       <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-6">
-            <q-input bg-color="white" outlined dense :model-value="currentSacbDateRangeDisplay" label="Date Range"
-              class="custom-date-range" clearable @clear="onCurrentSacbDateRangeClear" readonly>
-              <template v-slot:append>
-                <q-icon name="event" class="calend-icon">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="currentSacbDateRange" range @update:model-value="onCurrentSacbDateRangeChange" />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
+
+                   <q-input
+        bg-color="white"
+        outlined
+        dense
+        :model-value="currentSacbDateRangeDisplay"
+        label="Date Range"
+        class="custom-date-range"
+        clearable
+        @clear="onCurrentSacbDateRangeClear"
+        readonly
+      >
+        <template v-slot:append>
+          <q-icon name="event" class="calend-icon">
+            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+              <q-date
+                v-model="currentSacbDateRange"
+                range
+                @update:model-value="onCurrentSacbDateRangeChange"
+              />
+            </q-popup-proxy>
+          </q-icon>
+        </template>
+      </q-input>
+
           </div>
 
 
@@ -94,12 +124,27 @@
       <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-4">
-            <q-input bg-color="white" outlined dense :model-value="continuingDateRangeDisplay" label="Date Range"
-              class="custom-date-range" clearable @clear="onContinuingDateRangeClear" readonly>
+
+            <q-input
+              bg-color="white"
+              outlined
+              dense
+              :model-value="continuingDateRangeDisplay"
+              label="Date Range"
+              class="custom-date-range"
+              clearable
+              @clear="onContinuingDateRangeClear"
+              readonly
+            >
               <template v-slot:append>
                 <q-icon name="event" class="calend-icon">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="continuingDateRange" range @update:model-value="onContinuingDateRangeChange" />
+                    <q-date
+                      v-model="continuingDateRange"
+                      range
+                      @update:model-value="onContinuingDateRangeChange"
+                    />
+
                   </q-popup-proxy>
                 </q-icon>
               </template>
@@ -127,13 +172,27 @@
       <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-6">
-            <q-input bg-color="white" outlined dense :model-value="continuingSacbDateRangeDisplay" label="Date Range"
-              class="custom-date-range" clearable @clear="onContinuingSacbDateRangeClear" readonly>
+
+            <q-input
+              bg-color="white"
+              outlined
+              dense
+              :model-value="continuingSacbDateRangeDisplay"
+              label="Date Range"
+              class="custom-date-range"
+              clearable
+              @clear="onContinuingSacbDateRangeClear"
+              readonly
+            >
               <template v-slot:append>
                 <q-icon name="event" class="calend-icon">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="continuingSacbDateRange" range
-                      @update:model-value="onContinuingSacbDateRangeChange" />
+                    <q-date
+                      v-model="continuingSacbDateRange"
+                      range
+                      @update:model-value="onContinuingSacbDateRangeChange"
+                    />
+
                   </q-popup-proxy>
                 </q-icon>
               </template>
@@ -633,6 +692,44 @@ onActivated(async () => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
+/* Custom date range styling */
+.custom-date-range {
+  transition: all 0.3s ease;
+}
+
+.custom-date-range:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.calend-icon {
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.calend-icon:hover {
+  color: #1976d2;
+}
+
+/* Input and button enhancements */
+.q-input, .q-select {
+  background-color: white;
+  transition: all 0.3s ease;
+}
+
+.q-input:hover, .q-select:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.q-btn {
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.q-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .section-header {
@@ -656,6 +753,7 @@ onActivated(async () => {
     min-width: 90vw;
     max-width: 95vw;
   }
+
 
   .report-card {
     margin-bottom: 20px;
