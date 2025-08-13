@@ -8,6 +8,7 @@ use App\Models\Budget;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use App\Models\TranAppropriation; // Added this import
 
 class BudgetAugmentationController extends Controller
 {
@@ -45,6 +46,89 @@ class BudgetAugmentationController extends Controller
             'transfer_to_expense_item' => $detail->transferToExpenseItem ? $detail->transferToExpenseItem->name : '',
             'amount' => (float)$detail->amount,
             'particulars' => $detail->particulars
+        ];
+    }
+
+    /**
+     * Helper method to find appropriation by expense details
+     */
+    private function findAppropriation($barangayId, $budgetId, $expenseClassId, $expenseTypeId, $expenseItemId = null)
+    {
+        // Strategy 1: Try to find exact match in the specified budget
+        $appropriation = TranAppropriation::where('barangay_id', $barangayId)
+            ->where('budget_id', $budgetId)
+            ->where('expense_class_id', $expenseClassId)
+            ->where('expense_type_id', $expenseTypeId)
+            ->where('status', 'committed')
+            ->when($expenseItemId !== null, function($query) use ($expenseItemId) {
+                return $query->where('expense_item_id', $expenseItemId);
+            })
+            ->when($expenseItemId === null, function($query) {
+                return $query->whereNull('expense_item_id');
+            })
+            ->first();
+
+        if ($appropriation) {
+            return $appropriation;
+        }
+
+        // Strategy 2: If not found in specified budget, try to find in any budget for this barangay
+        // This allows cross-budget appropriations
+        $appropriation = TranAppropriation::where('barangay_id', $barangayId)
+            ->where('expense_class_id', $expenseClassId)
+            ->where('expense_type_id', $expenseTypeId)
+            ->where('status', 'committed')
+            ->when($expenseItemId !== null, function($query) use ($expenseItemId) {
+                return $query->where('expense_item_id', $expenseItemId);
+            })
+            ->when($expenseItemId === null, function($query) {
+                return $query->whereNull('expense_item_id');
+            })
+            ->first();
+
+        if ($appropriation) {
+            return $appropriation;
+        }
+
+        // Strategy 3: If expense_item_id is null, try to find any appropriation with same class/type (ignore item)
+        if ($expenseItemId === null) {
+            $appropriation = TranAppropriation::where('barangay_id', $barangayId)
+                ->where('expense_class_id', $expenseClassId)
+                ->where('expense_type_id', $expenseTypeId)
+                ->where('status', 'committed')
+                ->first();
+
+            if ($appropriation) {
+                return $appropriation;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Helper method to perform money transfer between appropriations
+     */
+    private function performTransfer($fromAppropriation, $toAppropriation, $amount)
+    {
+        if (!$fromAppropriation || !$toAppropriation) {
+            throw new \Exception('Source or destination appropriation not found');
+        }
+
+        if ($fromAppropriation->amount < $amount) {
+            throw new \Exception('Insufficient amount in source appropriation');
+        }
+
+        // Deduct from source appropriation
+        $fromAppropriation->decrement('amount', $amount);
+        
+        // Add to destination appropriation
+        $toAppropriation->increment('amount', $amount);
+
+        return [
+            'from_appropriation_id' => $fromAppropriation->id,
+            'to_appropriation_id' => $toAppropriation->id,
+            'amount_transferred' => $amount
         ];
     }
 
@@ -167,8 +251,38 @@ class BudgetAugmentationController extends Controller
                 'user_id' => $request->user()->id
             ]);
 
-            // Create augmentation details
+            // Create augmentation details and perform transfers
             foreach ($request->details as $detail) {
+                // Find source appropriation (FROM expense)
+                $fromAppropriation = $this->findAppropriation(
+                    $request->user()->barangay_id,
+                    $defaultBudget->id,
+                    $detail['from_expense_class_id'],
+                    $detail['from_expense_type_id'],
+                    $detail['from_expense_item_id'] ?? null
+                );
+
+                // Find destination appropriation (TO expense)
+                $toAppropriation = $this->findAppropriation(
+                    $request->user()->barangay_id,
+                    $defaultBudget->id,
+                    $detail['transfer_to_expense_class_id'],
+                    $detail['transfer_to_expense_type_id'],
+                    $detail['transfer_to_expense_item_id'] ?? null
+                );
+
+                if (!$fromAppropriation) {
+                    throw new \Exception('Source appropriation not found for FROM expense: Class ID ' . $detail['from_expense_class_id'] . ', Type ID ' . $detail['from_expense_type_id'] . ', Item ID ' . ($detail['from_expense_item_id'] ?? 'null'));
+                }
+
+                if (!$toAppropriation) {
+                    throw new \Exception('Destination appropriation not found for TO expense: Class ID ' . $detail['transfer_to_expense_class_id'] . ', Type ID ' . $detail['transfer_to_expense_type_id'] . ', Item ID ' . ($detail['transfer_to_expense_item_id'] ?? 'null'));
+                }
+
+                // Perform the actual money transfer
+                $transferResult = $this->performTransfer($fromAppropriation, $toAppropriation, $detail['amount']);
+
+                // Create augmentation detail record
                 BudgetAugmentationDetail::create([
                     'budget_augmentation_id' => $augmentation->id,
                     'from_expense_class_id' => $detail['from_expense_class_id'],
@@ -267,11 +381,66 @@ class BudgetAugmentationController extends Controller
                 'remarks' => $request->remarks
             ]);
 
+            // First, reverse the old transfers by adding back to FROM appropriations and deducting from TO appropriations
+            foreach ($augmentation->details as $oldDetail) {
+                $oldFromAppropriation = $this->findAppropriation(
+                    $augmentation->barangay_id,
+                    $augmentation->budget_id,
+                    $oldDetail->from_expense_class_id,
+                    $oldDetail->from_expense_type_id,
+                    $oldDetail->from_expense_item_id
+                );
+
+                $oldToAppropriation = $this->findAppropriation(
+                    $augmentation->barangay_id,
+                    $augmentation->budget_id,
+                    $oldDetail->transfer_to_expense_class_id,
+                    $oldDetail->transfer_to_expense_type_id,
+                    $oldDetail->transfer_to_expense_item_id
+                );
+
+                if ($oldFromAppropriation && $oldToAppropriation) {
+                    // Reverse the old transfer
+                    $oldFromAppropriation->increment('amount', $oldDetail->amount);
+                    $oldToAppropriation->decrement('amount', $oldDetail->amount);
+                }
+            }
+
             // Delete old details
             $augmentation->details()->delete();
 
-            // Create new details
+            // Create new details and perform new transfers
             foreach ($request->details as $detail) {
+                // Find source appropriation (FROM expense)
+                $fromAppropriation = $this->findAppropriation(
+                    $augmentation->barangay_id,
+                    $augmentation->budget_id,
+                    $detail['from_expense_class_id'],
+                    $detail['from_expense_type_id'],
+                    $detail['from_expense_item_id'] ?? null
+                );
+
+                // Find destination appropriation (TO expense)
+                $toAppropriation = $this->findAppropriation(
+                    $augmentation->barangay_id,
+                    $augmentation->budget_id,
+                    $detail['transfer_to_expense_class_id'],
+                    $detail['transfer_to_expense_type_id'],
+                    $detail['transfer_to_expense_item_id'] ?? null
+                );
+
+                if (!$fromAppropriation) {
+                    throw new \Exception('Source appropriation not found for FROM expense: Class ID ' . $detail['from_expense_class_id'] . ', Type ID ' . $detail['from_expense_type_id'] . ', Item ID ' . ($detail['from_expense_item_id'] ?? 'null'));
+                }
+
+                if (!$toAppropriation) {
+                    throw new \Exception('Destination appropriation not found for TO expense: Class ID ' . $detail['transfer_to_expense_class_id'] . ', Type ID ' . $detail['transfer_to_expense_type_id'] . ', Item ID ' . ($detail['transfer_to_expense_item_id'] ?? 'null'));
+                }
+
+                // Perform the actual money transfer
+                $transferResult = $this->performTransfer($fromAppropriation, $toAppropriation, $detail['amount']);
+
+                // Create augmentation detail record
                 BudgetAugmentationDetail::create([
                     'budget_augmentation_id' => $augmentation->id,
                     'from_expense_class_id' => $detail['from_expense_class_id'],
@@ -308,6 +477,31 @@ class BudgetAugmentationController extends Controller
         $augmentation = BudgetAugmentation::findOrFail($id);
 
         return DB::transaction(function () use ($augmentation) {
+            // Reverse all transfers by adding back to FROM appropriations and deducting from TO appropriations
+            foreach ($augmentation->details as $detail) {
+                $fromAppropriation = $this->findAppropriation(
+                    $augmentation->barangay_id,
+                    $augmentation->budget_id,
+                    $detail->from_expense_class_id,
+                    $detail->from_expense_type_id,
+                    $detail->from_expense_item_id
+                );
+
+                $toAppropriation = $this->findAppropriation(
+                    $augmentation->barangay_id,
+                    $augmentation->budget_id,
+                    $detail->transfer_to_expense_class_id,
+                    $detail->transfer_to_expense_type_id,
+                    $detail->transfer_to_expense_item_id
+                );
+
+                if ($fromAppropriation && $toAppropriation) {
+                    // Reverse the transfer
+                    $fromAppropriation->increment('amount', $detail->amount);
+                    $toAppropriation->decrement('amount', $detail->amount);
+                }
+            }
+
             // Update budget amounts
             $budget = $augmentation->budget;
             $budget->decrement('augmentation', $augmentation->total_amount);

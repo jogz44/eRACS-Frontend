@@ -15,7 +15,6 @@ class TranAppropriation extends Model
         'expense_item_id',
         'amount',
         'transaction_date',
-        'description',
         'status',
         'user_id'
     ];
