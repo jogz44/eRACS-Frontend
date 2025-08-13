@@ -44,14 +44,6 @@ export const useReportStore = defineStore("reportStore", {
         },
       }
     },
-    async loPositionsOptions() {
-        const config = this.getAuthConfig()
-        const positions = await api.get('/api/barangay/positions', config)
-        return positions.data.data.map(pos => ({
-          label: pos.name,
-          value: pos.id
-        }))
-      },
     async fetchData() {
       try{
         const config = this.getAuthConfig();
@@ -70,7 +62,7 @@ export const useReportStore = defineStore("reportStore", {
           name: expense.name
         }));
 
-        this.positionsOptions = positionsOptions?.data?.data?.map(pos => ({
+        this.positionsOptions = positionsOptions?.data?.map(pos => ({
           label: pos.name,
           value: pos.id
         })) || [];

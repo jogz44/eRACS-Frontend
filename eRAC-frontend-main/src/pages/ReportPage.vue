@@ -1,5 +1,14 @@
 <template>
   <q-page class="q-pa-lg report-page">
+
+    <!-- Fullscreen blocking loading modal -->
+    <q-dialog :model-value="loading" persistent>
+      <q-card class="q-pa-lg flex flex-center column" style="width: 200px;">
+        <q-spinner color="primary" size="50px" />
+        <div class="text-subtitle1 q-mt-md">Loading...</div>
+      </q-card>
+    </q-dialog>
+    
     <!-- Main Header with bottom border -->
     <div class="section-header q-mb-xl">
       <div class="section-title">Current Year Reports</div>
@@ -486,6 +495,7 @@ const authStore = useAuthStore()
 
 /* -------------------- STATE -------------------- */
 const showSetupDialog = ref(false)
+const loading = ref(false)
 
 // Modals
 const RACModal = reactive({
@@ -529,8 +539,8 @@ const SetupModal = reactive({
 })
 
 const loadAllData = async () => {
+  loading.value = true
   try{
-    
     const criticalPromises = [
       reportStore.fetchData(),
     ]
@@ -539,6 +549,8 @@ const loadAllData = async () => {
   }catch (error) {
     console.error('Error loading data:', error)
     notifyError('Failed to load data. Please try again later.')
+  } finally {
+    loading.value = false
   }
 }
 
