@@ -23,7 +23,7 @@
           outlined
           dense
           v-model="search"
-          placeholder="Search by ID, Name, Username, Email, or Position..."
+          placeholder="Search by ID, Name, Username, or Position..."
           style="min-width: 300px"
           clearable
           @clear="onSearchClear"
@@ -155,7 +155,6 @@
             <div><strong>Barangay:</strong> {{ viewModal.selectedRow?.barangay }}</div>
             <div><strong>Position:</strong> {{ viewModal.selectedRow?.position?.name }}</div>
             <div><strong>Username:</strong> {{ viewModal.selectedRow?.username }}</div>
-            <div><strong>Email:</strong> {{ viewModal.selectedRow?.email }}</div>
             <div><strong>Approved Date:</strong> {{ viewModal.selectedRow?.created_at }}</div>
           </div>
 
@@ -240,9 +239,8 @@ export default {
           const idMatch = formattedId.includes(query) || rawId.includes(query)
           const nameMatch = user.name.toLowerCase().includes(query)
           const usernameMatch = user.username.toLowerCase().includes(query)
-          const emailMatch = user.email.toLowerCase().includes(query)
           const positionMatch = (user.position || '').toLowerCase().includes(query)
-          return idMatch || nameMatch || usernameMatch || emailMatch || positionMatch
+          return idMatch || nameMatch || usernameMatch || positionMatch
         })
       }
 
@@ -295,13 +293,7 @@ export default {
         const response = await api.get('/api/admin/users/accepted')
         this.users = response.data
         localStorage.setItem('acceptedUsers', JSON.stringify(this.users));
-      } //catch (error) {
-      //   this.$q.notify({
-      //     type: 'negative',
-      //     message: 'Failed to load accepted users',
-      //     position: 'top',
-      //   })
-      finally {
+      } finally {
         this.loading = false
       }
     },

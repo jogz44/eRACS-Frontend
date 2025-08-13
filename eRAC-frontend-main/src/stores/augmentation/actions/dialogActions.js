@@ -6,14 +6,38 @@ export function useDialogActions(state, fetchExpenseAccounts, resetForm ) {
     }
     
     if (dialogName === 'augmentation') {
-      // Reset the form and all related state
-      resetForm('augmentation')
+      state.loading.value.addDialog = true
+      try {
+        // Reset the form first
+        resetForm('augmentation')
+        
+        // Clear any existing expenses
+        state.Augexpenses.value = []
+        state.currentItem.value = null
+        
+        // Set default date to today after form reset
+        const today = new Date()
+        const dd = String(today.getDate()).padStart(2, '0')
+        const mm = String(today.getMonth() + 1).padStart(2, '0')
+        const yyyy = today.getFullYear()
+        
+        // Set the date directly to the form
+        state.forms.value.augmentation.augmentation_date = `${dd}/${mm}/${yyyy}`
+        
+        state.dialogs.value[dialogName] = true
+      } finally {
+        state.loading.value.addDialog = false
+      }
     } else if (dialogName === 'augExpense') {
-      // Fetch expense accounts
-      await fetchExpenseAccounts()
+      state.loading.value.addExpense = true
+      try {
+        // Fetch expense accounts
+        await fetchExpenseAccounts()
+        state.dialogs.value[dialogName] = true
+      } finally {
+        state.loading.value.addExpense = false
+      }
     }
-    
-    state.dialogs.value[dialogName] = true
   }
 
   const closeDialog = (dialogName) => {
