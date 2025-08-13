@@ -19,147 +19,141 @@ class BudgetAugmentationSeeder extends Seeder
 {
     public function run()
     {
-        $fiscalYear = LibFiscalYear::first();
+        $now = now();
         $barangays = Barangay::all();
         
-        if (!$fiscalYear || $barangays->isEmpty()) {
-            return;
-        }
-
-        foreach ($barangays as $barangay) {
+        foreach ($barangays as $bIndex => $barangay) {
+            $budgets = Budget::where('barangay_id', $barangay->id)->get();
             $user = BarangayUser::where('barangay_id', $barangay->id)->first();
-            if (!$user) {
-                continue;
-            }
-
-            // Get budgets for this barangay
-            $budgets = Budget::where('barangay_id', $barangay->id)
-                           ->where('fiscal_year_id', $fiscalYear->id)
-                           ->get();
-
-            foreach ($budgets as $budget) {
-                // Create 1-2 augmentations per budget
-                $numAugmentations = rand(1, 2);
+            
+            if (!$budgets->count() || !$user) continue;
+            
+            foreach ($budgets as $budgetIndex => $budget) {
+                // Get existing appropriations for this budget
+                $existingAppropriations = TranAppropriation::where('barangay_id', $barangay->id)
+                    ->where('budget_id', $budget->id)
+                    ->where('status', 'committed')
+                    ->where('amount', '>', 0)
+                    ->get();
+                
+                if ($existingAppropriations->count() < 2) continue; // Need at least 2 appropriations for transfers
+                
+                // Create 1-3 augmentations per budget
+                $numAugmentations = min(3, $existingAppropriations->count() - 1);
                 
                 for ($i = 1; $i <= $numAugmentations; $i++) {
-                    $this->createAugmentation($budget, $user, $i);
+                    $this->createAugmentation($barangay, $budget, $user, $existingAppropriations, $i);
                 }
             }
         }
     }
 
-    private function createAugmentation($budget, $user, $index)
+    private function createAugmentation($barangay, $budget, $user, $existingAppropriations, $index)
     {
-        // Get appropriations for this budget that can be augmented
-        $appropriations = TranAppropriation::where('budget_id', $budget->id)
-                                         ->where('status', 'committed')
-                                         ->get();
-
-        if ($appropriations->isEmpty()) {
-            return;
-        }
-
-        // Filter appropriations that can be augmented (have positive available amount)
-        $augmentableAppropriations = $appropriations->filter(function($appropriation) use ($budget) {
-            $availableAmount = $this->calculateAvailableAmountForAppropriation($appropriation, $budget);
-            return $availableAmount > 0;
-        });
-
-        if ($augmentableAppropriations->isEmpty()) {
-            return;
-        }
-
-        // Create augmentation
-        $refNumber = 'AUG-' . date('y') . '-' . str_pad($budget->id, 2, '0', STR_PAD_LEFT) . '-' . str_pad($index, 3, '0', STR_PAD_LEFT);
-        $augmentationDate = Carbon::now()->subDays(rand(1, 90));
-
+        // Generate augmentation date (within the last 6 months)
+        $augmentationDate = now()->subDays(rand(1, 180));
+        
+        // Create budget augmentation
         $augmentation = BudgetAugmentation::create([
-            'barangay_id' => $budget->barangay_id,
+            'barangay_id' => $barangay->id,
             'budget_id' => $budget->id,
-            'ref_number' => $refNumber,
+            'ref_number' => 'AUG-' . $augmentationDate->format('y') . '-' . $augmentationDate->format('m') . '-' . str_pad($budget->id, 2, '0', STR_PAD_LEFT) . '-' . str_pad($index, 3, '0', STR_PAD_LEFT),
             'augmentation_date' => $augmentationDate->format('Y-m-d'),
             'total_amount' => 0, // Will be calculated from details
             'remarks' => $this->generateRemarks($budget->description ?? 'Budget', $index),
             'user_id' => $user->id
         ]);
 
-        // Create augmentation details
+        // Create augmentation details with actual transfers
         $totalAmount = 0;
-        $usedAppropriations = collect(); // Track used appropriations to avoid duplicates
-        $maxDetails = min(4, $augmentableAppropriations->count()); // Maximum 4 details per augmentation
+        $usedAppropriationIds = collect();
+        $maxDetails = min(3, $existingAppropriations->count() - 1);
         $detailsCreated = 0;
         
-        // Try to create 2-4 details, but only if there's available amount
-        for ($j = 1; $j <= $maxDetails && $detailsCreated < 4; $j++) {
-            // Get available appropriations that haven't been used yet and have positive available amount
-            $availableAppropriations = $augmentableAppropriations->filter(function($appropriation) use ($budget, $usedAppropriations) {
-                if ($usedAppropriations->contains('id', $appropriation->id)) {
-                    return false; // Skip if already used
-                }
-                
-                $availableAmount = $this->calculateAvailableAmountForAppropriation($appropriation, $budget);
-                return $availableAmount > 0; // Only include appropriations with positive available amount
-            });
+        for ($j = 1; $j <= $maxDetails && $detailsCreated < 3; $j++) {
+            // Refresh appropriations from database to get current amounts
+            $currentAppropriations = TranAppropriation::where('barangay_id', $barangay->id)
+                ->where('budget_id', $budget->id)
+                ->where('status', 'committed')
+                ->where('amount', '>', 1000)
+                ->whereNotIn('id', $usedAppropriationIds->toArray())
+                ->get();
             
-            if ($availableAppropriations->isEmpty()) {
-                break; // No more appropriations with available amount
+            if ($currentAppropriations->count() < 2) break; // Need at least 2 for transfer
+            
+            $fromAppropriation = $currentAppropriations->random();
+            $usedAppropriationIds->push($fromAppropriation->id);
+            
+            // Find a different appropriation to transfer to (refresh again to exclude the FROM appropriation)
+            $transferToAppropriations = TranAppropriation::where('barangay_id', $barangay->id)
+                ->where('budget_id', $budget->id)
+                ->where('status', 'committed')
+                ->where('amount', '>', 0)
+                ->whereNotIn('id', $usedAppropriationIds->toArray())
+                ->where(function($query) use ($fromAppropriation) {
+                    $query->where('expense_class_id', '!=', $fromAppropriation->expense_class_id)
+                          ->orWhere('expense_type_id', '!=', $fromAppropriation->expense_type_id)
+                          ->orWhere('expense_item_id', '!=', $fromAppropriation->expense_item_id);
+                })
+                ->get();
+            
+            if ($transferToAppropriations->isEmpty()) {
+                // If no different appropriation found, try to find any unused appropriation
+                $transferToAppropriations = TranAppropriation::where('barangay_id', $barangay->id)
+                    ->where('budget_id', $budget->id)
+                    ->where('status', 'committed')
+                    ->where('amount', '>', 0)
+                    ->whereNotIn('id', $usedAppropriationIds->toArray())
+                    ->get();
             }
             
-            $appropriation = $availableAppropriations->random();
-            $usedAppropriations->push($appropriation);
+            if ($transferToAppropriations->isEmpty()) continue;
             
-            // Calculate available amount for this appropriation
-            $availableAmount = $this->calculateAvailableAmountForAppropriation($appropriation, $budget);
+            $toAppropriation = $transferToAppropriations->random();
+            $usedAppropriationIds->push($toAppropriation->id);
             
-            // Set augmentation amount (not exceeding available amount, minimum 1000)
-            $augmentationAmount = max(1000, min(rand(1000, 5000), $availableAmount));
-            $totalAmount += $augmentationAmount;
-
-            // Create augmentation detail
-            $detailData = [
-                'budget_augmentation_id' => $augmentation->id,
-                'from_expense_class_id' => $appropriation->expense_class_id,
-                'from_expense_type_id' => $appropriation->expense_type_id,
-                'amount' => $augmentationAmount,
-                'particulars' => $this->generateParticularsForAppropriation($appropriation, $j, $augmentationAmount)
-            ];
-
-            // Only set from_expense_item_id if it exists
-            if ($appropriation->expense_item_id) {
-                $detailData['from_expense_item_id'] = $appropriation->expense_item_id;
-            }
-
-            // All augmentations are transfers - find a different appropriation to transfer to
-            $transferToAppropriation = $augmentableAppropriations->filter(function($app) use ($appropriation) {
-                // Must be different from the current appropriation
-                return $app->id !== $appropriation->id &&
-                       // Must have different expense structure
-                       ($app->expense_class_id !== $appropriation->expense_class_id ||
-                        $app->expense_type_id !== $appropriation->expense_type_id ||
-                        $app->expense_item_id !== $appropriation->expense_item_id);
-            })->first();
+            // Refresh both appropriations to get current amounts
+            $fromAppropriation->refresh();
+            $toAppropriation->refresh();
             
-            // Only create augmentation if we found a different appropriation to transfer to
-            if ($transferToAppropriation) {
-                $detailData['transfer_to_expense_class_id'] = $transferToAppropriation->expense_class_id;
-                $detailData['transfer_to_expense_type_id'] = $transferToAppropriation->expense_type_id;
+            // Calculate transfer amount (not exceeding available amount, minimum 500)
+            $maxTransferAmount = min($fromAppropriation->amount * 0.3, 3000); // Max 30% of source amount or 3000
+            $transferAmount = max(500, min(rand(500, 2000), $maxTransferAmount));
+            
+            if ($transferAmount > $fromAppropriation->amount) continue; // Skip if insufficient funds
+            
+            try {
+                // Perform the actual transfer
+                $fromAppropriation->decrement('amount', $transferAmount);
+                $toAppropriation->increment('amount', $transferAmount);
                 
-                if ($transferToAppropriation->expense_item_id) {
-                    $detailData['transfer_to_expense_item_id'] = $transferToAppropriation->expense_item_id;
-                }
-                
-                // Update particulars to indicate it's a transfer
-                $detailData['particulars'] = "Transfer from " . $this->getExpenseDescription($appropriation) . " to " . $this->getExpenseDescription($transferToAppropriation) . " (₱" . number_format($augmentationAmount, 2) . ")";
-                
-                // Create the augmentation detail
+                $totalAmount += $transferAmount;
+
+                // Create augmentation detail
+                $detailData = [
+                    'budget_augmentation_id' => $augmentation->id,
+                    'from_expense_class_id' => $fromAppropriation->expense_class_id,
+                    'from_expense_type_id' => $fromAppropriation->expense_type_id,
+                    'from_expense_item_id' => $fromAppropriation->expense_item_id,
+                    'transfer_to_expense_class_id' => $toAppropriation->expense_class_id,
+                    'transfer_to_expense_type_id' => $toAppropriation->expense_type_id,
+                    'transfer_to_expense_item_id' => $toAppropriation->expense_item_id,
+                    'amount' => $transferAmount,
+                    'particulars' => "Transfer from " . $this->getExpenseDescription($fromAppropriation) . " to " . $this->getExpenseDescription($toAppropriation) . " (₱" . number_format($transferAmount, 2) . ")"
+                ];
+
                 BudgetAugmentationDetail::create($detailData);
                 $detailsCreated++;
+                
+            } catch (\Exception $e) {
+                // Log error and continue with next iteration
+                \Log::warning('Failed to create augmentation detail: ' . $e->getMessage());
+                continue;
             }
-            // If no different appropriation found, skip creating this augmentation
         }
 
-        // Only proceed if we created at least 2 details with positive amount
-        if ($totalAmount > 0 && $detailsCreated >= 2) {
+        // Only proceed if we created at least 1 detail with positive amount
+        if ($totalAmount > 0 && $detailsCreated >= 1) {
             // Update augmentation total amount
             $augmentation->update(['total_amount' => $totalAmount]);
 
@@ -170,27 +164,6 @@ class BudgetAugmentationSeeder extends Seeder
             // If no details were created or total amount is 0, delete the augmentation
             $augmentation->delete();
         }
-    }
-
-    private function calculateAvailableAmountForAppropriation($appropriation, $budget)
-    {
-        $originalAmount = $appropriation->amount;
-        
-        // Get total existing augmentations for this appropriation
-        $existingAugmentations = BudgetAugmentationDetail::whereHas('budgetAugmentation', function($query) use ($budget) {
-            $query->where('budget_id', $budget->id);
-        })->where(function($query) use ($appropriation) {
-            $query->where('from_expense_class_id', $appropriation->expense_class_id)
-                  ->where('from_expense_type_id', $appropriation->expense_type_id);
-            
-            // If appropriation has an expense item, also check by expense item
-            if ($appropriation->expense_item_id) {
-                $query->orWhere('from_expense_item_id', $appropriation->expense_item_id);
-            }
-        })->sum('amount');
-        
-        // Return remaining available amount
-        return max(0, $originalAmount - $existingAugmentations);
     }
 
     private function generateRemarks($budgetDescription, $index)
@@ -206,48 +179,22 @@ class BudgetAugmentationSeeder extends Seeder
         return $remarks[array_rand($remarks)];
     }
 
-    private function generateParticularsForAppropriation($appropriation, $index, $amount)
-    {
-        $expenseClass = $appropriation->expenseClass;
-        $expenseType = $appropriation->expenseType;
-        $expenseItem = $appropriation->expenseItem;
-        
-        $description = '';
-        if ($expenseItem) {
-            $description = $expenseItem->name;
-        } elseif ($expenseType) {
-            $description = $expenseType->name;
-        } elseif ($expenseClass) {
-            $description = $expenseClass->name;
-        } else {
-            $description = 'Budget Item';
-        }
-        
-        $particulars = [
-            "Additional allocation for {$description} (₱" . number_format($amount, 2) . ")",
-            "Supplementary funding for {$description} activities (₱" . number_format($amount, 2) . ")",
-            "Emergency budget for {$description} (₱" . number_format($amount, 2) . ")",
-            "Additional {$description} expenses (₱" . number_format($amount, 2) . ")",
-            "Extra allocation for {$description} projects (₱" . number_format($amount, 2) . ")"
-        ];
-        
-        return $particulars[array_rand($particulars)];
-    }
-
     private function getExpenseDescription($appropriation)
     {
-        $expenseClass = $appropriation->expenseClass;
-        $expenseType = $appropriation->expenseType;
-        $expenseItem = $appropriation->expenseItem;
-
-        if ($expenseItem && $expenseItem->name) {
-            return $expenseItem->name;
-        } elseif ($expenseType && $expenseType->name) {
-            return $expenseType->name;
-        } elseif ($expenseClass && $expenseClass->name) {
-            return $expenseClass->name;
-        } else {
-            return 'Budget Item';
+        $parts = [];
+        
+        if ($appropriation->expenseClass && $appropriation->expenseClass->name) {
+            $parts[] = $appropriation->expenseClass->name;
         }
+        
+        if ($appropriation->expenseType && $appropriation->expenseType->name) {
+            $parts[] = $appropriation->expenseType->name;
+        }
+        
+        if ($appropriation->expenseItem && $appropriation->expenseItem->name) {
+            $parts[] = $appropriation->expenseItem->name;
+        }
+        
+        return implode(' > ', $parts);
     }
 } 
