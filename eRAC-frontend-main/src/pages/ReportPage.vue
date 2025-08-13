@@ -8,7 +8,7 @@
         <div class="text-subtitle1 q-mt-md">Loading...</div>
       </q-card>
     </q-dialog>
-    
+
     <!-- Main Header with bottom border -->
     <div class="section-header q-mb-xl">
       <div class="section-title">Current Year Reports</div>
@@ -25,14 +25,8 @@
       <q-card-section>
         <div class="row q-col-gutter-md items-end">
           <div class="col-12 col-sm-6 col-md-3">
-            <q-input
-              outlined
-              dense
-              label="From"
-              v-model="racDateFromCurrent"
-              mask="##/##/####"
-              placeholder="25/11/2022"
-            >
+            <q-input outlined dense label="From" v-model="racDateFromCurrent" mask="##/##/####"
+              placeholder="25/11/2022">
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
                   <q-popup-proxy>
@@ -44,14 +38,7 @@
           </div>
 
           <div class="col-12 col-sm-6 col-md-3">
-            <q-input
-              outlined
-              dense
-              label="To"
-              v-model="racDateToCurrent"
-              mask="##/##/####"
-              placeholder="25/11/2022"
-            >
+            <q-input outlined dense label="To" v-model="racDateToCurrent" mask="##/##/####" placeholder="25/11/2022">
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
                   <q-popup-proxy>
@@ -63,27 +50,13 @@
           </div>
 
           <div class="col-12 col-sm-6 col-md-4">
-            <q-select
-              outlined
-              dense
-              v-model="reportStore.expenseSelectedIDCurrent"
-              label="Expense Category"
-              :options="reportStore.expenseOptionsCurrent"
-              emit-value
-              map-options
-              option-label="name"
-              option-value="id"
-            />
+            <q-select outlined dense v-model="reportStore.expenseSelectedCurrent" label="Expense Category"
+              :options="reportStore.expenseOptionsCurrent" map-options option-label="name" option-value="id" />
           </div>
 
           <div class="col-12 col-sm-6 col-md-2">
-            <q-btn
-              color="primary"
-              icon="settings"
-              label="Generate Report"
-              class="full-width"
-              @click="openRACModal('current-rac')"
-            />
+            <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
+              @click="openRACModal('current-rac')" />
           </div>
         </div>
       </q-card-section>
@@ -97,14 +70,8 @@
       <q-card-section>
         <div class="row q-col-gutter-md items-end">
           <div class="col-12 col-sm-6 col-md-4">
-            <q-input
-              outlined
-              dense
-              label="From"
-              v-model="sacbDateFromCurrent"
-              mask="##/##/####"
-              placeholder="25/11/2022"
-            >
+            <q-input outlined dense label="From" v-model="sacbDateFromCurrent" mask="##/##/####"
+              placeholder="25/11/2022">
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
                   <q-popup-proxy>
@@ -116,14 +83,7 @@
           </div>
 
           <div class="col-12 col-sm-6 col-md-4">
-            <q-input
-              outlined
-              dense
-              label="To"
-              v-model="sacbDateToCurrent"
-              mask="##/##/####"
-              placeholder="25/11/2022"
-            >
+            <q-input outlined dense label="To" v-model="sacbDateToCurrent" mask="##/##/####" placeholder="25/11/2022">
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
                   <q-popup-proxy>
@@ -135,13 +95,8 @@
           </div>
 
           <div class="col-12 col-sm-12 col-md-4">
-            <q-btn
-              color="primary"
-              icon="settings"
-              label="Generate Report"
-              class="full-width"
-              @click="openSACBModal('current-sacb')"
-            />
+            <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
+              @click="openSACBModal('current-sacb')" />
           </div>
         </div>
       </q-card-section>
@@ -161,14 +116,7 @@
       <q-card-section>
         <div class="row q-col-gutter-md items-end">
           <div class="col-12 col-sm-6 col-md-3">
-            <q-input
-              outlined
-              dense
-              label="From"
-              v-model="racDateFromCont"
-              mask="##/##/####"
-              placeholder="25/11/2022"
-            >
+            <q-input outlined dense label="From" v-model="racDateFromCont" mask="##/##/####" placeholder="25/11/2022">
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
                   <q-popup-proxy>
@@ -180,14 +128,7 @@
           </div>
 
           <div class="col-12 col-sm-6 col-md-3">
-            <q-input
-              outlined
-              dense
-              label="To"
-              v-model="racDateToCont"
-              mask="##/##/####"
-              placeholder="25/11/2022"
-            >
+            <q-input outlined dense label="To" v-model="racDateToCont" mask="##/##/####" placeholder="25/11/2022">
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
                   <q-popup-proxy>
@@ -199,27 +140,13 @@
           </div>
 
           <div class="col-12 col-sm-6 col-md-4">
-            <q-select
-              outlined
-              dense
-              v-model="reportStore.expenseSelectedIDContinuing"
-              label="Expense Category"
-              emit-value
-              map-options
-              :options="reportStore.expenseOptionsContinuing"
-              option-value="id"
-              option-label="name"
-            />
+            <q-select outlined dense v-model="reportStore.expenseSelectedContinuing" label="Expense Category"
+              map-options :options="reportStore.expenseOptionsContinuing" option-value="id" option-label="name" />
           </div>
 
           <div class="col-12 col-sm-6 col-md-2">
-            <q-btn
-              color="primary"
-              icon="settings"
-              label="Generate Report"
-              class="full-width"
-              @click="openRACModal('continuing-rac')"
-            />
+            <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
+              @click="openRACModal('continuing-rac')" />
           </div>
         </div>
       </q-card-section>
@@ -233,14 +160,7 @@
       <q-card-section>
         <div class="row q-col-gutter-md items-end">
           <div class="col-12 col-sm-6 col-md-4">
-            <q-input
-              outlined
-              dense
-              label="From"
-              v-model="sacbDateFromCont"
-              mask="##/##/####"
-              placeholder="25/11/2022"
-            >
+            <q-input outlined dense label="From" v-model="sacbDateFromCont" mask="##/##/####" placeholder="25/11/2022">
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
                   <q-popup-proxy>
@@ -252,14 +172,7 @@
           </div>
 
           <div class="col-12 col-sm-6 col-md-4">
-            <q-input
-              outlined
-              dense
-              label="To"
-              v-model="sacbDateToCont"
-              mask="##/##/####"
-              placeholder="25/11/2022"
-            >
+            <q-input outlined dense label="To" v-model="sacbDateToCont" mask="##/##/####" placeholder="25/11/2022">
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
                   <q-popup-proxy>
@@ -271,14 +184,8 @@
           </div>
 
           <div class="col-12 col-sm-12 col-md-4">
-            <q-btn
-              color="primary"
-              icon="settings"
-              label="Generate Report"
-              class="full-width"
-              style="width: 100px;"
-              @click="openSACBModal('continuing-sacb')"
-            />
+            <q-btn color="primary" icon="settings" label="Generate Report" class="full-width" style="width: 100px;"
+              @click="openSACBModal('continuing-sacb')" />
           </div>
         </div>
       </q-card-section>
@@ -291,118 +198,58 @@
           <div class="text-h6">
             {{ SACBModal.reportType }}</div>
         </q-card-section>
-
         <q-card-section class="q-pb-none">
           <div class="text-h6">Barangay {{ authStore.user?.barangay_name }}</div>
           <div class="text-h6">Print Report Setup</div>
 
-          <!-- Prepared by and Position (side by side) -->
-          <div class="row q-mb-md q-col-gutter-md ">
-            <div class="col-6">
-              <q-input
-                outlined
-                dense
-                label="Prepared by"
-                v-model="SetupModal.Preparedby"
-              />
+          <!-- First row: Prepared by, Noted by, Certified by -->
+          <div class="row q-mb-md q-col-gutter-md">
+            <div class="col-4">
+              <q-input outlined dense label="Prepared by" v-model="SetupModal.Preparedby" />
             </div>
-            <div class="col-6">
-              <q-select
-                outlined
-                dense
-                :options="reportStore.positionsOptions"
-                emit-value
-                map-options
-                option-label="label"
-                option-value="value"
-                v-model="SetupModal.Preparedposition"
-                label="Position"
-              />
+            <div class="col-4">
+              <q-input outlined dense label="Noted by" v-model="SetupModal.Notedby" />
+            </div>
+            <div class="col-4">
+              <q-input outlined dense label="Certified by" v-model="SetupModal.Certifiedby" />
             </div>
           </div>
 
-          <!-- Noted by and Position (side by side) -->
+          <!-- Second row: Positions -->
           <div class="row q-mb-md q-col-gutter-md">
-            <div class="col-6">
-              <q-input
-                outlined
-                dense
-                v-model="SetupModal.Notedby"
-                label="Noted by"
-              />
+            <div class="col-4">
+              <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
+                option-value="value" v-model="SetupModal.Preparedposition" label="Position" />
             </div>
-            <div class="col-6">
-              <q-select
-                outlined
-                dense
-                v-model="reportStore.positionSelectedID"
-                :options="reportStore.positionsOptions"
-                emit-value
-                map-options
-                option-label="label"
-                option-value="value"
-                label="Position"
-              />
+            <div class="col-4">
+              <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
+                option-value="value" v-model="SetupModal.Notedposition" label="Position" />
             </div>
-          </div>
-
-          <!-- Certified by and Position (side by side) -->
-          <div class="row q-mb-md q-col-gutter-md">
-            <div class="col-6">
-              <q-input
-                outlined
-                dense
-                label="Certified by"
-                v-model="SetupModal.Certifiedby"
-              />
-            </div>
-            <div class="col-6">
-              <q-select
-                outlined
-                dense
-                v-model="SetupModal.Certifiedposition"
-                :options="reportStore.positionsOptions"
-                emit-value
-                map-options
-                option-label="label"
-                option-value="value"
-                label="Position"
-              />
+            <div class="col-4">
+              <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
+                option-value="value" v-model="SetupModal.Certifiedposition" label="Position" />
             </div>
           </div>
         </q-card-section>
+
         <q-card-section>
           <div class="row justify-between q-gutter-sm q-mb-md">
             <div class="row q-gutter-sm">
-              <q-btn
-                outline
-                label="Load Reports"
-                color="orange"
-              />
-              <q-btn
-                outline
-                label="Export Reports"
-                color="green"
-              />
+              <q-btn outline label="Load Reports" color="orange" />
+              <q-btn outline label="Export Reports" color="green" />
             </div>
           </div>
 
           <q-separator class="q-my-md" />
 
           <div class="text-subtitle2 q-mb-md text-grey-7">
-            Report Type: {{ SACBModal.reportType }}
+            Report Type: In Need for Improvement
           </div>
 
           <div class="q-mt-md">
             <div class="text-subtitle1 q-mb-sm">Activity Log</div>
-            <q-table
-              :rows="SACBModal.activities"
-              :columns="activityColumns"
-              row-key="id"
-              :pagination="{ rowsPerPage: 5 }"
-              flat
-              bordered
-            >
+            <q-table :rows="SACBModal.activities" :columns="activityColumns" row-key="id"
+              :pagination="{ rowsPerPage: 5 }" flat bordered>
               <template v-slot:body-cell-time="props">
                 <q-td :props="props">
                   <div class="text-caption">{{ props.value }}</div>
@@ -419,12 +266,7 @@
 
         <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancel" color="grey-7" @click="closeSACBModal" />
-          <q-btn
-            unelevated
-            label="Print"
-            color="primary"
-            @click="handleSACBPrint"
-          />
+          <q-btn unelevated label="Print" color="primary" @click="handleSACBPrint" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -445,15 +287,9 @@
 
         <q-card-section>
           <div class="q-mt-md">
-            <div class="text-subtitle1 q-mb-sm">Activity Log</div>
-            <q-table
-              :rows="RACModal.report"
-              :columns="activityColumns"
-              row-key="id"
-              :pagination="{ rowsPerPage: 5 }"
-              flat
-              bordered
-            >
+            <div class="text-subtitle1 q-mb-sm">Expense Class: {{ reportStore.expenseSelectedCurrent?.name }}</div>
+            <q-table :rows="RACModal.report" :columns="activityColumns" row-key="id" :pagination="{ rowsPerPage: 5 }"
+              flat bordered>
               <template v-slot:body-cell-time="props">
                 <q-td :props="props">
                   <div class="text-caption">{{ props.value }}</div>
@@ -470,19 +306,14 @@
 
         <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancel" color="grey-7" @click="closeRACModal" />
-          <q-btn
-            unelevated
-            label="Print"
-            color="primary"
-            @click="handleRACPrint"
-          />
+          <q-btn unelevated label="Print" color="primary" @click="handleRACPrint" />
         </q-card-actions>
       </q-card>
     </q-dialog>
   </q-page>
 </template>
 <script setup>
-import { ref, reactive, computed, onMounted,onActivated } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated } from 'vue'
 import SetupDialog from 'components/SetupDialog.vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'stores/auth'
@@ -540,13 +371,13 @@ const SetupModal = reactive({
 
 const loadAllData = async () => {
   loading.value = true
-  try{
+  try {
     const criticalPromises = [
       reportStore.fetchData(),
     ]
 
     await Promise.all(criticalPromises)
-  }catch (error) {
+  } catch (error) {
     console.error('Error loading data:', error)
     notifyError('Failed to load data. Please try again later.')
   } finally {
@@ -568,7 +399,7 @@ const openRACModal = (type) => {
   // if (current.racFrom >= current.racTo) {
   //   return notifyError('The From date must be before the To date.')
   // }
-  if (!reportStore.expenseSelectedIDCurrent) {
+  if (!reportStore.expenseSelectedCurrent) {
     return notifyError('Please select an Expense Category.')
   }
   RACModal.reportType = getReportTypeLabel(type)
@@ -667,9 +498,14 @@ onActivated(async () => {
 }
 
 .print-modal {
-  min-width: 700px;
-  max-width: 800px;
-  border-radius: 12px;
+  /* A4 aspect ratio (height / width = 1.414) */
+  aspect-ratio: 310 / 397;
+
+  
+  max-width: 100%;
+  width: min(100%, 210mm);
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 /* Responsive Design */
@@ -709,7 +545,9 @@ onActivated(async () => {
   .subsection-title {
     font-size: 1rem;
   }
-}.q-input{
+}
+
+.q-input {
   background-color: white;
 }
 </style>

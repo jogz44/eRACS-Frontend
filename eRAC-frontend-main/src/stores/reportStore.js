@@ -20,11 +20,11 @@ export const useReportStore = defineStore("reportStore", {
     certPosition: null,
     
     expenseOptionsCurrent: [],
-    expenseSelectedIDCurrent: null,
+    expenseSelectedCurrent: null,
     expenseOptionsContinuing: [],
-    expenseSelectedIDContinuing: null,
+    expenseSelectedContinuing: null,
     positionsOptions: [],
-    positionSelectedID: null,
+    positionSelected: null,
 
     loadingRAC: false,
     loadingSACB: false,
