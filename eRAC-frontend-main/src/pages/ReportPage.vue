@@ -25,29 +25,16 @@
       <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-4">
-              <q-input
-        bg-color="white"
-        outlined
-        dense
-        :model-value="dateRangeDisplay"
-        label="Date Range"
-        class="custom-date-range"
-        clearable
-        @clear="onDateRangeClear"
-        readonly
-      >
-        <template v-slot:append>
-          <q-icon name="event" class="calend-icon">
-            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-              <q-date
-                v-model="dateRange"
-                range
-                @update:model-value="onDateRangeChange"
-              />
-            </q-popup-proxy>
-          </q-icon>
-        </template>
-      </q-input>
+            <q-input bg-color="white" outlined dense :model-value="dateRangeDisplay" label="Date Range"
+              class="custom-date-range" clearable @clear="onDateRangeClear" readonly>
+              <template v-slot:append>
+                <q-icon name="event" class="calend-icon">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date v-model="dateRange" range @update:model-value="onDateRangeChange" />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
           </div>
 
 
@@ -72,29 +59,16 @@
       <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-6">
-                   <q-input
-        bg-color="white"
-        outlined
-        dense
-        :model-value="currentSacbDateRangeDisplay"
-        label="Date Range"
-        class="custom-date-range"
-        clearable
-        @clear="onCurrentSacbDateRangeClear"
-        readonly
-      >
-        <template v-slot:append>
-          <q-icon name="event" class="calend-icon">
-            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-              <q-date
-                v-model="currentSacbDateRange"
-                range
-                @update:model-value="onCurrentSacbDateRangeChange"
-              />
-            </q-popup-proxy>
-          </q-icon>
-        </template>
-      </q-input>
+            <q-input bg-color="white" outlined dense :model-value="currentSacbDateRangeDisplay" label="Date Range"
+              class="custom-date-range" clearable @clear="onCurrentSacbDateRangeClear" readonly>
+              <template v-slot:append>
+                <q-icon name="event" class="calend-icon">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date v-model="currentSacbDateRange" range @update:model-value="onCurrentSacbDateRangeChange" />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
           </div>
 
 
@@ -120,25 +94,12 @@
       <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-4">
-            <q-input
-              bg-color="white"
-              outlined
-              dense
-              :model-value="continuingDateRangeDisplay"
-              label="Date Range"
-              class="custom-date-range"
-              clearable
-              @clear="onContinuingDateRangeClear"
-              readonly
-            >
+            <q-input bg-color="white" outlined dense :model-value="continuingDateRangeDisplay" label="Date Range"
+              class="custom-date-range" clearable @clear="onContinuingDateRangeClear" readonly>
               <template v-slot:append>
                 <q-icon name="event" class="calend-icon">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date
-                      v-model="continuingDateRange"
-                      range
-                      @update:model-value="onContinuingDateRangeChange"
-                    />
+                    <q-date v-model="continuingDateRange" range @update:model-value="onContinuingDateRangeChange" />
                   </q-popup-proxy>
                 </q-icon>
               </template>
@@ -166,25 +127,13 @@
       <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-6">
-            <q-input
-              bg-color="white"
-              outlined
-              dense
-              :model-value="continuingSacbDateRangeDisplay"
-              label="Date Range"
-              class="custom-date-range"
-              clearable
-              @clear="onContinuingSacbDateRangeClear"
-              readonly
-            >
+            <q-input bg-color="white" outlined dense :model-value="continuingSacbDateRangeDisplay" label="Date Range"
+              class="custom-date-range" clearable @clear="onContinuingSacbDateRangeClear" readonly>
               <template v-slot:append>
                 <q-icon name="event" class="calend-icon">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date
-                      v-model="continuingSacbDateRange"
-                      range
-                      @update:model-value="onContinuingSacbDateRangeChange"
-                    />
+                    <q-date v-model="continuingSacbDateRange" range
+                      @update:model-value="onContinuingSacbDateRangeChange" />
                   </q-popup-proxy>
                 </q-icon>
               </template>
@@ -276,48 +225,80 @@
 
     <!-- RAC Modal -->
 
-    <q-dialog v-model="RACModal.show" 
-      maximized transition-show="slide-up" transition-hide="slide-down">
-      <q-card class="bg-transparent column full-height">
+    <q-dialog v-model="RACModal.show" maximized transition-show="slide-up" transition-hide="slide-down">
+      <q-card class="bg-transparent full-height pages-group scroll q-pa-md">
+
         <!-- Header menu -->
-        <q-card-actions align="right" class="q-pa-md bg-grey-2">
+        <q-card-actions align="right" class="q-pa-md bg-grey-2" style="position: sticky; top: 0; z-index: 10;">
           <q-btn flat label="Cancel" color="grey-7" @click="closeRACModal" />
           <q-btn outline label="Export Reports" color="green" />
           <q-btn unelevated label="Print" color="primary" @click="handleRACPrint" />
         </q-card-actions>
 
+        <!-- Page 1 -->
+        <q-card class="print-modal q-mb-lg">
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">
+              {{ RACModal.reportType }}
+            </div>
+          </q-card-section>
+
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">Barangay {{ authStore.user?.barangay_name }}</div>
+          </q-card-section>
+          <q-card-section>
+            <div class="q-mt-md">
+              <div class="text-subtitle1 q-mb-sm">Expense Class: {{ reportStore.expenseSelectedCurrent?.name }}</div>
+              <q-table :rows="RACModal.report" :columns="activityColumns" row-key="id" :pagination="{ rowsPerPage: 5 }"
+                flat bordered>
+                <template v-slot:body-cell-time="props">
+                  <q-td :props="props">
+                    <div class="text-caption">{{ props.value }}</div>
+                  </q-td>
+                </template>
+                <template v-slot:body-cell-description="props">
+                  <q-td :props="props">
+                    <div class="text-body2">{{ props.value }}</div>
+                  </q-td>
+                </template>
+              </q-table>
+            </div>
+          </q-card-section>
+        </q-card>
+
+        <!-- Page 2 -->
         <q-card class="print-modal">
-        <q-card-section class="q-pb-none">
-          <div class="text-h6">
-            {{ RACModal.reportType }}</div>
-        </q-card-section>
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">
+              {{ RACModal.reportType }}
+            </div>
+          </q-card-section>
 
-        <q-card-section class="q-pb-none">
-          <div class="text-h6">Barangay {{ authStore.user?.barangay_name }}</div>
-        </q-card-section>
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">Barangay {{ authStore.user?.barangay_name }}</div>
+          </q-card-section>
+          <q-card-section>
+            <div class="q-mt-md">
+              <div class="text-subtitle1 q-mb-sm">Expense Class: {{ reportStore.expenseSelectedCurrent?.name }}</div>
+              <q-table :rows="RACModal.report" :columns="activityColumns" row-key="id" :pagination="{ rowsPerPage: 5 }"
+                flat bordered>
+                <template v-slot:body-cell-time="props">
+                  <q-td :props="props">
+                    <div class="text-caption">{{ props.value }}</div>
+                  </q-td>
+                </template>
+                <template v-slot:body-cell-description="props">
+                  <q-td :props="props">
+                    <div class="text-body2">{{ props.value }}</div>
+                  </q-td>
+                </template>
+              </q-table>
+            </div>
+          </q-card-section>
+        </q-card>
 
-
-        <q-card-section>
-          <div class="q-mt-md">
-            <div class="text-subtitle1 q-mb-sm">Expense Class: {{ reportStore.expenseSelectedCurrent?.name }}</div>
-            <q-table :rows="RACModal.report" :columns="activityColumns" row-key="id" :pagination="{ rowsPerPage: 5 }"
-              flat bordered>
-              <template v-slot:body-cell-time="props">
-                <q-td :props="props">
-                  <div class="text-caption">{{ props.value }}</div>
-                </q-td>
-              </template>
-              <template v-slot:body-cell-description="props">
-                <q-td :props="props">
-                  <div class="text-body2">{{ props.value }}</div>
-                </q-td>
-              </template>
-            </q-table>
-          </div>
-        </q-card-section>
       </q-card>
 
-      </q-card>
     </q-dialog>
   </q-page>
 </template>
@@ -411,7 +392,7 @@ const openSACBModal = (type) => {
     }
   }
 
-  
+
   SACBModal.reportType = getReportTypeLabel(type)
   SACBModal.show = true
 }
@@ -607,6 +588,9 @@ onActivated(async () => {
   width: min(100%, 210mm);
   max-height: 90vh;
   overflow-y: auto;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
 }
 
 /* Custom date range styling */
@@ -628,12 +612,14 @@ onActivated(async () => {
 }
 
 /* Input and button enhancements */
-.q-input, .q-select {
+.q-input,
+.q-select {
   background-color: white;
   transition: all 0.3s ease;
 }
 
-.q-input:hover, .q-select:hover {
+.q-input:hover,
+.q-select:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
