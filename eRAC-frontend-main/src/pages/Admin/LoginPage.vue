@@ -136,12 +136,13 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useQuasar } from 'quasar'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from 'stores/auth'
 
 
 const $q = useQuasar()
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const email = ref('admin@gmail.com') // Pre-fill for testing
@@ -232,6 +233,15 @@ const handleGlobalKeydown = (event) => {
 
 // Add and remove global event listeners
 onMounted(() => {
+  const role = route.query.role
+  if (role === 'coa') {
+    email.value = 'coa@gmail.com'
+  } else if (role === 'accounting') {
+    email.value = 'accounting@gmail.com'
+  } else if (role === 'superadmin') {
+    email.value = 'admin@gmail.com'
+  }
+
   document.addEventListener('keydown', handleGlobalKeydown)
   console.log('Global keyboard listener added for admin login')
 })

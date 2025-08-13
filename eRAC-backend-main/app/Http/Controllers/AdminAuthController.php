@@ -105,6 +105,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
                     'username' => $user->username,
                     'email' => $user->email,
                     'avatar' => $user->photo_url,
+                    'permissions' => $user->permissions,
                     'created_at' => $user->created_at->format('F j, Y'),
                 ];
             });

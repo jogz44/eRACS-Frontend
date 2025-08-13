@@ -66,6 +66,7 @@
             :loading="store.expenseAccountsLoading || store.loading.addExpense"
             @click="handleAddExpense"
             :disable="store.loading.addExpense"
+            v-permission="'add'"
           />
         </div>
 
@@ -86,6 +87,7 @@
                   color="green"
                   icon="edit"
                   @click="store.editItem(props.row)"
+                  v-permission="'edit'"
                 />
                 <q-btn
                   size="sm"
@@ -94,6 +96,7 @@
                   color="red"
                   icon="delete"
                   @click="store.deleteItem(props.row.id)"
+                  v-permission="'delete'"
                 />
               </div>
             </q-td>
@@ -127,6 +130,7 @@
           @click="handleSaveClick"
           :loading="store.loading.saveAugmentation"
           :disable="store.loading.saveAugmentation"
+          v-permission="'add'"
         />
       </q-card-actions>
     </q-card>

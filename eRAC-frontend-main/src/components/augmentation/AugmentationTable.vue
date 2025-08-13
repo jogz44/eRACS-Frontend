@@ -9,12 +9,13 @@
       <template v-slot:body-cell-action="props">
         <q-td :props="props">
           <div class="button-group">
-            <q-btn class="edit-btn" icon="edit" @click="store.editAugmentation(props.row)" />
+            <q-btn class="edit-btn" icon="edit" @click="store.editAugmentation(props.row)" v-permission="'edit'" />
             <q-btn
               outlined
               class="view-btn"
               icon="delete"
               @click="handleDelete(props.row.id)"
+              v-permission="'delete'"
             />
           </div>
         </q-td>

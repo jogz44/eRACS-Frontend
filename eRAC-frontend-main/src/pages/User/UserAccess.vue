@@ -290,11 +290,11 @@ export default {
           print: this.accessModal.permissions.print.value,
         }
 
-        const response = await api.post(`/api/user-access/${this.accessModal.selectedUser.id}`, {
+        const response = await api.post(`/api/admin/user-access/${this.accessModal.selectedUser.id}`, {
           permissions
         })
 
-        if (response.data.status === 'success') {
+        if (response.data.success || response.data.status === 'success') {
           this.$q.notify({
             type: 'positive',
             message: 'Access permissions saved successfully!',

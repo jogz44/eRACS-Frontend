@@ -27,7 +27,8 @@ class BarangayUser extends Authenticatable
         'username',
         'password',
         'role',
-        'is_approved'
+        'is_approved',
+        'permissions',
     ];
 
     protected $hidden = [
@@ -38,6 +39,7 @@ class BarangayUser extends Authenticatable
     protected $casts = [
         'is_approved' => 'boolean',
         'last_login_at' => 'datetime',
+        'permissions' => 'array',
     ];
 
      // Relationship to Barangay

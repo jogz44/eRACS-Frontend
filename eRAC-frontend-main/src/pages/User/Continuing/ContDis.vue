@@ -43,6 +43,7 @@
           icon="add"
           color="primary"
           @click="store.openDialog('disbursement')"
+          v-permission="'add'"
         />
       </div>
 
@@ -131,6 +132,7 @@
                 color="primary"
                 icon="add"
                 @click="store.openDialog('expense')"
+                v-permission="'add'"
               />
             </div>
 
@@ -152,6 +154,7 @@
                       icon="edit"
                       color="orange"
                       @click="store.editItem(props.row)"
+                      v-permission="'edit'"
                     />
                     <q-btn
                       size="sm"
@@ -159,6 +162,7 @@
                       icon="delete"
                       color="red"
                       @click="store.deleteItem(props.row)"
+                      v-permission="'delete'"
                     />
                   </div>
                 </q-td>
@@ -184,7 +188,7 @@
               label="Cancel"
               @click="store.closeDialog('disbursement')"
             />
-            <q-btn label="Save" color="primary" @click="handleSaveClick" />
+            <q-btn label="Save" color="primary" @click="handleSaveClick" v-permission="'add'" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -206,18 +210,21 @@
                   icon="edit"
                   color="orange"
                   @click="store.openEditDisbursement(props.row)"
+                  v-permission="'edit'"
                 />
                 <q-btn
                   dense
                   icon="visibility"
                   color="blue"
                   @click="store.openViewOrDetails(props.row)"
+                  v-permission="'view'"
                 />
                 <q-btn
                   dense
                   label="Liquidate"
                   color="primary"
                   @click="store.openOrDetailsDialog(props.row)"
+                  v-permission="'edit'"
                 />
               </div>
             </q-td>
