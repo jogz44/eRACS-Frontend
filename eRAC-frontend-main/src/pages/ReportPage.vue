@@ -285,10 +285,10 @@
     <!-- RAC Modal -->
 
     <q-dialog v-model="RACModal.show" maximized transition-show="slide-up" transition-hide="slide-down">
-      <q-card class="bg-transparent full-height pages-group scroll q-pa-md">
+      <q-card class=" full-height pages-group scroll ">
 
         <!-- Header menu -->
-        <q-card-actions align="right" class="q-pa-md bg-grey-2" style="position: sticky; top: 0; z-index: 10;">
+        <q-card-actions align="right" class="q-pa-md bg-grey-2 print-header" >
           <q-btn flat label="Cancel" color="grey-7" @click="closeRACModal" />
           <q-btn outline label="Export Reports" color="green" />
           <q-btn unelevated label="Print" color="primary" @click="handleRACPrint" />
@@ -642,6 +642,7 @@ onActivated(async () => {
 
 .print-modal {
   /* A4 aspect ratio (height / width = 1.414) */
+
   aspect-ratio: 310 / 397;
   max-width: 100%;
   width: min(100%, 210mm);
@@ -650,6 +651,8 @@ onActivated(async () => {
   margin-left: auto;
   margin-right: auto;
   display: block;
+  overflow: hidden;
+position: sticky;
 }
 
 /* Custom date range styling */
@@ -777,5 +780,14 @@ onActivated(async () => {
   .section-header {
     margin-bottom: 20px;
   }
+}.print-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+
+}.pages-group{
+  background-color: gray;
 }
 </style>
