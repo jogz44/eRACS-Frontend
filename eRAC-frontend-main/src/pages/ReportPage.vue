@@ -401,6 +401,17 @@ const loadAllData = async () => {
 }
 
 const openSACBModal = (type) => {
+  if (type === 'current-sacb') {
+    if (!currentSacbDateRange.value.from || !currentSacbDateRange.value.to) {
+      return notifyError('Please select a valid current SACB date range.')
+    }
+  } else if (type === 'continuing-sacb') {
+    if (!continuingSacbDateRange.value.from || !continuingSacbDateRange.value.to) {
+      return notifyError('Please select a valid continuing SACB date range.')
+    }
+  }
+
+  
   SACBModal.reportType = getReportTypeLabel(type)
   SACBModal.show = true
 }
@@ -408,13 +419,16 @@ const openSACBModal = (type) => {
 const closeSACBModal = () => { SACBModal.show = false }
 
 const openRACModal = (type) => {
-  // if (!current.racFrom || !current.racTo) {
-  //   return notifyError('Please select both From and To dates.')
-  // }
-  // if (current.racFrom >= current.racTo) {
-  //   return notifyError('The From date must be before the To date.')
-  // }
-  if (!reportStore.expenseSelectedCurrent) {
+  if (
+    (type === 'current-rac' && (!dateRange.value.from || !dateRange.value.to)) ||
+    (type === 'continuing-rac' && (!continuingDateRange.value.from || !continuingDateRange.value.to))
+  ) {
+    return notifyError('Please select a valid date range.')
+  }
+  if (
+    (type === 'current-rac' && !reportStore.expenseSelectedCurrent) ||
+    (type === 'continuing-rac' && !reportStore.expenseSelectedContinuing)
+  ) {
     return notifyError('Please select an Expense Category.')
   }
   RACModal.reportType = getReportTypeLabel(type)
@@ -431,6 +445,12 @@ const getReportTypeLabel = (type) => ({
 }[type] || 'Unknown Report')
 
 const handleSACBPrint = () => {
+  if (dateRangeDisplay.value === '') {
+    return notifyError('Please select a date range.')
+  }
+  if (dateRange.value.from === '' || dateRange.value.to === '') {
+    return notifyError('Please select a valid date range.')
+  }
   console.log('Printing report:', SACBModal.reportType)
   closeSACBModal()
   notifySuccess('Report sent to printer successfully!')
