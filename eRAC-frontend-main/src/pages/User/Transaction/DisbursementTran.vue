@@ -113,6 +113,7 @@
                 @click="handleAddExpense"
                 @mouseenter="preloadExpenseAccounts"
                 :loading="addingExpense || store.expenseTypeLoading"
+                v-permission="'add'"
               />
             </div>
 
@@ -134,6 +135,7 @@
                       icon="edit"
                       color="orange"
                       @click="store.editItem(props.row)"
+                      v-permission="'edit'"
                     />
                     <q-btn
                       size="sm"
@@ -141,6 +143,7 @@
                       icon="delete"
                       color="red"
                       @click="store.deleteItem(props.row)"
+                      v-permission="'delete'"
                     />
                   </div>
                 </q-td>
@@ -166,7 +169,7 @@
               label="Cancel"
               @click="store.closeDialog('disbursement')"
             />
-            <q-btn label="Save" color="primary" @click="handleSaveClick" />
+            <q-btn label="Save" color="primary" @click="handleSaveClick" v-permission="'add'" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -317,6 +320,7 @@
                   color="primary"
                   v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
                   @click="store.openOrDetailsDialog(props.row)"
+                  v-permission="'edit'"
                 />
             </q-td>
           </template>

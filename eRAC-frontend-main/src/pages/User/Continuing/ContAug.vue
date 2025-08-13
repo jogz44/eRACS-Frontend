@@ -43,6 +43,7 @@
           icon="add"
           color="primary"
           @click="store.openDialog('augmentation')"
+          v-permission="'add'"
         />
       </div>
 
@@ -137,6 +138,7 @@
                 color="primary"
                 icon="add"
                 @click="store.openDialog('augExpense')"
+                v-permission="'add'"
               />
             </div>
 
@@ -158,6 +160,7 @@
                       icon="edit"
                       color="orange"
                       @click="store.editItem(props.row)"
+                      v-permission="'edit'"
                     />
                     <q-btn
                       size="sm"
@@ -165,6 +168,7 @@
                       icon="delete"
                       color="red"
                       @click="store.deleteItem(props.row)"
+                      v-permission="'delete'"
                     />
                   </div>
                 </q-td>
@@ -190,7 +194,7 @@
               label="Cancel"
               @click="store.closeDialog('augmentation')"
             />
-            <q-btn label="Save" color="primary" @click="handleSaveClick" />
+            <q-btn label="Save" color="primary" @click="handleSaveClick" v-permission="'add'" />
           </q-card-actions>
         </q-card>
       </q-dialog>

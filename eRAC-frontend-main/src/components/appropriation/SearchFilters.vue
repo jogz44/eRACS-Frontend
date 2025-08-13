@@ -45,6 +45,7 @@
         label="Clear All"
         @click="clearAllFilters"
         class="clear-all-btn"
+
       />
       <q-space />
 
@@ -55,6 +56,7 @@
         @click="$emit('add')"
         color="primary"
         style="min-width: 150px; border-radius: 3px; font-size: small !important;"
+        v-permission="'add'"
       />
 
       <!-- Clear All Filters Button -->

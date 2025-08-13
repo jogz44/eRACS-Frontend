@@ -1,19 +1,22 @@
 import { usePermissionsStore } from 'stores/permissionsStore'
 
-// Vue directive to show/hide elements based on permissions
+// Vue directive to disable/hide elements based on permissions
 export const vPermission = {
   beforeMount(el, binding) {
-    checkPermission(el, binding)
+    applyPermission(el, binding)
   },
   updated(el, binding) {
-    checkPermission(el, binding)
+    applyPermission(el, binding)
+  },
+  unmounted(el) {
+    removeBlockHandlers(el)
   }
 }
 
-function checkPermission(el, binding) {
+function applyPermission(el, binding) {
   const permissionsStore = usePermissionsStore()
-  const { value } = binding
-  
+  const { value, modifiers } = binding
+
   if (!value) {
     throw new Error('v-permission directive requires a permission value')
   }
@@ -21,37 +24,75 @@ function checkPermission(el, binding) {
   let hasPermission = false
 
   if (typeof value === 'string') {
-    // Single permission: v-permission="'add'"
     hasPermission = permissionsStore.checkPermission(value)
   } else if (Array.isArray(value)) {
-    // Array of permissions (any): v-permission="['add', 'edit']"
     hasPermission = permissionsStore.hasAnyPermission(value)
   } else if (typeof value === 'object') {
-    // Object with options: v-permission="{ permission: 'add', requireAll: true }"
     if (value.permissions && Array.isArray(value.permissions)) {
-      if (value.requireAll) {
-        // All permissions required
-        hasPermission = value.permissions.every(perm => 
-          permissionsStore.checkPermission(perm)
-        )
-      } else {
-        // Any permission required (default)
-        hasPermission = permissionsStore.hasAnyPermission(value.permissions)
-      }
+      hasPermission = value.requireAll
+        ? value.permissions.every(perm => permissionsStore.checkPermission(perm))
+        : permissionsStore.hasAnyPermission(value.permissions)
     } else if (value.permission) {
       hasPermission = permissionsStore.checkPermission(value.permission)
     }
   }
 
+  // If lacking permission: disable by default; hide if "hide" modifier present
   if (!hasPermission) {
-    // Remove the element from DOM
-    el.style.display = 'none'
-    el.setAttribute('data-permission-hidden', 'true')
+    if (modifiers && modifiers.hide) {
+      el.style.display = 'none'
+      el.setAttribute('data-permission-hidden', 'true')
+    } else {
+      // Visual and interactive disable
+      el.style.pointerEvents = 'none'
+      el.style.opacity = '0.5'
+      el.setAttribute('aria-disabled', 'true')
+      // Add event blockers in capture phase as a fallback for components
+      addBlockHandlers(el)
+      // For native button elements
+      if (typeof el.disabled !== 'undefined') {
+        el.disabled = true
+      }
+    }
   } else {
-    // Show the element
     el.style.display = ''
+    el.style.pointerEvents = ''
+    el.style.opacity = ''
     el.removeAttribute('data-permission-hidden')
+    el.removeAttribute('aria-disabled')
+    removeBlockHandlers(el)
+    if (typeof el.disabled !== 'undefined') {
+      el.disabled = false
+    }
   }
+}
+
+function blockEvent(e) {
+  e.preventDefault()
+  e.stopImmediatePropagation()
+  e.stopPropagation()
+  return false
+}
+
+function addBlockHandlers(el) {
+  el.__permHandlers = el.__permHandlers || []
+  const events = ['click', 'mousedown', 'mouseup', 'keydown', 'keyup', 'touchstart', 'touchend']
+  events.forEach(evt => {
+    const handler = blockEvent
+    el.addEventListener(evt, handler, true)
+    el.__permHandlers.push({ evt, handler })
+  })
+  el.setAttribute('tabindex', '-1')
+}
+
+function removeBlockHandlers(el) {
+  if (el.__permHandlers) {
+    el.__permHandlers.forEach(({ evt, handler }) => {
+      el.removeEventListener(evt, handler, true)
+    })
+    el.__permHandlers = []
+  }
+  el.removeAttribute('tabindex')
 }
 
 export default vPermission

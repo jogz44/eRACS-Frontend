@@ -25,6 +25,8 @@ return new class extends Migration
         $table->string('password');
         $table->enum('role', ['admin', 'barangay_user'])->default('barangay_user');
         $table->boolean('is_approved')->default(false);
+        // JSON field for simple permissions (view, add, edit, delete, print)
+        $table->json('permissions')->nullable();
         $table->rememberToken();
         $table->timestamps();
 

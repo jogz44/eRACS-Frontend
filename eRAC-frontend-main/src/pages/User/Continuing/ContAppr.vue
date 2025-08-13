@@ -42,6 +42,7 @@
           label="Continue Accounts"
           @click="showContinueDialog = true"
           color="secondary"
+          v-permission="'add'"
         />
       </div>
     </div>
@@ -132,12 +133,14 @@
                 icon="visibility"
                 color="blue"
                 @click="viewDetails(props.row)"
+                v-permission="'view'"
               />
               <q-btn
                 dense
                 label="Commit"
                 color="primary"
                 @click="openAllocationDialog(props.row)"
+                v-permission="'edit'"
               />
             </div>
           </q-td>
@@ -226,6 +229,7 @@
             color="primary"
             @click="handleAllocationSaveClick"
             :disable="!canSaveAllocation"
+            v-permission="'edit'"
           />
         </q-card-actions>
       </q-card>

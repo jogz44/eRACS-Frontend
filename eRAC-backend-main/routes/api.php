@@ -175,12 +175,13 @@ Route::prefix('admin')->group(function () {
 
     // Admin user access and logs endpoints
     // Route::middleware(['check.role'])->group(function () {
-        Route::get('/admin/users', [AdminAuthController::class, 'getUsersWithPermissions']);
-        Route::post('/admin/user-access/{id}', [AdminAuthController::class, 'updateUserPermissions']);
-        Route::get('/admin/logs', [AdminAuthController::class, 'getAllLogs']);
+        Route::get('/users', [AdminAuthController::class, 'getUsersWithPermissions']);
+        // Fixed path to avoid double 'admin' in route: now /api/admin/user-access/{id}
+        Route::post('/user-access/{id}', [AdminAuthController::class, 'updateUserPermissions']);
+        Route::get('/logs', [AdminAuthController::class, 'getAllLogs']);
 
         // Admin Individual Log Open
-        Route::get('/admin/logs/{user}/{day}', [AdminAuthController::class, 'getUserLogs']);
+        Route::get('/logs/{user}/{day}', [AdminAuthController::class, 'getUserLogs']);
     // });
 });
 

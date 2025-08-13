@@ -203,7 +203,29 @@ onUnmounted(() => {
 
 const goToForgotPassword = () => router.push('/forgotpage')
 const goToSignUp = () => router.push('/signup')
-const goToAdmin = () => router.push('/admin/login')
+const goToAdmin = () => {
+  $q.dialog({
+    title: 'Choose position',
+    message: 'Please select the admin role you want to sign in as.',
+    options: {
+      type: 'radio',
+      model: 'superadmin',
+      items: [
+        { label: 'COA', value: 'coa' },
+        { label: 'City Accounting Office', value: 'accounting' },
+        { label: 'Super Administrator', value: 'superadmin' }
+      ]
+    },
+    ok: 'Continue',
+    cancel: 'Back',
+    color: 'green',
+    position: 'right',
+    class: 'admin-role-dialog',
+    persistent: true
+  }).onOk((role) => {
+    router.push({ path: '/admin/login', query: { role } })
+  })
+}
 
 // const onImageError = (error) => {
 //   console.log('Logo image failed to load:', error)
@@ -423,6 +445,47 @@ const goToAdmin = () => router.push('/admin/login')
 .login-footer {
   margin-top: auto;
   padding-top: 2rem;
+}
+
+/* Admin role dialog (right aligned and polished) */
+::v-deep(.admin-role-dialog .q-dialog__inner--right) {
+  justify-content: flex-end;
+  align-items: center;
+  padding-right: 2rem;
+}
+
+@media (max-width: 768px) {
+  ::v-deep(.admin-role-dialog .q-dialog__inner--right) {
+    padding-right: 0.5rem;
+  }
+}
+
+::v-deep(.admin-role-dialog .q-card) {
+  width: 360px;
+  max-width: 92vw;
+  border-radius: 14px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+::v-deep(.admin-role-dialog .q-dialog__title) {
+  font-weight: 700;
+  color: #2d5016;
+}
+
+::v-deep(.admin-role-dialog .q-card__section--vert) {
+  padding: 18px 20px;
+}
+
+::v-deep(.admin-role-dialog .q-option__label) {
+  font-weight: 600;
+}
+
+::v-deep(.admin-role-dialog .q-radio) {
+  margin: 4px 0;
+}
+
+::v-deep(.admin-role-dialog .q-card__actions) {
+  padding: 12px 16px;
 }
 
 /* Responsive Design */

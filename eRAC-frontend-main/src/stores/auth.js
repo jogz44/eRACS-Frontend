@@ -187,14 +187,19 @@ export const useAuthStore = defineStore('auth', {
         localStorage.setItem('user_data', JSON.stringify(response.data.user))
         localStorage.setItem('barangay_token', response.data.access_token)
 
-        // Load user permissions after successful login
+        // Initialize permissions immediately from login payload if present
         try {
           const { usePermissionsStore } = await import('./permissionsStore')
           const permissionsStore = usePermissionsStore()
-          await permissionsStore.loadUserPermissions()
+          if (response.data?.permissions) {
+            permissionsStore.setPermissions(response.data.permissions)
+            permissionsStore.currentUser = response.data.user || permissionsStore.currentUser
+            permissionsStore.initialized = true
+          } else {
+            await permissionsStore.loadUserPermissions()
+          }
         } catch (permError) {
           console.warn('Failed to load user permissions:', permError)
-          // Don't fail login if permissions fail to load
         }
 
         $q.notify({
@@ -252,11 +257,12 @@ export const useAuthStore = defineStore('auth', {
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`
         const response = await api.get('/api/barangay/user')
 
-        if (!response.data?.data?.user) {
+        const userData = response.data?.user || response.data?.data?.user
+        if (!userData) {
           throw new Error('Invalid user data in response')
         }
 
-        this._setAuthData(response.data.data.user, token)
+        this._setAuthData(userData, token)
       } catch (error) {
         console.error('Session validation failed:', error)
         this.clearAuth()

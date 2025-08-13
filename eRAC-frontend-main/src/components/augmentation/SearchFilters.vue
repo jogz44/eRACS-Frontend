@@ -56,6 +56,7 @@
         :loading="store.loading.addDialog"
         :disable="store.loading.addDialog"
         style="min-width: 150px; border-radius: 3px; font-size: small !important;"
+        v-permission="'add'"
       />
 
       <!-- Clear All Filters Button -->

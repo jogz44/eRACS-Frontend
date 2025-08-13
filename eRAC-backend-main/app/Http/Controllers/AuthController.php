@@ -119,9 +119,10 @@ public function login(Request $request)
         null, null, true, true, false, 'None'
     );
 
-    // Log user login
+        // Log user login
 
-    return response()->json([
+        // include user's permissions in login response for frontend to initialize
+        return response()->json([
         'status' => 'success',
         'message' => 'Logged in successfully',
         //'user' => $user,
@@ -134,6 +135,13 @@ public function login(Request $request)
                 ? asset("storage/{$user->photo_path}")
                 : null, // Returns full URL like http://localhost/storage/profile-photos/filename.jpg
         ],
+            'permissions' => $user->permissions ?? [
+                'view' => true,
+                'add' => true,
+                'edit' => true,
+                'delete' => false,
+                'print' => true,
+            ],
         'access_token' => $token,
         'token_type' => 'Bearer',
     ])->withCookie($cookie);
@@ -175,6 +183,7 @@ public function user(Request $request)
     $user = $request->user()->load(['barangay', 'position']);
 
     return response()->json([
+        'status' => 'success',
         'user' => [
             'id' => $user->id,
             'first_name' => $user->first_name ?? '',
@@ -183,6 +192,14 @@ public function user(Request $request)
             'position_name' => $user->position->name ?? '',
             'photo_path' => $user->photo_path ?? null,
             'photo_url' => $user->photo_path ? asset("storage/{$user->photo_path}") : null
+        ],
+        // expose permissions for currently authenticated user
+        'permissions' => $user->permissions ?? [
+            'view' => true,
+            'add' => true,
+            'edit' => true,
+            'delete' => false,
+            'print' => true,
         ]
     ]);
 }

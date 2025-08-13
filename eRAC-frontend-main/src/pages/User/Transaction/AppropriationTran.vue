@@ -73,6 +73,7 @@
           @click="addBudget"
           :loading="addLoading"
           :disable="addLoading"
+          v-permission="'add'"
         />
       </div>
     </div>
@@ -174,6 +175,7 @@
               :color="props.row.unappropriated <= 0 ? 'grey' : 'primary'"
               @click="openAllocationDialog(props.row)"
                :disable="props.row.unappropriated <= 0"
+               v-permission="'add'"
             />
           </q-td>
         </template>
@@ -187,12 +189,14 @@
                 color="orange"
                 @click="openEditAllocationDialog(props.row)"
                 :disable="!props.row.allocations || props.row.allocations.length === 0"
+                v-permission="'edit'"
               />
               <q-btn
                 dense
                 icon="visibility"
                 color="blue"
                 @click="openViewDialog(props.row)"
+                v-permission="'view'"
               />
             </div>
           </q-td>

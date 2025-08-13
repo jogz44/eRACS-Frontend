@@ -66,11 +66,11 @@ export const usePermissionsStore = defineStore('permissions', {
 
     async updatePermissions(userId, permissions) {
       try {
-        const response = await api.post(`/api/barangay/user-access/${userId}`, {
+        const response = await api.post(`/api/admin/user-access/${userId}`, {
           permissions
         })
         
-        if (response.data.status === 'success') {
+        if (response.data.success || response.data.status === 'success') {
           return { success: true, message: 'Permissions updated successfully' }
         } else {
           throw new Error(response.data.message || 'Failed to update permissions')
