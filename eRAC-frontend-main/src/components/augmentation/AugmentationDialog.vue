@@ -63,9 +63,8 @@
             label="Add"
             class="add-table-btn"
             icon="add"
-            :loading="store.expenseAccountsLoading"
+            :loading="store.expenseAccountsLoading || store.loading.addExpense"
             @click="handleAddExpense"
-            :loading="store.loading.addExpense"
             :disable="store.loading.addExpense"
           />
         </div>
