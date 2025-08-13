@@ -57,7 +57,7 @@
             <q-select
               outlined
               dense
-              v-model="expenseCategoryCurrent"
+              v-model="reportStore.expenseSelectedIDCurrent"
               label="Expense Category"
               :options="reportStore.expenseOptionsCurrent"
               emit-value
@@ -193,9 +193,13 @@
             <q-select
               outlined
               dense
-              v-model="expenseCategoryCont"
+              v-model="reportStore.expenseSelectedIDContinuing"
               label="Expense Category"
-              :options="expenseOptionsCont"
+              emit-value
+              map-options
+              :options="reportStore.expenseOptionsContinuing"
+              option-value="id"
+              option-label="name"
             />
           </div>
 
@@ -280,7 +284,7 @@
         </q-card-section>
 
         <q-card-section class="q-pb-none">
-          <div class="text-h6">Barangay {{ this.authStore.user?.barangay_name }}</div>
+          <div class="text-h6">Barangay {{ authStore.user?.barangay_name }}</div>
           <div class="text-h6">Print Report Setup</div>
 
           <!-- Prepared by and Position (side by side) -->
@@ -297,7 +301,11 @@
               <q-select
                 outlined
                 dense
-                :options="positionOptions"
+                :options="reportStore.positionsOptions"
+                emit-value
+                map-options
+                option-label="label"
+                option-value="value"
                 v-model="SetupModal.Preparedposition"
                 label="Position"
               />
@@ -318,8 +326,12 @@
               <q-select
                 outlined
                 dense
-                v-model="SetupModal.Notedposition"
-                :options="positionOptions"
+                v-model="reportStore.positionSelectedID"
+                :options="reportStore.positionsOptions"
+                emit-value
+                map-options
+                option-label="label"
+                option-value="value"
                 label="Position"
               />
             </div>
@@ -340,7 +352,11 @@
                 outlined
                 dense
                 v-model="SetupModal.Certifiedposition"
-                :options="positionOptions"
+                :options="reportStore.positionsOptions"
+                emit-value
+                map-options
+                option-label="label"
+                option-value="value"
                 label="Position"
               />
             </div>
@@ -414,7 +430,7 @@
         </q-card-section>
 
         <q-card-section class="q-pb-none">
-          <div class="text-h6">Barangay {{ this.authStore.user?.barangay_name }}</div>
+          <div class="text-h6">Barangay {{ authStore.user?.barangay_name }}</div>
         </q-card-section>
 
 
@@ -460,24 +476,16 @@
 import { ref, reactive, computed, onMounted,onActivated } from 'vue'
 import SetupDialog from 'components/SetupDialog.vue'
 import { useQuasar } from 'quasar'
+import { useAuthStore } from 'stores/auth'
 import { useReportStore } from 'stores/reportStore'
 
 // stores & composables
 const $q = useQuasar()
 const reportStore = useReportStore()
+const authStore = useAuthStore()
 
 /* -------------------- STATE -------------------- */
 const showSetupDialog = ref(false)
-
-// Dates & categories
-const current = reactive({
-  racFrom: null,
-  racTo: null,
-  sacbFrom: null,
-  sacbTo: null,
-  expenseCategory: null,
-  expenseOptions: ['Select Expense Class...', 'Class A', 'Class B', 'Class C']
-})
 
 // Modals
 const RACModal = reactive({
@@ -520,14 +528,11 @@ const SetupModal = reactive({
   Certifiedposition: ''
 })
 
-const positionOptions = ref([])
-
-
 const loadAllData = async () => {
   try{
     
     const criticalPromises = [
-      reportStore.fetchExpenseClass(),
+      reportStore.fetchData(),
     ]
 
     await Promise.all(criticalPromises)
@@ -545,13 +550,13 @@ const openSACBModal = (type) => {
 const closeSACBModal = () => { SACBModal.show = false }
 
 const openRACModal = (type) => {
-  if (!current.racFrom || !current.racTo) {
-    return notifyError('Please select both From and To dates.')
-  }
-  if (current.racFrom >= current.racTo) {
-    return notifyError('The From date must be before the To date.')
-  }
-  if (!current.expenseCategory) {
+  // if (!current.racFrom || !current.racTo) {
+  //   return notifyError('Please select both From and To dates.')
+  // }
+  // if (current.racFrom >= current.racTo) {
+  //   return notifyError('The From date must be before the To date.')
+  // }
+  if (!reportStore.expenseSelectedIDCurrent) {
     return notifyError('Please select an Expense Category.')
   }
   RACModal.reportType = getReportTypeLabel(type)

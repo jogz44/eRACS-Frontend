@@ -2,8 +2,8 @@
 # GET http://localhost:8000/api/barangay/barangays
 # Accept: application/json
 
-GET http://localhost:8000/api/barangay/booklets/3/cheques
-Authorization: Bearer 10075|xIlH8YBGn1JQqM6gUMVeYWOB7RhODMJjRYOH4AyG333bfa69
+GET http://localhost:8000/api/barangay/expense-classes
+Authorization: Bearer 12|JtqGWYjjLgaDRegouNST9teZvmfozB052VwrXZcy13024f57
 Accept: application/json
 
 # GET http://localhost:8000/api/user
