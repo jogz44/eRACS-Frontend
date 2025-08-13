@@ -22,46 +22,104 @@ export function useFormActions(state) {
   }
 
   const saveExpense = () => {
-    console.log('Saving expense with form data:', state.forms.value.augExpense?.value)
-    
-    if (!state.forms.value.augExpense?.value) {
-      console.error('augExpense form is not initialized')
-      return
+    // Always use .value for refs
+    const augExpense = state.forms.value.augExpense?.value || state.forms.value.augExpense
+    if (!augExpense) {
+      throw new Error('Expense form is not initialized')
     }
     
-    const newId = state.Augexpenses.value.length + 1
+    const particulars = augExpense.particulars?.trim() || ''
+    const amount = Number(augExpense.amount) || 0
+    
+    // Validate that both from and to expenses are selected
+    if (!augExpense.from_expense || !augExpense.to_expense) {
+      throw new Error('Both From Expense and To Expense must be selected')
+    }
+    
+    // Validate particulars
+    if (!particulars) {
+      throw new Error('Particulars is required')
+    }
+    
+    // Validate amount
+    if (amount <= 0) {
+      throw new Error('Amount must be greater than 0')
+    }
+    
+    // Validate amount against available balance
+    const availableBalance = augExpense.balance || 0
+    const accountKey = `${augExpense.from_expense_class_id}-${augExpense.from_expense_type_id}-${augExpense.from_expense_item_id}`
+    const existingAmountForAccount = (state.Augexpenses.value || [])
+      .filter(expense => `${expense.from_expense_class_id}-${expense.from_expense_type_id}-${expense.from_expense_item_id}` === accountKey)
+      .reduce((total, expense) => total + Number(expense.amount), 0)
+    const remainingBalance = availableBalance - existingAmountForAccount
+    
+    if (amount > remainingBalance) {
+      throw new Error(`Amount exceeds available balance. Available: ₱${remainingBalance.toLocaleString()}, Requested: ₱${amount.toLocaleString()}`)
+    }
+    
+    // Add expense
+    const newId = (state.Augexpenses.value && state.Augexpenses.value.length > 0) 
+      ? Math.max(...state.Augexpenses.value.map(e => e.id)) + 1 
+      : 1
+      
     const expenseData = {
       id: newId,
-      expense_class_id: state.forms.value.augExpense.value.expense_class_id,
-      expense_type_id: state.forms.value.augExpense.value.expense_type_id,
-      expense_item_id: state.forms.value.augExpense.value.expense_item_id,
-      account: state.forms.value.augExpense.value.account,
-      expense_class: state.forms.value.augExpense.value.account.split(' > ')[0] || '',
-      expense_type: state.forms.value.augExpense.value.account.split(' > ')[1] || '',
-      expense_item: state.forms.value.augExpense.value.account.split(' > ')[2] || '',
-      amount: Number(state.forms.value.augExpense.value.amount) || 0,
-      particulars: state.forms.value.augExpense.value.particulars,
-      }
+      from_expense_class_id: augExpense.from_expense_class_id,
+      from_expense_type_id: augExpense.from_expense_type_id,
+      from_expense_item_id: augExpense.from_expense_item_id,
+      to_expense_class_id: augExpense.to_expense_class_id,
+      to_expense_type_id: augExpense.to_expense_type_id,
+      to_expense_item_id: augExpense.to_expense_item_id,
+      from_expense: augExpense.from_expense,
+      to_expense: augExpense.to_expense,
+      amount: amount,
+      particulars: particulars,
+    }
     
-    console.log('Adding expense data:', expenseData)
+    if (!state.Augexpenses.value) {
+      state.Augexpenses.value = []
+    }
+    
     state.Augexpenses.value.push(expenseData)
     state.Augexpenses.value = [...state.Augexpenses.value]
-    console.log('Updated Augexpenses:', state.Augexpenses.value)
     
     state.dialogs.value.AugexpenseDetail = false
     resetForm('augExpense')
   }
 
   const editItem = (row) => {
+    if (!state.Augexpenses.value) {
+      state.Augexpenses.value = []
+    }
+    
     const index = state.Augexpenses.value.findIndex((e) => e.id === row.id)
     if (index !== -1) {
-      state.Augexpenses.value[index] = row
+      state.Augexpenses.value[index] = {
+        ...row,
+        from_expense: row.from_expense,
+        to_expense: row.to_expense,
+        from_expense_class_id: row.from_expense_class_id,
+        from_expense_type_id: row.from_expense_type_id,
+        from_expense_item_id: row.from_expense_item_id,
+        to_expense_class_id: row.to_expense_class_id,
+        to_expense_type_id: row.to_expense_type_id,
+        to_expense_item_id: row.to_expense_item_id,
+      }
       state.Augexpenses.value = [...state.Augexpenses.value]
     }
   }
 
   const deleteItem = (id) => {
-    state.Augexpenses.value = state.Augexpenses.value.filter((e) => e.id !== id)
+    if (!state.Augexpenses.value) {
+      state.Augexpenses.value = []
+    }
+    
+    const index = state.Augexpenses.value.findIndex((e) => e.id === Number(id))
+    if (index !== -1) {
+      state.Augexpenses.value.splice(index, 1)
+      state.Augexpenses.value = [...state.Augexpenses.value]
+    }
   }
 
   return {

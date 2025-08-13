@@ -1,17 +1,43 @@
 <template>
   <q-dialog v-model="store.dialogs.AugexpenseDetail">
-    <q-card style="min-width: 500px">
+    <q-card style="min-width: 500px; max-width: 90vw; width: auto;">
       <q-card-section>
         <div class="text-h6">Add Expense</div>
       </q-card-section>
 
       <q-card-section>
-        <!-- Display selected account info -->
+        <!-- Display FROM expense info -->
         <div class="text-subtitle1 q-mb-sm">
-          <strong>Account:</strong> {{ store.forms.augExpense?.value?.account }}
+          <strong>From Expense:</strong> {{ store.forms.augExpense?.value?.from_expense }}
         </div>
-        <div class="text-subtitle1 q-mb-md">
+        <div class="text-subtitle1 q-mb-sm">
           <strong>Balance:</strong> ₱{{ store.forms.augExpense?.value?.balance?.toLocaleString() }}
+        </div>
+
+        <!-- TO Expense Selection -->
+        <div class="q-mb-md">
+          <div class="text-subtitle2 q-mb-sm">
+            <strong>To Expense:</strong>
+          </div>
+          <div class="row q-gutter-sm">
+            <q-input
+              outlined
+              dense
+              v-model="store.forms.augExpense.value.to_expense"
+              label="To Expense"
+              class="col"
+              readonly
+              placeholder="Select destination expense"
+            />
+            <q-btn
+              label="Select"
+              color="primary"
+              outline
+              :loading="store.toExpenseSelectionLoading"
+              :disable="!store.forms.augExpense?.value?.from_expense || store.toExpenseSelectionLoading"
+              @click="openToExpenseSelection"
+            />
+          </div>
         </div>
 
         <!-- Particulars Field -->
@@ -24,7 +50,7 @@
           type="textarea"
           autogrow
         />
-
+        
         <!-- Amount Field -->
         <q-input
           outlined
@@ -44,7 +70,7 @@
           color="negative"
           @click="store.closeDialog('AugexpenseDetail')"
         />
-        <q-btn label="Save" color="primary" @click="store.saveExpense" />
+        <q-btn label="Save" color="primary" @click="handleSave" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -52,8 +78,33 @@
 
 <script setup>
 import { useAugmentationStore } from 'stores/augmentation'
-
+import { useQuasar } from 'quasar'
 const store = useAugmentationStore()
+const $q = useQuasar()
+
+function openToExpenseSelection() {
+  // Set the flag to indicate we're selecting a TO expense
+  store.isSelectingToExpense = true
+  
+  // Set loading state for the Select button
+  store.toExpenseSelectionLoading = true
+  
+  // Open the expense selection dialog for selecting TO expense
+  store.openDialog('augExpense')
+}
+
+function handleSave() {
+  try {
+    store.saveExpense()
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to add expense',
+      position: 'top',
+      icon: 'error',
+    })
+  }
+}
 </script>
 
 <style scoped>

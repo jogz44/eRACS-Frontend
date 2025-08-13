@@ -9,9 +9,12 @@ class BudgetAugmentationDetail extends Model
 {
     protected $fillable = [
         'budget_augmentation_id',
-        'expense_class_id',
-        'expense_type_id',
-        'expense_item_id',
+        'from_expense_class_id',
+        'from_expense_type_id',
+        'from_expense_item_id',
+        'transfer_to_expense_class_id',
+        'transfer_to_expense_type_id',
+        'transfer_to_expense_item_id',
         'amount',
         'particulars'
     ];
@@ -25,18 +28,33 @@ class BudgetAugmentationDetail extends Model
         return $this->belongsTo(BudgetAugmentation::class);
     }
 
-    public function expenseClass(): BelongsTo
+    public function fromExpenseClass(): BelongsTo
     {
-        return $this->belongsTo(LibExpenseClass::class);
+        return $this->belongsTo(LibExpenseClass::class, 'from_expense_class_id');
     }
 
-    public function expenseType(): BelongsTo
+    public function fromExpenseType(): BelongsTo
     {
-        return $this->belongsTo(LibExpenseType::class);
+        return $this->belongsTo(LibExpenseType::class, 'from_expense_type_id');
     }
 
-    public function expenseItem(): BelongsTo
+    public function fromExpenseItem(): BelongsTo
     {
-        return $this->belongsTo(LibExpenseItem::class);
+        return $this->belongsTo(LibExpenseItem::class, 'from_expense_item_id');
+    }
+
+    public function transferToExpenseClass(): BelongsTo
+    {
+        return $this->belongsTo(LibExpenseClass::class, 'transfer_to_expense_class_id');
+    }
+
+    public function transferToExpenseType(): BelongsTo
+    {
+        return $this->belongsTo(LibExpenseType::class, 'transfer_to_expense_type_id');
+    }
+
+    public function transferToExpenseItem(): BelongsTo
+    {
+        return $this->belongsTo(LibExpenseItem::class, 'transfer_to_expense_item_id');
     }
 } 

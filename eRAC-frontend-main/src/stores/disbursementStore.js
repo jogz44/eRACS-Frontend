@@ -943,8 +943,13 @@ export const useDisbursementStore = defineStore('disbursement', {
         throw new Error(`Amount exceeds available balance. Available: ₱${remainingBalance.toLocaleString()}, Requested: ₱${amount.toLocaleString()}`)
       }
 
+      // Generate incremental ID instead of timestamp
+      const newId = this.expenses.length > 0 
+        ? Math.max(...this.expenses.map(e => e.id)) + 1 
+        : 1
+
       this.expenses.push({
-        id: Date.now(),
+        id: newId,
         accountId: this.forms.expense.accountId,
         accountName: this.forms.expense.account,
         amount: amount,

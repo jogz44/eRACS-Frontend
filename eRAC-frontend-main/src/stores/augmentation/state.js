@@ -8,6 +8,10 @@ export function initialState() {
 
     AugexpenseAccounts: ref([]),
 
+    // Loading states
+    expenseAccountsLoading: ref(false),
+    toExpenseSelectionLoading: ref(false),
+
     // Search/filters
     searchQuery: ref(''),
     dateFrom: ref(''),
@@ -25,6 +29,9 @@ export function initialState() {
       AugexpenseDetail: false,
     }),
 
+    // Transfer selection state
+    isSelectingToExpense: ref(false),
+
     forms: ref({
       augmentation: ref({
         augmentation_date: '',
@@ -36,6 +43,14 @@ export function initialState() {
         expense_class_id: null,
         expense_type_id: null,
         expense_item_id: null,
+        from_expense: '',
+        to_expense: '',
+        from_expense_class_id: null,
+        from_expense_type_id: null,
+        from_expense_item_id: null,
+        to_expense_class_id: null,
+        to_expense_type_id: null,
+        to_expense_item_id: null,
         account: '',
         balance: 0,
         particulars: '',

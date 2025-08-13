@@ -4,6 +4,15 @@ import { useAuthStore } from 'stores/auth'
 export function useAugmentationActions(state) {
   const authStore = useAuthStore()
 
+  // Helper function to build account names without extra separators
+  const buildAccountName = (expenseClass, expenseType, expenseItem) => {
+    const parts = []
+    if (expenseClass) parts.push(expenseClass)
+    if (expenseType) parts.push(expenseType)
+    if (expenseItem) parts.push(expenseItem)
+    return parts.join(' > ')
+  }
+
   const fetchAugmentations = async () => {
     try {
       const token = authStore.token
@@ -28,11 +37,13 @@ export function useAugmentationActions(state) {
     }
   }
 
+  // --- UPDATED: Fetch and flatten expense accounts like disbursement ---
   const fetchExpenseAccounts = async () => {
     try {
+      state.expenseAccountsLoading.value = true
       const token = authStore.token
       
-      // First, get the current fiscal year
+      // Get the current fiscal year
       const fiscalYearResponse = await api.get('/api/barangay/fiscal-years', {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -41,18 +52,12 @@ export function useAugmentationActions(state) {
       })
       
       if (!fiscalYearResponse.data.data || fiscalYearResponse.data.data.length === 0) {
-        console.error('No fiscal years found')
         state.AugexpenseAccounts.value = []
         return
       }
       
-      // Get the most recent fiscal year
-      const currentFiscalYear = fiscalYearResponse.data.data[0] // Assuming it's sorted by year desc
-      
-      const params = {
-        fiscal_year_id: currentFiscalYear.id
-      }
-      
+      const currentFiscalYear = fiscalYearResponse.data.data[0]
+      const params = { fiscal_year_id: currentFiscalYear.id }
       const response = await api.get('/api/barangay/expense-hierarchy', {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -60,58 +65,119 @@ export function useAugmentationActions(state) {
         },
         params
       })
-
-      // Transform the expense hierarchy into a flat list for selection
-      const expenseAccounts = []
-      if (response.data.data) {
-        response.data.data.forEach(expenseClass => {
-          if (expenseClass.children) {
-            expenseClass.children.forEach(expenseType => {
-              if (expenseType.children) {
-                expenseType.children.forEach(expenseItem => {
-                  const balance = expenseItem.amount || 0
-                  // Only include accounts with balance greater than 0
-                  if (balance > 0) {
-                    expenseAccounts.push({
-                      id: expenseItem.id,
-                      expense_class_id: expenseClass.id,
-                      expense_type_id: expenseType.id,
-                      expense_item_id: expenseItem.id,
-                      expense_class: expenseClass.name,
-                      expense_type: expenseType.name,
-                      expense_item: expenseItem.name,
-                      account: `${expenseClass.name} > ${expenseType.name} > ${expenseItem.name}`,
-                      balance: balance
-                    })
-                  }
+      
+      // Store the hierarchy for possible future use
+      state.expenseData = response.data.data || []
+      
+      // Flatten for dialog selection (same as disbursement)
+      const flattened = []
+      if (state.expenseData && state.expenseData.length > 0) {
+        state.expenseData.forEach(expenseClass => {
+          if (!expenseClass.children) return
+          expenseClass.children.forEach(expenseType => {
+            // Check if this expense type has any expense items with balance > 0
+            const hasExpenseItemsWithBalance = expenseType.children && 
+              expenseType.children.some(item => item.amount && item.amount > 0)
+            
+            if (hasExpenseItemsWithBalance) {
+              // If expense type has items with balance, only show the items (not the type)
+              expenseType.children.forEach(expenseItem => {
+                if (expenseItem.amount && expenseItem.amount > 0) {
+                  flattened.push({
+                    id: expenseItem.id,
+                    account: expenseClass.name,
+                    expenseType: expenseType.name,
+                    expenseItem: expenseItem.name,
+                    balance: expenseItem.amount || 0,
+                    expense_class_id: expenseClass.id,
+                    expense_type_id: expenseType.id,
+                    expense_item_id: expenseItem.id,
+                  })
+                }
+              })
+            } else {
+              // If expense type has no items with balance, show the type itself (if it has balance)
+              if (expenseType.amount && expenseType.amount > 0) {
+                flattened.push({
+                  id: expenseType.id,
+                  account: expenseClass.name,
+                  expenseType: expenseType.name,
+                  expenseItem: null,
+                  balance: expenseType.amount || 0,
+                  expense_class_id: expenseClass.id,
+                  expense_type_id: expenseType.id,
+                  expense_item_id: null,
                 })
               }
-            })
-          }
+            }
+          })
         })
       }
       
-      state.AugexpenseAccounts.value = expenseAccounts
+      // If we're selecting TO expense, filter out the FROM expense
+      if (state.isSelectingToExpense.value && state.forms.value.augExpense?.value) {
+        const fromExpense = state.forms.value.augExpense.value
+        const filtered = flattened.filter(expense => {
+          // Filter out the expense that matches the FROM expense
+          return !(expense.expense_class_id === fromExpense.from_expense_class_id &&
+                   expense.expense_type_id === fromExpense.from_expense_type_id &&
+                   expense.expense_item_id === fromExpense.from_expense_item_id)
+        })
+        state.AugexpenseAccounts.value = filtered
+      } else {
+        state.AugexpenseAccounts.value = flattened
+      }
     } catch (error) {
       console.error('Failed to fetch expense accounts:', error)
       state.AugexpenseAccounts.value = []
+    } finally {
+      state.expenseAccountsLoading.value = false
     }
   }
 
   const saveAugmentation = async () => {
     try {
       const token = authStore.token
+      
+      // Validate required fields
+      if (!state.forms.value.augmentation.augmentation_date) {
+        throw new Error('Augmentation date is required')
+      }
+      if (!state.forms.value.augmentation.remarks) {
+        throw new Error('Remarks are required')
+      }
+      if (!state.Augexpenses.value || state.Augexpenses.value.length === 0) {
+        throw new Error('At least one expense is required')
+      }
+      
+      // Convert date format from DD/MM/YYYY to YYYY-MM-DD for backend
+      let backendDate = state.forms.value.augmentation.augmentation_date
+      if (backendDate && backendDate.includes('/')) {
+        const dateParts = backendDate.split('/')
+        if (dateParts.length === 3) {
+          backendDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`
+        }
+      }
+      
+      // Create backward-compatible payload that matches the original structure
       const payload = {
-        augmentation_date: state.forms.value.augmentation.augmentation_date,
+        augmentation_date: backendDate,
         remarks: state.forms.value.augmentation.remarks,
         details: state.Augexpenses.value.map(expense => ({
-          expense_class_id: expense.expense_class_id,
-          expense_type_id: expense.expense_type_id,
-          expense_item_id: expense.expense_item_id,
+          // Use the new field names that the backend expects
+          from_expense_class_id: expense.from_expense_class_id,
+          from_expense_type_id: expense.from_expense_type_id,
+          from_expense_item_id: expense.from_expense_item_id,
+          // Add transfer information as additional fields
+          transfer_to_expense_class_id: expense.to_expense_class_id,
+          transfer_to_expense_type_id: expense.to_expense_type_id,
+          transfer_to_expense_item_id: expense.to_expense_item_id,
           amount: expense.amount,
           particulars: expense.particulars
         }))
       }
+      
+      console.log('Sending payload:', payload)
 
       let response
       if (state.currentItem.value?.id) {
@@ -143,9 +209,11 @@ export function useAugmentationActions(state) {
       return { success: true, data: response.data.data }
     } catch (error) {
       console.error('Failed to save augmentation:', error)
+      console.error('Error response:', error.response?.data)
+      console.error('Error status:', error.response?.status)
       return { 
         success: false, 
-        error: error.response?.data?.message || 'Failed to save augmentation' 
+        error: error.response?.data?.message || 'Failed to save augmentation'
       }
     }
   }
@@ -153,13 +221,40 @@ export function useAugmentationActions(state) {
   const updateAugmentation = async (id) => {
     try {
       const token = authStore.token
+      
+      // Validate required fields
+      if (!state.forms.value.augmentation.augmentation_date) {
+        throw new Error('Augmentation date is required')
+      }
+      if (!state.forms.value.augmentation.remarks) {
+        throw new Error('Remarks are required')
+      }
+      if (!state.Augexpenses.value || state.Augexpenses.value.length === 0) {
+        throw new Error('At least one expense is required')
+      }
+      
+      // Convert date format from DD/MM/YYYY to YYYY-MM-DD for backend
+      let backendDate = state.forms.value.augmentation.augmentation_date
+      if (backendDate && backendDate.includes('/')) {
+        const dateParts = backendDate.split('/')
+        if (dateParts.length === 3) {
+          backendDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`
+        }
+      }
+      
+      // Create backward-compatible payload that matches the original structure
       const payload = {
-        augmentation_date: state.forms.value.augmentation.augmentation_date,
+        augmentation_date: backendDate,
         remarks: state.forms.value.augmentation.remarks,
         details: state.Augexpenses.value.map(expense => ({
-          expense_class_id: expense.expense_class_id,
-          expense_type_id: expense.expense_type_id,
-          expense_item_id: expense.expense_item_id,
+          // Use the new field names that the backend expects
+          from_expense_class_id: expense.from_expense_class_id,
+          from_expense_type_id: expense.from_expense_type_id,
+          from_expense_item_id: expense.from_expense_item_id,
+          // Add transfer information as additional fields
+          transfer_to_expense_class_id: expense.to_expense_class_id,
+          transfer_to_expense_type_id: expense.to_expense_type_id,
+          transfer_to_expense_item_id: expense.to_expense_item_id,
           amount: expense.amount,
           particulars: expense.particulars
         }))
@@ -181,10 +276,12 @@ export function useAugmentationActions(state) {
       
       return { success: true, data: response.data.data }
     } catch (error) {
-      console.error('Failed to update augmentation:', error)
+            console.error('Failed to update augmentation:', error)
+      console.error('Error response:', error.response?.data)
+      console.error('Error status:', error.response?.status)
       return { 
         success: false, 
-        error: error.response?.data?.message || 'Failed to update augmentation' 
+        error: error.response?.data?.message || 'Failed to update augmentation'
       }
     }
   }
@@ -243,33 +340,104 @@ export function useAugmentationActions(state) {
           refNo: augmentation.ref_number || '',
         }
         
-        state.Augexpenses.value = augmentation.details || []
+        // Map the backend details to the new transfer structure
+        const mappedDetails = (augmentation.details || []).map(detail => {
+          // Build FROM expense account name
+          const fromExpense = buildAccountName(
+            detail.expense_class, 
+            detail.expense_type, 
+            detail.expense_item
+          )
+          
+          // Build TO expense account name
+          const toExpense = detail.transfer_to_expense_class_id ? 
+            buildAccountName(
+              detail.transfer_to_expense_class, 
+              detail.transfer_to_expense_type, 
+              detail.transfer_to_expense_item
+            ) : ''
+          
+          return {
+            id: detail.id,
+            from_expense: fromExpense,
+            to_expense: toExpense,
+            from_expense_class_id: detail.expense_class_id,
+            from_expense_type_id: detail.expense_type_id,
+            from_expense_item_id: detail.expense_item_id,
+            to_expense_class_id: detail.transfer_to_expense_class_id,
+            to_expense_type_id: detail.transfer_to_expense_type_id,
+            to_expense_item_id: detail.transfer_to_expense_item_id,
+            amount: detail.amount,
+            particulars: detail.particulars
+          }
+        })
+        
+        state.Augexpenses.value = mappedDetails
         state.currentItem.value = augmentation
         state.dialogs.value.augmentation = true
       }
     } catch (error) {
       console.error('Failed to edit augmentation:', error)
-  }
+    }
   }
 
   const resetForm = (formName) => {
     if (formName === 'augmentation') {
+      // Reset the augmentation form
       state.forms.value.augmentation = {
         augmentation_date: '',
         remarks: '',
         refNo: '',
       }
+      
+      // Clear all related state
+      state.Augexpenses.value = []
+      state.currentItem.value = null
+      
+      // Generate fresh defaults including new ref number
+      generateNewAugmentationDefaults()
     } else if (formName === 'augExpense') {
       state.forms.value.augExpense = {
         expense_class_id: null,
         expense_type_id: null,
         expense_item_id: null,
+        from_expense: '',
+        to_expense: '',
+        from_expense_class_id: null,
+        from_expense_type_id: null,
+        from_expense_item_id: null,
+        to_expense_class_id: null,
+        to_expense_type_id: null,
+        to_expense_item_id: null,
         account: '',
         balance: 0,
         particulars: '',
         amount: 0,
       }
     }
+  }
+
+  const generateNewAugmentationDefaults = () => {
+    const today = new Date()
+    const dd = String(today.getDate()).padStart(2, '0')
+    const mm = String(today.getMonth() + 1).padStart(2, '0')
+    const yyyy = today.getFullYear()
+
+    // Generate new ref number
+    const lastRef = state.augmentation.value.reduce((max, a) => {
+      const num = parseInt(a.ref_number?.split('-')?.pop()) || 0
+      return Math.max(max, num)
+    }, 0)
+    const newRefNumber = `AUG-${String(yyyy).slice(-2)}-${mm}-${String(lastRef + 1).padStart(3, '0')}`
+
+    // Update form with new defaults
+    state.forms.value.augmentation.augmentation_date = `${dd}/${mm}/${yyyy}`
+    state.forms.value.augmentation.refNo = newRefNumber
+  }
+
+  const refreshAugmentationDialog = () => {
+    // Completely reset all augmentation dialog state
+    resetForm('augmentation')
   }
 
   return {
@@ -281,5 +449,7 @@ export function useAugmentationActions(state) {
     fetchAugmentationById,
     editAugmentation,
     resetForm,
+    generateNewAugmentationDefaults,
+    refreshAugmentationDialog,
   }
 }
