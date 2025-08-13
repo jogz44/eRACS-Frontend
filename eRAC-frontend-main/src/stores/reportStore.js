@@ -4,12 +4,10 @@ import { useAuthStore } from './auth'
 
 export const useReportStore = defineStore("reportStore", {
   state: () => ({
-    barangayID: '',
 
     reportRAC: [],
     toDateRAC: '',
     fromDateRAC: '',
-    expenseID: 'Lol',
     
     reportSACB: [],
     toDateSACB: '',
@@ -22,8 +20,11 @@ export const useReportStore = defineStore("reportStore", {
     certPosition: null,
     
     expenseOptionsCurrent: [],
+    expenseSelectedCurrent: null,
     expenseOptionsContinuing: [],
+    expenseSelectedContinuing: null,
     positionsOptions: [],
+    positionSelected: null,
 
     loadingRAC: false,
     loadingSACB: false,
@@ -43,18 +44,11 @@ export const useReportStore = defineStore("reportStore", {
         },
       }
     },
-    async loadPositionsOptions() {
-        const config = this.getAuthConfig()
-        const positions = await api.get('/api/barangay/positions', config)
-        return positions.data.data.map(pos => ({
-          label: pos.name,
-          value: pos.id
-        }))
-      },
-    async fetchExpenseClass() {
+    async fetchData() {
       try{
         const config = this.getAuthConfig();
         const expenseClasses = await api.get('/api/barangay/expense-classes', config);
+        const positionsOptions = await api.get('/api/barangay/positions', config);
 
         const list = expenseClasses?.data?.data?.data || [];
 
@@ -62,7 +56,16 @@ export const useReportStore = defineStore("reportStore", {
           id: expense.id,
           name: expense.name
         }));
-        return this.expenseOptionsCurrent
+
+        this.expenseOptionsContinuing = list.map(expense => ({
+          id: expense.id,
+          name: expense.name
+        }));
+
+        this.positionsOptions = positionsOptions?.data?.map(pos => ({
+          label: pos.name,
+          value: pos.id
+        })) || [];
       } catch (error) {
         console.error('Error:', error)
         throw error
