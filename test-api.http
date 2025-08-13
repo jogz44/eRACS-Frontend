@@ -2,8 +2,8 @@
 # GET http://localhost:8000/api/barangay/barangays
 # Accept: application/json
 
-GET http://localhost:8000/api/barangay/expense-classes
-Authorization: Bearer 12|JtqGWYjjLgaDRegouNST9teZvmfozB052VwrXZcy13024f57
+GET http://localhost:8000/api/barangay/expense-classes?fiscal_year=2025
+Authorization: Bearer 13|XYdOoMYh19qmdYefIOR7ZFyizdQy0YCtVz88O95K9e5eb85d
 Accept: application/json
 
 # GET http://localhost:8000/api/user
