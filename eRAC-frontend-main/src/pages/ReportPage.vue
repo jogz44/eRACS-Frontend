@@ -25,6 +25,7 @@
       <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-4">
+
               <q-input
         bg-color="white"
         outlined
@@ -48,6 +49,7 @@
           </q-icon>
         </template>
       </q-input>
+
           </div>
 
 
@@ -72,6 +74,7 @@
       <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-6">
+
                    <q-input
         bg-color="white"
         outlined
@@ -95,6 +98,7 @@
           </q-icon>
         </template>
       </q-input>
+
           </div>
 
 
@@ -120,6 +124,7 @@
       <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-4">
+
             <q-input
               bg-color="white"
               outlined
@@ -139,6 +144,7 @@
                       range
                       @update:model-value="onContinuingDateRangeChange"
                     />
+
                   </q-popup-proxy>
                 </q-icon>
               </template>
@@ -166,6 +172,7 @@
       <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-6">
+
             <q-input
               bg-color="white"
               outlined
@@ -185,6 +192,7 @@
                       range
                       @update:model-value="onContinuingSacbDateRangeChange"
                     />
+
                   </q-popup-proxy>
                 </q-icon>
               </template>
@@ -241,12 +249,6 @@
         </q-card-section>
 
         <q-card-section>
-          <div class="row justify-between q-gutter-sm q-mb-md">
-            <div class="row q-gutter-sm">
-              <q-btn outline label="Load Reports" color="orange" />
-              <q-btn outline label="Export Reports" color="green" />
-            </div>
-          </div>
 
           <q-separator class="q-my-md" />
 
@@ -274,6 +276,7 @@
 
         <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancel" color="grey-7" @click="closeSACBModal" />
+          <q-btn outline label="Export Reports" color="green" />
           <q-btn unelevated label="Print" color="primary" @click="handleSACBPrint" />
         </q-card-actions>
       </q-card>
@@ -281,41 +284,78 @@
 
     <!-- RAC Modal -->
 
-    <q-dialog v-model="RACModal.show" persistent>
-      <q-card class="print-modal">
-        <q-card-section class="q-pb-none">
-          <div class="text-h6">
-            {{ RACModal.reportType }}</div>
-        </q-card-section>
+    <q-dialog v-model="RACModal.show" maximized transition-show="slide-up" transition-hide="slide-down">
+      <q-card class="bg-transparent full-height pages-group scroll q-pa-md">
 
-        <q-card-section class="q-pb-none">
-          <div class="text-h6">Barangay {{ authStore.user?.barangay_name }}</div>
-        </q-card-section>
-
-
-        <q-card-section>
-          <div class="q-mt-md">
-            <div class="text-subtitle1 q-mb-sm">Expense Class: {{ reportStore.expenseSelectedCurrent?.name }}</div>
-            <q-table :rows="RACModal.report" :columns="activityColumns" row-key="id" :pagination="{ rowsPerPage: 5 }"
-              flat bordered>
-              <template v-slot:body-cell-time="props">
-                <q-td :props="props">
-                  <div class="text-caption">{{ props.value }}</div>
-                </q-td>
-              </template>
-              <template v-slot:body-cell-description="props">
-                <q-td :props="props">
-                  <div class="text-body2">{{ props.value }}</div>
-                </q-td>
-              </template>
-            </q-table>
-          </div>
-        </q-card-section>
-
-        <q-card-actions align="right" class="q-pa-md">
+        <!-- Header menu -->
+        <q-card-actions align="right" class="q-pa-md bg-grey-2" style="position: sticky; top: 0; z-index: 10;">
           <q-btn flat label="Cancel" color="grey-7" @click="closeRACModal" />
+          <q-btn outline label="Export Reports" color="green" />
           <q-btn unelevated label="Print" color="primary" @click="handleRACPrint" />
         </q-card-actions>
+
+        <!-- Page 1 -->
+        <q-card class="print-modal q-mb-lg">
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">
+              {{ RACModal.reportType }}
+            </div>
+          </q-card-section>
+
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">Barangay {{ authStore.user?.barangay_name }}</div>
+          </q-card-section>
+          <q-card-section>
+            <div class="q-mt-md">
+              <div class="text-subtitle1 q-mb-sm">Expense Class: {{ reportStore.expenseSelectedCurrent?.name }}</div>
+              <q-table :rows="RACModal.report" :columns="activityColumns" row-key="id" :pagination="{ rowsPerPage: 5 }"
+                flat bordered>
+                <template v-slot:body-cell-time="props">
+                  <q-td :props="props">
+                    <div class="text-caption">{{ props.value }}</div>
+                  </q-td>
+                </template>
+                <template v-slot:body-cell-description="props">
+                  <q-td :props="props">
+                    <div class="text-body2">{{ props.value }}</div>
+                  </q-td>
+                </template>
+              </q-table>
+            </div>
+          </q-card-section>
+        </q-card>
+
+        <!-- Page 2 -->
+        <q-card class="print-modal">
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">
+              {{ RACModal.reportType }}
+            </div>
+          </q-card-section>
+
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">Barangay {{ authStore.user?.barangay_name }}</div>
+          </q-card-section>
+          <q-card-section>
+            <div class="q-mt-md">
+              <div class="text-subtitle1 q-mb-sm">Expense Class: {{ reportStore.expenseSelectedCurrent?.name }}</div>
+              <q-table :rows="RACModal.report" :columns="activityColumns" row-key="id" :pagination="{ rowsPerPage: 5 }"
+                flat bordered>
+                <template v-slot:body-cell-time="props">
+                  <q-td :props="props">
+                    <div class="text-caption">{{ props.value }}</div>
+                  </q-td>
+                </template>
+                <template v-slot:body-cell-description="props">
+                  <q-td :props="props">
+                    <div class="text-body2">{{ props.value }}</div>
+                  </q-td>
+                </template>
+              </q-table>
+            </div>
+          </q-card-section>
+        </q-card>
+
       </q-card>
 
     </q-dialog>
@@ -401,6 +441,17 @@ const loadAllData = async () => {
 }
 
 const openSACBModal = (type) => {
+  if (type === 'current-sacb') {
+    if (!currentSacbDateRange.value.from || !currentSacbDateRange.value.to) {
+      return notifyError('Please select a valid current SACB date range.')
+    }
+  } else if (type === 'continuing-sacb') {
+    if (!continuingSacbDateRange.value.from || !continuingSacbDateRange.value.to) {
+      return notifyError('Please select a valid continuing SACB date range.')
+    }
+  }
+
+
   SACBModal.reportType = getReportTypeLabel(type)
   SACBModal.show = true
 }
@@ -408,13 +459,16 @@ const openSACBModal = (type) => {
 const closeSACBModal = () => { SACBModal.show = false }
 
 const openRACModal = (type) => {
-  // if (!current.racFrom || !current.racTo) {
-  //   return notifyError('Please select both From and To dates.')
-  // }
-  // if (current.racFrom >= current.racTo) {
-  //   return notifyError('The From date must be before the To date.')
-  // }
-  if (!reportStore.expenseSelectedCurrent) {
+  if (
+    (type === 'current-rac' && (!dateRange.value.from || !dateRange.value.to)) ||
+    (type === 'continuing-rac' && (!continuingDateRange.value.from || !continuingDateRange.value.to))
+  ) {
+    return notifyError('Please select a valid date range.')
+  }
+  if (
+    (type === 'current-rac' && !reportStore.expenseSelectedCurrent) ||
+    (type === 'continuing-rac' && !reportStore.expenseSelectedContinuing)
+  ) {
     return notifyError('Please select an Expense Category.')
   }
   RACModal.reportType = getReportTypeLabel(type)
@@ -431,6 +485,12 @@ const getReportTypeLabel = (type) => ({
 }[type] || 'Unknown Report')
 
 const handleSACBPrint = () => {
+  if (dateRangeDisplay.value === '') {
+    return notifyError('Please select a date range.')
+  }
+  if (dateRange.value.from === '' || dateRange.value.to === '') {
+    return notifyError('Please select a valid date range.')
+  }
   console.log('Printing report:', SACBModal.reportType)
   closeSACBModal()
   notifySuccess('Report sent to printer successfully!')
@@ -587,6 +647,49 @@ onActivated(async () => {
   width: min(100%, 210mm);
   max-height: 90vh;
   overflow-y: auto;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+
+/* Custom date range styling */
+.custom-date-range {
+  transition: all 0.3s ease;
+}
+
+.custom-date-range:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.calend-icon {
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.calend-icon:hover {
+  color: #1976d2;
+}
+
+/* Input and button enhancements */
+.q-input,
+.q-select {
+  background-color: white;
+  transition: all 0.3s ease;
+}
+
+.q-input:hover,
+.q-select:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.q-btn {
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.q-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Custom date range styling */
@@ -650,7 +753,8 @@ onActivated(async () => {
     min-width: 90vw;
     max-width: 95vw;
   }
-  
+
+
   .report-card {
     margin-bottom: 20px;
   }
@@ -669,7 +773,7 @@ onActivated(async () => {
   .subsection-title {
     font-size: 1rem;
   }
-  
+
   .section-header {
     margin-bottom: 20px;
   }

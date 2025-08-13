@@ -47,7 +47,9 @@ export const useReportStore = defineStore("reportStore", {
     async fetchData() {
       try{
         const config = this.getAuthConfig();
-        const expenseClasses = await api.get('/api/barangay/expense-classes', config);
+        const currentYear = new Date().getFullYear();
+        const expenseClasses = await api.get(
+          `/api/barangay/expense-classes?fiscal_year=${currentYear}`, config);
         const positionsOptions = await api.get('/api/barangay/positions', config);
 
         const list = expenseClasses?.data?.data?.data || [];
