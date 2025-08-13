@@ -22,79 +22,83 @@
         <div class="subsection-title">Registry of Appropriation and Commitment (RAC)</div>
       </q-card-section>
 
-      <q-card-section>
-        <div class="row q-col-gutter-md items-end">
-          <div class="col-12 col-sm-6 col-md-3">
-            <q-input outlined dense label="From" v-model="racDateFromCurrent" mask="##/##/####"
-              placeholder="25/11/2022">
-              <template v-slot:append>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy>
-                    <q-date v-model="racDateFromCurrent" mask="DD/MM/YYYY" />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
+      <q-card-section class="q-pt-md">
+        <div class="row q-col-gutter-lg items-end">
+          <div class="col-12 col-sm-6 col-md-4">
+              <q-input
+        bg-color="white"
+        outlined
+        dense
+        :model-value="dateRangeDisplay"
+        label="Date Range"
+        class="custom-date-range"
+        clearable
+        @clear="onDateRangeClear"
+        readonly
+      >
+        <template v-slot:append>
+          <q-icon name="event" class="calend-icon">
+            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+              <q-date
+                v-model="dateRange"
+                range
+                @update:model-value="onDateRangeChange"
+              />
+            </q-popup-proxy>
+          </q-icon>
+        </template>
+      </q-input>
           </div>
 
-          <div class="col-12 col-sm-6 col-md-3">
-            <q-input outlined dense label="To" v-model="racDateToCurrent" mask="##/##/####" placeholder="25/11/2022">
-              <template v-slot:append>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy>
-                    <q-date v-model="racDateToCurrent" mask="DD/MM/YYYY" />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
-          </div>
 
           <div class="col-12 col-sm-6 col-md-4">
             <q-select outlined dense v-model="reportStore.expenseSelectedCurrent" label="Expense Category"
               :options="reportStore.expenseOptionsCurrent" map-options option-label="name" option-value="id" />
           </div>
 
-          <div class="col-12 col-sm-6 col-md-2">
+          <div class="col-12 col-sm-6 col-md-4">
             <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
               @click="openRACModal('current-rac')" />
           </div>
         </div>
       </q-card-section>
 
-      <q-separator class="q-my-md" />
+      <q-separator class="q-my-lg" />
 
       <q-card-section class="q-pb-none">
         <div class="subsection-title">Status of Appropriation and Obligation (SACB)</div>
       </q-card-section>
 
-      <q-card-section>
-        <div class="row q-col-gutter-md items-end">
-          <div class="col-12 col-sm-6 col-md-4">
-            <q-input outlined dense label="From" v-model="sacbDateFromCurrent" mask="##/##/####"
-              placeholder="25/11/2022">
-              <template v-slot:append>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy>
-                    <q-date v-model="sacbDateFromCurrent" mask="DD/MM/YYYY" />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
+      <q-card-section class="q-pt-md">
+        <div class="row q-col-gutter-lg items-end">
+          <div class="col-12 col-sm-6 col-md-6">
+                   <q-input
+        bg-color="white"
+        outlined
+        dense
+        :model-value="dateRangeDisplay"
+        label="Date Range"
+        class="custom-date-range"
+        clearable
+        @clear="onDateRangeClear"
+        readonly
+      >
+        <template v-slot:append>
+          <q-icon name="event" class="calend-icon">
+            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+              <q-date
+                v-model="dateRange"
+                range
+                @update:model-value="onDateRangeChange"
+              />
+            </q-popup-proxy>
+          </q-icon>
+        </template>
+      </q-input>
           </div>
 
-          <div class="col-12 col-sm-6 col-md-4">
-            <q-input outlined dense label="To" v-model="sacbDateToCurrent" mask="##/##/####" placeholder="25/11/2022">
-              <template v-slot:append>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy>
-                    <q-date v-model="sacbDateToCurrent" mask="DD/MM/YYYY" />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
-          </div>
 
-          <div class="col-12 col-sm-12 col-md-4">
+          <div class="col-12 col-sm-6 col-md-6">
             <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
               @click="openSACBModal('current-sacb')" />
           </div>
@@ -113,26 +117,28 @@
         <div class="subsection-title">Registry of Appropriation and Commitment (RAC)</div>
       </q-card-section>
 
-      <q-card-section>
-        <div class="row q-col-gutter-md items-end">
-          <div class="col-12 col-sm-6 col-md-3">
-            <q-input outlined dense label="From" v-model="racDateFromCont" mask="##/##/####" placeholder="25/11/2022">
+      <q-card-section class="q-pt-md">
+        <div class="row q-col-gutter-lg items-end">
+          <div class="col-12 col-sm-6 col-md-4">
+            <q-input
+              bg-color="white"
+              outlined
+              dense
+              :model-value="continuingDateRangeDisplay"
+              label="Date Range"
+              class="custom-date-range"
+              clearable
+              @clear="onContinuingDateRangeClear"
+              readonly
+            >
               <template v-slot:append>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy>
-                    <q-date v-model="racDateFromCont" mask="DD/MM/YYYY" />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
-          </div>
-
-          <div class="col-12 col-sm-6 col-md-3">
-            <q-input outlined dense label="To" v-model="racDateToCont" mask="##/##/####" placeholder="25/11/2022">
-              <template v-slot:append>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy>
-                    <q-date v-model="racDateToCont" mask="DD/MM/YYYY" />
+                <q-icon name="event" class="calend-icon">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date
+                      v-model="continuingDateRange"
+                      range
+                      @update:model-value="onContinuingDateRangeChange"
+                    />
                   </q-popup-proxy>
                 </q-icon>
               </template>
@@ -144,47 +150,49 @@
               map-options :options="reportStore.expenseOptionsContinuing" option-value="id" option-label="name" />
           </div>
 
-          <div class="col-12 col-sm-6 col-md-2">
+          <div class="col-12 col-sm-6 col-md-4">
             <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
               @click="openRACModal('continuing-rac')" />
           </div>
         </div>
       </q-card-section>
 
-      <q-separator class="q-my-md" />
+      <q-separator class="q-my-lg" />
 
       <q-card-section class="q-pb-none">
         <div class="subsection-title">Status of Appropriation and Obligation (SACB)</div>
       </q-card-section>
 
-      <q-card-section>
-        <div class="row q-col-gutter-md items-end">
-          <div class="col-12 col-sm-6 col-md-4">
-            <q-input outlined dense label="From" v-model="sacbDateFromCont" mask="##/##/####" placeholder="25/11/2022">
+      <q-card-section class="q-pt-md">
+        <div class="row q-col-gutter-lg items-end">
+          <div class="col-12 col-sm-6 col-md-6">
+            <q-input
+              bg-color="white"
+              outlined
+              dense
+              :model-value="continuingDateRangeDisplay"
+              label="Date Range"
+              class="custom-date-range"
+              clearable
+              @clear="onContinuingDateRangeClear"
+              readonly
+            >
               <template v-slot:append>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy>
-                    <q-date v-model="sacbDateFromCont" mask="DD/MM/YYYY" />
+                <q-icon name="event" class="calend-icon">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date
+                      v-model="continuingDateRange"
+                      range
+                      @update:model-value="onContinuingDateRangeChange"
+                    />
                   </q-popup-proxy>
                 </q-icon>
               </template>
             </q-input>
           </div>
 
-          <div class="col-12 col-sm-6 col-md-4">
-            <q-input outlined dense label="To" v-model="sacbDateToCont" mask="##/##/####" placeholder="25/11/2022">
-              <template v-slot:append>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy>
-                    <q-date v-model="sacbDateToCont" mask="DD/MM/YYYY" />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
-          </div>
-
-          <div class="col-12 col-sm-12 col-md-4">
-            <q-btn color="primary" icon="settings" label="Generate Report" class="full-width" style="width: 100px;"
+          <div class="col-12 col-sm-6 col-md-6">
+            <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
               @click="openSACBModal('continuing-sacb')" />
           </div>
         </div>
@@ -309,7 +317,7 @@
           <q-btn unelevated label="Print" color="primary" @click="handleRACPrint" />
         </q-card-actions>
       </q-card>
-      
+
     </q-dialog>
   </q-page>
 </template>
@@ -328,6 +336,10 @@ const authStore = useAuthStore()
 /* -------------------- STATE -------------------- */
 const showSetupDialog = ref(false)
 const loading = ref(false)
+
+// Date ranges
+const dateRange = ref({ from: '', to: '' })
+const continuingDateRange = ref({ from: '', to: '' })
 
 // Modals
 const RACModal = reactive({
@@ -428,6 +440,22 @@ const handleRACPrint = () => {
   notifySuccess('Report sent to printer successfully!')
 }
 
+const onDateRangeChange = (newRange) => {
+  dateRange.value = newRange
+}
+
+const onDateRangeClear = () => {
+  dateRange.value = { from: '', to: '' }
+}
+
+const onContinuingDateRangeChange = (newRange) => {
+  continuingDateRange.value = newRange
+}
+
+const onContinuingDateRangeClear = () => {
+  continuingDateRange.value = { from: '', to: '' }
+}
+
 /* -------------------- HELPERS -------------------- */
 const notifyError = (msg) => $q.notify({ type: 'negative', message: msg, position: 'top' })
 const notifySuccess = (msg) => $q.notify({ type: 'positive', message: msg, position: 'top' })
@@ -437,6 +465,20 @@ const activityColumns = computed(() => [
   { name: 'time', label: 'Time', field: 'time', align: 'left', sortable: true, style: 'width: 120px' },
   { name: 'description', label: 'Activity Description', field: 'description', align: 'left', sortable: true }
 ])
+
+const dateRangeDisplay = computed(() => {
+  if (!dateRange.value.from && !dateRange.value.to) return ''
+  if (dateRange.value.from && !dateRange.value.to) return `From ${dateRange.value.from}`
+  if (!dateRange.value.from && dateRange.value.to) return `To ${dateRange.value.to}`
+  return `${dateRange.value.from} - ${dateRange.value.to}`
+})
+
+const continuingDateRangeDisplay = computed(() => {
+  if (!continuingDateRange.value.from && !continuingDateRange.value.to) return ''
+  if (continuingDateRange.value.from && !continuingDateRange.value.to) return `From ${continuingDateRange.value.from}`
+  if (!continuingDateRange.value.from && continuingDateRange.value.to) return `To ${continuingDateRange.value.to}`
+  return `${continuingDateRange.value.from} - ${continuingDateRange.value.to}`
+})
 
 /* -------------------- LIFECYCLE -------------------- */
 onMounted(async () => {
@@ -502,7 +544,7 @@ onActivated(async () => {
   /* A4 aspect ratio (height / width = 1.414) */
   aspect-ratio: 310 / 397;
 
-  
+
   max-width: 100%;
   width: min(100%, 210mm);
   max-height: 90vh;
