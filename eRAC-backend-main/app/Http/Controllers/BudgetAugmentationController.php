@@ -54,6 +54,23 @@ class BudgetAugmentationController extends Controller
      */
     private function findAppropriation($barangayId, $budgetId, $expenseClassId, $expenseTypeId, $expenseItemId = null)
     {
+        // If budgetId is null, search across all budgets
+        if ($budgetId === null) {
+            $appropriation = TranAppropriation::where('barangay_id', $barangayId)
+                ->where('expense_class_id', $expenseClassId)
+                ->where('expense_type_id', $expenseTypeId)
+                ->where('status', 'committed')
+                ->when($expenseItemId !== null, function($query) use ($expenseItemId) {
+                    return $query->where('expense_item_id', $expenseItemId);
+                })
+                ->when($expenseItemId === null, function($query) {
+                    return $query->whereNull('expense_item_id');
+                })
+                ->first();
+
+            return $appropriation;
+        }
+
         // Strategy 1: Try to find exact match in the specified budget
         $appropriation = TranAppropriation::where('barangay_id', $barangayId)
             ->where('budget_id', $budgetId)
@@ -228,22 +245,27 @@ class BudgetAugmentationController extends Controller
             // Calculate total amount
             $totalAmount = collect($request->details)->sum('amount');
 
-            // Get the default budget for the barangay (first available budget)
-            $defaultBudget = Budget::where('barangay_id', $request->user()->barangay_id)
-                ->where('current_amount', '>', 0)
-                ->first();
+            // Find the first appropriation to determine the budget
+            $firstDetail = $request->details[0];
+            $firstFromAppropriation = $this->findAppropriation(
+                $request->user()->barangay_id,
+                null, // Don't specify budget_id, let findAppropriation find it
+                $firstDetail['from_expense_class_id'],
+                $firstDetail['from_expense_type_id'],
+                $firstDetail['from_expense_item_id'] ?? null
+            );
 
-            if (!$defaultBudget) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'No available budget found for augmentation'
-                ], 422);
+            if (!$firstFromAppropriation) {
+                throw new \Exception('Source appropriation not found for FROM expense: Class ID ' . $firstDetail['from_expense_class_id'] . ', Type ID ' . $firstDetail['from_expense_type_id'] . ', Item ID ' . ($firstDetail['from_expense_item_id'] ?? 'null'));
             }
+
+            // Get the budget from the first appropriation
+            $correctBudget = $firstFromAppropriation->budget;
 
             // Create budget augmentation
             $augmentation = BudgetAugmentation::create([
                 'barangay_id' => $request->user()->barangay_id,
-                'budget_id' => $defaultBudget->id,
+                'budget_id' => $correctBudget->id,
                 'ref_number' => $refNumber,
                 'augmentation_date' => $request->augmentation_date,
                 'total_amount' => $totalAmount,
@@ -256,7 +278,7 @@ class BudgetAugmentationController extends Controller
                 // Find source appropriation (FROM expense)
                 $fromAppropriation = $this->findAppropriation(
                     $request->user()->barangay_id,
-                    $defaultBudget->id,
+                    $correctBudget->id,
                     $detail['from_expense_class_id'],
                     $detail['from_expense_type_id'],
                     $detail['from_expense_item_id'] ?? null
@@ -265,7 +287,7 @@ class BudgetAugmentationController extends Controller
                 // Find destination appropriation (TO expense)
                 $toAppropriation = $this->findAppropriation(
                     $request->user()->barangay_id,
-                    $defaultBudget->id,
+                    $correctBudget->id,
                     $detail['transfer_to_expense_class_id'],
                     $detail['transfer_to_expense_type_id'],
                     $detail['transfer_to_expense_item_id'] ?? null
@@ -282,6 +304,22 @@ class BudgetAugmentationController extends Controller
                 // Perform the actual money transfer
                 $transferResult = $this->performTransfer($fromAppropriation, $toAppropriation, $detail['amount']);
 
+                // Adjust budgets if transfer crosses budgets
+                $fromBudgetId = $fromAppropriation->budget_id;
+                $toBudgetId = $toAppropriation->budget_id;
+                if ($fromBudgetId !== $toBudgetId) {
+                    // Deduct from source budget's augmentation (money moved out)
+                    $fromBudget = \App\Models\Budget::find($fromBudgetId);
+                    if ($fromBudget) {
+                        $fromBudget->decrement('augmentation', $detail['amount']);
+                    }
+                    // Add to destination budget's augmentation (money moved in)
+                    $toBudget = \App\Models\Budget::find($toBudgetId);
+                    if ($toBudget) {
+                        $toBudget->increment('augmentation', $detail['amount']);
+                    }
+                }
+
                 // Create augmentation detail record
                 BudgetAugmentationDetail::create([
                     'budget_augmentation_id' => $augmentation->id,
@@ -296,9 +334,10 @@ class BudgetAugmentationController extends Controller
                 ]);
             }
 
-            // Update budget augmentation amount
-            $defaultBudget->increment('augmentation', $totalAmount);
-            $defaultBudget->increment('current_amount', $totalAmount);
+            // Note: Budget augmentation per budget was adjusted per-detail when crossing budgets.
+            // No aggregate adjustment here to avoid double counting.
+            
+
 
             return response()->json([
                 'status' => true,
@@ -374,8 +413,26 @@ class BudgetAugmentationController extends Controller
             $newTotalAmount = collect($request->details)->sum('amount');
             $oldTotalAmount = $augmentation->total_amount;
 
+            // Find the first appropriation to determine the new budget
+            $firstDetail = $request->details[0];
+            $firstFromAppropriation = $this->findAppropriation(
+                $augmentation->barangay_id,
+                null, // Don't specify budget_id, let findAppropriation find it
+                $firstDetail['from_expense_class_id'],
+                $firstDetail['from_expense_type_id'],
+                $firstDetail['from_expense_item_id'] ?? null
+            );
+
+            if (!$firstFromAppropriation) {
+                throw new \Exception('Source appropriation not found for FROM expense: Class ID ' . $firstDetail['from_expense_class_id'] . ', Type ID ' . $firstDetail['from_expense_type_id'] . ', Item ID ' . ($firstDetail['from_expense_item_id'] ?? 'null'));
+            }
+
+            // Get the new budget from the first appropriation
+            $newBudget = $firstFromAppropriation->budget;
+
             // Update budget augmentation
             $augmentation->update([
+                'budget_id' => $newBudget->id,
                 'augmentation_date' => $request->augmentation_date,
                 'total_amount' => $newTotalAmount,
                 'remarks' => $request->remarks
@@ -385,7 +442,7 @@ class BudgetAugmentationController extends Controller
             foreach ($augmentation->details as $oldDetail) {
                 $oldFromAppropriation = $this->findAppropriation(
                     $augmentation->barangay_id,
-                    $augmentation->budget_id,
+                    null,
                     $oldDetail->from_expense_class_id,
                     $oldDetail->from_expense_type_id,
                     $oldDetail->from_expense_item_id
@@ -393,7 +450,7 @@ class BudgetAugmentationController extends Controller
 
                 $oldToAppropriation = $this->findAppropriation(
                     $augmentation->barangay_id,
-                    $augmentation->budget_id,
+                    null,
                     $oldDetail->transfer_to_expense_class_id,
                     $oldDetail->transfer_to_expense_type_id,
                     $oldDetail->transfer_to_expense_item_id
@@ -403,6 +460,20 @@ class BudgetAugmentationController extends Controller
                     // Reverse the old transfer
                     $oldFromAppropriation->increment('amount', $oldDetail->amount);
                     $oldToAppropriation->decrement('amount', $oldDetail->amount);
+
+                    // Reverse budget augmentation effects if transfer crossed budgets
+                    if ($oldFromAppropriation->budget_id !== $oldToAppropriation->budget_id) {
+                        $fromBudget = \App\Models\Budget::find($oldFromAppropriation->budget_id);
+                        $toBudget = \App\Models\Budget::find($oldToAppropriation->budget_id);
+                        if ($fromBudget) {
+                            // Money returns to source budget: augmentation increases back
+                            $fromBudget->increment('augmentation', $oldDetail->amount);
+                        }
+                        if ($toBudget) {
+                            // Money removed from destination budget: augmentation decreases
+                            $toBudget->decrement('augmentation', $oldDetail->amount);
+                        }
+                    }
                 }
             }
 
@@ -414,7 +485,7 @@ class BudgetAugmentationController extends Controller
                 // Find source appropriation (FROM expense)
                 $fromAppropriation = $this->findAppropriation(
                     $augmentation->barangay_id,
-                    $augmentation->budget_id,
+                    $newBudget->id,
                     $detail['from_expense_class_id'],
                     $detail['from_expense_type_id'],
                     $detail['from_expense_item_id'] ?? null
@@ -423,7 +494,7 @@ class BudgetAugmentationController extends Controller
                 // Find destination appropriation (TO expense)
                 $toAppropriation = $this->findAppropriation(
                     $augmentation->barangay_id,
-                    $augmentation->budget_id,
+                    $newBudget->id,
                     $detail['transfer_to_expense_class_id'],
                     $detail['transfer_to_expense_type_id'],
                     $detail['transfer_to_expense_item_id'] ?? null
@@ -440,6 +511,18 @@ class BudgetAugmentationController extends Controller
                 // Perform the actual money transfer
                 $transferResult = $this->performTransfer($fromAppropriation, $toAppropriation, $detail['amount']);
 
+                // Adjust budgets if transfer crosses budgets
+                if ($fromAppropriation->budget_id !== $toAppropriation->budget_id) {
+                    $fromBudget = \App\Models\Budget::find($fromAppropriation->budget_id);
+                    $toBudget = \App\Models\Budget::find($toAppropriation->budget_id);
+                    if ($fromBudget) {
+                        $fromBudget->decrement('augmentation', $detail['amount']);
+                    }
+                    if ($toBudget) {
+                        $toBudget->increment('augmentation', $detail['amount']);
+                    }
+                }
+
                 // Create augmentation detail record
                 BudgetAugmentationDetail::create([
                     'budget_augmentation_id' => $augmentation->id,
@@ -454,12 +537,7 @@ class BudgetAugmentationController extends Controller
                 ]);
             }
 
-            // Update budget amounts
-            $budget = $augmentation->budget;
-            $budget->decrement('augmentation', $oldTotalAmount);
-            $budget->decrement('current_amount', $oldTotalAmount);
-            $budget->increment('augmentation', $newTotalAmount);
-            $budget->increment('current_amount', $newTotalAmount);
+            // Budget augmentation values were adjusted per-detail above to reflect cross-budget transfers.
 
             return response()->json([
                 'status' => true,
@@ -481,7 +559,7 @@ class BudgetAugmentationController extends Controller
             foreach ($augmentation->details as $detail) {
                 $fromAppropriation = $this->findAppropriation(
                     $augmentation->barangay_id,
-                    $augmentation->budget_id,
+                    null,
                     $detail->from_expense_class_id,
                     $detail->from_expense_type_id,
                     $detail->from_expense_item_id
@@ -489,7 +567,7 @@ class BudgetAugmentationController extends Controller
 
                 $toAppropriation = $this->findAppropriation(
                     $augmentation->barangay_id,
-                    $augmentation->budget_id,
+                    null,
                     $detail->transfer_to_expense_class_id,
                     $detail->transfer_to_expense_type_id,
                     $detail->transfer_to_expense_item_id
@@ -499,13 +577,22 @@ class BudgetAugmentationController extends Controller
                     // Reverse the transfer
                     $fromAppropriation->increment('amount', $detail->amount);
                     $toAppropriation->decrement('amount', $detail->amount);
+
+                    // Reverse budget augmentation effects if transfer crossed budgets
+                    if ($fromAppropriation->budget_id !== $toAppropriation->budget_id) {
+                        $fromBudget = \App\Models\Budget::find($fromAppropriation->budget_id);
+                        $toBudget = \App\Models\Budget::find($toAppropriation->budget_id);
+                        if ($fromBudget) {
+                            $fromBudget->increment('augmentation', $detail->amount);
+                        }
+                        if ($toBudget) {
+                            $toBudget->decrement('augmentation', $detail->amount);
+                        }
+                    }
                 }
             }
 
-            // Update budget amounts
-            $budget = $augmentation->budget;
-            $budget->decrement('augmentation', $augmentation->total_amount);
-            $budget->decrement('current_amount', $augmentation->total_amount);
+            // Budget augmentation values were previously adjusted per-detail; no aggregate change here
 
             // Delete augmentation and details
             $augmentation->delete();
