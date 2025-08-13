@@ -17,6 +17,12 @@ export const useAuthStore = defineStore('auth', {
    getters: {
     isAuthenticated: (state) => !!state.token,
     currentUser: (state) => state.user,
+    
+    // Admin role getters
+    isSuperAdmin: (state) => state.admin?.role === 'super_admin',
+    isAccounting: (state) => state.admin?.role === 'accounting',
+    isCOA: (state) => state.admin?.role === 'coa',
+    canManageUsers: (state) => state.admin?.role === 'super_admin',
   },
 
 

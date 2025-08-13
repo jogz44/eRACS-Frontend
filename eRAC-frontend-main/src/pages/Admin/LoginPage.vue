@@ -5,15 +5,16 @@
       <div class="photo-container">
         <div class="photo-overlay">
           <div class="overlay-content">
-                  <div class="welcome-text">
-              <h5 class="welcome-title">Welcome</h5>
-              <h5 class="to-text">to</h5>
-              <h5 class="erac-title">eRAC</h5>
+                  <div class="welcome-text ">
+              <h6 class="welcome-title q-pb-md">Welcome </h6>
+              <h6 class="to-text q-pb-md">to</h6>
+              <h6 class="erac-title">eRAC</h6>
             </div>
             <div class="description-text">
-              <p class="description-line">Electronic Registry</p>
-              <p class="description-line"> of</p>
-              <p class="description-line">Appropriation and Commitment</p>
+              <q-space></q-space>
+
+
+
 
             </div>
             <div class="tagline">
@@ -59,7 +60,7 @@
           <div class="office-name">City Accounting Office</div>
             <div class="system-name">Electronic Registry of Appropriation and Commitment (eRAC)</div>
 
-          <div class="signin-title">Admin</div>
+          <div class="signin-title">{{ getSigninTitle() }}</div>
         </div>
 
         <div class="login-form">
@@ -151,6 +152,18 @@ const showValidation = ref(false)
 
 const goToUser = () => {
   router.push('/') // Make sure this matches your signup route
+}
+
+// Get signin title based on email
+const getSigninTitle = () => {
+  if (email.value === 'accounting@gmail.com') {
+    return 'Accounting Officer'
+  } else if (email.value === 'coa@gmail.com') {
+    return 'COA Officer'
+  } else if (email.value === 'admin@gmail.com') {
+    return 'Super Administrator'
+  }
+  return 'Admin'
 }
 
 // Validation function
@@ -265,7 +278,10 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: linear-gradient(25deg,
+    rgba(0, 0, 0, 0.5),
+    rgba(5, 100, 13, 0.404)
+  );
   display: flex;
   align-items: center;
   justify-content: center;
@@ -282,15 +298,17 @@ onUnmounted(() => {
 }
 
 .welcome-title, .to-text, .erac-title {
-  font-size: 4rem;
+  font-size: 5rem;
   font-weight: bold;
   margin: 0;
   line-height: 1;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  ;
 }
 
 .to-text {
-  font-size: 3rem;
+
+  font-size: 4.5rem;
   opacity: 0.9;
 }
 
@@ -299,7 +317,8 @@ onUnmounted(() => {
 }
 
 .description-line {
-  font-size: 1.5rem;
+  font-style: italic;
+  font-size:2rem;
   font-weight: 500;
   margin: 0.2rem 0;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);

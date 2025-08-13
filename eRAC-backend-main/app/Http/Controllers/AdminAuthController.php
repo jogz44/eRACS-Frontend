@@ -51,7 +51,8 @@ class AdminAuthController extends Controller  // <-- This is crucial
             'admin' => [
                 'id' => $admin->id,
                 'email' => $admin->email,
-                'name' => $admin->name ?? 'Admin'
+                'name' => $admin->name ?? 'Admin',
+                'role' => $admin->role
             ]
         ])->withCookie($cookie);
     }
