@@ -26,7 +26,7 @@
 
     <!-- Right side - Login form section -->
     <div class="login-section">
-      <div class="login-container">
+      <div class="login-container q-pt-md">
                 <div class="header-section">
           <div class="office-info ">
             <div class="divide row">
@@ -39,9 +39,8 @@
 
 
           </div>
-          <div class="office-name">City</div>
-            <div class="office-name">Accounting</div>
-            <div class="office-name">Office</div>
+          <div class="office-name">City Accounting Office</div>
+
             <div class="system-name">Electronic Registry of Appropriation and Commitment (eRAC)</div>
 
           </div>

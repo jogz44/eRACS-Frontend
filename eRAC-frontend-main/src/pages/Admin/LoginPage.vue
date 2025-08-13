@@ -46,7 +46,7 @@
 
     <!-- Right side - Login form section (1/3 width) -->
     <div class="login-section">
-      <div class="login-container">
+      <div class="login-container q-pt-md">
            <div class="header-section">
           <div class="office-info">
             <q-img
@@ -56,9 +56,7 @@
               style="width: 120px; height: 120px; margin: 0 auto 1rem auto;"
             />
           </div>
-          <div class="office-name">City</div>
-            <div class="office-name">Accounting</div>
-            <div class="office-name">Office</div>
+          <div class="office-name">City Accounting Office</div>
             <div class="system-name">Electronic Registry of Appropriation and Commitment (eRAC)</div>
 
           <div class="signin-title">Admin</div>

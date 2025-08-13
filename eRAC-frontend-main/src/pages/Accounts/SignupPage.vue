@@ -26,18 +26,16 @@
 
     <!-- Right side - Signup form section -->
     <div class="login-section">
-      <div class="login-container">
+      <div class="login-container q-pt-md">
         <div class="header-section">
           <div class="office-info">
             <q-img
               src="src/assets/tagumlogo.png"
               class="logo-image"
               contain
-              style="width: 80px; height: 80px; margin: 0 auto 0.5rem auto;"
+              style="width: 120px; height: 120px; margin: 0 auto 0.5rem auto;"
             />
-            <div class="office-name">City</div>
-            <div class="office-name">Accounting</div>
-            <div class="office-name">Office</div>
+            <div class="office-name">City Accounting Office</div>
             <div class="system-name">Electronic Registry of Appropriation and Commitment (eRAC)</div>
           </div>
 
@@ -779,7 +777,7 @@ export default {
 }
 
 .office-name {
-  font-size: 1.4rem;
+  font-size: 1.8rem;
   font-weight: bold;
   color: #2d5016;
   line-height: 1.1;
@@ -787,10 +785,10 @@ export default {
 }
 
 .system-name {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   color: #666;
   font-style: italic;
-  margin-top: 0.3rem;
+  margin-top: 0.5rem;
 }
 
 .signin-title {
