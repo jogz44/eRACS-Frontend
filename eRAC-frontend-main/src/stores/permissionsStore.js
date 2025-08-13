@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { useAuthStore } from './auth'
 import { api } from 'boot/axios'
 
 export const usePermissionsStore = defineStore('permissions', {
@@ -44,7 +45,11 @@ export const usePermissionsStore = defineStore('permissions', {
 
       this.loading = true
       try {
-        const response = await api.get('/api/barangay/user/permissions')
+        const response = await api.get('/api/barangay/user', {
+          headers: {
+            'Authorization': `Bearer ${useAuthStore().token}`
+          }
+        })
         
         if (response.data.status === 'success') {
           this.userPermissions = response.data.permissions
