@@ -18,11 +18,11 @@
 
     <!-- Current Year Reports Card -->
     <q-card class="report-card q-mb-xl" flat bordered>
-      <q-card-section class="q-pb-none">
+      <q-card-section class="q-pb-none q-pt-lg">
         <div class="subsection-title">Registry of Appropriation and Commitment (RAC)</div>
       </q-card-section>
 
-      <q-card-section class="q-pt-md">
+      <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-4">
               <q-input
@@ -65,31 +65,31 @@
 
       <q-separator class="q-my-lg" />
 
-      <q-card-section class="q-pb-none">
+      <q-card-section class="q-pb-none q-pt-lg">
         <div class="subsection-title">Status of Appropriation and Obligation (SACB)</div>
       </q-card-section>
 
-      <q-card-section class="q-pt-md">
+      <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-6">
                    <q-input
         bg-color="white"
         outlined
         dense
-        :model-value="dateRangeDisplay"
+        :model-value="currentSacbDateRangeDisplay"
         label="Date Range"
         class="custom-date-range"
         clearable
-        @clear="onDateRangeClear"
+        @clear="onCurrentSacbDateRangeClear"
         readonly
       >
         <template v-slot:append>
           <q-icon name="event" class="calend-icon">
             <q-popup-proxy cover transition-show="scale" transition-hide="scale">
               <q-date
-                v-model="dateRange"
+                v-model="currentSacbDateRange"
                 range
-                @update:model-value="onDateRangeChange"
+                @update:model-value="onCurrentSacbDateRangeChange"
               />
             </q-popup-proxy>
           </q-icon>
@@ -113,11 +113,11 @@
 
     <!-- Continuing Reports Card -->
     <q-card class="report-card q-mb-xl" flat bordered>
-      <q-card-section class="q-pb-none">
+      <q-card-section class="q-pb-none q-pt-lg">
         <div class="subsection-title">Registry of Appropriation and Commitment (RAC)</div>
       </q-card-section>
 
-      <q-card-section class="q-pt-md">
+      <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-4">
             <q-input
@@ -159,31 +159,31 @@
 
       <q-separator class="q-my-lg" />
 
-      <q-card-section class="q-pb-none">
+      <q-card-section class="q-pb-none q-pt-lg">
         <div class="subsection-title">Status of Appropriation and Obligation (SACB)</div>
       </q-card-section>
 
-      <q-card-section class="q-pt-md">
+      <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-6">
             <q-input
               bg-color="white"
               outlined
               dense
-              :model-value="continuingDateRangeDisplay"
+              :model-value="continuingSacbDateRangeDisplay"
               label="Date Range"
               class="custom-date-range"
               clearable
-              @clear="onContinuingDateRangeClear"
+              @clear="onContinuingSacbDateRangeClear"
               readonly
             >
               <template v-slot:append>
                 <q-icon name="event" class="calend-icon">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                     <q-date
-                      v-model="continuingDateRange"
+                      v-model="continuingSacbDateRange"
                       range
-                      @update:model-value="onContinuingDateRangeChange"
+                      @update:model-value="onContinuingSacbDateRangeChange"
                     />
                   </q-popup-proxy>
                 </q-icon>
@@ -340,6 +340,8 @@ const loading = ref(false)
 // Date ranges
 const dateRange = ref({ from: '', to: '' })
 const continuingDateRange = ref({ from: '', to: '' })
+const currentSacbDateRange = ref({ from: '', to: '' })
+const continuingSacbDateRange = ref({ from: '', to: '' })
 
 // Modals
 const RACModal = reactive({
@@ -439,7 +441,7 @@ const handleRACPrint = () => {
   closeRACModal()
   notifySuccess('Report sent to printer successfully!')
 }
-
+// Cur-Rac Date range
 const onDateRangeChange = (newRange) => {
   dateRange.value = newRange
 }
@@ -454,6 +456,22 @@ const onContinuingDateRangeChange = (newRange) => {
 
 const onContinuingDateRangeClear = () => {
   continuingDateRange.value = { from: '', to: '' }
+}
+
+const onCurrentSacbDateRangeChange = (newRange) => {
+  currentSacbDateRange.value = newRange
+}
+
+const onCurrentSacbDateRangeClear = () => {
+  currentSacbDateRange.value = { from: '', to: '' }
+}
+
+const onContinuingSacbDateRangeChange = (newRange) => {
+  continuingSacbDateRange.value = newRange
+}
+
+const onContinuingSacbDateRangeClear = () => {
+  continuingSacbDateRange.value = { from: '', to: '' }
 }
 
 /* -------------------- HELPERS -------------------- */
@@ -480,6 +498,20 @@ const continuingDateRangeDisplay = computed(() => {
   return `${continuingDateRange.value.from} - ${continuingDateRange.value.to}`
 })
 
+const currentSacbDateRangeDisplay = computed(() => {
+  if (!currentSacbDateRange.value.from && !currentSacbDateRange.value.to) return ''
+  if (currentSacbDateRange.value.from && !currentSacbDateRange.value.to) return `From ${currentSacbDateRange.value.from}`
+  if (!currentSacbDateRange.value.from && currentSacbDateRange.value.to) return `To ${currentSacbDateRange.value.to}`
+  return `${currentSacbDateRange.value.from} - ${currentSacbDateRange.value.to}`
+})
+
+const continuingSacbDateRangeDisplay = computed(() => {
+  if (!continuingSacbDateRange.value.from && !continuingSacbDateRange.value.to) return ''
+  if (continuingSacbDateRange.value.from && !continuingSacbDateRange.value.to) return `From ${continuingSacbDateRange.value.from}`
+  if (!continuingSacbDateRange.value.from && continuingSacbDateRange.value.to) return `To ${continuingSacbDateRange.value.to}`
+  return `${continuingSacbDateRange.value.from} - ${continuingSacbDateRange.value.to}`
+})
+
 /* -------------------- LIFECYCLE -------------------- */
 onMounted(async () => {
   await loadAllData()
@@ -502,7 +534,7 @@ onActivated(async () => {
   align-items: center;
   padding-bottom: 16px;
   border-bottom: 2px solid #e0e0e0;
-  margin-bottom: 24px;
+  margin-bottom: 32px;
 }
 
 .section-title {
@@ -516,7 +548,9 @@ onActivated(async () => {
   font-size: 1.1rem;
   font-weight: 500;
   color: #424242;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 /* Setup button styling */
@@ -528,9 +562,15 @@ onActivated(async () => {
 
 /* Card styling */
 .report-card {
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e0e0e0;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e8e8e8;
+  transition: all 0.3s ease;
+}
+
+.report-card:hover {
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
 }
 
 /* Modal styling */
@@ -543,12 +583,48 @@ onActivated(async () => {
 .print-modal {
   /* A4 aspect ratio (height / width = 1.414) */
   aspect-ratio: 310 / 397;
-
-
   max-width: 100%;
   width: min(100%, 210mm);
   max-height: 90vh;
   overflow-y: auto;
+}
+
+/* Custom date range styling */
+.custom-date-range {
+  transition: all 0.3s ease;
+}
+
+.custom-date-range:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.calend-icon {
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.calend-icon:hover {
+  color: #1976d2;
+}
+
+/* Input and button enhancements */
+.q-input, .q-select {
+  background-color: white;
+  transition: all 0.3s ease;
+}
+
+.q-input:hover, .q-select:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.q-btn {
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.q-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Responsive Design */
@@ -557,6 +633,7 @@ onActivated(async () => {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
+    margin-bottom: 24px;
   }
 
   .section-title {
@@ -573,12 +650,16 @@ onActivated(async () => {
     min-width: 90vw;
     max-width: 95vw;
   }
+
+  .report-card {
+    margin-bottom: 20px;
+  }
 }
 
 @media (max-width: 600px) {
   .report-page {
-    padding: 12px;
-    background-color: whitesmoke;
+    padding: 16px;
+    background-color: #fafafa;
   }
 
   .section-title {
@@ -588,9 +669,9 @@ onActivated(async () => {
   .subsection-title {
     font-size: 1rem;
   }
-}
 
-.q-input {
-  background-color: white;
+  .section-header {
+    margin-bottom: 20px;
+  }
 }
 </style>
