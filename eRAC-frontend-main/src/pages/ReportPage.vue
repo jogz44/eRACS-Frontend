@@ -76,35 +76,33 @@
             <div class="subsection-title">Status of Appropriation and Obligation (SACB)</div>
           </q-card-section>
 
-          <q-card-section class="q-pt-md q-pb-lg">
-            <div class="row items-end justify-between">
-              <div class="row items-end">
-                <div class="col-auto" style="min-width: 250px;">
-                  <q-input
-                    bg-color="white"
-                    outlined
-                    dense
-                    :model-value="currentSacbDateRangeDisplay"
-                    label="Date Range"
-                    class="custom-date-range"
-                    clearable
-                    @clear="onCurrentSacbDateRangeClear"
-                    readonly
-                  >
-                    <template v-slot:append>
-                      <q-icon name="event" class="calend-icon">
-                        <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                          <q-date
-                            v-model="currentSacbDateRange"
-                            range
-                            @update:model-value="onCurrentSacbDateRangeChange"
-                          />
-                        </q-popup-proxy>
-                      </q-icon>
-                    </template>
-                  </q-input>
-                </div>
-              </div>
+      <q-card-section class="q-pt-md q-pb-lg">
+        <div class="row q-col-gutter-lg items-end">
+          <div class="col-12 col-sm-6 col-md-6">
+                   <q-input
+        bg-color="white"
+        outlined
+        dense
+        :model-value="currentSacbDateRangeDisplay"
+        label="Date Range"
+        class="custom-date-range"
+        clearable
+        @clear="onCurrentSacbDateRangeClear"
+        readonly
+      >
+        <template v-slot:append>
+          <q-icon name="event" class="calend-icon">
+            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+              <q-date
+                v-model="currentSacbDateRange"
+                range
+                @update:model-value="onCurrentSacbDateRangeChange"
+              />
+            </q-popup-proxy>
+          </q-icon>
+        </template>
+      </q-input>
+          </div>
 
               <div class="col-auto q-mt-sm">
                 <q-btn color="primary" icon="settings" label="Generate Report"
@@ -128,33 +126,32 @@
       </q-card-section>
 
       <q-card-section class="q-pt-md q-pb-lg">
-        <div class="row items-end justify-between">
-          <div class="row items-end">
-            <div class="col-auto" style="min-width: 250px;">
-              <q-input
-                bg-color="white"
-                outlined
-                dense
-                :model-value="continuingDateRangeDisplay"
-                label="Date Range"
-                class="custom-date-range"
-                clearable
-                @clear="onContinuingDateRangeClear"
-                readonly
-              >
-                <template v-slot:append>
-                  <q-icon name="event" class="calend-icon">
-                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                      <q-date
-                        v-model="continuingDateRange"
-                        range
-                        @update:model-value="onContinuingDateRangeChange"
-                      />
-                    </q-popup-proxy>
-                  </q-icon>
-                </template>
-              </q-input>
-            </div>
+        <div class="row q-col-gutter-lg items-end">
+          <div class="col-12 col-sm-6 col-md-4">
+            <q-input
+              bg-color="white"
+              outlined
+              dense
+              :model-value="continuingDateRangeDisplay"
+              label="Date Range"
+              class="custom-date-range"
+              clearable
+              @clear="onContinuingDateRangeClear"
+              readonly
+            >
+              <template v-slot:append>
+                <q-icon name="event" class="calend-icon">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date
+                      v-model="continuingDateRange"
+                      range
+                      @update:model-value="onContinuingDateRangeChange"
+                    />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
 
             <div class="col-auto q-ml-md" style="min-width: 300px;">
               <q-select outlined dense v-model="reportStore.expenseSelectedContinuing" label="Expense Category"
@@ -176,33 +173,31 @@
       </q-card-section>
 
       <q-card-section class="q-pt-md q-pb-lg">
-        <div class="row items-end justify-between">
-          <div class="row items-end">
-            <div class="col-auto" style="min-width: 250px;">
-              <q-input
-                bg-color="white"
-                outlined
-                dense
-                :model-value="continuingSacbDateRangeDisplay"
-                label="Date Range"
-                class="custom-date-range"
-                clearable
-                @clear="onContinuingSacbDateRangeClear"
-                readonly
-              >
-                <template v-slot:append>
-                  <q-icon name="event" class="calend-icon">
-                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                      <q-date
-                        v-model="continuingSacbDateRange"
-                        range
-                        @update:model-value="onContinuingSacbDateRangeChange"
-                      />
-                    </q-popup-proxy>
-                  </q-icon>
-                </template>
-              </q-input>
-            </div>
+        <div class="row q-col-gutter-lg items-end">
+          <div class="col-12 col-sm-6 col-md-6">
+            <q-input
+              bg-color="white"
+              outlined
+              dense
+              :model-value="continuingSacbDateRangeDisplay"
+              label="Date Range"
+              class="custom-date-range"
+              clearable
+              @clear="onContinuingSacbDateRangeClear"
+              readonly
+            >
+              <template v-slot:append>
+                <q-icon name="event" class="calend-icon">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date
+                      v-model="continuingSacbDateRange"
+                      range
+                      @update:model-value="onContinuingSacbDateRangeChange"
+                    />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
           </div>
 
           <div class="col-auto">
@@ -294,44 +289,76 @@
       maximized transition-show="slide-up" transition-hide="slide-down">
       <q-card class="bg-transparent column full-height">
         <!-- Header menu -->
-        <q-card-actions align="right" class="q-pa-md bg-grey-2">
+        <q-card-actions align="right" class="q-pa-md bg-grey-2" style="position: sticky; top: 0; z-index: 10;">
           <q-btn flat label="Cancel" color="grey-7" @click="closeRACModal" />
           <q-btn outline label="Export Reports" color="green" />
           <q-btn unelevated label="Print" color="primary" @click="handleRACPrint" />
         </q-card-actions>
 
+        <!-- Page 1 -->
+        <q-card class="print-modal q-mb-lg">
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">
+              {{ RACModal.reportType }}
+            </div>
+          </q-card-section>
+
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">Barangay {{ authStore.user?.barangay_name }}</div>
+          </q-card-section>
+          <q-card-section>
+            <div class="q-mt-md">
+              <div class="text-subtitle1 q-mb-sm">Expense Class: {{ reportStore.expenseSelectedCurrent?.name }}</div>
+              <q-table :rows="RACModal.report" :columns="activityColumns" row-key="id" :pagination="{ rowsPerPage: 5 }"
+                flat bordered>
+                <template v-slot:body-cell-time="props">
+                  <q-td :props="props">
+                    <div class="text-caption">{{ props.value }}</div>
+                  </q-td>
+                </template>
+                <template v-slot:body-cell-description="props">
+                  <q-td :props="props">
+                    <div class="text-body2">{{ props.value }}</div>
+                  </q-td>
+                </template>
+              </q-table>
+            </div>
+          </q-card-section>
+        </q-card>
+
+        <!-- Page 2 -->
         <q-card class="print-modal">
-        <q-card-section class="q-pb-none">
-          <div class="text-h6">
-            {{ RACModal.reportType }}</div>
-        </q-card-section>
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">
+              {{ RACModal.reportType }}
+            </div>
+          </q-card-section>
 
-        <q-card-section class="q-pb-none">
-          <div class="text-h6">Barangay {{ authStore.user?.barangay_name }}</div>
-        </q-card-section>
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">Barangay {{ authStore.user?.barangay_name }}</div>
+          </q-card-section>
+          <q-card-section>
+            <div class="q-mt-md">
+              <div class="text-subtitle1 q-mb-sm">Expense Class: {{ reportStore.expenseSelectedCurrent?.name }}</div>
+              <q-table :rows="RACModal.report" :columns="activityColumns" row-key="id" :pagination="{ rowsPerPage: 5 }"
+                flat bordered>
+                <template v-slot:body-cell-time="props">
+                  <q-td :props="props">
+                    <div class="text-caption">{{ props.value }}</div>
+                  </q-td>
+                </template>
+                <template v-slot:body-cell-description="props">
+                  <q-td :props="props">
+                    <div class="text-body2">{{ props.value }}</div>
+                  </q-td>
+                </template>
+              </q-table>
+            </div>
+          </q-card-section>
+        </q-card>
 
-
-        <q-card-section>
-          <div class="q-mt-md">
-            <div class="text-subtitle1 q-mb-sm">Expense Class: {{ reportStore.expenseSelectedCurrent?.name }}</div>
-            <q-table :rows="RACModal.report" :columns="activityColumns" row-key="id" :pagination="{ rowsPerPage: 5 }"
-              flat bordered>
-              <template v-slot:body-cell-time="props">
-                <q-td :props="props">
-                  <div class="text-caption">{{ props.value }}</div>
-                </q-td>
-              </template>
-              <template v-slot:body-cell-description="props">
-                <q-td :props="props">
-                  <div class="text-body2">{{ props.value }}</div>
-                </q-td>
-              </template>
-            </q-table>
-          </div>
-        </q-card-section>
       </q-card>
 
-      </q-card>
     </q-dialog>
   </q-page>
 </template>
@@ -415,6 +442,17 @@ const loadAllData = async () => {
 }
 
 const openSACBModal = (type) => {
+  if (type === 'current-sacb') {
+    if (!currentSacbDateRange.value.from || !currentSacbDateRange.value.to) {
+      return notifyError('Please select a valid current SACB date range.')
+    }
+  } else if (type === 'continuing-sacb') {
+    if (!continuingSacbDateRange.value.from || !continuingSacbDateRange.value.to) {
+      return notifyError('Please select a valid continuing SACB date range.')
+    }
+  }
+
+
   SACBModal.reportType = getReportTypeLabel(type)
   SACBModal.show = true
 }
@@ -422,13 +460,16 @@ const openSACBModal = (type) => {
 const closeSACBModal = () => { SACBModal.show = false }
 
 const openRACModal = (type) => {
-  // if (!current.racFrom || !current.racTo) {
-  //   return notifyError('Please select both From and To dates.')
-  // }
-  // if (current.racFrom >= current.racTo) {
-  //   return notifyError('The From date must be before the To date.')
-  // }
-  if (!reportStore.expenseSelectedCurrent) {
+  if (
+    (type === 'current-rac' && (!dateRange.value.from || !dateRange.value.to)) ||
+    (type === 'continuing-rac' && (!continuingDateRange.value.from || !continuingDateRange.value.to))
+  ) {
+    return notifyError('Please select a valid date range.')
+  }
+  if (
+    (type === 'current-rac' && !reportStore.expenseSelectedCurrent) ||
+    (type === 'continuing-rac' && !reportStore.expenseSelectedContinuing)
+  ) {
     return notifyError('Please select an Expense Category.')
   }
   RACModal.reportType = getReportTypeLabel(type)
@@ -445,6 +486,12 @@ const getReportTypeLabel = (type) => ({
 }[type] || 'Unknown Report')
 
 const handleSACBPrint = () => {
+  if (dateRangeDisplay.value === '') {
+    return notifyError('Please select a date range.')
+  }
+  if (dateRange.value.from === '' || dateRange.value.to === '') {
+    return notifyError('Please select a valid date range.')
+  }
   console.log('Printing report:', SACBModal.reportType)
   closeSACBModal()
   notifySuccess('Report sent to printer successfully!')
@@ -601,6 +648,9 @@ onActivated(async () => {
   width: min(100%, 210mm);
   max-height: 90vh;
   overflow-y: auto;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
 }
 
 /* Custom date range styling */
@@ -622,12 +672,14 @@ onActivated(async () => {
 }
 
 /* Input and button enhancements */
-.q-input, .q-select {
+.q-input,
+.q-select {
   background-color: white;
   transition: all 0.3s ease;
 }
 
-.q-input:hover, .q-select:hover {
+.q-input:hover,
+.q-select:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
