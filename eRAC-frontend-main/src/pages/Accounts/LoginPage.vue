@@ -6,14 +6,12 @@
         <div class="photo-overlay">
           <div class="overlay-content">
             <div class="welcome-text">
-              <h5 class="welcome-title">Welcome</h5>
-              <h5 class="to-text">to</h5>
-              <h5 class="erac-title">eRAC</h5>
+                <h6 class="welcome-title q-pb-md">Welcome </h6>
+              <h6 class="to-text q-pb-md">to</h6>
+              <h6 class="erac-title">eRAC</h6>
             </div>
             <div class="description-text">
-              <p class="description-line">Electronic Registry</p>
-              <p class="description-line"> of</p>
-              <p class="description-line">Appropriation and Commitment</p>
+
 
             </div>
             <div class="tagline">
@@ -26,7 +24,7 @@
 
     <!-- Right side - Login form section -->
     <div class="login-section">
-      <div class="login-container">
+      <div class="login-container q-pt-md">
                 <div class="header-section">
           <div class="office-info ">
             <div class="divide row">
@@ -39,9 +37,8 @@
 
 
           </div>
-          <div class="office-name">City</div>
-            <div class="office-name">Accounting</div>
-            <div class="office-name">Office</div>
+          <div class="office-name">City Accounting Office</div>
+
             <div class="system-name">Electronic Registry of Appropriation and Commitment (eRAC)</div>
 
           </div>
@@ -254,7 +251,10 @@ const goToAdmin = () => router.push('/admin/login')
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: linear-gradient(25deg,
+    rgba(0, 0, 0, 0.5),
+    rgba(5, 100, 13, 0.404)
+  );
   display: flex;
   align-items: center;
   justify-content: center;
@@ -271,15 +271,17 @@ const goToAdmin = () => router.push('/admin/login')
 }
 
 .welcome-title, .to-text, .erac-title {
-  font-size: 4rem;
+  font-size: 5rem;
   font-weight: bold;
   margin: 0;
   line-height: 1;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  ;
 }
 
 .to-text {
-  font-size: 3rem;
+
+  font-size: 4.5rem;
   opacity: 0.9;
 }
 

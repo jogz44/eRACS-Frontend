@@ -2,8 +2,10 @@
   <q-layout view="lHh Lpr lFf">
     <!-- HEADER -->
     <q-header elevated class="custom-header">
-      <q-toolbar class="q-pr-md items-center" style="display: flex; flex-direction: row;">
+      <q-toolbar class="q-pr-md items-center" style="justify-content: space-between;">
+         <div style="display: flex; align-items: center;">
         <q-btn
+           v-if="$q.screen.lt.md && authStore.admin?.name"
           flat
           round
           dense
@@ -21,7 +23,27 @@
           style="color: white; font-weight: bold ;"
         >
           Welcome, {{ authStore.admin?.name || 'Admin' }}
+
         </q-toolbar-title>
+        </div>
+
+        <q-space/>
+
+        <q-select
+          outlined
+          dense
+          bg-color="light-green-1 "
+          label="Select Barangay"
+          color="green"
+          class="q-mb-sm q-pt-sm"
+          style="width: 200px;"
+          emit-value
+          map-options
+          v-model="barangay"
+          :options="barangayOptions"
+          option-label="name"
+          option-value="value"
+        />
       </q-toolbar>
     </q-header>
 
@@ -52,8 +74,9 @@
         </div>
 
         <!-- Main Functions Section -->
+        <!-- All admin types (Super Admin, Accounting, COA) can access these functions -->
         <div class="favorites-section">
-          <div class="section-title">Main Functions</div>
+          <div class="section-title">Main Functions </div>
           <div class="favorites-list q-pa-sm">
             <div
               v-for="favorite in favorites"
@@ -68,8 +91,46 @@
           </div>
         </div>
 
+        <!-- Collapsed Transactions for COA and Accounting -->
+        <!-- Super Admin sees sliding panel, COA/Accounting see collapsed view -->
+        <div v-if="!authStore.canManageUsers" class="collapsed-transactions-section">
+          <!-- Current Transactions -->
+          <div class="transaction-group">
+            <div class="transaction-group-title">Current Transactions</div>
+            <div class="transaction-item" @click="navigateTo('/admin/appropriation')">
+              <q-icon name="account_balance" size="16px" />
+              <span>Appropriation</span>
+            </div>
+            <div class="transaction-item" @click="navigateTo('/admin/disbursement')">
+              <q-icon name="payments" size="16px" />
+              <span>Disbursement</span>
+            </div>
+            <div class="transaction-item" @click="navigateTo('/admin/augmentation')">
+              <q-icon name="add_circle" size="16px" />
+              <span>Augmentation</span>
+            </div>
+          </div>
+
+          <!-- Continuing Transactions -->
+          <div class="transaction-group">
+            <div class="transaction-group-title">Continuing Transactions</div>
+            <div class="transaction-item" @click="navigateTo('/admin/contAppropriation')">
+              <q-icon name="account_balance_wallet" size="16px" />
+              <span>Appropriation</span>
+            </div>
+            <div class="transaction-item" @click="navigateTo('/admin/contDisbursement')">
+              <q-icon name="credit_card" size="16px" />
+              <span>Disbursement</span>
+            </div>
+            <div class="transaction-item" @click="navigateTo('/admin/contAugmentation')">
+              <q-icon name="trending_up" size="16px" />
+              <span>Augmentation</span>
+            </div>
+          </div>
+        </div>
+
         <!-- User Management Section -->
-        <div class="saved-searches-section">
+        <div v-if="authStore.canManageUsers" class="saved-searches-section">
           <div class="section-title">User Management</div>
           <div class="saved-searches-list q-pa-sm">
             <div
@@ -96,7 +157,7 @@
                   {{ authStore.admin?.name || 'Admin' }}
                 </span>
                 <span class="position-text text-caption text-white text-weight-medium text-h5">
-                  ADMIN
+                  {{ getRoleDisplayName() }}
                 </span>
               </div>
               <q-space />
@@ -117,8 +178,9 @@
     </q-drawer>
 
     <!-- Sliding Panels -->
-    <!-- Transactions Panel -->
+    <!-- Transactions Panel - Only for Super Admin -->
     <div
+      v-if="authStore.canManageUsers"
       class="sliding-panel transactions-panel"
       :class="{ 'panel-open': activePanel === 'transactions' }"
       v-show="activePanel === 'transactions'"
@@ -165,7 +227,7 @@
 
     <!-- Backdrop -->
     <div
-      v-if="activePanel"
+      v-if="activePanel && authStore.canManageUsers"
       class="panel-backdrop"
       @click="closePanel"
     ></div>
@@ -178,24 +240,47 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, nextTick } from 'vue'
+import { ref, watch, onMounted, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'stores/auth'
 import { api } from 'boot/axios'
+
 
 const $q = useQuasar()
 const router = useRouter()
 const authStore = useAuthStore()
 const leftDrawerOpen = ref(false)
 const activePanel = ref(null)
+const barangayOptions = ref([])
+const barangay = ref('')
+
+onMounted(async () => {
+  try {
+    // Load barangay options
+    const response = await api.get('/api/barangay/barangays')
+    if (response.data && Array.isArray(response.data)) {
+      barangayOptions.value = response.data.map((b) => ({
+        name: b.name,
+        value: b.name,
+      }))
+    }  } catch (error) {
+    console.error('Error loading setup data:', error)
+    // Don't show notification if it might break the page
+    // Just log the error for debugging
+  }
+})
 
 // Admin functions data
-const favorites = ref([
-  { title: 'Dashboard', link: '/admin/dashboard', icon: 'dashboard' },
-  { title: 'Transactions', type: 'panel', panelType: 'transactions', icon: 'account_balance_wallet' },
-
-])
+const favorites = computed(() => {
+  const baseFavorites = [
+    { title: 'Dashboard', link: '/admin/dashboard', icon: 'dashboard' },
+  ]
+  if (authStore.canManageUsers) {
+    baseFavorites.push({ title: 'Transactions', type: 'panel', panelType: 'transactions', icon: 'account_balance_wallet' })
+  }
+  return baseFavorites
+})
 
 // User management data
 const savedSearches = ref([
@@ -212,6 +297,15 @@ const navigateToFavorite = (link) => {
 }
 
 const navigateToSearch = (link) => {
+  // Only allow super admin to access user management
+  if (!authStore.canManageUsers) {
+    $q.notify({
+      type: 'warning',
+      message: 'Access denied. Only Super Administrators can manage users.',
+      position: 'top',
+    })
+    return
+  }
   router.push(link)
 }
 
@@ -288,6 +382,18 @@ watch(
     }
   }
 )
+
+const getRoleDisplayName = () => {
+  if (authStore.admin?.role === 'super_admin') {
+    return 'SUPER ADMIN'
+  } else if (authStore.admin?.role === 'accounting') {
+    return 'ACCOUNTING OFFICER'
+  } else if (authStore.admin?.role === 'coa') {
+    return 'COA OFFICER'
+  } else {
+    return 'ADMIN'
+  }
+}
 </script>
 
 <style>
@@ -735,6 +841,75 @@ watch(
 .position-text {
   font-style: italic;
   font-size: smaller;
+  color: white !important;
+}
+
+.welcome-title {
+  color: white;
+  font-weight: bold;
+}
+
+.role-indicator {
+  font-size: 0.8rem;
+  font-weight: normal;
+  opacity: 0.9;
+  margin-top: 2px;
+  color: #E0FFE7;
+}
+
+/* Collapsed Transactions Section */
+.collapsed-transactions-section {
+  border-top: 1px solid black;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  margin-top: 10px;
+}
+
+.transaction-group {
+  margin-bottom: 16px;
+  padding: 8px;
+
+  border-radius: 6px;
+
+}
+
+.transaction-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: black;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 16px 2px 16px;
+  margin-top: 0;
+  margin-bottom: 8px;
+
+  padding-bottom: 4px;
+}
+
+.transaction-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: white !important;
+  background-color: #69B31E;
+  box-shadow: 0 4px 8px rgba(82, 140, 24, 0.4);
+  width: 95%;
+  max-width: 280px;
+  margin: 4px auto;
+}
+
+.transaction-item:hover {
+  background-color: #0E780E;
+  transform: translateX(2px);
+}
+
+.transaction-item span {
+  margin-left: 12px;
+  font-size: 15px;
+  font-weight: 500;
   color: white !important;
 }
 </style>

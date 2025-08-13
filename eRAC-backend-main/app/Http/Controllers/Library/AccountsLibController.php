@@ -208,11 +208,19 @@ public function copyToYear(Request $request, $sourceYearId)
     $this->verifyBarangayAccess();
     $barangayId = Auth::user()->barangay_id;
     $fiscalYearId = request('fiscal_year_id');
+    $fiscalYear = request('fiscal_year');
 
     $classes = LibExpenseClass::where('barangay_id', $barangayId)
         ->when($fiscalYearId, function($query) use ($fiscalYearId) {
             $query->where('fiscal_year_id', $fiscalYearId);
         })
+        
+        ->when($fiscalYear, function ($query) use ($fiscalYear) {
+            $query->whereHas('fiscalYear', function ($subQuery) use ($fiscalYear) {
+                $subQuery->where('year', $fiscalYear);
+            });
+        })
+        ->with(['types', 'fiscalYear']) // eager load fiscal year too
         ->with('types')
         ->orderBy('order')
         ->get();

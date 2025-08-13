@@ -38,7 +38,6 @@
               dense 
               v-model="store.forms.augmentation.refNo" 
               readonly 
-              placeholder="Auto-generated"
               @keydown.enter="handleEnterKey"
             />
           </div>
@@ -64,6 +63,7 @@
             label="Add"
             class="add-table-btn"
             icon="add"
+            :loading="store.expenseAccountsLoading"
             @click="handleAddExpense"
             :loading="store.loading.addExpense"
             :disable="store.loading.addExpense"
@@ -72,7 +72,7 @@
 
         <!-- Expense Table -->
         <q-table
-          :rows="store.Augexpenses"
+          :rows="store.Augexpenses || []"
           :columns="store.expenseAugColumns"
           row-key="id"
           :pagination="{ rowsPerPage: 5 }"
@@ -94,7 +94,7 @@
                   round
                   color="red"
                   icon="delete"
-                  @click="store.deleteItem(props.row)"
+                  @click="store.deleteItem(props.row.id)"
                 />
               </div>
             </q-td>
@@ -106,9 +106,9 @@
           <q-input 
             filled 
             outlined 
-            readonly="true" 
+            readonly 
             dense 
-            prefix="₱" 
+            :model-value="`₱${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`"
             style="width: 40%"
           />
         </div>
@@ -142,6 +142,13 @@ import { useQuasar } from 'quasar'
 const store = useAugmentationStore()
 const $q = useQuasar()
 
+// Computed property for total amount to ensure reactivity
+const totalAmount = computed(() => {
+  const total = store.totalExpensesAmount || 0
+  console.log('Component totalAmount computed:', total)
+  return total
+})
+
 // Computed property for dialog
 const dialogModel = computed({
   get: () => store.dialogs?.augmentation || false,
@@ -161,10 +168,10 @@ const validateAndSave = async () => {
     // Validate required fields before saving
     const form = store.forms.augmentation
     const hasRequiredFields = form.augmentation_date && form.remarks 
-    
+ 
     // Check if expenses are added
-    const hasExpenses = store.Augexpenses?.value && store.Augexpenses.value.length > 0
-    
+    const hasExpenses = store.Augexpenses && store.Augexpenses.length > 0
+  
     if (!hasRequiredFields) {
       $q.notify({
         type: 'negative',
@@ -202,7 +209,7 @@ const handleSaveClick = () => {
 
 const handleSave = async () => {
 
-  if (!store.Augexpenses?.value || store.Augexpenses.value.length === 0) {
+  if (!store.Augexpenses || store.Augexpenses.length === 0) {
     $q.notify({
       type: 'negative',
       message: 'Please add at least one expense',

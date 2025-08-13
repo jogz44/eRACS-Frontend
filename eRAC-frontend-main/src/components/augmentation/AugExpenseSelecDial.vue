@@ -1,7 +1,7 @@
 <template>
   <!-- Expense Selection Dialog -->
   <q-dialog v-model="store.dialogs.augExpense">
-    <q-card style="min-width: 800px">
+    <q-card :style="cardWidthStyle">
       <q-card-section>
         <div class="text-h6">Select Expense Account</div>
       </q-card-section>
@@ -48,7 +48,15 @@
 
 <script setup>
 import { useAugmentationStore } from 'stores/augmentation'
+import { computed } from 'vue'
 const store = useAugmentationStore()
+
+const colCount = store.AugexpenseAccountColumns.length || 4
+const cardWidthStyle = computed(() => {
+  // Each column gets 180px, but clamp between 500px and 98vw
+  const width = Math.min(Math.max(colCount * 180, 500), window.innerWidth * 0.98)
+  return `min-width: 500px; max-width: 98vw; width: ${width}px;`
+})
 </script>
 
 <style scoped>

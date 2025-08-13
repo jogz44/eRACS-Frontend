@@ -28,6 +28,29 @@
           </template>
         </q-input>
 
+        <!-- Fiscal Year Filter -->
+        <q-select
+          outlined
+          dense
+          v-model="selectedFiscalYear"
+          :options="appropriationStore.fiscalYearOptions"
+          label="Fiscal Year"
+          class="col-auto"
+          style="min-width: 180px; background-color: white;"
+          emit-value
+          map-options
+          :loading="appropriationStore.loading"
+          @update:model-value="onFiscalYearChange"
+        >
+          <template v-slot:no-option>
+            <q-item>
+              <q-item-section class="text-grey">
+                No fiscal years found
+              </q-item-section>
+            </q-item>
+          </template>
+        </q-select>
+
         <q-btn
           dense
           outlined
@@ -38,11 +61,11 @@
 
         <q-space />
 
-        <q-btn
+        <!-- <q-btn
           label="Continue Accounts"
           @click="showContinueDialog = true"
           color="secondary"
-        />
+        /> -->
       </div>
     </div>
 
@@ -133,12 +156,12 @@
                 color="blue"
                 @click="viewDetails(props.row)"
               />
-              <q-btn
+              <!-- <q-btn
                 dense
                 label="Commit"
                 color="primary"
                 @click="openAllocationDialog(props.row)"
-              />
+              /> -->
             </div>
           </q-td>
         </template>
@@ -234,11 +257,18 @@
 </template>
 
 <script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useQuasar } from 'quasar'
+import { useAppropriationStore } from 'stores/appropriationStore'
+
+const $q = useQuasar()
+const appropriationStore = useAppropriationStore()
 const loading = ref(false)
 
 const loadPendingUsers = async () => {
   loading.value = true
   try {
+    await appropriationStore.initialize()
     await new Promise(resolve => setTimeout(resolve, 500))
     $q.notify({
       type: 'positive',
@@ -258,16 +288,42 @@ const loadPendingUsers = async () => {
   }
 }
 
+const selectedFiscalYear = computed({
+  get: () => appropriationStore.selectedFiscalYear,
+  set: (value) => appropriationStore.setSelectedFiscalYear(value)
+})
+
+const onFiscalYearChange = (value) => {
+  if (value !== appropriationStore.selectedFiscalYear) {
+    appropriationStore.setSelectedFiscalYear(value)
+    loadPendingUsers() // Refresh data when fiscal year changes
+  }
+}
+
 const clearAllFilters = () => {
   searchQuery.value = ''
   dateFrom.value = ''
   dateTo.value = ''
+  // Reset fiscal year to current year if available, otherwise first available year
+  const currentYear = new Date().getFullYear().toString()
+  const defaultYear = appropriationStore.fiscalYears.includes(currentYear)
+    ? currentYear
+    : appropriationStore.fiscalYears[0]
+  appropriationStore.setSelectedFiscalYear(defaultYear)
 }
 
-import { ref, computed } from 'vue'
-import { useQuasar } from 'quasar'
-
-const $q = useQuasar()
+onMounted(async () => {
+  try {
+    await appropriationStore.initialize()
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Failed to load data',
+      icon: 'error',
+      position: 'top',
+    })
+  }
+})
 
 const showContinueDialog = ref(false)
 const showAllocationDialog = ref(false)

@@ -84,6 +84,12 @@
           </q-td>
         </template>
 
+        <template v-slot:body-cell-created_at="props">
+          <q-td :props="props">
+            {{ formatDate(props.row.created_at) }}
+          </q-td>
+        </template>
+
         <template v-slot:body-cell-action="props">
           <q-td :props="props">
             <div class="q-gutter-xs">
@@ -199,6 +205,8 @@ export default {
         { name: 'barangay', label: 'Barangay', field: 'barangay', align: 'left', sortable: true },
         { name: 'position', label: 'Position', field: 'position', align: 'left', sortable: true },
         { name: 'username', label: 'Username', field: 'username', align: 'left', sortable: true },
+        { name: 'email', label: 'Email', field: 'email', align: 'left' },
+        { name: 'created_at', label: 'Acceptance Date', field: 'created_at', align: 'left', sortable: true },
         { name: 'action', label: 'Action', field: 'action', align: 'center' },
       ],
     }
@@ -268,6 +276,16 @@ export default {
   methods: {
     formatId(id) {
       return id.toString().padStart(4, '0')
+    },
+    formatDate(date) {
+      if (!date) return '-'
+      return new Date(date).toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
     },
     async loadAcceptedUsers() {
       this.loading = true

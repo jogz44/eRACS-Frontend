@@ -19,6 +19,8 @@ class Admin extends Authenticatable
     protected $fillable = [
         'email',
         'password',
+        'name',
+        'role',
     ];
 
     /**
@@ -43,5 +45,37 @@ class Admin extends Authenticatable
     public function guardName()
     {
         return 'admin';
+    }
+
+    /**
+     * Check if admin is super admin
+     */
+    public function isSuperAdmin()
+    {
+        return $this->role === 'super_admin';
+    }
+
+    /**
+     * Check if admin is accounting officer
+     */
+    public function isAccounting()
+    {
+        return $this->role === 'accounting';
+    }
+
+    /**
+     * Check if admin is COA officer
+     */
+    public function isCOA()
+    {
+        return $this->role === 'coa';
+    }
+
+    /**
+     * Check if admin can access user management
+     */
+    public function canManageUsers()
+    {
+        return $this->isSuperAdmin();
     }
 }

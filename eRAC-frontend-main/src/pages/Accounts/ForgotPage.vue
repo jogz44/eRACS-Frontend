@@ -5,6 +5,17 @@
       <div class="photo-container">
         <div class="photo-overlay">
           <div class="overlay-content">
+              <div class="welcome-text">
+              <h6 class="welcome-title q-pb-md">Welcome </h6>
+              <h6 class="to-text q-pb-md">to</h6>
+              <h6 class="erac-title">eRAC</h6>
+            </div>
+            <div class="description-text">
+
+            </div>
+            <div class="tagline">
+                </div>
+
 
           </div>
         </div>
@@ -13,7 +24,7 @@
 
     <!-- Right side - Login form section -->
     <div class="login-section">
-      <div class="login-container">
+      <div class="login-container q-pt-md">
         <div class="header-section">
           <div class="office-info">
             <q-img
@@ -22,9 +33,7 @@
               contain
               style="width: 120px; height: 120px; margin: 0 auto 1rem auto;"
             />
-            <div class="office-name">City</div>
-            <div class="office-name">Accounting</div>
-            <div class="office-name">Office</div>
+             <div class="office-name">City Accounting Office</div>
             <div class="system-name">Electronic Registry of Appropriation and Commitment (eRAC)</div>
           </div>
 
@@ -233,11 +242,15 @@ const goToLogin = () => router.push('/')
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: linear-gradient(25deg,
+    rgba(0, 0, 0, 0.5),
+    rgba(5, 100, 13, 0.404)
+  );
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
 
 .overlay-content {
   text-align: center;
@@ -250,16 +263,21 @@ const goToLogin = () => router.push('/')
 }
 
 .welcome-title, .to-text, .erac-title {
-  font-size: 4rem;
+  font-size: 5rem;
   font-weight: bold;
   margin: 0;
   line-height: 1;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  ;
 }
 
 .to-text {
-  font-size: 3rem;
+
+  font-size: 4.5rem;
   opacity: 0.9;
+}
+.description-text {
+  margin-bottom: 2rem;
 }
 
 .description-text {
@@ -331,7 +349,7 @@ const goToLogin = () => router.push('/')
   font-size: 0.8rem;
   color: #666;
   font-style: italic;
-  margin-top: 0.3rem;
+  margin-top: 0.5rem;
 }
 
 .signin-title {

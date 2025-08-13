@@ -59,13 +59,24 @@ class AppropriationController extends Controller
             ->get()
             ->map(function($budget) {
                 $hasAllocations = $budget->tranAppropriations->isNotEmpty();
+                
+                // Calculate total available budget (original + augmentation)
+                $totalAvailable = (float)$budget->original_amount + (float)$budget->augmentation;
+                
+                // Calculate total appropriated amount
+                $totalAppropriated = $budget->tranAppropriations->sum('amount');
+                
+                // Calculate unappropriated amount
+                $unappropriated = $totalAvailable - $totalAppropriated;
+                
+
 
                 return [
                     'id' => $budget->id,
                     'date' => $budget->created_at->format('Y-m-d'),
                     'description' => $budget->description,
-                    'amount' => (float)$budget->original_amount,
-                    'unappropriated' => (float)$budget->current_amount,
+                    'amount' => $totalAvailable,
+                    'unappropriated' => $unappropriated,
                     'fiscal_year' => $budget->fiscalYear->year,
                     'allocations' => $budget->tranAppropriations->map(function($tranAppropriations) {
                         return [
@@ -81,7 +92,10 @@ class AppropriationController extends Controller
             'status' => true,
             'data' => $budgets,
             'total_available' => (float)Budget::where('barangay_id', $request->user()->barangay_id)
-                                        ->sum('current_amount')
+                                        ->get()
+                                        ->sum(function($budget) {
+                                            return (float)$budget->original_amount + (float)$budget->augmentation;
+                                        })
         ]);
     }
 
@@ -106,6 +120,7 @@ class AppropriationController extends Controller
             'description' => $validated['description'],
             'original_amount' => $validated['original_amount'],
             'current_amount' => $validated['original_amount'], // Initialize with full amount
+            'augmentation' => 0, // Initialize augmentation to 0
             'user_id' => $request->user()->id
         ]);
 

@@ -1,22 +1,20 @@
 <template>
-  <q-page class="split-login-page">
+  <q-page class="split-login-page ">
     <!-- Left side - Photo section with overlay text -->
     <div class="photo-section">
       <div class="photo-container">
         <div class="photo-overlay">
           <div class="overlay-content">
             <div class="welcome-text">
-              <h1 class="welcome-title">Welcome</h1>
-              <h1 class="to-text">to</h1>
-              <h1 class="erac-title">eRAC</h1>
+             <h6 class="welcome-title q-pb-md">Welcome </h6>
+              <h6 class="to-text q-pb-md">to</h6>
+              <h6 class="erac-title">eRAC</h6>
             </div>
             <div class="description-text">
-              <p class="description-line">Electronic</p>
-              <p class="description-line">Registry of</p>
-              <p class="description-line">Appropriation</p>
-              <p class="description-line">and</p>
-              <p class="description-line">Commitment</p>
+
             </div>
+            <div class="tagline">
+                </div>
 
           </div>
         </div>
@@ -25,7 +23,7 @@
 
     <!-- Right side - Reset form section -->
     <div class="login-section">
-      <div class="login-container">
+      <div class="login-container q-pt-md">
         <div class="header-section">
           <div class="office-info">
             <q-img
@@ -34,9 +32,7 @@
               contain
               style="width: 120px; height: 120px; margin: 0 auto 1rem auto;"
             />
-            <div class="office-name">City</div>
-            <div class="office-name">Accounting</div>
-            <div class="office-name">Office</div>
+            <div class="office-name">City Accounting Office</div>
             <div class="system-name">Electronic Registry of Appropriation and Commitment (eRAC)</div>
           </div>
 
@@ -267,7 +263,10 @@ const goToLogin = () => router.push('/')
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: linear-gradient(25deg,
+    rgba(0, 0, 0, 0.5),
+    rgba(5, 100, 13, 0.404)
+  );
   display: flex;
   align-items: center;
   justify-content: center;
@@ -284,18 +283,19 @@ const goToLogin = () => router.push('/')
 }
 
 .welcome-title, .to-text, .erac-title {
-  font-size: 4rem;
+  font-size: 5rem;
   font-weight: bold;
   margin: 0;
   line-height: 1;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  ;
 }
 
 .to-text {
-  font-size: 3rem;
+
+  font-size: 4.5rem;
   opacity: 0.9;
 }
-
 .description-text {
   margin-bottom: 2rem;
 }
