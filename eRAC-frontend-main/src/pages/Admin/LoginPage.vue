@@ -104,14 +104,18 @@
               />
             </template>
           </q-input>
+           <div class="forgot-pass q-mb-md">
+
+           </div>
 
           <!-- Sign In button -->
           <q-btn
             label="SIGN IN"
             color="green"
-            class="full-width q-mb-md"
+            class="q-mb-md"
             @click="handleLoginClick"
             :loading="loading"
+            style="width: 50% !important; justify-content: center; align-self: center;"
           />
 
           <!-- Switch to user link -->
@@ -121,6 +125,7 @@
             </div>
           </div>
         </div>
+
 
         <!-- Footer -->
         <div class="login-footer">
@@ -145,7 +150,7 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
-const email = ref('admin@gmail.com') // Pre-fill for testing
+const email = ref('')
 const password = ref('')
 const loading = ref(false)
 const isPasswordVisible = ref(false)
