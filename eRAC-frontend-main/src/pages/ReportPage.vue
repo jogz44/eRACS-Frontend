@@ -1,13 +1,6 @@
 <template>
   <q-page class="q-pa-lg report-page">
 
-    <!-- Fullscreen blocking loading modal -->
-    <q-dialog :model-value="loading" persistent>
-      <q-card class="q-pa-lg flex flex-center column" style="width: 200px;">
-        <q-spinner color="primary" size="50px" />
-        <div class="text-subtitle1 q-mt-md">Loading...</div>
-      </q-card>
-    </q-dialog>
 
     <!-- Main Header with bottom border -->
     <div class="section-header q-mb-xl">
@@ -42,12 +35,12 @@
 
           <div class="col-12 col-sm-6 col-md-4">
             <q-select outlined dense v-model="reportStore.expenseSelectedCurrent" label="Expense Category"
-              :options="reportStore.expenseOptionsCurrent" map-options option-label="name" option-value="id" />
+              :options="reportStore.expenseOptionsCurrent" map-options option-label="name" option-value="id" :loading="loading"/>
           </div>
 
           <div class="col-12 col-sm-6 col-md-4">
             <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-              @click="openRACModal('current-rac')" />
+              @click="openRACModal('current-rac')" :loading="loading"/>
           </div>
         </div>
       </q-card-section>
@@ -78,7 +71,7 @@
 
           <div class="col-12 col-sm-6 col-md-6">
             <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-              @click="openSACBModal('current-sacb')" />
+              @click="openSACBModal('current-sacb')" :loading="loading"/>
           </div>
         </div>
       </q-card-section>
@@ -114,12 +107,15 @@
 
           <div class="col-12 col-sm-6 col-md-4">
             <q-select outlined dense v-model="reportStore.expenseSelectedContinuing" label="Expense Category"
-              map-options :options="reportStore.expenseOptionsContinuing" option-value="id" option-label="name" />
+              map-options :options="reportStore.expenseOptionsContinuing" 
+              
+                  :loading="loading"
+              option-value="id" option-label="name" />
           </div>
 
           <div class="col-12 col-sm-6 col-md-4">
             <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-              @click="openRACModal('continuing-rac')" />
+              @click="openRACModal('continuing-rac')" :loading="loading"/>
           </div>
         </div>
       </q-card-section>
@@ -150,7 +146,7 @@
 
           <div class="col-12 col-sm-6 col-md-6">
             <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-              @click="openSACBModal('continuing-sacb')" />
+              @click="openSACBModal('continuing-sacb')" :loading="loading"/>
           </div>
         </div>
       </q-card-section>
