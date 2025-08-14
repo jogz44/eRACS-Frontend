@@ -67,9 +67,8 @@ export const useReportStore = defineStore("reportStore", {
     certPosition: null,
     
     expenseOptionsCurrent: [],
-    expenseSelectedCurrent: null,
     expenseOptionsContinuing: [],
-    expenseSelectedContinuing: null,
+    expenseRacSelected: null,
     positionsOptions: [],
     positionSelected: null,
 
@@ -130,6 +129,26 @@ export const useReportStore = defineStore("reportStore", {
         console.error('Error:', error)
         throw error
       }
+      }
+    },
+    async fetchRacReport($date){
+      try{
+        const config = this.getAuthConfig();
+        const response = await api.get(`/api/`,
+          { params: { to: $date.value.to, from: $date.value.from, expense_class_id: this.expenseRacSelected  }}
+          ,config);
+
+        this.reportRAC=response?.data?.map(pos => ({
+          accountTitle: pos.accountTitle,
+          appropriation: pos.appropriation,
+          dvNumber: pos.dvNumber,
+          date: pos.date,
+          payee: pos.payee,
+          amount: pos.amount
+        }))
+      }catch (error) {
+        console.error('Error:', error)
+        throw error
       }
     }
 })

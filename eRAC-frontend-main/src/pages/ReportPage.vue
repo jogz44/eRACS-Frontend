@@ -34,13 +34,14 @@
 
 
           <div class="col-12 col-sm-6 col-md-4">
-            <q-select outlined dense v-model="reportStore.expenseSelectedCurrent" label="Expense Category"
-              :options="reportStore.expenseOptionsCurrent" map-options option-label="name" option-value="id" :loading="loading"/>
+            <q-select outlined dense v-model="expenseSelectedCurrent" label="Expense Category"
+              :options="reportStore.expenseOptionsCurrent" map-options option-label="name" option-value="id"
+              :loading="loading" />
           </div>
 
           <div class="col-12 col-sm-6 col-md-4">
             <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-              @click="openRACModal('current-rac')" :loading="loading"/>
+              @click="openRACModal('current-rac')" :loading="loading" />
           </div>
         </div>
       </q-card-section>
@@ -71,7 +72,7 @@
 
           <div class="col-12 col-sm-6 col-md-6">
             <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-              @click="openSACBModal('current-sacb')" :loading="loading"/>
+              @click="openSACBModal('current-sacb')" :loading="loading" />
           </div>
         </div>
       </q-card-section>
@@ -106,16 +107,14 @@
           </div>
 
           <div class="col-12 col-sm-6 col-md-4">
-            <q-select outlined dense v-model="reportStore.expenseSelectedContinuing" label="Expense Category"
-              map-options :options="reportStore.expenseOptionsContinuing" 
-              
-                  :loading="loading"
-              option-value="id" option-label="name" />
+            <q-select outlined dense v-model="expenseSelectedContinuing" label="Expense Category" map-options
+              :options="reportStore.expenseOptionsContinuing" :loading="loading" option-value="id"
+              option-label="name"/>
           </div>
 
           <div class="col-12 col-sm-6 col-md-4">
             <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-              @click="openRACModal('continuing-rac')" :loading="loading"/>
+              @click="openRACModal('continuing-rac')" :loading="loading" />
           </div>
         </div>
       </q-card-section>
@@ -146,7 +145,7 @@
 
           <div class="col-12 col-sm-6 col-md-6">
             <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-              @click="openSACBModal('continuing-sacb')" :loading="loading"/>
+              @click="openSACBModal('continuing-sacb')" :loading="loading" />
           </div>
         </div>
       </q-card-section>
@@ -235,7 +234,7 @@
         <!-- Header menu -->
         <q-card-actions align="right" class="q-pa-md bg-grey-2 print-header">
           <q-btn flat label="Close" color="black-7" @click="closeRACModal" />
-          <q-btn outline label="Export Reports to PDF" color="green" @click="exportToPDF"/>
+          <q-btn outline label="Export Reports to PDF" color="green" @click="exportToPDF" />
           <q-btn unelevated label="Print" color="primary" @click="handleRACPrint" />
         </q-card-actions>
 
@@ -253,11 +252,12 @@
           </q-card-section>
           <q-card-section>
             <div class="q-mt-md">
-              <div class="text-subtitle1 q-mb-sm">Expense Class: {{ reportStore.expenseSelectedCurrent?.name }}</div>
+              <div class="text-subtitle1 q-mb-sm">Expense Class: {{ reportStore.expenseRacSelected?.name }}</div>
 
               <!-- Modified Excel Report Table with Obligation Amount and Subcolumns -->
-              <q-table :rows="reportStore.reportRAC" :columns="reportStore.racColumn" row-key="dvNumber" flat bordered dense separator="cell"
-                class="q-mt-md small-table-font" hide-pagination :pagination="{ rowsPerPage: 0 }">
+              <q-table :rows="reportStore.reportRAC" :columns="reportStore.racColumn" row-key="dvNumber" flat bordered
+                dense separator="cell" class="q-mt-md small-table-font" hide-pagination
+                :pagination="{ rowsPerPage: 0 }">
                 <!-- Custom two-row header -->
                 <template v-slot:header>
                   <q-tr>
@@ -327,6 +327,9 @@ const continuingDateRange = ref({ from: '', to: '' })
 const currentSacbDateRange = ref({ from: '', to: '' })
 const continuingSacbDateRange = ref({ from: '', to: '' })
 
+const expenseSelectedCurrent = ref(null);
+const expenseSelectedContinuing = ref(null);
+
 
 // Modals
 const RACModal = reactive({
@@ -395,8 +398,6 @@ const openSACBModal = (type) => {
       return notifyError('Please select a valid continuing SACB date range.')
     }
   }
-
-
   SACBModal.reportType = getReportTypeLabel(type)
   SACBModal.show = true
 }
@@ -404,22 +405,39 @@ const openSACBModal = (type) => {
 const closeSACBModal = () => { SACBModal.show = false }
 
 const openRACModal = (type) => {
-  if (type === 'current-sacb') {
+  if (type === 'current-rac') {
     if (!dateRange.value.from || !dateRange.value.to) {
       return notifyError('Please select a valid current RAC date range.')
     }
-  } else if (type === 'continuing-sacb') {
+  } else if (type === 'continuing-rac') {
     if (!continuingDateRange.value.from || !continuingDateRange.value.to) {
       return notifyError('Please select a valid continuing RAC date range.')
     }
   }
   if (
-    (type === 'current-rac' && !reportStore.expenseSelectedCurrent) ||
-    (type === 'continuing-rac' && !reportStore.expenseSelectedContinuing)
+    (type === 'current-rac' && !expenseSelectedCurrent.value) ||
+    (type === 'continuing-rac' && !expenseSelectedContinuing.value)
   ) {
     return notifyError('Please select an Expense Category.')
   }
-  
+
+  reportStore.expenseRacSelected =
+    type === 'current-rac'
+      ? expenseSelectedCurrent
+      : type === 'continuing-rac'
+        ? expenseSelectedContinuing
+        : null
+
+  if (!reportStore.expenseRacSelected) {
+    return notifyError('Please select an Expense Category.')
+  }
+
+  loadRacReport(
+    type === 'current-rac'
+      ? dateRange
+      : type === 'continuing-rac'
+        ? continuingDateRange
+        : null)
   RACModal.reportType = getReportTypeLabel(type)
   RACModal.show = true
 }
@@ -521,11 +539,23 @@ const continuingSacbDateRangeDisplay = computed(() => {
   return `${continuingSacbDateRange.value.from} - ${continuingSacbDateRange.value.to}`
 })
 
-async function exportToPDF(){
-const html2canvas = (await import('html2canvas')).default;
-const jsPDF = (await import('jspdf')).default;
+async function loadRacReport($date) {
+  try{
+    await reportStore.fetchRacReport($date)
+  }catch (error) {
+    console.error(error)
+    this.$q.notify({
+      type: 'negative',
+      message: 'Failed to generate Report',
+    })
+  }
+}
+
+async function exportToPDF() {
+  const html2canvas = (await import('html2canvas')).default;
+  const jsPDF = (await import('jspdf')).default;
   try {
-    
+
     const element = document.querySelector('.print-modal')
 
     if (!element) {
@@ -536,16 +566,16 @@ const jsPDF = (await import('jspdf')).default;
       return
     }
 
-    
+
     const canvas = await html2canvas(element, {
-      scale: 2, 
+      scale: 2,
       useCORS: true,
     })
 
     const imgData = canvas.toDataURL('image/png')
     const pdf = new jsPDF('p', 'mm', 'a4')
 
-    
+
     const pageWidth = pdf.internal.pageSize.getWidth()
     const pageHeight = pdf.internal.pageSize.getHeight()
     const imgWidth = pageWidth
@@ -554,11 +584,11 @@ const jsPDF = (await import('jspdf')).default;
     let heightLeft = imgHeight
     let position = 0
 
-    
+
     pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
     heightLeft -= pageHeight
 
-    
+
     while (heightLeft > 0) {
       position = heightLeft - imgHeight
       pdf.addPage()
@@ -566,7 +596,7 @@ const jsPDF = (await import('jspdf')).default;
       heightLeft -= pageHeight
     }
 
-    
+
     pdf.save('report.pdf')
 
     this.$q.notify({
