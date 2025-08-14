@@ -145,8 +145,8 @@ Route::prefix('barangay')->group(function () {
         Route::apiResource('budget-augmentations', BudgetAugmentationController::class);
 
         // Report routes aka Preview and PDF download by Dan Steve
-        Route::get('/rac/current', [ReportController::class, 'index']);         // JSON preview
-        Route::get('/rac/current/pdf', [ReportController::class, 'exportPdf']); // PDF download
+        Route::get('/report/rac', [ReportController::class, 'getRacReport']);  
+        Route::get('/report/sacb', [ReportController::class, 'getSacbReport']);
 
     });
 

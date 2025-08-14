@@ -6,9 +6,9 @@ use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\TranAppropriation;
 
-class RacReportController extends Controller
+class ReportController extends Controller
 {
-    public function index(Request $request)
+    public function getRacReport(Request $request)
     {
         $data = $request->validate([
             'from' => 'required|date',
@@ -16,25 +16,19 @@ class RacReportController extends Controller
             'expense_class_id' => 'required|integer',
         ]);
 
-        //change Order to your actual model
-        // and adjust the fields accordingly
+        
         $q = TranAppropriation::query()->whereBetween('transaction_date', [$data['from'], $data['to']]);
 
         $q->where('expense_class_id', $data['expense_class_id']);
 
         $rows = $q->orderBy('transaction_date')->get()->map(fn($o) => [
-            'id' => $o->id,
-            'expense_type_id' => $o->expense_type_id,
-            'expense_item_id' => $o->expense_item_id,
-            'expense_type_name' => $o->expenseType->name ?? null,
-            'expense_item_name' => $o->expenseItem->name ?? null,
-            'transaction_date' => $o->transaction_date->toDateString(),
-            'amount' => (float)$o->amount,
+            'accountTitle' => $o->expenseType->name ?? null + $o->expenseItem->name ?? null,
+            'appropriation' => (float)$o->amount,
 
-            'status' => $o->status,
-            'user_id' => $o->user_id,
-            'barangay_id' => $o->barangay_id,
-            'budget_id' => $o->budget_id,
+            'dvNumber' => $o->data,//disbursmnet
+            'date' => $o->toDateString(),//disbursmnet
+            'payee' => $o->data,//disbursmnet
+            'amount' => $o->data,//disbursmnet
         ])->values();
 
         $summary = [
