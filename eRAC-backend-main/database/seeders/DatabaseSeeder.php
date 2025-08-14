@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             TranAppropriationSeeder::class,
             DisbursementSeeder::class,
             BudgetAugmentationSeeder::class,
+            BookletAndChequeSeeder::class
         ]);
     }
 }

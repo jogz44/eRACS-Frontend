@@ -19,6 +19,8 @@ return new class extends Migration
             $table->string('cheque_number');
             $table->unsignedBigInteger('bank_id');
             $table->string('payee');
+            $table->string('particular');
+            $table->unsignedBigInteger('tran_appropriations_id');
             $table->decimal('dv_amount', 15, 2);
             $table->decimal('liquidated_amount', 15, 2)->nullable();
             $table->enum('status', ['Pending', 'Liquidated', 'Partial'])->default('Pending');
@@ -27,6 +29,7 @@ return new class extends Migration
 
             $table->foreign('barangay_id')->references('id')->on('barangays')->onDelete('cascade');
             $table->foreign('bank_id')->references('id')->on('lib_banks')->onDelete('NO ACTION');
+            $table->foreign('tran_appropriations_id')->references('id')->on('tran_appropriations')->onDelete('NO ACTION');
         });
     }
 
