@@ -117,6 +117,33 @@
             </div>
           </div>
         </div>
+        <!-- Admin role selection dialog -->
+        <q-dialog v-model="showAdminRoleDialog" persistent position="right" class="admin-role-dialog">
+          <q-card style="width: 360px; max-width: 92vw;">
+            <q-card-section>
+              <div class="text-h6">Choose position</div>
+              <div class="text-caption q-mt-sm">Please select the admin role you want to sign in as.</div>
+            </q-card-section>
+
+            <q-card-section class="q-pt-none">
+              <q-option-group
+                v-model="selectedAdminRole"
+                :options="adminRoleOptions"
+                type="radio"
+              />
+            </q-card-section>
+
+            <q-card-actions align="center">
+              <q-btn flat label="Back" color="grey" v-close-popup />
+              <q-btn
+                label="Continue"
+                color="green"
+                @click="handleAdminRoleSelection"
+                :disable="!selectedAdminRole"
+              />
+            </q-card-actions>
+          </q-card>
+        </q-dialog>
 
         <!-- Footer -->
         <div class="login-footer">
@@ -145,6 +172,24 @@ const password = ref('')
 const isLoading = ref(false)
 const isPasswordVisible = ref(false)
 const showValidation = ref(false)
+const showAdminRoleDialog = ref(false)
+const selectedAdminRole = ref(null)
+const adminRoleOptions = ref([
+  { label: 'Commission on Audit', value: 'coa' },
+  { label: 'City Accounting Office', value: 'accounting' },
+  { label: 'Super Administrator', value: 'superadmin' }
+])
+const goToAdmin = () => {
+  selectedAdminRole.value = null
+  showAdminRoleDialog.value = true
+}
+
+const handleAdminRoleSelection = () => {
+  if (selectedAdminRole.value) {
+    router.push({ path: '/admin/login', query: { role: selectedAdminRole.value } })
+    showAdminRoleDialog.value = false
+  }
+}
 
 // Validation function
 const validateLogin = () => {
@@ -203,29 +248,29 @@ onUnmounted(() => {
 
 const goToForgotPassword = () => router.push('/forgotpage')
 const goToSignUp = () => router.push('/signup')
-const goToAdmin = () => {
-  $q.dialog({
-    title: 'Choose position',
-    message: 'Please select the admin role you want to sign in as.',
-    options: {
-      type: 'radio',
-      model: 'superadmin',
-      items: [
-        { label: 'COA', value: 'coa' },
-        { label: 'City Accounting Office', value: 'accounting' },
-        { label: 'Super Administrator', value: 'superadmin' }
-      ]
-    },
-    ok: 'Continue',
-    cancel: 'Back',
-    color: 'green',
-    position: 'right',
-    class: 'admin-role-dialog',
-    persistent: true
-  }).onOk((role) => {
-    router.push({ path: '/admin/login', query: { role } })
-  })
-}
+// const goToAdmin = () => {
+//   $q.dialog({
+//     title: 'Choose position',
+//     message: 'Please select the admin role you want to sign in as.',
+//     options: {
+//       type: 'radio',
+//       model: 'superadmin',
+//       items: [
+//         { label: 'COA', value: 'coa' },
+//         { label: 'City Accounting Office', value: 'accounting' },
+//         { label: 'Super Administrator', value: 'superadmin' }
+//       ]
+//     },
+//     ok: 'Continue',
+//     cancel: 'Back',
+//     color: 'green',
+
+//     class: 'admin-role-dialog',
+//     persistent: true
+//   }).onOk((role) => {
+//     router.push({ path: '/admin/login', query: { role } })
+//   })
+// }
 
 // const onImageError = (error) => {
 //   console.log('Logo image failed to load:', error)
@@ -447,17 +492,12 @@ const goToAdmin = () => {
   padding-top: 2rem;
 }
 
-/* Admin role dialog (right aligned and polished) */
+/* Admin role dialog (right aligned) */
 ::v-deep(.admin-role-dialog .q-dialog__inner--right) {
-  justify-content: flex-end;
-  align-items: center;
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
   padding-right: 2rem;
-}
-
-@media (max-width: 768px) {
-  ::v-deep(.admin-role-dialog .q-dialog__inner--right) {
-    padding-right: 0.5rem;
-  }
 }
 
 ::v-deep(.admin-role-dialog .q-card) {
@@ -465,6 +505,13 @@ const goToAdmin = () => {
   max-width: 92vw;
   border-radius: 14px;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+/* Tweak spacing on smaller screens */
+@media (max-width: 768px) {
+  ::v-deep(.admin-role-dialog .q-dialog__inner--right) {
+    padding-right: 0.5rem;
+  }
 }
 
 ::v-deep(.admin-role-dialog .q-dialog__title) {
