@@ -43,7 +43,7 @@
 
           </div>
 
-          <div class="signin-title">Sign In</div>
+          <div class="signin-title">Barangay Sign In</div>
         </div>
 
         <div class="login-form">
@@ -98,9 +98,11 @@
           <q-btn
             label="Sign In"
             color="green"
-            class="full-width q-mb-md"
+            class=" q-mb-md"
             @click="handleLoginClick"
             :loading="isLoading"
+            style="width: 50% !important; justify-content: center; align-self: center;"
+
           />
 
           <!-- Sign up and admin links -->
@@ -443,6 +445,9 @@ const goToAdmin = () => router.push('/admin/login')
 .forgot-pass {
   display: flex;
   justify-content: flex-end;
+  font-size: small;
+  font-style: normal;
+  font-weight: 500;
 }
 
 .login-footer {
