@@ -26,29 +26,16 @@
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-4">
 
-              <q-input
-        bg-color="white"
-        outlined
-        dense
-        :model-value="dateRangeDisplay"
-        label="Date Range"
-        class="custom-date-range"
-        clearable
-        @clear="onDateRangeClear"
-        readonly
-      >
-        <template v-slot:append>
-          <q-icon name="event" class="calend-icon">
-            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-              <q-date
-                v-model="dateRange"
-                range
-                @update:model-value="onDateRangeChange"
-              />
-            </q-popup-proxy>
-          </q-icon>
-        </template>
-      </q-input>
+            <q-input bg-color="white" outlined dense :model-value="dateRangeDisplay" label="Date Range"
+              class="custom-date-range" clearable @clear="onDateRangeClear" readonly>
+              <template v-slot:append>
+                <q-icon name="event" class="calend-icon">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date v-model="dateRange" range @update:model-value="onDateRangeChange" />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
 
           </div>
 
@@ -75,29 +62,16 @@
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-6">
 
-                   <q-input
-        bg-color="white"
-        outlined
-        dense
-        :model-value="currentSacbDateRangeDisplay"
-        label="Date Range"
-        class="custom-date-range"
-        clearable
-        @clear="onCurrentSacbDateRangeClear"
-        readonly
-      >
-        <template v-slot:append>
-          <q-icon name="event" class="calend-icon">
-            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-              <q-date
-                v-model="currentSacbDateRange"
-                range
-                @update:model-value="onCurrentSacbDateRangeChange"
-              />
-            </q-popup-proxy>
-          </q-icon>
-        </template>
-      </q-input>
+            <q-input bg-color="white" outlined dense :model-value="currentSacbDateRangeDisplay" label="Date Range"
+              class="custom-date-range" clearable @clear="onCurrentSacbDateRangeClear" readonly>
+              <template v-slot:append>
+                <q-icon name="event" class="calend-icon">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date v-model="currentSacbDateRange" range @update:model-value="onCurrentSacbDateRangeChange" />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
 
           </div>
 
@@ -125,25 +99,12 @@
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-4">
 
-            <q-input
-              bg-color="white"
-              outlined
-              dense
-              :model-value="continuingDateRangeDisplay"
-              label="Date Range"
-              class="custom-date-range"
-              clearable
-              @clear="onContinuingDateRangeClear"
-              readonly
-            >
+            <q-input bg-color="white" outlined dense :model-value="continuingDateRangeDisplay" label="Date Range"
+              class="custom-date-range" clearable @clear="onContinuingDateRangeClear" readonly>
               <template v-slot:append>
                 <q-icon name="event" class="calend-icon">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date
-                      v-model="continuingDateRange"
-                      range
-                      @update:model-value="onContinuingDateRangeChange"
-                    />
+                    <q-date v-model="continuingDateRange" range @update:model-value="onContinuingDateRangeChange" />
 
                   </q-popup-proxy>
                 </q-icon>
@@ -173,25 +134,13 @@
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-6">
 
-            <q-input
-              bg-color="white"
-              outlined
-              dense
-              :model-value="continuingSacbDateRangeDisplay"
-              label="Date Range"
-              class="custom-date-range"
-              clearable
-              @clear="onContinuingSacbDateRangeClear"
-              readonly
-            >
+            <q-input bg-color="white" outlined dense :model-value="continuingSacbDateRangeDisplay" label="Date Range"
+              class="custom-date-range" clearable @clear="onContinuingSacbDateRangeClear" readonly>
               <template v-slot:append>
                 <q-icon name="event" class="calend-icon">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date
-                      v-model="continuingSacbDateRange"
-                      range
-                      @update:model-value="onContinuingSacbDateRangeChange"
-                    />
+                    <q-date v-model="continuingSacbDateRange" range
+                      @update:model-value="onContinuingSacbDateRangeChange" />
 
                   </q-popup-proxy>
                 </q-icon>
@@ -276,7 +225,7 @@
 
         <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancel" color="grey-7" @click="closeSACBModal" />
-          <q-btn outline label="Export Reports" color="green" />
+          <q-btn outline label="Export Reports to PDF" color="green" />
           <q-btn unelevated label="Print" color="primary" @click="handleSACBPrint" />
         </q-card-actions>
       </q-card>
@@ -288,13 +237,13 @@
       <q-card class=" full-height pages-group scroll ">
 
         <!-- Header menu -->
-        <q-card-actions align="right" class="q-pa-md bg-grey-2 print-header" >
-          <q-btn flat label="Cancel" color="grey-7" @click="closeRACModal" />
-          <q-btn outline label="Export Reports" color="green" />
+        <q-card-actions align="right" class="q-pa-md bg-grey-2 print-header">
+          <q-btn flat label="Close" color="black-7" @click="closeRACModal" />
+          <q-btn outline label="Export Reports to PDF" color="green" @click="exportToPDF"/>
           <q-btn unelevated label="Print" color="primary" @click="handleRACPrint" />
         </q-card-actions>
 
-        <!-- Page 1 -->
+        <!-- Page To Print -->
         <q-card class="print-modal q-mb-lg">
           <q-card-section class="q-pb-none">
             <div class="text-h6">
@@ -308,50 +257,48 @@
           <q-card-section>
             <div class="q-mt-md">
               <div class="text-subtitle1 q-mb-sm">Expense Class: {{ reportStore.expenseSelectedCurrent?.name }}</div>
-              <q-table :rows="RACModal.report" :columns="activityColumns" row-key="id" :pagination="{ rowsPerPage: 5 }"
-                flat bordered>
-                <template v-slot:body-cell-time="props">
-                  <q-td :props="props">
-                    <div class="text-caption">{{ props.value }}</div>
+
+              <!-- Modified Excel Report Table with Obligation Amount and Subcolumns -->
+              <q-table :rows="rows" :columns="columns" row-key="dvNumber" flat bordered dense separator="cell"
+                class="q-mt-md small-table-font" hide-pagination :pagination="{ rowsPerPage: 0 }">
+                <!-- Custom two-row header -->
+                <template v-slot:header>
+                  <q-tr>
+                    <q-th rowspan="2" style="width:200px;">Account Title</q-th>
+                    <q-th rowspan="2" style="width:120px;" class="text-right">Appropriation</q-th>
+                    <q-th colspan="4" class="text-center">Obligation</q-th>
+                  </q-tr>
+                  <q-tr>
+                    <q-th style="width:80px;">DV#</q-th>
+                    <q-th style="width:100px;">Date</q-th>
+                    <q-th style="width:150px;">Payee</q-th>
+                    <q-th style="width:120px;" class="text-right">Amount</q-th>
+                  </q-tr>
+                </template>
+
+                <!-- Wrap text in all body cells -->
+                <template v-slot:body-cell="props">
+                  <q-td :props="props" style="white-space: normal; word-break: break-word;">
+                    {{ props.value }}
                   </q-td>
                 </template>
-                <template v-slot:body-cell-description="props">
-                  <q-td :props="props">
-                    <div class="text-body2">{{ props.value }}</div>
-                  </q-td>
+
+                <!-- Bottom total row -->
+                <template v-slot:bottom-row>
+                  <q-tr>
+                    <q-td colspan="1" class="text-right text-bold">Total Appropriation</q-td>
+                    <q-td class="text-right text-bold">
+                      {{rows.reduce((sum, r) => sum + r.appropriation, 0).toLocaleString()}}
+                    </q-td>
+                    <q-td colspan="3" class="text-right text-bold">Total Obligation</q-td>
+                    <q-td class="text-right text-bold">
+                      {{rows.reduce((sum, r) => sum + r.amount, 0).toLocaleString()}}
+                    </q-td>
+                  </q-tr>
                 </template>
               </q-table>
-            </div>
-          </q-card-section>
-        </q-card>
 
-        <!-- Page 2 -->
-        <q-card class="print-modal">
-          <q-card-section class="q-pb-none">
-            <div class="text-h6">
-              {{ RACModal.reportType }}
-            </div>
-          </q-card-section>
-
-          <q-card-section class="q-pb-none">
-            <div class="text-h6">Barangay {{ authStore.user?.barangay_name }}</div>
-          </q-card-section>
-          <q-card-section>
-            <div class="q-mt-md">
-              <div class="text-subtitle1 q-mb-sm">Expense Class: {{ reportStore.expenseSelectedCurrent?.name }}</div>
-              <q-table :rows="RACModal.report" :columns="activityColumns" row-key="id" :pagination="{ rowsPerPage: 5 }"
-                flat bordered>
-                <template v-slot:body-cell-time="props">
-                  <q-td :props="props">
-                    <div class="text-caption">{{ props.value }}</div>
-                  </q-td>
-                </template>
-                <template v-slot:body-cell-description="props">
-                  <q-td :props="props">
-                    <div class="text-body2">{{ props.value }}</div>
-                  </q-td>
-                </template>
-              </q-table>
+              <!-- End Modified Table -->
             </div>
           </q-card-section>
         </q-card>
@@ -382,6 +329,69 @@ const dateRange = ref({ from: '', to: '' })
 const continuingDateRange = ref({ from: '', to: '' })
 const currentSacbDateRange = ref({ from: '', to: '' })
 const continuingSacbDateRange = ref({ from: '', to: '' })
+
+const rows = [
+  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
+  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
+  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
+  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
+  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
+  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
+  { accountTitle: "Utility Bills Payment - Electricity for Municipal Hall", appropriation: 120000, dvNumber: "DV-004", date: "2024-06-15", payee: "Meralco", amount: 118500 },
+  { accountTitle: "Repair and Maintenance of Service Vehicle", appropriation: 90000, dvNumber: "DV-005", date: "2024-06-18", payee: "XYZ Auto Repair Shop", amount: 87500 },
+  { accountTitle: "Purchase of Sports Equipment for Barangay Sportsfest", appropriation: 50000, dvNumber: "DV-006", date: "2024-06-20", payee: "Sports World Inc.", amount: 49800 },
+  { accountTitle: "Catering Services for Barangay General Assembly", appropriation: 60000, dvNumber: "DV-007", date: "2024-06-25", payee: "Delicious Bites Catering", amount: 59700 },
+  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
+  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
+  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
+  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
+  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
+  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
+  { accountTitle: "Utility Bills Payment - Electricity for Municipal Hall", appropriation: 120000, dvNumber: "DV-004", date: "2024-06-15", payee: "Meralco", amount: 118500 },
+  { accountTitle: "Repair and Maintenance of Service Vehicle", appropriation: 90000, dvNumber: "DV-005", date: "2024-06-18", payee: "XYZ Auto Repair Shop", amount: 87500 },
+  { accountTitle: "Purchase of Sports Equipment for Barangay Sportsfest", appropriation: 50000, dvNumber: "DV-006", date: "2024-06-20", payee: "Sports World Inc.", amount: 49800 },
+  { accountTitle: "Catering Services for Barangay General Assembly", appropriation: 60000, dvNumber: "DV-007", date: "2024-06-25", payee: "Delicious Bites Catering", amount: 59700 },
+  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
+  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
+  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
+  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
+  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
+  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
+  { accountTitle: "Utility Bills Payment - Electricity for Municipal Hall", appropriation: 120000, dvNumber: "DV-004", date: "2024-06-15", payee: "Meralco", amount: 118500 },
+  { accountTitle: "Repair and Maintenance of Service Vehicle", appropriation: 90000, dvNumber: "DV-005", date: "2024-06-18", payee: "XYZ Auto Repair Shop", amount: 87500 },
+  { accountTitle: "Purchase of Sports Equipment for Barangay Sportsfest", appropriation: 50000, dvNumber: "DV-006", date: "2024-06-20", payee: "Sports World Inc.", amount: 49800 },
+  { accountTitle: "Catering Services for Barangay General Assembly", appropriation: 60000, dvNumber: "DV-007", date: "2024-06-25", payee: "Delicious Bites Catering", amount: 59700 },
+  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
+  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
+  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
+  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
+  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
+  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
+  { accountTitle: "Utility Bills Payment - Electricity for Municipal Hall", appropriation: 120000, dvNumber: "DV-004", date: "2024-06-15", payee: "Meralco", amount: 118500 },
+  { accountTitle: "Repair and Maintenance of Service Vehicle", appropriation: 90000, dvNumber: "DV-005", date: "2024-06-18", payee: "XYZ Auto Repair Shop", amount: 87500 },
+  { accountTitle: "Purchase of Sports Equipment for Barangay Sportsfest", appropriation: 50000, dvNumber: "DV-006", date: "2024-06-20", payee: "Sports World Inc.", amount: 49800 },
+  { accountTitle: "Catering Services for Barangay General Assembly", appropriation: 60000, dvNumber: "DV-007", date: "2024-06-25", payee: "Delicious Bites Catering", amount: 59700 },
+  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
+  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
+  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
+  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
+  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
+  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
+  { accountTitle: "Utility Bills Payment - Electricity for Municipal Hall", appropriation: 120000, dvNumber: "DV-004", date: "2024-06-15", payee: "Meralco", amount: 118500 },
+  { accountTitle: "Repair and Maintenance of Service Vehicle", appropriation: 90000, dvNumber: "DV-005", date: "2024-06-18", payee: "XYZ Auto Repair Shop", amount: 87500 },
+  { accountTitle: "Purchase of Sports Equipment for Barangay Sportsfest", appropriation: 50000, dvNumber: "DV-006", date: "2024-06-20", payee: "Sports World Inc.", amount: 49800 },
+  { accountTitle: "Catering Services for Barangay General Assembly", appropriation: 60000, dvNumber: "DV-007", date: "2024-06-25", payee: "Delicious Bites Catering", amount: 59700 }
+];
+
+// We still define columns for QTable, but header slot overrides display
+const columns = [
+  { name: "accountTitle", field: "accountTitle", align: "left" },
+  { name: "appropriation", field: "appropriation", align: "right", format: val => val.toLocaleString() },
+  { name: "dvNumber", field: "dvNumber", align: "left" },
+  { name: "date", field: "date", align: "left" },
+  { name: "payee", field: "payee", align: "left" },
+  { name: "amount", field: "amount", align: "right", format: val => val.toLocaleString() }
+]
 
 // Modals
 const RACModal = reactive({
@@ -572,6 +582,67 @@ const continuingSacbDateRangeDisplay = computed(() => {
   return `${continuingSacbDateRange.value.from} - ${continuingSacbDateRange.value.to}`
 })
 
+async function exportToPDF(){
+const html2canvas = (await import('html2canvas')).default;
+const jsPDF = (await import('jspdf')).default;
+  try {
+    
+    const element = document.querySelector('.print-modal')
+
+    if (!element) {
+      this.$q.notify({
+        type: 'negative',
+        message: 'No content found to export!',
+      })
+      return
+    }
+
+    
+    const canvas = await html2canvas(element, {
+      scale: 2, 
+      useCORS: true,
+    })
+
+    const imgData = canvas.toDataURL('image/png')
+    const pdf = new jsPDF('p', 'mm', 'a4')
+
+    
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    const pageHeight = pdf.internal.pageSize.getHeight()
+    const imgWidth = pageWidth
+    const imgHeight = (canvas.height * imgWidth) / canvas.width
+
+    let heightLeft = imgHeight
+    let position = 0
+
+    
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+    heightLeft -= pageHeight
+
+    
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight
+      pdf.addPage()
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+    }
+
+    
+    pdf.save('report.pdf')
+
+    this.$q.notify({
+      type: 'positive',
+      message: 'PDF Exported Successfully!',
+    })
+  } catch (error) {
+    console.error(error)
+    this.$q.notify({
+      type: 'negative',
+      message: 'Failed to export PDF',
+    })
+  }
+}
+
 /* -------------------- LIFECYCLE -------------------- */
 onMounted(async () => {
   await loadAllData()
@@ -641,19 +712,50 @@ onActivated(async () => {
 }
 
 .print-modal {
-  /* A4 aspect ratio (height / width = 1.414) */
-
-  aspect-ratio: 310 / 397;
-  max-width: 100%;
+  /* A4 aspect ratio (width:height = 1:1.414) */
   width: min(100%, 210mm);
-  max-height: 90vh;
+  min-height: 297mm;
+  /* Minimum height is A4 */
+  max-width: 100%;
   overflow-y: auto;
-  margin-left: auto;
-  margin-right: auto;
   display: block;
-  overflow: hidden;
-position: sticky;
+  overflow: visible;
+  position: sticky;
+  /* Zoom in the modal */
+  transform: scale(1.15);
+  transform-origin: center top;
+  margin: 30px auto 30px auto;
+  padding: 24px;
+  /* Allow height to grow with content */
+  box-sizing: border-box;
 }
+
+/* Divider for every A4 "page" of content */
+.print-modal {
+  position: relative;
+}
+
+.print-modal>.a4-divider {
+  width: 100%;
+  height: 0;
+  border-top: 2px dashed #bdbdbd;
+  margin: 0;
+  position: absolute;
+  left: 0;
+  /* Top will be set inline via JS or template for each A4 page */
+  z-index: 2;
+}
+
+/* Utility class for A4 height */
+.a4-page {
+  min-height: 297mm;
+  position: relative;
+}
+
+/* Example: Add this to your template for every A4 "page" of content
+<div class="a4-page"> ...content... </div>
+<div class="a4-divider" style="top: 297mm"></div>
+*/
 
 /* Custom date range styling */
 .custom-date-range {
@@ -714,12 +816,14 @@ position: sticky;
 }
 
 /* Input and button enhancements */
-.q-input, .q-select {
+.q-input,
+.q-select {
   background-color: white;
   transition: all 0.3s ease;
 }
 
-.q-input:hover, .q-select:hover {
+.q-input:hover,
+.q-select:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -780,14 +884,23 @@ position: sticky;
   .section-header {
     margin-bottom: 20px;
   }
-}.print-header {
+}
+
+.print-header {
   position: sticky;
   top: 0;
   z-index: 10;
   background-color: #f5f5f5;
   border-bottom: 1px solid #e0e0e0;
 
-}.pages-group{
+}
+
+.pages-group {
   background-color: gray;
+}
+
+.small-table-font td,
+.small-table-font th {
+  font-size: 12px;
 }
 </style>
