@@ -293,12 +293,14 @@
                   :color="props.row.status === 'Pending' || props.row.status === 'Partial' ? 'orange' : 'grey'"
                   :disable="props.row.status !== 'Pending' && props.row.status !== 'Partial'"
                   @click="store.openEditDisbursement(props.row)"
+                  v-permission="'edit'"
                 />
                 <q-btn
                   dense
                   icon="visibility"
                   color="blue"
                   @click="store.openViewOrDetails(props.row)"
+                  v-permission="'view'"
                 />
 
                 <q-btn
@@ -307,6 +309,7 @@
                   :color="canDelete(props.row) ? 'red' : 'grey'"
                   :disable="getAgingDays(props.row.aging) >= 1"
                   @click.stop="() => canDelete(props.row) && handleDeleteDisbursement(props.row)"
+                  v-permission="'delete'"
                 />
               </div>
             </q-td>
@@ -320,7 +323,7 @@
                   color="primary"
                   v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
                   @click="store.openOrDetailsDialog(props.row)"
-                  v-permission="'edit'"
+                  v-permission="'add'"
                 />
             </q-td>
           </template>
