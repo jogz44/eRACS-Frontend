@@ -117,33 +117,7 @@
             </div>
           </div>
         </div>
-        <!-- Admin role selection dialog -->
-        <q-dialog v-model="showAdminRoleDialog" persistent position="right" class="admin-role-dialog">
-          <q-card style="width: 360px; max-width: 92vw;">
-            <q-card-section>
-              <div class="text-h6">Choose position</div>
-              <div class="text-caption q-mt-sm">Please select the admin role you want to sign in as.</div>
-            </q-card-section>
 
-            <q-card-section class="q-pt-none">
-              <q-option-group
-                v-model="selectedAdminRole"
-                :options="adminRoleOptions"
-                type="radio"
-              />
-            </q-card-section>
-
-            <q-card-actions align="center">
-              <q-btn flat label="Back" color="grey" v-close-popup />
-              <q-btn
-                label="Continue"
-                color="green"
-                @click="handleAdminRoleSelection"
-                :disable="!selectedAdminRole"
-              />
-            </q-card-actions>
-          </q-card>
-        </q-dialog>
 
         <!-- Footer -->
         <div class="login-footer">
@@ -172,24 +146,7 @@ const password = ref('')
 const isLoading = ref(false)
 const isPasswordVisible = ref(false)
 const showValidation = ref(false)
-const showAdminRoleDialog = ref(false)
-const selectedAdminRole = ref(null)
-const adminRoleOptions = ref([
-  { label: 'Commission on Audit', value: 'coa' },
-  { label: 'City Accounting Office', value: 'accounting' },
-  { label: 'Super Administrator', value: 'superadmin' }
-])
-const goToAdmin = () => {
-  selectedAdminRole.value = null
-  showAdminRoleDialog.value = true
-}
 
-const handleAdminRoleSelection = () => {
-  if (selectedAdminRole.value) {
-    router.push({ path: '/admin/login', query: { role: selectedAdminRole.value } })
-    showAdminRoleDialog.value = false
-  }
-}
 
 // Validation function
 const validateLogin = () => {
@@ -248,6 +205,7 @@ onUnmounted(() => {
 
 const goToForgotPassword = () => router.push('/forgotpage')
 const goToSignUp = () => router.push('/signup')
+const goToAdmin = () => router.push('/admin/login')
 // const goToAdmin = () => {
 //   $q.dialog({
 //     title: 'Choose position',

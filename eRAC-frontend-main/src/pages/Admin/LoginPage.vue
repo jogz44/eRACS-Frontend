@@ -145,7 +145,7 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
-const email = ref('admin@gmail.com') // Pre-fill for testing
+const email = ref('')
 const password = ref('')
 const loading = ref(false)
 const isPasswordVisible = ref(false)
