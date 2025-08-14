@@ -256,7 +256,7 @@
               <div class="text-subtitle1 q-mb-sm">Expense Class: {{ reportStore.expenseSelectedCurrent?.name }}</div>
 
               <!-- Modified Excel Report Table with Obligation Amount and Subcolumns -->
-              <q-table :rows="rows" :columns="columns" row-key="dvNumber" flat bordered dense separator="cell"
+              <q-table :rows="reportStore.reportRAC" :columns="reportStore.racColumn" row-key="dvNumber" flat bordered dense separator="cell"
                 class="q-mt-md small-table-font" hide-pagination :pagination="{ rowsPerPage: 0 }">
                 <!-- Custom two-row header -->
                 <template v-slot:header>
@@ -285,11 +285,11 @@
                   <q-tr>
                     <q-td colspan="1" class="text-right text-bold">Total Appropriation</q-td>
                     <q-td class="text-right text-bold">
-                      {{rows.reduce((sum, r) => sum + r.appropriation, 0).toLocaleString()}}
+                      {{reportStore.reportRAC.reduce((sum, r) => sum + r.appropriation, 0).toLocaleString()}}
                     </q-td>
                     <q-td colspan="3" class="text-right text-bold">Total Obligation</q-td>
                     <q-td class="text-right text-bold">
-                      {{rows.reduce((sum, r) => sum + r.amount, 0).toLocaleString()}}
+                      {{reportStore.reportRAC.reduce((sum, r) => sum + r.amount, 0).toLocaleString()}}
                     </q-td>
                   </q-tr>
                 </template>
@@ -327,68 +327,6 @@ const continuingDateRange = ref({ from: '', to: '' })
 const currentSacbDateRange = ref({ from: '', to: '' })
 const continuingSacbDateRange = ref({ from: '', to: '' })
 
-const rows = [
-  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
-  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
-  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
-  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
-  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
-  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
-  { accountTitle: "Utility Bills Payment - Electricity for Municipal Hall", appropriation: 120000, dvNumber: "DV-004", date: "2024-06-15", payee: "Meralco", amount: 118500 },
-  { accountTitle: "Repair and Maintenance of Service Vehicle", appropriation: 90000, dvNumber: "DV-005", date: "2024-06-18", payee: "XYZ Auto Repair Shop", amount: 87500 },
-  { accountTitle: "Purchase of Sports Equipment for Barangay Sportsfest", appropriation: 50000, dvNumber: "DV-006", date: "2024-06-20", payee: "Sports World Inc.", amount: 49800 },
-  { accountTitle: "Catering Services for Barangay General Assembly", appropriation: 60000, dvNumber: "DV-007", date: "2024-06-25", payee: "Delicious Bites Catering", amount: 59700 },
-  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
-  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
-  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
-  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
-  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
-  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
-  { accountTitle: "Utility Bills Payment - Electricity for Municipal Hall", appropriation: 120000, dvNumber: "DV-004", date: "2024-06-15", payee: "Meralco", amount: 118500 },
-  { accountTitle: "Repair and Maintenance of Service Vehicle", appropriation: 90000, dvNumber: "DV-005", date: "2024-06-18", payee: "XYZ Auto Repair Shop", amount: 87500 },
-  { accountTitle: "Purchase of Sports Equipment for Barangay Sportsfest", appropriation: 50000, dvNumber: "DV-006", date: "2024-06-20", payee: "Sports World Inc.", amount: 49800 },
-  { accountTitle: "Catering Services for Barangay General Assembly", appropriation: 60000, dvNumber: "DV-007", date: "2024-06-25", payee: "Delicious Bites Catering", amount: 59700 },
-  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
-  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
-  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
-  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
-  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
-  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
-  { accountTitle: "Utility Bills Payment - Electricity for Municipal Hall", appropriation: 120000, dvNumber: "DV-004", date: "2024-06-15", payee: "Meralco", amount: 118500 },
-  { accountTitle: "Repair and Maintenance of Service Vehicle", appropriation: 90000, dvNumber: "DV-005", date: "2024-06-18", payee: "XYZ Auto Repair Shop", amount: 87500 },
-  { accountTitle: "Purchase of Sports Equipment for Barangay Sportsfest", appropriation: 50000, dvNumber: "DV-006", date: "2024-06-20", payee: "Sports World Inc.", amount: 49800 },
-  { accountTitle: "Catering Services for Barangay General Assembly", appropriation: 60000, dvNumber: "DV-007", date: "2024-06-25", payee: "Delicious Bites Catering", amount: 59700 },
-  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
-  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
-  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
-  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
-  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
-  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
-  { accountTitle: "Utility Bills Payment - Electricity for Municipal Hall", appropriation: 120000, dvNumber: "DV-004", date: "2024-06-15", payee: "Meralco", amount: 118500 },
-  { accountTitle: "Repair and Maintenance of Service Vehicle", appropriation: 90000, dvNumber: "DV-005", date: "2024-06-18", payee: "XYZ Auto Repair Shop", amount: 87500 },
-  { accountTitle: "Purchase of Sports Equipment for Barangay Sportsfest", appropriation: 50000, dvNumber: "DV-006", date: "2024-06-20", payee: "Sports World Inc.", amount: 49800 },
-  { accountTitle: "Catering Services for Barangay General Assembly", appropriation: 60000, dvNumber: "DV-007", date: "2024-06-25", payee: "Delicious Bites Catering", amount: 59700 },
-  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
-  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
-  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
-  { accountTitle: "Salaries and Wages for Regular Employees", appropriation: 500000, dvNumber: "DV-001", date: "2024-06-01", payee: "Juan Dela Cruz", amount: 450000 },
-  { accountTitle: "Purchase of Office Supplies including printer ink and bond papers", appropriation: 80000, dvNumber: "DV-002", date: "2024-06-05", payee: "ABC Stationery Co.", amount: 60000 },
-  { accountTitle: "Travel Expenses for Official Business Trip to Manila", appropriation: 40000, dvNumber: "DV-003", date: "2024-06-10", payee: "Maria Santos", amount: 35000 },
-  { accountTitle: "Utility Bills Payment - Electricity for Municipal Hall", appropriation: 120000, dvNumber: "DV-004", date: "2024-06-15", payee: "Meralco", amount: 118500 },
-  { accountTitle: "Repair and Maintenance of Service Vehicle", appropriation: 90000, dvNumber: "DV-005", date: "2024-06-18", payee: "XYZ Auto Repair Shop", amount: 87500 },
-  { accountTitle: "Purchase of Sports Equipment for Barangay Sportsfest", appropriation: 50000, dvNumber: "DV-006", date: "2024-06-20", payee: "Sports World Inc.", amount: 49800 },
-  { accountTitle: "Catering Services for Barangay General Assembly", appropriation: 60000, dvNumber: "DV-007", date: "2024-06-25", payee: "Delicious Bites Catering", amount: 59700 }
-];
-
-// We still define columns for QTable, but header slot overrides display
-const columns = [
-  { name: "accountTitle", field: "accountTitle", align: "left" },
-  { name: "appropriation", field: "appropriation", align: "right", format: val => val.toLocaleString() },
-  { name: "dvNumber", field: "dvNumber", align: "left" },
-  { name: "date", field: "date", align: "left" },
-  { name: "payee", field: "payee", align: "left" },
-  { name: "amount", field: "amount", align: "right", format: val => val.toLocaleString() }
-]
 
 // Modals
 const RACModal = reactive({
