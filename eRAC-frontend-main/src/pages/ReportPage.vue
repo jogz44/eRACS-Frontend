@@ -225,7 +225,7 @@
 
         <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancel" color="grey-7" @click="closeSACBModal" />
-          <q-btn outline label="Export Reports" color="green" />
+          <q-btn outline label="Export Reports to PDF" color="green" />
           <q-btn unelevated label="Print" color="primary" @click="handleSACBPrint" />
         </q-card-actions>
       </q-card>
@@ -238,12 +238,12 @@
 
         <!-- Header menu -->
         <q-card-actions align="right" class="q-pa-md bg-grey-2 print-header">
-          <q-btn flat label="Cancel" color="grey-7" @click="closeRACModal" />
-          <q-btn outline label="Export Reports" color="green" />
+          <q-btn flat label="Close" color="black-7" @click="closeRACModal" />
+          <q-btn outline label="Export Reports to PDF" color="green" @click="exportToPDF"/>
           <q-btn unelevated label="Print" color="primary" @click="handleRACPrint" />
         </q-card-actions>
 
-        <!-- Page 1 -->
+        <!-- Page To Print -->
         <q-card class="print-modal q-mb-lg">
           <q-card-section class="q-pb-none">
             <div class="text-h6">
@@ -581,6 +581,67 @@ const continuingSacbDateRangeDisplay = computed(() => {
   if (!continuingSacbDateRange.value.from && continuingSacbDateRange.value.to) return `To ${continuingSacbDateRange.value.to}`
   return `${continuingSacbDateRange.value.from} - ${continuingSacbDateRange.value.to}`
 })
+
+async function exportToPDF(){
+const html2canvas = (await import('html2canvas')).default;
+const jsPDF = (await import('jspdf')).default;
+  try {
+    
+    const element = document.querySelector('.print-modal')
+
+    if (!element) {
+      this.$q.notify({
+        type: 'negative',
+        message: 'No content found to export!',
+      })
+      return
+    }
+
+    
+    const canvas = await html2canvas(element, {
+      scale: 2, 
+      useCORS: true,
+    })
+
+    const imgData = canvas.toDataURL('image/png')
+    const pdf = new jsPDF('p', 'mm', 'a4')
+
+    
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    const pageHeight = pdf.internal.pageSize.getHeight()
+    const imgWidth = pageWidth
+    const imgHeight = (canvas.height * imgWidth) / canvas.width
+
+    let heightLeft = imgHeight
+    let position = 0
+
+    
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+    heightLeft -= pageHeight
+
+    
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight
+      pdf.addPage()
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+    }
+
+    
+    pdf.save('report.pdf')
+
+    this.$q.notify({
+      type: 'positive',
+      message: 'PDF Exported Successfully!',
+    })
+  } catch (error) {
+    console.error(error)
+    this.$q.notify({
+      type: 'negative',
+      message: 'Failed to export PDF',
+    })
+  }
+}
 
 /* -------------------- LIFECYCLE -------------------- */
 onMounted(async () => {
