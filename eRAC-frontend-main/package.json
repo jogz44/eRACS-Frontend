@@ -19,6 +19,8 @@
     "@vueuse/core": "^13.1.0",
     "axios": "^1.2.1",
     "chart.js": "^4.4.8",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.1",
     "pinia": "^3.0.1",
     "quasar": "^2.16.0",
     "sortablejs": "^1.15.6",
