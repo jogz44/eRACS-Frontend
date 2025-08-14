@@ -26,8 +26,6 @@ export const useReportStore = defineStore("reportStore", {
     positionsOptions: [],
     positionSelected: null,
 
-    loadingRAC: false,
-    loadingSACB: false,
     }),
   getters: {},
   actions: {
