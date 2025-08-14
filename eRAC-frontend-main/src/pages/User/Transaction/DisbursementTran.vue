@@ -307,7 +307,7 @@
                   dense
                   icon="delete"
                   :color="canDelete(props.row) ? 'red' : 'grey'"
-                  :disable="getAgingDays(props.row.aging) >= 1"
+                  :disable="getAgingDays(props.row.aging) >= 1 || !canDelete(props.row)"
                   @click.stop="() => canDelete(props.row) && handleDeleteDisbursement(props.row)"
                   v-permission="'delete'"
                 />
@@ -355,6 +355,11 @@ const bankStore = useBankStore()
 function canDelete(row) {
   const aging = Number(getAgingDays(row.aging))
   if (Number.isNaN(aging)) return false
+  
+  // Cannot delete if liquidated (regardless of return amount)
+  if (row.status === 'Liquidated') return false
+  
+  // Can only delete if pending or partial and aging < 1 day
   return (row.status === 'Pending' || row.status === 'Partial') && aging < 1
 }
 

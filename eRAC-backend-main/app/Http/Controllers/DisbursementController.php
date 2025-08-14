@@ -144,6 +144,7 @@ class DisbursementController extends Controller
     {
         $request->validate([
             'orDetails' => 'required|array',
+            'orDetails.*.id' => 'nullable|integer|exists:disbursement_or_details,id',
             'orDetails.*.orNumber' => 'required|string',
             'orDetails.*.orAmount' => 'required|numeric|min:0',
             'orDetails.*.orDate' => 'required|string|regex:/^\d{2}\/\d{2}\/\d{4}$/',
@@ -169,7 +170,10 @@ class DisbursementController extends Controller
                 DisbursementOrDetail::where('disbursement_id', $id)->delete();
             }
 
-            // Save new OR details (append if continuing, replace if new)
+            // Get existing OR details for comparison
+            $existingOrDetails = DisbursementOrDetail::where('disbursement_id', $id)->get();
+            
+            // Process OR details - update existing ones or create new ones
             foreach ($request->orDetails as $orDetail) {
                 // Convert date from DD/MM/YYYY to YYYY-MM-DD if provided
                 $orDate = null;
@@ -180,15 +184,35 @@ class DisbursementController extends Controller
                     }
                 }
 
-                DisbursementOrDetail::create([
-                    'disbursement_id' => $id,
-                    'or_date' => $orDate,
-                    'or_number' => $orDetail['orNumber'],
-                    'or_amount' => $orDetail['orAmount'],
-                    'remarks' => $orDetail['remarks'] ?? '',
-                    'or_photo' => $orDetail['orPhotoUrl'] ?? null, // Save the photo URL/path
-                ]);
+                if ($isContinuation && isset($orDetail['id']) && $orDetail['id']) {
+                    // Update existing OR detail by ID
+                    $existingOrDetail = DisbursementOrDetail::where('id', $orDetail['id'])
+                        ->where('disbursement_id', $id)
+                        ->first();
+                    
+                    if ($existingOrDetail) {
+                        $existingOrDetail->update([
+                            'or_date' => $orDate,
+                            'or_number' => $orDetail['orNumber'],
+                            'or_amount' => $orDetail['orAmount'],
+                            'remarks' => $orDetail['remarks'] ?? '',
+                            'or_photo' => $orDetail['orPhotoUrl'] ?? null,
+                        ]);
+                    }
+                } else {
+                    // Create new OR detail
+                    DisbursementOrDetail::create([
+                        'disbursement_id' => $id,
+                        'or_date' => $orDate,
+                        'or_number' => $orDetail['orNumber'],
+                        'or_amount' => $orDetail['orAmount'],
+                        'remarks' => $orDetail['remarks'] ?? '',
+                        'or_photo' => $orDetail['orPhotoUrl'] ?? null,
+                    ]);
+                }
             }
+            
+
 
             // Update disbursement status based on whether it's partial or full liquidation
             $isPartial = $request->has('isPartial') && ($request->isPartial === true || $request->isPartial === 'true' || $request->isPartial === 1);
@@ -416,6 +440,47 @@ class DisbursementController extends Controller
         return response()->json(['status' => true, 'data' => $disbursement]);
     }
 
+    // DELETE /api/barangay/disbursements/{id}/or-details/{orDetailId}
+    public function deleteOrDetail(Request $request, $id, $orDetailId)
+    {
+        try {
+            $user = $request->user();
+            
+            // Find the disbursement and ensure it belongs to the user's barangay
+            $disbursement = Disbursement::where('id', $id)
+                ->where('barangay_id', $user->barangay_id)
+                ->firstOrFail();
+            
+            // Check if disbursement can be modified (only if status is Pending or Partial)
+            if ($disbursement->status !== 'Pending' && $disbursement->status !== 'Partial') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Only pending and partial disbursements can be modified'
+                ], 400);
+            }
+            
+            // Find and delete the OR detail
+            $orDetail = DisbursementOrDetail::where('id', $orDetailId)
+                ->where('disbursement_id', $id)
+                ->firstOrFail();
+            
+            $orDetail->delete();
+            
+            return response()->json([
+                'status' => true,
+                'message' => 'OR Detail deleted successfully'
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error deleting OR detail: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to delete OR detail',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     // DELETE /api/barangay/disbursements/{id}
     public function destroy(Request $request, $id)
     {
@@ -427,11 +492,11 @@ class DisbursementController extends Controller
                 ->where('barangay_id', $user->barangay_id)
                 ->firstOrFail();
             
-            // Check if disbursement can be deleted (only if status is Pending)
-            if ($disbursement->status !== 'Pending') {
+            // Check if disbursement can be deleted (only if status is Pending or Partial)
+            if ($disbursement->status !== 'Pending' && $disbursement->status !== 'Partial') {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Only pending disbursements can be deleted'
+                    'message' => 'Only pending and partial disbursements can be deleted'
                 ], 400);
             }
             

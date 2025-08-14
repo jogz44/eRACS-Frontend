@@ -253,6 +253,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         align: 'right',
         sortable: true,
       },
+
       {
         name: 'action',
         label: 'Action',
@@ -310,24 +311,36 @@ export const useDisbursementStore = defineStore('disbursement', {
   },
 
   actions: {
-    // Calculate remaining balance by deducting disbursements from appropriations
+    // Calculate remaining balance by deducting disbursements and adding returned amounts from appropriations
     calculateRemainingBalance(expenseId, originalAmount, expenseLevel) {
       try {
         let totalDisbursed = 0
+        let totalReturned = 0
         
-        // Check all disbursement expenses for this account
+        // Check all disbursement expenses for this account (already saved)
         this.disbursementExpenses.forEach(disbursementExpense => {
           disbursementExpense.expenses.forEach(expense => {
             if (expenseLevel === 'item' && expense.expense_item_id === expenseId) {
               totalDisbursed += parseFloat(expense.amount) || 0
+              totalReturned += parseFloat(expense.returnedAmount) || 0
             } else if (expenseLevel === 'type' && expense.expense_type_id === expenseId) {
               totalDisbursed += parseFloat(expense.amount) || 0
+              totalReturned += parseFloat(expense.returnedAmount) || 0
             }
           })
         })
         
-        // Calculate remaining balance
-        const remainingBalance = Math.max(0, originalAmount - totalDisbursed)
+        // Also check current expenses being added to the disbursement (not yet saved)
+        this.expenses.forEach(expense => {
+          if (expenseLevel === 'item' && expense.expense_item_id === expenseId) {
+            totalDisbursed += parseFloat(expense.amount) || 0
+          } else if (expenseLevel === 'type' && expense.expense_type_id === expenseId) {
+            totalDisbursed += parseFloat(expense.amount) || 0
+          }
+        })
+        
+        // Calculate remaining balance: original - disbursed + returned
+        const remainingBalance = Math.max(0, originalAmount - totalDisbursed + totalReturned)
         
         return remainingBalance
       } catch (error) {
@@ -864,13 +877,14 @@ export const useDisbursementStore = defineStore('disbursement', {
             }
 
             return {
+              id: or.id, // Keep the original ID for updating
               orDate: formattedDate,
               orNumber: or.or_number,
               orAmount: or.or_amount,
               orImage: null,
               orPhotoUrl: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
               serverPhotoPath: or.or_photo,
-              isReadOnly: true, // Mark existing OR details as read-only
+              isExisting: true, // Flag to identify existing OR details
             };
           });
 
@@ -1110,6 +1124,10 @@ export const useDisbursementStore = defineStore('disbursement', {
       })
 
       this.expenses = [...this.expenses]
+      
+      // Immediately refresh expense account balances to show updated amounts
+      this.refreshExpenseAccountsWithBalances()
+      
       this.closeDialog('expenseDetail')
       this.resetForm('expense')
     },
@@ -1119,12 +1137,18 @@ export const useDisbursementStore = defineStore('disbursement', {
       if (index !== -1) {
         this.expenses[index] = row
         this.forms.disbursement.amount = this.totalExpensesAmount
+        
+        // Immediately refresh expense account balances to show updated amounts
+        this.refreshExpenseAccountsWithBalances()
       }
     },
 
     deleteExpense(id) {
       this.expenses = this.expenses.filter((e) => e.id !== id)
       this.forms.disbursement.amount = this.totalExpensesAmount
+      
+      // Immediately refresh expense account balances to show updated amounts
+      this.refreshExpenseAccountsWithBalances()
     },
 
     // Alias functions for EditDisbursement component
@@ -1225,6 +1249,24 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Update the expenses data for balance calculations
         if (this.expenses.length > 0) {
           const disbursementId = this.currentItem.id
+          
+          // Get the old disbursement expense to calculate what needs to be returned
+          const oldDisbursementExpense = this.disbursementExpenses.find(de => de.disbursementId === disbursementId)
+          if (oldDisbursementExpense) {
+            const oldTotalAmount = oldDisbursementExpense.expenses.reduce(
+              (sum, expense) => sum + (parseFloat(expense.amount) || 0), 0
+            )
+            const newTotalAmount = this.expenses.reduce(
+              (sum, expense) => sum + (parseFloat(expense.amount) || 0), 0
+            )
+            
+            // If the new amount is less than the old amount, return the difference
+            if (newTotalAmount < oldTotalAmount) {
+              const returnAmount = oldTotalAmount - newTotalAmount
+              await this.returnRemainingAmountToExpenses(disbursementId, oldTotalAmount - returnAmount)
+            }
+          }
+          
           // Remove old expenses for this disbursement
           this.disbursementExpenses = this.disbursementExpenses.filter(de => de.disbursementId !== disbursementId)
           // Add updated expenses
@@ -1321,7 +1363,8 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Prepare the payload
         const payload = {
-          orDetails: this.currentLiquidation.orDetails.filter(or => !or.isReadOnly).map(or => ({
+          orDetails: this.currentLiquidation.orDetails.map(or => ({
+            id: or.id || null, // Include ID for existing OR details
             orNumber: or.orNumber,
             orAmount: or.orAmount,
             orDate: or.orDate || '',
@@ -1342,6 +1385,9 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Refresh the disbursements list
         await this.fetchDisbursements()
+
+        // Return remaining amount to expense accounts
+        await this.returnRemainingAmountToExpenses(this.currentLiquidation.id, totalActualExpense)
 
         // Close the dialog after saving
         this.closeDialog('orDetails')
@@ -1383,7 +1429,8 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Prepare the payload for partial liquidation
         const payload = {
-          orDetails: this.currentLiquidation.orDetails.filter(or => !or.isReadOnly).map(or => ({
+          orDetails: this.currentLiquidation.orDetails.map(or => ({
+            id: or.id || null, // Include ID for existing OR details
             orNumber: or.orNumber,
             orAmount: or.orAmount,
             orDate: or.orDate || '',
@@ -1405,6 +1452,9 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Refresh the disbursements list
         await this.fetchDisbursements()
+
+        // Return remaining amount to expense accounts
+        await this.returnRemainingAmountToExpenses(this.currentLiquidation.id, totalActualExpense)
 
         // Close the dialog after saving
         this.closeDialog('orDetails')
@@ -1439,7 +1489,6 @@ export const useDisbursementStore = defineStore('disbursement', {
         orPhotoUrl: null,
         serverPhotoPath: null,
         remarks: '',
-        isReadOnly: false,
       })
 
       this.calculateTotals()
@@ -1493,6 +1542,119 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
+    async deleteOrDetail(disbursementId, orDetailId) {
+      try {
+        const authStore = useAuthStore()
+        const token = authStore.token
+
+        const response = await api.delete(`/api/barangay/disbursements/${disbursementId}/or-details/${orDetailId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        })
+
+        if (response.data.status) {
+          // Remove the OR detail from the local array
+          if (this.currentLiquidation?.orDetails) {
+            this.currentLiquidation.orDetails = this.currentLiquidation.orDetails.filter(
+              or => or.id !== orDetailId
+            )
+          }
+
+          return { success: true, message: response.data.message }
+        } else {
+          return { success: false, message: response.data.message }
+        }
+      } catch (error) {
+        console.error('Failed to delete OR detail:', error)
+        return {
+          success: false,
+          message: error.response?.data?.message || 'Failed to delete OR detail'
+        }
+      }
+    },
+
+    // Get the total returned amount for a specific expense account
+    getReturnedAmount(expenseId, expenseLevel) {
+      try {
+        let totalReturned = 0
+        
+        // Check all disbursement expenses for this account
+        this.disbursementExpenses.forEach(disbursementExpense => {
+          disbursementExpense.expenses.forEach(expense => {
+            if (expenseLevel === 'item' && expense.expense_item_id === expenseId) {
+              totalReturned += parseFloat(expense.returnedAmount) || 0
+            } else if (expenseLevel === 'type' && expense.expense_type_id === expenseId) {
+              totalReturned += parseFloat(expense.returnedAmount) || 0
+            }
+          })
+        })
+        
+        return totalReturned
+      } catch (error) {
+        console.error('Error calculating returned amount:', error)
+        return 0
+      }
+    },
+
+    // Return remaining amount to expense accounts after liquidation
+    async returnRemainingAmountToExpenses(disbursementId, liquidatedAmount) {
+      try {
+        // Find the disbursement to get the original DV amount
+        const disbursement = this.disbursements.find(d => d.id === disbursementId)
+        if (!disbursement) {
+          console.warn('Disbursement not found for returning remaining amount')
+          return
+        }
+
+        const dvAmount = parseFloat(disbursement.dvAmount) || 0
+        const returnAmount = dvAmount - liquidatedAmount
+
+        if (returnAmount <= 0) {
+          console.log('No amount to return to expense accounts')
+          return
+        }
+
+        // Find the disbursement expenses for this disbursement
+        const disbursementExpense = this.disbursementExpenses.find(de => de.disbursementId === disbursementId)
+        if (!disbursementExpense || !disbursementExpense.expenses || disbursementExpense.expenses.length === 0) {
+          console.warn('No expenses found for disbursement')
+          return
+        }
+
+        // Calculate total original expense amount for this disbursement
+        const totalOriginalExpense = disbursementExpense.expenses.reduce(
+          (sum, expense) => sum + (parseFloat(expense.amount) || 0), 0
+        )
+
+        if (totalOriginalExpense <= 0) {
+          console.warn('Invalid total original expense amount')
+          return
+        }
+
+        // Distribute return amount proportionally to each expense account
+        disbursementExpense.expenses.forEach(expense => {
+          const originalAmount = parseFloat(expense.amount) || 0
+          const proportion = originalAmount / totalOriginalExpense
+          const returnAmountForExpense = returnAmount * proportion
+          
+          // Add a returnedAmount field to track how much was returned
+          expense.returnedAmount = (expense.returnedAmount || 0) + returnAmountForExpense
+        })
+
+        // Save updated disbursement expenses to storage
+        this.saveDisbursementExpensesToStorage()
+
+        // Refresh expense accounts with updated balances
+        this.refreshExpenseAccountsWithBalances()
+
+        console.log(`Successfully returned ₱${returnAmount.toFixed(2)} to expense accounts`)
+      } catch (error) {
+        console.error('Error returning remaining amount to expense accounts:', error)
+      }
+    },
+
     async deleteDisbursement(id) {
       try {
         const authStore = useAuthStore();
@@ -1506,6 +1668,15 @@ export const useDisbursementStore = defineStore('disbursement', {
         });
 
         if (response.data.status) {
+          // Return any remaining amounts to expense accounts before deleting
+          const disbursementExpense = this.disbursementExpenses.find(de => de.disbursementId === id)
+          if (disbursementExpense) {
+            const totalDisbursed = disbursementExpense.expenses.reduce(
+              (sum, expense) => sum + (parseFloat(expense.amount) || 0), 0
+            )
+            await this.returnRemainingAmountToExpenses(id, totalDisbursed)
+          }
+
           // Remove the disbursement from the local array
           this.disbursements = this.disbursements.filter(d => d.id !== id);
 

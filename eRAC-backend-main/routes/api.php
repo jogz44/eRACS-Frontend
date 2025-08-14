@@ -137,6 +137,8 @@ Route::prefix('barangay')->group(function () {
         Route::get('disbursements/{id}/or-details', [DisbursementController::class, 'getOrDetails']);
         // Save OR Details for a disbursement
         Route::post('disbursements/{id}/or-details', [DisbursementController::class, 'saveOrDetails']);
+        // Delete individual OR Detail
+        Route::delete('disbursements/{id}/or-details/{orDetailId}', [DisbursementController::class, 'deleteOrDetail']);
         // Upload OR photo
         Route::post('disbursements/or-photo/upload', [DisbursementController::class, 'uploadOrPhoto']);
         // Delete OR photo
