@@ -70,19 +70,6 @@
               label="Choose Booklet"
               class="q-mb-sm"
             />
-
-            <!-- Cheque Number Selection Dropdown -->
-            <q-select
-              filled
-              outlined
-              dense
-              v-model="store.selectedChequeNumber"
-              @update:model-value="store.selectChequeNumber"
-              :options="store.availableChequeNumbers"
-              :disable="!store.selectedBooklet"
-              label="Select Cheque Number"
-              :rules="[(val) => !!val || 'Field is required']"
-            />
           </div>
           <!-- DV Number Field -->
           <div class="col-md-4 col-sm-6">
