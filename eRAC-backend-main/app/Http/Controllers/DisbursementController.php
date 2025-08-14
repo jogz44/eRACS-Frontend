@@ -68,7 +68,7 @@ class DisbursementController extends Controller
             'payee' => 'required|string',
             'dv_amount' => 'required|numeric|min:0',
             'expenses' => 'array',
-            'expenses.*.accountId' => 'required|exists:lib_expense_items,id',
+            'expenses.*.accountId' => 'required|integer',
             'expenses.*.amount' => 'required|numeric|min:0',
             'expenses.*.particular' => 'nullable|string',
         ]);

@@ -12,6 +12,9 @@ export const useDisbursementStore = defineStore('disbursement', {
     expenseSearch: '',
     currentItem: null,
 
+    // Track disbursement expenses for balance calculations
+    disbursementExpenses: [], // Array to store all disbursement expenses with their details
+
     autoBookletID: null, // Automatically generated cheque booklet after selecting a bank
     autoCheque: null, // Automatically generated cheque number after selecting a bank
     chequeBooklets: [], // Will be populated from selected bank
@@ -79,13 +82,21 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Filtered expense accounts for search
     expenseAccounts(state) {
       if (!state.expenseData || state.expenseData.length === 0) {
-        console.log('No expense data available')
+        return []
+      }
+
+      // Use the new calculation that includes disbursement deductions
+      return this.expenseAccountsWithDisbursements
+    },
+
+    // New getter that calculates remaining balance after disbursements
+    expenseAccountsWithDisbursements(state) {
+      if (!state.expenseData || state.expenseData.length === 0) {
         return []
       }
 
       const flattened = state.expenseData.reduce((acc, expenseClass) => {
         if (!expenseClass.children) {
-          console.log(`No children for expense class: ${expenseClass.name}`)
           return acc
         }
 
@@ -98,35 +109,53 @@ export const useDisbursementStore = defineStore('disbursement', {
             // If expense type has items with balance, only show the items (not the type)
             expenseType.children.forEach((expenseItem) => {
               if (expenseItem.amount && expenseItem.amount > 0) {
-                const expenseItemEntry = {
-                  id: expenseItem.id,
-                  account: expenseClass.name,
-                  expenseType: expenseType.name,
-                  expenseItem: expenseItem.name,
-                  balance: expenseItem.amount || 0,
-                  expense_class_id: expenseClass.id,
-                  expense_type_id: expenseType.id,
-                  expense_item_id: expenseItem.id,
+                // Calculate remaining balance by deducting disbursements
+                const remainingBalance = this.calculateRemainingBalance(
+                  expenseItem.id,
+                  expenseItem.amount,
+                  'item'
+                )
+
+                if (remainingBalance > 0) {
+                  const expenseItemEntry = {
+                    id: expenseItem.id,
+                    account: expenseClass.name,
+                    expenseType: expenseType.name,
+                    expenseItem: expenseItem.name,
+                    balance: remainingBalance, // Use remaining balance instead of original amount
+                    originalBalance: expenseItem.amount, // Keep original amount for reference
+                    expense_class_id: expenseClass.id,
+                    expense_type_id: expenseType.id,
+                    expense_item_id: expenseItem.id,
+                  }
+                  acc.push(expenseItemEntry)
                 }
-                acc.push(expenseItemEntry)
-                console.log(`Added expense item: ${expenseItem.name} with balance: ${expenseItem.amount}`)
               }
             })
           } else {
             // If expense type has no items with balance, show the type itself (if it has balance)
             if (expenseType.amount && expenseType.amount > 0) {
-              const expenseTypeEntry = {
-                id: expenseType.id,
-                account: expenseClass.name,
-                expenseType: expenseType.name,
-                expenseItem: null,
-                balance: expenseType.amount || 0,
-                expense_class_id: expenseClass.id,
-                expense_type_id: expenseType.id,
-                expense_item_id: null, // This identifies it as an expense type
+              // Calculate remaining balance by deducting disbursements
+              const remainingBalance = this.calculateRemainingBalance(
+                expenseType.id,
+                expenseType.amount,
+                'type'
+              )
+
+              if (remainingBalance > 0) {
+                const expenseTypeEntry = {
+                  id: expenseType.id,
+                  account: expenseClass.name,
+                  expenseType: expenseType.name,
+                  expenseItem: null,
+                  balance: remainingBalance, // Use remaining balance instead of original amount
+                  originalBalance: expenseType.amount, // Keep original amount for reference
+                  expense_class_id: expenseClass.id,
+                  expense_type_id: expenseType.id,
+                  expense_item_id: null, // This identifies it as an expense type
+                }
+                acc.push(expenseTypeEntry)
               }
-              acc.push(expenseTypeEntry)
-              console.log(`Added expense type: ${expenseType.name} with balance: ${expenseType.amount}`)
             }
           }
         })
@@ -255,7 +284,6 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     filteredExpenseAccounts(state) {
       if (!state.expenseSearch.trim()) {
-        console.log('No search query, returning all expense accounts:', this.expenseAccounts.length)
         return this.expenseAccounts
       }
 
@@ -282,12 +310,47 @@ export const useDisbursementStore = defineStore('disbursement', {
   },
 
   actions: {
+    // Calculate remaining balance by deducting disbursements from appropriations
+    calculateRemainingBalance(expenseId, originalAmount, expenseLevel) {
+      try {
+        let totalDisbursed = 0
+        
+        // Check all disbursement expenses for this account
+        this.disbursementExpenses.forEach(disbursementExpense => {
+          disbursementExpense.expenses.forEach(expense => {
+            if (expenseLevel === 'item' && expense.expense_item_id === expenseId) {
+              totalDisbursed += parseFloat(expense.amount) || 0
+            } else if (expenseLevel === 'type' && expense.expense_type_id === expenseId) {
+              totalDisbursed += parseFloat(expense.amount) || 0
+            }
+          })
+        })
+        
+        // Calculate remaining balance
+        const remainingBalance = Math.max(0, originalAmount - totalDisbursed)
+        
+        return remainingBalance
+      } catch (error) {
+        console.error('Error calculating remaining balance:', error)
+        return originalAmount // Return original amount if calculation fails
+      }
+    },
+
+    // Refresh expense accounts with updated balances after disbursement changes
+    refreshExpenseAccountsWithBalances() {
+      try {
+        // Force a refresh of the expense accounts to recalculate balances
+        this.expenseData = [...this.expenseData]
+      } catch (error) {
+        console.error('Failed to refresh expense accounts with balances:', error)
+      }
+    },
+
     // Fetch expense hierarchy from appropriation store and accounts library store
     async fetchExpenseAccounts() {
       try {
         // Only fetch if not already loaded to avoid unnecessary API calls
         if (this.expenseData.length > 0 && !this.expenseTypeLoading) {
-          console.log('Expense accounts already loaded, skipping fetch')
           return
         }
 
@@ -310,8 +373,6 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Background refresh method for expense accounts
     async refreshExpenseAccountsInBackground() {
       try {
-        console.log('Refreshing expense accounts in background...')
-
         // Fetch from appropriation store for budget allocations
         const appropriationStore = useAppropriationStore()
         await appropriationStore.fetchExpenseHierarchy()
@@ -322,7 +383,6 @@ export const useDisbursementStore = defineStore('disbursement', {
           console.warn('Failed to fetch expense types in background:', error)
         })
 
-        console.log('Expense accounts refreshed in background')
       } catch (error) {
         console.warn('Failed to refresh expense accounts in background:', error)
       }
@@ -377,7 +437,6 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // If no expense types are available, return early
         if (!accountsStore.expenseTypes || accountsStore.expenseTypes.length === 0) {
-          console.log('No expense types available from accounts library')
           return
         }
 
@@ -423,7 +482,6 @@ export const useDisbursementStore = defineStore('disbursement', {
                     amount: 0, // Will be populated from appropriation data if available
                     children: [] // Initialize empty children array for items
                   })
-                  console.log(`Added expense type: ${type.name} to class: ${expenseClass.name}`)
                 }
               })
             } else {
@@ -442,7 +500,6 @@ export const useDisbursementStore = defineStore('disbursement', {
                 }))
               }
               this.expenseData.push(newClass)
-              console.log(`Created new expense class: ${expenseClass.name} with ${types.length} types`)
             }
           }
         })
@@ -474,10 +531,77 @@ export const useDisbursementStore = defineStore('disbursement', {
           dvAmount: d.dv_amount,
           status: d.status,
           aging: calculateAging(d.date),
+          expenses: d.expenses || [], // Store expenses directly in disbursement object
         }))
+
+        // Fetch disbursement expenses for balance calculations
+        await this.fetchDisbursementExpenses()
+        
+        // Initialize disbursement expenses from existing disbursements if none exist
+        if (this.disbursementExpenses.length === 0) {
+          this.initializeDisbursementExpensesFromExisting()
+        }
       } catch (error) {
         console.error('Failed to fetch disbursements:', error)
         this.disbursements = []
+      }
+    },
+
+    // Initialize disbursement expenses from existing disbursements
+    initializeDisbursementExpensesFromExisting() {
+      try {
+        // This method would be used to populate disbursement expenses from existing data
+        // For now, we'll leave it empty since we don't have the expense details in the current API response
+        // In a real implementation, you might want to:
+        // 1. Create an API endpoint that returns disbursement expenses
+        // 2. Store expenses in a separate table
+        // 3. Use a different approach based on your data model
+        
+      } catch (error) {
+        console.error('Failed to initialize disbursement expenses from existing data:', error)
+      }
+    },
+
+    // Fetch disbursement expenses for balance calculations
+    async fetchDisbursementExpenses() {
+      try {
+        // Load disbursement expenses from localStorage if available
+        this.loadDisbursementExpensesFromStorage()
+        
+        // Since we don't have a dedicated API endpoint for disbursement expenses,
+        // we'll need to reconstruct this data from the disbursements
+        // For now, we'll initialize an empty array and let it be populated
+        // when new disbursements are created/updated
+        
+        // In a real implementation, you might want to:
+        // 1. Create an API endpoint that returns disbursement expenses
+        // 2. Store expenses in a separate table
+        // 3. Use a different approach based on your data model
+        
+      } catch (error) {
+        console.error('Failed to fetch disbursement expenses:', error)
+      }
+    },
+
+    // Save disbursement expenses to localStorage
+    saveDisbursementExpensesToStorage() {
+      try {
+        localStorage.setItem('disbursementExpenses', JSON.stringify(this.disbursementExpenses))
+      } catch (error) {
+        console.error('Failed to save disbursement expenses to storage:', error)
+      }
+    },
+
+    // Load disbursement expenses from localStorage
+    loadDisbursementExpensesFromStorage() {
+      try {
+        const stored = localStorage.getItem('disbursementExpenses')
+        if (stored) {
+          this.disbursementExpenses = JSON.parse(stored)
+        }
+      } catch (error) {
+        console.error('Failed to load disbursement expenses from storage:', error)
+        this.disbursementExpenses = []
       }
     },
 
@@ -665,8 +789,6 @@ export const useDisbursementStore = defineStore('disbursement', {
 
           }
 
-          console.log('Fetched cheque booklets:', this.chequeBooklets[0].booklet.id)
-
           // Automatically select the first cheque if available
           this.autoBookletID = this.chequeBooklets[0].booklet.id || null
           this.autoCheque = this.chequeBooklets[0].booklet.cheques[0].cheque_number || null
@@ -817,6 +939,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         account: accountDisplay,
         accountId: item.id,
         balance: item.balance || 0,
+        originalBalance: item.originalBalance || item.balance || 0, // Include original balance
         particulars: '',
         amount: 0,
         disbursementId: this.currentItem?.id || null,
@@ -856,7 +979,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           payee: this.forms.disbursement.payee,
           dv_amount: this.totalExpensesAmount,
           expenses: this.expenses.map(expense => ({
-            accountId: expense.accountId,
+            accountId: expense.expense_item_id || expense.accountId, // Use expense_item_id if available, fallback to accountId
             amount: expense.amount,
             particular: expense.particular,
             expense_class_id: expense.expense_class_id,
@@ -872,10 +995,30 @@ export const useDisbursementStore = defineStore('disbursement', {
           },
         })
 
-        console.log('Disbursement saved successfully:', response.data)
+        // Store the expenses data for balance calculations
+        if (this.expenses.length > 0) {
+          const disbursementId = response.data.data.id
+          this.disbursementExpenses.push({
+            disbursementId: disbursementId,
+            expenses: this.expenses.map(expense => ({
+              accountId: expense.accountId,
+              amount: expense.amount,
+              particular: expense.particular,
+              expense_class_id: expense.expense_class_id,
+              expense_type_id: expense.expense_type_id,
+              expense_item_id: expense.expense_item_id,
+            }))
+          })
+          
+          // Save to localStorage
+          this.saveDisbursementExpensesToStorage()
+        }
 
         // Refresh the disbursements list
         await this.fetchDisbursements()
+
+        // Refresh expense accounts with updated balances
+        this.refreshExpenseAccountsWithBalances()
 
         // Refresh expense accounts in background to ensure latest data
         this.refreshExpenseAccountsInBackground()
@@ -889,6 +1032,12 @@ export const useDisbursementStore = defineStore('disbursement', {
         return { success: true, data: response.data.data }
       } catch (error) {
         console.error('Failed to save disbursement:', error)
+        
+        // Log the specific validation errors if available
+        if (error.response?.data?.errors) {
+          console.error('Validation errors:', error.response.data.errors)
+        }
+        
         return {
           success: false,
           error: error.response?.data?.message || error.message || 'Failed to save disbursement'
@@ -929,18 +1078,18 @@ export const useDisbursementStore = defineStore('disbursement', {
         throw new Error('Amount must be greater than 0')
       }
 
-      // Validate amount against available balance
-      const availableBalance = this.forms.expense.balance || 0
+      // Validate amount against remaining balance (not original balance)
+      const remainingBalance = this.forms.expense.balance || 0
 
       // Calculate total amount already allocated to this account in current disbursement
       const existingAmountForAccount = this.expenses
         .filter(expense => expense.accountId === this.forms.expense.accountId)
         .reduce((total, expense) => total + Number(expense.amount), 0)
 
-      const remainingBalance = availableBalance - existingAmountForAccount
+      const availableRemainingBalance = remainingBalance - existingAmountForAccount
 
-      if (amount > remainingBalance) {
-        throw new Error(`Amount exceeds available balance. Available: ₱${remainingBalance.toLocaleString()}, Requested: ₱${amount.toLocaleString()}`)
+      if (amount > availableRemainingBalance) {
+        throw new Error(`Amount exceeds available remaining balance. Available: ₱${availableRemainingBalance.toLocaleString()}, Requested: ₱${amount.toLocaleString()}`)
       }
 
       // Generate incremental ID instead of timestamp
@@ -1073,8 +1222,33 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         console.log('Disbursement updated successfully:', response.data)
 
+        // Update the expenses data for balance calculations
+        if (this.expenses.length > 0) {
+          const disbursementId = this.currentItem.id
+          // Remove old expenses for this disbursement
+          this.disbursementExpenses = this.disbursementExpenses.filter(de => de.disbursementId !== disbursementId)
+          // Add updated expenses
+          this.disbursementExpenses.push({
+            disbursementId: disbursementId,
+            expenses: this.expenses.map(expense => ({
+              accountId: expense.accountId,
+              amount: expense.amount,
+              particular: expense.particular,
+              expense_class_id: expense.expense_class_id,
+              expense_type_id: expense.expense_type_id,
+              expense_item_id: expense.expense_item_id,
+            }))
+          })
+          
+          // Save to localStorage
+          this.saveDisbursementExpensesToStorage()
+        }
+
         // Refresh the disbursements list
         await this.fetchDisbursements()
+
+        // Refresh expense accounts with updated balances
+        this.refreshExpenseAccountsWithBalances()
 
         // Refresh expense accounts in background to ensure latest data
         this.refreshExpenseAccountsInBackground()
@@ -1319,7 +1493,6 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
-
     async deleteDisbursement(id) {
       try {
         const authStore = useAuthStore();
@@ -1335,6 +1508,15 @@ export const useDisbursementStore = defineStore('disbursement', {
         if (response.data.status) {
           // Remove the disbursement from the local array
           this.disbursements = this.disbursements.filter(d => d.id !== id);
+
+          // Remove the corresponding expenses from disbursementExpenses
+          this.disbursementExpenses = this.disbursementExpenses.filter(de => de.disbursementId !== id);
+
+          // Save to localStorage
+          this.saveDisbursementExpensesToStorage()
+
+          // Refresh expense accounts with updated balances
+          this.refreshExpenseAccountsWithBalances()
 
           // Refresh expense accounts in background to ensure latest data
           this.refreshExpenseAccountsInBackground()
