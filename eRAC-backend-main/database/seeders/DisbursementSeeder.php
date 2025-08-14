@@ -7,6 +7,9 @@ use App\Models\Disbursement;
 use App\Models\Barangay;
 use App\Models\LibBank;
 use App\Models\DisbursementOrDetail;
+use App\Models\LibExpenseClass;
+use App\Models\LibExpenseType;
+use App\Models\LibExpenseItem;
 use Carbon\Carbon;
 
 class DisbursementSeeder extends Seeder
@@ -17,15 +20,37 @@ class DisbursementSeeder extends Seeder
         $barangays = Barangay::all();
         $barangayCount = $barangays->count();
         $disbursementIndex = 1;
+        
+        // Get expense accounts for disbursement tracking
+        $expenseClasses = LibExpenseClass::all();
+        $expenseTypes = LibExpenseType::all();
+        $expenseItems = LibExpenseItem::all();
+        
         // 4 liquidated per barangay
         foreach ($barangays as $barangay) {
             // Get all banks for this barangay
             $banks = LibBank::where('barangay_id', $barangay->id)->get();
             $bankCount = $banks->count();
+            
             for ($i = 1; $i <= 2; $i++) {
                 $dvAmount = 1000 * $i;
                 $bank = $banks[($i - 1) % $bankCount] ?? $banks[0] ?? null;
                 $bankId = $bank ? $bank->id : null;
+                
+                // Select expense account for this disbursement
+                $expenseClass = $expenseClasses->random();
+                $expenseType = $expenseTypes->where('expense_class_id', $expenseClass->id)->first();
+                $expenseItem = $expenseItems->where('expense_type_id', $expenseType->id ?? 0)->first();
+                
+                // Create account path for remarks
+                $accountPath = $expenseClass->name;
+                if ($expenseType) {
+                    $accountPath .= ' > ' . $expenseType->name;
+                }
+                if ($expenseItem) {
+                    $accountPath .= ' > ' . $expenseItem->name;
+                }
+                
                 $disb = Disbursement::create([
                     'barangay_id' => $barangay->id,
                     'date' => $now->copy()->subDays($i),
@@ -38,6 +63,7 @@ class DisbursementSeeder extends Seeder
                     'liquidated_amount' => $dvAmount,
                     'liquidated_at' => $now->copy()->subDays($i),
                 ]);
+                
                 // Seed 2 OR details for each liquidated disbursement, sum does not exceed dv_amount
                 $orAmounts = [$dvAmount * 0.6, $dvAmount * 0.4];
                 for ($j = 1; $j <= 2; $j++) {
@@ -47,16 +73,32 @@ class DisbursementSeeder extends Seeder
                         'or_number' => 'OR-' . $disbursementIndex . '-' . $j,
                         'or_amount' => $orAmounts[$j-1],
                         'or_photo' => 'or-photos/vm8wtjh7G05yx1SzPm46RCpSMxUlEJiDNeC6YE8A.png',
-                        'remarks' => 'Seeded remark for OR ' . $j . ' of disbursement ' . $disbursementIndex,
+                        'remarks' => 'Disbursed from ' . $accountPath . ' - OR ' . $j . ' of ' . $disbursementIndex,
                     ]);
                 }
                 $disbursementIndex++;
             }
+            
             // 2 pending per barangay
             for ($i = 3; $i <= 4; $i++) {
                 $dvAmount = 1000 * $i;
                 $bank = $banks[($i - 1) % $bankCount] ?? $banks[0] ?? null;
                 $bankId = $bank ? $bank->id : null;
+                
+                // Select expense account for this disbursement
+                $expenseClass = $expenseClasses->random();
+                $expenseType = $expenseTypes->where('expense_class_id', $expenseClass->id)->first();
+                $expenseItem = $expenseItems->where('expense_type_id', $expenseType->id ?? 0)->first();
+                
+                // Create account path for remarks
+                $accountPath = $expenseClass->name;
+                if ($expenseType) {
+                    $accountPath .= ' > ' . $expenseType->name;
+                }
+                if ($expenseItem) {
+                    $accountPath .= ' > ' . $expenseItem->name;
+                }
+                
                 $disb = Disbursement::create([
                     'barangay_id' => $barangay->id,
                     'date' => $now->copy()->subDays($i),
@@ -69,7 +111,18 @@ class DisbursementSeeder extends Seeder
                     'liquidated_amount' => null,
                     'liquidated_at' => null,
                 ]);
-                // No OR details for pending disbursements
+                
+                // No OR details for pending disbursements, but we can add a note about the account
+                // This could be stored in a separate field or we could create a placeholder OR detail
+                DisbursementOrDetail::create([
+                    'disbursement_id' => $disb->id,
+                    'or_date' => null,
+                    'or_number' => null,
+                    'or_amount' => null,
+                    'or_photo' => null,
+                    'remarks' => 'Pending disbursement from ' . $accountPath . ' - Awaiting liquidation',
+                ]);
+                
                 $disbursementIndex++;
             }
         }

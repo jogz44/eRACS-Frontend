@@ -22,13 +22,21 @@ class BudgetAugmentationSeeder extends Seeder
         $now = now();
         $barangays = Barangay::all();
         
+        // Create only 2 augmentation entries total
+        $augmentationCount = 0;
+        $maxAugmentations = 2;
+        
         foreach ($barangays as $bIndex => $barangay) {
+            if ($augmentationCount >= $maxAugmentations) break;
+            
             $budgets = Budget::where('barangay_id', $barangay->id)->get();
             $user = BarangayUser::where('barangay_id', $barangay->id)->first();
             
             if (!$budgets->count() || !$user) continue;
             
             foreach ($budgets as $budgetIndex => $budget) {
+                if ($augmentationCount >= $maxAugmentations) break;
+                
                 // Get existing appropriations for this budget
                 $existingAppropriations = TranAppropriation::where('barangay_id', $barangay->id)
                     ->where('budget_id', $budget->id)
@@ -38,12 +46,11 @@ class BudgetAugmentationSeeder extends Seeder
                 
                 if ($existingAppropriations->count() < 2) continue; // Need at least 2 appropriations for transfers
                 
-                // Create 1-3 augmentations per budget
-                $numAugmentations = min(3, $existingAppropriations->count() - 1);
+                // Create only 1 augmentation for this budget
+                $this->createAugmentation($barangay, $budget, $user, $existingAppropriations, $augmentationCount + 1);
+                $augmentationCount++;
                 
-                for ($i = 1; $i <= $numAugmentations; $i++) {
-                    $this->createAugmentation($barangay, $budget, $user, $existingAppropriations, $i);
-                }
+                if ($augmentationCount >= $maxAugmentations) break;
             }
         }
     }
@@ -67,10 +74,10 @@ class BudgetAugmentationSeeder extends Seeder
         // Create augmentation details with actual transfers
         $totalAmount = 0;
         $usedAppropriationIds = collect();
-        $maxDetails = min(3, $existingAppropriations->count() - 1);
+        $maxDetails = min(2, $existingAppropriations->count() - 1); // Reduced to max 2 details
         $detailsCreated = 0;
         
-        for ($j = 1; $j <= $maxDetails && $detailsCreated < 3; $j++) {
+        for ($j = 1; $j <= $maxDetails && $detailsCreated < 2; $j++) { // Reduced to max 2 details
             // Refresh appropriations from database to get current amounts
             $currentAppropriations = TranAppropriation::where('barangay_id', $barangay->id)
                 ->where('budget_id', $budget->id)

@@ -307,7 +307,7 @@
                   dense
                   icon="delete"
                   :color="canDelete(props.row) ? 'red' : 'grey'"
-                  :disable="getAgingDays(props.row.aging) >= 1"
+                  :disable="getAgingDays(props.row.aging) >= 1 || !canDelete(props.row)"
                   @click.stop="() => canDelete(props.row) && handleDeleteDisbursement(props.row)"
                   v-permission="'delete'"
                 />
@@ -352,18 +352,19 @@ import { useBankStore } from 'stores/bankStore'
 const store = useDisbursementStore()
 const bankStore = useBankStore()
 
-
 function canDelete(row) {
-  const aging = Number(getAgingDays(row.aging)) // coerce to number
+  const aging = Number(getAgingDays(row.aging))
   if (Number.isNaN(aging)) return false
+  
+  // Cannot delete if liquidated (regardless of return amount)
+  if (row.status === 'Liquidated') return false
+  
+  // Can only delete if pending or partial and aging < 1 day
   return (row.status === 'Pending' || row.status === 'Partial') && aging < 1
-
-
 }
 
 // Function to load all data with optimized loading strategy
 const loadAllData = async () => {
-  console.log('Loading all disbursement data...')
   loading.value = true
 
   try {
@@ -412,8 +413,10 @@ const loadAllData = async () => {
 let expenseRefreshInterval = null
 
 onMounted(async () => {
-  console.log('DisbursementTran component mounted - starting data refresh...')
   await loadAllData()
+
+  // Refresh expense accounts with updated balances
+  store.refreshExpenseAccountsWithBalances()
 
   // Set up periodic refresh for expense accounts (every 2 minutes)
   expenseRefreshInterval = setInterval(() => {
@@ -426,7 +429,6 @@ onMounted(async () => {
 
 // Refresh data when component is activated (when navigating back to this page)
 onActivated(async () => {
-  console.log('DisbursementTran component activated - refreshing data...')
   await loadAllData()
 })
 
@@ -447,7 +449,6 @@ watch(
   },
   { deep: true },
 )
-
 
 // Auto-refresh expense accounts when the expense dialog is opened
 watch(
@@ -491,21 +492,6 @@ const handleBankSelection = async (bankId) => {
   }
 }
 
-// const handleBookletSelection = async (bookletRange) => {
-//   if (bookletRange) {
-//     try {
-//       await store.selectBooklet(bookletRange)
-//     } catch (error) {
-//       $q.notify({
-//         type: 'negative',
-//         message: `Failed to load cheques for selected booklet: ${error.message}`,
-//         icon: 'error',
-//         position: 'top',
-//       })
-//     }
-//   }
-// }
-
 const validateAndSave = () => {
   if (store.dialogs.disbursement) {
     const form = store.forms.disbursement
@@ -514,7 +500,17 @@ const validateAndSave = () => {
                              form.dvNumber &&
                              form.payee
     if (hasRequiredFields && !store.loading) {
-      store.saveDisbursement()
+      store.saveDisbursement().then(result => {
+        if (!result.success) {
+          $q.notify({
+            type: 'negative',
+            message: result.error || 'Failed to save disbursement',
+            icon: 'error',
+            position: 'top',
+            timeout: 5000
+          })
+        }
+      })
     } else {
       $q.notify({
         type: 'negative',
