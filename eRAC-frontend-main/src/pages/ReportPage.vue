@@ -249,6 +249,7 @@
 
           <q-card-section class="q-pb-none">
             <div class="text-h6">Barangay {{ authStore.user?.barangay_name }}</div>
+            <div class="text-h6">Date {{ dateRangeDisplay }}</div>
           </q-card-section>
           <q-card-section>
             <div class="q-mt-md">
@@ -465,11 +466,14 @@ const openSACBModal = (type) => {
 const closeSACBModal = () => { SACBModal.show = false }
 
 const openRACModal = (type) => {
-  if (
-    (type === 'current-rac' && (!dateRange.value.from || !dateRange.value.to)) ||
-    (type === 'continuing-rac' && (!continuingDateRange.value.from || !continuingDateRange.value.to))
-  ) {
-    return notifyError('Please select a valid date range.')
+  if (type === 'current-sacb') {
+    if (!dateRange.value.from || !dateRange.value.to) {
+      return notifyError('Please select a valid current RAC date range.')
+    }
+  } else if (type === 'continuing-sacb') {
+    if (!continuingDateRange.value.from || !continuingDateRange.value.to) {
+      return notifyError('Please select a valid continuing RAC date range.')
+    }
   }
   if (
     (type === 'current-rac' && !reportStore.expenseSelectedCurrent) ||
@@ -477,6 +481,7 @@ const openRACModal = (type) => {
   ) {
     return notifyError('Please select an Expense Category.')
   }
+  
   RACModal.reportType = getReportTypeLabel(type)
   RACModal.show = true
 }
