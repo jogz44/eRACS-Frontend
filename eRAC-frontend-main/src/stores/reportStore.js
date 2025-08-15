@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { api } from 'boot/axios'
 import { useAuthStore } from './auth'
 
+
 export const useReportStore = defineStore("reportStore", {
   state: () => ({
 
@@ -163,6 +164,27 @@ export const useReportStore = defineStore("reportStore", {
           payee: pos.payee,
           amount: pos.amount
         }))
+      }catch (error) {
+        console.error('Error:', error)
+        throw error
+      }
+    },
+    async fetchSacbReport($date){
+      try{
+        const config = this.getAuthConfig();
+        const response = await api.get(`/api/`,
+          { params: { to: $date.value.to, from: $date.value.from, expense_class_id: this.expenseRacSelected  }}
+          ,config);
+
+        this.reportRAC=response?.data?.map(pos => ({
+          ppa: pos.ppa,
+          appropriation: pos.appropriation,
+          obligation: pos.obligation,
+          balance: pos.balance,
+        }))
+      //   { isSection: true, ppa: '1. PERSONAL SERVICES' },
+      // { ppa: '• Honorarium', appropriation: '17,000,858.00', obligation: '13,305,598.54', balance: '3,695,259.46' },
+      
       }catch (error) {
         console.error('Error:', error)
         throw error
