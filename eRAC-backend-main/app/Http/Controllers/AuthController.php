@@ -81,6 +81,100 @@ public function register(Request $request)
     ]);
 }
 
+/**
+ * Get all approved users from the same barangay as the authenticated user
+ */
+public function getBarangayUsers(Request $request)
+{
+    try {
+        $user = Auth::user();
+        
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
+        $users = BarangayUser::where('barangay_id', $user->barangay_id)
+            ->where('is_approved', true)
+            ->with(['barangay', 'position'])
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->full_name,
+                    'username' => $user->username,
+                    'position' => $user->position ? $user->position->name : 'N/A',
+                    'barangay_name' => $user->barangay ? $user->barangay->name : 'N/A',
+                    'permissions' => $user->permissions ?? [
+                        'view' => true,
+                        'add' => true,
+                        'edit' => true,
+                        'delete' => false,
+                        'print' => true,
+                    ]
+                ];
+            });
+
+        return response()->json($users);
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'Failed to fetch barangay users',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Update user permissions within the same barangay
+ */
+public function updateUserPermissions(Request $request, $userId)
+{
+    try {
+        $user = Auth::user();
+        
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
+        // Get the target user
+        $targetUser = BarangayUser::where('id', $userId)
+            ->where('barangay_id', $user->barangay_id)
+            ->first();
+
+        if (!$targetUser) {
+            return response()->json([
+                'message' => 'User not found or not in your barangay'
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'permissions' => 'required|array',
+            'permissions.view' => 'boolean',
+            'permissions.add' => 'boolean',
+            'permissions.edit' => 'boolean',
+            'permissions.delete' => 'boolean',
+            'permissions.print' => 'boolean',
+        ]);
+
+        // Update permissions
+        $targetUser->permissions = $validated['permissions'];
+        $targetUser->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User permissions updated successfully'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'Failed to update user permissions',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
 
 public function login(Request $request)
 {
