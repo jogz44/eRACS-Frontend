@@ -299,8 +299,8 @@
             </div>
           </div>
           <q-stepper-navigation class="row justify-between q-mt-md">
-            <q-btn flat @click="step = 1" color="green" label="Back" />
-            <q-btn @click="handleSubmit" color="green" label="Submit" />
+            <q-btn flat @click="step = 1" color="green" label="Back" :disable="isLoading" />
+            <q-btn @click="handleSubmit" color="green" label="Submit" :loading="isLoading" :disable="isLoading" />
           </q-stepper-navigation>
         </q-step>
       </q-stepper>

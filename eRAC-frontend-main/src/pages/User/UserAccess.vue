@@ -160,8 +160,14 @@
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" @click="closeAccessModal" />
-          <q-btn label="Save" color="primary" @click="handleAccessSaveClick" />
+          <q-btn flat label="Cancel" @click="closeAccessModal" :disable="accessModal.saving" />
+          <q-btn
+            label="Save"
+            color="primary"
+            @click="handleAccessSaveClick"
+            :loading="accessModal.saving"
+            :disable="accessModal.saving"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -190,6 +196,7 @@ export default {
       accessModal: {
         show: false,
         selectedUser: null,
+        saving: false,
         permissions: {
           view: { label: 'Access View:', value: false },
           add: { label: 'Access Add:', value: false },
@@ -204,7 +211,7 @@ export default {
     authStore() {
       return useAuthStore()
     },
-    
+
          currentUserBarangay() {
        return this.authStore.user?.barangay_name || null
      },
@@ -218,7 +225,7 @@ export default {
        if (!Array.isArray(this.users)) {
          return []
        }
-       
+
        const uniquePositions = [...new Set(this.users.map(user => user.position).filter(Boolean))]
        return uniquePositions.map(position => ({
          label: position,
@@ -233,7 +240,7 @@ export default {
        }
 
        // First filter by barangay - only show users from the same barangay
-       let filtered = this.users.filter(user => 
+       let filtered = this.users.filter(user =>
          user.barangay_name === this.currentUserBarangay
        )
 
@@ -258,7 +265,7 @@ export default {
      async mounted() {
      // Initialize users as empty array
      this.users = []
-     
+
      const cached = localStorage.getItem('acceptedUsers');
      if (cached) {
        try {
@@ -289,7 +296,7 @@ export default {
        try {
          // Check if user has admin token (for admin users) or regular token (for barangay users)
          const token = this.authStore.adminToken || this.authStore.token
-         
+
          if (!token) {
            throw new Error('No authentication token found')
          }
@@ -302,12 +309,12 @@ export default {
          }
 
          const response = await api.get('/api/barangay/users', config)
-         
+
          console.log('API Response:', response)
          console.log('Response data:', response.data)
          console.log('Response data type:', typeof response.data)
          console.log('Is array?', Array.isArray(response.data))
-         
+
          // Check if response.data.data is an array (nested response structure)
          if (Array.isArray(response.data.data)) {
            this.users = response.data.data
@@ -325,7 +332,7 @@ export default {
          }
        } catch (error) {
          console.error('Error loading users:', error)
-         
+
          if (error.response?.status === 401) {
            this.$q.notify({
              type: 'negative',
@@ -333,11 +340,11 @@ export default {
              position: 'top',
              timeout: 5000
            })
-           
+
            // Clear cached data
            localStorage.removeItem('acceptedUsers')
            this.users = []
-           
+
            // Optionally redirect to login
            setTimeout(() => {
              this.$router.push('/login')
@@ -414,10 +421,11 @@ export default {
     },
 
          async saveAccess() {
+       this.accessModal.saving = true
        try {
          // Check if user has admin token (for admin users) or regular token (for barangay users)
          const token = this.authStore.adminToken || this.authStore.token
-         
+
          if (!token) {
            throw new Error('No authentication token found')
          }
@@ -466,14 +474,16 @@ export default {
           throw new Error(`Unexpected response format. Expected success: true, got: ${response.data.success}`)
         }
       } catch (error) {
-        console.error('Error saving permissions:', error)
-        this.$q.notify({
-          type: 'negative',
-          message: error.response?.data?.message || 'Failed to save permissions. Please try again.',
-          position: 'top',
-        })
-      }
-    },
+                 console.error('Error saving permissions:', error)
+         this.$q.notify({
+           type: 'negative',
+           message: error.response?.data?.message || 'Failed to save permissions. Please try again.',
+           position: 'top',
+         })
+       } finally {
+         this.accessModal.saving = false
+       }
+     },
     onSearchClear() {
       this.search = ''
     },

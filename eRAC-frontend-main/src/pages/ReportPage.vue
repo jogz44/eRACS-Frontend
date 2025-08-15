@@ -154,53 +154,55 @@
     <!-- SACB Modal -->
     <q-dialog v-model="SACBModal.show" maximized transition-show="slide-up" transition-hide="slide-down">
       <q-layout view="lHh Lpr lFf" class="sacb-layout">
-        
+
         <!-- Header -->
         <q-header elevated class="bg-white text-dark sacb-header">
           <q-toolbar class="q-px-md">
-            <q-btn 
-              flat 
-              icon="menu" 
-              @click="toggleSACBDrawer" 
+            <q-btn
+              flat
+              icon="menu"
+              @click="toggleSACBDrawer"
               class="q-mr-md"
               :color="sacbDrawerOpen ? '#187C19' : '#666'"
               size="md"
             >
               <q-tooltip>Toggle Settings Panel</q-tooltip>
             </q-btn>
-            
+
             <q-toolbar-title class="text-h6 text-weight-medium" style="color: #187C19;">
               Status of Appropriation and Obligation (SACB)
             </q-toolbar-title>
-            
+
             <q-space />
-            
+
             <!-- Action Buttons -->
             <div class="q-gutter-sm">
-              <q-btn 
-                outline 
-                icon="file_download" 
-                label="Export PDF" 
-                color="#69B31E" 
+              <q-btn
+                outline
+                icon="file_download"
+                label="Export PDF"
+                color="#69B31E"
                 @click="exportSACBToPDF"
                 size="sm"
+                :loading="exportingSACBPDF"
+                :disable="exportingSACBPDF"
                 no-caps
               />
-              
-              <q-btn 
-                unelevated 
-                icon="print" 
-                label="Print" 
-                color="#187C19" 
+
+              <q-btn
+                unelevated
+                icon="print"
+                label="Print"
+                color="#187C19"
                 @click="handleSACBPrint"
                 size="sm"
                 no-caps
               />
-              
-              <q-btn 
-                flat 
-                icon="close" 
-                @click="closeSACBModal" 
+
+              <q-btn
+                flat
+                icon="close"
+                @click="closeSACBModal"
                 color="#666"
                 size="md"
               >
@@ -263,56 +265,56 @@
                        <q-icon name="people" class="q-mr-xs" />
                        Report Signatories
                      </div>
-                     
+
                      <!-- Prepared by -->
                      <div class="signatory-group q-mb-lg">
                        <div class="signatory-header">
                          <q-icon name="create" size="sm" style="color: #69B31E;" class="q-mr-xs" />
                          <span class="text-weight-medium">Prepared by</span>
                        </div>
-                       <q-input 
-                         outlined 
-                         dense 
-                         v-model="SetupModal.Preparedby" 
+                       <q-input
+                         outlined
+                         dense
+                         v-model="SetupModal.Preparedby"
                          placeholder="Enter full name"
                          class="q-mb-sm"
                          clearable
                        />
-                       <q-select 
-                         outlined 
-                         dense 
-                         :options="reportStore.positionsOptions" 
-                         map-options 
+                       <q-select
+                         outlined
+                         dense
+                         :options="reportStore.positionsOptions"
+                         map-options
                          option-label="label"
-                         option-value="value" 
-                         v-model="SetupModal.Preparedposition" 
+                         option-value="value"
+                         v-model="SetupModal.Preparedposition"
                          placeholder="Select position"
                          clearable
                        />
                      </div>
-                     
+
                      <!-- Noted by -->
                      <div class="signatory-group q-mb-lg">
                        <div class="signatory-header">
                          <q-icon name="visibility" size="sm" style="color: #E0FFE7;" class="q-mr-xs" />
                          <span class="text-weight-medium">Noted by</span>
                        </div>
-                       <q-input 
-                         outlined 
-                         dense 
-                         v-model="SetupModal.Notedby" 
+                       <q-input
+                         outlined
+                         dense
+                         v-model="SetupModal.Notedby"
                          placeholder="Enter full name"
                          class="q-mb-sm"
                          clearable
                        />
-                       <q-select 
-                         outlined 
-                         dense 
-                         :options="reportStore.positionsOptions" 
-                         map-options 
+                       <q-select
+                         outlined
+                         dense
+                         :options="reportStore.positionsOptions"
+                         map-options
                          option-label="label"
-                         option-value="value" 
-                         v-model="SetupModal.Notedposition" 
+                         option-value="value"
+                         v-model="SetupModal.Notedposition"
                          placeholder="Select position"
                          clearable
                        />
@@ -324,22 +326,22 @@
                          <q-icon name="verified" size="sm" style="color: #187C19;" class="q-mr-xs" />
                          <span class="text-weight-medium">Certified by</span>
                        </div>
-                       <q-input 
-                         outlined 
-                         dense 
-                         v-model="SetupModal.Certifiedby" 
+                       <q-input
+                         outlined
+                         dense
+                         v-model="SetupModal.Certifiedby"
                          placeholder="Enter full name"
                          class="q-mb-sm"
                          clearable
                        />
-                       <q-select 
-                         outlined 
-                         dense 
-                         :options="reportStore.positionsOptions" 
-                         map-options 
+                       <q-select
+                         outlined
+                         dense
+                         :options="reportStore.positionsOptions"
+                         map-options
                          option-label="label"
-                         option-value="value" 
-                         v-model="SetupModal.Certifiedposition" 
+                         option-value="value"
+                         v-model="SetupModal.Certifiedposition"
                          placeholder="Select position"
                          clearable
                        />
@@ -355,21 +357,21 @@
                        Quick Actions
                      </div>
                      <div class="q-gutter-sm">
-                       <q-btn 
-                         outline 
-                         size="sm" 
-                         icon="refresh" 
-                         label="Reset Form" 
-                         color="#E0FFE7" 
+                       <q-btn
+                         outline
+                         size="sm"
+                         icon="refresh"
+                         label="Reset Form"
+                         color="#E0FFE7"
                          @click="resetSignatories"
                          class="full-width"
                        />
-                       <q-btn 
-                         outline 
-                         size="sm" 
-                         icon="save" 
-                         label="Save as Template" 
-                         color="#69B31E" 
+                       <q-btn
+                         outline
+                         size="sm"
+                         icon="save"
+                         label="Save as Template"
+                         color="#69B31E"
                          @click="saveAsTemplate"
                          class="full-width"
                        />
@@ -399,15 +401,15 @@
 
               <q-card-section>
                 <!-- SACB Table with improved styling -->
-                <q-table 
-                  :rows="reportStore.reportSACB" 
-                  :columns="sacbColumns" 
+                <q-table
+                  :rows="reportStore.reportSACB"
+                  :columns="sacbColumns"
                   row-key="ppa"
-                  flat 
+                  flat
                   bordered
-                  dense 
-                  separator="cell" 
-                  class="sacb-table" 
+                  dense
+                  separator="cell"
+                  class="sacb-table"
                   hide-pagination
                   :pagination="{ rowsPerPage: 0 }"
                 >
@@ -493,42 +495,44 @@
     <!-- RAC Modal -->
     <q-dialog v-model="RACModal.show" maximized transition-show="slide-up" transition-hide="slide-down">
       <q-layout view="lHh Lpr lFf" class="rac-layout">
-        
+
         <!-- Header -->
         <q-header elevated class="bg-white text-dark rac-header">
           <q-toolbar class="q-px-md">
             <q-toolbar-title class="text-h6 text-weight-medium" style="color: #187C19;">
               {{ RACModal.reportType }}
             </q-toolbar-title>
-            
+
             <q-space />
-            
+
             <!-- Action Buttons -->
             <div class="q-gutter-sm">
-              <q-btn 
-                outline 
-                icon="file_download" 
-                label="Export PDF" 
-                color="#69B31E" 
+              <q-btn
+                outline
+                icon="file_download"
+                label="Export PDF"
+                color="#69B31E"
                 @click="exportToPDF"
                 size="sm"
                 no-caps
+                :loading="exportingPDF"
+                :disable="exportingPDF"
               />
-              
-              <q-btn 
-                unelevated 
-                icon="print" 
-                label="Print" 
-                color="#187C19" 
+
+              <q-btn
+                unelevated
+                icon="print"
+                label="Print"
+                color="#187C19"
                 @click="handleRACPrint"
                 size="sm"
                 no-caps
               />
-              
-              <q-btn 
-                flat 
-                icon="close" 
-                @click="closeRACModal" 
+
+              <q-btn
+                flat
+                icon="close"
+                @click="closeRACModal"
                 color="#666"
                 size="md"
               >
@@ -559,15 +563,15 @@
 
               <q-card-section>
                 <!-- RAC Table with improved styling -->
-                <q-table 
-                  :rows="reportStore.reportRAC" 
-                  :columns="reportStore.racColumn" 
+                <q-table
+                  :rows="reportStore.reportRAC"
+                  :columns="reportStore.racColumn"
                   row-key="dvNumber"
-                  flat 
+                  flat
                   bordered
-                  dense 
-                  separator="cell" 
-                  class="rac-table q-mt-md" 
+                  dense
+                  separator="cell"
+                  class="rac-table q-mt-md"
                   hide-pagination
                   :pagination="{ rowsPerPage: 0 }"
                 >
@@ -685,6 +689,8 @@ const authStore = useAuthStore()
 /* -------------------- STATE -------------------- */
 const showSetupDialog = ref(false)
 const loading = ref(false)
+const exportingPDF = ref(false)
+const exportingSACBPDF = ref(false)
 const sacbDrawerOpen = ref(true)
 
 // Date ranges
@@ -920,6 +926,7 @@ async function loadRacReport($date) {
 }
 
 async function exportToPDF() {
+  exportingPDF.value = true
   const html2canvas = (await import('html2canvas')).default;
   const jsPDF = (await import('jspdf')).default;
   try {
@@ -977,10 +984,13 @@ async function exportToPDF() {
       type: 'negative',
       message: 'Failed to export PDF',
     })
+  } finally {
+    exportingPDF.value = false
   }
 }
 
 async function exportSACBToPDF() {
+  exportingSACBPDF.value = true
   const html2canvas = (await import('html2canvas')).default;
   const jsPDF = (await import('jspdf')).default;
   try {
@@ -1033,6 +1043,8 @@ async function exportSACBToPDF() {
       type: 'negative',
       message: 'Failed to export SACB PDF',
     })
+  } finally {
+    exportingSACBPDF.value = false
   }
 }
 
@@ -1040,7 +1052,7 @@ function getSACBDateRangeDisplay() {
   // Determine which SACB date range to use based on which modal was opened
   const currentDisplay = currentSacbDateRangeDisplay.value
   const continuingDisplay = continuingSacbDateRangeDisplay.value
-  
+
   // Return the one that has data, prioritizing current
   if (currentDisplay) return currentDisplay
   if (continuingDisplay) return continuingDisplay
@@ -1058,7 +1070,7 @@ function resetSignatories() {
   SetupModal.Notedposition = null
   SetupModal.Certifiedby = ''
   SetupModal.Certifiedposition = null
-  
+
   notifySuccess('Signatory fields have been reset')
 }
 
@@ -1072,7 +1084,7 @@ function saveAsTemplate() {
     certifiedBy: SetupModal.Certifiedby,
     certifiedPosition: SetupModal.Certifiedposition
   }
-  
+
   localStorage.setItem('sacbSignatoryTemplate', JSON.stringify(template))
   notifySuccess('Signatory template saved successfully')
 }
@@ -1651,34 +1663,34 @@ onActivated(async () => {
   .sacb-drawer {
     width: 300px !important;
   }
-  
+
   .drawer-header {
     padding: 16px 0;
   }
-  
+
   .signatory-group {
     padding: 12px;
   }
-  
+
   .print-content-wrapper {
     padding: 10px;
   }
-  
+
   .print-content-wrapper .print-modal {
     padding: 16px;
     min-height: auto;
   }
-  
+
   .sacb-header .q-toolbar {
     min-height: 56px;
     padding: 4px 8px;
   }
-  
+
   .rac-header .q-toolbar {
     min-height: 56px;
     padding: 4px 8px;
   }
-  
+
   .sacb-header .q-toolbar-title,
   .rac-header .q-toolbar-title {
     font-size: 1rem;
@@ -1689,32 +1701,32 @@ onActivated(async () => {
   .sacb-drawer {
     width: 280px !important;
   }
-  
+
   .info-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
   }
-  
+
   .info-value {
     text-align: left;
     margin-left: 0;
   }
-  
+
   .signatory-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
   }
-  
+
   .print-content-wrapper {
     padding: 5px;
   }
-  
+
   .print-content-wrapper .print-modal {
     padding: 12px;
   }
-  
+
   .sacb-header .q-toolbar-title,
   .rac-header .q-toolbar-title {
     font-size: 0.9rem;
