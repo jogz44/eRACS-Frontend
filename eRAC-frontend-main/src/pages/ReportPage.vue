@@ -210,12 +210,27 @@
           </q-card-section>
 
           <q-card-section>
-            <div class="q-mt-md">
-              <!-- Modified Excel Report Table with Obligation Amount and Subcolumns -->
-              <q-table :rows="reportStore.reportSACB" :columns="reportStore.sacbColumn">
-
+              <!-- Table -->
+               <q-table
+                :rows="reportStore.reportSACB" :columns="reportStore.sacbColumn" row-key="ppa" flat bordered dense
+                separator="cell" class="small-table-font" hide-pagination
+                :pagination="{ rowsPerPage: 0 }">
+                <!-- Custom Body -->
+                <template v-slot:body="props">
+                  <tr v-if="props.row.isSection">
+                    <td :colspan="reportStore.sacbColumn.length" class="text-bold text-left bg-grey-3">
+                      {{ props.row.ppa }}
+                    </td>
+                  </tr>
+                  <tr v-else>
+                    <td class="text-left ">{{ props.row.ppa }}</td>
+                    <td class="text-right">{{ props.row.appropriation }}</td>
+                    <td class="text-right">{{ props.row.obligation }}</td>
+                    <td class="text-right">{{ props.row.balance }}</td>
+                  </tr>
+                </template>
               </q-table>
-            </div>
+
           </q-card-section>
         </q-card></q-card>
     </q-dialog>
