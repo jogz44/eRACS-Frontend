@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             BudgetSeeder::class,
             TranAppropriationSeeder::class,
             DisbursementSeeder::class,
+            TranExpenseDetailSeeder::class,
             BudgetAugmentationSeeder::class,
             BookletAndChequeSeeder::class
         ]);

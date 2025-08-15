@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Disbursement;
 use App\Models\LibCheque;
 use App\Models\DisbursementOrDetail;
+use App\Models\TranExpenseDetail;
 use Illuminate\Http\Request;
 
 class DisbursementController extends Controller
@@ -102,16 +103,14 @@ class DisbursementController extends Controller
             ]);
 
 
-            // Save expenses if provided
+            // Save expense details to tran_expense_details table
             if ($request->has('expenses') && is_array($request->expenses)) {
                 foreach ($request->expenses as $expense) {
-                    // You might want to create a separate table for disbursement expenses
-                    // For now, we'll just log them or store them in a different way
-                    \Log::info('Disbursement expense:', [
+                    TranExpenseDetail::create([
                         'disbursement_id' => $disbursement->id,
-                        'expense_item_id' => $expense['accountId'],
+                        'appropriation_id' => $expense['accountId'],
                         'amount' => $expense['amount'],
-                        'particular' => $expense['particular'] ?? '',
+                        'particulars' => $expense['particular'] ?? '',
                     ]);
                 }
             }
@@ -322,7 +321,7 @@ class DisbursementController extends Controller
             $user = request()->user();
             \Log::info("User: ", ['user_id' => $user ? $user->id : 'null', 'barangay_id' => $user ? $user->barangay_id : 'null']);
             
-            $query = Disbursement::with('bank');
+            $query = Disbursement::with(['bank', 'expenseDetails.appropriation']);
             
             // If user is authenticated and has barangay_id, filter by it
             if ($user && isset($user->barangay_id)) {
@@ -350,6 +349,14 @@ class DisbursementController extends Controller
                 'payee' => $disbursement->payee,
                 'dv_amount' => $disbursement->dv_amount,
                 'status' => $disbursement->status,
+                'expenses' => $disbursement->expenseDetails->map(function($detail) {
+                    return [
+                        'id' => $detail->id,
+                        'accountId' => $detail->appropriation_id,
+                        'amount' => $detail->amount,
+                        'particular' => $detail->particulars,
+                    ];
+                }),
                 'created_at' => $disbursement->created_at,
                 'updated_at' => $disbursement->updated_at,
                 ]
@@ -398,14 +405,18 @@ class DisbursementController extends Controller
                 'dv_amount' => $request->dv_amount,
             ]);
 
-            // Log expenses if provided
+            // Update expense details - first delete existing ones, then create new ones
             if ($request->has('expenses') && is_array($request->expenses)) {
+                // Delete existing expense details for this disbursement
+                TranExpenseDetail::where('disbursement_id', $disbursement->id)->delete();
+                
+                // Create new expense details
                 foreach ($request->expenses as $expense) {
-                    \Log::info('Updated disbursement expense:', [
+                    TranExpenseDetail::create([
                         'disbursement_id' => $disbursement->id,
-                        'expense_item_id' => $expense['accountId'],
+                        'appropriation_id' => $expense['accountId'],
                         'amount' => $expense['amount'],
-                        'particular' => $expense['particular'] ?? '',
+                        'particulars' => $expense['particular'] ?? '',
                     ]);
                 }
             }
@@ -499,6 +510,9 @@ class DisbursementController extends Controller
                     'message' => 'Only pending and partial disbursements can be deleted'
                 ], 400);
             }
+            
+            // Delete expense details first (they will be automatically deleted due to cascade, but being explicit)
+            TranExpenseDetail::where('disbursement_id', $disbursement->id)->delete();
             
             // Delete the disbursement
             $disbursement->delete();
