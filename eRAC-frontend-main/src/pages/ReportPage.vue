@@ -109,7 +109,7 @@
           <div class="col-12 col-sm-6 col-md-4">
             <q-select outlined dense v-model="expenseSelectedContinuing" label="Expense Category" map-options
               :options="reportStore.expenseOptionsContinuing" :loading="loading" option-value="id"
-              option-label="name"/>
+              option-label="name" />
           </div>
 
           <div class="col-12 col-sm-6 col-md-4">
@@ -152,78 +152,87 @@
     </q-card>
 
     <!-- SACB Modal -->
-    <q-dialog v-model="SACBModal.show" persistent>
-      <q-card class="print-modal">
-        <q-card-section class="q-pb-none">
-          <div class="text-h6">
-            {{ SACBModal.reportType }}</div>
-        </q-card-section>
-        <q-card-section class="q-pb-none">
-          <div class="text-h6">Barangay {{ authStore.user?.barangay_name }}</div>
+    <q-dialog v-model="SACBModal.show" maximized transition-show="slide-up" transition-hide="slide-down">
+      <q-card class=" full-height pages-group scroll ">
+
+        <!-- Header menu -->
+        <q-card-actions align="right" class="q-pa-md bg-grey-2 print-header">
+
           <div class="text-h6">Print Report Setup</div>
-
-          <!-- First row: Prepared by, Noted by, Certified by -->
-          <div class="row q-mb-md q-col-gutter-md">
-            <div class="col-4">
-              <q-input outlined dense label="Prepared by" v-model="SetupModal.Preparedby" />
-            </div>
-            <div class="col-4">
-              <q-input outlined dense label="Noted by" v-model="SetupModal.Notedby" />
-            </div>
-            <div class="col-4">
-              <q-input outlined dense label="Certified by" v-model="SetupModal.Certifiedby" />
-            </div>
-          </div>
-
-          <!-- Second row: Positions -->
-          <div class="row q-mb-md q-col-gutter-md">
-            <div class="col-4">
-              <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
-                option-value="value" v-model="SetupModal.Preparedposition" label="Position" />
-            </div>
-            <div class="col-4">
-              <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
-                option-value="value" v-model="SetupModal.Notedposition" label="Position" />
-            </div>
-            <div class="col-4">
-              <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
-                option-value="value" v-model="SetupModal.Certifiedposition" label="Position" />
-            </div>
-          </div>
-        </q-card-section>
-
-        <q-card-section>
-
           <q-separator class="q-my-md" />
+          <q-card-section class="q-pb-none">
+            <!-- First row: Prepared by, Noted by, Certified by -->
+            <div class="row q-mb-md q-col-gutter-md">
+              <div class="col-4">
+                <q-input outlined dense label="Prepared by" v-model="SetupModal.Preparedby" />
+              </div>
+              <div class="col-4">
+                <q-input outlined dense label="Noted by" v-model="SetupModal.Notedby" />
+              </div>
+              <div class="col-4">
+                <q-input outlined dense label="Certified by" v-model="SetupModal.Certifiedby" />
+              </div>
+            </div>
 
-          <div class="text-subtitle2 q-mb-md text-grey-7">
-            Report Type: In Need for Improvement
-          </div>
-
-          <div class="q-mt-md">
-            <div class="text-subtitle1 q-mb-sm">Activity Log</div>
-            <q-table :rows="SACBModal.activities" :columns="activityColumns" row-key="id"
-              :pagination="{ rowsPerPage: 5 }" flat bordered>
-              <template v-slot:body-cell-time="props">
-                <q-td :props="props">
-                  <div class="text-caption">{{ props.value }}</div>
-                </q-td>
-              </template>
-              <template v-slot:body-cell-description="props">
-                <q-td :props="props">
-                  <div class="text-body2">{{ props.value }}</div>
-                </q-td>
-              </template>
-            </q-table>
-          </div>
-        </q-card-section>
-
-        <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" color="grey-7" @click="closeSACBModal" />
+            <!-- Second row: Positions -->
+            <div class="row q-mb-md q-col-gutter-md">
+              <div class="col-4">
+                <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
+                  option-value="value" v-model="SetupModal.Preparedposition" label="Position" />
+              </div>
+              <div class="col-4">
+                <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
+                  option-value="value" v-model="SetupModal.Notedposition" label="Position" />
+              </div>
+              <div class="col-4">
+                <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
+                  option-value="value" v-model="SetupModal.Certifiedposition" label="Position" />
+              </div>
+            </div>
+          </q-card-section>
+          <q-btn flat label="Close" color="black-7" @click="closeSACBModal" />
           <q-btn outline label="Export Reports to PDF" color="green" />
           <q-btn unelevated label="Print" color="primary" @click="handleSACBPrint" />
         </q-card-actions>
-      </q-card>
+
+        <!-- Page to Print -->
+        <q-card class="print-modal q-mb-lg">
+          <q-card-section class="q-pa-md text-center">
+            <div class="text-h6 q-mb-sm">
+              {{ SACBModal.reportType }}
+            </div>
+            <div class="text-h8">
+              Barangay {{ authStore.user?.barangay_name }}
+            </div>
+            <div class="text-h8">
+              Date: {{ continuingSacbDateRangeDisplay }}
+            </div>
+          </q-card-section>
+
+          <q-card-section>
+              <!-- Table -->
+               <q-table
+                :rows="reportStore.reportSACB" :columns="reportStore.sacbColumn" row-key="ppa" flat bordered dense
+                separator="cell" class="small-table-font" hide-pagination
+                :pagination="{ rowsPerPage: 0 }">
+                <!-- Custom Body -->
+                <template v-slot:body="props">
+                  <tr v-if="props.row.isSection">
+                    <td :colspan="reportStore.sacbColumn.length" class="text-bold text-left bg-grey-3">
+                      {{ props.row.ppa }}
+                    </td>
+                  </tr>
+                  <tr v-else>
+                    <td class="text-left ">{{ props.row.ppa }}</td>
+                    <td class="text-right">{{ props.row.appropriation }}</td>
+                    <td class="text-right">{{ props.row.obligation }}</td>
+                    <td class="text-right">{{ props.row.balance }}</td>
+                  </tr>
+                </template>
+              </q-table>
+
+          </q-card-section>
+        </q-card></q-card>
     </q-dialog>
 
     <!-- RAC Modal -->
@@ -240,19 +249,19 @@
 
         <!-- Page To Print -->
         <q-card class="print-modal q-mb-lg">
-            <q-card-section class="q-pa-md text-center">
-              <div class="text-h6 q-mb-sm">
-                {{ RACModal.reportType }}
-              </div>
-              <div class="text-h8">
-                Barangay {{ authStore.user?.barangay_name }}
-              </div>
-              <div class="text-h8">
-                Date: {{ dateRangeDisplay }}
-              </div>
-              <div class="text-h8">
-                Expense Class: {{ reportStore.expenseRacSelected?.name }}
-              </div>
+          <q-card-section class="q-pa-md text-center">
+            <div class="text-h6 q-mb-sm">
+              {{ RACModal.reportType }}
+            </div>
+            <div class="text-h8">
+              Barangay {{ authStore.user?.barangay_name }}
+            </div>
+            <div class="text-h8">
+              Date: {{ dateRangeDisplay }}
+            </div>
+            <div class="text-h8">
+              Expense Class: {{ reportStore.expenseRacSelected?.name }}
+            </div>
           </q-card-section>
           <q-card-section>
             <div class="q-mt-md">
@@ -509,10 +518,6 @@ const notifyError = (msg) => $q.notify({ type: 'negative', message: msg, positio
 const notifySuccess = (msg) => $q.notify({ type: 'positive', message: msg, position: 'top' })
 
 /* -------------------- COMPUTED -------------------- */
-const activityColumns = computed(() => [
-  { name: 'time', label: 'Time', field: 'time', align: 'left', sortable: true, style: 'width: 120px' },
-  { name: 'description', label: 'Activity Description', field: 'description', align: 'left', sortable: true }
-])
 
 const dateRangeDisplay = computed(() => {
   if (!dateRange.value.from && !dateRange.value.to) return ''
@@ -543,9 +548,9 @@ const continuingSacbDateRangeDisplay = computed(() => {
 })
 
 async function loadRacReport($date) {
-  try{
+  try {
     await reportStore.fetchRacReport($date)
-  }catch (error) {
+  } catch (error) {
     console.error(error)
     this.$q.notify({
       type: 'negative',
@@ -871,9 +876,10 @@ onActivated(async () => {
   background-color: gray;
 }
 
-.small-table-font td{
+.small-table-font td {
   font-size: 12px;
 }
+
 .small-table-font th {
   font-size: 14px;
 }

@@ -57,7 +57,19 @@ export const useReportStore = defineStore("reportStore", {
   { accountTitle: "Honorarium - Financial Assistance for Brgy. Functionaries", appropriation: 400000, particular: "Support for Barangay Officials", dvNumber: "DV-25-08-049", date: "July 19", payee: "Manuel Perez", amount: 390000 },
   { accountTitle: "Cash Gift - Fidelity Bond", appropriation: 80000, particular: "Fidelity Bond Renewal", dvNumber: "DV-25-08-050", date: "July 20", payee: "Rosario Chavez", amount: 78000 }
     ],
-    reportSACB: [],
+    reportSACB: [
+      { isSection: true, ppa: '1. PERSONAL SERVICES' },
+      { ppa: '• Honorarium', appropriation: '17,000,858.00', obligation: '13,305,598.54', balance: '3,695,259.46' },
+      { ppa: '• Leave Credit Benefits', appropriation: '350,089.19', obligation: '308,198.26', balance: '41,890.93' },
+      { ppa: '• Productivity Enhancement Incentive (PEI)', appropriation: '60,000.00', obligation: '0.00', balance: '60,000.00' },
+      { ppa: '• Cash Gift', appropriation: '60,000.00', obligation: '0.00', balance: '60,000.00' },
+      { ppa: '• Year-End Bonus', appropriation: '303,625.00', obligation: '0.00', balance: '303,625.00' },
+      { ppa: '• Mid-Year Bonus', appropriation: '276,411.00', obligation: '254,221.00', balance: '22,190.00' },
+
+      { isSection: true, ppa: '2. MOOE' },
+      { ppa: '• Travelling Expenses', appropriation: '300,000.00', obligation: '41,100.00', balance: '258,900.00' },
+      { ppa: '• Training Expense', appropriation: '200,000.00', obligation: '200,000.00', balance: '0.00' },
+      { ppa: '• Internet Expenses', appropriation: '50,000.00', obligation: '0.00', balance: '50,000.00' }],
     
     prepBy: '',
     prepPosition: null,
@@ -81,7 +93,11 @@ export const useReportStore = defineStore("reportStore", {
       { name: "payee", field: "payee", align: "left" },
       { name: "amount", field: "amount", align: "right", format: val => val.toLocaleString() }
     ],
-    sacbColumn: [],
+    sacbColumn: [
+      { name: 'ppa', label: 'PROGRAM / PROJECT / ACTIVITY', align: 'left', field: 'ppa' },
+      { name: 'appropriation', label: 'APPROPRIATION', align: 'right', field: 'appropriation' },
+      { name: 'obligation', label: 'OBLIGATION', align: 'right', field: 'obligation' },
+      { name: 'balance', label: 'BALANCE', align: 'right', field: 'balance' }],
 
     }),
   getters: {
