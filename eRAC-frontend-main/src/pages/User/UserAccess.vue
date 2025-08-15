@@ -4,7 +4,7 @@
       <div class="row items-center justify-between">
                  <div class="text-h6 text-weight-medium">
            User Control
-           <span class="text-caption q-ml-sm">({{ filteredUsers.length }} users from your barangay)</span>
+           <span class="text-caption q-ml-sm">({{ filteredUsers.length }} users from {{ currentUserBarangay }})</span>
          </div>
         <q-btn
           icon="refresh"
@@ -18,14 +18,7 @@
          </div>
 
      <!-- Barangay Restriction Notice -->
-     <q-banner
-       v-if="currentUserBarangay"
-       class="bg-blue text-white q-mb-md"
-       icon="info"
-     >
-       <div class="text-weight-medium">Barangay Restriction Active</div>
-       <div>Showing only users from <strong>{{ currentUserBarangay }}</strong></div>
-     </q-banner>
+
 
      <!-- Authentication Warning -->
      <q-banner
@@ -204,7 +197,7 @@ export default {
     authStore() {
       return useAuthStore()
     },
-    
+
          currentUserBarangay() {
        return this.authStore.user?.barangay_name || null
      },
@@ -218,7 +211,7 @@ export default {
        if (!Array.isArray(this.users)) {
          return []
        }
-       
+
        const uniquePositions = [...new Set(this.users.map(user => user.position).filter(Boolean))]
        return uniquePositions.map(position => ({
          label: position,
@@ -233,7 +226,7 @@ export default {
        }
 
        // First filter by barangay - only show users from the same barangay
-       let filtered = this.users.filter(user => 
+       let filtered = this.users.filter(user =>
          user.barangay_name === this.currentUserBarangay
        )
 
@@ -258,7 +251,7 @@ export default {
      async mounted() {
      // Initialize users as empty array
      this.users = []
-     
+
      const cached = localStorage.getItem('acceptedUsers');
      if (cached) {
        try {
@@ -289,7 +282,7 @@ export default {
        try {
          // Check if user has admin token (for admin users) or regular token (for barangay users)
          const token = this.authStore.adminToken || this.authStore.token
-         
+
          if (!token) {
            throw new Error('No authentication token found')
          }
@@ -302,12 +295,12 @@ export default {
          }
 
          const response = await api.get('/api/barangay/users', config)
-         
+
          console.log('API Response:', response)
          console.log('Response data:', response.data)
          console.log('Response data type:', typeof response.data)
          console.log('Is array?', Array.isArray(response.data))
-         
+
          // Check if response.data.data is an array (nested response structure)
          if (Array.isArray(response.data.data)) {
            this.users = response.data.data
@@ -325,7 +318,7 @@ export default {
          }
        } catch (error) {
          console.error('Error loading users:', error)
-         
+
          if (error.response?.status === 401) {
            this.$q.notify({
              type: 'negative',
@@ -333,11 +326,11 @@ export default {
              position: 'top',
              timeout: 5000
            })
-           
+
            // Clear cached data
            localStorage.removeItem('acceptedUsers')
            this.users = []
-           
+
            // Optionally redirect to login
            setTimeout(() => {
              this.$router.push('/login')
@@ -417,7 +410,7 @@ export default {
        try {
          // Check if user has admin token (for admin users) or regular token (for barangay users)
          const token = this.authStore.adminToken || this.authStore.token
-         
+
          if (!token) {
            throw new Error('No authentication token found')
          }
