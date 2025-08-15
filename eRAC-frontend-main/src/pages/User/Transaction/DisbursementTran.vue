@@ -307,9 +307,8 @@
                   dense
                   icon="delete"
                   :color="canDelete(props.row) ? 'red' : 'grey'"
-                  :disable="getAgingDays(props.row.aging) >= 1 || !canDelete(props.row)"
+                  :disable="!canDelete(props.row)"
                   @click.stop="() => canDelete(props.row) && handleDeleteDisbursement(props.row)"
-                  v-permission="'delete'"
                 />
               </div>
             </q-td>
@@ -359,8 +358,8 @@ function canDelete(row) {
   // Cannot delete if liquidated (regardless of return amount)
   if (row.status === 'Liquidated') return false
   
-  // Can only delete if pending or partial and aging < 1 day
-  return (row.status === 'Pending' || row.status === 'Partial') && aging < 1
+  // Can only delete if pending or partial and aging <= 1 day
+  return (row.status === 'Pending' || row.status === 'Partial') && aging <= 1
 }
 
 // Function to load all data with optimized loading strategy

@@ -828,23 +828,15 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Reset the form first to clear any previous data
         this.resetForm('disbursement')
 
-        const today = new Date()
-        const dd = String(today.getDate()).padStart(2, '0')
-        const mm = String(today.getMonth() + 1).padStart(2, '0')
-        const yyyy = today.getFullYear()
-        this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
+        // Generate new disbursement defaults including DV number
+        this.generateNewDisbursementDefaults()
 
+        // Generate cheque number (separate logic)
         const lastCheque = this.disbursements.reduce(
           (max, d) => Math.max(max, parseInt(d.chequeNumber) || 0),
           0,
         )
         this.forms.disbursement.chequeNumber = String(lastCheque + 1).padStart(6, '0')
-
-        const lastDV = this.disbursements.reduce((max, d) => {
-          const num = parseInt(d.dvNumber.split('-').pop()) || 0
-          return Math.max(max, num)
-        }, 0)
-        this.forms.disbursement.dvNumber = `DV-${String(yyyy).slice(-2)}-${mm}-${String(lastDV + 1).padStart(3, '0')}`
       } else if (dialogName === 'expense') {
         // Only fetch expense accounts if not already loaded
         if (this.expenseData.length === 0) {
@@ -1065,11 +1057,26 @@ export const useDisbursementStore = defineStore('disbursement', {
       const mm = String(today.getMonth() + 1).padStart(2, '0')
       const yyyy = today.getFullYear()
 
-      // Generate new DV number
-      const lastDV = this.disbursements.reduce((max, d) => {
-        const num = parseInt(d.dvNumber?.split('-')?.pop()) || 0
-        return Math.max(max, num)
-      }, 0)
+      // Generate new DV number - only consider disbursements from current month
+      const currentMonthDisbursements = this.disbursements.filter(d => {
+        // Extract month from DV number (format: DV-YY-MM-XXX)
+        const dvParts = d.dvNumber?.split('-')
+        if (dvParts && dvParts.length >= 3) {
+          const dvMonth = dvParts[2] // Get the month part
+          const dvYear = dvParts[1]  // Get the year part
+          return dvMonth === mm && dvYear === String(yyyy).slice(-2)
+        }
+        return false
+      })
+
+      // If no disbursements exist for current month, start from 001
+      const lastDV = currentMonthDisbursements.length > 0 
+        ? currentMonthDisbursements.reduce((max, d) => {
+            const num = parseInt(d.dvNumber?.split('-')?.pop()) || 0
+            return Math.max(max, num)
+          }, 0)
+        : 0
+
       const newDVNumber = `DV-${String(yyyy).slice(-2)}-${mm}-${String(lastDV + 1).padStart(3, '0')}`
 
       // Update form with new defaults
