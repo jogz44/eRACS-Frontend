@@ -240,20 +240,22 @@
 
         <!-- Page To Print -->
         <q-card class="print-modal q-mb-lg">
-          <q-card-section class="q-pb-none">
-            <div class="text-h6">
-              {{ RACModal.reportType }}
-            </div>
-          </q-card-section>
-
-          <q-card-section class="q-pb-none">
-            <div class="text-h6">Barangay {{ authStore.user?.barangay_name }}</div>
-            <div class="text-h6">Date {{ dateRangeDisplay }}</div>
+            <q-card-section class="q-pa-md text-center">
+              <div class="text-h6 q-mb-sm">
+                {{ RACModal.reportType }}
+              </div>
+              <div class="text-h8">
+                Barangay {{ authStore.user?.barangay_name }}
+              </div>
+              <div class="text-h8">
+                Date: {{ dateRangeDisplay }}
+              </div>
+              <div class="text-h8">
+                Expense Class: {{ reportStore.expenseRacSelected?.name }}
+              </div>
           </q-card-section>
           <q-card-section>
             <div class="q-mt-md">
-              <div class="text-subtitle1 q-mb-sm">Expense Class: {{ reportStore.expenseRacSelected?.name }}</div>
-
               <!-- Modified Excel Report Table with Obligation Amount and Subcolumns -->
               <q-table :rows="reportStore.reportRAC" :columns="reportStore.racColumn" row-key="dvNumber" flat bordered
                 dense separator="cell" class="q-mt-md small-table-font" hide-pagination
@@ -261,15 +263,16 @@
                 <!-- Custom two-row header -->
                 <template v-slot:header>
                   <q-tr>
-                    <q-th rowspan="2" style="width:200px;">Account Title</q-th>
-                    <q-th rowspan="2" style="width:120px;" class="text-right">Appropriation</q-th>
-                    <q-th colspan="4" class="text-center">Obligation</q-th>
+                    <q-th rowspan="2" style="width:25%;">Account Title</q-th>
+                    <q-th rowspan="2" style="width:12%;" class="text-right">Appropriation</q-th>
+                    <q-th colspan="5" class="text-center" style="width:55%;">Obligation</q-th>
                   </q-tr>
                   <q-tr>
-                    <q-th style="width:80px;">DV#</q-th>
-                    <q-th style="width:100px;">Date</q-th>
-                    <q-th style="width:150px;">Payee</q-th>
-                    <q-th style="width:120px;" class="text-right">Amount</q-th>
+                    <q-th style="width:15%;">Particular</q-th>
+                    <q-th style="width:15%;">DV#</q-th>
+                    <q-th style="width:10%;">Date</q-th>
+                    <q-th style="width:15%;">Payee</q-th>
+                    <q-th style="width:15%;" class="text-right">Amount</q-th>
                   </q-tr>
                 </template>
 
@@ -287,7 +290,7 @@
                     <q-td class="text-right text-bold">
                       {{reportStore.reportRAC.reduce((sum, r) => sum + r.appropriation, 0).toLocaleString()}}
                     </q-td>
-                    <q-td colspan="3" class="text-right text-bold">Total Obligation</q-td>
+                    <q-td colspan="4" class="text-right text-bold">Total Obligation</q-td>
                     <q-td class="text-right text-bold">
                       {{reportStore.reportRAC.reduce((sum, r) => sum + r.amount, 0).toLocaleString()}}
                     </q-td>
@@ -682,7 +685,7 @@ onActivated(async () => {
 
 .print-modal {
   /* A4 aspect ratio (width:height = 1:1.414) */
-  width: min(100%, 210mm);
+  width: min(100%, 310mm);
   min-height: 297mm;
   /* Minimum height is A4 */
   max-width: 100%;
@@ -694,7 +697,7 @@ onActivated(async () => {
   transform: scale(1.15);
   transform-origin: center top;
   margin: 30px auto 30px auto;
-  padding: 24px;
+  padding: 60px;
   /* Allow height to grow with content */
   box-sizing: border-box;
 }
@@ -868,8 +871,10 @@ onActivated(async () => {
   background-color: gray;
 }
 
-.small-table-font td,
-.small-table-font th {
+.small-table-font td{
   font-size: 12px;
+}
+.small-table-font th {
+  font-size: 14px;
 }
 </style>
