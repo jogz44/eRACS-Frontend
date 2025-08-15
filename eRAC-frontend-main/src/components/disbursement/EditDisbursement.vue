@@ -19,7 +19,8 @@
               dense
               v-model="store.forms.disbursement.date"
               mask="##/##/####"
-
+              :readonly="true"
+              :disable="true"
             >
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
@@ -45,42 +46,33 @@
               emit-value
               map-options
               :label="currentBankLabel"
+              :readonly="true"
+              :disable="true"
             />
           </div>
 
           <!-- Check Number Field -->
           <div class="col-md-4 col-sm-12">
             <q-item-label class="q-mb-xs">Cheque Number:</q-item-label>
-            <q-select
-              filled
+
+            <q-input
               outlined
               dense
-              v-model="store.selectedBooklet"
-              @update:model-value="store.selectBooklet"
-              :options="
-                store.chequeBooklets.map((b) => ({
-                  label: `${b.label} (${b.range})`,
-                  value: b.range,
-                }))
-              "
-              option-label="label"
-              option-value="value"
-              emit-value
-              map-options
-              label="Choose Booklet"
-              class="q-mb-sm"
-            />
+              v-model="store.forms.disbursement.chequeNumber" 
+              :disable="true"
+            ></q-input>
           </div>
           <!-- DV Number Field -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">DV Number:</q-item-label>
-            <q-input filled outlined dense v-model="store.forms.disbursement.dvNumber" />
+            <q-input filled outlined dense v-model="store.forms.disbursement.dvNumber" 
+              :disable="true"/>
           </div>
 
           <!-- Payee Field -->
           <div class="col-md-4 col-sm-12">
             <q-item-label class="q-mb-xs">Payee:</q-item-label>
-            <q-input filled outlined dense v-model="store.forms.disbursement.payee" />
+            <q-input filled outlined dense v-model="store.forms.disbursement.payee"/>
           </div>
         </div>
       </q-card-section>
