@@ -153,167 +153,520 @@
 
     <!-- SACB Modal -->
     <q-dialog v-model="SACBModal.show" maximized transition-show="slide-up" transition-hide="slide-down">
-      <q-card class=" full-height pages-group scroll ">
-
-        <!-- Header menu -->
-        <q-card-actions align="right" class="q-pa-md bg-grey-2 print-header">
-
-          <div class="text-h6">Print Report Setup</div>
-          <q-separator class="q-my-md" />
-          <q-card-section class="q-pb-none">
-            <!-- First row: Prepared by, Noted by, Certified by -->
-            <div class="row q-mb-md q-col-gutter-md">
-              <div class="col-4">
-                <q-input outlined dense label="Prepared by" v-model="SetupModal.Preparedby" />
-              </div>
-              <div class="col-4">
-                <q-input outlined dense label="Noted by" v-model="SetupModal.Notedby" />
-              </div>
-              <div class="col-4">
-                <q-input outlined dense label="Certified by" v-model="SetupModal.Certifiedby" />
-              </div>
+      <q-layout view="lHh Lpr lFf" class="sacb-layout">
+        
+        <!-- Header -->
+        <q-header elevated class="bg-white text-dark sacb-header">
+          <q-toolbar class="q-px-md">
+            <q-btn 
+              flat 
+              icon="menu" 
+              @click="toggleSACBDrawer" 
+              class="q-mr-md"
+              :color="sacbDrawerOpen ? '#187C19' : '#666'"
+              size="md"
+            >
+              <q-tooltip>Toggle Settings Panel</q-tooltip>
+            </q-btn>
+            
+            <q-toolbar-title class="text-h6 text-weight-medium" style="color: #187C19;">
+              Status of Appropriation and Obligation (SACB)
+            </q-toolbar-title>
+            
+            <q-space />
+            
+            <!-- Action Buttons -->
+            <div class="q-gutter-sm">
+              <q-btn 
+                outline 
+                icon="file_download" 
+                label="Export PDF" 
+                color="#69B31E" 
+                @click="exportSACBToPDF"
+                size="sm"
+                no-caps
+              />
+              
+              <q-btn 
+                unelevated 
+                icon="print" 
+                label="Print" 
+                color="#187C19" 
+                @click="handleSACBPrint"
+                size="sm"
+                no-caps
+              />
+              
+              <q-btn 
+                flat 
+                icon="close" 
+                @click="closeSACBModal" 
+                color="#666"
+                size="md"
+              >
+                <q-tooltip>Close</q-tooltip>
+              </q-btn>
             </div>
+          </q-toolbar>
+        </q-header>
 
-            <!-- Second row: Positions -->
-            <div class="row q-mb-md q-col-gutter-md">
-              <div class="col-4">
-                <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
-                  option-value="value" v-model="SetupModal.Preparedposition" label="Position" />
+        <!-- Left Drawer for Report Signatories -->
+        <q-drawer
+          v-model="sacbDrawerOpen"
+          side="left"
+          bordered
+          :width="350"
+          :breakpoint="768"
+          :show-if-above="false"
+          class="bg-grey-1 sacb-drawer"
+        >
+          <div class="drawer-content-sacb">
+            <q-scroll-area class="drawer-scrollable-content">
+              <div class="q-pa-lg drawer-content">
+                                 <!-- Drawer Header -->
+                 <div class="drawer-header q-mb-lg">
+                   <div class="text-h6 q-mb-sm" style="color: #187C19;">
+                     <q-icon name="edit" class="q-mr-sm" />
+                     Report Setup
+                   </div>
+                   <div class="text-caption" style="color: #666;">
+                     Configure report signatories and settings
+                   </div>
+                 </div>
+
+                                 <!-- Report Information -->
+                 <q-card flat bordered class="q-mb-lg info-card">
+                   <q-card-section class="q-pb-sm">
+                     <div class="text-subtitle2 text-weight-medium q-mb-sm" style="color: #187C19;">
+                       <q-icon name="info" class="q-mr-xs" />
+                       Report Information
+                     </div>
+                     <div class="info-item">
+                       <span class="info-label">Barangay:</span>
+                       <span class="info-value">{{ authStore.user?.barangay_name }}</span>
+                     </div>
+                     <div class="info-item">
+                       <span class="info-label">Date Range:</span>
+                       <span class="info-value">{{ getSACBDateRangeDisplay() }}</span>
+                     </div>
+                     <div class="info-item">
+                       <span class="info-label">Report Type:</span>
+                       <span class="info-value">SACB</span>
+                     </div>
+                   </q-card-section>
+                 </q-card>
+
+                                 <!-- Signatories Setup -->
+                 <q-card flat bordered class="signatories-card">
+                   <q-card-section>
+                     <div class="text-subtitle2 text-weight-medium q-mb-md" style="color: #187C19;">
+                       <q-icon name="people" class="q-mr-xs" />
+                       Report Signatories
+                     </div>
+                     
+                     <!-- Prepared by -->
+                     <div class="signatory-group q-mb-lg">
+                       <div class="signatory-header">
+                         <q-icon name="create" size="sm" style="color: #69B31E;" class="q-mr-xs" />
+                         <span class="text-weight-medium">Prepared by</span>
+                       </div>
+                       <q-input 
+                         outlined 
+                         dense 
+                         v-model="SetupModal.Preparedby" 
+                         placeholder="Enter full name"
+                         class="q-mb-sm"
+                         clearable
+                       />
+                       <q-select 
+                         outlined 
+                         dense 
+                         :options="reportStore.positionsOptions" 
+                         map-options 
+                         option-label="label"
+                         option-value="value" 
+                         v-model="SetupModal.Preparedposition" 
+                         placeholder="Select position"
+                         clearable
+                       />
+                     </div>
+                     
+                     <!-- Noted by -->
+                     <div class="signatory-group q-mb-lg">
+                       <div class="signatory-header">
+                         <q-icon name="visibility" size="sm" style="color: #E0FFE7;" class="q-mr-xs" />
+                         <span class="text-weight-medium">Noted by</span>
+                       </div>
+                       <q-input 
+                         outlined 
+                         dense 
+                         v-model="SetupModal.Notedby" 
+                         placeholder="Enter full name"
+                         class="q-mb-sm"
+                         clearable
+                       />
+                       <q-select 
+                         outlined 
+                         dense 
+                         :options="reportStore.positionsOptions" 
+                         map-options 
+                         option-label="label"
+                         option-value="value" 
+                         v-model="SetupModal.Notedposition" 
+                         placeholder="Select position"
+                         clearable
+                       />
+                     </div>
+
+                     <!-- Certified by -->
+                     <div class="signatory-group q-mb-md">
+                       <div class="signatory-header">
+                         <q-icon name="verified" size="sm" style="color: #187C19;" class="q-mr-xs" />
+                         <span class="text-weight-medium">Certified by</span>
+                       </div>
+                       <q-input 
+                         outlined 
+                         dense 
+                         v-model="SetupModal.Certifiedby" 
+                         placeholder="Enter full name"
+                         class="q-mb-sm"
+                         clearable
+                       />
+                       <q-select 
+                         outlined 
+                         dense 
+                         :options="reportStore.positionsOptions" 
+                         map-options 
+                         option-label="label"
+                         option-value="value" 
+                         v-model="SetupModal.Certifiedposition" 
+                         placeholder="Select position"
+                         clearable
+                       />
+                     </div>
+                   </q-card-section>
+                 </q-card>
+
+                                 <!-- Quick Actions -->
+                 <q-card flat bordered class="q-mt-lg">
+                   <q-card-section>
+                     <div class="text-subtitle2 text-weight-medium q-mb-md" style="color: #187C19;">
+                       <q-icon name="flash_on" class="q-mr-xs" />
+                       Quick Actions
+                     </div>
+                     <div class="q-gutter-sm">
+                       <q-btn 
+                         outline 
+                         size="sm" 
+                         icon="refresh" 
+                         label="Reset Form" 
+                         color="#E0FFE7" 
+                         @click="resetSignatories"
+                         class="full-width"
+                       />
+                       <q-btn 
+                         outline 
+                         size="sm" 
+                         icon="save" 
+                         label="Save as Template" 
+                         color="#69B31E" 
+                         @click="saveAsTemplate"
+                         class="full-width"
+                       />
+                     </div>
+                   </q-card-section>
+                 </q-card>
               </div>
-              <div class="col-4">
-                <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
-                  option-value="value" v-model="SetupModal.Notedposition" label="Position" />
-              </div>
-              <div class="col-4">
-                <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
-                  option-value="value" v-model="SetupModal.Certifiedposition" label="Position" />
-              </div>
-            </div>
-          </q-card-section>
-          <q-btn flat label="Close" color="black-7" @click="closeSACBModal" />
-          <q-btn outline label="Export Reports to PDF" color="green" />
-          <q-btn unelevated label="Print" color="primary" @click="handleSACBPrint" />
-        </q-card-actions>
+            </q-scroll-area>
+          </div>
+        </q-drawer>
 
-        <!-- Page to Print -->
-        <q-card class="print-modal q-mb-lg">
-          <q-card-section class="q-pa-md text-center">
-            <div class="text-h6 q-mb-sm">
-              {{ SACBModal.reportType }}
-            </div>
-            <div class="text-h8">
-              Barangay {{ authStore.user?.barangay_name }}
-            </div>
-            <div class="text-h8">
-              Date: {{ continuingSacbDateRangeDisplay }}
-            </div>
-          </q-card-section>
+        <!-- Main Content Area -->
+        <q-page-container style="background: #f5f5f5;">
+          <div class="print-content-wrapper q-pa-md">
+            <q-card class="print-modal" id="sacb-print-content">
+                             <q-card-section class="q-pb-none">
+                 <div class="text-h5 text-center text-weight-bold q-mb-sm" style="color: #187C19;">
+                   Status of Appropriation and Obligation (SACB)
+                 </div>
+                 <div class="text-h6 text-center text-weight-medium" style="color: #187C19;">
+                   Barangay {{ authStore.user?.barangay_name }}
+                 </div>
+                 <div class="text-subtitle1 text-center q-mb-lg" style="color: #666;">
+                   Period: {{ getSACBDateRangeDisplay() }}
+                 </div>
+               </q-card-section>
 
-          <q-card-section>
-              <!-- Table -->
-               <q-table
-                :rows="reportStore.reportSACB" :columns="reportStore.sacbColumn" row-key="ppa" flat bordered dense
-                separator="cell" class="small-table-font" hide-pagination
-                :pagination="{ rowsPerPage: 0 }">
-                <!-- Custom Body -->
-                <template v-slot:body="props">
-                  <tr v-if="props.row.isSection">
-                    <td :colspan="reportStore.sacbColumn.length" class="text-bold text-left bg-grey-3">
-                      {{ props.row.ppa }}
-                    </td>
-                  </tr>
-                  <tr v-else>
-                    <td class="text-left ">{{ props.row.ppa }}</td>
-                    <td class="text-right">{{ props.row.appropriation }}</td>
-                    <td class="text-right">{{ props.row.obligation }}</td>
-                    <td class="text-right">{{ props.row.balance }}</td>
-                  </tr>
-                </template>
-              </q-table>
+              <q-card-section>
+                <!-- SACB Table with improved styling -->
+                <q-table 
+                  :rows="reportStore.reportSACB" 
+                  :columns="sacbColumns" 
+                  row-key="ppa"
+                  flat 
+                  bordered
+                  dense 
+                  separator="cell" 
+                  class="sacb-table" 
+                  hide-pagination
+                  :pagination="{ rowsPerPage: 0 }"
+                >
+                  <!-- Custom Body -->
+                  <template v-slot:body="props">
+                    <tr v-if="props.row.isSection">
+                      <td :colspan="sacbColumns.length" class="text-bold text-left bg-grey-3">
+                        {{ props.row.ppa }}
+                      </td>
+                    </tr>
+                    <tr v-else>
+                      <td class="text-left">{{ props.row.ppa }}</td>
+                      <td class="text-right">{{ props.row.appropriation }}</td>
+                      <td class="text-right">{{ props.row.obligation }}</td>
+                      <td class="text-right">{{ props.row.balance }}</td>
+                    </tr>
+                  </template>
+                </q-table>
 
-          </q-card-section>
-        </q-card></q-card>
+                <!-- Report Summary Section -->
+                <div class="report-summary q-mt-xl">
+                  <div class="row q-col-gutter-lg">
+                    <div class="col-12 col-md-6">
+                      <q-card flat bordered class="summary-card">
+                        <q-card-section>
+                          <div class="text-subtitle2 text-weight-medium q-mb-sm">
+                            <q-icon name="assessment" class="q-mr-xs" />
+                            Summary Statistics
+                          </div>
+                          <div class="summary-stats">
+                            <div class="stat-item">
+                              <span class="stat-label">Total Appropriation:</span>
+                              <span class="stat-value">₱{{ (reportStore.reportSACB || []).reduce((sum, r) => sum + (r.appropriation || 0), 0).toLocaleString() }}</span>
+                            </div>
+                            <div class="stat-item">
+                              <span class="stat-label">Total Obligation:</span>
+                              <span class="stat-value">₱{{ (reportStore.reportSACB || []).reduce((sum, r) => sum + (r.obligation || 0), 0).toLocaleString() }}</span>
+                            </div>
+                            <div class="stat-item">
+                              <span class="stat-label">Remaining Balance:</span>
+                              <span class="stat-value">₱{{ (reportStore.reportSACB || []).reduce((sum, r) => sum + (r.balance || 0), 0).toLocaleString() }}</span>
+                            </div>
+                          </div>
+                        </q-card-section>
+                      </q-card>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <q-card flat bordered class="summary-card">
+                        <q-card-section>
+                          <div class="text-subtitle2 text-weight-medium q-mb-sm">
+                            <q-icon name="draw" class="q-mr-xs" />
+                            Signature Block
+                          </div>
+                          <div class="signature-block">
+                            <div class="signature-line">
+                              <div class="signature-name">{{ SetupModal.Preparedby || '_________________________' }}</div>
+                              <div class="signature-position">{{ SetupModal.Preparedposition?.label || 'Position' }}</div>
+                              <div class="signature-label">Prepared by</div>
+                            </div>
+                            <div class="signature-line">
+                              <div class="signature-name">{{ SetupModal.Notedby || '_________________________' }}</div>
+                              <div class="signature-position">{{ SetupModal.Notedposition?.label || 'Position' }}</div>
+                              <div class="signature-label">Noted by</div>
+                            </div>
+                            <div class="signature-line">
+                              <div class="signature-name">{{ SetupModal.Certifiedby || '_________________________' }}</div>
+                              <div class="signature-position">{{ SetupModal.Certifiedposition?.label || 'Position' }}</div>
+                              <div class="signature-label">Certified by</div>
+                            </div>
+                          </div>
+                        </q-card-section>
+                      </q-card>
+                    </div>
+                  </div>
+                </div>
+              </q-card-section>
+            </q-card>
+          </div>
+        </q-page-container>
+      </q-layout>
     </q-dialog>
 
     <!-- RAC Modal -->
-
     <q-dialog v-model="RACModal.show" maximized transition-show="slide-up" transition-hide="slide-down">
-      <q-card class=" full-height pages-group scroll ">
-
-        <!-- Header menu -->
-        <q-card-actions align="right" class="q-pa-md bg-grey-2 print-header">
-          <q-btn flat label="Close" color="black-7" @click="closeRACModal" />
-          <q-btn outline label="Export Reports to PDF" color="green" @click="exportToPDF" />
-          <q-btn unelevated label="Print" color="primary" @click="handleRACPrint" />
-        </q-card-actions>
-
-        <!-- Page To Print -->
-        <q-card class="print-modal q-mb-lg">
-          <q-card-section class="q-pa-md text-center">
-            <div class="text-h6 q-mb-sm">
+      <q-layout view="lHh Lpr lFf" class="rac-layout">
+        
+        <!-- Header -->
+        <q-header elevated class="bg-white text-dark rac-header">
+          <q-toolbar class="q-px-md">
+            <q-toolbar-title class="text-h6 text-weight-medium" style="color: #187C19;">
               {{ RACModal.reportType }}
+            </q-toolbar-title>
+            
+            <q-space />
+            
+            <!-- Action Buttons -->
+            <div class="q-gutter-sm">
+              <q-btn 
+                outline 
+                icon="file_download" 
+                label="Export PDF" 
+                color="#69B31E" 
+                @click="exportToPDF"
+                size="sm"
+                no-caps
+              />
+              
+              <q-btn 
+                unelevated 
+                icon="print" 
+                label="Print" 
+                color="#187C19" 
+                @click="handleRACPrint"
+                size="sm"
+                no-caps
+              />
+              
+              <q-btn 
+                flat 
+                icon="close" 
+                @click="closeRACModal" 
+                color="#666"
+                size="md"
+              >
+                <q-tooltip>Close</q-tooltip>
+              </q-btn>
             </div>
-            <div class="text-h8">
-              Barangay {{ authStore.user?.barangay_name }}
-            </div>
-            <div class="text-h8">
-              Date: {{ dateRangeDisplay }}
-            </div>
-            <div class="text-h8">
-              Expense Class: {{ reportStore.expenseRacSelected?.name }}
-            </div>
-          </q-card-section>
-          <q-card-section>
-            <div class="q-mt-md">
-              <!-- Modified Excel Report Table with Obligation Amount and Subcolumns -->
-              <q-table :rows="reportStore.reportRAC" :columns="reportStore.racColumn" row-key="dvNumber" flat bordered
-                dense separator="cell" class="q-mt-md small-table-font" hide-pagination
-                :pagination="{ rowsPerPage: 0 }">
-                <!-- Custom two-row header -->
-                <template v-slot:header>
-                  <q-tr>
-                    <q-th rowspan="2" style="width:25%;">Account Title</q-th>
-                    <q-th rowspan="2" style="width:12%;" class="text-right">Appropriation</q-th>
-                    <q-th colspan="5" class="text-center" style="width:55%;">Obligation</q-th>
-                  </q-tr>
-                  <q-tr>
-                    <q-th style="width:15%;">Particular</q-th>
-                    <q-th style="width:15%;">DV#</q-th>
-                    <q-th style="width:10%;">Date</q-th>
-                    <q-th style="width:15%;">Payee</q-th>
-                    <q-th style="width:15%;" class="text-right">Amount</q-th>
-                  </q-tr>
-                </template>
+          </q-toolbar>
+        </q-header>
 
-                <!-- Wrap text in all body cells -->
-                <template v-slot:body-cell="props">
-                  <q-td :props="props" style="white-space: normal; word-break: break-word;">
-                    {{ props.value }}
-                  </q-td>
-                </template>
+        <!-- Main Content Area -->
+        <q-page-container style="background: #f5f5f5;">
+          <div class="print-content-wrapper q-pa-md">
+            <q-card class="print-modal" id="rac-print-content">
+                             <q-card-section class="q-pb-none">
+                 <div class="text-h5 text-center text-weight-bold q-mb-sm" style="color: #187C19;">
+                   {{ RACModal.reportType }}
+                 </div>
+                 <div class="text-h6 text-center text-weight-medium" style="color: #187C19;">
+                   Barangay {{ authStore.user?.barangay_name }}
+                 </div>
+                 <div class="text-subtitle1 text-center q-mb-lg" style="color: #666;">
+                   Date: {{ dateRangeDisplay }}
+                 </div>
+                 <div class="text-subtitle1 text-center q-mb-lg" style="color: #666;">
+                   Expense Class: {{ reportStore.expenseRacSelected?.name }}
+                 </div>
+               </q-card-section>
 
-                <!-- Bottom total row -->
-                <template v-slot:bottom-row>
-                  <q-tr>
-                    <q-td colspan="1" class="text-right text-bold">Total Appropriation</q-td>
-                    <q-td class="text-right text-bold">
-                      {{reportStore.reportRAC.reduce((sum, r) => sum + r.appropriation, 0).toLocaleString()}}
+              <q-card-section>
+                <!-- RAC Table with improved styling -->
+                <q-table 
+                  :rows="reportStore.reportRAC" 
+                  :columns="reportStore.racColumn" 
+                  row-key="dvNumber"
+                  flat 
+                  bordered
+                  dense 
+                  separator="cell" 
+                  class="rac-table q-mt-md" 
+                  hide-pagination
+                  :pagination="{ rowsPerPage: 0 }"
+                >
+                  <!-- Custom two-row header -->
+                  <template v-slot:header>
+                    <q-tr>
+                      <q-th rowspan="2" style="width:25%;">Account Title</q-th>
+                      <q-th rowspan="2" style="width:12%;" class="text-right">Appropriation</q-th>
+                      <q-th colspan="5" class="text-center" style="width:55%;">Obligation</q-th>
+                    </q-tr>
+                    <q-tr>
+                      <q-th style="width:15%;">Particular</q-th>
+                      <q-th style="width:15%;">DV#</q-th>
+                      <q-th style="width:10%;">Date</q-th>
+                      <q-th style="width:15%;">Payee</q-th>
+                      <q-th style="width:15%;" class="text-right">Amount</q-th>
+                    </q-tr>
+                  </template>
+
+                  <!-- Wrap text in all body cells -->
+                  <template v-slot:body-cell="props">
+                    <q-td :props="props" style="white-space: normal; word-break: break-word;">
+                      {{ props.value }}
                     </q-td>
-                    <q-td colspan="4" class="text-right text-bold">Total Obligation</q-td>
-                    <q-td class="text-right text-bold">
-                      {{reportStore.reportRAC.reduce((sum, r) => sum + r.amount, 0).toLocaleString()}}
-                    </q-td>
-                  </q-tr>
-                </template>
-              </q-table>
+                  </template>
 
-              <!-- End Modified Table -->
-            </div>
-          </q-card-section>
-        </q-card>
+                  <!-- Bottom total row -->
+                  <template v-slot:bottom-row>
+                    <q-tr>
+                      <q-td colspan="1" class="text-right text-bold">Total Appropriation</q-td>
+                      <q-td class="text-right text-bold">
+                        {{reportStore.reportRAC.reduce((sum, r) => sum + r.appropriation, 0).toLocaleString()}}
+                      </q-td>
+                      <q-td colspan="4" class="text-right text-bold">Total Obligation</q-td>
+                      <q-td class="text-right text-bold">
+                        {{reportStore.reportRAC.reduce((sum, r) => sum + r.amount, 0).toLocaleString()}}
+                      </q-td>
+                    </q-tr>
+                  </template>
+                </q-table>
 
-      </q-card>
-
+                <!-- Report Summary Section -->
+                <div class="report-summary q-mt-xl">
+                  <div class="row q-col-gutter-lg">
+                    <div class="col-12 col-md-6">
+                      <q-card flat bordered class="summary-card">
+                        <q-card-section>
+                          <div class="text-subtitle2 text-weight-medium q-mb-sm">
+                            <q-icon name="assessment" class="q-mr-xs" />
+                            Summary Statistics
+                          </div>
+                          <div class="summary-stats">
+                            <div class="stat-item">
+                              <span class="stat-label">Total Appropriation:</span>
+                              <span class="stat-value">₱{{reportStore.reportRAC.reduce((sum, r) => sum + r.appropriation, 0).toLocaleString()}}</span>
+                            </div>
+                            <div class="stat-item">
+                              <span class="stat-label">Total Obligation:</span>
+                              <span class="stat-value">₱{{reportStore.reportRAC.reduce((sum, r) => sum + r.amount, 0).toLocaleString()}}</span>
+                            </div>
+                            <div class="stat-item">
+                              <span class="stat-label">Remaining Balance:</span>
+                              <span class="stat-value">₱{{(reportStore.reportRAC.reduce((sum, r) => sum + r.appropriation, 0) - reportStore.reportRAC.reduce((sum, r) => sum + r.amount, 0)).toLocaleString()}}</span>
+                            </div>
+                          </div>
+                        </q-card-section>
+                      </q-card>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <q-card flat bordered class="summary-card">
+                        <q-card-section>
+                          <div class="text-subtitle2 text-weight-medium q-mb-sm">
+                            <q-icon name="info" class="q-mr-xs" />
+                            Report Information
+                          </div>
+                          <div class="summary-stats">
+                            <div class="stat-item">
+                              <span class="stat-label">Report Type:</span>
+                              <span class="stat-value">RAC</span>
+                            </div>
+                            <div class="stat-item">
+                              <span class="stat-label">Total Records:</span>
+                              <span class="stat-value">{{reportStore.reportRAC.length}}</span>
+                            </div>
+                            <div class="stat-item">
+                              <span class="stat-label">Generated Date:</span>
+                              <span class="stat-value">{{ new Date().toLocaleDateString() }}</span>
+                            </div>
+                          </div>
+                        </q-card-section>
+                      </q-card>
+                    </div>
+                  </div>
+                </div>
+              </q-card-section>
+            </q-card>
+          </div>
+        </q-page-container>
+      </q-layout>
     </q-dialog>
   </q-page>
 </template>
@@ -332,6 +685,7 @@ const authStore = useAuthStore()
 /* -------------------- STATE -------------------- */
 const showSetupDialog = ref(false)
 const loading = ref(false)
+const sacbDrawerOpen = ref(true)
 
 // Date ranges
 const dateRange = ref({ from: '', to: '' })
@@ -518,6 +872,12 @@ const notifyError = (msg) => $q.notify({ type: 'negative', message: msg, positio
 const notifySuccess = (msg) => $q.notify({ type: 'positive', message: msg, position: 'top' })
 
 /* -------------------- COMPUTED -------------------- */
+const sacbColumns = computed(() => [
+  { name: 'ppa', label: 'Account Title', field: 'ppa', align: 'left', sortable: true },
+  { name: 'appropriation', label: 'Appropriation', field: 'appropriation', align: 'right', sortable: true, format: val => val?.toLocaleString() },
+  { name: 'obligation', label: 'Obligation', field: 'obligation', align: 'right', sortable: true, format: val => val?.toLocaleString() },
+  { name: 'balance', label: 'Balance', field: 'balance', align: 'right', sortable: true, format: val => val?.toLocaleString() }
+])
 
 const dateRangeDisplay = computed(() => {
   if (!dateRange.value.from && !dateRange.value.to) return ''
@@ -564,12 +924,12 @@ async function exportToPDF() {
   const jsPDF = (await import('jspdf')).default;
   try {
 
-    const element = document.querySelector('.print-modal')
+    const element = document.querySelector('#rac-print-content')
 
     if (!element) {
-      this.$q.notify({
+      $q.notify({
         type: 'negative',
-        message: 'No content found to export!',
+        message: 'No RAC content found to export!',
       })
       return
     }
@@ -605,19 +965,116 @@ async function exportToPDF() {
     }
 
 
-    pdf.save('report.pdf')
+    pdf.save('rac-report.pdf')
 
-    this.$q.notify({
+    $q.notify({
       type: 'positive',
-      message: 'PDF Exported Successfully!',
+      message: 'RAC PDF Exported Successfully!',
     })
   } catch (error) {
     console.error(error)
-    this.$q.notify({
+    $q.notify({
       type: 'negative',
       message: 'Failed to export PDF',
     })
   }
+}
+
+async function exportSACBToPDF() {
+  const html2canvas = (await import('html2canvas')).default;
+  const jsPDF = (await import('jspdf')).default;
+  try {
+
+    const element = document.querySelector('#sacb-print-content')
+
+    if (!element) {
+      $q.notify({
+        type: 'negative',
+        message: 'No SACB content found to export!',
+      })
+      return
+    }
+
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+    })
+
+    const imgData = canvas.toDataURL('image/png')
+    const pdf = new jsPDF('p', 'mm', 'a4')
+
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    const pageHeight = pdf.internal.pageSize.getHeight()
+    const imgWidth = pageWidth
+    const imgHeight = (canvas.height * imgWidth) / canvas.width
+
+    let heightLeft = imgHeight
+    let position = 0
+
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+    heightLeft -= pageHeight
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight
+      pdf.addPage()
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+    }
+
+    pdf.save('sacb-report.pdf')
+
+    $q.notify({
+      type: 'positive',
+      message: 'SACB PDF Exported Successfully!',
+    })
+  } catch (error) {
+    console.error(error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to export SACB PDF',
+    })
+  }
+}
+
+function getSACBDateRangeDisplay() {
+  // Determine which SACB date range to use based on which modal was opened
+  const currentDisplay = currentSacbDateRangeDisplay.value
+  const continuingDisplay = continuingSacbDateRangeDisplay.value
+  
+  // Return the one that has data, prioritizing current
+  if (currentDisplay) return currentDisplay
+  if (continuingDisplay) return continuingDisplay
+  return 'No date range selected'
+}
+
+function toggleSACBDrawer() {
+  sacbDrawerOpen.value = !sacbDrawerOpen.value
+}
+
+function resetSignatories() {
+  SetupModal.Preparedby = ''
+  SetupModal.Preparedposition = null
+  SetupModal.Notedby = ''
+  SetupModal.Notedposition = null
+  SetupModal.Certifiedby = ''
+  SetupModal.Certifiedposition = null
+  
+  notifySuccess('Signatory fields have been reset')
+}
+
+function saveAsTemplate() {
+  // This could save to localStorage or send to backend
+  const template = {
+    preparedBy: SetupModal.Preparedby,
+    preparedPosition: SetupModal.Preparedposition,
+    notedBy: SetupModal.Notedby,
+    notedPosition: SetupModal.Notedposition,
+    certifiedBy: SetupModal.Certifiedby,
+    certifiedPosition: SetupModal.Certifiedposition
+  }
+  
+  localStorage.setItem('sacbSignatoryTemplate', JSON.stringify(template))
+  notifySuccess('Signatory template saved successfully')
 }
 
 /* -------------------- LIFECYCLE -------------------- */
@@ -648,7 +1105,7 @@ onActivated(async () => {
 .section-title {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #1f6c0e;
+  color: #187C19;
   margin: 0;
 }
 
@@ -677,7 +1134,7 @@ onActivated(async () => {
 }
 
 .report-card:hover {
-  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 6px 25px rgba(24, 124, 25, 0.12);
   transform: translateY(-2px);
 }
 
@@ -740,7 +1197,7 @@ onActivated(async () => {
 }
 
 .custom-date-range:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(24, 124, 25, 0.1);
 }
 
 .calend-icon {
@@ -749,7 +1206,7 @@ onActivated(async () => {
 }
 
 .calend-icon:hover {
-  color: #1976d2;
+  color: #187C19;
 }
 
 /* Input and button enhancements */
@@ -761,7 +1218,7 @@ onActivated(async () => {
 
 .q-input:hover,
 .q-select:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(24, 124, 25, 0.1);
 }
 
 .q-btn {
@@ -771,47 +1228,7 @@ onActivated(async () => {
 
 .q-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* Custom date range styling */
-.custom-date-range {
-  transition: all 0.3s ease;
-}
-
-.custom-date-range:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.calend-icon {
-  cursor: pointer;
-  transition: color 0.3s ease;
-}
-
-.calend-icon:hover {
-  color: #1976d2;
-}
-
-/* Input and button enhancements */
-.q-input,
-.q-select {
-  background-color: white;
-  transition: all 0.3s ease;
-}
-
-.q-input:hover,
-.q-select:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.q-btn {
-  transition: all 0.3s ease;
-  font-weight: 500;
-}
-
-.q-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(24, 124, 25, 0.15);
 }
 
 /* Responsive Design */
@@ -882,5 +1299,425 @@ onActivated(async () => {
 
 .small-table-font th {
   font-size: 14px;
+}
+
+/* Enhanced SACB Modal Styles */
+.sacb-layout {
+  height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.sacb-header {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 2000;
+}
+
+.sacb-header .q-toolbar {
+  min-height: 64px;
+  padding: 8px 16px;
+}
+
+.sacb-drawer {
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+/* Drawer Content Structure */
+.drawer-content-sacb {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.drawer-header {
+  flex-shrink: 0;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 16px;
+  background-color: white;
+}
+
+.drawer-scrollable-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Drawer Styles */
+.drawer-header {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 16px;
+}
+
+.info-card {
+  background: linear-gradient(135deg, #E0FFE7 0%, #69B31E 100%);
+  border: 1px solid #187C19;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  margin-bottom: 8px;
+}
+
+.info-item:last-child {
+  margin-bottom: 0;
+}
+
+.info-label {
+  font-weight: 500;
+  color: #666;
+  font-size: 0.85em;
+}
+
+.info-value {
+  font-weight: 600;
+  color: #187C19;
+  font-size: 0.9em;
+  text-align: right;
+  flex: 1;
+  margin-left: 8px;
+}
+
+.signatories-card {
+  background-color: white;
+  border: 1px solid #e0e0e0;
+}
+
+.signatory-group {
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #fafafa;
+  transition: all 0.3s ease;
+}
+
+.signatory-group:hover {
+  background-color: #E0FFE7;
+  border-color: #187C19;
+  box-shadow: 0 2px 8px rgba(24, 124, 25, 0.1);
+}
+
+.signatory-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Print Content Wrapper - Natural Scrolling */
+.print-content-wrapper {
+  max-width: 210mm; /* A4 width */
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.print-content-wrapper .print-modal {
+  background-color: white;
+  box-shadow: 0 4px 20px rgba(24, 124, 25, 0.1);
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  overflow: visible;
+  transform: none;
+  margin: 0;
+  padding: 32px;
+  min-height: auto;
+}
+
+/* Enhanced Header Styling */
+.sacb-layout .q-toolbar {
+  padding: 12px 24px;
+}
+
+.sacb-layout .q-toolbar-title {
+  font-size: 1.2em;
+  font-weight: 600;
+}
+
+/* Enhanced Button Styling in Header */
+.sacb-layout .q-btn {
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.sacb-layout .q-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(24, 124, 25, 0.15);
+}
+
+/* SACB Table Styles */
+.sacb-table {
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.sacb-table .q-table__top,
+.sacb-table .q-table__bottom {
+  background-color: #f8f9fa;
+}
+
+.sacb-table th {
+  background-color: #e9ecef;
+  font-weight: 600;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.sacb-table td {
+  border-bottom: 1px solid #dee2e6;
+}
+
+.sacb-table tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.sacb-table tr:hover {
+  background-color: #E0FFE7;
+}
+
+/* Enhanced table header styling for SACB */
+.sacb-table .q-table thead tr:first-child th {
+  background: linear-gradient(135deg, #187C19 0%, #0E780E 100%);
+  color: white;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.sacb-table .q-table thead tr:last-child th {
+  background: linear-gradient(135deg, #69B31E 0%, #187C19 100%);
+  color: white;
+  font-weight: 500;
+}
+
+/* Report Summary Styles */
+.report-summary {
+  margin-top: 32px;
+}
+
+.summary-card {
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.summary-card:hover {
+  box-shadow: 0 4px 20px rgba(24, 124, 25, 0.08);
+  transform: translateY(-2px);
+}
+
+.summary-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.stat-item:last-child {
+  border-bottom: none;
+}
+
+.stat-label {
+  font-weight: 500;
+  color: #424242;
+}
+
+.stat-value {
+  font-weight: 600;
+  color: #187C19;
+  font-size: 1.1em;
+}
+
+/* Signature Block Styles */
+.signature-block {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.signature-line {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #fafafa;
+  transition: all 0.3s ease;
+}
+
+.signature-line:hover {
+  background-color: #E0FFE7;
+  border-color: #187C19;
+  box-shadow: 0 2px 8px rgba(24, 124, 25, 0.1);
+}
+
+.signature-name {
+  font-weight: 600;
+  font-size: 1em;
+  color: #187C19;
+  margin-bottom: 4px;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 4px;
+  min-height: 20px;
+  width: 100%;
+}
+
+.signature-position {
+  font-size: 0.9em;
+  color: #666;
+  margin-bottom: 8px;
+  font-style: italic;
+}
+
+.signature-label {
+  font-size: 0.8em;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* RAC Layout Styles */
+.rac-layout {
+  height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.rac-header {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 2000;
+}
+
+.rac-header .q-toolbar {
+  min-height: 64px;
+  padding: 8px 16px;
+}
+
+.rac-table {
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.rac-table .q-table__top,
+.rac-table .q-table__bottom {
+  background-color: #f8f9fa;
+}
+
+.rac-table th {
+  background-color: #e9ecef;
+  font-weight: 600;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.rac-table td {
+  border-bottom: 1px solid #dee2e6;
+}
+
+.rac-table tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.rac-table tr:hover {
+  background-color: #E0FFE7;
+}
+
+/* Enhanced table header styling for RAC */
+.rac-table .q-table thead tr:first-child th {
+  background: linear-gradient(135deg, #187C19 0%, #0E780E 100%);
+  color: white;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.rac-table .q-table thead tr:last-child th {
+  background: linear-gradient(135deg, #69B31E 0%, #187C19 100%);
+  color: white;
+  font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .sacb-drawer {
+    width: 300px !important;
+  }
+  
+  .drawer-header {
+    padding: 16px 0;
+  }
+  
+  .signatory-group {
+    padding: 12px;
+  }
+  
+  .print-content-wrapper {
+    padding: 10px;
+  }
+  
+  .print-content-wrapper .print-modal {
+    padding: 16px;
+    min-height: auto;
+  }
+  
+  .sacb-header .q-toolbar {
+    min-height: 56px;
+    padding: 4px 8px;
+  }
+  
+  .rac-header .q-toolbar {
+    min-height: 56px;
+    padding: 4px 8px;
+  }
+  
+  .sacb-header .q-toolbar-title,
+  .rac-header .q-toolbar-title {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .sacb-drawer {
+    width: 280px !important;
+  }
+  
+  .info-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .info-value {
+    text-align: left;
+    margin-left: 0;
+  }
+  
+  .signatory-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .print-content-wrapper {
+    padding: 5px;
+  }
+  
+  .print-content-wrapper .print-modal {
+    padding: 12px;
+  }
+  
+  .sacb-header .q-toolbar-title,
+  .rac-header .q-toolbar-title {
+    font-size: 0.9rem;
+  }
 }
 </style>
