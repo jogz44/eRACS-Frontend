@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('tran_expense_details', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('disbursement_id')->nullable();
+            $table->unsignedBigInteger('disbursement_id');
             $table->unsignedBigInteger('appropriation_id'); // Reference to appropriation/expense item
             $table->decimal('amount', 15, 2); // Amount allocated to this expense
             $table->text('particulars')->nullable(); // Description/particulars for this expense

@@ -99,6 +99,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       console.log('=== expenseAccountsWithDisbursements getter ===')
       console.log('Expense data:', state.expenseData)
       console.log('Expense details data:', this.expenseDetailsData)
+      console.log('Current frontend expenses:', this.expenses)
 
       const flattened = state.expenseData.reduce((acc, expenseClass) => {
         if (!expenseClass.children) {
@@ -332,6 +333,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         console.log(`\n=== Balance Calculation for ${expenseLevel} ${expenseId} ===`)
         console.log(`Original amount: ${originalAmount}`)
         console.log(`Total expense details: ${this.expenseDetailsData?.length || 0}`)
+        console.log(`Current frontend expenses: ${this.expenses?.length || 0}`)
         
         // Get all expense details from the database for this expense account
         if (this.expenseDetailsData && this.expenseDetailsData.length > 0) {
@@ -342,17 +344,33 @@ export const useDisbursementStore = defineStore('disbursement', {
             return false
           })
           
-          console.log(`Relevant expense details (${relevantDetails.length}):`, relevantDetails.slice(0, 3))
+          console.log(`Relevant database expense details (${relevantDetails.length}):`, relevantDetails.slice(0, 3))
           
           relevantDetails.forEach(expenseDetail => {
             // Include ALL expense details in the calculation (both linked and unlinked)
             totalDisbursed += parseFloat(expenseDetail.amount) || 0;
             
             if (expenseDetail.disbursement_id !== null) {
-              console.log(`✓ Linked: Amount ${expenseDetail.amount}, Disbursement ${expenseDetail.disbursement_id}`)
+              console.log(`✓ Database: Amount ${expenseDetail.amount}, Disbursement ${expenseDetail.disbursement_id}`)
             } else {
-              console.log(`✓ Unlinked (pending): Amount ${expenseDetail.amount}`)
+              console.log(`✓ Database (unlinked): Amount ${expenseDetail.amount}`)
             }
+          });
+        }
+
+        // Add current frontend expenses for this account
+        if (this.expenses && this.expenses.length > 0) {
+          const relevantFrontendExpenses = this.expenses.filter(expense => {
+            if (expenseLevel === 'item') return String(expense.expense_item_id) === String(expenseId)
+            if (expenseLevel === 'type') return String(expense.expense_type_id) === String(expenseId)
+            return false
+          })
+          
+          console.log(`Relevant frontend expenses (${relevantFrontendExpenses.length}):`, relevantFrontendExpenses)
+          
+          relevantFrontendExpenses.forEach(expense => {
+            totalDisbursed += parseFloat(expense.amount) || 0;
+            console.log(`✓ Frontend: Amount ${expense.amount} (pending)`)
           });
         }
     
@@ -408,71 +426,14 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
-    // Save expense detail to database immediately
-    async saveExpenseDetail(expense) {
-      try {
-        const authStore = useAuthStore()
-        const token = authStore.token
-        
-        const payload = {
-          // Do NOT send appropriation_id unless it's a real tran_appropriations.id
-          amount: expense.amount,
-          particulars: expense.particular,
-          expense_class_id: expense.expense_class_id,
-          expense_type_id: expense.expense_type_id,
-          expense_item_id: expense.expense_item_id,
-          // Note: disbursement_id will be null until disbursement is saved
-        }
-        
-        const response = await api.post('/api/barangay/expense-details', payload, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-          },
-        })
-        
-        if (response.data.status) {
-          // Add the saved expense detail to our local array
-          this.expenseDetailsData.push(response.data.data)
-          console.log('Saved expense detail:', response.data.data)
-          return response.data.data
-        }
-      } catch (error) {
-        console.error('Failed to save expense detail:', error)
-        throw error
-      }
-    },
-
-    // Delete expense detail from database
-    async deleteExpenseDetail(expenseDetailId) {
-      try {
-        const authStore = useAuthStore()
-        const token = authStore.token
-        
-        const response = await api.delete(`/api/barangay/expense-details/${expenseDetailId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-          },
-        })
-        
-        if (response.data.status) {
-          // Remove from local array
-          this.expenseDetailsData = this.expenseDetailsData.filter(ed => ed.id !== expenseDetailId)
-          console.log('Deleted expense detail:', expenseDetailId)
-          return true
-        }
-      } catch (error) {
-        console.error('Failed to delete expense detail:', error)
-        throw error
-      }
-    },
-
     // Refresh expense accounts with updated balances after disbursement changes
     refreshExpenseAccountsWithBalances() {
       try {
         // Force a refresh of the expense accounts to recalculate balances
+        // This will trigger the getter to recalculate with current frontend expenses
         this.expenseData = [...this.expenseData]
+        
+        console.log('Refreshed expense accounts with balances, including frontend expenses:', this.expenses.length)
       } catch (error) {
         console.error('Failed to refresh expense accounts with balances:', error)
       }
@@ -918,24 +879,17 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     // Rollback all unsaved expense details when disbursement is canceled
-    async rollbackUnsavedExpenses() {
+    rollbackUnsavedExpenses() {
       try {
-        // Get all expense details that don't have a disbursement_id (unsaved)
-        const unsavedExpenseDetails = this.expenseDetailsData.filter(ed => !ed.disbursement_id)
-        
-        if (unsavedExpenseDetails.length > 0) {
-          console.log('Rolling back unsaved expense details:', unsavedExpenseDetails)
-          
-          // Delete all unsaved expense details from database
-          for (const expenseDetail of unsavedExpenseDetails) {
-            await this.deleteExpenseDetail(expenseDetail.id)
-          }
+        // Since expenses are now only stored in frontend, just clear the local array
+        if (this.expenses.length > 0) {
+          console.log('Rolling back unsaved expenses from frontend:', this.expenses)
           
           // Clear local expenses array
           this.expenses = []
           
-          // Refresh expense details
-          await this.fetchExpenseDetails()
+          // Refresh expense account balances to show original amounts
+          this.refreshExpenseAccountsWithBalances()
           
           console.log('Successfully rolled back all unsaved expenses')
         }
@@ -1090,8 +1044,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           payee: this.forms.disbursement.payee,
           dv_amount: this.totalExpensesAmount,
           expenses: this.expenses.map(expense => ({
-            dbId: expense.dbId, // Include the database ID for linking
-            accountId: expense.expense_item_id || expense.accountId, // Use expense_item_id if available, fallback to accountId
+            accountId: expense.accountId,
             amount: expense.amount,
             particular: expense.particular,
             expense_class_id: expense.expense_class_id,
@@ -1110,47 +1063,56 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Get the disbursement ID for linking expense details
         const disbursementId = response.data.data.id
 
-        // Link expense details to the disbursement
+        // Create expense details in the database when disbursement is saved
         if (this.expenses.length > 0) {
-          console.log('Linking expense details to disbursement:', disbursementId)
-          console.log('Expenses to link:', this.expenses)
+          console.log('Creating expense details for disbursement:', disbursementId)
+          console.log('Expenses to create:', this.expenses)
           
-          // Update all expense details with the disbursement ID
+          // Create expense details in the database
           for (const expense of this.expenses) {
-            if (expense.dbId) {
-              try {
-                const authStore = useAuthStore()
-                const token = authStore.token
-                
-                console.log(`Linking expense detail ${expense.dbId} to disbursement ${disbursementId}`)
-                
-                await api.patch(`/api/barangay/expense-details/${expense.dbId}`, {
-                  disbursement_id: disbursementId
-                }, {
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                    Accept: 'application/json',
-                  },
-                })
-                
-                console.log(`Successfully linked expense detail ${expense.dbId}`)
-              } catch (error) {
-                console.error('Failed to link expense detail to disbursement:', error)
+            try {
+              const authStore = useAuthStore()
+              const token = authStore.token
+              
+              console.log(`Creating expense detail for disbursement ${disbursementId}:`, expense)
+              
+              // Create the expense detail with the disbursement ID
+              const expenseDetailPayload = {
+                amount: expense.amount,
+                particulars: expense.particular,
+                expense_class_id: expense.expense_class_id,
+                expense_type_id: expense.expense_type_id,
+                expense_item_id: expense.expense_item_id,
+                disbursement_id: disbursementId, // Link directly to disbursement
               }
-            } else {
-              console.warn('Expense missing dbId:', expense)
+              
+              const expenseDetailResponse = await api.post('/api/barangay/expense-details', expenseDetailPayload, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  Accept: 'application/json',
+                },
+              })
+              
+              if (expenseDetailResponse.data.status) {
+                console.log(`Successfully created expense detail:`, expenseDetailResponse.data.data)
+              }
+            } catch (error) {
+              console.error('Failed to create expense detail for disbursement:', error)
+              // Continue with other expenses even if one fails
             }
           }
         }
 
-        // Wait for data to appear in the disbursement table before closing dialog
-        await this.refreshDataInBackground()
-
-        // Close dialog and reset form after data is loaded
+        // Close dialog and reset form immediately for better UX
         this.resetForm('disbursement')
         this.expenses = []
         this.generateNewDisbursementDefaults()
         this.closeDialog('disbursement')
+
+        // Do data refreshes in background (non-blocking)
+        this.refreshDataInBackground().catch(error => {
+          console.warn('Background refresh failed:', error)
+        })
 
         return { success: true, data: response.data.data }
       } catch (error) {
@@ -1173,7 +1135,9 @@ export const useDisbursementStore = defineStore('disbursement', {
     // New method to refresh data in background without blocking UI
     async refreshDataInBackground() {
       try {
-        // Refresh disbursements list
+        console.log('Starting background refresh...')
+        
+        // Refresh disbursements list first (most important)
         await this.fetchDisbursements()
         
         // Refresh expense details for balance calculations
@@ -1226,6 +1190,17 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.forms.disbursement.dvNumber = newDVNumber
     },
 
+          // Generate next available incremental ID for expenses
+      getNextExpenseId() {
+        if (this.expenses.length === 0) {
+          return 1
+        }
+        
+        // Always return the next sequential ID (highest + 1)
+        const highestId = Math.max(...this.expenses.map(exp => exp.id))
+        return highestId + 1
+      },
+
     // Expense Actions
     async saveExpense() {
       const amount = Number(this.forms.expense.amount) || 0
@@ -1249,9 +1224,9 @@ export const useDisbursementStore = defineStore('disbursement', {
         throw new Error(`Amount exceeds available balance. Available: ₱${currentAvailableBalance.toLocaleString()}, Requested: ₱${amount.toLocaleString()}`)
       }
 
-      // Create expense object
+      // Create expense object - keep in frontend only until disbursement is saved
       const expense = {
-        id: Date.now(), // Temporary ID for local tracking
+        id: this.getNextExpenseId(), // Use the new method to get the next available ID
         accountId: this.forms.expense.accountId,
         accountName: this.forms.expense.account,
         amount: amount,
@@ -1259,30 +1234,28 @@ export const useDisbursementStore = defineStore('disbursement', {
         expense_class_id: this.forms.expense.expense_class_id,
         expense_type_id: this.forms.expense.expense_type_id,
         expense_item_id: this.forms.expense.expense_item_id,
+        // Note: No dbId until disbursement is saved
       }
 
-      // Save to database immediately
-      try {
-        const savedExpenseDetail = await this.saveExpenseDetail(expense)
-        
-        // Update the expense with the database ID
-        expense.id = savedExpenseDetail.id
-        expense.dbId = savedExpenseDetail.id // Keep track of database ID
-        
-        this.expenses.push(expense)
-        this.expenses = [...this.expenses]
-        
-        // Immediately refresh expense account balances to show updated amounts
-        this.refreshExpenseAccountsWithBalances()
-        
-        this.closeDialog('expenseDetail')
-        this.resetForm('expense')
-        
-        console.log('Expense saved successfully:', expense)
-      } catch (error) {
-        console.error('Failed to save expense:', error)
-        throw new Error('Failed to save expense to database: ' + error.message)
-      }
+      // Add to local expenses array (frontend only)
+      this.expenses.push(expense)
+      this.expenses = [...this.expenses]
+      
+      // Immediately refresh expense account balances to show updated amounts
+      this.refreshExpenseAccountsWithBalances()
+      
+      // Force a refresh of the expense accounts to update the selection table
+      this.expenseData = [] // Clear to force refresh
+      this.fetchExpenseAccounts().then(() => {
+        console.log('Expense accounts refreshed after adding expense')
+      }).catch(error => {
+        console.warn('Failed to refresh expense accounts:', error)
+      })
+      
+      this.closeDialog('expenseDetail')
+      this.resetForm('expense')
+      
+      console.log('Expense added to frontend:', expense)
     },
     // Similarly update editExpense and deleteExpense
     editExpense(row) {
@@ -1293,28 +1266,38 @@ export const useDisbursementStore = defineStore('disbursement', {
         
         // Immediately refresh expense account balances to show updated amounts
         this.refreshExpenseAccountsWithBalances()
+        
+        // Force a refresh of the expense accounts to update the selection table
+        this.expenseData = [] // Clear to force refresh
+        this.fetchExpenseAccounts().then(() => {
+          console.log('Expense accounts refreshed after editing expense')
+        }).catch(error => {
+          console.warn('Failed to refresh expense accounts:', error)
+        })
       }
     },
 
     async deleteExpense(id) {
       const expense = this.expenses.find(e => e.id === id)
       
-      if (expense && expense.dbId) {
-        // Delete the expense detail from database
-        try {
-          await this.deleteExpenseDetail(expense.dbId)
-        } catch (error) {
-          console.error('Failed to delete expense from database:', error)
-          throw new Error('Failed to delete expense from database: ' + error.message)
-        }
+      if (expense) {
+        // Remove from local array (frontend only)
+        this.expenses = this.expenses.filter((e) => e.id !== id)
+        this.forms.disbursement.amount = this.totalExpensesAmount
+        
+        // Immediately refresh expense account balances to show updated amounts
+        this.refreshExpenseAccountsWithBalances()
+        
+        // Force a refresh of the expense accounts to update the selection table
+        this.expenseData = [] // Clear to force refresh
+        this.fetchExpenseAccounts().then(() => {
+          console.log('Expense accounts refreshed after deleting expense')
+        }).catch(error => {
+          console.warn('Failed to refresh expense accounts:', error)
+        })
+        
+        console.log('Expense removed from frontend:', expense)
       }
-      
-      // Remove from local array
-      this.expenses = this.expenses.filter((e) => e.id !== id)
-      this.forms.disbursement.amount = this.totalExpensesAmount
-      
-      // Immediately refresh expense account balances to show updated amounts
-      this.refreshExpenseAccountsWithBalances()
     },
 
     // Alias functions for EditDisbursement component

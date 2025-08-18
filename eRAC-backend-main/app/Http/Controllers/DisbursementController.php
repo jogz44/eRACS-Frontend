@@ -591,6 +591,7 @@ class DisbursementController extends Controller
         $request->validate([
             'amount' => 'required|numeric|min:0',
             'particulars' => 'nullable|string',
+            'disbursement_id' => 'exists:disbursements,id', // Allow disbursement_id to be provided
             // Client may provide either a direct appropriation_id or one of the expense hierarchy IDs
             'appropriation_id' => 'nullable|exists:tran_appropriations,id',
             'expense_class_id' => 'nullable|exists:lib_expense_classes,id',
@@ -711,11 +712,9 @@ class DisbursementController extends Controller
                 ], 422);
             }
 
-            // Create a single expense detail record (representing the logical expense)
-            // The appropriation_id will be set to the first matching appropriation
-            // but the amount represents the total across all appropriations
+            // Create the expense detail record
             $expenseDetail = TranExpenseDetail::create([
-                'disbursement_id' => null, // Will be set when disbursement is saved
+                'disbursement_id' => $request->disbursement_id, // Use provided disbursement_id or null
                 'appropriation_id' => $matchingAppropriations->first()->id, // Use first appropriation as reference
                 'amount' => (float)$request->amount,
                 'particulars' => $request->particulars ?? '',
@@ -725,6 +724,7 @@ class DisbursementController extends Controller
                 'id' => $expenseDetail->id,
                 'amount' => $expenseDetail->amount,
                 'appropriation_id' => $expenseDetail->appropriation_id,
+                'disbursement_id' => $expenseDetail->disbursement_id,
             ]);
 
             // Commit the transaction
@@ -736,15 +736,13 @@ class DisbursementController extends Controller
                 'message' => 'Expense detail created successfully',
                 'data' => [
                     'id' => $expenseDetail->id,
-                    'disbursement_id' => null,
+                    'disbursement_id' => $expenseDetail->disbursement_id,
                     'appropriation_id' => $expenseDetail->appropriation_id,
                     'amount' => $expenseDetail->amount,
                     'particulars' => $expenseDetail->particulars,
                     'expense_class_id' => $appropriation->expense_class_id,
                     'expense_type_id' => $appropriation->expense_type_id,
                     'expense_item_id' => $appropriation->expense_item_id,
-                    // Since we're treating this as one logical expense, just return the single ID
-                    'all_detail_ids' => [$expenseDetail->id],
                 ]
             ], 201);
 
