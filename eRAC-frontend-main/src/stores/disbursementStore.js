@@ -96,11 +96,6 @@ export const useDisbursementStore = defineStore('disbursement', {
         return []
       }
 
-      console.log('=== expenseAccountsWithDisbursements getter ===')
-      console.log('Expense data:', state.expenseData)
-      console.log('Expense details data:', this.expenseDetailsData)
-      console.log('Current frontend expenses:', this.expenses)
-
       const flattened = state.expenseData.reduce((acc, expenseClass) => {
         if (!expenseClass.children) {
           return acc
@@ -121,8 +116,6 @@ export const useDisbursementStore = defineStore('disbursement', {
                   expenseItem.amount,
                   'item'
                 )
-
-                console.log(`Item ${expenseItem.id}: Original ${expenseItem.amount} → Remaining ${remainingBalance}`)
 
                 if (remainingBalance > 0) {
                   const expenseItemEntry = {
@@ -150,8 +143,6 @@ export const useDisbursementStore = defineStore('disbursement', {
                 'type'
               )
 
-              console.log(`Type ${expenseType.id}: Original ${expenseType.amount} → Remaining ${remainingBalance}`)
-
               if (remainingBalance > 0) {
                 const expenseTypeEntry = {
                   id: expenseType.id,
@@ -172,9 +163,6 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         return acc
       }, [])
-
-      console.log('Final flattened result:', flattened)
-      console.log('=== End getter ===')
 
       return flattened
     },
@@ -330,11 +318,6 @@ export const useDisbursementStore = defineStore('disbursement', {
         let totalDisbursed = 0;
         let totalReturned = 0;
     
-        console.log(`\n=== Balance Calculation for ${expenseLevel} ${expenseId} ===`)
-        console.log(`Original amount: ${originalAmount}`)
-        console.log(`Total expense details: ${this.expenseDetailsData?.length || 0}`)
-        console.log(`Current frontend expenses: ${this.expenses?.length || 0}`)
-        
         // Get all expense details from the database for this expense account
         if (this.expenseDetailsData && this.expenseDetailsData.length > 0) {
           // Only show first few expense details to avoid clutter
@@ -344,17 +327,9 @@ export const useDisbursementStore = defineStore('disbursement', {
             return false
           })
           
-          console.log(`Relevant database expense details (${relevantDetails.length}):`, relevantDetails.slice(0, 3))
-          
           relevantDetails.forEach(expenseDetail => {
             // Include ALL expense details in the calculation (both linked and unlinked)
             totalDisbursed += parseFloat(expenseDetail.amount) || 0;
-            
-            if (expenseDetail.disbursement_id !== null) {
-              console.log(`✓ Database: Amount ${expenseDetail.amount}, Disbursement ${expenseDetail.disbursement_id}`)
-            } else {
-              console.log(`✓ Database (unlinked): Amount ${expenseDetail.amount}`)
-            }
           });
         }
 
@@ -366,19 +341,13 @@ export const useDisbursementStore = defineStore('disbursement', {
             return false
           })
           
-          console.log(`Relevant frontend expenses (${relevantFrontendExpenses.length}):`, relevantFrontendExpenses)
-          
           relevantFrontendExpenses.forEach(expense => {
             totalDisbursed += parseFloat(expense.amount) || 0;
-            console.log(`✓ Frontend: Amount ${expense.amount} (pending)`)
           });
         }
     
         // Compute remaining balance
         const remainingBalance = Math.max(0, originalAmount - totalDisbursed + totalReturned);
-    
-        console.log(`Total disbursed: ${totalDisbursed} → Remaining: ${remainingBalance}`)
-        console.log(`=== End Balance Calculation ===\n`)
     
         return remainingBalance;
     
@@ -405,20 +374,6 @@ export const useDisbursementStore = defineStore('disbursement', {
         
         if (response.data.status) {
           this.expenseDetailsData = response.data.data || []
-          console.log('Fetched expense details:', this.expenseDetailsData)
-          
-          // Debug: Check if disbursement_id is being set correctly
-          this.expenseDetailsData.forEach((detail, index) => {
-            console.log(`Expense detail ${index}:`, {
-              id: detail.id,
-              disbursement_id: detail.disbursement_id,
-              appropriation_id: detail.appropriation_id,
-              amount: detail.amount,
-              expense_class_id: detail.expense_class_id,
-              expense_type_id: detail.expense_type_id,
-              expense_item_id: detail.expense_item_id
-            })
-          })
         }
       } catch (error) {
         console.error('Failed to fetch expense details:', error)
@@ -433,7 +388,6 @@ export const useDisbursementStore = defineStore('disbursement', {
         // This will trigger the getter to recalculate with current frontend expenses
         this.expenseData = [...this.expenseData]
         
-        console.log('Refreshed expense accounts with balances, including frontend expenses:', this.expenses.length)
       } catch (error) {
         console.error('Failed to refresh expense accounts with balances:', error)
       }
@@ -883,7 +837,6 @@ export const useDisbursementStore = defineStore('disbursement', {
       try {
         // Since expenses are now only stored in frontend, just clear the local array
         if (this.expenses.length > 0) {
-          console.log('Rolling back unsaved expenses from frontend:', this.expenses)
           
           // Clear local expenses array
           this.expenses = []
@@ -891,7 +844,6 @@ export const useDisbursementStore = defineStore('disbursement', {
           // Refresh expense account balances to show original amounts
           this.refreshExpenseAccountsWithBalances()
           
-          console.log('Successfully rolled back all unsaved expenses')
         }
       } catch (error) {
         console.error('Failed to rollback unsaved expenses:', error)
@@ -993,12 +945,6 @@ export const useDisbursementStore = defineStore('disbursement', {
       // DO NOT recalculate - this prevents double counting
       const availableBalance = item.balance || 0
 
-      console.log('Opening expense detail:', {
-        accountId: item.id,
-        balance: availableBalance,
-        originalBalance: item.originalBalance || item.balance || 0
-      })
-
       this.forms.expense = {
         account: accountDisplay,
         accountId: item.id,
@@ -1065,16 +1011,11 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Create expense details in the database when disbursement is saved
         if (this.expenses.length > 0) {
-          console.log('Creating expense details for disbursement:', disbursementId)
-          console.log('Expenses to create:', this.expenses)
-          
           // Create expense details in the database
           for (const expense of this.expenses) {
             try {
               const authStore = useAuthStore()
               const token = authStore.token
-              
-              console.log(`Creating expense detail for disbursement ${disbursementId}:`, expense)
               
               // Create the expense detail with the disbursement ID
               const expenseDetailPayload = {
@@ -1094,7 +1035,7 @@ export const useDisbursementStore = defineStore('disbursement', {
               })
               
               if (expenseDetailResponse.data.status) {
-                console.log(`Successfully created expense detail:`, expenseDetailResponse.data.data)
+                // Successfully created expense detail
               }
             } catch (error) {
               console.error('Failed to create expense detail for disbursement:', error)
@@ -1135,7 +1076,6 @@ export const useDisbursementStore = defineStore('disbursement', {
     // New method to refresh data in background without blocking UI
     async refreshDataInBackground() {
       try {
-        console.log('Starting background refresh...')
         
         // Refresh disbursements list first (most important)
         await this.fetchDisbursements()
@@ -1150,7 +1090,6 @@ export const useDisbursementStore = defineStore('disbursement', {
         this.expenseData = [] // Clear to force refresh
         await this.fetchExpenseAccounts()
         
-        console.log('Background refresh completed successfully')
       } catch (error) {
         console.error('Background refresh failed:', error)
         // Don't show error to user since this is background operation
@@ -1247,7 +1186,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       // Force a refresh of the expense accounts to update the selection table
       this.expenseData = [] // Clear to force refresh
       this.fetchExpenseAccounts().then(() => {
-        console.log('Expense accounts refreshed after adding expense')
+        // Expense accounts refreshed successfully
       }).catch(error => {
         console.warn('Failed to refresh expense accounts:', error)
       })
@@ -1255,7 +1194,6 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.closeDialog('expenseDetail')
       this.resetForm('expense')
       
-      console.log('Expense added to frontend:', expense)
     },
     // Similarly update editExpense and deleteExpense
     editExpense(row) {
@@ -1270,7 +1208,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Force a refresh of the expense accounts to update the selection table
         this.expenseData = [] // Clear to force refresh
         this.fetchExpenseAccounts().then(() => {
-          console.log('Expense accounts refreshed after editing expense')
+          // Expense accounts refreshed successfully
         }).catch(error => {
           console.warn('Failed to refresh expense accounts:', error)
         })
@@ -1291,12 +1229,11 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Force a refresh of the expense accounts to update the selection table
         this.expenseData = [] // Clear to force refresh
         this.fetchExpenseAccounts().then(() => {
-          console.log('Expense accounts refreshed after deleting expense')
+          // Expense accounts refreshed successfully
         }).catch(error => {
           console.warn('Failed to refresh expense accounts:', error)
         })
         
-        console.log('Expense removed from frontend:', expense)
       }
     },
 
@@ -1392,8 +1329,6 @@ export const useDisbursementStore = defineStore('disbursement', {
             Accept: 'application/json',
           },
         })
-
-        console.log('Disbursement updated successfully:', response.data)
 
         // Update the expenses data for balance calculations
         if (this.expenses.length > 0) {
@@ -1530,8 +1465,6 @@ export const useDisbursementStore = defineStore('disbursement', {
           },
         })
 
-        console.log('OR Details saved successfully:', response.data)
-
         // Refresh the disbursements list
         await this.fetchDisbursements()
 
@@ -1596,8 +1529,6 @@ export const useDisbursementStore = defineStore('disbursement', {
             Accept: 'application/json',
           },
         })
-
-        console.log('Partial OR Details saved successfully:', response.data)
 
         // Refresh the disbursements list
         await this.fetchDisbursements()
@@ -1761,7 +1692,6 @@ export const useDisbursementStore = defineStore('disbursement', {
         const returnAmount = dvAmount - liquidatedAmount
 
         if (returnAmount <= 0) {
-          console.log('No amount to return to expense accounts')
           return
         }
 
@@ -1798,7 +1728,6 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Refresh expense accounts with updated balances
         this.refreshExpenseAccountsWithBalances()
 
-        console.log(`Successfully returned ₱${returnAmount.toFixed(2)} to expense accounts`)
       } catch (error) {
         console.error('Error returning remaining amount to expense accounts:', error)
       }

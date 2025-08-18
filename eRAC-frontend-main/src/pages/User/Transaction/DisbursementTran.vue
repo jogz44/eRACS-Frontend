@@ -445,15 +445,6 @@ onUnmounted(() => {
   }
 })
 
-// Watch for expenses changes
-watch(
-  () => store.expenses,
-  (newExpenses) => {
-    console.log('Expenses changed:', newExpenses)
-    console.log('Current total:', store.totalExpensesAmount)
-  },
-  { deep: true },
-)
 
 // Auto-refresh expense accounts when the expense dialog is opened
 watch(
