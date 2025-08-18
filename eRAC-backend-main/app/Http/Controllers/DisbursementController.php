@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Disbursement;
 use App\Models\LibCheque;
 use App\Models\DisbursementOrDetail;
+use App\Models\TranExpenseDetail;
+use App\Models\TranAppropriation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DisbursementController extends Controller
 {
@@ -102,17 +105,16 @@ class DisbursementController extends Controller
             ]);
 
 
-            // Save expenses if provided
+            // Save expense details to tran_expense_details table
             if ($request->has('expenses') && is_array($request->expenses)) {
+                // The frontend already creates expense details, we just need to link them
+                // by updating their disbursement_id
                 foreach ($request->expenses as $expense) {
-                    // You might want to create a separate table for disbursement expenses
-                    // For now, we'll just log them or store them in a different way
-                    \Log::info('Disbursement expense:', [
-                        'disbursement_id' => $disbursement->id,
-                        'expense_item_id' => $expense['accountId'],
-                        'amount' => $expense['amount'],
-                        'particular' => $expense['particular'] ?? '',
-                    ]);
+                    if (isset($expense['dbId'])) {
+                        // Update existing expense detail with disbursement ID
+                        TranExpenseDetail::where('id', $expense['dbId'])
+                            ->update(['disbursement_id' => $disbursement->id]);
+                    }
                 }
             }
 
@@ -322,7 +324,7 @@ class DisbursementController extends Controller
             $user = request()->user();
             \Log::info("User: ", ['user_id' => $user ? $user->id : 'null', 'barangay_id' => $user ? $user->barangay_id : 'null']);
             
-            $query = Disbursement::with('bank');
+            $query = Disbursement::with(['bank', 'expenseDetails.appropriation']);
             
             // If user is authenticated and has barangay_id, filter by it
             if ($user && isset($user->barangay_id)) {
@@ -350,6 +352,17 @@ class DisbursementController extends Controller
                 'payee' => $disbursement->payee,
                 'dv_amount' => $disbursement->dv_amount,
                 'status' => $disbursement->status,
+                'expenses' => $disbursement->expenseDetails->map(function($detail) {
+                    return [
+                        'id' => $detail->id,
+                        'accountId' => $detail->appropriation_id,
+                        'amount' => $detail->amount,
+                        'particular' => $detail->particulars,
+                        'expense_class_id' => $detail->appropriation->expense_class_id ?? null,
+                        'expense_type_id' => $detail->appropriation->expense_type_id ?? null,
+                        'expense_item_id' => $detail->appropriation->expense_item_id ?? null,
+                    ];
+                }),
                 'created_at' => $disbursement->created_at,
                 'updated_at' => $disbursement->updated_at,
                 ]
@@ -398,14 +411,18 @@ class DisbursementController extends Controller
                 'dv_amount' => $request->dv_amount,
             ]);
 
-            // Log expenses if provided
+            // Update expense details - first delete existing ones, then create new ones
             if ($request->has('expenses') && is_array($request->expenses)) {
+                // Delete existing expense details for this disbursement
+                TranExpenseDetail::where('disbursement_id', $disbursement->id)->delete();
+                
+                // Create new expense details
                 foreach ($request->expenses as $expense) {
-                    \Log::info('Updated disbursement expense:', [
+                    TranExpenseDetail::create([
                         'disbursement_id' => $disbursement->id,
-                        'expense_item_id' => $expense['accountId'],
+                        'appropriation_id' => $expense['accountId'],
                         'amount' => $expense['amount'],
-                        'particular' => $expense['particular'] ?? '',
+                        'particulars' => $expense['particular'] ?? '',
                     ]);
                 }
             }
@@ -500,6 +517,9 @@ class DisbursementController extends Controller
                 ], 400);
             }
             
+            // Delete expense details first (they will be automatically deleted due to cascade, but being explicit)
+            TranExpenseDetail::where('disbursement_id', $disbursement->id)->delete();
+            
             // Delete the disbursement
             $disbursement->delete();
             
@@ -513,6 +533,301 @@ class DisbursementController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to delete disbursement',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // GET /api/barangay/expense-details
+    public function getExpenseDetails(Request $request)
+    {
+        try {
+            $user = $request->user();
+            
+            $query = TranExpenseDetail::with(['appropriation.expenseClass', 'appropriation.expenseType', 'appropriation.expenseItem']);
+            
+            // If user is authenticated and has barangay_id, filter by it
+            if ($user && isset($user->barangay_id)) {
+                $query->whereHas('appropriation', function($q) use ($user) {
+                    $q->where('barangay_id', $user->barangay_id);
+                });
+            }
+            
+            $expenseDetails = $query->get();
+            
+            $result = $expenseDetails->map(function($detail) {
+                return [
+                    'id' => $detail->id,
+                    'disbursement_id' => $detail->disbursement_id,
+                    'appropriation_id' => $detail->appropriation_id,
+                    'amount' => $detail->amount,
+                    'particulars' => $detail->particulars,
+                    'expense_class_id' => $detail->appropriation->expense_class_id ?? null,
+                    'expense_type_id' => $detail->appropriation->expense_type_id ?? null,
+                    'expense_item_id' => $detail->appropriation->expense_item_id ?? null,
+                    'created_at' => $detail->created_at,
+                    'updated_at' => $detail->updated_at,
+                ];
+            });
+            
+            return response()->json([
+                'status' => true,
+                'data' => $result
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error fetching expense details: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to fetch expense details',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // POST /api/barangay/expense-details
+    public function storeExpenseDetail(Request $request)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:0',
+            'particulars' => 'nullable|string',
+            'disbursement_id' => 'exists:disbursements,id', // Allow disbursement_id to be provided
+            // Client may provide either a direct appropriation_id or one of the expense hierarchy IDs
+            'appropriation_id' => 'nullable|exists:tran_appropriations,id',
+            'expense_class_id' => 'nullable|exists:lib_expense_classes,id',
+            'expense_type_id' => 'nullable|exists:lib_expense_types,id',
+            'expense_item_id' => 'nullable|exists:lib_expense_items,id',
+        ]);
+
+        try {
+            $user = $request->user();
+            
+            \Log::info('Starting expense detail creation:', [
+                'user_id' => $user->id,
+                'barangay_id' => $user->barangay_id,
+                'request_data' => $request->all()
+            ]);
+
+            // Use database transaction to ensure data consistency
+            DB::beginTransaction();
+
+            // Resolve appropriation
+            $appropriationQuery = TranAppropriation::where('barangay_id', $user->barangay_id)
+                ->where('status', 'committed');
+
+            $appropriation = null;
+            if ($request->filled('appropriation_id')) {
+                $appropriation = $appropriationQuery->where('id', $request->appropriation_id)->first();
+            }
+
+            if (!$appropriation) {
+                // Prefer most specific ID first (item > type > class)
+                if ($request->filled('expense_item_id')) {
+                    $appropriationQuery->where('expense_item_id', $request->expense_item_id);
+                } elseif ($request->filled('expense_type_id')) {
+                    $appropriationQuery->whereNull('expense_item_id')
+                        ->where('expense_type_id', $request->expense_type_id);
+                } elseif ($request->filled('expense_class_id')) {
+                    $appropriationQuery->whereNull('expense_item_id')
+                        ->whereNull('expense_type_id')
+                        ->where('expense_class_id', $request->expense_class_id);
+                } else {
+                    DB::rollBack();
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'No appropriation reference provided',
+                        'errors' => ['appropriation' => ['Provide appropriation_id or one of expense_item_id/expense_type_id/expense_class_id']]
+                    ], 422);
+                }
+
+                // Pick the most recent committed appropriation that matches
+                $appropriation = $appropriationQuery->orderByDesc('created_at')->first();
+                if (!$appropriation) {
+                    DB::rollBack();
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'No committed appropriation found for the selected account',
+                    ], 422);
+                }
+            }
+
+            \Log::info('Found appropriation:', [
+                'id' => $appropriation->id,
+                'amount' => $appropriation->amount,
+                'expense_class_id' => $appropriation->expense_class_id,
+                'expense_type_id' => $appropriation->expense_type_id,
+                'expense_item_id' => $appropriation->expense_item_id,
+            ]);
+
+            // Find all matching appropriations and treat them as one budget pool
+            $matchingAppropriationsQuery = TranAppropriation::where('barangay_id', $user->barangay_id)
+                ->where('status', 'committed');
+            
+            if ($appropriation->expense_item_id) {
+                $matchingAppropriationsQuery->where('expense_item_id', $appropriation->expense_item_id);
+            } elseif ($appropriation->expense_type_id) {
+                $matchingAppropriationsQuery->whereNull('expense_item_id')
+                    ->where('expense_type_id', $appropriation->expense_type_id);
+            } else {
+                $matchingAppropriationsQuery->whereNull('expense_item_id')
+                    ->where('expense_class_id', $appropriation->expense_class_id);
+            }
+
+            $matchingAppropriations = $matchingAppropriationsQuery->orderBy('created_at', 'asc')->get();
+
+            \Log::info('Matching appropriations found:', [
+                'count' => $matchingAppropriations->count(),
+                'requested_amount' => $request->amount,
+                'expense_class_id' => $request->expense_class_id,
+                'expense_type_id' => $request->expense_type_id,
+                'expense_item_id' => $request->expense_item_id,
+            ]);
+
+            if ($matchingAppropriations->isEmpty()) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => false,
+                    'message' => 'No appropriations found for the selected account',
+                ], 422);
+            }
+
+            // Calculate total available balance across all appropriations (treat as one pool)
+            $totalAvailableBalance = 0;
+            foreach ($matchingAppropriations as $appr) {
+                $alreadyUsed = TranExpenseDetail::where('appropriation_id', $appr->id)->sum('amount');
+                $available = max(0, (float)$appr->amount - (float)$alreadyUsed);
+                $totalAvailableBalance += $available;
+            }
+
+            \Log::info('Total available balance:', [
+                'total_available' => $totalAvailableBalance,
+                'requested_amount' => $request->amount,
+            ]);
+
+            if ($totalAvailableBalance < (float)$request->amount) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Insufficient appropriation balance to cover requested amount',
+                ], 422);
+            }
+
+            // Create the expense detail record
+            $expenseDetail = TranExpenseDetail::create([
+                'disbursement_id' => $request->disbursement_id, // Use provided disbursement_id or null
+                'appropriation_id' => $matchingAppropriations->first()->id, // Use first appropriation as reference
+                'amount' => (float)$request->amount,
+                'particulars' => $request->particulars ?? '',
+            ]);
+
+            \Log::info('Successfully created expense detail:', [
+                'id' => $expenseDetail->id,
+                'amount' => $expenseDetail->amount,
+                'appropriation_id' => $expenseDetail->appropriation_id,
+                'disbursement_id' => $expenseDetail->disbursement_id,
+            ]);
+
+            // Commit the transaction
+            DB::commit();
+
+            // Return the expense detail
+            return response()->json([
+                'status' => true,
+                'message' => 'Expense detail created successfully',
+                'data' => [
+                    'id' => $expenseDetail->id,
+                    'disbursement_id' => $expenseDetail->disbursement_id,
+                    'appropriation_id' => $expenseDetail->appropriation_id,
+                    'amount' => $expenseDetail->amount,
+                    'particulars' => $expenseDetail->particulars,
+                    'expense_class_id' => $appropriation->expense_class_id,
+                    'expense_type_id' => $appropriation->expense_type_id,
+                    'expense_item_id' => $appropriation->expense_item_id,
+                ]
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Error creating expense detail: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to create expense detail',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // PATCH /api/barangay/expense-details/{id}
+    public function updateExpenseDetail(Request $request, $id)
+    {
+        $request->validate([
+            'disbursement_id' => 'nullable|exists:disbursements,id',
+        ]);
+
+        try {
+            $user = $request->user();
+            
+            // Find the expense detail and ensure it belongs to the user's barangay
+            $expenseDetail = TranExpenseDetail::where('id', $id)
+                ->whereHas('appropriation', function($q) use ($user) {
+                    $q->where('barangay_id', $user->barangay_id);
+                })
+                ->firstOrFail();
+            
+            $expenseDetail->update([
+                'disbursement_id' => $request->disbursement_id,
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Expense detail updated successfully',
+                'data' => $expenseDetail
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error updating expense detail: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to update expense detail',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // DELETE /api/barangay/expense-details/{id}
+    public function destroyExpenseDetail(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+            
+            // Find the expense detail and ensure it belongs to the user's barangay
+            $expenseDetail = TranExpenseDetail::where('id', $id)
+                ->whereHas('appropriation', function($q) use ($user) {
+                    $q->where('barangay_id', $user->barangay_id);
+                })
+                ->firstOrFail();
+            
+            // Only allow deletion if disbursement_id is null (unsaved)
+            if ($expenseDetail->disbursement_id !== null) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Cannot delete expense detail that is already associated with a disbursement'
+                ], 400);
+            }
+            
+            $expenseDetail->delete();
+            
+            return response()->json([
+                'status' => true,
+                'message' => 'Expense detail deleted successfully'
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error deleting expense detail: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to delete expense detail',
                 'error' => $e->getMessage()
             ], 500);
         }

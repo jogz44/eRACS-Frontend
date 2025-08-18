@@ -153,8 +153,14 @@
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" @click="closeAccessModal" />
-          <q-btn label="Save" color="primary" @click="handleAccessSaveClick" />
+          <q-btn flat label="Cancel" @click="closeAccessModal" :disable="accessModal.saving" />
+          <q-btn
+            label="Save"
+            color="primary"
+            @click="handleAccessSaveClick"
+            :loading="accessModal.saving"
+            :disable="accessModal.saving"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -183,6 +189,7 @@ export default {
       accessModal: {
         show: false,
         selectedUser: null,
+        saving: false,
         permissions: {
           view: { label: 'Access View:', value: false },
           add: { label: 'Access Add:', value: false },
@@ -407,6 +414,7 @@ export default {
     },
 
          async saveAccess() {
+       this.accessModal.saving = true
        try {
          // Check if user has admin token (for admin users) or regular token (for barangay users)
          const token = this.authStore.adminToken || this.authStore.token
@@ -459,14 +467,16 @@ export default {
           throw new Error(`Unexpected response format. Expected success: true, got: ${response.data.success}`)
         }
       } catch (error) {
-        console.error('Error saving permissions:', error)
-        this.$q.notify({
-          type: 'negative',
-          message: error.response?.data?.message || 'Failed to save permissions. Please try again.',
-          position: 'top',
-        })
-      }
-    },
+                 console.error('Error saving permissions:', error)
+         this.$q.notify({
+           type: 'negative',
+           message: error.response?.data?.message || 'Failed to save permissions. Please try again.',
+           position: 'top',
+         })
+       } finally {
+         this.accessModal.saving = false
+       }
+     },
     onSearchClear() {
       this.search = ''
     },

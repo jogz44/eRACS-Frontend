@@ -358,15 +358,6 @@ onMounted(async () => {
   }
 })
 
-watch(
-  () => store.expenses,
-  (newExpenses) => {
-    console.log('Expenses changed:', newExpenses)
-    console.log('Current total:', store.totalExpensesAmount)
-  },
-  { deep: true },
-)
-
 // Watch for changes in the selected bank to update the cheque booklets
 watch(
   () => store.forms.disbursement.bank_id,

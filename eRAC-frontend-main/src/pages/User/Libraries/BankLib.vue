@@ -119,12 +119,13 @@
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn flat label="Cancel" v-close-popup :disable="bankStore.isLoading" />
           <q-btn
             label="Save"
             color="primary"
             @click="handleAddBankSaveClick"
-            :disable="!newBankName || newBankName.length < 3"
+            :disable="!newBankName || newBankName.length < 3 || bankStore.isLoading"
+            :loading="bankStore.isLoading"
           />
         </q-card-actions>
       </q-card>
