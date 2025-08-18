@@ -1439,7 +1439,6 @@ export const useDisbursementStore = defineStore('disbursement', {
     async saveEditedDisbursement() {
       if (!this.currentItem) return
 
-      // Validate that there is at least one expense
       if (!this.expenses || this.expenses.length === 0) {
         return {
           success: false,
@@ -1451,16 +1450,62 @@ export const useDisbursementStore = defineStore('disbursement', {
         const authStore = useAuthStore()
         const token = authStore.token
 
-        // Prepare the payload
+        // Ensure we have up-to-date expense details
+        if (!this.expenseDetailsData || this.expenseDetailsData.length === 0) {
+          await this.fetchExpenseDetails()
+        }
+
+        // Existing DB ids for this disbursement
+        const existingIdsForCurrent = new Set(
+          (this.expenseDetailsData || [])
+            .filter(ed => String(ed.disbursement_id) === String(this.currentItem.id))
+            .map(ed => Number(ed.id))
+        )
+
+        // Pre-create new expenses so we get real DB ids for the update delete-keep logic
+        for (const exp of this.expenses) {
+          const numericId = Number(exp.id)
+          const isExisting = Number.isFinite(numericId) && existingIdsForCurrent.has(numericId)
+          if (!isExisting) {
+            // Create on backend
+            const createBody = {
+              amount: exp.amount,
+              particulars: exp.particular,
+              disbursement_id: this.currentItem.id,
+              expense_class_id: exp.expense_class_id || null,
+              expense_type_id: exp.expense_type_id || null,
+              expense_item_id: exp.expense_item_id || null,
+            }
+            const createRes = await api.post('/api/barangay/expense-details', createBody, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/json',
+              },
+            })
+            const created = createRes.data?.data
+            if (created && created.id) {
+              exp.id = Number(created.id)
+              existingIdsForCurrent.add(exp.id)
+            }
+          }
+        }
+
+        // Refresh expense details from DB to compute dv_amount accurately
+        await this.fetchExpenseDetails()
+        const dvAmountFromDb = (this.expenseDetailsData || [])
+          .filter(ed => String(ed.disbursement_id) === String(this.currentItem.id))
+          .reduce((sum, ed) => sum + (parseFloat(ed.amount) || 0), 0)
+
+        // Prepare the payload with ids for all expenses so backend keeps them
         const payload = {
           date: this.forms.disbursement.date,
           dv_number: this.forms.disbursement.dvNumber,
           cheque_number: this.forms.disbursement.chequeNumber,
           bank_id: this.forms.disbursement.bank_id,
           payee: this.forms.disbursement.payee,
-          dv_amount: this.totalExpensesAmount,
+          dv_amount: dvAmountFromDb,
           expenses: this.expenses.map(expense => ({
-            id: expense.id > 0 ? expense.id : null, // Only include database ID if it's positive
+            id: Number(expense.id) || undefined,
             accountId: expense.accountId,
             amount: expense.amount,
             particular: expense.particular,
@@ -1477,18 +1522,12 @@ export const useDisbursementStore = defineStore('disbursement', {
           },
         })
 
-        console.log('Disbursement updated successfully:', response.data)
-
-        // Refresh the disbursements list
+        // Refresh lists/details
         await this.fetchDisbursements()
-
-        // Refresh expense accounts with updated balances
+        await this.fetchExpenseDetails()
         this.refreshExpenseAccountsWithBalances()
-
-        // Refresh expense accounts in background to ensure latest data
         this.refreshExpenseAccountsInBackground()
 
-        // Close dialog and reset
         this.closeDialog('editDisbursement')
         this.resetEditDisbursement()
 
