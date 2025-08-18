@@ -103,7 +103,7 @@
                   round
                   color="green"
                   icon="edit"
-                  @click="store.editItem(props.row)"
+                  @click="editExpenseInline(props.row)"
                 />
                 <q-btn
                   size="sm"
@@ -210,4 +210,8 @@ const handleSaveEditedDisbursement = async () => {
   }
 }
 
+const editExpenseInline = (expense) => {
+  // Open the expense detail dialog for editing
+  store.openExpenseDetailForEdit(expense)
+}
 </script>

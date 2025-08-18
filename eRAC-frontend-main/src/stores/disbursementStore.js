@@ -623,7 +623,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             if (dateStr.includes('-')) {
               // 'YYYY-MM-DD'
               const [yyyy, mm, dd] = dateStr.split('-');
-              return `${mm}/${dd}/${yyyy}`;
+              return `${dd}/${mm}/${yyyy}`;
             }
             else if (dateStr.includes('/')) {
               return dateStr;
@@ -631,16 +631,22 @@ export const useDisbursementStore = defineStore('disbursement', {
             return dateStr;
           }
 
-          // Find and set the selected booklet based on the cheque number
-          // const chequeNum = parseInt(disbursement.cheque_number)
-          // const selectedBooklet = this.chequeBooklets.find((booklet) => {
-          //   const [start, end] = booklet.range.split('-').map(Number)
-          //   return chequeNum >= start && chequeNum <= end
-          // })
+          // Load existing expenses from the disbursement
+          if (disbursement.expenses && disbursement.expenses.length > 0) {
+            this.expenses = disbursement.expenses.map(expense => ({
+              id: expense.id, // Use the actual database ID from tran_expense_details
+              accountId: expense.accountId,
+              accountName: expense.particular || 'Unknown Account', // Use particular as fallback
+              amount: expense.amount,
+              particular: expense.particular,
+              expense_class_id: expense.expense_class_id,
+              expense_type_id: expense.expense_type_id,
+              expense_item_id: expense.expense_item_id,
+            }));
+          } else {
+            this.expenses = [];
+          }
 
-
-          // Set expenses to empty array since backend doesn't include them yet
-          this.expenses = []
           this.currentItem = { ...disbursement }
           this.dialogs.editDisbursement = true
         }
@@ -815,6 +821,11 @@ export const useDisbursementStore = defineStore('disbursement', {
           0,
         )
         this.forms.disbursement.chequeNumber = String(lastCheque + 1).padStart(6, '0')
+        
+        // Load expense details data to ensure getNextExpenseId can access existing database IDs
+        if (this.expenseDetailsData.length === 0) {
+          await this.fetchExpenseDetails()
+        }
       } else if (dialogName === 'expense') {
         // Only fetch expense accounts if not already loaded
         if (this.expenseData.length === 0) {
@@ -961,6 +972,27 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.dialogs.expense = false
       this.dialogs.expenseDetail = true
     },
+
+    // Method to open expense detail for editing existing expenses
+    openExpenseDetailForEdit(existingExpense) {
+      this.forms.expense = {
+        account: existingExpense.accountName,
+        accountId: existingExpense.accountId,
+        balance: existingExpense.amount, // Use current amount as available balance
+        originalBalance: existingExpense.amount,
+        particulars: existingExpense.particular,
+        amount: existingExpense.amount,
+        disbursementId: this.currentItem?.id || null,
+        // Store additional information for backend
+        expense_class_id: existingExpense.expense_class_id,
+        expense_type_id: existingExpense.expense_type_id,
+        expense_item_id: existingExpense.expense_item_id,
+        // Flag to indicate this is an edit operation
+        isEditing: true,
+        editingExpenseId: existingExpense.id, // Use the database ID for editing
+      }
+      this.dialogs.expenseDetail = true
+    },
     // Disbursement Actions
     // Update your saveDisbursement action in the Pinia store
     async saveDisbursement() {
@@ -1006,44 +1038,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           },
         })
 
-        // Get the disbursement ID for linking expense details
-        const disbursementId = response.data.data.id
-
-        // Create expense details in the database when disbursement is saved
-        if (this.expenses.length > 0) {
-          // Create expense details in the database
-          for (const expense of this.expenses) {
-            try {
-              const authStore = useAuthStore()
-              const token = authStore.token
-              
-              // Create the expense detail with the disbursement ID
-              const expenseDetailPayload = {
-                amount: expense.amount,
-                particulars: expense.particular,
-                expense_class_id: expense.expense_class_id,
-                expense_type_id: expense.expense_type_id,
-                expense_item_id: expense.expense_item_id,
-                disbursement_id: disbursementId, // Link directly to disbursement
-              }
-              
-              const expenseDetailResponse = await api.post('/api/barangay/expense-details', expenseDetailPayload, {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  Accept: 'application/json',
-                },
-              })
-              
-              if (expenseDetailResponse.data.status) {
-                // Successfully created expense detail
-              }
-            } catch (error) {
-              console.error('Failed to create expense detail for disbursement:', error)
-              // Continue with other expenses even if one fails
-            }
-          }
-        }
-
+        // The backend now automatically creates expense details, so we don't need to do it manually
         // Close dialog and reset form immediately for better UX
         this.resetForm('disbursement')
         this.expenses = []
@@ -1130,15 +1125,72 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
           // Generate next available incremental ID for expenses
-      getNextExpenseId() {
-        if (this.expenses.length === 0) {
-          return 1
+    getNextExpenseId() {
+      // Get all existing IDs from current expenses array
+      const currentExpenseIds = this.expenses.map(exp => exp.id)
+      
+      // Get all existing IDs from database expense details
+      const databaseExpenseIds = this.expenseDetailsData.map(exp => exp.id)
+      
+      // Combine all IDs and filter out negative ones
+      const allIds = [...currentExpenseIds, ...databaseExpenseIds].filter(id => id > 0)
+      
+      if (allIds.length === 0) {
+        // No existing IDs found, start from 1
+        return 1
+      }
+      
+      // Find the highest ID and add 1
+      const highestId = Math.max(...allIds)
+      return highestId + 1
+    },
+
+    // Helper method to get expense account name from IDs
+    getExpenseAccountName(expenseClassId, expenseTypeId, expenseItemId) {
+      try {
+        let accountName = '';
+        
+        console.log('Getting expense account name for:', {
+          expenseClassId,
+          expenseTypeId,
+          expenseItemId,
+          expenseDataLength: this.expenseData.length
+        });
+        
+        // Find expense class - convert IDs to strings for comparison
+        const expenseClass = this.expenseData.find(ec => String(ec.id) === String(expenseClassId));
+        if (expenseClass) {
+          accountName = expenseClass.name;
+          console.log('Found expense class:', expenseClass.name);
+          
+          // Find expense type
+          if (expenseTypeId && expenseClass.children) {
+            const expenseType = expenseClass.children.find(et => String(et.id) === String(expenseTypeId));
+            if (expenseType) {
+              accountName += ` > ${expenseType.name}`;
+              console.log('Found expense type:', expenseType.name);
+              
+              // Find expense item
+              if (expenseItemId && expenseType.children) {
+                const expenseItem = expenseType.children.find(ei => String(ei.id) === String(expenseItemId));
+                if (expenseItem) {
+                  accountName += ` > ${expenseItem.name}`;
+                  console.log('Found expense item:', expenseItem.name);
+                }
+              }
+            }
+          }
+        } else {
+          console.log('Expense class not found for ID:', expenseClassId);
+          console.log('Available expense classes:', this.expenseData.map(ec => ({ id: ec.id, name: ec.name })));
         }
         
-        // Always return the next sequential ID (highest + 1)
-        const highestId = Math.max(...this.expenses.map(exp => exp.id))
-        return highestId + 1
-      },
+        return accountName || 'Unknown Account';
+      } catch (error) {
+        console.error('Error getting expense account name:', error);
+        return 'Unknown Account';
+      }
+    },
 
     // Expense Actions
     async saveExpense() {
@@ -1163,22 +1215,36 @@ export const useDisbursementStore = defineStore('disbursement', {
         throw new Error(`Amount exceeds available balance. Available: ₱${currentAvailableBalance.toLocaleString()}, Requested: ₱${amount.toLocaleString()}`)
       }
 
-      // Create expense object - keep in frontend only until disbursement is saved
-      const expense = {
-        id: this.getNextExpenseId(), // Use the new method to get the next available ID
-        accountId: this.forms.expense.accountId,
-        accountName: this.forms.expense.account,
-        amount: amount,
-        particular: particulars,
-        expense_class_id: this.forms.expense.expense_class_id,
-        expense_type_id: this.forms.expense.expense_type_id,
-        expense_item_id: this.forms.expense.expense_item_id,
-        // Note: No dbId until disbursement is saved
-      }
+      // Check if this is an edit operation
+      if (this.forms.expense.isEditing && this.forms.expense.editingExpenseId) {
+        // Update existing expense - keep the existing database ID
+        const existingExpenseIndex = this.expenses.findIndex(exp => exp.id === this.forms.expense.editingExpenseId)
+        if (existingExpenseIndex !== -1) {
+          this.expenses[existingExpenseIndex] = {
+            ...this.expenses[existingExpenseIndex],
+            amount: amount,
+            particular: particulars,
+          }
+          this.expenses = [...this.expenses]
+        }
+      } else {
+        // Create new expense object - keep in frontend only until disbursement is saved
+        const expense = {
+          id: this.getNextExpenseId(), // Generate new frontend ID for new expenses
+          accountId: this.forms.expense.accountId,
+          accountName: this.forms.expense.account,
+          amount: amount,
+          particular: particulars,
+          expense_class_id: this.forms.expense.expense_class_id,
+          expense_type_id: this.forms.expense.expense_type_id,
+          expense_item_id: this.forms.expense.expense_item_id,
+          // Note: No dbId until disbursement is saved
+        }
 
-      // Add to local expenses array (frontend only)
-      this.expenses.push(expense)
-      this.expenses = [...this.expenses]
+        // Add to local expenses array (frontend only)
+        this.expenses.push(expense)
+        this.expenses = [...this.expenses]
+      }
       
       // Immediately refresh expense account balances to show updated amounts
       this.refreshExpenseAccountsWithBalances()
@@ -1283,6 +1349,8 @@ export const useDisbursementStore = defineStore('disbursement', {
           balance: 0,
           particulars: '',
           disbursementId: null,
+          isEditing: false,
+          editingExpenseId: null,
         }
       } else if (formName === 'orDetails') {
         this.forms.orDetails = {
@@ -1295,9 +1363,28 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     async openEditDisbursement(row) {
-      await this.fetchDisbursementById(row.id);
-      // Fetch expense accounts for the edit dialog
+      console.log('Opening edit disbursement for row:', row);
+      
+      // First fetch expense accounts to ensure we have the data for account names
       await this.fetchExpenseAccounts();
+      console.log('Expense accounts loaded, count:', this.expenseData.length);
+      
+      // Then fetch the disbursement with its expenses
+      await this.fetchDisbursementById(row.id);
+      console.log('Disbursement loaded, expenses count:', this.expenses.length);
+      
+      // Now update the account names for existing expenses using the loaded expense data
+      if (this.expenses.length > 0) {
+        console.log('Updating account names for expenses...');
+        this.expenses = this.expenses.map(expense => {
+          const accountName = this.getExpenseAccountName(expense.expense_class_id, expense.expense_type_id, expense.expense_item_id);
+          console.log('Expense:', expense.id, 'Account name:', accountName);
+          return {
+            ...expense,
+            accountName: accountName
+          };
+        });
+      }
     },
 
 
@@ -1317,9 +1404,13 @@ export const useDisbursementStore = defineStore('disbursement', {
           payee: this.forms.disbursement.payee,
           dv_amount: this.totalExpensesAmount,
           expenses: this.expenses.map(expense => ({
+            id: expense.id > 0 ? expense.id : null, // Only include database ID if it's positive
             accountId: expense.accountId,
             amount: expense.amount,
-            particular: expense.particular
+            particular: expense.particular,
+            expense_class_id: expense.expense_class_id,
+            expense_type_id: expense.expense_type_id,
+            expense_item_id: expense.expense_item_id,
           }))
         }
 
@@ -1330,45 +1421,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           },
         })
 
-        // Update the expenses data for balance calculations
-        if (this.expenses.length > 0) {
-          const disbursementId = this.currentItem.id
-          
-          // Get the old disbursement expense to calculate what needs to be returned
-          const oldDisbursementExpense = this.disbursementExpenses.find(de => de.disbursementId === disbursementId)
-          if (oldDisbursementExpense) {
-            const oldTotalAmount = oldDisbursementExpense.expenses.reduce(
-              (sum, expense) => sum + (parseFloat(expense.amount) || 0), 0
-            )
-            const newTotalAmount = this.expenses.reduce(
-              (sum, expense) => sum + (parseFloat(expense.amount) || 0), 0
-            )
-            
-            // If the new amount is less than the old amount, return the difference
-            if (newTotalAmount < oldTotalAmount) {
-              const returnAmount = oldTotalAmount - newTotalAmount
-              await this.returnRemainingAmountToExpenses(disbursementId, oldTotalAmount - returnAmount)
-            }
-          }
-          
-          // Remove old expenses for this disbursement
-          this.disbursementExpenses = this.disbursementExpenses.filter(de => de.disbursementId !== disbursementId)
-          // Add updated expenses
-          this.disbursementExpenses.push({
-            disbursementId: disbursementId,
-            expenses: this.expenses.map(expense => ({
-              accountId: expense.accountId,
-              amount: expense.amount,
-              particular: expense.particular,
-              expense_class_id: expense.expense_class_id,
-              expense_type_id: expense.expense_type_id,
-              expense_item_id: expense.expense_item_id,
-            }))
-          })
-          
-          // Save to localStorage
-          this.saveDisbursementExpensesToStorage()
-        }
+        console.log('Disbursement updated successfully:', response.data)
 
         // Refresh the disbursements list
         await this.fetchDisbursements()
