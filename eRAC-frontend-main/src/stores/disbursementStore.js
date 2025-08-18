@@ -49,6 +49,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     bookletLoading: false,
     expenseTypeLoading: false,
     savingDisbursement: false, // New loading state for save button
+    loadingEditDisbursement: null, // Loading state for edit disbursement (stores the ID of the disbursement being loaded)
 
     // Form data
     forms: {
@@ -318,22 +319,35 @@ export const useDisbursementStore = defineStore('disbursement', {
         let totalDisbursed = 0;
         let totalReturned = 0;
     
+        // Determine current editing disbursement id (if any)
+        const currentDisbursementId = this.currentItem?.id ? String(this.currentItem.id) : null
+    
         // Get all expense details from the database for this expense account
         if (this.expenseDetailsData && this.expenseDetailsData.length > 0) {
           // Only show first few expense details to avoid clutter
           const relevantDetails = this.expenseDetailsData.filter(ed => {
-            if (expenseLevel === 'item') return String(ed.expense_item_id) === String(expenseId)
-            if (expenseLevel === 'type') return String(ed.expense_type_id) === String(expenseId)
-            return false
+            const matchesLevel = (
+              (expenseLevel === 'item' && String(ed.expense_item_id) === String(expenseId)) ||
+              (expenseLevel === 'type' && String(ed.expense_type_id) === String(expenseId))
+            )
+
+            if (!matchesLevel) return false
+
+            // When editing a disbursement, exclude its own existing expense details
+            if (currentDisbursementId && String(ed.disbursement_id) === currentDisbursementId) {
+              return false
+            }
+
+            return true
           })
           
           relevantDetails.forEach(expenseDetail => {
-            // Include ALL expense details in the calculation (both linked and unlinked)
+            // Include expense details from other disbursements in the calculation
             totalDisbursed += parseFloat(expenseDetail.amount) || 0;
           });
         }
 
-        // Add current frontend expenses for this account
+        // Add current frontend expenses for this account (includes the one being edited)
         if (this.expenses && this.expenses.length > 0) {
           const relevantFrontendExpenses = this.expenses.filter(expense => {
             if (expenseLevel === 'item') return String(expense.expense_item_id) === String(expenseId)
@@ -1365,31 +1379,73 @@ export const useDisbursementStore = defineStore('disbursement', {
     async openEditDisbursement(row) {
       console.log('Opening edit disbursement for row:', row);
       
-      // First fetch expense accounts to ensure we have the data for account names
-      await this.fetchExpenseAccounts();
-      console.log('Expense accounts loaded, count:', this.expenseData.length);
+      // Set loading state for this specific disbursement
+      this.loadingEditDisbursement = row.id;
       
-      // Then fetch the disbursement with its expenses
-      await this.fetchDisbursementById(row.id);
-      console.log('Disbursement loaded, expenses count:', this.expenses.length);
+      // Set a timeout to clear loading state if something goes wrong
+      const loadingTimeout = setTimeout(() => {
+        if (this.loadingEditDisbursement === row.id) {
+          console.warn('Loading timeout reached, clearing loading state');
+          this.loadingEditDisbursement = null;
+        }
+      }, 30000); // 30 second timeout
       
-      // Now update the account names for existing expenses using the loaded expense data
-      if (this.expenses.length > 0) {
-        console.log('Updating account names for expenses...');
-        this.expenses = this.expenses.map(expense => {
-          const accountName = this.getExpenseAccountName(expense.expense_class_id, expense.expense_type_id, expense.expense_item_id);
-          console.log('Expense:', expense.id, 'Account name:', accountName);
-          return {
-            ...expense,
-            accountName: accountName
-          };
-        });
+      try {
+        // Ensure expense details are loaded for correct balance calculations
+        if (this.expenseDetailsData.length === 0) {
+          await this.fetchExpenseDetails()
+        }
+
+        // First fetch expense accounts to ensure we have the data for account names
+        await this.fetchExpenseAccounts();
+        console.log('Expense accounts loaded, count:', this.expenseData.length);
+        
+        // Then fetch the disbursement with its expenses
+        await this.fetchDisbursementById(row.id);
+        console.log('Disbursement loaded, expenses count:', this.expenses.length);
+        
+        // Now update the account names for existing expenses using the loaded expense data
+        if (this.expenses.length > 0) {
+          console.log('Updating account names for expenses...');
+          this.expenses = this.expenses.map(expense => {
+            const accountName = this.getExpenseAccountName(expense.expense_class_id, expense.expense_type_id, expense.expense_item_id);
+            console.log('Expense:', expense.id, 'Account name:', accountName);
+            return {
+              ...expense,
+              accountName: accountName
+            };
+          });
+        }
+
+        // Refresh balances to reflect current editing context (exclude current disbursement's DB expenses)
+        this.refreshExpenseAccountsWithBalances()
+        // Force re-fetch of accounts to propagate recalculated balances into the selection table
+        this.expenseData = []
+        await this.fetchExpenseAccounts()
+
+      } catch (error) {
+        console.error('Error in openEditDisbursement:', error);
+        // Re-throw the error so the calling component can handle it
+        throw error;
+      } finally {
+        // Clear the timeout
+        clearTimeout(loadingTimeout);
+        // Always clear loading state when done (either success or error)
+        this.loadingEditDisbursement = null;
       }
     },
 
 
     async saveEditedDisbursement() {
       if (!this.currentItem) return
+
+      // Validate that there is at least one expense
+      if (!this.expenses || this.expenses.length === 0) {
+        return {
+          success: false,
+          error: 'At least one expense is required to save the disbursement'
+        }
+      }
 
       try {
         const authStore = useAuthStore()
