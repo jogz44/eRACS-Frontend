@@ -11,6 +11,10 @@
           @click="loadAppropriation"
           :loading="loading"
         />
+
+        <q-btn class="get-barangay" @click="getBarangay">
+
+        </q-btn>
       </div>
     </div>
 
@@ -286,6 +290,9 @@
           <q-btn flat label="Cancel" v-close-popup @click="closeEditAllocationDialog" />
           <q-btn label="Save Changes" color="primary" @click="saveEditedAllocation" />
         </q-card-actions>
+
+
+
       </q-card>
     </q-dialog>
   </q-page>
@@ -299,6 +306,7 @@ import ViewCommitDialog from 'components/appropriation/ViewCommitDialog.vue'
 import { useAppropriationStore } from 'stores/appropriationStore'
 import { useAccountsLibraryStore } from 'stores/accountsLibstore'
 import { api } from 'src/boot/axios'
+import { useAuthStore } from 'src/stores/auth'
 
 const $q = useQuasar()
 const accountLibraryStore = useAccountsLibraryStore()
@@ -313,6 +321,13 @@ const amount = ref(null)
 const loading = ref(false)
 const addLoading = ref(false)
 const dateRange = ref(null)
+const authStore = useAuthStore()
+
+
+const getBarangay = () => {
+  return authStore.user?.barangay || 'Unknown Barangay'
+}
+
 
 const loadAppropriation = async () => {
   loading.value = true

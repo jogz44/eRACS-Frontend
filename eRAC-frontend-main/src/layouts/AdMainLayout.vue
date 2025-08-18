@@ -275,6 +275,8 @@ onMounted(async () => {
 const favorites = computed(() => {
   const baseFavorites = [
     { title: 'Dashboard', link: '/admin/dashboard', icon: 'dashboard' },
+    { title: 'Reports', link: '/admin/reportPage', icon: 'assessment' },
+
   ]
   if (authStore.canManageUsers) {
     baseFavorites.push({ title: 'Transactions', type: 'panel', panelType: 'transactions', icon: 'account_balance_wallet' })
