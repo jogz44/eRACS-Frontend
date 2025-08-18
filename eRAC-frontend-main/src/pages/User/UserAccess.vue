@@ -4,7 +4,7 @@
       <div class="row items-center justify-between">
                  <div class="text-h6 text-weight-medium">
            User Control
-           <span class="text-caption q-ml-sm">({{ filteredUsers.length }} users from your barangay)</span>
+           <span class="text-caption q-ml-sm">({{ filteredUsers.length }} users from {{ currentUserBarangay }})</span>
          </div>
         <q-btn
           icon="refresh"
@@ -18,14 +18,7 @@
          </div>
 
      <!-- Barangay Restriction Notice -->
-     <q-banner
-       v-if="currentUserBarangay"
-       class="bg-blue text-white q-mb-md"
-       icon="info"
-     >
-       <div class="text-weight-medium">Barangay Restriction Active</div>
-       <div>Showing only users from <strong>{{ currentUserBarangay }}</strong></div>
-     </q-banner>
+
 
      <!-- Authentication Warning -->
      <q-banner

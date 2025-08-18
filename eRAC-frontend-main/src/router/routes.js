@@ -155,6 +155,12 @@ const routes = [
         component: () => import('pages/Admin/DashBoard.vue'),
         meta: { title: 'Dashboard' },
       },
+       {
+        path: 'reportPage',
+        name: 'aDminReportPage',
+        component: () => import('pages/Admin/AdminReportpage.vue'),
+        meta: { title: 'Report page' },
+      },
 
       // User Control
       {
