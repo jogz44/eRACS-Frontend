@@ -46,8 +46,19 @@
         @click="clearAllFilters"
         class="clear-all-btn"
       />
-      <q-space />
+          <q-space/>
 
+          <div class="row  ">
+        <q-btn
+          unelevated
+                icon="print"
+                label="Print"
+                color="green"
+                @click="handleSACBPrint"
+                size="md"
+                no-caps
+        />
+          </div>
       <!-- <q-btn
         label="Add"
         icon="add"

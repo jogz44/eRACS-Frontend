@@ -24,7 +24,7 @@
               <template v-slot:append>
                 <q-icon name="event" class="calend-icon">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="dateRange" range @update:model-value="onDateRangeChange" />
+                    <q-date v-model="CurrentRacDateRange" range @update:model-value="onDateRangeChange" />
                   </q-popup-proxy>
                 </q-icon>
               </template>
@@ -98,7 +98,7 @@
               <template v-slot:append>
                 <q-icon name="event" class="calend-icon">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="continuingDateRange" range @update:model-value="onContinuingDateRangeChange" />
+                    <q-date v-model="continuingRacDateRange" range @update:model-value="onContinuingDateRangeChange" />
 
                   </q-popup-proxy>
                 </q-icon>
@@ -191,7 +191,7 @@
                 unelevated
                 icon="print"
                 label="Print"
-                color="green"
+                color="#187C19"
                 @click="handleSACBPrint"
                 size="sm"
                 no-caps
@@ -688,9 +688,9 @@ const loading = ref(false)
 const sacbDrawerOpen = ref(true)
 
 // Date ranges
-const dateRange = ref({ from: '', to: '' })
-const continuingDateRange = ref({ from: '', to: '' })
+const CurrentRacDateRange = ref({ from: '', to: '' })
 const currentSacbDateRange = ref({ from: '', to: '' })
+const continuingRacDateRange = ref({ from: '', to: '' })
 const continuingSacbDateRange = ref({ from: '', to: '' })
 
 const expenseSelectedCurrent = ref(null);
@@ -772,11 +772,11 @@ const closeSACBModal = () => { SACBModal.show = false }
 
 const openRACModal = (type) => {
   if (type === 'current-rac') {
-    if (!dateRange.value.from || !dateRange.value.to) {
+    if (!CurrentRacDateRange.value.from || !CurrentRacDateRange.value.to) {
       return notifyError('Please select a valid current RAC date range.')
     }
   } else if (type === 'continuing-rac') {
-    if (!continuingDateRange.value.from || !continuingDateRange.value.to) {
+    if (!continuingRacDateRange.value.from || !continuingRacDateRange.value.to) {
       return notifyError('Please select a valid continuing RAC date range.')
     }
   }
@@ -800,9 +800,9 @@ const openRACModal = (type) => {
 
   loadRacReport(
     type === 'current-rac'
-      ? dateRange
+      ? CurrentRacDateRange
       : type === 'continuing-rac'
-        ? continuingDateRange
+        ? continuingRacDateRange
         : null)
   RACModal.reportType = getReportTypeLabel(type)
   RACModal.show = true
@@ -821,7 +821,7 @@ const handleSACBPrint = () => {
   if (dateRangeDisplay.value === '') {
     return notifyError('Please select a date range.')
   }
-  if (dateRange.value.from === '' || dateRange.value.to === '') {
+  if (CurrentRacDateRange.value.from === '' || CurrentRacDateRange.value.to === '') {
     return notifyError('Please select a valid date range.')
   }
   console.log('Printing report:', SACBModal.reportType)
@@ -836,19 +836,19 @@ const handleRACPrint = () => {
 }
 // Cur-Rac Date range
 const onDateRangeChange = (newRange) => {
-  dateRange.value = newRange
+  CurrentRacDateRange.value = newRange
 }
 
 const onDateRangeClear = () => {
-  dateRange.value = { from: '', to: '' }
+  CurrentRacDateRange.value = { from: '', to: '' }
 }
 
 const onContinuingDateRangeChange = (newRange) => {
-  continuingDateRange.value = newRange
+  continuingRacDateRange.value = newRange
 }
 
 const onContinuingDateRangeClear = () => {
-  continuingDateRange.value = { from: '', to: '' }
+  continuingRacDateRange.value = { from: '', to: '' }
 }
 
 const onCurrentSacbDateRangeChange = (newRange) => {
@@ -880,17 +880,17 @@ const sacbColumns = computed(() => [
 ])
 
 const dateRangeDisplay = computed(() => {
-  if (!dateRange.value.from && !dateRange.value.to) return ''
-  if (dateRange.value.from && !dateRange.value.to) return `From ${dateRange.value.from}`
-  if (!dateRange.value.from && dateRange.value.to) return `To ${dateRange.value.to}`
-  return `${dateRange.value.from} - ${dateRange.value.to}`
+  if (!CurrentRacDateRange.value.from && !CurrentRacDateRange.value.to) return ''
+  if (CurrentRacDateRange.value.from && !CurrentRacDateRange.value.to) return `From ${CurrentRacDateRange.value.from}`
+  if (!CurrentRacDateRange.value.from && CurrentRacDateRange.value.to) return `To ${CurrentRacDateRange.value.to}`
+  return `${CurrentRacDateRange.value.from} - ${CurrentRacDateRange.value.to}`
 })
 
 const continuingDateRangeDisplay = computed(() => {
-  if (!continuingDateRange.value.from && !continuingDateRange.value.to) return ''
-  if (continuingDateRange.value.from && !continuingDateRange.value.to) return `From ${continuingDateRange.value.from}`
-  if (!continuingDateRange.value.from && continuingDateRange.value.to) return `To ${continuingDateRange.value.to}`
-  return `${continuingDateRange.value.from} - ${continuingDateRange.value.to}`
+  if (!continuingRacDateRange.value.from && !continuingRacDateRange.value.to) return ''
+  if (continuingRacDateRange.value.from && !continuingRacDateRange.value.to) return `From ${continuingRacDateRange.value.from}`
+  if (!continuingRacDateRange.value.from && continuingRacDateRange.value.to) return `To ${continuingRacDateRange.value.to}`
+  return `${continuingRacDateRange.value.from} - ${continuingRacDateRange.value.to}`
 })
 
 const currentSacbDateRangeDisplay = computed(() => {
