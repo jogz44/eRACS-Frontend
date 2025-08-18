@@ -3,7 +3,7 @@ import { api } from 'boot/axios'
 import { useAuthStore } from './auth'
 
 
-export const useReportStore = defineStore("reportStore", {
+export const useReportStore = defineStore("report", {
   state: () => ({
 
     reportRAC: [
@@ -147,9 +147,8 @@ export const useReportStore = defineStore("reportStore", {
         console.error('Error:', error)
         throw error
       }
-      }
-    },
-    async fetchRacReport($date){
+      },
+      async fetchRacReport($date){
       try{
         const config = this.getAuthConfig();
         const response = await api.get(`/api/`,
@@ -169,25 +168,55 @@ export const useReportStore = defineStore("reportStore", {
         throw error
       }
     },
-    async fetchSacbReport($date){
+    async fetchSacbReport($to,$from){
       try{
         const config = this.getAuthConfig();
-        const response = await api.get(`/api/`,
-          { params: { to: $date.value.to, from: $date.value.from, expense_class_id: this.expenseRacSelected  }}
+        console.error('steve ',$to)
+        const response = await api.get(`/api/barangay/report/sacb`,
+          { params: { to: $to, from: $from  }}
           ,config);
 
-        this.reportRAC=response?.data?.map(pos => ({
-          ppa: pos.ppa,
-          appropriation: pos.appropriation,
-          obligation: pos.obligation,
-          balance: pos.balance,
-        }))
+        // assuming response.data.rows contains your array
+        const grouped = {};
+
+        // Group by order + expense
+        response?.data?.rows.forEach(row => {
+          const key = `${row.order}-${row.expense}`;
+          if (!grouped[key]) grouped[key] = [];
+          grouped[key].push(row);
+        });
+
+        // Prepare the final reportRAC array
+        this.reportRAC = [];
+
+        Object.keys(grouped).sort().forEach((key) => {
+          const items = grouped[key];
+          const firstItem = items[0];
+
+          // Add section header
+          this.reportRAC.push({
+            isSection: true,
+            ppa: `${parseInt(firstItem.order) + 1}. ${firstItem.expense}`
+          });
+
+          // Add the items
+          items.forEach(item => {
+            this.reportRAC.push({
+              ppa: `• ${item.ppa}`,
+              appropriation: Number(item.appropriation).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+              obligation: Number(item.obligation).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+              balance: Number(item.balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            });
+          });
+        });
       //   { isSection: true, ppa: '1. PERSONAL SERVICES' },
       // { ppa: '• Honorarium', appropriation: '17,000,858.00', obligation: '13,305,598.54', balance: '3,695,259.46' },
       
       }catch (error) {
-        console.error('Error:', error)
+        console.error('Fetch by steve - Error:', error)
         throw error
       }
+    
     }
+    },
 })

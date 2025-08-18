@@ -722,6 +722,21 @@ const loadAllData = async () => {
     loading.value = false
   }
 }
+const loadSacbReport = async () => {
+  try {
+    const criticalPromises = [
+      reportStore.fetchSacbReport(currentSacbDateRangeDisplay.value.to,currentSacbDateRangeDisplay.value.from)
+    ]
+
+    await Promise.all(criticalPromises)
+  } catch (error) {
+    console.error(error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to generate SACB Report',
+    })
+  }
+}
 
 const openSACBModal = (type) => {
   if (type === 'current-sacb') {
@@ -733,7 +748,6 @@ const openSACBModal = (type) => {
       return notifyError('Please select a valid continuing SACB date range.')
     }
   }
-  
   loadSacbReport();
   SACBModal.reportType = getReportTypeLabel(type)
   SACBModal.show = true
@@ -881,18 +895,6 @@ async function loadRacReport($date) {
     this.$q.notify({
       type: 'negative',
       message: 'Failed to generate RAC Report',
-    })
-  }
-}
-
-async function loadSacbReport() {
-  try {
-    await reportStore.fetchSacbReport(getSACBDateRangeDisplay())
-  } catch (error) {
-    console.error(error)
-    this.$q.notify({
-      type: 'negative',
-      message: 'Failed to generate SACB Report',
     })
   }
 }

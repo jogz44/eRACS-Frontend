@@ -44,6 +44,47 @@ class ReportController extends Controller
         ]);
     }
 
+    
+    public function getSacbReport(Request $request)
+    {
+        $data = $request->validate([
+            'from' => 'required|date',
+            'to'   => 'required|date|after_or_equal:from',
+        ]);
+
+        
+        $q = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem'])
+            ->whereBetween('transaction_date', [$data['from'], $data['to']]);
+
+        //$q->where('expense_class_id', $data['expense_class_id']);
+
+        $rows = $q->orderBy('transaction_date')->get()->map(fn($o) => [
+            'expense'=> $o->expenseClass?->name,
+            'order'=> $o->expenseClass?->order,
+            'ppa' => implode(' - ', array_filter([
+                $o->expenseType?->name,
+                $o->expenseItem?->name
+            ])),
+            'appropriation'=> (float)$o->amount,
+            'obligation'=> (float)$o->obligation,
+            'balance'=> (float)$o->balance,
+        ])->values();
+
+        $summary = [
+            'count' => $rows->count(),
+            'total' => round($rows->sum('appropriation'), 2),
+            'total' => round($rows->sum('obligation'), 2),
+            'total' => round($rows->sum('balance'), 2),
+            'range' => ['from' => $data['from'], 'to' => $data['to']],
+        ];
+
+        return response()->json([
+            'rows' => $rows,
+            'filters' => $data,
+            'summary' => $summary,
+        ]);
+    }
+
     public function exportPdf(Request $request)
     {
         $data = $request->validate([
