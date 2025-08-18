@@ -38,4 +38,9 @@ class Disbursement extends Model
     {
         return $this->belongsTo(LibBank::class, 'bank_id');
     }
+
+    public function expenseDetails()
+    {
+        return $this->hasMany(TranExpenseDetail::class);
+    }
 } 

@@ -142,8 +142,7 @@
                       dense
                       icon="delete"
                       color="red"
-                      @click="store.deleteItem(props.row)"
-                      v-permission="'delete'"
+                      @click="handleDeleteExpense(props.row)"
                     />
                   </div>
                 </q-td>
@@ -169,7 +168,14 @@
               label="Cancel"
               @click="store.closeDialog('disbursement')"
             />
-            <q-btn label="Save" color="primary" @click="handleSaveClick" v-permission="'add'" />
+            <q-btn 
+              label="Save" 
+              color="primary" 
+              @click="handleSaveClick" 
+              v-permission="'add'"
+              :loading="store.savingDisbursement"
+              :disable="store.savingDisbursement"
+            />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -307,9 +313,8 @@
                   dense
                   icon="delete"
                   :color="canDelete(props.row) ? 'red' : 'grey'"
-                  :disable="getAgingDays(props.row.aging) >= 1 || !canDelete(props.row)"
+                  :disable="!canDelete(props.row)"
                   @click.stop="() => canDelete(props.row) && handleDeleteDisbursement(props.row)"
-                  v-permission="'delete'"
                 />
               </div>
             </q-td>
@@ -359,8 +364,8 @@ function canDelete(row) {
   // Cannot delete if liquidated (regardless of return amount)
   if (row.status === 'Liquidated') return false
   
-  // Can only delete if pending or partial and aging < 1 day
-  return (row.status === 'Pending' || row.status === 'Partial') && aging < 1
+  // Can only delete if pending or partial and aging <= 1 day
+  return (row.status === 'Pending' || row.status === 'Partial') && aging <= 1
 }
 
 // Function to load all data with optimized loading strategy
@@ -440,15 +445,6 @@ onUnmounted(() => {
   }
 })
 
-// Watch for expenses changes
-watch(
-  () => store.expenses,
-  (newExpenses) => {
-    console.log('Expenses changed:', newExpenses)
-    console.log('Current total:', store.totalExpensesAmount)
-  },
-  { deep: true },
-)
 
 // Auto-refresh expense accounts when the expense dialog is opened
 watch(
@@ -560,9 +556,9 @@ const handleAddExpense = async () => {
   }
 }
 
-const handleSaveExpense = () => {
+const handleSaveExpense = async () => {
   try {
-    store.saveExpense()
+    await store.saveExpense()
     $q.notify({
       type: 'positive',
       message: 'Expense added successfully!',
@@ -575,6 +571,28 @@ const handleSaveExpense = () => {
     $q.notify({
       type: 'negative',
       message: error.message || 'Failed to save expense',
+      icon: 'error',
+      position: 'top',
+      timeout: 5000
+    })
+  }
+}
+
+const handleDeleteExpense = async (row) => {
+  try {
+    await store.deleteItem(row)
+    $q.notify({
+      type: 'positive',
+      message: 'Expense deleted successfully!',
+      icon: 'check_circle',
+      position: 'top',
+      timeout: 3000
+    })
+  } catch (error) {
+    console.error('Error deleting expense:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to delete expense',
       icon: 'error',
       position: 'top',
       timeout: 5000
