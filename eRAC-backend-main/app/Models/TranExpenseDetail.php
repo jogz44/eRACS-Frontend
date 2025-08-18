@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TranExpenseDetail extends Model
 {
@@ -33,6 +34,6 @@ class TranExpenseDetail extends Model
      */
     public function appropriation()
     {
-        return $this->belongsTo(TranAppropriation::class, 'appropriation_id');
+        return $this->hasMany(TranAppropriation::class, 'appropriation_id');
     }
 }

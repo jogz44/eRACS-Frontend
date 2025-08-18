@@ -43,4 +43,8 @@ class TranAppropriation extends Model
     {
         return $this->belongsTo(LibExpenseItem::class);
     }
+    public function details()
+    {
+        return $this->belongsTo(TranExpenseDetail::class);
+    }
 }

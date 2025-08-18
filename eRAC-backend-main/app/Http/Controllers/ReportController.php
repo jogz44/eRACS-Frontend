@@ -53,7 +53,7 @@ class ReportController extends Controller
         ]);
 
         
-        $q = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem'])
+        $q = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem','details'])
             ->whereBetween('transaction_date', [$data['from'], $data['to']]);
 
         //$q->where('expense_class_id', $data['expense_class_id']);
