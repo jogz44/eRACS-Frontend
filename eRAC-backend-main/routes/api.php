@@ -54,6 +54,8 @@ Route::prefix('barangay')->group(function () {
         // });
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/user', [AuthController::class, 'user']);
+        Route::get('/users', [AuthController::class, 'getBarangayUsers']);
+        Route::post('/users/{userId}/permissions', [AuthController::class, 'updateUserPermissions']);
 
         //Accounts Library
 
