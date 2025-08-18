@@ -143,6 +143,13 @@ Route::prefix('barangay')->group(function () {
         Route::post('disbursements/or-photo/upload', [DisbursementController::class, 'uploadOrPhoto']);
         // Delete OR photo
         Route::delete('disbursements/or-photo/delete', [DisbursementController::class, 'deleteOrPhoto']);
+        
+        // Expense Details endpoints
+        Route::get('expense-details', [DisbursementController::class, 'getExpenseDetails']);
+        Route::post('expense-details', [DisbursementController::class, 'storeExpenseDetail']);
+        Route::patch('expense-details/{id}', [DisbursementController::class, 'updateExpenseDetail']);
+        Route::delete('expense-details/{id}', [DisbursementController::class, 'destroyExpenseDetail']);
+        
         // Budget Augmentation endpoints
         Route::apiResource('budget-augmentations', BudgetAugmentationController::class);
 

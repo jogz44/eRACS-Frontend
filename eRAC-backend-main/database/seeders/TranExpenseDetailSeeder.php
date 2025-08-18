@@ -82,9 +82,8 @@ class TranExpenseDetailSeeder extends Seeder
         // Insert all expense details
         if (!empty($expenseDetails)) {
             TranExpenseDetail::insert($expenseDetails);
-            $this->command->info('Successfully seeded ' . count($expenseDetails) . ' expense details for Apokon barangay.');
+            
         } else {
-            $this->command->warn('No expense details were created.');
         }
     }
 }
