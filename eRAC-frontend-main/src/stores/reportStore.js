@@ -136,15 +136,15 @@ export const useReportStore = defineStore('report', {
         })
 
         this.reportSACB = []
+        let count=0;
         Object.keys(grouped)
           .sort()
           .forEach((key) => {
             const items = grouped[key]
             const firstItem = items[0]
-
             this.reportSACB.push({
               isSection: true,
-              ppa: `${parseInt(firstItem.order) + 1}. ${firstItem.expense}`,
+              ppa: `${++count}. ${firstItem.expense}`,
             })
 
             items.forEach((item) => {
