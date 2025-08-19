@@ -53,7 +53,7 @@ class ReportController extends Controller
         ]);
 
         
-        $q = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem','details'])
+        $q = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem','details.disbursement'])
             ->whereBetween('transaction_date', [$data['from'], $data['to']]);
 
         //$q->where('expense_class_id', $data['expense_class_id']);
@@ -66,8 +66,8 @@ class ReportController extends Controller
                 $o->expenseItem?->name
             ])),
             'appropriation'=> (float)$o->amount,
-            'obligation'=> (float)$o->obligation,
-            'balance'=> (float)$o->balance,
+            'obligation'   => (float) $o->details->sum(fn($d) => $d->disbursement?->dv_amount ?? 0),
+            'balance'      => (float) $o->amount - (float) $o->details->sum(fn($d) => $d->disbursement?->dv_amount ?? 0),
         ])->values();
 
         $summary = [

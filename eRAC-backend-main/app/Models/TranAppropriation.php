@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TranAppropriation extends Model
 {
@@ -45,6 +46,6 @@ class TranAppropriation extends Model
     }
     public function details()
     {
-        return $this->belongsTo(TranExpenseDetail::class);
+        return $this->hasMany(TranExpenseDetail::class, 'appropriation_id');
     }
 }

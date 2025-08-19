@@ -26,7 +26,7 @@ class TranExpenseDetail extends Model
      */
     public function disbursement()
     {
-        return $this->belongsTo(Disbursement::class);
+        return $this->belongsTo(Disbursement::class,'disbursement_id');
     }
 
     /**
@@ -34,6 +34,6 @@ class TranExpenseDetail extends Model
      */
     public function appropriation()
     {
-        return $this->hasMany(TranAppropriation::class, 'appropriation_id');
+        return $this->belongsTo(TranAppropriation::class, 'appropriation_id');
     }
 }
