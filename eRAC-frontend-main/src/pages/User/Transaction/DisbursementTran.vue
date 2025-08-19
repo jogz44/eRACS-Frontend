@@ -247,15 +247,19 @@
             <div class="text-subtitle1 q-mb-md">
               <strong>Balance:</strong> ₱{{ store.forms.expense.balance.toLocaleString() }}
             </div>
-
-            <q-input
+            <q-select
               outlined
               dense
               v-model="store.forms.expense.particulars"
+              :options="filteredParticulars"
+              option-label="label"
+              option-value="value"
+              use-input
+              fill-input
+              input-debounce="0"
               label="Particulars"
               class="q-mb-md"
-              type="textarea"
-              autogrow
+              @filter="filterFn"
             />
 
             <q-input
@@ -356,7 +360,25 @@ import { useBankStore } from 'stores/bankStore'
 
 const store = useDisbursementStore()
 const bankStore = useBankStore()
+const particulars = ref([])
+const filteredParticulars = ref(particulars.value)
 
+function filterFn (val, update) {
+  particulars.value=store.particulars
+  if (val === '') {
+    update(() => {
+      filteredParticulars.value = particulars.value
+    })
+    return
+  }
+
+  update(() => {
+    const needle = val.toLowerCase()
+    filteredParticulars.value = particulars.value.filter(
+      option => option.label.toLowerCase().includes(needle)
+    )
+  })
+}
 function canDelete(row) {
   const aging = Number(getAgingDays(row.aging))
   if (Number.isNaN(aging)) return false

@@ -159,6 +159,10 @@ Route::prefix('barangay')->group(function () {
         Route::get('/report/rac', [ReportController::class, 'getRacReport']);  
         Route::get('/report/sacb', [ReportController::class, 'getSacbReport']);
 
+        // Particular route by Dan Steve
+        Route::get('/particulars', [DisbursementController::class, 'getParticular']); 
+        
+
     });
 
 });

@@ -60,6 +60,16 @@ class DisbursementController extends Controller
         ]);
     }
 
+    public function getParticular(Request $request)
+    {
+        $particular = TranExpenseDetail::select('particulars')
+            ->groupBy('particulars')
+            ->orderBy('particulars')
+            ->get();
+
+        return response()->json($particular);
+    }
+
     // POST /api/barangay/disbursements
     public function store(Request $request)
     {

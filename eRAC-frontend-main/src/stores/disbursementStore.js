@@ -6,6 +6,12 @@ import { useAuthStore } from './auth'
 
 export const useDisbursementStore = defineStore('disbursement', {
   state: () => ({
+    particulars: [
+      { label: 'Office Supplies', value: 'office' },
+      { label: 'Transportation', value: 'transport' },
+      { label: 'Meals', value: 'meals' }
+    ],
+
     // Main data collections
     expenseData: [], // This will hold our complete expense hierarchy
     expenses: [], // Initialize expenses array
@@ -561,12 +567,23 @@ export const useDisbursementStore = defineStore('disbursement', {
       try {
         const authStore = useAuthStore()
         const token = authStore.token
+        const particular= await api.get('/api/barangay/particulars', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        })
         const response = await api.get('/api/barangay/disbursements', {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',
           },
         })
+        this.particulars = particular.data.data.map(item => ({
+          label: item.particulars,
+          value: item.particulars
+        }))
+
         // Map backend fields to frontend fields if needed
         this.disbursements = (response.data.data || []).map(d => ({
           id: d.id,
@@ -578,7 +595,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           dvAmount: d.dv_amount,
           status: d.status,
           aging: calculateAging(d.date),
-          expenses: d.expenses || [], // Store expenses directly in disbursement object
+          expenses: d.expenses || [], 
         }))
 
         // Fetch expense details for balance calculations

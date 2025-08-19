@@ -2,7 +2,7 @@
 # GET http://localhost:8000/api/barangay/barangays
 # Accept: application/json
 
-GET http://localhost:8000/api/barangay/report/rac?from=2025-07-01&to=2025-09-29&expense_class_id=3
+GET http://localhost:8000/api/barangay/particulars
 Authorization: Bearer 1|8NixzEtbqpxeRlNaRviXrSiLNAdDiTIsJXYeBukFc0cb3382
 Accept: application/json
 
