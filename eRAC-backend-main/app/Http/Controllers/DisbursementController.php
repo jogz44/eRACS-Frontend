@@ -84,6 +84,9 @@ class DisbursementController extends Controller
             'expenses.*.accountId' => 'required|integer',
             'expenses.*.amount' => 'required|numeric|min:0',
             'expenses.*.particular' => 'nullable|string',
+            'expenses.*.expense_class_id' => 'nullable|exists:lib_expense_classes,id',
+            'expenses.*.expense_type_id' => 'nullable|exists:lib_expense_types,id',
+            'expenses.*.expense_item_id' => 'nullable|exists:lib_expense_items,id',
         ]);
 
         try {
@@ -117,13 +120,32 @@ class DisbursementController extends Controller
 
             // Save expense details to tran_expense_details table
             if ($request->has('expenses') && is_array($request->expenses)) {
-                // The frontend already creates expense details, we just need to link them
-                // by updating their disbursement_id
                 foreach ($request->expenses as $expense) {
-                    if (isset($expense['dbId'])) {
-                        // Update existing expense detail with disbursement ID
-                        TranExpenseDetail::where('id', $expense['dbId'])
-                            ->update(['disbursement_id' => $disbursement->id]);
+                    // Find the appropriate appropriation based on expense hierarchy
+                    $appropriationQuery = TranAppropriation::where('barangay_id', $user->barangay_id)
+                        ->where('status', 'committed');
+                    
+                    if (isset($expense['expense_item_id'])) {
+                        $appropriationQuery->where('expense_item_id', $expense['expense_item_id']);
+                    } elseif (isset($expense['expense_type_id'])) {
+                        $appropriationQuery->whereNull('expense_item_id')
+                            ->where('expense_type_id', $expense['expense_type_id']);
+                    } elseif (isset($expense['expense_class_id'])) {
+                        $appropriationQuery->whereNull('expense_item_id')
+                            ->whereNull('expense_type_id')
+                            ->where('expense_class_id', $expense['expense_class_id']);
+                    }
+                    
+                    $appropriation = $appropriationQuery->first();
+                    
+                    if ($appropriation) {
+                        // Create expense detail with the disbursement ID
+                        TranExpenseDetail::create([
+                            'disbursement_id' => $disbursement->id,
+                            'appropriation_id' => $appropriation->id,
+                            'amount' => $expense['amount'],
+                            'particulars' => $expense['particular'] ?? '',
+                        ]);
                     }
                 }
             }
@@ -394,9 +416,13 @@ class DisbursementController extends Controller
             'payee' => 'required|string',
             'dv_amount' => 'required|numeric|min:0',
             'expenses' => 'array',
-            'expenses.*.accountId' => 'required|exists:lib_expense_items,id',
+            'expenses.*.id' => 'nullable|exists:tran_expense_details,id',
+            'expenses.*.accountId' => 'required|integer',
             'expenses.*.amount' => 'required|numeric|min:0',
             'expenses.*.particular' => 'nullable|string',
+            'expenses.*.expense_class_id' => 'nullable|exists:lib_expense_classes,id',
+            'expenses.*.expense_type_id' => 'nullable|exists:lib_expense_types,id',
+            'expenses.*.expense_item_id' => 'nullable|exists:lib_expense_items,id',
         ]);
 
         try {
@@ -421,20 +447,61 @@ class DisbursementController extends Controller
                 'dv_amount' => $request->dv_amount,
             ]);
 
-            // Update expense details - first delete existing ones, then create new ones
+            // Update expense details - handle existing and new ones
             if ($request->has('expenses') && is_array($request->expenses)) {
-                // Delete existing expense details for this disbursement
-                TranExpenseDetail::where('disbursement_id', $disbursement->id)->delete();
+                // Get existing expense detail IDs for this disbursement
+                $existingExpenseDetailIds = TranExpenseDetail::where('disbursement_id', $disbursement->id)
+                    ->pluck('id')
+                    ->toArray();
                 
-                // Create new expense details
+                // Process each expense
                 foreach ($request->expenses as $expense) {
-                    TranExpenseDetail::create([
-                        'disbursement_id' => $disbursement->id,
-                        'appropriation_id' => $expense['accountId'],
-                        'amount' => $expense['amount'],
-                        'particulars' => $expense['particular'] ?? '',
-                    ]);
+                    // Find the appropriate appropriation based on expense hierarchy
+                    $appropriationQuery = TranAppropriation::where('barangay_id', $user->barangay_id)
+                        ->where('status', 'committed');
+                    
+                    if (isset($expense['expense_item_id'])) {
+                        $appropriationQuery->where('expense_item_id', $expense['expense_item_id']);
+                    } elseif (isset($expense['expense_type_id'])) {
+                        $appropriationQuery->whereNull('expense_item_id')
+                            ->where('expense_type_id', $expense['expense_type_id']);
+                    } elseif (isset($expense['expense_class_id'])) {
+                        $appropriationQuery->whereNull('expense_item_id')
+                            ->whereNull('expense_type_id')
+                            ->where('expense_class_id', $expense['expense_class_id']);
+                    }
+                    
+                    $appropriation = $appropriationQuery->first();
+                    
+                    if ($appropriation) {
+                        if (isset($expense['id']) && in_array($expense['id'], $existingExpenseDetailIds)) {
+                            // Update existing expense detail
+                            TranExpenseDetail::where('id', $expense['id'])->update([
+                                'appropriation_id' => $appropriation->id,
+                                'amount' => $expense['amount'],
+                                'particulars' => $expense['particular'] ?? '',
+                            ]);
+                        } else {
+                            // Create new expense detail
+                            TranExpenseDetail::create([
+                                'disbursement_id' => $disbursement->id,
+                                'appropriation_id' => $appropriation->id,
+                                'amount' => $expense['amount'],
+                                'particulars' => $expense['particular'] ?? '',
+                            ]);
+                        }
+                    }
                 }
+                
+                // Delete any remaining expense details that are no longer in the request
+                $requestedIds = collect($request->expenses)
+                    ->pluck('id')
+                    ->filter()
+                    ->toArray();
+                
+                TranExpenseDetail::where('disbursement_id', $disbursement->id)
+                    ->whereNotIn('id', $requestedIds)
+                    ->delete();
             }
 
             return response()->json([

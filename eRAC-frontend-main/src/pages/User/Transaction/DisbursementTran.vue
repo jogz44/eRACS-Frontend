@@ -302,7 +302,8 @@
                   icon="edit"
                   :color="props.row.status === 'Pending' || props.row.status === 'Partial' ? 'orange' : 'grey'"
                   :disable="props.row.status !== 'Pending' && props.row.status !== 'Partial'"
-                  @click="store.openEditDisbursement(props.row)"
+                  :loading="store.loadingEditDisbursement === props.row.id"
+                  @click="handleEditDisbursement(props.row)"
                   v-permission="'edit'"
                 />
                 <q-btn
@@ -710,6 +711,22 @@ const handleDeleteDisbursement = (row) => {
     }
   })
 }
+
+// Handle edit disbursement with loading state
+const handleEditDisbursement = async (row) => {
+  try {
+    await store.openEditDisbursement(row)
+  } catch (error) {
+    console.error('Error opening edit disbursement:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to open edit disbursement',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000
+    })
+  }
+}
 </script>
 
 <style scoped>
@@ -721,6 +738,16 @@ const handleDeleteDisbursement = (row) => {
 .page-header {
   border-bottom: 1px solid #e0e0e0;
   padding-bottom: 8px;
+}
+
+/* Style for loading edit button */
+.q-btn[loading] {
+  opacity: 0.7;
+}
+
+/* Ensure proper spacing for action buttons */
+.q-gutter-xs .q-btn {
+  margin: 2px;
 }
 
 @media (max-width: 768px) {
