@@ -34,7 +34,7 @@ class Budget extends Model
 
     public function tranAppropriations(): HasMany
     {
-        return $this->hasMany(TranAppropriation::class);
+        return $this->hasMany(TranAppropriation::class,'budget_id');
     }
 
     public function barangay(): BelongsTo

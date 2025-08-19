@@ -27,7 +27,7 @@ class TranAppropriation extends Model
 
     public function budget(): BelongsTo
     {
-        return $this->belongsTo(Budget::class);
+        return $this->belongsTo(Budget::class,'budget_id');
     }
 
     public function expenseClass(): BelongsTo

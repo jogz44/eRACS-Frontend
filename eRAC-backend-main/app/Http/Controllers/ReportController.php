@@ -68,7 +68,18 @@ class ReportController extends Controller
             'appropriation'=> (float)$o->amount,
             'obligation'   => (float) $o->details->sum(fn($d) => $d->disbursement?->dv_amount ?? 0),
             'balance'      => (float) $o->amount - (float) $o->details->sum(fn($d) => $d->disbursement?->dv_amount ?? 0),
-        ])->values();
+        ])->groupBy('ppa')   // group all rows by PPA
+            ->map(function ($group) {
+                return [
+                    'expense'      => $group->first()['expense'],
+                    'order'        => $group->first()['order'],
+                    'ppa'          => $group->first()['ppa'],
+                    'appropriation'=> $group->sum('appropriation'),
+                    'obligation'   => $group->sum('obligation'),
+                    'balance'      => $group->sum('appropriation') - $group->sum('obligation'),
+                ];
+            })
+            ->values();
 
         $summary = [
             'count' => $rows->count(),
