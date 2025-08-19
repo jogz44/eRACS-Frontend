@@ -6,6 +6,8 @@ use Illuminate\Database\Seeder;
 use App\Models\Disbursement;
 use App\Models\Barangay;
 use App\Models\LibBank;
+use App\Models\LibBooklet;
+use App\Models\LibCheque;
 use App\Models\DisbursementOrDetail;
 use App\Models\TranExpenseDetail;
 use App\Models\TranAppropriation;
@@ -16,198 +18,160 @@ class DisbursementSeeder extends Seeder
     public function run()
     {
         $barangays = Barangay::all();
-        $barangayCount = $barangays->count();
-        $disbursementIndex = 1;
-        
-        // Create disbursements for July 2025 (DV-25-07-XXX)
-        $julyDate = Carbon::create(2025, 7, 15); // July 15, 2025
-        
-        // 4 liquidated per barangay
+        $now = Carbon::now();
+        $yy = $now->format('y');
+        $mm = $now->format('m');
+        $dvCounter = 1; // global counter so DV-YY-MM-XXX continues cleanly
+
         foreach ($barangays as $barangay) {
-            // Get all banks for this barangay
             $banks = LibBank::where('barangay_id', $barangay->id)->get();
-            $bankCount = $banks->count();
-            
-            // Get appropriations for this barangay
-            $appropriations = TranAppropriation::where('barangay_id', $barangay->id)->get();
-            
-            for ($i = 1; $i <= 2; $i++) {
-                $dvAmount = 1000 * $i;
-                $bank = $banks[($i - 1) % $bankCount] ?? $banks[0] ?? null;
-                $bankId = $bank ? $bank->id : null;
-                $disbursementDate = $julyDate->copy()->subDays($i);
-                
-                $disb = Disbursement::create([
-                    'barangay_id' => $barangay->id,
-                    'date' => $disbursementDate,
-                    'dv_number' => 'DV-25-07-' . str_pad($disbursementIndex, 3, '0', STR_PAD_LEFT),
-                    'cheque_number' => '20000' . (150 + $disbursementIndex),
-                    'bank_id' => $bankId,
-                    'payee' => 'Payee ' . $disbursementIndex,
-                    'dv_amount' => $dvAmount,
-                    'status' => 'Liquidated',
-                    'liquidated_amount' => $dvAmount,
-                    'liquidated_at' => $disbursementDate,
-                    'created_at' => $disbursementDate,
-                    'updated_at' => $disbursementDate,
-                ]);
-                
-                // Create expense details for this disbursement
-                if ($appropriations->count() > 0) {
-                    $remainingAmount = $dvAmount;
-                    $numExpenses = rand(1, 3); // 1-3 expense details per disbursement
-                    $usedAppropriations = [];
-                    
-                    for ($j = 0; $j < $numExpenses && $remainingAmount > 0; $j++) {
-                        // Get a random appropriation that hasn't been used for this disbursement
-                        $availableAppropriations = $appropriations->whereNotIn('id', $usedAppropriations);
-                        
-                        if ($availableAppropriations->isEmpty()) break;
-                        
-                        $appropriation = $availableAppropriations->random();
-                        $usedAppropriations[] = $appropriation->id;
-                        
-                        // Calculate amount for this expense detail
-                        if ($j === $numExpenses - 1) {
-                            // Last expense detail gets the remaining amount
-                            $amount = $remainingAmount;
-                        } else {
-                            // Distribute amount evenly among expense details
-                            $amount = round($remainingAmount / ($numExpenses - $j), 2);
-                        }
-                        
-                        if ($amount > 0) {
-                            TranExpenseDetail::create([
-                                'disbursement_id' => $disb->id,
-                                'appropriation_id' => $appropriation->id,
-                                'amount' => $amount,
-                                'particulars' => 'Expense detail ' . ($j + 1) . ' for ' . $disb->dv_number,
-                                'created_at' => $disbursementDate,
-                                'updated_at' => $disbursementDate,
-                            ]);
-                            
-                            $remainingAmount -= $amount;
-                        }
-                    }
-                }
-                
-                // Seed 2 OR details for each liquidated disbursement, sum does not exceed dv_amount
-                $orAmounts = [$dvAmount * 0.6, $dvAmount * 0.4];
-                for ($j = 1; $j <= 2; $j++) {
-                    $orDate = $disbursementDate->copy()->addDays($j);
-                    
-                    // Create remarks showing the appropriation information
-                    $expenseDetails = TranExpenseDetail::where('disbursement_id', $disb->id)->with('appropriation.expenseClass', 'appropriation.expenseType', 'appropriation.expenseItem')->get();
-                    $remarks = $this->generateAppropriationRemarks($expenseDetails);
-                    
-                    DisbursementOrDetail::create([
-                        'disbursement_id' => $disb->id,
-                        'or_date' => $orDate,
-                        'or_number' => 'OR-' . $disbursementIndex . '-' . $j,
-                        'or_amount' => $orAmounts[$j-1],
-                        'or_photo' => 'or-photos/vm8wtjh7G05yx1SzPm46RCpSMxUlEJiDNeC6YE8A.png',
-                        'remarks' => $remarks,
-                        'created_at' => $orDate,
-                        'updated_at' => $orDate,
-                    ]);
-                }
-                $disbursementIndex++;
+            if ($banks->isEmpty()) {
+                continue;
             }
-            
-            // 2 pending per barangay
-            for ($i = 3; $i <= 4; $i++) {
-                $dvAmount = 1000 * $i;
-                $bank = $banks[($i - 1) % $bankCount] ?? $banks[0] ?? null;
-                $bankId = $bank ? $bank->id : null;
-                $disbursementDate = $julyDate->copy()->subDays($i);
-                
-                $disb = Disbursement::create([
-                    'barangay_id' => $barangay->id,
-                    'date' => $disbursementDate,
-                    'dv_number' => 'DV-25-07-' . str_pad($disbursementIndex, 3, '0', STR_PAD_LEFT),
-                    'cheque_number' => '20000' . (150 + $disbursementIndex),
-                    'bank_id' => $bankId,
-                    'payee' => 'Payee ' . $disbursementIndex,
-                    'dv_amount' => $dvAmount,
-                    'status' => 'Pending',
-                    'liquidated_amount' => null,
-                    'liquidated_at' => null,
-                    'created_at' => $disbursementDate,
-                    'updated_at' => $disbursementDate,
-                ]);
-                
-                // Create expense details for pending disbursements too
-                if ($appropriations->count() > 0) {
-                    $remainingAmount = $dvAmount;
-                    $numExpenses = rand(1, 3); // 1-3 expense details per disbursement
-                    $usedAppropriations = [];
-                    
-                    for ($j = 0; $j < $numExpenses && $remainingAmount > 0; $j++) {
-                        // Get a random appropriation that hasn't been used for this disbursement
-                        $availableAppropriations = $appropriations->whereNotIn('id', $usedAppropriations);
-                        
-                        if ($availableAppropriations->isEmpty()) break;
-                        
-                        $appropriation = $availableAppropriations->random();
-                        $usedAppropriations[] = $appropriation->id;
-                        
-                        // Calculate amount for this expense detail
-                        if ($j === $numExpenses - 1) {
-                            // Last expense detail gets the remaining amount
-                            $amount = $remainingAmount;
-                        } else {
-                            // Distribute amount evenly among expense details
-                            $amount = round($remainingAmount / ($numExpenses - $j), 2);
-                        }
-                        
-                        if ($amount > 0) {
-                            TranExpenseDetail::create([
-                                'disbursement_id' => $disb->id,
-                                'appropriation_id' => $appropriation->id,
-                                'amount' => $amount,
-                                'particulars' => 'Expense detail ' . ($j + 1) . ' for ' . $disb->dv_number,
-                                'created_at' => $disbursementDate,
-                                'updated_at' => $disbursementDate,
-                            ]);
-                            
-                            $remainingAmount -= $amount;
-                        }
+
+            // Use available appropriations from this barangay
+            $appropriations = TranAppropriation::where('barangay_id', $barangay->id)
+                ->where('status', 'committed')
+                ->where('amount', '>', 0)
+                ->get();
+            if ($appropriations->isEmpty()) {
+                continue;
+            }
+
+            // Three disbursements: Pending, Partial, Liquidated
+            $statuses = ['Pending', 'Partial', 'Liquidated'];
+            foreach ($statuses as $idx => $status) {
+                $bank = $banks[$idx % $banks->count()];
+                $date = $now->copy()->subDays(($idx + 1));
+
+                // Find an available cheque number for this bank
+                $chequeNumber = null;
+                $bookletIds = LibBooklet::where('bank_id', $bank->id)->pluck('id');
+                if ($bookletIds->isNotEmpty()) {
+                    $cheque = LibCheque::whereIn('booklet_id', $bookletIds)
+                        ->where('status', 'unused')
+                        ->orderBy('cheque_number')
+                        ->first();
+                    if ($cheque) {
+                        $chequeNumber = $cheque->cheque_number;
                     }
                 }
-                
-                // No OR details for pending disbursements
-                $disbursementIndex++;
+
+                // If no cheque available for this bank, skip this disbursement
+                if (!$chequeNumber) {
+                    continue;
+                }
+
+                // Clean amounts (multiples of 100)
+                $dvAmount = (int) (1000 * ($idx + 2)); // 2000, 3000, 4000
+
+                $dvNumber = 'DV-' . $yy . '-' . $mm . '-' . str_pad($dvCounter, 3, '0', STR_PAD_LEFT);
+
+                $disb = Disbursement::create([
+                    'barangay_id' => $barangay->id,
+                    'date' => $date->format('Y-m-d'),
+                    'dv_number' => $dvNumber,
+                    'cheque_number' => $chequeNumber,
+                    'bank_id' => $bank->id,
+                    'payee' => 'Seeded Payee ' . $dvCounter,
+                    'dv_amount' => $dvAmount,
+                    'status' => $status,
+                    'liquidated_amount' => $status === 'Liquidated' ? $dvAmount : ($status === 'Partial' ? (int) ($dvAmount * 0.6) : null),
+                    'liquidated_at' => $status === 'Pending' ? null : $date->format('Y-m-d'),
+                    'created_at' => $date,
+                    'updated_at' => $date,
+                ]);
+
+                // Mark cheque as issued
+                if (isset($cheque)) {
+                    $cheque->update(['status' => 'issued']);
+                }
+
+                // Create 1-3 expense details that sum to dv_amount
+                $this->seedExpenseDetails($disb->id, $appropriations, $dvAmount, $date);
+
+                // OR details
+                if ($status === 'Liquidated') {
+                    // Sum equals dv_amount
+                    $orSplits = [$dvAmount * 0.6, $dvAmount * 0.4];
+                    $this->seedOrDetails($disb->id, $orSplits, $date, $dvCounter);
+                } elseif ($status === 'Partial') {
+                    // Sum is less than dv_amount (e.g., 60%)
+                    $liq = (int) ($dvAmount * 0.6);
+                    $orSplits = [$liq];
+                    $this->seedOrDetails($disb->id, $orSplits, $date, $dvCounter);
+                }
+
+                $dvCounter++;
             }
         }
     }
-    
-    /**
-     * Generate remarks showing appropriation information
-     */
-    private function generateAppropriationRemarks($expenseDetails)
+
+    private function seedExpenseDetails(int $disbursementId, $appropriations, int $totalAmount, Carbon $baseDate): void
     {
-        if ($expenseDetails->isEmpty()) {
-            return 'No appropriation details available';
-        }
-        
-        $remarks = [];
-        foreach ($expenseDetails as $detail) {
-            $appropriation = $detail->appropriation;
-            $expenseClass = $appropriation->expenseClass;
-            $expenseType = $appropriation->expenseType;
-            $expenseItem = $appropriation->expenseItem;
-            
-            $accountPath = $expenseClass->name;
-            if ($expenseType) {
-                $accountPath .= ' > ' . $expenseType->name;
+        $remaining = $totalAmount;
+        $num = rand(1, 3);
+        $used = [];
+
+        for ($i = 0; $i < $num && $remaining > 0; $i++) {
+            $available = $appropriations->whereNotIn('id', $used);
+            if ($available->isEmpty()) {
+                break;
             }
-            if ($expenseItem) {
-                $accountPath .= ' > ' . $expenseItem->name;
+            $appr = $available->random();
+            $used[] = $appr->id;
+
+            // Last line gets remainder, others split evenly
+            if ($i === $num - 1) {
+                $amount = $remaining;
+            } else {
+                $partsLeft = max(1, $num - $i);
+                $amount = (int) floor($remaining / $partsLeft / 100) * 100; // keep multiples of 100
+                if ($amount <= 0) {
+                    $amount = min(100, $remaining);
+                }
             }
-            
-            $remarks[] = $accountPath . ' (₱' . number_format($detail->amount, 2) . ')';
+
+            TranExpenseDetail::create([
+                'disbursement_id' => $disbursementId,
+                'appropriation_id' => $appr->id,
+                'amount' => $amount,
+                'particulars' => 'Seeded expense',
+                'created_at' => $baseDate,
+                'updated_at' => $baseDate,
+            ]);
+
+            $remaining -= $amount;
         }
-        
-        return 'Disbursed from: ' . implode(', ', $remarks);
+
+        // If anything remains due to rounding, add one more detail
+        if ($remaining > 0) {
+            $appr = $appropriations->first();
+            TranExpenseDetail::create([
+                'disbursement_id' => $disbursementId,
+                'appropriation_id' => $appr->id,
+                'amount' => $remaining,
+                'particulars' => 'Seeded expense (adjustment)',
+                'created_at' => $baseDate,
+                'updated_at' => $baseDate,
+            ]);
+        }
+    }
+
+    private function seedOrDetails(int $disbursementId, array $amounts, Carbon $baseDate, int $dvIndex): void
+    {
+        foreach ($amounts as $k => $amount) {
+            $orDate = $baseDate->copy()->addDays($k + 1);
+            DisbursementOrDetail::create([
+                'disbursement_id' => $disbursementId,
+                'or_date' => $orDate->format('Y-m-d'),
+                'or_number' => 'OR-' . str_pad($dvIndex, 3, '0', STR_PAD_LEFT) . '-' . ($k + 1),
+                'or_amount' => $amount,
+                'or_photo' => 'or-photos/vm8wtjh7G05yx1SzPm46RCpSMxUlEJiDNeC6YE8A.png',
+                'remarks' => 'Seeded OR detail',
+                'created_at' => $orDate,
+                'updated_at' => $orDate,
+            ]);
+        }
     }
 } 
