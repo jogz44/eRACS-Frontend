@@ -41,6 +41,6 @@ class Disbursement extends Model
 
     public function expenseDetails()
     {
-        return $this->hasMany(TranExpenseDetail::class);
+        return $this->hasMany(TranExpenseDetail::class, 'disbursement_id');
     }
 } 

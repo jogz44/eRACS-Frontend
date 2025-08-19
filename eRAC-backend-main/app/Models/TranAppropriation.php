@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TranAppropriation extends Model
 {
@@ -26,7 +27,7 @@ class TranAppropriation extends Model
 
     public function budget(): BelongsTo
     {
-        return $this->belongsTo(Budget::class);
+        return $this->belongsTo(Budget::class,'budget_id');
     }
 
     public function expenseClass(): BelongsTo
@@ -42,5 +43,9 @@ class TranAppropriation extends Model
     public function expenseItem(): BelongsTo
     {
         return $this->belongsTo(LibExpenseItem::class);
+    }
+    public function details()
+    {
+        return $this->hasMany(TranExpenseDetail::class, 'appropriation_id');
     }
 }

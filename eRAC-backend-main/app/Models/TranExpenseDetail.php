@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TranExpenseDetail extends Model
 {
@@ -25,7 +26,7 @@ class TranExpenseDetail extends Model
      */
     public function disbursement()
     {
-        return $this->belongsTo(Disbursement::class);
+        return $this->belongsTo(Disbursement::class,'disbursement_id');
     }
 
     /**

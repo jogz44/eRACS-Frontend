@@ -2,8 +2,8 @@
 # GET http://localhost:8000/api/barangay/barangays
 # Accept: application/json
 
-GET http://localhost:8000/api/barangay/report/sacb?from=2024-08-01&to=2025-08-
-Authorization: Bearer 1|wEFJk4X0bP5BNzAYEsx4QtqiduwEU9MnHrcmToLiff5cb546
+GET http://localhost:8000/api/barangay/report/rac?from=2025-07-01&to=2025-09-29&expense_class_id=3
+Authorization: Bearer 1|8NixzEtbqpxeRlNaRviXrSiLNAdDiTIsJXYeBukFc0cb3382
 Accept: application/json
 
 # GET http://localhost:8000/api/user
