@@ -17,19 +17,31 @@ class ReportController extends Controller
         ]);
 
         
-        $q = TranAppropriation::query()->whereBetween('transaction_date', [$data['from'], $data['to']]);
+        $q = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem', 'details','details.disbursement'])
+            ->whereBetween('transaction_date', [$data['from'], $data['to']]);
 
         $q->where('expense_class_id', $data['expense_class_id']);
 
-        $rows = $q->orderBy('transaction_date')->get()->map(fn($o) => [
-            'accountTitle' => $o->expenseType->name ?? null + $o->expenseItem->name ?? null,
-            'appropriation' => (float)$o->amount,
+        $rows = $q->orderBy('transaction_date')->get()
+            ->flatMap(function ($o) {
+                return $o->details->map(function ($detail) use ($o) {
+                    $disb = $detail->disbursement;
+                    return [
+                        'accountTitle' => implode(' - ', array_filter([
+                            $o->expenseType->name ?? null,
+                            $o->expenseItem->name ?? null,
+                        ])),
+                        'appropriation' => (float) $o->amount,
+                        'particular' => $detail?->particulars,
+                        'dvNumber' => $disb?->dv_number,
+                        'date' => $disb?->date,
+                        'payee'    => $disb?->payee,
 
-            'dvNumber' => $o->data,//disbursmnet
-            'date' => $o->toDateString(),//disbursmnet
-            'payee' => $o->data,//disbursmnet
-            'amount' => $o->data,//disbursmnet
-        ])->values();
+                        'amount'   => (float) ($disb?->dv_amount ?? 0),
+                    ];
+                });
+            })
+            ->values();
 
         $summary = [
             'count' => $rows->count(),
@@ -38,9 +50,9 @@ class ReportController extends Controller
         ];
 
         return response()->json([
+            'rows' => $rows,
             'filters' => $data,
             'summary' => $summary,
-            'rows' => $rows,
         ]);
     }
 
@@ -55,8 +67,6 @@ class ReportController extends Controller
         
         $q = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem','details.disbursement'])
             ->whereBetween('transaction_date', [$data['from'], $data['to']]);
-
-        //$q->where('expense_class_id', $data['expense_class_id']);
 
         $rows = $q->orderBy('transaction_date')->get()->map(fn($o) => [
             'expense'=> $o->expenseClass?->name,
