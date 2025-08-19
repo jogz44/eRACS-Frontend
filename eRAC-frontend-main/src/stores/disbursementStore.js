@@ -7,9 +7,6 @@ import { useAuthStore } from './auth'
 export const useDisbursementStore = defineStore('disbursement', {
   state: () => ({
     particulars: [
-      { label: 'Office Supplies', value: 'office' },
-      { label: 'Transportation', value: 'transport' },
-      { label: 'Meals', value: 'meals' }
     ],
 
     // Main data collections
@@ -580,8 +577,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           },
         })
         this.particulars = particular.data.data.map(item => ({
-          label: item.particulars,
-          value: item.particulars
+          label: item.particulars
         }))
 
         // Map backend fields to frontend fields if needed
