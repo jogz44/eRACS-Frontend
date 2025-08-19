@@ -4,17 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\TranAppropriation;
 
 class BudgetAugmentationDetail extends Model
 {
     protected $fillable = [
         'budget_augmentation_id',
-        'from_expense_class_id',
-        'from_expense_type_id',
-        'from_expense_item_id',
-        'transfer_to_expense_class_id',
-        'transfer_to_expense_type_id',
-        'transfer_to_expense_item_id',
+        'from_appropriation_id',
+        'to_appropriation_id',
         'amount',
         'particulars'
     ];
@@ -28,33 +25,13 @@ class BudgetAugmentationDetail extends Model
         return $this->belongsTo(BudgetAugmentation::class);
     }
 
-    public function fromExpenseClass(): BelongsTo
+    public function fromAppropriation(): BelongsTo
     {
-        return $this->belongsTo(LibExpenseClass::class, 'from_expense_class_id');
+        return $this->belongsTo(TranAppropriation::class, 'from_appropriation_id');
     }
 
-    public function fromExpenseType(): BelongsTo
+    public function toAppropriation(): BelongsTo
     {
-        return $this->belongsTo(LibExpenseType::class, 'from_expense_type_id');
-    }
-
-    public function fromExpenseItem(): BelongsTo
-    {
-        return $this->belongsTo(LibExpenseItem::class, 'from_expense_item_id');
-    }
-
-    public function transferToExpenseClass(): BelongsTo
-    {
-        return $this->belongsTo(LibExpenseClass::class, 'transfer_to_expense_class_id');
-    }
-
-    public function transferToExpenseType(): BelongsTo
-    {
-        return $this->belongsTo(LibExpenseType::class, 'transfer_to_expense_type_id');
-    }
-
-    public function transferToExpenseItem(): BelongsTo
-    {
-        return $this->belongsTo(LibExpenseItem::class, 'transfer_to_expense_item_id');
+        return $this->belongsTo(TranAppropriation::class, 'to_appropriation_id');
     }
 } 

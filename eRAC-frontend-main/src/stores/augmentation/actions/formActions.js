@@ -10,9 +10,10 @@ export function useFormActions(state) {
       }
     } else if (formName === 'augExpense') {
       state.forms.value.augExpense = {
-        expense_class_id: null,
-        expense_type_id: null,
-        expense_item_id: null,
+        from_appropriation_id: null,
+        to_appropriation_id: null,
+        from_expense: '',
+        to_expense: '',
         account: '',
         balance: 0,
         particulars: '',
@@ -36,6 +37,11 @@ export function useFormActions(state) {
       throw new Error('Both From Expense and To Expense must be selected')
     }
     
+    // Validate that FROM and TO appropriations are different
+    if (augExpense.from_appropriation_id === augExpense.to_appropriation_id) {
+      throw new Error('From and To appropriations must be different')
+    }
+    
     // Validate particulars
     if (!particulars) {
       throw new Error('Particulars is required')
@@ -48,9 +54,9 @@ export function useFormActions(state) {
     
     // Validate amount against available balance
     const availableBalance = augExpense.balance || 0
-    const accountKey = `${augExpense.from_expense_class_id}-${augExpense.from_expense_type_id}-${augExpense.from_expense_item_id}`
+    const accountKey = augExpense.from_appropriation_id
     const existingAmountForAccount = (state.Augexpenses.value || [])
-      .filter(expense => `${expense.from_expense_class_id}-${expense.from_expense_type_id}-${expense.from_expense_item_id}` === accountKey)
+      .filter(expense => expense.from_appropriation_id === accountKey)
       .reduce((total, expense) => total + Number(expense.amount), 0)
     const remainingBalance = availableBalance - existingAmountForAccount
     
@@ -65,17 +71,15 @@ export function useFormActions(state) {
       
     const expenseData = {
       id: newId,
-      from_expense_class_id: augExpense.from_expense_class_id,
-      from_expense_type_id: augExpense.from_expense_type_id,
-      from_expense_item_id: augExpense.from_expense_item_id,
-      to_expense_class_id: augExpense.to_expense_class_id,
-      to_expense_type_id: augExpense.to_expense_type_id,
-      to_expense_item_id: augExpense.to_expense_item_id,
+      from_appropriation_id: augExpense.from_appropriation_id,
+      to_appropriation_id: augExpense.to_appropriation_id,
       from_expense: augExpense.from_expense,
       to_expense: augExpense.to_expense,
       amount: amount,
       particulars: particulars,
     }
+    
+    console.log('Adding expense data:', expenseData)
     
     if (!state.Augexpenses.value) {
       state.Augexpenses.value = []
@@ -99,12 +103,8 @@ export function useFormActions(state) {
         ...row,
         from_expense: row.from_expense,
         to_expense: row.to_expense,
-        from_expense_class_id: row.from_expense_class_id,
-        from_expense_type_id: row.from_expense_type_id,
-        from_expense_item_id: row.from_expense_item_id,
-        to_expense_class_id: row.to_expense_class_id,
-        to_expense_type_id: row.to_expense_type_id,
-        to_expense_item_id: row.to_expense_item_id,
+        from_appropriation_id: row.from_appropriation_id,
+        to_appropriation_id: row.to_appropriation_id,
       }
       state.Augexpenses.value = [...state.Augexpenses.value]
     }

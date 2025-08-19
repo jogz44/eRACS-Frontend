@@ -53,9 +53,14 @@ export function useGetters(state) {
   ])
 
   const AugexpenseAccountColumns = computed(() => [
-    { name: 'expense_class', label: 'Expense Class', field: 'account', align: 'left', sortable: true },
-    { name: 'expense_type', label: 'Expense Type', field: 'expenseType', align: 'left', sortable: true },
-    { name: 'expense_item', label: 'Expense Item', field: 'expenseItem', align: 'left', sortable: true },
+    { 
+      name: 'account', 
+      label: 'Account', 
+      field: 'account', 
+      align: 'left', 
+      sortable: true,
+      style: 'width: 50%; min-width: 300px;'
+    },
     {
       name: 'balance',
       label: 'Balance',
@@ -63,8 +68,15 @@ export function useGetters(state) {
       format: (val) => `₱${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       align: 'right',
       sortable: true,
+      style: 'width: 25%; min-width: 120px;'
     },
-    { name: 'action', label: 'Action', field: '', align: 'center' },
+    { 
+      name: 'action', 
+      label: 'Action', 
+      field: '', 
+      align: 'center',
+      style: 'width: 25%; min-width: 100px;'
+    },
   ])
 
   const filteredAugmentations = computed(() => {

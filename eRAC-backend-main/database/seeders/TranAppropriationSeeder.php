@@ -13,90 +13,91 @@ use App\Models\LibExpenseClass;
 
 class TranAppropriationSeeder extends Seeder
 {
-    public function run()
+        public function run()
     {
         $now = now();
         $barangays = Barangay::all();
         
-        foreach ($barangays as $bIndex => $barangay) {
+        foreach ($barangays as $barangay) {
             $budgets = Budget::where('barangay_id', $barangay->id)->get();
             $user = BarangayUser::where('barangay_id', $barangay->id)->first();
             
             if (!$budgets->count() || !$user) continue;
             
-            // Get only 2 expense classes for this barangay
-            $expenseClasses = LibExpenseClass::where('barangay_id', $barangay->id)->take(2)->get();
+            // Get all available expense classes for this barangay
+            $allExpenseClasses = LibExpenseClass::where('barangay_id', $barangay->id)->get();
+            
+            if ($allExpenseClasses->count() < 2) {
+                \Log::warning("Barangay {$barangay->id} doesn't have enough expense classes for appropriation seeding");
+                continue;
+            }
             
             foreach ($budgets as $budgetIndex => $budget) {
                 $remaining = $budget->original_amount;
-                $totalAllocated = 0; // Track total allocated for this budget
+                $totalAllocated = 0;
                 
-                foreach ($expenseClasses as $classIndex => $expenseClass) {
-                    $types = LibExpenseType::where('expense_class_id', $expenseClass->id)->get();
+                // Each budget gets a different expense class
+                // Budget 1 gets the first expense class, Budget 2 gets the second expense class
+                $expenseClass = $allExpenseClasses->get($budgetIndex % $allExpenseClasses->count());
+                
+                if (!$expenseClass) {
+                    \Log::warning("No expense class found for budget {$budget->id}");
+                    continue;
+                }
+                
+                // Get the first expense type for this class
+                $expenseType = LibExpenseType::where('expense_class_id', $expenseClass->id)->first();
+                
+                if (!$expenseType) {
+                    \Log::warning("Expense class {$expenseClass->id} doesn't have any expense types");
+                    continue;
+                }
+                
+                // Check if this type has items
+                $expenseItem = LibExpenseItem::where('expense_type_id', $expenseType->id)->first();
+                
+                if ($expenseItem) {
+                    // Create item-level appropriation
+                    $itemAmount = min(50000, $remaining * 0.4); // 40% of remaining budget
                     
-                    foreach ($types as $typeIndex => $expenseType) {
-                        // Check if this type has items
-                        $items = LibExpenseItem::where('expense_type_id', $expenseType->id)->get();
+                    if ($itemAmount > 0 && $remaining > 0) {
+                        TranAppropriation::firstOrCreate([
+                            'barangay_id' => $barangay->id,
+                            'budget_id' => $budget->id,
+                            'expense_class_id' => $expenseClass->id,
+                            'expense_type_id' => $expenseType->id,
+                            'expense_item_id' => $expenseItem->id,
+                        ], [
+                            'amount' => $itemAmount,
+                            'transaction_date' => $now,
+                            'status' => 'committed',
+                            'user_id' => $user->id,
+                        ]);
                         
-                        if ($items->count() > 0) {
-                            // Type has items - create item-level appropriations only
-                            foreach ($items as $itemIndex => $item) {
-                                // Calculate item-level allocation (distributed among items)
-                                $itemAmount = min(
-                                    (500 + ($bIndex * 100) + ($budgetIndex * 50) + ($classIndex * 30) + ($typeIndex * 20) + ($itemIndex * 10)),
-                                    $remaining * 0.8 / max($items->count(), 1) // 80% of remaining budget for items
-                                );
-                                
-                                if ($itemAmount > 0 && $remaining > 0) {
-                                    TranAppropriation::firstOrCreate([
-                                        'barangay_id' => $barangay->id,
-                                        'budget_id' => $budget->id,
-                                        'expense_class_id' => $expenseClass->id,
-                                        'expense_type_id' => $expenseType->id,
-                                        'expense_item_id' => $item->id,
-                                    ], [
-                                        'amount' => $itemAmount,
-                                        'transaction_date' => $now,
-                                        'status' => 'committed',
-                                        'user_id' => $user->id,
-                                    ]);
-                                    
-                                    $remaining -= $itemAmount;
-                                    $totalAllocated += $itemAmount; // Track allocated amount
-                                }
-                                
-                                if ($remaining <= 0) break; // Stop if budget is fully appropriated
-                            }
-                        } else {
-                            // Type has no items - create type-level appropriation
-                            $typeAmount = min(
-                                (1000 + ($bIndex * 300) + ($budgetIndex * 150) + ($classIndex * 100) + ($typeIndex * 50)),
-                                $remaining * 0.6 // 60% of remaining budget for type-level
-                            );
-                            
-                            if ($typeAmount > 0 && $remaining > 0) {
-                                TranAppropriation::firstOrCreate([
-                                    'barangay_id' => $barangay->id,
-                                    'budget_id' => $budget->id,
-                                    'expense_class_id' => $expenseClass->id,
-                                    'expense_type_id' => $expenseType->id,
-                                    'expense_item_id' => null,
-                                ], [
-                                    'amount' => $typeAmount,
-                                    'transaction_date' => $now,
-                                    'status' => 'committed',
-                                    'user_id' => $user->id,
-                                ]);
-                                
-                                $remaining -= $typeAmount;
-                                $totalAllocated += $typeAmount; // Track allocated amount
-                            }
-                        }
-                        
-                        if ($remaining <= 0) break; // Stop if budget is fully appropriated
+                        $remaining -= $itemAmount;
+                        $totalAllocated += $itemAmount;
                     }
+                } else {
+                    // Create type-level appropriation
+                    $typeAmount = min(50000, $remaining * 0.4); // 40% of remaining budget
                     
-                    if ($remaining <= 0) break; // Stop if budget is fully appropriated
+                    if ($typeAmount > 0 && $remaining > 0) {
+                        TranAppropriation::firstOrCreate([
+                            'barangay_id' => $barangay->id,
+                            'budget_id' => $budget->id,
+                            'expense_class_id' => $expenseClass->id,
+                            'expense_type_id' => $expenseType->id,
+                            'expense_item_id' => null,
+                        ], [
+                            'amount' => $typeAmount,
+                            'transaction_date' => $now,
+                            'status' => 'committed',
+                            'user_id' => $user->id,
+                        ]);
+                        
+                        $remaining -= $typeAmount;
+                        $totalAllocated += $typeAmount;
+                    }
                 }
                 
                 // Update the budget's current_amount after all appropriations

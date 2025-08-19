@@ -14,27 +14,19 @@ return new class extends Migration
         Schema::create('budget_augmentation_details', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('budget_augmentation_id');
-            $table->unsignedBigInteger('from_expense_class_id')->nullable();
-            $table->unsignedBigInteger('from_expense_type_id')->nullable();
-            $table->unsignedBigInteger('from_expense_item_id')->nullable();
+            $table->unsignedBigInteger('from_appropriation_id'); // Reference to source appropriation
             $table->decimal('amount', 15, 2);
-            $table->unsignedBigInteger('transfer_to_expense_class_id')->nullable();
-            $table->unsignedBigInteger('transfer_to_expense_type_id')->nullable();
-            $table->unsignedBigInteger('transfer_to_expense_item_id')->nullable();
+            $table->unsignedBigInteger('to_appropriation_id'); // Reference to destination appropriation
             $table->text('particulars');
             $table->timestamps();
 
             $table->foreign('budget_augmentation_id')->references('id')->on('budget_augmentations')->onDelete('cascade');
-            $table->foreign('from_expense_class_id')->references('id')->on('lib_expense_classes')->onDelete('no action');
-            $table->foreign('from_expense_type_id')->references('id')->on('lib_expense_types')->onDelete('no action');
-            $table->foreign('from_expense_item_id')->references('id')->on('lib_expense_items')->onDelete('no action');
-            $table->foreign('transfer_to_expense_class_id')->references('id')->on('lib_expense_classes')->onDelete('no action');
-            $table->foreign('transfer_to_expense_type_id')->references('id')->on('lib_expense_types')->onDelete('no action');
-            $table->foreign('transfer_to_expense_item_id')->references('id')->on('lib_expense_items')->onDelete('no action');
+            $table->foreign('from_appropriation_id')->references('id')->on('tran_appropriations')->onDelete('no action');
+            $table->foreign('to_appropriation_id')->references('id')->on('tran_appropriations')->onDelete('no action');
 
             $table->index(['budget_augmentation_id']);
-            $table->index(['from_expense_class_id', 'from_expense_type_id', 'from_expense_item_id']);
-            $table->index(['transfer_to_expense_class_id', 'transfer_to_expense_type_id', 'transfer_to_expense_item_id']);
+            $table->index(['from_appropriation_id']);
+            $table->index(['to_appropriation_id']);
         });
     }
 

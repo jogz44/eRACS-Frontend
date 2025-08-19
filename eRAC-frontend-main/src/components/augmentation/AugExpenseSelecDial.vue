@@ -6,7 +6,7 @@
         <div class="text-h6">Select Expense Account</div>
       </q-card-section>
 
-      <q-card-section>
+      <q-card-section class="q-pa-md">
         <q-input
           outlined
           dense
@@ -20,12 +20,17 @@
         </q-input>
 
         <!-- Expense Account Selection Table -->
-        <q-table
-          :rows="store.AugexpenseAccounts"
-          :columns="store.AugexpenseAccountColumns"
-          row-key="id"
-          :filter="store.expenseSearch"
-        >
+        <div class="table-container">
+          <q-table
+            :rows="store.AugexpenseAccounts"
+            :columns="store.AugexpenseAccountColumns"
+            row-key="id"
+            :filter="store.expenseSearch"
+            class="expense-accounts-table"
+            :pagination="{ rowsPerPage: 5 }"
+            flat
+            bordered
+          >
           <template v-slot:body-cell-action="props">
             <q-td :props="props">
               <q-btn
@@ -37,6 +42,7 @@
             </q-td>
           </template>
         </q-table>
+        </div>
       </q-card-section>
 
       <q-card-actions align="right">
@@ -51,15 +57,59 @@ import { useAugmentationStore } from 'stores/augmentation'
 import { computed } from 'vue'
 const store = useAugmentationStore()
 
-const colCount = store.AugexpenseAccountColumns.length || 4
 const cardWidthStyle = computed(() => {
-  // Each column gets 180px, but clamp between 500px and 98vw
-  const width = Math.min(Math.max(colCount * 180, 500), window.innerWidth * 0.98)
-  return `min-width: 500px; max-width: 98vw; width: ${width}px;`
+  // Calculate appropriate width based on content
+  // Account column needs more space for long names, balance and action are fixed
+  const accountColumnWidth = 400 // Account names can be long
+  const balanceColumnWidth = 150  // Balance column
+  const actionColumnWidth = 120   // Action button
+  const totalWidth = accountColumnWidth + balanceColumnWidth + actionColumnWidth + 100 // Add padding
+  
+  // Responsive width calculation
+  if (window.innerWidth < 768) {
+    // Mobile/tablet: use most of the viewport width
+    return `min-width: 95vw; max-width: 95vw; width: 95vw;`
+  } else if (window.innerWidth < 1200) {
+    // Small desktop: use calculated width or 90vw, whichever is smaller
+    const width = Math.min(totalWidth, window.innerWidth * 0.9)
+    return `min-width: 700px; max-width: 90vw; width: ${width}px;`
+  } else {
+    // Large desktop: use calculated width or 80vw, whichever is smaller
+    const width = Math.min(totalWidth, window.innerWidth * 0.8)
+    return `min-width: 700px; max-width: 80vw; width: ${width}px;`
+  }
 })
 </script>
 
 <style scoped>
+/* Table container and column width control */
+.table-container {
+  width: 100%;
+  min-height: 400px;
+}
+
+.expense-accounts-table {
+  width: 100%;
+}
+
+.expense-accounts-table .q-table th:nth-child(1),
+.expense-accounts-table .q-table td:nth-child(1) {
+  width: 50%;
+  min-width: 300px;
+}
+
+.expense-accounts-table .q-table th:nth-child(2),
+.expense-accounts-table .q-table td:nth-child(2) {
+  width: 25%;
+  min-width: 120px;
+}
+
+.expense-accounts-table .q-table th:nth-child(3),
+.expense-accounts-table .q-table td:nth-child(3) {
+  width: 25%;
+  min-width: 100px;
+}
+
 /* Responsive Dialog - Only sizing adjustments for mobile and tablet */
 @media (max-width: 600px) {
   /* Mobile View - Only size adjustments */
