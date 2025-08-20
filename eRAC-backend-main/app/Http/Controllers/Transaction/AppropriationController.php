@@ -658,4 +658,91 @@ class AppropriationController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get appropriations for augmentation (returns appropriations grouped by expense hierarchy)
+     */
+    public function getAppropriationsForAugmentation(Request $request)
+    {
+        $request->validate([
+            'status' => 'nullable|in:draft,committed,reverted',
+            'fiscal_year_id' => 'nullable|exists:lib_fiscal_years,id'
+        ]);
+
+        $barangayId = $request->user()->barangay_id;
+        $status = $request->status ?? 'committed';
+
+        $query = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem'])
+            ->where('barangay_id', $barangayId)
+            ->where('status', $status);
+
+        if ($request->fiscal_year_id) {
+            $query->whereHas('budget', function($q) use ($request) {
+                $q->where('fiscal_year_id', $request->fiscal_year_id);
+            });
+        }
+
+        $appropriations = $query->get();
+
+        // Group appropriations by expense hierarchy (class, type, item)
+        $groupedAppropriations = [];
+        
+        foreach ($appropriations as $appropriation) {
+            // Create a unique key for grouping
+            $key = $appropriation->expense_class_id . '_' . 
+                   ($appropriation->expense_type_id ?? 'null') . '_' . 
+                   ($appropriation->expense_item_id ?? 'null');
+            
+            if (!isset($groupedAppropriations[$key])) {
+                // Build account name
+                $accountParts = [];
+                if ($appropriation->expenseClass) {
+                    $accountParts[] = $appropriation->expenseClass->name;
+                }
+                if ($appropriation->expenseType) {
+                    $accountParts[] = $appropriation->expenseType->name;
+                }
+                if ($appropriation->expenseItem) {
+                    $accountParts[] = $appropriation->expenseItem->name;
+                }
+                
+                $accountName = implode(' > ', $accountParts);
+
+                // Get all appropriations with the same expense hierarchy
+                $matchingAppropriations = $appropriations->filter(function($appr) use ($appropriation) {
+                    return $appr->expense_class_id === $appropriation->expense_class_id &&
+                           $appr->expense_type_id === $appropriation->expense_type_id &&
+                           $appr->expense_item_id === $appropriation->expense_item_id;
+                });
+
+                // Calculate total amount and get the first appropriation ID for reference
+                $totalAmount = $matchingAppropriations->sum('amount');
+                $firstAppropriation = $matchingAppropriations->first();
+
+                $groupedAppropriations[$key] = [
+                    'id' => $firstAppropriation->id, // Use first appropriation ID as reference
+                    'account_name' => $accountName,
+                    'amount' => (float)$totalAmount,
+                    'expense_class_id' => $appropriation->expense_class_id,
+                    'expense_type_id' => $appropriation->expense_type_id,
+                    'expense_item_id' => $appropriation->expense_item_id,
+                    'budget_id' => $firstAppropriation->budget_id,
+                    'status' => $appropriation->status,
+                    'created_at' => $firstAppropriation->created_at->format('Y-m-d'),
+                    'appropriation_ids' => $matchingAppropriations->pluck('id')->toArray() // Store all IDs for reference
+                ];
+            }
+        }
+
+        // Convert to array and sort by appropriation ID
+        $result = array_values($groupedAppropriations);
+        usort($result, function($a, $b) {
+            return $a['id'] - $b['id'];
+        });
+
+        return response()->json([
+            'status' => true,
+            'data' => $result
+        ]);
+    }
 }

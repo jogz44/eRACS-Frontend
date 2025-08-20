@@ -32,92 +32,74 @@ class BudgetAugmentationSeeder extends Seeder
             $budgets = Budget::where('barangay_id', $barangay->id)->get();
             $user = BarangayUser::where('barangay_id', $barangay->id)->first();
             
-            if (!$budgets->count() || !$user) continue;
+            if ($budgets->count() < 2 || !$user) continue; // Need at least 2 budgets for cross-budget transfer
             
-            foreach ($budgets as $budgetIndex => $budget) {
-                if ($augmentationCount >= $maxAugmentations) break;
-                
-                // Get existing appropriations for this budget
-                $existingAppropriations = TranAppropriation::where('barangay_id', $barangay->id)
-                    ->where('budget_id', $budget->id)
-                    ->where('status', 'committed')
-                    ->where('amount', '>', 0)
-                    ->get();
-                
-                if ($existingAppropriations->count() < 2) continue; // Need at least 2 appropriations for transfers
-                
-                // Create only 1 augmentation for this budget
-                $this->createAugmentation($barangay, $budget, $user, $existingAppropriations, $augmentationCount + 1);
-                $augmentationCount++;
-                
-                if ($augmentationCount >= $maxAugmentations) break;
-            }
+            // Get all appropriations for this barangay
+            $allAppropriations = TranAppropriation::where('barangay_id', $barangay->id)
+                ->where('status', 'committed')
+                ->where('amount', '>', 1000)
+                ->get();
+            
+            if ($allAppropriations->count() < 2) continue; // Need at least 2 appropriations
+            
+            // Create augmentation that transfers between different budgets
+            $this->createCrossBudgetAugmentation($barangay, $budgets, $user, $allAppropriations, $augmentationCount + 1);
+            $augmentationCount++;
+            
+            if ($augmentationCount >= $maxAugmentations) break;
         }
     }
 
-    private function createAugmentation($barangay, $budget, $user, $existingAppropriations, $index)
+    private function createCrossBudgetAugmentation($barangay, $budgets, $user, $allAppropriations, $index)
     {
         // Generate augmentation date (within the last 6 months)
         $augmentationDate = now()->subDays(rand(1, 180));
         
-        // Create budget augmentation
+        // Select source budget (budget to transfer FROM)
+        $sourceBudget = $budgets->random();
+        
+        // Select destination budget (budget to transfer TO) - must be different
+        $destinationBudget = $budgets->where('id', '!=', $sourceBudget->id)->random();
+        
+        if (!$destinationBudget) {
+            \Log::warning("No different budget found for cross-budget transfer in barangay {$barangay->id}");
+            return;
+        }
+        
+        // Create budget augmentation (attached to source budget)
         $augmentation = BudgetAugmentation::create([
             'barangay_id' => $barangay->id,
-            'budget_id' => $budget->id,
-            'ref_number' => 'AUG-' . $augmentationDate->format('y') . '-' . $augmentationDate->format('m') . '-' . str_pad($budget->id, 2, '0', STR_PAD_LEFT) . '-' . str_pad($index, 3, '0', STR_PAD_LEFT),
+            'budget_id' => $sourceBudget->id, // Attach to source budget
+            'ref_number' => 'AUG-' . $augmentationDate->format('y') . '-' . $augmentationDate->format('m') . '-' . str_pad($sourceBudget->id, 2, '0', STR_PAD_LEFT) . '-' . str_pad($index, 3, '0', STR_PAD_LEFT),
             'augmentation_date' => $augmentationDate->format('Y-m-d'),
             'total_amount' => 0, // Will be calculated from details
-            'remarks' => $this->generateRemarks($budget->description ?? 'Budget', $index),
+            'remarks' => $this->generateRemarks($sourceBudget->description ?? 'Source Budget', $destinationBudget->description ?? 'Destination Budget', $index),
             'user_id' => $user->id
         ]);
 
-        // Create augmentation details with actual transfers
+        // Create augmentation details with cross-budget transfers
         $totalAmount = 0;
-        $usedAppropriationIds = collect();
-        $maxDetails = min(2, $existingAppropriations->count() - 1); // Reduced to max 2 details
         $detailsCreated = 0;
+        $maxDetails = 2; // Create up to 2 transfer details
         
-        for ($j = 1; $j <= $maxDetails && $detailsCreated < 2; $j++) { // Reduced to max 2 details
-            // Refresh appropriations from database to get current amounts
-            $currentAppropriations = TranAppropriation::where('barangay_id', $barangay->id)
-                ->where('budget_id', $budget->id)
-                ->where('status', 'committed')
+        for ($j = 1; $j <= $maxDetails && $detailsCreated < $maxDetails; $j++) {
+            // Find source appropriation (FROM budget)
+            $sourceAppropriations = $allAppropriations->where('budget_id', $sourceBudget->id)
                 ->where('amount', '>', 1000)
-                ->whereNotIn('id', $usedAppropriationIds->toArray())
-                ->get();
+                ->values();
             
-            if ($currentAppropriations->count() < 2) break; // Need at least 2 for transfer
+            if ($sourceAppropriations->count() === 0) break;
             
-            $fromAppropriation = $currentAppropriations->random();
-            $usedAppropriationIds->push($fromAppropriation->id);
+            $fromAppropriation = $sourceAppropriations->random();
             
-            // Find a different appropriation to transfer to (refresh again to exclude the FROM appropriation)
-            $transferToAppropriations = TranAppropriation::where('barangay_id', $barangay->id)
-                ->where('budget_id', $budget->id)
-                ->where('status', 'committed')
+            // Find destination appropriation (TO budget) - must be different budget
+            $destinationAppropriations = $allAppropriations->where('budget_id', $destinationBudget->id)
                 ->where('amount', '>', 0)
-                ->whereNotIn('id', $usedAppropriationIds->toArray())
-                ->where(function($query) use ($fromAppropriation) {
-                    $query->where('expense_class_id', '!=', $fromAppropriation->expense_class_id)
-                          ->orWhere('expense_type_id', '!=', $fromAppropriation->expense_type_id)
-                          ->orWhere('expense_item_id', '!=', $fromAppropriation->expense_item_id);
-                })
-                ->get();
+                ->values();
             
-            if ($transferToAppropriations->isEmpty()) {
-                // If no different appropriation found, try to find any unused appropriation
-                $transferToAppropriations = TranAppropriation::where('barangay_id', $barangay->id)
-                    ->where('budget_id', $budget->id)
-                    ->where('status', 'committed')
-                    ->where('amount', '>', 0)
-                    ->whereNotIn('id', $usedAppropriationIds->toArray())
-                    ->get();
-            }
+            if ($destinationAppropriations->count() === 0) break;
             
-            if ($transferToAppropriations->isEmpty()) continue;
-            
-            $toAppropriation = $transferToAppropriations->random();
-            $usedAppropriationIds->push($toAppropriation->id);
+            $toAppropriation = $destinationAppropriations->random();
             
             // Refresh both appropriations to get current amounts
             $fromAppropriation->refresh();
@@ -126,31 +108,36 @@ class BudgetAugmentationSeeder extends Seeder
             // Calculate transfer amount (not exceeding available amount, minimum 500)
             $maxTransferAmount = min($fromAppropriation->amount * 0.3, 3000); // Max 30% of source amount or 3000
             $transferAmount = max(500, min(rand(500, 2000), $maxTransferAmount));
+            // Round to the nearest lower multiple of 100 for clean values
+            $transferAmount = (int) (floor($transferAmount / 100) * 100);
+            if ($transferAmount < 100) {
+                $transferAmount = 100;
+            }
+            if ($transferAmount > $maxTransferAmount) {
+                $transferAmount = (int) (floor($maxTransferAmount / 100) * 100);
+            }
             
             if ($transferAmount > $fromAppropriation->amount) continue; // Skip if insufficient funds
             
             try {
-                // Perform the actual transfer
+                // Perform the actual transfer (deduct from FROM, add to TO)
                 $fromAppropriation->decrement('amount', $transferAmount);
                 $toAppropriation->increment('amount', $transferAmount);
                 
                 $totalAmount += $transferAmount;
 
-                // Create augmentation detail
+                // Create augmentation detail using appropriation IDs
                 $detailData = [
                     'budget_augmentation_id' => $augmentation->id,
-                    'from_expense_class_id' => $fromAppropriation->expense_class_id,
-                    'from_expense_type_id' => $fromAppropriation->expense_type_id,
-                    'from_expense_item_id' => $fromAppropriation->expense_item_id,
-                    'transfer_to_expense_class_id' => $toAppropriation->expense_class_id,
-                    'transfer_to_expense_type_id' => $toAppropriation->expense_type_id,
-                    'transfer_to_expense_item_id' => $toAppropriation->expense_item_id,
+                    'from_appropriation_id' => $fromAppropriation->id,
+                    'to_appropriation_id' => $toAppropriation->id,
                     'amount' => $transferAmount,
-                    'particulars' => "Transfer from " . $this->getExpenseDescription($fromAppropriation) . " to " . $this->getExpenseDescription($toAppropriation) . " (₱" . number_format($transferAmount, 2) . ")"
+                    'particulars' => "test data"
                 ];
 
                 BudgetAugmentationDetail::create($detailData);
                 $detailsCreated++;
+                
                 
             } catch (\Exception $e) {
                 // Log error and continue with next iteration
@@ -164,23 +151,28 @@ class BudgetAugmentationSeeder extends Seeder
             // Update augmentation total amount
             $augmentation->update(['total_amount' => $totalAmount]);
 
-            // Update budget augmentation and current amount
-            $budget->increment('augmentation', $totalAmount);
-            $budget->increment('current_amount', $totalAmount);
+            // Update source budget (decrement current amount since money is transferred out)
+            $sourceBudget->decrement('current_amount', $totalAmount);
+            
+            // Update destination budget (increment current amount since money is transferred in)
+            $destinationBudget->increment('current_amount', $totalAmount);
+            
+            // Update augmentation columns: source (negative), destination (positive)
+            $sourceBudget->decrement('augmentation', $totalAmount);
+            $destinationBudget->increment('augmentation', $totalAmount);
+            
+            \Log::info("Created cross-budget augmentation {$augmentation->id} with total amount {$totalAmount} - FROM budget {$sourceBudget->id} TO budget {$destinationBudget->id}");
         } else {
             // If no details were created or total amount is 0, delete the augmentation
             $augmentation->delete();
+            \Log::warning("Failed to create augmentation details for cross-budget transfer");
         }
     }
 
-    private function generateRemarks($budgetDescription, $index)
+    private function generateRemarks($sourceBudgetDescription, $destinationBudgetDescription, $index)
     {
         $remarks = [
-            "Additional funding for {$budgetDescription} - Quarter " . ceil($index / 2),
-            "Emergency augmentation for {$budgetDescription}",
-            "Supplementary budget allocation for {$budgetDescription}",
-            "Additional allocation for {$budgetDescription} projects",
-            "Budget adjustment for {$budgetDescription} activities"
+            "test data"
         ];
         
         return $remarks[array_rand($remarks)];

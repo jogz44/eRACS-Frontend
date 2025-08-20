@@ -4,14 +4,6 @@ import { useAuthStore } from 'stores/auth'
 export function useAugmentationActions(state) {
   const authStore = useAuthStore()
 
-  // Helper function to build account names without extra separators
-  const buildAccountName = (expenseClass, expenseType, expenseItem) => {
-    const parts = []
-    if (expenseClass) parts.push(expenseClass)
-    if (expenseType) parts.push(expenseType)
-    if (expenseItem) parts.push(expenseItem)
-    return parts.join(' > ')
-  }
 
   const fetchAugmentations = async () => {
     try {
@@ -69,59 +61,38 @@ export function useAugmentationActions(state) {
       // Store the hierarchy for possible future use
       state.expenseData = response.data.data || []
       
-      // Flatten for dialog selection (same as disbursement)
-      const flattened = []
-      if (state.expenseData && state.expenseData.length > 0) {
-        state.expenseData.forEach(expenseClass => {
-          if (!expenseClass.children) return
-          expenseClass.children.forEach(expenseType => {
-            // Check if this expense type has any expense items with balance > 0
-            const hasExpenseItemsWithBalance = expenseType.children && 
-              expenseType.children.some(item => item.amount && item.amount > 0)
-            
-            if (hasExpenseItemsWithBalance) {
-              // If expense type has items with balance, only show the items (not the type)
-              expenseType.children.forEach(expenseItem => {
-                if (expenseItem.amount && expenseItem.amount > 0) {
-                  flattened.push({
-                    id: expenseItem.id,
-                    account: expenseClass.name,
-                    expenseType: expenseType.name,
-                    expenseItem: expenseItem.name,
-                    balance: expenseItem.amount || 0,
-                    expense_class_id: expenseClass.id,
-                    expense_type_id: expenseType.id,
-                    expense_item_id: expenseItem.id,
-                  })
-                }
-              })
-            } else {
-              // If expense type has no items with balance, show the type itself (if it has balance)
-              if (expenseType.amount && expenseType.amount > 0) {
-                flattened.push({
-                  id: expenseType.id,
-                  account: expenseClass.name,
-                  expenseType: expenseType.name,
-                  expenseItem: null,
-                  balance: expenseType.amount || 0,
-                  expense_class_id: expenseClass.id,
-                  expense_type_id: expenseType.id,
-                  expense_item_id: null,
-                })
-              }
-            }
-          })
-        })
-      }
+      // Fetch appropriations instead of expense hierarchy
+      const appropriationResponse = await api.get('/api/barangay/appropriations', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+        params: { status: 'committed' }
+      })
+      
+      const appropriations = appropriationResponse.data.data || []
+      console.log('Raw appropriations from API:', appropriations)
+      
+      const flattened = appropriations.map(appropriation => ({
+        id: appropriation.id,
+        account: appropriation.account_name || 'Unknown Account',
+        balance: appropriation.amount || 0,
+        appropriation_id: appropriation.id, // This is now the representative ID
+        // Store additional info for debugging
+        expense_class_id: appropriation.expense_class_id,
+        expense_type_id: appropriation.expense_type_id,
+        expense_item_id: appropriation.expense_item_id,
+        appropriation_ids: appropriation.appropriation_ids || [appropriation.id] // All IDs in the group
+      }))
+      
+      console.log('Flattened appropriations:', flattened)
       
       // If we're selecting TO expense, filter out the FROM expense
       if (state.isSelectingToExpense.value && state.forms.value.augExpense?.value) {
         const fromExpense = state.forms.value.augExpense.value
         const filtered = flattened.filter(expense => {
-          // Filter out the expense that matches the FROM expense
-          return !(expense.expense_class_id === fromExpense.from_expense_class_id &&
-                   expense.expense_type_id === fromExpense.from_expense_type_id &&
-                   expense.expense_item_id === fromExpense.from_expense_item_id)
+          // Filter out the appropriation that matches the FROM appropriation
+          return expense.appropriation_id !== fromExpense.from_appropriation_id
         })
         state.AugexpenseAccounts.value = filtered
       } else {
@@ -160,24 +131,19 @@ export function useAugmentationActions(state) {
         }
       }
       
-      // Create backward-compatible payload that matches the original structure
+      // Create payload with appropriation IDs
       const payload = {
         augmentation_date: backendDate,
         remarks: state.forms.value.augmentation.remarks,
         details: state.Augexpenses.value.map(expense => ({
-          // Use the new field names that the backend expects
-          from_expense_class_id: expense.from_expense_class_id,
-          from_expense_type_id: expense.from_expense_type_id,
-          from_expense_item_id: expense.from_expense_item_id,
-          // Add transfer information as additional fields
-          transfer_to_expense_class_id: expense.to_expense_class_id,
-          transfer_to_expense_type_id: expense.to_expense_type_id,
-          transfer_to_expense_item_id: expense.to_expense_item_id,
+          from_appropriation_id: expense.from_appropriation_id,
+          to_appropriation_id: expense.to_appropriation_id,
           amount: expense.amount,
           particulars: expense.particulars
         }))
       }
       
+      console.log('Augexpenses array:', state.Augexpenses.value)
       console.log('Sending payload:', payload)
 
       let response
@@ -250,14 +216,8 @@ export function useAugmentationActions(state) {
         augmentation_date: backendDate,
         remarks: state.forms.value.augmentation.remarks,
         details: state.Augexpenses.value.map(expense => ({
-          // Use the new field names that the backend expects
-          from_expense_class_id: expense.from_expense_class_id,
-          from_expense_type_id: expense.from_expense_type_id,
-          from_expense_item_id: expense.from_expense_item_id,
-          // Add transfer information as additional fields
-          transfer_to_expense_class_id: expense.to_expense_class_id,
-          transfer_to_expense_type_id: expense.to_expense_type_id,
-          transfer_to_expense_item_id: expense.to_expense_item_id,
+          from_appropriation_id: expense.from_appropriation_id,
+          to_appropriation_id: expense.to_appropriation_id,
           amount: expense.amount,
           particulars: expense.particulars
         }))
@@ -343,33 +303,20 @@ export function useAugmentationActions(state) {
           refNo: augmentation.ref_number || '',
         }
         
-        // Map the backend details to the new transfer structure
+        // Map the backend details to the new appropriation structure
         const mappedDetails = (augmentation.details || []).map(detail => {
           // Build FROM expense account name
-          const fromExpense = buildAccountName(
-            detail.expense_class, 
-            detail.expense_type, 
-            detail.expense_item
-          )
+          const fromExpense = detail.from_account || ''
           
           // Build TO expense account name
-          const toExpense = detail.transfer_to_expense_class_id ? 
-            buildAccountName(
-              detail.transfer_to_expense_class, 
-              detail.transfer_to_expense_type, 
-              detail.transfer_to_expense_item
-            ) : ''
+          const toExpense = detail.to_account || ''
           
           return {
             id: detail.id,
             from_expense: fromExpense,
             to_expense: toExpense,
-            from_expense_class_id: detail.expense_class_id,
-            from_expense_type_id: detail.expense_type_id,
-            from_expense_item_id: detail.expense_item_id,
-            to_expense_class_id: detail.transfer_to_expense_class_id,
-            to_expense_type_id: detail.transfer_to_expense_type_id,
-            to_expense_item_id: detail.transfer_to_expense_item_id,
+            from_appropriation_id: detail.from_appropriation_id,
+            to_appropriation_id: detail.to_appropriation_id,
             amount: detail.amount,
             particulars: detail.particulars
           }
@@ -401,17 +348,10 @@ export function useAugmentationActions(state) {
       generateNewAugmentationDefaults()
     } else if (formName === 'augExpense') {
       state.forms.value.augExpense = {
-        expense_class_id: null,
-        expense_type_id: null,
-        expense_item_id: null,
+        from_appropriation_id: null,
+        to_appropriation_id: null,
         from_expense: '',
         to_expense: '',
-        from_expense_class_id: null,
-        from_expense_type_id: null,
-        from_expense_item_id: null,
-        to_expense_class_id: null,
-        to_expense_type_id: null,
-        to_expense_item_id: null,
         account: '',
         balance: 0,
         particulars: '',

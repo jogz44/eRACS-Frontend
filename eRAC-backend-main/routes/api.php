@@ -116,6 +116,8 @@ Route::prefix('barangay')->group(function () {
         Route::get('dashboard/summary', [AppropriationController::class, 'getDashboardSummary']);
         // Expense hierarchy
         Route::get('expense-hierarchy', [AppropriationController::class, 'getExpenseHierarchy']);
+        // Appropriations for augmentation
+        Route::get('appropriations', [AppropriationController::class, 'getAppropriationsForAugmentation']);
         // Allocation endpoints
         Route::get('budgets/{budget}/allocations', [AppropriationController::class, 'getBudgetAllocations']);
         Route::post('budgets/{budget}/allocate', [AppropriationController::class, 'saveAllocation']);

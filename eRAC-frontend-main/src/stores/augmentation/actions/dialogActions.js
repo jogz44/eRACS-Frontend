@@ -59,22 +59,11 @@ export function useDialogActions(state, fetchExpenseAccounts, resetForm ) {
     // Check if we're selecting a TO expense
     if (state.isSelectingToExpense.value) {
       // Update the TO expense fields in the current form
-      const expenseClass = expenseItem.account || expenseItem.expense_class || ''
-      const expenseType = expenseItem.expenseType || expenseItem.expense_type || ''
-      const expenseItemName = expenseItem.expenseItem || expenseItem.expense_item || ''
-      
-      // Construct account name only with fields that have values
-      const parts = []
-      if (expenseClass) parts.push(expenseClass)
-      if (expenseType) parts.push(expenseType)
-      if (expenseItemName) parts.push(expenseItemName)
-      const accountName = parts.join(' > ')
+      const accountName = expenseItem.account || 'Unknown Account'
       
       // Update the TO expense fields
       state.forms.value.augExpense.value.to_expense = accountName
-      state.forms.value.augExpense.value.to_expense_class_id = expenseItem.expense_class_id
-      state.forms.value.augExpense.value.to_expense_type_id = expenseItem.expense_type_id
-      state.forms.value.augExpense.value.to_expense_item_id = expenseItem.expense_item_id
+      state.forms.value.augExpense.value.to_appropriation_id = expenseItem.appropriation_id
       
       // Reset the flag and loading state
       state.isSelectingToExpense.value = false
@@ -89,17 +78,10 @@ export function useDialogActions(state, fetchExpenseAccounts, resetForm ) {
     if (!state.forms.value?.augExpense?.value) {
       if (state.forms.value?.augExpense) {
         state.forms.value.augExpense.value = {
-          expense_class_id: null,
-          expense_type_id: null,
-          expense_item_id: null,
+          from_appropriation_id: null,
+          to_appropriation_id: null,
           from_expense: '',
           to_expense: '',
-          from_expense_class_id: null,
-          from_expense_type_id: null,
-          from_expense_item_id: null,
-          to_expense_class_id: null,
-          to_expense_type_id: null,
-          to_expense_item_id: null,
           account: '',
           balance: 0,
           particulars: '',
@@ -112,29 +94,13 @@ export function useDialogActions(state, fetchExpenseAccounts, resetForm ) {
     }
     
     // Extract the expense details from the selected item (this becomes the FROM expense)
-    const expenseClass = expenseItem.account || expenseItem.expense_class || ''
-    const expenseType = expenseItem.expenseType || expenseItem.expense_type || ''
-    const expenseItemName = expenseItem.expenseItem || expenseItem.expense_item || ''
-    
-    // Construct account name only with fields that have values
-    const parts = []
-    if (expenseClass) parts.push(expenseClass)
-    if (expenseType) parts.push(expenseType)
-    if (expenseItemName) parts.push(expenseItemName)
-    const accountName = parts.join(' > ')
+    const accountName = expenseItem.account || 'Unknown Account'
     
     state.forms.value.augExpense.value = {
-      expense_class_id: expenseItem.expense_class_id,
-      expense_type_id: expenseItem.expense_type_id,
-      expense_item_id: expenseItem.expense_item_id,
+      from_appropriation_id: expenseItem.appropriation_id,
+      to_appropriation_id: null,
       from_expense: accountName, // Set the FROM expense
       to_expense: '', // TO expense will be selected later
-      from_expense_class_id: expenseItem.expense_class_id,
-      from_expense_type_id: expenseItem.expense_type_id,
-      from_expense_item_id: expenseItem.expense_item_id,
-      to_expense_class_id: null,
-      to_expense_type_id: null,
-      to_expense_item_id: null,
       account: accountName,
       balance: expenseItem.balance || 0,
       particulars: '',
