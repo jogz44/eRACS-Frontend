@@ -464,48 +464,53 @@
               </q-card-section>
 
               <q-card-section>
-                <!-- RAC Table with improved styling -->
+                <!-- Updated RAC Table to match preview table layout -->
+                <div class="preview-table-container">
+                  <!-- Header matching preview table style -->
+                  <div class="preview-header">
+                    {{ reportStore.expenseRacSelected?.name?.toUpperCase() }} - 10%
+                  </div>
 
-                <q-table :rows="reportStore.reportRAC" :columns="reportStore.racColumn" row-key="dvNumber" flat bordered
-                  dense separator="cell" class="rac-table q-mt-md" hide-pagination :pagination="{ rowsPerPage: 0 }">
-
-                  <!-- Custom two-row header -->
-                  <template v-slot:header>
-                    <q-tr>
-                      <q-th rowspan="2" style="width:25%;">Account Title</q-th>
-                      <q-th rowspan="2" style="width:12%;" class="text-right">Appropriation</q-th>
-                      <q-th colspan="5" class="text-center" style="width:55%;">Obligation</q-th>
-                    </q-tr>
-                    <q-tr>
-                      <q-th style="width:15%;">Particular</q-th>
-                      <q-th style="width:15%;">DV#</q-th>
-                      <q-th style="width:10%;">Date</q-th>
-                      <q-th style="width:15%;">Payee</q-th>
-                      <q-th style="width:15%;" class="text-right">Amount</q-th>
-                    </q-tr>
-                  </template>
-
-                  <!-- Wrap text in all body cells -->
-                  <template v-slot:body-cell="props">
-                    <q-td :props="props" style="white-space: normal; word-break: break-word;">
-                      {{ props.value }}
-                    </q-td>
-                  </template>
-
-                  <!-- Bottom total row -->
-                  <template v-slot:bottom-row>
-                    <q-tr>
-                      <q-td colspan="1" class="text-right text-bold">Total Appropriation</q-td>
-                      <q-td class="text-right text-bold">
-                        {{reportStore.reportRAC.reduce((sum, r) => sum + r.appropriation, 0).toLocaleString()}}
-                      </q-td>
-                      <q-td colspan="4" class="text-right text-bold">Total Obligation</q-td>
-                      <q-td class="text-right text-bold">
-                        {{reportStore.reportRAC.reduce((sum, r) => sum + r.amount, 0).toLocaleString()}}
-                      </q-td>
-                    </q-tr>
-                  </template>
-                </q-table>
+                  <!-- Table with preview layout structure -->
+                  <table class="preview-table">
+                    <thead>
+                      <tr class="header-row">
+                        <th class="col-date">date</th>
+                        <th class="col-particulars">Particulars</th>
+                        <th class="col-dv">DV#</th>
+                        <th class="col-payee">Payee</th>
+                        <th class="col-appropriation">Appropriation</th>
+                        <th class="col-mooe">MOOE</th>
+                        <th class="col-locally-funded">LOCALLY FUNDED PROGRAMS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(row, index) in reportStore.reportRAC" :key="index" class="data-row">
+                        <td class="col-date"></td>
+                        <td class="col-particulars">{{ row.particular }}</td>
+                        <td class="col-dv">{{ row.dvNumber }}</td>
+                        <td class="col-payee">{{ row.payee }}</td>
+                        <td class="col-appropriation text-right">{{ row.appropriation.toLocaleString() }}</td>
+                        <td class="col-mooe text-right">{{ row.amount.toLocaleString() }}</td>
+                        <td class="col-locally-funded text-right"></td>
+                      </tr>
+                      <!-- Total row -->
+                      <tr class="total-row">
+                        <td class="col-date"></td>
+                        <td class="col-particulars font-weight-bold">Total Appropriation</td>
+                        <td class="col-dv"></td>
+                        <td class="col-payee"></td>
+                        <td class="col-appropriation text-right font-weight-bold">
+                          {{ reportStore.reportRAC.reduce((sum, r) => sum + r.appropriation, 0).toLocaleString() }}
+                        </td>
+                        <td class="col-mooe text-right font-weight-bold">
+                          {{ reportStore.reportRAC.reduce((sum, r) => sum + r.amount, 0).toLocaleString() }}
+                        </td>
+                        <td class="col-locally-funded text-right font-weight-bold"></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
 
                 <!-- Report Summary Section -->
                 <div class="report-summary q-mt-xl">
@@ -1713,6 +1718,86 @@ onActivated(async () => {
   .sacb-header .q-toolbar-title,
   .rac-header .q-toolbar-title {
     font-size: 0.9rem;
+  }
+}
+
+/* Added preview table styles to match the reference design */
+.preview-table-container {
+  width: 100%;
+  margin: 20px 0;
+  border: 2px solid #000;
+  background: white;
+}
+
+.preview-header {
+  text-align: center;
+  font-weight: bold;
+  font-size: 14px;
+  padding: 8px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #000;
+}
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.preview-table th,
+.preview-table td {
+  border: 1px solid #000;
+  padding: 4px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.preview-table th {
+  background: #f8f9fa;
+  font-weight: bold;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.preview-table .text-right {
+  text-align: right;
+}
+
+.preview-table .font-weight-bold {
+  font-weight: bold;
+}
+
+/* Column widths to match preview */
+.col-date { width: 8%; }
+.col-particulars { width: 20%; }
+.col-dv { width: 15%; }
+.col-payee { width: 15%; }
+.col-appropriation { width: 12%; }
+.col-mooe { width: 15%; }
+.col-locally-funded { width: 15%; }
+
+.data-row:nth-child(even) {
+  background: #f9f9f9;
+}
+
+.total-row {
+  background: #e9ecef;
+  font-weight: bold;
+}
+
+/* Print styles */
+@media print {
+  .preview-table-container {
+    page-break-inside: avoid;
+  }
+
+  .preview-table {
+    font-size: 10px;
+  }
+
+  .preview-table th,
+  .preview-table td {
+    padding: 2px 4px;
   }
 }
 </style>
