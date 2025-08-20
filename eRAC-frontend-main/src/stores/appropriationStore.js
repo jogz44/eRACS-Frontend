@@ -395,16 +395,6 @@ export const useAppropriationStore = defineStore("appropriation", {
           amount: parseCurrency(allocation.amount),
         }))
 
-        const totalAmount = cleanedAllocations.reduce((sum, a) => sum + a.amount, 0)
-
-        console.log("[DEBUG] Committing allocation:")
-        console.log("- Budget ID:", budgetId)
-        console.log("- Allocations:", cleanedAllocations)
-        console.log("- Total Amount:", totalAmount)
-        console.log("- Available Budget:", this.selectedRow?.unappropriated)
-        console.log("- Existing Total:", this.existingAllocationsTotal)
-        console.log("- Net Change:", totalAmount - this.existingAllocationsTotal)
-
         const response = await api.post(
           `/api/barangay/budgets/${budgetId}/allocate`,
           { allocations: cleanedAllocations },
@@ -417,17 +407,31 @@ export const useAppropriationStore = defineStore("appropriation", {
           },
         )
 
-        // Update local state
-        const budgetIndex = this.appropriations.findIndex((b) => b.id === budgetId)
-        if (budgetIndex !== -1) {
-          const netChange = totalAmount - this.existingAllocationsTotal
-          const updatedAmount = this.appropriations[budgetIndex].unappropriated - netChange
+        // Use the backend response to update local state instead of calculating locally
+        if (response.data && response.data.budget) {
+          const budgetIndex = this.appropriations.findIndex((b) => b.id === budgetId)
+          if (budgetIndex !== -1) {
+            // Update with the actual values from the database
+            // Backend returns current_amount which represents the unappropriated amount
+            this.appropriations[budgetIndex].unappropriated = parseCurrency(response.data.budget.current_amount)
+          }
+        }
 
-          this.appropriations[budgetIndex].unappropriated = parseCurrency(updatedAmount)
-          console.log(
-            "[DEBUG] Updated local budget unappropriated to:",
-            this.appropriations[budgetIndex].unappropriated,
-          )
+        // Refresh the budgets list to ensure we have the latest data from the database
+        await this.fetchBudgets()
+
+        // Refresh disbursement store expense data to reflect appropriation changes
+        try {
+          const { useDisbursementStore } = await import('./disbursementStore')
+          const disbursementStore = useDisbursementStore()
+          
+          // Force refresh expense details to ensure we have latest disbursement data
+          await disbursementStore.forceRefreshExpenseDetails()
+          
+          // Then refresh expense accounts
+          await disbursementStore.refreshExpenseAccountsInBackground()
+        } catch (error) {
+          console.warn('Failed to refresh disbursement store after appropriation update:', error)
         }
 
         return response.data

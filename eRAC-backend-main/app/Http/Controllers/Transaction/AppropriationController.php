@@ -5,6 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\AdminAuthController;
 use App\Models\Budget;
 use App\Models\TranAppropriation;
+use App\Models\TranExpenseDetail;
 use App\Models\LibFiscalYear;
 use App\Models\LibExpenseClass;
 use App\Models\LibExpenseType;
@@ -233,6 +234,34 @@ class AppropriationController extends Controller
 
     $existingTotal = $existingAllocations->sum('amount');
 
+    // NEW: Validate that new appropriation amounts are not less than what has already been disbursed
+    foreach ($validated['allocations'] as $allocation) {
+        // Find the existing allocation to compare amounts
+        $existingAllocation = $existingAllocations->first(function($existing) use ($allocation) {
+            return $existing->expense_class_id == ($allocation['expense_class_id'] ?? null) &&
+                   $existing->expense_type_id == ($allocation['expense_type_id'] ?? null) &&
+                   $existing->expense_item_id == ($allocation['expense_item_id'] ?? null);
+        });
+
+        if ($existingAllocation) {
+            // Calculate how much has been disbursed from this appropriation
+            $disbursedAmount = \App\Models\TranExpenseDetail::where('appropriation_id', $existingAllocation->id)
+                ->sum('amount');
+
+            // Check if the new amount is less than what has been disbursed
+            if ($allocation['amount'] < $disbursedAmount) {
+                
+                return response()->json([
+                    'status' => false,
+                    'message' => sprintf(
+                        'Cannot reduce appropriation below the disbursed amount. New amount must be at least ₱%s.',
+                        number_format($disbursedAmount, 2)
+                    )
+                ], 422);
+            }
+        }
+    }
+
     // Calculate total of new allocations
     $newTotal = array_sum(array_column($validated['allocations'], 'amount'));
 
@@ -270,24 +299,49 @@ class AppropriationController extends Controller
     return DB::transaction(function () use ($validated, $budget, $request, $netChange, $existingAllocations) {
         $appropriations = [];
 
-        // Delete existing allocations for this budget
-        $existingAllocations->each->delete();
+        // Instead of deleting all existing allocations, update them intelligently
+        // This preserves the TranExpenseDetail records that are linked to appropriations
+        
+        // Create a map of existing allocations for easy lookup
+        $existingAllocationMap = [];
+        foreach ($existingAllocations as $existing) {
+            $key = $this->getAllocationKey($existing);
+            $existingAllocationMap[$key] = $existing;
+        }
 
-        // Create new allocations
+        // Process new allocations
         foreach ($validated['allocations'] as $allocation) {
-            $appropriationData = [
-                'barangay_id' => $request->user()->barangay_id,
-                'budget_id' => $budget->id,
-                'amount' => $allocation['amount'],
-                'transaction_date' => now(),
-                'status' => 'committed',
-                'user_id' => $request->user()->id,
-                'expense_class_id' => $allocation['expense_class_id'] ?? null,
-                'expense_type_id' => $allocation['expense_type_id'] ?? null,
-                'expense_item_id' => $allocation['expense_item_id'] ?? null
-            ];
+            $allocationKey = $this->getAllocationKey($allocation);
+            
+            if (isset($existingAllocationMap[$allocationKey])) {
+                // Update existing allocation
+                $existingAllocation = $existingAllocationMap[$allocationKey];
+                $existingAllocation->update([
+                    'amount' => $allocation['amount'],
+                    'transaction_date' => now(),
+                    'status' => 'committed',
+                    'user_id' => $request->user()->id,
+                ]);
+                $appropriations[] = $existingAllocation;
+                
+                // Remove from map to track which ones were updated
+                unset($existingAllocationMap[$allocationKey]);
+            } else {
+                // Create new allocation
+                $appropriationData = [
+                    'barangay_id' => $request->user()->barangay_id,
+                    'budget_id' => $budget->id,
+                    'amount' => $allocation['amount'],
+                    'transaction_date' => now(),
+                    'status' => 'committed',
+                    'user_id' => $request->user()->id,
+                    'expense_class_id' => $allocation['expense_class_id'] ?? null,
+                    'expense_type_id' => $allocation['expense_type_id'] ?? null,
+                    'expense_item_id' => $allocation['expense_item_id'] ?? null
+                ];
 
-            $appropriations[] = TranAppropriation::create($appropriationData);
+                $appropriations[] = TranAppropriation::create($appropriationData);
+            }
 
             AdminAuthController::logUserAction(
                 $request->user(),
@@ -295,6 +349,12 @@ class AppropriationController extends Controller
                 "Set appropriation amount to ₱" . number_format($allocation['amount'], 2) .
                 " for budget: " . $budget->description
             );
+        }
+
+        // Delete only the allocations that are no longer needed
+        // This preserves TranExpenseDetail records for allocations that still exist
+        foreach ($existingAllocationMap as $existingAllocation) {
+            $existingAllocation->delete();
         }
 
         // Update budget's current amount by the net change
@@ -317,6 +377,63 @@ class AppropriationController extends Controller
         ]);
     });
 }
+
+    /**
+     * Helper method to get a human-readable identifier for an expense allocation
+     */
+    private function getExpenseIdentifier($allocation)
+    {
+        if (isset($allocation['expense_item_id'])) {
+            $item = \App\Models\LibExpenseItem::find($allocation['expense_item_id']);
+            if ($item) {
+                $type = \App\Models\LibExpenseType::find($item->expense_type_id);
+                $class = \App\Models\LibExpenseClass::find($item->expense_class_id);
+                return sprintf('%s > %s > %s', 
+                    $class ? $class->name : 'Unknown Class',
+                    $type ? $type->name : 'Unknown Type',
+                    $item->name
+                );
+            }
+        } elseif (isset($allocation['expense_type_id'])) {
+            $type = \App\Models\LibExpenseType::find($allocation['expense_type_id']);
+            if ($type) {
+                $class = \App\Models\LibExpenseClass::find($type->expense_class_id);
+                return sprintf('%s > %s', 
+                    $class ? $class->name : 'Unknown Class',
+                    $type->name
+                );
+            }
+        } elseif (isset($allocation['expense_class_id'])) {
+            $class = \App\Models\LibExpenseClass::find($allocation['expense_class_id']);
+            return $class ? $class->name : 'Unknown Class';
+        }
+        
+        return 'Unknown Expense Account';
+    }
+
+    /**
+     * Helper method to generate a unique key for an allocation
+     */
+    private function getAllocationKey($allocation)
+    {
+        // For arrays (from request)
+        if (is_array($allocation)) {
+            return sprintf(
+                'class_%s_type_%s_item_%s',
+                $allocation['expense_class_id'] ?? 'null',
+                $allocation['expense_type_id'] ?? 'null',
+                $allocation['expense_item_id'] ?? 'null'
+            );
+        }
+        
+        // For models (from database)
+        return sprintf(
+            'class_%s_type_%s_item_%s',
+            $allocation->expense_class_id ?? 'null',
+            $allocation->expense_type_id ?? 'null',
+            $allocation->expense_item_id ?? 'null'
+        );
+    }
 
     // In your AppropriationController.php
     public function getBudgetAllocations($budgetId)
@@ -439,6 +556,37 @@ class AppropriationController extends Controller
 
         $budget = \App\Models\Budget::findOrFail($budgetId);
 
+        // NEW: Validate that new appropriation amounts are not less than what has already been disbursed
+        foreach ($validated['allocations'] as $allocation) {
+            // Find the existing allocation to compare amounts
+            $existingAllocation = TranAppropriation::where('budget_id', $budgetId)
+                ->where('barangay_id', $request->user()->barangay_id)
+                ->where('expense_item_id', $allocation['expense_item_id'])
+                ->first();
+
+            if ($existingAllocation) {
+                // Calculate how much has been disbursed from this appropriation
+                $disbursedAmount = \App\Models\TranExpenseDetail::where('appropriation_id', $existingAllocation->id)
+                    ->sum('amount');
+
+                // Check if the new amount is less than what has been disbursed
+                if ($allocation['amount'] < $disbursedAmount) {
+                    $expenseIdentifier = $this->getExpenseIdentifier($allocation);
+                    
+                    return response()->json([
+                        'status' => false,
+                        'message' => sprintf(
+                            'Cannot reduce appropriation for %s below ₱%s because ₱%s has already been disbursed. New amount must be at least ₱%s.',
+                            $expenseIdentifier,
+                            number_format($allocation['amount'], 2),
+                            number_format($disbursedAmount, 2),
+                            number_format($disbursedAmount, 2)
+                        )
+                    ], 422);
+                }
+            }
+        }
+
         // FIXED: Check against current_amount instead of original_amount
         $totalAllocated = array_sum(array_column($validated['allocations'], 'amount'));
         if ($totalAllocated > $budget->current_amount) {
@@ -454,20 +602,53 @@ class AppropriationController extends Controller
         }
 
         return DB::transaction(function () use ($validated, $budget, $totalAllocated) {
-            // Delete all old item-level appropriations for this budget
-            $budget->tranAppropriations()->whereNotNull('expense_item_id')->delete();
+            // Get existing item-level appropriations for this budget
+            $existingAllocations = $budget->tranAppropriations()
+                ->whereNotNull('expense_item_id')
+                ->get();
 
+            // Create a map of existing allocations for easy lookup
+            $existingAllocationMap = [];
+            foreach ($existingAllocations as $existing) {
+                $key = $this->getAllocationKey($existing);
+                $existingAllocationMap[$key] = $existing;
+            }
+
+            // Process new allocations
             foreach ($validated['allocations'] as $alloc) {
-                $budget->tranAppropriations()->create([
-                    'barangay_id' => $budget->barangay_id,
-                    'amount' => $alloc['amount'],
-                    'expense_class_id' => $alloc['expense_class_id'] ?? null,
-                    'expense_type_id' => $alloc['expense_type_id'] ?? null,
-                    'expense_item_id' => $alloc['expense_item_id'],
-                    'transaction_date' => now(),
-                    'status' => 'committed',
-                    'user_id' => $budget->user_id,
-                ]);
+                $allocationKey = $this->getAllocationKey($alloc);
+                
+                if (isset($existingAllocationMap[$allocationKey])) {
+                    // Update existing allocation
+                    $existingAllocation = $existingAllocationMap[$allocationKey];
+                    $existingAllocation->update([
+                        'amount' => $alloc['amount'],
+                        'transaction_date' => now(),
+                        'status' => 'committed',
+                        'user_id' => $budget->user_id,
+                    ]);
+                    
+                    // Remove from map to track which ones were updated
+                    unset($existingAllocationMap[$allocationKey]);
+                } else {
+                    // Create new allocation
+                    $budget->tranAppropriations()->create([
+                        'barangay_id' => $budget->barangay_id,
+                        'amount' => $alloc['amount'],
+                        'expense_class_id' => $alloc['expense_class_id'] ?? null,
+                        'expense_type_id' => $alloc['expense_type_id'] ?? null,
+                        'expense_item_id' => $alloc['expense_item_id'],
+                        'transaction_date' => now(),
+                        'status' => 'committed',
+                        'user_id' => $budget->user_id,
+                    ]);
+                }
+            }
+
+            // Delete only the allocations that are no longer needed
+            // This preserves TranExpenseDetail records for allocations that still exist
+            foreach ($existingAllocationMap as $existingAllocation) {
+                $existingAllocation->delete();
             }
 
             // Update current_amount by subtracting the total allocated
