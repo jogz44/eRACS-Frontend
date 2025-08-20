@@ -248,20 +248,17 @@
               <strong>Balance:</strong> ₱{{ store.forms.expense.balance.toLocaleString() }}
             </div>
             <q-select
-              outlined
-              dense
-              v-model="store.forms.expense.particulars"
-              :options="filteredParticulars"
-              option-label="label"
-              option-value="value"
-              use-input
-              fill-input
-              input-debounce="0"
-              label="Particulars"
-              class="q-mb-md"
-              @filter="filterFn"
-            />
-
+  outlined
+  dense
+  v-model="store.forms.expense.particulars"
+  :options="filteredParticulars"
+  label="Particulars"
+  use-input
+  fill-input
+  hide-selected
+  new-value-mode="add-unique"
+  @filter="filterFn"
+/>
             <q-input
               outlined
               dense
@@ -361,22 +358,20 @@ import { useBankStore } from 'stores/bankStore'
 
 const store = useDisbursementStore()
 const bankStore = useBankStore()
-const particulars = ref([])
-const filteredParticulars = ref(particulars.value)
 
+const filteredParticulars = ref(store.particulars)
 function filterFn (val, update) {
-  particulars.value=store.particulars
   if (val === '') {
     update(() => {
-      filteredParticulars.value = particulars.value
+      filteredParticulars.value = store.particulars
     })
     return
   }
 
   update(() => {
     const needle = val.toLowerCase()
-    filteredParticulars.value = particulars.value.filter(
-      option => option.label.toLowerCase().includes(needle)
+    filteredParticulars.value = store.particulars.filter(
+      opt => opt.label.toLowerCase().includes(needle)
     )
   })
 }
