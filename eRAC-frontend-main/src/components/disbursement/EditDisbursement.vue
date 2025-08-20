@@ -369,16 +369,6 @@ const handleSaveExpense = async () => {
   }
 }
 
-// Watch for changes in the expense dialog to refresh data when needed
-watch(
-  () => store.dialogs.expense,
-  async (isOpen) => {
-    if (isOpen) {
-      // Refresh expense accounts when dialog opens to ensure latest data
-      store.refreshExpenseAccountsInBackground()
-    }
-  }
-)
 
 // Watch for changes in the expense detail dialog
 watch(

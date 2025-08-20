@@ -658,7 +658,9 @@ const saveEditedAllocation = async () => {
       throw new Error(`Total allocation (₱${totalAllocated.toFixed(2)}) exceeds available budget (₱${availableBudget.toFixed(2)})`)
     }
 
-    await api.post(`/api/barangay/budgets/${appropriationStore.selectedRow.id}/allocate`, { allocations })
+    // Use the appropriation store's commitAllocation method instead of calling API directly
+    await appropriationStore.commitAllocation(appropriationStore.selectedRow.id, allocations)
+    
     $q.notify({
       type: 'positive',
       message: 'Allocations updated',

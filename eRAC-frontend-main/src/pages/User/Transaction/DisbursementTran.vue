@@ -433,7 +433,7 @@ const loadAllData = async () => {
 }
 
 // Set up periodic refresh for expense accounts
-let expenseRefreshInterval = null
+// Removed to reduce excessive API calls
 
 onMounted(async () => {
   await loadAllData()
@@ -441,13 +441,8 @@ onMounted(async () => {
   // Refresh expense accounts with updated balances
   store.refreshExpenseAccountsWithBalances()
 
-  // Set up periodic refresh for expense accounts (every 2 minutes)
-  expenseRefreshInterval = setInterval(() => {
-    // Only refresh if expense dialog is open or if we have expense data
-    if (store.dialogs.expense || store.expenseData.length > 0) {
-      store.refreshExpenseAccountsInBackground()
-    }
-  }, 120000) // 2 minutes
+  // Remove the periodic refresh to reduce excessive API calls
+  // The data will be refreshed when needed (after disbursements are saved/edited)
 })
 
 // Refresh data when component is activated (when navigating back to this page)
@@ -457,10 +452,7 @@ onActivated(async () => {
 
 // Clean up interval when component is unmounted
 onUnmounted(() => {
-  if (expenseRefreshInterval) {
-    clearInterval(expenseRefreshInterval)
-    expenseRefreshInterval = null
-  }
+  // No longer needed since we removed the periodic refresh
 })
 
 
@@ -468,8 +460,7 @@ onUnmounted(() => {
 watch(
   () => store.dialogs.expense,
   async (isOpen) => {
-    if (isOpen) {
-      // Refresh expense accounts when dialog opens to ensure latest data
+    if (isOpen && store.expenseData.length === 0) {
       store.refreshExpenseAccountsInBackground()
     }
   }

@@ -390,11 +390,16 @@ export const useDisbursementStore = defineStore('disbursement', {
         })
         
         if (response.data.status) {
-          this.expenseDetailsData = response.data.data || []
+          const newExpenseDetails = response.data.data || []
+          
+          // Only update if we actually got data
+          if (newExpenseDetails.length > 0) {
+            this.expenseDetailsData = newExpenseDetails
+          } 
         }
       } catch (error) {
         console.error('Failed to fetch expense details:', error)
-        this.expenseDetailsData = []
+        // Don't clear existing data on error
       }
     },
 
@@ -434,6 +439,15 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
+    // Force refresh expense details when appropriations are updated
+    async forceRefreshExpenseDetails() {
+      try {
+        await this.fetchExpenseDetails()
+      } catch (error) {
+        console.error('Failed to force refresh expense details:', error)
+      }
+    },
+
     // Background refresh method for expense accounts
     async refreshExpenseAccountsInBackground() {
       try {
@@ -441,6 +455,12 @@ export const useDisbursementStore = defineStore('disbursement', {
         const appropriationStore = useAppropriationStore()
         await appropriationStore.fetchExpenseHierarchy()
         this.expenseData = appropriationStore.allocations || []
+        
+        // Only refresh expense details if we don't have any
+        // This prevents excessive API calls
+        if (!this.expenseDetailsData || this.expenseDetailsData.length === 0) {
+          await this.fetchExpenseDetails()
+        }
 
         // Fetch expense types from accounts library store (non-blocking)
         this.fetchExpenseTypesFromAccountsLib().catch(error => {
@@ -1163,39 +1183,26 @@ export const useDisbursementStore = defineStore('disbursement', {
       try {
         let accountName = '';
         
-        console.log('Getting expense account name for:', {
-          expenseClassId,
-          expenseTypeId,
-          expenseItemId,
-          expenseDataLength: this.expenseData.length
-        });
-        
         // Find expense class - convert IDs to strings for comparison
         const expenseClass = this.expenseData.find(ec => String(ec.id) === String(expenseClassId));
         if (expenseClass) {
           accountName = expenseClass.name;
-          console.log('Found expense class:', expenseClass.name);
           
           // Find expense type
           if (expenseTypeId && expenseClass.children) {
             const expenseType = expenseClass.children.find(et => String(et.id) === String(expenseTypeId));
             if (expenseType) {
               accountName += ` > ${expenseType.name}`;
-              console.log('Found expense type:', expenseType.name);
               
               // Find expense item
               if (expenseItemId && expenseType.children) {
                 const expenseItem = expenseType.children.find(ei => String(ei.id) === String(expenseItemId));
                 if (expenseItem) {
                   accountName += ` > ${expenseItem.name}`;
-                  console.log('Found expense item:', expenseItem.name);
                 }
               }
             }
           }
-        } else {
-          console.log('Expense class not found for ID:', expenseClassId);
-          console.log('Available expense classes:', this.expenseData.map(ec => ({ id: ec.id, name: ec.name })));
         }
         
         return accountName || 'Unknown Account';
@@ -1259,16 +1266,8 @@ export const useDisbursementStore = defineStore('disbursement', {
         this.expenses = [...this.expenses]
       }
       
-      // Immediately refresh expense account balances to show updated amounts
+      // Refresh expense account balances to show updated amounts
       this.refreshExpenseAccountsWithBalances()
-      
-      // Force a refresh of the expense accounts to update the selection table
-      this.expenseData = [] // Clear to force refresh
-      this.fetchExpenseAccounts().then(() => {
-        // Expense accounts refreshed successfully
-      }).catch(error => {
-        console.warn('Failed to refresh expense accounts:', error)
-      })
       
       this.closeDialog('expenseDetail')
       this.resetForm('expense')
@@ -1281,16 +1280,8 @@ export const useDisbursementStore = defineStore('disbursement', {
         this.expenses[index] = row
         this.forms.disbursement.amount = this.totalExpensesAmount
         
-        // Immediately refresh expense account balances to show updated amounts
+        // Refresh expense account balances to show updated amounts
         this.refreshExpenseAccountsWithBalances()
-        
-        // Force a refresh of the expense accounts to update the selection table
-        this.expenseData = [] // Clear to force refresh
-        this.fetchExpenseAccounts().then(() => {
-          // Expense accounts refreshed successfully
-        }).catch(error => {
-          console.warn('Failed to refresh expense accounts:', error)
-        })
       }
     },
 
@@ -1302,17 +1293,8 @@ export const useDisbursementStore = defineStore('disbursement', {
         this.expenses = this.expenses.filter((e) => e.id !== id)
         this.forms.disbursement.amount = this.totalExpensesAmount
         
-        // Immediately refresh expense account balances to show updated amounts
+        // Refresh expense account balances to show updated amounts
         this.refreshExpenseAccountsWithBalances()
-        
-        // Force a refresh of the expense accounts to update the selection table
-        this.expenseData = [] // Clear to force refresh
-        this.fetchExpenseAccounts().then(() => {
-          // Expense accounts refreshed successfully
-        }).catch(error => {
-          console.warn('Failed to refresh expense accounts:', error)
-        })
-        
       }
     },
 
@@ -1376,15 +1358,12 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     async openEditDisbursement(row) {
-      console.log('Opening edit disbursement for row:', row);
-      
       // Set loading state for this specific disbursement
       this.loadingEditDisbursement = row.id;
       
       // Set a timeout to clear loading state if something goes wrong
       const loadingTimeout = setTimeout(() => {
         if (this.loadingEditDisbursement === row.id) {
-          console.warn('Loading timeout reached, clearing loading state');
           this.loadingEditDisbursement = null;
         }
       }, 30000); // 30 second timeout
@@ -1397,18 +1376,14 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // First fetch expense accounts to ensure we have the data for account names
         await this.fetchExpenseAccounts();
-        console.log('Expense accounts loaded, count:', this.expenseData.length);
         
         // Then fetch the disbursement with its expenses
         await this.fetchDisbursementById(row.id);
-        console.log('Disbursement loaded, expenses count:', this.expenses.length);
         
         // Now update the account names for existing expenses using the loaded expense data
         if (this.expenses.length > 0) {
-          console.log('Updating account names for expenses...');
           this.expenses = this.expenses.map(expense => {
             const accountName = this.getExpenseAccountName(expense.expense_class_id, expense.expense_type_id, expense.expense_item_id);
-            console.log('Expense:', expense.id, 'Account name:', accountName);
             return {
               ...expense,
               accountName: accountName
@@ -1418,9 +1393,6 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Refresh balances to reflect current editing context (exclude current disbursement's DB expenses)
         this.refreshExpenseAccountsWithBalances()
-        // Force re-fetch of accounts to propagate recalculated balances into the selection table
-        this.expenseData = []
-        await this.fetchExpenseAccounts()
 
       } catch (error) {
         console.error('Error in openEditDisbursement:', error);
@@ -1615,9 +1587,6 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Refresh the disbursements list
         await this.fetchDisbursements()
 
-        // Return remaining amount to expense accounts
-        await this.returnRemainingAmountToExpenses(this.currentLiquidation.id, totalActualExpense)
-
         // Close the dialog after saving
         this.closeDialog('orDetails')
 
@@ -1679,9 +1648,6 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Refresh the disbursements list
         await this.fetchDisbursements()
-
-        // Return remaining amount to expense accounts
-        await this.returnRemainingAmountToExpenses(this.currentLiquidation.id, totalActualExpense)
 
         // Close the dialog after saving
         this.closeDialog('orDetails')
@@ -1802,84 +1768,6 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
-    // Get the total returned amount for a specific expense account
-    getReturnedAmount(expenseId, expenseLevel) {
-      try {
-        let totalReturned = 0
-        
-        // Check all disbursement expenses for this account
-        this.disbursementExpenses.forEach(disbursementExpense => {
-          disbursementExpense.expenses.forEach(expense => {
-            if (expenseLevel === 'item' && expense.expense_item_id === expenseId) {
-              totalReturned += parseFloat(expense.returnedAmount) || 0
-            } else if (expenseLevel === 'type' && expense.expense_type_id === expenseId) {
-              totalReturned += parseFloat(expense.returnedAmount) || 0
-            }
-          })
-        })
-        
-        return totalReturned
-      } catch (error) {
-        console.error('Error calculating returned amount:', error)
-        return 0
-      }
-    },
-
-    // Return remaining amount to expense accounts after liquidation
-    async returnRemainingAmountToExpenses(disbursementId, liquidatedAmount) {
-      try {
-        // Find the disbursement to get the original DV amount
-        const disbursement = this.disbursements.find(d => d.id === disbursementId)
-        if (!disbursement) {
-          console.warn('Disbursement not found for returning remaining amount')
-          return
-        }
-
-        const dvAmount = parseFloat(disbursement.dvAmount) || 0
-        const returnAmount = dvAmount - liquidatedAmount
-
-        if (returnAmount <= 0) {
-          return
-        }
-
-        // Find the disbursement expenses for this disbursement
-        const disbursementExpense = this.disbursementExpenses.find(de => de.disbursementId === disbursementId)
-        if (!disbursementExpense || !disbursementExpense.expenses || disbursementExpense.expenses.length === 0) {
-          console.warn('No expenses found for disbursement')
-          return
-        }
-
-        // Calculate total original expense amount for this disbursement
-        const totalOriginalExpense = disbursementExpense.expenses.reduce(
-          (sum, expense) => sum + (parseFloat(expense.amount) || 0), 0
-        )
-
-        if (totalOriginalExpense <= 0) {
-          console.warn('Invalid total original expense amount')
-          return
-        }
-
-        // Distribute return amount proportionally to each expense account
-        disbursementExpense.expenses.forEach(expense => {
-          const originalAmount = parseFloat(expense.amount) || 0
-          const proportion = originalAmount / totalOriginalExpense
-          const returnAmountForExpense = returnAmount * proportion
-          
-          // Add a returnedAmount field to track how much was returned
-          expense.returnedAmount = (expense.returnedAmount || 0) + returnAmountForExpense
-        })
-
-        // Save updated disbursement expenses to storage
-        this.saveDisbursementExpensesToStorage()
-
-        // Refresh expense accounts with updated balances
-        this.refreshExpenseAccountsWithBalances()
-
-      } catch (error) {
-        console.error('Error returning remaining amount to expense accounts:', error)
-      }
-    },
-
     async deleteDisbursement(id) {
       try {
         const authStore = useAuthStore();
@@ -1893,29 +1781,17 @@ export const useDisbursementStore = defineStore('disbursement', {
         });
 
         if (response.data.status) {
-          // Return any remaining amounts to expense accounts before deleting
-          const disbursementExpense = this.disbursementExpenses.find(de => de.disbursementId === id)
-          if (disbursementExpense) {
-            const totalDisbursed = disbursementExpense.expenses.reduce(
-              (sum, expense) => sum + (parseFloat(expense.amount) || 0), 0
-            )
-            await this.returnRemainingAmountToExpenses(id, totalDisbursed)
-          }
-
           // Remove the disbursement from the local array
           this.disbursements = this.disbursements.filter(d => d.id !== id);
 
-          // Remove the corresponding expenses from disbursementExpenses
-          this.disbursementExpenses = this.disbursementExpenses.filter(de => de.disbursementId !== id);
-
-          // Save to localStorage
-          this.saveDisbursementExpensesToStorage()
+          // Refresh expense details for balance calculations
+          await this.fetchExpenseDetails();
 
           // Refresh expense accounts with updated balances
-          this.refreshExpenseAccountsWithBalances()
+          this.refreshExpenseAccountsWithBalances();
 
           // Refresh expense accounts in background to ensure latest data
-          this.refreshExpenseAccountsInBackground()
+          this.refreshExpenseAccountsInBackground();
 
           return { success: true, message: response.data.message };
         } else {
