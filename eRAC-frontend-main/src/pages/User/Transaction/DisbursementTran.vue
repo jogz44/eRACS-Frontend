@@ -143,6 +143,7 @@
                       icon="delete"
                       color="red"
                       @click="handleDeleteExpense(props.row)"
+                      v-permission="'delete'"
                     />
                   </div>
                 </q-td>
@@ -317,6 +318,7 @@
                   :color="canDelete(props.row) ? 'red' : 'grey'"
                   :disable="!canDelete(props.row)"
                   @click.stop="() => canDelete(props.row) && handleDeleteDisbursement(props.row)"
+                  v-permission="'delete'"
                 />
               </div>
             </q-td>
