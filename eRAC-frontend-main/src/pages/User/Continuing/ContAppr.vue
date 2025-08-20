@@ -69,8 +69,9 @@
             <q-select
               outlined
               dense
-              v-model="selectedYear"
-              :options="contApprStore.yearOptions"
+              v-model="contApprStore.selectedYear"
+              :options="contApprStore.years"
+              option-label="label"
               label="Select Year"
               style="min-width: 150px"
               :loading="generalLoading"
@@ -289,16 +290,7 @@ const dateTo = ref('')
 const returnAmount = ref(0)
 const augmentationAmount = ref(0)
 
-const selectedYearDisplay = ref(null)
 const generalLoading = ref(true)
-const selectedYear = computed({
-  get: () => contApprStore.selectedYear,
-  set: (value) => {
-    contApprStore.selectedYear = value
-    selectedYearDisplay.value =
-      contApprStore.yearOptions.find((y) => y.value === value)?.yearValue || null
-  },
-})
 
 
 const continueColumns = [
@@ -565,11 +557,6 @@ const saveAllocation = () => {
 onMounted(async () => {
   try {
     await contApprStore.fetchYears()
-    if (contApprStore.selectedYear) {
-      selectedYearDisplay.value =
-        contApprStore.yearOptions.find((y) => y.value === contApprStore.selectedYear)?.yearValue ||
-        null
-    }
   } catch (error) {
     $q.notify({
       type: 'negative',

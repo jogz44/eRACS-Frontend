@@ -9,36 +9,47 @@ export const useContApprStore = defineStore('continuing-appropriation',{
         selectedYear: null,
     }),
     getters: {
-        yearOptions: (state) => {
-            return state.years.map((y) => ({
-                label: y.year.toString(), // Display value (e.g., "2024")
-                value: y.id, // Actual fiscal year ID
-                yearValue: y.year.toString(), // For display purposes database ID // For display purposes
-            }))
-        },
     },
     actions: {
         
         getAuthConfig() {
-        const authStore = useAuthStore()
-        if (!authStore.token) {
-            throw new Error('Authentication token not found')
-        }
-        return {
-            headers: {
-            Authorization: `Bearer ${authStore.token}`,
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            },
-        }
+            const authStore = useAuthStore()
+            if (!authStore.token) {
+                throw new Error('Authentication token not found')
+            }
+            return {
+                headers: {
+                Authorization: `Bearer ${authStore.token}`,
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                },
+            }
         },
         async fetchYears() {
             const config = this.getAuthConfig()
             try {
                 const response = await api.get('/api/barangay/fiscal-years', config)
 
-                this.years = response.data.data || []
-                //const currentYear = new Date().getFullYear()
+                const currentYear = new Date().getFullYear()
+
+                const rawYears = response.data.data || []
+
+                // remove current year (compare by year string/number)
+                const filteredYears = rawYears.filter(y => Number(y.year) !== currentYear)
+                    this.years = filteredYears.map(y => ({
+                    label: y.year,   
+                    value: y.id     
+                }))
+
+                if (filteredYears.length > 0) {
+                const latest = filteredYears.reduce((max, y) =>
+                    Number(y.year) > Number(max.year) ? y : max
+                )
+                this.selectedYear = latest.id
+                } else {
+                this.selectedYear = null
+                }
+
 
             } catch (error) {
                 this.error = error.response?.data?.message || error.message
@@ -46,6 +57,8 @@ export const useContApprStore = defineStore('continuing-appropriation',{
             } finally {
                 this.loading = false
             }
-        },
+        }
+
     }
+
 })
