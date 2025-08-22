@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('cont_appropriations', function (Blueprint $table) {
             $table->id();
+            $table->string('description');
             $table->timestamps();
         });
     }
