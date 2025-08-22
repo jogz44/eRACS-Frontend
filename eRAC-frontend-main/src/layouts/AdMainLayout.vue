@@ -122,10 +122,7 @@
               <q-icon name="credit_card" size="16px" />
               <span>Disbursement</span>
             </div>
-            <div class="transaction-item" @click="navigateTo('/admin/contAugmentation')">
-              <q-icon name="trending_up" size="16px" />
-              <span>Augmentation</span>
-            </div>
+
           </div>
         </div>
 
