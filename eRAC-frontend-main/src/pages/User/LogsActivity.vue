@@ -206,11 +206,9 @@ export default {
 
 .no-data-message {
   min-height: 200px;
-}.card-table{
+}
 
-
-
-}.activity-table{
+.activity-table{
   max-height: 400px;
 }
 </style>
