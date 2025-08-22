@@ -161,10 +161,7 @@
             <div class="colored-dot dot-purple"></div>
             <span>Disbursement</span>
           </div>
-          <div class="panel-item" @click="navigateTo('/home/continuing/augmentation')">
-            <div class="colored-dot dot-green"></div>
-            <span>Augmentation</span>
-          </div>
+
         </div>
       </div>
     </div>

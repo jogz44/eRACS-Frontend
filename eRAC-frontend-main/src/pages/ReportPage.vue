@@ -456,56 +456,109 @@
                   Barangay {{ authStore.user?.barangay_name }}
                 </div>
                 <div class="text-subtitle1 text-center q-mb-lg" style="color: #666;">
-                  Date: {{ dateRangeDisplay }}
+                  Date: {{ dateRangeDisplay || 'No date range selected' }}
                 </div>
                 <div class="text-subtitle1 text-center q-mb-lg" style="color: #666;">
-                  Expense Class: {{ reportStore.expenseRacSelected?.name }}
+                  Expense Class: {{ reportStore.expenseRacSelected?.name || 'Not Selected' }}
                 </div>
               </q-card-section>
 
               <q-card-section>
-                <!-- RAC Table with improved styling -->
+                <!-- Updated RAC Table to match preview table layout -->
+                <div class="preview-table-container">
+                  <!-- Header matching preview table style -->
 
-                <q-table :rows="reportStore.reportRAC" :columns="reportStore.racColumn" row-key="dvNumber" flat bordered
-                  dense separator="cell" class="rac-table q-mt-md" hide-pagination :pagination="{ rowsPerPage: 0 }">
 
-                  <!-- Custom two-row header -->
-                  <template v-slot:header>
-                    <q-tr>
-                      <q-th rowspan="2" style="width:25%;">Account Title</q-th>
-                      <q-th rowspan="2" style="width:12%;" class="text-right">Appropriation</q-th>
-                      <q-th colspan="5" class="text-center" style="width:55%;">Obligation</q-th>
-                    </q-tr>
-                    <q-tr>
-                      <q-th style="width:15%;">Particular</q-th>
-                      <q-th style="width:15%;">DV#</q-th>
-                      <q-th style="width:10%;">Date</q-th>
-                      <q-th style="width:15%;">Payee</q-th>
-                      <q-th style="width:15%;" class="text-right">Amount</q-th>
-                    </q-tr>
-                  </template>
+                  <!-- Table with preview layout structure -->
+                  <table v-if="reportStore.reportRAC && reportStore.reportRAC.length > 0"
+                         class="preview-table"
+                         :data-columns="dynamicColumnsCount">
+                    <thead>
+                      <!-- First header row with expense class and obligation -->
+                      <tr class="header-row-main " >
+                        <th colspan="5" class="col-expense-class">
+                        OBLIGATION
+                        </th>
+                        <th v-if="hasDynamicColumns"
+                            :colspan="1 + dynamicColumnsCount"
+                            class="col-obligation-header">
+                        ACCOUNT TITLE
+                        </th>
+                        <th v-else
+                            :colspan="1"
+                            class="col-obligation-header">
+                          ACCOUNT TITLE
+                        </th>
+                      </tr>
+                      <!-- Second header row with individual column names -->
+                      <tr class="header-row">
+                        <th class="col-date">Date</th>
+                        <th class="col-particulars">Particulars</th>
+                        <th class="col-dv">DV#</th>
+                        <th class="col-payee">Payee</th>
+                        <th class="col-appropriation">Appropriation</th>
+                        <!-- Dynamic Account Title Columns -->
+                        <th v-for="accountTitle in reportStore.dynamicAccountColumns"
+                            :key="accountTitle"
+                            class="col-account-title">
+                          {{ accountTitle }}
+                        </th>
+                        <!-- Fallback when no dynamic columns -->
+                        <th v-if="!hasDynamicColumns" class="col-account-title">
+                          No Account Titles Found
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(row, index) in reportStore.reportRAC" :key="index" class="data-row">
+                        <td class="col-date">{{ row.date || '' }}</td>
+                        <td class="col-particulars">{{ row.particular || '' }}</td>
+                        <td class="col-dv">{{ row.dvNumber || '' }}</td>
+                        <td class="col-payee">{{ row.payee || '' }}</td>
+                        <td class="col-appropriation text-right">{{ (row.appropriation || 0).toLocaleString() }}</td>
+                        <!-- Dynamic Account Title Cells -->
+                        <td v-for="accountTitle in reportStore.dynamicAccountColumns"
+                            :key="accountTitle"
+                            class="col-account-title text-right">
+                          {{ row[`amount_${accountTitle.replace(/\s+/g, '_').toLowerCase()}`] ?
+                             row[`amount_${accountTitle.replace(/\s+/g, '_').toLowerCase()}`].toLocaleString() : '' }}
+                        </td>
+                        <!-- Fallback when no dynamic columns -->
+                        <td v-if="!hasDynamicColumns" class="col-account-title text-right">
+                          -
+                        </td>
+                      </tr>
+                      <!-- Total row -->
+                      <tr class="total-row">
+                        <td class="col-date"></td>
+                        <td class="col-particulars font-weight-bold">Total Appropriation</td>
+                        <td class="col-dv"></td>
+                        <td class="col-payee"></td>
+                        <td class="col-appropriation text-right font-weight-bold">
+                          {{ reportStore.reportRAC.reduce((sum, r) => sum + (r.appropriation || 0), 0).toLocaleString() }}
+                        </td>
+                        <!-- Dynamic Account Title Total Cells -->
+                        <td v-for="accountTitle in reportStore.dynamicAccountColumns"
+                            :key="accountTitle"
+                            class="col-account-title text-right font-weight-bold">
+                          {{ reportStore.reportRAC.reduce((sum, r) =>
+                             sum + (r[`amount_${accountTitle.replace(/\s+/g, '_').toLowerCase()}`] || 0), 0).toLocaleString() }}
+                        </td>
+                        <!-- Fallback when no dynamic columns -->
+                        <td v-if="!hasDynamicColumns" class="col-account-title text-right font-weight-bold">
+                          -
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
 
-                  <!-- Wrap text in all body cells -->
-                  <template v-slot:body-cell="props">
-                    <q-td :props="props" style="white-space: normal; word-break: break-word;">
-                      {{ props.value }}
-                    </q-td>
-                  </template>
-
-                  <!-- Bottom total row -->
-                  <template v-slot:bottom-row>
-                    <q-tr>
-                      <q-td colspan="1" class="text-right text-bold">Total Appropriation</q-td>
-                      <q-td class="text-right text-bold">
-                        {{reportStore.reportRAC.reduce((sum, r) => sum + r.appropriation, 0).toLocaleString()}}
-                      </q-td>
-                      <q-td colspan="4" class="text-right text-bold">Total Obligation</q-td>
-                      <q-td class="text-right text-bold">
-                        {{reportStore.reportRAC.reduce((sum, r) => sum + r.amount, 0).toLocaleString()}}
-                      </q-td>
-                    </q-tr>
-                  </template>
-                </q-table>
+                  <!-- No data message -->
+                  <div v-else class="q-pa-lg text-center text-grey-6">
+                    <q-icon name="info" size="48px" class="q-mb-md" />
+                    <div class="text-h6">No RAC data available</div>
+                    <div class="text-body2">Please select a date range and expense category to generate the report.</div>
+                  </div>
+                </div>
 
                 <!-- Report Summary Section -->
                 <div class="report-summary q-mt-xl">
@@ -521,21 +574,29 @@
                             <div class="stat-item">
                               <span class="stat-label">Total Appropriation:</span>
                               <span class="stat-value">₱{{reportStore.reportRAC.reduce((sum, r) => sum +
-                                r.appropriation,
+                                (r.appropriation || 0),
                                 0).toLocaleString()}}</span>
                             </div>
                             <div class="stat-item">
                               <span class="stat-label">Total Obligation:</span>
-                              <span class="stat-value">₱{{reportStore.reportRAC.reduce((sum, r) => sum + r.amount,
+                              <span class="stat-value">₱{{reportStore.reportRAC.reduce((sum, r) => sum + (r.amount || 0),
                                 0).toLocaleString()}}</span>
                             </div>
                             <div class="stat-item">
                               <span class="stat-label">Remaining Balance:</span>
                               <span class="stat-value">₱{{(reportStore.reportRAC.reduce((sum, r) => sum +
-                                r.appropriation,
-                                0) - reportStore.reportRAC.reduce((sum, r) => sum + r.amount,
+                                (r.appropriation || 0),
+                                0) - reportStore.reportRAC.reduce((sum, r) => sum + (r.amount || 0),
                                   0)).toLocaleString()}}</span>
                             </div>
+                            <!-- Dynamic Account Title Totals -->
+                            <!-- <div v-for="accountTitle in reportStore.dynamicAccountColumns"
+                                 :key="accountTitle"
+                                 class="stat-item">
+                              <span class="stat-label">Total {{ accountTitle }}:</span>
+                              <span class="stat-value">₱{{reportStore.reportRAC.reduce((sum, r) =>
+                                 sum + (r[`amount_${accountTitle.replace(/\s+/g, '_').toLowerCase()}`] || 0), 0).toLocaleString()}}</span>
+                            </div> -->
                           </div>
                         </q-card-section>
                       </q-card>
@@ -554,7 +615,7 @@
                             </div>
                             <div class="stat-item">
                               <span class="stat-label">Total Records:</span>
-                              <span class="stat-value">{{ reportStore.reportRAC.length }}</span>
+                              <span class="stat-value">{{ reportStore.reportRAC ? reportStore.reportRAC.length : 0 }}</span>
                             </div>
                             <div class="stat-item">
                               <span class="stat-label">Generated Date:</span>
@@ -641,7 +702,19 @@ const totalBalance = computed(() => {
     .filter(row => !row.isSection)
     .reduce((sum, row) => sum + parseFloat(row.balance.replace(/,/g, '')), 0)
     .toLocaleString('en-US', { minimumFractionDigits: 2 });
-});
+})
+
+// Computed property for dynamic columns count
+const dynamicColumnsCount = computed(() => {
+  console.log('Dynamic columns:', reportStore.dynamicAccountColumns)
+  console.log('Report RAC:', reportStore.reportRAC)
+  return reportStore.dynamicAccountColumns.length
+})
+
+// Check if there are dynamic columns
+const hasDynamicColumns = computed(() => {
+  return reportStore.dynamicAccountColumns.length > 0
+})
 
 
 // stores & composables
@@ -930,11 +1003,12 @@ async function exportToPDF() {
     })
 
     const imgData = canvas.toDataURL('image/png')
-    const pdf = new jsPDF('p', 'mm', 'a4')
+    // Create PDF in landscape orientation with A4 dimensions
+    const pdf = new jsPDF('l', 'mm', 'a4') // 'l' for landscape
 
 
-    const pageWidth = pdf.internal.pageSize.getWidth()
-    const pageHeight = pdf.internal.pageSize.getHeight()
+    const pageWidth = pdf.internal.pageSize.getWidth() // 297mm (A4 landscape width)
+    const pageHeight = pdf.internal.pageSize.getHeight() // 210mm (A4 landscape height)
     const imgWidth = pageWidth
     const imgHeight = (canvas.height * imgWidth) / canvas.width
 
@@ -993,10 +1067,11 @@ async function exportSACBToPDF() {
     })
 
     const imgData = canvas.toDataURL('image/png')
-    const pdf = new jsPDF('p', 'mm', 'a4')
+    // Create PDF in landscape orientation with A4 dimensions
+    const pdf = new jsPDF('l', 'mm', 'a4') // 'l' for landscape
 
-    const pageWidth = pdf.internal.pageSize.getWidth()
-    const pageHeight = pdf.internal.pageSize.getHeight()
+    const pageWidth = pdf.internal.pageSize.getWidth() // 297mm (A4 landscape width)
+    const pageHeight = pdf.internal.pageSize.getHeight() // 210mm (A4 landscape height)
     const imgWidth = pageWidth
     const imgHeight = (canvas.height * imgWidth) / canvas.width
 
@@ -1140,10 +1215,9 @@ onActivated(async () => {
 }
 
 .print-modal {
-  /* A4 aspect ratio (width:height = 1:1.414) */
-  width: min(100%, 310mm);
-  min-height: 297mm;
-  /* Minimum height is A4 */
+  /* A4 Landscape aspect ratio (width:height = 1.414:1) */
+  width: min(100%, 420mm); /* A4 landscape width */
+  min-height: 297mm; /* A4 landscape height */
   max-width: 100%;
   overflow-y: auto;
   display: block;
@@ -1403,9 +1477,9 @@ onActivated(async () => {
 }
 
 /* Print Content Wrapper - Natural Scrolling */
+/* Configured for A4 Landscape layout (297mm x 210mm) */
 .print-content-wrapper {
-  max-width: 210mm;
-  /* A4 width */
+  max-width: 297mm; /* A4 landscape height (now width) */
   margin: 0 auto;
   padding: 20px;
 }
@@ -1662,6 +1736,9 @@ onActivated(async () => {
   .print-content-wrapper .print-modal {
     padding: 16px;
     min-height: auto;
+    /* Adjust for mobile landscape */
+    width: 100% !important;
+    transform: scale(1) !important;
   }
 
   .sacb-header .q-toolbar {
@@ -1713,6 +1790,190 @@ onActivated(async () => {
   .sacb-header .q-toolbar-title,
   .rac-header .q-toolbar-title {
     font-size: 0.9rem;
+  }
+}
+
+/* Added preview table styles to match the reference design */
+.preview-table-container {
+  width: 100%;
+  margin: 20px 0;
+  border: 2px solid #dee2e6;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.preview-header {
+  text-align: center;
+  font-weight: bold;
+  font-size: 14px;
+  padding: 12px;
+  background: linear-gradient(135deg, #187C19 0%, #0E780E 100%);
+  color: white;
+  border-bottom: 2px solid #dee2e6;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.preview-table th,
+.preview-table td {
+  border: 1px solid #dee2e6;
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+/* Main header row styling */
+.preview-table .header-row-main th {
+  background: linear-gradient(135deg, #187C19 0%, #0E780E 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 20px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+/* Expense class header styling */
+.preview-table .col-expense-class {
+  background: linear-gradient(135deg, #187C19 0%, #0E780E 100%) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  text-align: center !important;
+}
+
+/* Obligation header styling */
+.preview-table .col-obligation-header {
+  background: linear-gradient(135deg, #187C19 0%, #0E780E 100%) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  text-align: center !important;
+}
+
+/* Regular header row styling */
+.preview-table .header-row th {
+  background: linear-gradient(135deg, #69B31E 0%, #187C19 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.preview-table .text-right {
+  text-align: right;
+}
+
+.preview-table .font-weight-bold {
+  font-weight: bold;
+}
+
+.preview-table tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.preview-table tr:hover {
+  background-color: #E0FFE7;
+}
+
+.preview-table .data-row:nth-child(even) {
+  background: #f8f9fa;
+}
+
+.preview-table .total-row {
+  background: #e9ecef;
+  font-weight: bold;
+}
+
+/* Column widths to match preview */
+.col-date { width: 8%; }
+.col-particulars { width: 20%; }
+.col-dv { width: 15%; }
+.col-payee { width: 15%; }
+.col-appropriation { width: 12%; }
+.col-account-title {
+  width: calc((100% - 70%) / max(1, var(--dynamic-columns, 1)));
+  min-width: 80px;
+  text-align: center;
+}
+
+/* Set CSS custom property for dynamic columns */
+.preview-table {
+  --dynamic-columns: 1;
+}
+
+.preview-table[data-columns="0"] { --dynamic-columns: 1; }
+.preview-table[data-columns="1"] { --dynamic-columns: 1; }
+.preview-table[data-columns="2"] { --dynamic-columns: 2; }
+.preview-table[data-columns="3"] { --dynamic-columns: 3; }
+.preview-table[data-columns="4"] { --dynamic-columns: 4; }
+.preview-table[data-columns="5"] { --dynamic-columns: 5; }
+
+/* Print styles */
+@media print {
+  .preview-table-container {
+    page-break-inside: avoid;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+  }
+
+  .preview-table {
+    font-size: 10px;
+  }
+
+  .preview-table th,
+  .preview-table td {
+    padding: 4px 6px;
+    border: 1px solid #dee2e6;
+  }
+
+  .preview-header {
+    background: linear-gradient(135deg, #187C19 0%, #0E780E 100%) !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    color-adjust: exact;
+  }
+
+  /* Main header row print styling */
+  .preview-table .header-row-main th {
+    background: linear-gradient(135deg, #187C19 0%, #0E780E 100%) !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    color-adjust: exact;
+    font-size: 20px;
+  }
+
+  /* Regular header row print styling */
+  .preview-table .header-row th {
+    background: linear-gradient(135deg, #69B31E 0%, #187C19 100%) !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    color-adjust: exact;
+  }
+
+  /* Landscape print optimization */
+  .print-modal {
+    transform: none !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    width: 100% !important;
+    min-height: auto !important;
+  }
+
+  .print-content-wrapper {
+    max-width: none !important;
+    padding: 10px !important;
   }
 }
 </style>

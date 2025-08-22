@@ -20,6 +20,8 @@ export const useReportStore = defineStore('report', {
     positionsOptions: [],
     positionSelected: null,
 
+    // Dynamic columns for RAC report
+    dynamicAccountColumns: [],
     racColumn: [
       { name: 'accountTitle', field: 'accountTitle', align: 'left' },
       {
@@ -103,15 +105,35 @@ export const useReportStore = defineStore('report', {
           config,
         )
 
-        this.reportRAC = response?.data?.data?.rows.map((pos) => ({
-          accountTitle: pos.accountTitle,
-          appropriation: pos.appropriation,
-          particular: pos.particular,
-          dvNumber: pos.dvNumber,
-          date: pos.date,
-          payee: pos.payee,
-          amount: pos.amount,
-        }))
+        const rawData = response?.data?.data?.rows || []
+        
+        // Extract unique account titles for dynamic columns
+        const accountTitles = [...new Set(rawData.map(item => item.accountTitle).filter(Boolean))]
+        this.dynamicAccountColumns = accountTitles
+
+        // Process data for dynamic columns
+        this.reportRAC = rawData.map((pos) => {
+          const row = {
+            accountTitle: pos.accountTitle,
+            appropriation: pos.appropriation,
+            particular: pos.particular,
+            dvNumber: pos.dvNumber,
+            date: pos.date,
+            payee: pos.payee,
+            amount: pos.amount,
+          }
+          
+          // Add dynamic columns with amounts
+          accountTitles.forEach(title => {
+            if (pos.accountTitle === title) {
+              row[`amount_${title.replace(/\s+/g, '_').toLowerCase()}`] = pos.amount
+            } else {
+              row[`amount_${title.replace(/\s+/g, '_').toLowerCase()}`] = 0
+            }
+          })
+          
+          return row
+        })
       } catch (error) {
         console.error('Error:', error)
         throw error
