@@ -1941,16 +1941,14 @@ onActivated(async () => {
   .preview-header {
     background: linear-gradient(135deg, #187C19 0%, #0E780E 100%) !important;
     color: white !important;
-    -webkit-print-color-adjust: exact;
-    color-adjust: exact;
+
   }
 
   /* Main header row print styling */
   .preview-table .header-row-main th {
     background: linear-gradient(135deg, #187C19 0%, #0E780E 100%) !important;
     color: white !important;
-    -webkit-print-color-adjust: exact;
-    color-adjust: exact;
+
     font-size: 20px;
   }
 
@@ -1958,8 +1956,7 @@ onActivated(async () => {
   .preview-table .header-row th {
     background: linear-gradient(135deg, #69B31E 0%, #187C19 100%) !important;
     color: white !important;
-    -webkit-print-color-adjust: exact;
-    color-adjust: exact;
+
   }
 
   /* Landscape print optimization */
