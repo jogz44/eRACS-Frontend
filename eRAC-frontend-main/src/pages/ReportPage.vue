@@ -1,7 +1,5 @@
 <template>
   <q-page class="q-pa-lg report-page">
-
-
     <!-- Main Header with bottom border -->
     <div class="section-header q-mb-xl">
       <div class="section-title">Current Year Reports</div>
@@ -18,30 +16,54 @@
       <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-4">
-
-            <q-input bg-color="white" outlined dense :model-value="dateRangeDisplay" label="Date Range"
-              class="custom-date-range" clearable @clear="onDateRangeClear" readonly>
+            <q-input
+              bg-color="white"
+              outlined
+              dense
+              :model-value="dateRangeDisplay"
+              label="Date Range"
+              class="custom-date-range"
+              clearable
+              @clear="onDateRangeClear"
+              readonly
+            >
               <template v-slot:append>
                 <q-icon name="event" class="calend-icon">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="CurrentRacDateRange" range @update:model-value="onDateRangeChange" />
+                    <q-date
+                      v-model="CurrentRacDateRange"
+                      range
+                      @update:model-value="onDateRangeChange"
+                    />
                   </q-popup-proxy>
                 </q-icon>
               </template>
             </q-input>
-
-          </div>
-
-
-          <div class="col-12 col-sm-6 col-md-4">
-            <q-select outlined dense v-model="expenseSelectedCurrent" label="Expense Category"
-              :options="reportStore.expenseOptionsCurrent" map-options option-label="name" option-value="id"
-              :loading="loading" />
           </div>
 
           <div class="col-12 col-sm-6 col-md-4">
-            <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-              @click="openRACModal('current-rac')" :loading="loading" />
+            <q-select
+              outlined
+              dense
+              v-model="expenseSelectedCurrent"
+              label="Expense Category"
+              :options="reportStore.expenseOptionsCurrent"
+              map-options
+              option-label="name"
+              option-value="id"
+              :loading="loading"
+            />
+          </div>
+
+          <div class="col-12 col-sm-6 col-md-4">
+            <q-btn
+              color="primary"
+              icon="settings"
+              label="Generate Report"
+              class="full-width"
+              @click="openRACModal('current-rac')"
+              :loading="loading"
+            />
           </div>
         </div>
       </q-card-section>
@@ -55,24 +77,40 @@
       <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-6">
-
-            <q-input bg-color="white" outlined dense :model-value="currentSacbDateRangeDisplay" label="Date Range"
-              class="custom-date-range" clearable @clear="onCurrentSacbDateRangeClear" readonly>
+            <q-input
+              bg-color="white"
+              outlined
+              dense
+              :model-value="currentSacbDateRangeDisplay"
+              label="Date Range"
+              class="custom-date-range"
+              clearable
+              @clear="onCurrentSacbDateRangeClear"
+              readonly
+            >
               <template v-slot:append>
                 <q-icon name="event" class="calend-icon">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="currentSacbDateRange" range @update:model-value="onCurrentSacbDateRangeChange" />
+                    <q-date
+                      v-model="currentSacbDateRange"
+                      range
+                      @update:model-value="onCurrentSacbDateRangeChange"
+                    />
                   </q-popup-proxy>
                 </q-icon>
               </template>
             </q-input>
-
           </div>
 
-
           <div class="col-12 col-sm-6 col-md-6">
-            <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-              @click="openSACBModal('current-sacb')" :loading="loading" />
+            <q-btn
+              color="primary"
+              icon="settings"
+              label="Generate Report"
+              class="full-width"
+              @click="openSACBModal('current-sacb')"
+              :loading="loading"
+            />
           </div>
         </div>
       </q-card-section>
@@ -92,14 +130,25 @@
       <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-4">
-
-            <q-input bg-color="white" outlined dense :model-value="continuingDateRangeDisplay" label="Date Range"
-              class="custom-date-range" clearable @clear="onContinuingDateRangeClear" readonly>
+            <q-input
+              bg-color="white"
+              outlined
+              dense
+              :model-value="continuingDateRangeDisplay"
+              label="Date Range"
+              class="custom-date-range"
+              clearable
+              @clear="onContinuingDateRangeClear"
+              readonly
+            >
               <template v-slot:append>
                 <q-icon name="event" class="calend-icon">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="continuingRacDateRange" range @update:model-value="onContinuingDateRangeChange" />
-
+                    <q-date
+                      v-model="continuingRacDateRange"
+                      range
+                      @update:model-value="onContinuingDateRangeChange"
+                    />
                   </q-popup-proxy>
                 </q-icon>
               </template>
@@ -107,14 +156,28 @@
           </div>
 
           <div class="col-12 col-sm-6 col-md-4">
-            <q-select outlined dense v-model="expenseSelectedContinuing" label="Expense Category" map-options
-              :options="reportStore.expenseOptionsContinuing" :loading="loading" option-value="id"
-              option-label="name" />
+            <q-select
+              outlined
+              dense
+              v-model="expenseSelectedContinuing"
+              label="Expense Category"
+              map-options
+              :options="reportStore.expenseOptionsContinuing"
+              :loading="loading"
+              option-value="id"
+              option-label="name"
+            />
           </div>
 
           <div class="col-12 col-sm-6 col-md-4">
-            <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-              @click="openRACModal('continuing-rac')" :loading="loading" />
+            <q-btn
+              color="primary"
+              icon="settings"
+              label="Generate Report"
+              class="full-width"
+              @click="openRACModal('continuing-rac')"
+              :loading="loading"
+            />
           </div>
         </div>
       </q-card-section>
@@ -128,15 +191,25 @@
       <q-card-section class="q-pt-md q-pb-lg">
         <div class="row q-col-gutter-lg items-end">
           <div class="col-12 col-sm-6 col-md-6">
-
-            <q-input bg-color="white" outlined dense :model-value="continuingSacbDateRangeDisplay" label="Date Range"
-              class="custom-date-range" clearable @clear="onContinuingSacbDateRangeClear" readonly>
+            <q-input
+              bg-color="white"
+              outlined
+              dense
+              :model-value="continuingSacbDateRangeDisplay"
+              label="Date Range"
+              class="custom-date-range"
+              clearable
+              @clear="onContinuingSacbDateRangeClear"
+              readonly
+            >
               <template v-slot:append>
                 <q-icon name="event" class="calend-icon">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="continuingSacbDateRange" range
-                      @update:model-value="onContinuingSacbDateRangeChange" />
-
+                    <q-date
+                      v-model="continuingSacbDateRange"
+                      range
+                      @update:model-value="onContinuingSacbDateRangeChange"
+                    />
                   </q-popup-proxy>
                 </q-icon>
               </template>
@@ -144,28 +217,42 @@
           </div>
 
           <div class="col-12 col-sm-6 col-md-6">
-            <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-              @click="openSACBModal('continuing-sacb')" :loading="loading" />
+            <q-btn
+              color="primary"
+              icon="settings"
+              label="Generate Report"
+              class="full-width"
+              @click="openSACBModal('continuing-sacb')"
+              :loading="loading"
+            />
           </div>
         </div>
       </q-card-section>
     </q-card>
 
     <!-- SACB Modal -->
-    <q-dialog v-model="SACBModal.show" maximized transition-show="slide-up" transition-hide="slide-down">
+    <q-dialog
+      v-model="SACBModal.show"
+      maximized
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
       <q-layout view="lHh Lpr lFf" class="sacb-layout">
-
         <!-- Header -->
         <q-header elevated class="bg-white text-dark sacb-header">
           <q-toolbar class="q-px-md">
-
-            <q-btn flat icon="menu" @click="toggleSACBDrawer" class="q-mr-md"
-              :color="sacbDrawerOpen ? '#187C19' : '#666'" size="md">
-
+            <q-btn
+              flat
+              icon="menu"
+              @click="toggleSACBDrawer"
+              class="q-mr-md"
+              :color="sacbDrawerOpen ? '#187C19' : '#666'"
+              size="md"
+            >
               <q-tooltip>Toggle Settings Panel</q-tooltip>
             </q-btn>
 
-            <q-toolbar-title class="text-h6 text-weight-medium" style="color: #187C19;">
+            <q-toolbar-title class="text-h6 text-weight-medium" style="color: #187c19">
               Status of Appropriation and Obligation (SACB)
             </q-toolbar-title>
 
@@ -173,14 +260,27 @@
 
             <!-- Action Buttons -->
             <div class="q-gutter-sm">
+              <q-btn
+                outline
+                icon="file_download"
+                label="Export PDF"
+                color="#69B31E"
+                @click="exportSACBToPDF"
+                size="sm"
+                no-caps
+              />
 
-              <q-btn outline icon="file_download" label="Export PDF" color="#69B31E" @click="exportSACBToPDF" size="sm"
-                no-caps />
-
-              <q-btn unelevated icon="print" label="Print" color="#187C19" @click="handleSACBPrint" size="sm" no-caps />
+              <q-btn
+                unelevated
+                icon="print"
+                label="Print"
+                color="#187C19"
+                @click="handleSACBPrint"
+                size="sm"
+                no-caps
+              />
 
               <q-btn flat icon="close" @click="closeSACBModal" color="#666" size="md">
-
                 <q-tooltip>Close</q-tooltip>
               </q-btn>
             </div>
@@ -188,19 +288,25 @@
         </q-header>
 
         <!-- Left Drawer for Report Signatories -->
-        <q-drawer v-model="sacbDrawerOpen" side="left" bordered :width="350" :breakpoint="768" :show-if-above="false"
-          class="bg-grey-1 sacb-drawer">
+        <q-drawer
+          v-model="sacbDrawerOpen"
+          side="left"
+          bordered
+          :width="350"
+          :breakpoint="768"
+          :show-if-above="false"
+          class="bg-grey-1 sacb-drawer"
+        >
           <div class="drawer-content-sacb">
             <q-scroll-area class="drawer-scrollable-content">
               <div class="q-pa-lg drawer-content">
-
                 <!-- Drawer Header -->
                 <div class="drawer-header q-mb-lg">
-                  <div class="text-h6 q-mb-sm" style="color: #187C19;">
+                  <div class="text-h6 q-mb-sm" style="color: #187c19">
                     <q-icon name="edit" class="q-mr-sm" />
                     Report Setup
                   </div>
-                  <div class="text-caption" style="color: #666;">
+                  <div class="text-caption" style="color: #666">
                     Configure report signatories and settings
                   </div>
                 </div>
@@ -208,7 +314,7 @@
                 <!-- Report Information -->
                 <q-card flat bordered class="q-mb-lg info-card">
                   <q-card-section class="q-pb-sm">
-                    <div class="text-subtitle2 text-weight-medium q-mb-sm" style="color: #187C19;">
+                    <div class="text-subtitle2 text-weight-medium q-mb-sm" style="color: #187c19">
                       <q-icon name="info" class="q-mr-xs" />
                       Report Information
                     </div>
@@ -230,7 +336,7 @@
                 <!-- Signatories Setup -->
                 <q-card flat bordered class="signatories-card">
                   <q-card-section>
-                    <div class="text-subtitle2 text-weight-medium q-mb-md" style="color: #187C19;">
+                    <div class="text-subtitle2 text-weight-medium q-mb-md" style="color: #187c19">
                       <q-icon name="people" class="q-mr-xs" />
                       Report Signatories
                     </div>
@@ -238,40 +344,87 @@
                     <!-- Prepared by -->
                     <div class="signatory-group q-mb-lg">
                       <div class="signatory-header">
-                        <q-icon name="create" size="sm" style="color: #69B31E;" class="q-mr-xs" />
+                        <q-icon name="create" size="sm" style="color: #69b31e" class="q-mr-xs" />
                         <span class="text-weight-medium">Prepared by</span>
                       </div>
-                      <q-input outlined dense v-model="SetupModal.Preparedby" placeholder="Enter full name"
-                        class="q-mb-sm" clearable />
-                      <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
-                        option-value="value" v-model="SetupModal.Preparedposition" placeholder="Select position"
-                        clearable />
+                      <q-input
+                        outlined
+                        dense
+                        v-model="SetupModal.Preparedby"
+                        placeholder="Enter full name"
+                        class="q-mb-sm"
+                        clearable
+                      />
+                      <q-select
+                        outlined
+                        dense
+                        :options="reportStore.positionsOptions"
+                        map-options
+                        option-label="label"
+                        option-value="value"
+                        v-model="SetupModal.Preparedposition"
+                        placeholder="Select position"
+                        clearable
+                      />
                     </div>
 
                     <!-- Noted by -->
                     <div class="signatory-group q-mb-lg">
                       <div class="signatory-header">
-                        <q-icon name="visibility" size="sm" style="color: #E0FFE7;" class="q-mr-xs" />
+                        <q-icon
+                          name="visibility"
+                          size="sm"
+                          style="color: #e0ffe7"
+                          class="q-mr-xs"
+                        />
                         <span class="text-weight-medium">Noted by</span>
                       </div>
-                      <q-input outlined dense v-model="SetupModal.Notedby" placeholder="Enter full name" class="q-mb-sm"
-                        clearable />
-                      <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
-                        option-value="value" v-model="SetupModal.Notedposition" placeholder="Select position"
-                        clearable />
+                      <q-input
+                        outlined
+                        dense
+                        v-model="SetupModal.Notedby"
+                        placeholder="Enter full name"
+                        class="q-mb-sm"
+                        clearable
+                      />
+                      <q-select
+                        outlined
+                        dense
+                        :options="reportStore.positionsOptions"
+                        map-options
+                        option-label="label"
+                        option-value="value"
+                        v-model="SetupModal.Notedposition"
+                        placeholder="Select position"
+                        clearable
+                      />
                     </div>
 
                     <!-- Certified by -->
                     <div class="signatory-group q-mb-md">
                       <div class="signatory-header">
-                        <q-icon name="verified" size="sm" style="color: #187C19;" class="q-mr-xs" />
+                        <q-icon name="verified" size="sm" style="color: #187c19" class="q-mr-xs" />
                         <span class="text-weight-medium">Certified by</span>
                       </div>
-                      <q-input outlined dense v-model="SetupModal.Certifiedby" placeholder="Enter full name"
-                        class="q-mb-sm" clearable />
-                      <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
-                        option-value="value" v-model="SetupModal.Certifiedposition" placeholder="Select position"
-                        clearable />
+                      <q-input
+                        outlined
+                        dense
+                        v-model="SetupModal.Certifiedby"
+                        placeholder="Enter full name"
+                        class="q-mb-sm"
+                        clearable
+                      />
+                      <q-select
+                        outlined
+                        dense
+                        :options="reportStore.positionsOptions"
+                        map-options
+                        option-label="label"
+                        option-value="value"
+                        v-model="SetupModal.Certifiedposition"
+                        placeholder="Select position"
+                        clearable
+                      />
                     </div>
                   </q-card-section>
                 </q-card>
@@ -279,36 +432,49 @@
                 <!-- Quick Actions -->
                 <q-card flat bordered class="q-mt-lg">
                   <q-card-section>
-                    <div class="text-subtitle2 text-weight-medium q-mb-md" style="color: #187C19;">
+                    <div class="text-subtitle2 text-weight-medium q-mb-md" style="color: #187c19">
                       <q-icon name="flash_on" class="q-mr-xs" />
                       Quick Actions
                     </div>
                     <div class="q-gutter-sm">
-                      <q-btn outline size="sm" icon="refresh" label="Reset Form" color="#E0FFE7"
-                        @click="resetSignatories" class="full-width" />
-                      <q-btn outline size="sm" icon="save" label="Save as Template" color="#69B31E"
-                        @click="saveAsTemplate" class="full-width" />
+                      <q-btn
+                        outline
+                        size="sm"
+                        icon="refresh"
+                        label="Reset Form"
+                        color="#E0FFE7"
+                        @click="resetSignatories"
+                        class="full-width"
+                      />
+                      <q-btn
+                        outline
+                        size="sm"
+                        icon="save"
+                        label="Save as Template"
+                        color="#69B31E"
+                        @click="saveAsTemplate"
+                        class="full-width"
+                      />
                     </div>
                   </q-card-section>
                 </q-card>
-
               </div>
             </q-scroll-area>
           </div>
         </q-drawer>
 
         <!-- Main Content Area -->
-        <q-page-container style="background: #f5f5f5;">
+        <q-page-container style="background: #f5f5f5">
           <div class="print-content-wrapper q-pa-md">
             <q-card class="print-modal" id="sacb-print-content">
               <q-card-section class="q-pb-none">
-                <div class="text-h5 text-center text-weight-bold q-mb-sm" style="color: #187C19;">
+                <div class="text-h5 text-center text-weight-bold q-mb-sm" style="color: #187c19">
                   Status of Appropriation and Obligation (SACB)
                 </div>
-                <div class="text-h6 text-center text-weight-medium" style="color: #187C19;">
+                <div class="text-h6 text-center text-weight-medium" style="color: #187c19">
                   Barangay {{ authStore.user?.barangay_name }}
                 </div>
-                <div class="text-subtitle1 text-center q-mb-lg" style="color: #666;">
+                <div class="text-subtitle1 text-center q-mb-lg" style="color: #666">
                   Period: {{ getSACBDateRangeDisplay() }}
                 </div>
               </q-card-section>
@@ -316,9 +482,18 @@
               <q-card-section>
                 <!-- SACB Table with improved styling -->
 
-                <q-table :rows="computedSACBRows" :columns="sacbColumns" row-key="ppa" flat bordered dense
-                  separator="cell" class="sacb-table" hide-pagination :pagination="{ rowsPerPage: 0 }">
-
+                <q-table
+                  :rows="computedSACBRows"
+                  :columns="sacbColumns"
+                  row-key="ppa"
+                  flat
+                  bordered
+                  dense
+                  separator="cell"
+                  class="sacb-table"
+                  hide-pagination
+                  :pagination="{ rowsPerPage: 0 }"
+                >
                   <template v-slot:body="props">
                     <!-- Section Header -->
                     <tr v-if="props.row.isSection">
@@ -342,11 +517,8 @@
                       <td class="text-right">{{ props.row.obligation }}</td>
                       <td class="text-right">{{ props.row.balance }}</td>
                     </tr>
-
-
                   </template>
                 </q-table>
-
 
                 <!-- Report Summary Section -->
                 <div class="report-summary q-mt-xl">
@@ -384,21 +556,29 @@
                           </div>
                           <div class="signature-block">
                             <div class="signature-line">
-                              <div class="signature-name">{{ SetupModal.Preparedby || '_________________________' }}
+                              <div class="signature-name">
+                                {{ SetupModal.Preparedby || '_________________________' }}
                               </div>
-                              <div class="signature-position">{{ SetupModal.Preparedposition?.label || 'Position' }}
+                              <div class="signature-position">
+                                {{ SetupModal.Preparedposition?.label || 'Position' }}
                               </div>
                               <div class="signature-label">Prepared by</div>
                             </div>
                             <div class="signature-line">
-                              <div class="signature-name">{{ SetupModal.Notedby || '_________________________' }}</div>
-                              <div class="signature-position">{{ SetupModal.Notedposition?.label || 'Position' }}</div>
+                              <div class="signature-name">
+                                {{ SetupModal.Notedby || '_________________________' }}
+                              </div>
+                              <div class="signature-position">
+                                {{ SetupModal.Notedposition?.label || 'Position' }}
+                              </div>
                               <div class="signature-label">Noted by</div>
                             </div>
                             <div class="signature-line">
-                              <div class="signature-name">{{ SetupModal.Certifiedby || '_________________________' }}
+                              <div class="signature-name">
+                                {{ SetupModal.Certifiedby || '_________________________' }}
                               </div>
-                              <div class="signature-position">{{ SetupModal.Certifiedposition?.label || 'Position' }}
+                              <div class="signature-position">
+                                {{ SetupModal.Certifiedposition?.label || 'Position' }}
                               </div>
                               <div class="signature-label">Certified by</div>
                             </div>
@@ -416,13 +596,17 @@
     </q-dialog>
 
     <!-- RAC Modal -->
-    <q-dialog v-model="RACModal.show" maximized transition-show="slide-up" transition-hide="slide-down">
+    <q-dialog
+      v-model="RACModal.show"
+      maximized
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
       <q-layout view="lHh Lpr lFf" class="rac-layout">
-
         <!-- Header -->
         <q-header elevated class="bg-white text-dark rac-header">
           <q-toolbar class="q-px-md">
-            <q-toolbar-title class="text-h6 text-weight-medium" style="color: #187C19;">
+            <q-toolbar-title class="text-h6 text-weight-medium" style="color: #187c19">
               {{ RACModal.reportType }}
             </q-toolbar-title>
 
@@ -430,14 +614,27 @@
 
             <!-- Action Buttons -->
             <div class="q-gutter-sm">
+              <q-btn
+                outline
+                icon="file_download"
+                label="Export PDF"
+                color="#69B31E"
+                @click="exportToPDF"
+                size="sm"
+                no-caps
+              />
 
-              <q-btn outline icon="file_download" label="Export PDF" color="#69B31E" @click="exportToPDF" size="sm"
-                no-caps />
-
-              <q-btn unelevated icon="print" label="Print" color="#187C19" @click="handleRACPrint" size="sm" no-caps />
+              <q-btn
+                unelevated
+                icon="print"
+                label="Print"
+                color="#187C19"
+                @click="handleRACPrint"
+                size="sm"
+                no-caps
+              />
 
               <q-btn flat icon="close" @click="closeRACModal" color="#666" size="md">
-
                 <q-tooltip>Close</q-tooltip>
               </q-btn>
             </div>
@@ -445,50 +642,55 @@
         </q-header>
 
         <!-- Main Content Area -->
-        <q-page-container style="background: #f5f5f5;">
+        <q-page-container style="background: #f5f5f5">
           <div class="print-content-wrapper q-pa-md">
             <q-card class="print-modal" id="rac-print-content">
               <q-card-section class="q-pb-none">
-                <div class="text-h5 text-center text-weight-bold q-mb-sm" style="color: #187C19;">
-                  {{ RACModal.reportType }}
+                <div
+                  class="row items-center justify-between text-h6 text-weight-bold"
+                  style="color: #187c19"
+                >
+                  <span>{{ RACModal.reportType }}</span>
+                  <span class="stat-label text-h10"
+                    >Generated Date: {{ new Date().toLocaleDateString() }}</span
+                  >
                 </div>
-                <div class="text-h6 text-center text-weight-medium" style="color: #187C19;">
+                <div class="text-h6 text-weight-medium" style="color: #187c19">
                   Barangay {{ authStore.user?.barangay_name }}
+                  <span class="text-subtitle1 text-center" style="color: #666"> </span>
                 </div>
-                <div class="text-subtitle1 text-center q-mb-lg" style="color: #666;">
-                  Date: {{ dateRangeDisplay || 'No date range selected' }}
-                </div>
-                <div class="text-subtitle1 text-center q-mb-lg" style="color: #666;">
-                  Expense Class: {{ reportStore.expenseRacSelected?.name || 'Not Selected' }}
-                </div>
+
+                <div></div>
               </q-card-section>
 
               <q-card-section>
                 <!-- Updated RAC Table to match preview table layout -->
                 <div class="preview-table-container">
                   <!-- Header matching preview table style -->
-
-
                   <!-- Table with preview layout structure -->
-                  <table v-if="reportStore.reportRAC && reportStore.reportRAC.length > 0"
-                         class="preview-table"
-                         :data-columns="dynamicColumnsCount">
+                  <table
+                    v-if="reportStore.reportRAC && reportStore.reportRAC.length > 0"
+                    class="preview-table"
+                    :data-columns="dynamicColumnsCount"
+                  >
                     <thead>
                       <!-- First header row with expense class and obligation -->
-                      <tr class="header-row-main " >
-                        <th colspan="5" class="col-expense-class">
-                        OBLIGATION
+
+                      <tr class="header-row-main">
+                        <th colspan="20" class="col-expense-class">
+                          {{ reportStore.expenseRacSelected?.name || 'Not Selected' }}
                         </th>
-                        <th v-if="hasDynamicColumns"
-                            :colspan="1 + dynamicColumnsCount"
-                            class="col-obligation-header">
-                        ACCOUNT TITLE
-                        </th>
-                        <th v-else
-                            :colspan="1"
-                            class="col-obligation-header">
+                      </tr>
+                      <tr class="header-row-main">
+                        <th colspan="5" class="col-expense-class">OBLIGATION</th>
+                        <th
+                          v-if="hasDynamicColumns"
+                          :colspan="1 + dynamicColumnsCount"
+                          class="col-obligation-header"
+                        >
                           ACCOUNT TITLE
                         </th>
+                        <th v-else :colspan="1" class="col-obligation-header">ACCOUNT TITLE</th>
                       </tr>
                       <!-- Second header row with individual column names -->
                       <tr class="header-row">
@@ -498,9 +700,11 @@
                         <th class="col-payee">Payee</th>
                         <th class="col-appropriation">Appropriation</th>
                         <!-- Dynamic Account Title Columns -->
-                        <th v-for="accountTitle in reportStore.dynamicAccountColumns"
-                            :key="accountTitle"
-                            class="col-account-title">
+                        <th
+                          v-for="accountTitle in reportStore.dynamicAccountColumns"
+                          :key="accountTitle"
+                          class="col-account-title"
+                        >
                           {{ accountTitle }}
                         </th>
                         <!-- Fallback when no dynamic columns -->
@@ -508,25 +712,43 @@
                           No Account Titles Found
                         </th>
                       </tr>
+
+                        <tr class="header-row-main">
+                        <th colspan="20" style="background-color: whitesmoke;"></th>
+
+                      </tr>
+
                     </thead>
                     <tbody>
-                      <tr v-for="(row, index) in reportStore.reportRAC" :key="index" class="data-row">
+                      <tr
+                        v-for="(row, index) in reportStore.reportRAC"
+                        :key="index"
+                        class="data-row"
+                      >
+
                         <td class="col-date">{{ row.date || '' }}</td>
                         <td class="col-particulars">{{ row.particular || '' }}</td>
                         <td class="col-dv">{{ row.dvNumber || '' }}</td>
                         <td class="col-payee">{{ row.payee || '' }}</td>
-                        <td class="col-appropriation text-right">{{ (row.appropriation || 0).toLocaleString() }}</td>
+                        <td class="col-appropriation text-right">
+                          {{ (row.appropriation || 0).toLocaleString() }}
+                        </td>
                         <!-- Dynamic Account Title Cells -->
-                        <td v-for="accountTitle in reportStore.dynamicAccountColumns"
-                            :key="accountTitle"
-                            class="col-account-title text-right">
-                          {{ row[`amount_${accountTitle.replace(/\s+/g, '_').toLowerCase()}`] ?
-                             row[`amount_${accountTitle.replace(/\s+/g, '_').toLowerCase()}`].toLocaleString() : '' }}
+                        <td
+                          v-for="accountTitle in reportStore.dynamicAccountColumns"
+                          :key="accountTitle"
+                          class="col-account-title text-right"
+                        >
+                          {{
+                            row[`amount_${accountTitle.replace(/\s+/g, '_').toLowerCase()}`]
+                              ? row[
+                                  `amount_${accountTitle.replace(/\s+/g, '_').toLowerCase()}`
+                                ].toLocaleString()
+                              : ''
+                          }}
                         </td>
                         <!-- Fallback when no dynamic columns -->
-                        <td v-if="!hasDynamicColumns" class="col-account-title text-right">
-                          -
-                        </td>
+                        <td v-if="!hasDynamicColumns" class="col-account-title text-right">-</td>
                       </tr>
                       <!-- Total row -->
                       <tr class="total-row">
@@ -535,17 +757,35 @@
                         <td class="col-dv"></td>
                         <td class="col-payee"></td>
                         <td class="col-appropriation text-right font-weight-bold">
-                          {{ reportStore.reportRAC.reduce((sum, r) => sum + (r.appropriation || 0), 0).toLocaleString() }}
+                          {{
+                            reportStore.reportRAC
+                              .reduce((sum, r) => sum + (r.appropriation || 0), 0)
+                              .toLocaleString()
+                          }}
                         </td>
                         <!-- Dynamic Account Title Total Cells -->
-                        <td v-for="accountTitle in reportStore.dynamicAccountColumns"
-                            :key="accountTitle"
-                            class="col-account-title text-right font-weight-bold">
-                          {{ reportStore.reportRAC.reduce((sum, r) =>
-                             sum + (r[`amount_${accountTitle.replace(/\s+/g, '_').toLowerCase()}`] || 0), 0).toLocaleString() }}
+                        <td
+                          v-for="accountTitle in reportStore.dynamicAccountColumns"
+                          :key="accountTitle"
+                          class="col-account-title text-right font-weight-bold"
+                        >
+                          {{
+                            reportStore.reportRAC
+                              .reduce(
+                                (sum, r) =>
+                                  sum +
+                                  (r[`amount_${accountTitle.replace(/\s+/g, '_').toLowerCase()}`] ||
+                                    0),
+                                0,
+                              )
+                              .toLocaleString()
+                          }}
                         </td>
                         <!-- Fallback when no dynamic columns -->
-                        <td v-if="!hasDynamicColumns" class="col-account-title text-right font-weight-bold">
+                        <td
+                          v-if="!hasDynamicColumns"
+                          class="col-account-title text-right font-weight-bold"
+                        >
                           -
                         </td>
                       </tr>
@@ -556,7 +796,9 @@
                   <div v-else class="q-pa-lg text-center text-grey-6">
                     <q-icon name="info" size="48px" class="q-mb-md" />
                     <div class="text-h6">No RAC data available</div>
-                    <div class="text-body2">Please select a date range and expense category to generate the report.</div>
+                    <div class="text-body2">
+                      Please select a date range and expense category to generate the report.
+                    </div>
                   </div>
                 </div>
 
@@ -573,21 +815,40 @@
                           <div class="summary-stats">
                             <div class="stat-item">
                               <span class="stat-label">Total Appropriation:</span>
-                              <span class="stat-value">₱{{reportStore.reportRAC.reduce((sum, r) => sum +
-                                (r.appropriation || 0),
-                                0).toLocaleString()}}</span>
+                              <span class="stat-value"
+                                >₱{{
+                                  reportStore.reportRAC
+                                    .reduce((sum, r) => sum + (r.appropriation || 0), 0)
+                                    .toLocaleString()
+                                }}</span
+                              >
                             </div>
                             <div class="stat-item">
                               <span class="stat-label">Total Obligation:</span>
-                              <span class="stat-value">₱{{reportStore.reportRAC.reduce((sum, r) => sum + (r.amount || 0),
-                                0).toLocaleString()}}</span>
+                              <span class="stat-value"
+                                >₱{{
+                                  reportStore.reportRAC
+                                    .reduce((sum, r) => sum + (r.amount || 0), 0)
+                                    .toLocaleString()
+                                }}</span
+                              >
                             </div>
                             <div class="stat-item">
                               <span class="stat-label">Remaining Balance:</span>
-                              <span class="stat-value">₱{{(reportStore.reportRAC.reduce((sum, r) => sum +
-                                (r.appropriation || 0),
-                                0) - reportStore.reportRAC.reduce((sum, r) => sum + (r.amount || 0),
-                                  0)).toLocaleString()}}</span>
+                              <span class="stat-value"
+                                >₱{{
+                                  (
+                                    reportStore.reportRAC.reduce(
+                                      (sum, r) => sum + (r.appropriation || 0),
+                                      0,
+                                    ) -
+                                    reportStore.reportRAC.reduce(
+                                      (sum, r) => sum + (r.amount || 0),
+                                      0,
+                                    )
+                                  ).toLocaleString()
+                                }}</span
+                              >
                             </div>
                             <!-- Dynamic Account Title Totals -->
                             <!-- <div v-for="accountTitle in reportStore.dynamicAccountColumns"
@@ -615,11 +876,16 @@
                             </div>
                             <div class="stat-item">
                               <span class="stat-label">Total Records:</span>
-                              <span class="stat-value">{{ reportStore.reportRAC ? reportStore.reportRAC.length : 0 }}</span>
+                              <span class="stat-value">{{
+                                reportStore.reportRAC ? reportStore.reportRAC.length : 0
+                              }}</span>
                             </div>
+
                             <div class="stat-item">
-                              <span class="stat-label">Generated Date:</span>
-                              <span class="stat-value">{{ new Date().toLocaleDateString() }}</span>
+                              <span class="stat-label">Date Range:</span>
+                              <span class="stat-value">
+                                {{ dateRangeDisplay || 'No date range selected' }}</span
+                              >
                             </div>
                           </div>
                         </q-card-section>
@@ -643,34 +909,34 @@ import { useAuthStore } from 'stores/auth'
 import { useReportStore } from 'stores/reportStore'
 
 const computedSACBRows = computed(() => {
-  const result = [];
-  let sectionItems = [];
+  const result = []
+  let sectionItems = []
 
   reportStore.reportSACB.forEach((row, index) => {
     if (row.isSection) {
       // If sectionItems has data, push a total before starting new section
       if (sectionItems.length) {
-        result.push(makeTotalRow(sectionItems));
-        sectionItems = [];
+        result.push(makeTotalRow(sectionItems))
+        sectionItems = []
       }
-      result.push(row); // push the section header
+      result.push(row) // push the section header
     } else {
-      result.push(row);
-      sectionItems.push(row);
+      result.push(row)
+      sectionItems.push(row)
     }
 
     // Last row check
     if (index === reportStore.reportSACB.length - 1 && sectionItems.length) {
-      result.push(makeTotalRow(sectionItems));
+      result.push(makeTotalRow(sectionItems))
     }
-  });
+  })
 
-  return result;
-});
+  return result
+})
 
 function makeTotalRow(items) {
   const sum = (field) =>
-    items.reduce((acc, item) => acc + parseFloat(item[field].replace(/,/g, '')), 0);
+    items.reduce((acc, item) => acc + parseFloat(item[field].replace(/,/g, '')), 0)
 
   return {
     isTotal: true,
@@ -678,30 +944,30 @@ function makeTotalRow(items) {
     appropriation: sum('appropriation').toLocaleString('en-US', { minimumFractionDigits: 2 }),
     obligation: sum('obligation').toLocaleString('en-US', { minimumFractionDigits: 2 }),
     balance: sum('balance').toLocaleString('en-US', { minimumFractionDigits: 2 }),
-  };
+  }
 }
 
 const totalAppropriation = computed(() => {
   return reportStore.reportSACB
-    .filter(row => !row.isSection) // skip section headers
+    .filter((row) => !row.isSection) // skip section headers
     .reduce((sum, row) => {
-      return sum + parseFloat(row.appropriation.replace(/,/g, ''));
+      return sum + parseFloat(row.appropriation.replace(/,/g, ''))
     }, 0)
-    .toLocaleString('en-US', { minimumFractionDigits: 2 });
-});
+    .toLocaleString('en-US', { minimumFractionDigits: 2 })
+})
 
 const totalObligation = computed(() => {
   return reportStore.reportSACB
-    .filter(row => !row.isSection)
+    .filter((row) => !row.isSection)
     .reduce((sum, row) => sum + parseFloat(row.obligation.replace(/,/g, '')), 0)
-    .toLocaleString('en-US', { minimumFractionDigits: 2 });
-});
+    .toLocaleString('en-US', { minimumFractionDigits: 2 })
+})
 
 const totalBalance = computed(() => {
   return reportStore.reportSACB
-    .filter(row => !row.isSection)
+    .filter((row) => !row.isSection)
     .reduce((sum, row) => sum + parseFloat(row.balance.replace(/,/g, '')), 0)
-    .toLocaleString('en-US', { minimumFractionDigits: 2 });
+    .toLocaleString('en-US', { minimumFractionDigits: 2 })
 })
 
 // Computed property for dynamic columns count
@@ -715,7 +981,6 @@ const dynamicColumnsCount = computed(() => {
 const hasDynamicColumns = computed(() => {
   return reportStore.dynamicAccountColumns.length > 0
 })
-
 
 // stores & composables
 const $q = useQuasar()
@@ -735,9 +1000,8 @@ const currentSacbDateRange = ref({ from: '', to: '' })
 const continuingRacDateRange = ref({ from: '', to: '' })
 const continuingSacbDateRange = ref({ from: '', to: '' })
 
-const expenseSelectedCurrent = ref(null);
-const expenseSelectedContinuing = ref(null);
-
+const expenseSelectedCurrent = ref(null)
+const expenseSelectedContinuing = ref(null)
 
 // Modals
 const RACModal = reactive({
@@ -747,8 +1011,8 @@ const RACModal = reactive({
     { id: 1, time: '09:30 AM', description: 'Report generated successfully' },
     { id: 2, time: '09:25 AM', description: 'Data validation completed' },
     { id: 3, time: '09:20 AM', description: 'Report parameters configured' },
-    { id: 4, time: '09:15 AM', description: 'Print dialog opened' }
-  ]
+    { id: 4, time: '09:15 AM', description: 'Print dialog opened' },
+  ],
 })
 
 const SACBModal = reactive({
@@ -758,8 +1022,8 @@ const SACBModal = reactive({
     { id: 1, time: '09:30 AM', description: 'Report generated successfully' },
     { id: 2, time: '09:25 AM', description: 'Data validation completed' },
     { id: 3, time: '09:20 AM', description: 'Report parameters configured' },
-    { id: 4, time: '09:15 AM', description: 'Print dialog opened' }
-  ]
+    { id: 4, time: '09:15 AM', description: 'Print dialog opened' },
+  ],
 })
 
 const SetupModal = reactive({
@@ -777,15 +1041,13 @@ const SetupModal = reactive({
   Notedby: '',
   Notedposition: '',
   Certifiedby: '',
-  Certifiedposition: ''
+  Certifiedposition: '',
 })
 
 const loadAllData = async () => {
   loading.value = true
   try {
-    const criticalPromises = [
-      reportStore.fetchData(),
-    ]
+    const criticalPromises = [reportStore.fetchData()]
 
     await Promise.all(criticalPromises)
   } catch (error) {
@@ -806,23 +1068,25 @@ const openSACBModal = (type) => {
       return notifyError('Please select a valid continuing SACB date range.')
     }
   }
-  loadSacbReport((
+  loadSacbReport(
     type === 'current-sacb'
       ? currentSacbDateRange.value.from
       : type === 'continuing-sacb'
         ? continuingSacbDateRange.value.from
-        : null),
-      (
+        : null,
     type === 'current-sacb'
       ? currentSacbDateRange.value.to
       : type === 'continuing-sacb'
         ? continuingSacbDateRange.value.to
-        : null));
+        : null,
+  )
   SACBModal.reportType = getReportTypeLabel(type)
   SACBModal.show = true
 }
 
-const closeSACBModal = () => { SACBModal.show = false }
+const closeSACBModal = () => {
+  SACBModal.show = false
+}
 
 const openRACModal = (type) => {
   if (type === 'current-rac') {
@@ -857,22 +1121,25 @@ const openRACModal = (type) => {
       ? CurrentRacDateRange
       : type === 'continuing-rac'
         ? continuingRacDateRange
-        : null)
+        : null,
+  )
   RACModal.reportType = getReportTypeLabel(type)
   RACModal.show = true
 }
 
-const closeRACModal = () => { RACModal.show = false }
+const closeRACModal = () => {
+  RACModal.show = false
+}
 
-const getReportTypeLabel = (type) => ({
-  'current-rac': 'Current Year - Registry of Appropriation and Commitment (RAC)',
-  'current-sacb': 'Current Year - Status of Appropriation and Obligation (SACB)',
-  'continuing-rac': 'Continuing Reports - Registry of Appropriation and Commitment (RAC)',
-  'continuing-sacb': 'Continuing Reports - Status of Appropriation and Obligation (SACB)'
-}[type] || 'Unknown Report')
+const getReportTypeLabel = (type) =>
+  ({
+    'current-rac': 'Current Year - Registry of Appropriation and Commitment (RAC)',
+    'current-sacb': 'Current Year - Status of Appropriation and Obligation (SACB)',
+    'continuing-rac': 'Continuing Reports - Registry of Appropriation and Commitment (RAC)',
+    'continuing-sacb': 'Continuing Reports - Status of Appropriation and Obligation (SACB)',
+  })[type] || 'Unknown Report'
 
 const handleSACBPrint = () => {
-
   console.log('Printing report:', SACBModal.reportType)
   closeSACBModal()
   notifySuccess('Report sent to printer successfully!')
@@ -923,36 +1190,65 @@ const notifySuccess = (msg) => $q.notify({ type: 'positive', message: msg, posit
 /* -------------------- COMPUTED -------------------- */
 const sacbColumns = computed(() => [
   { name: 'ppa', label: 'Account Title', field: 'ppa', align: 'left', sortable: true },
-  { name: 'appropriation', label: 'Appropriation', field: 'appropriation', align: 'right', sortable: true, format: val => val?.toLocaleString() },
-  { name: 'obligation', label: 'Obligation', field: 'obligation', align: 'right', sortable: true, format: val => val?.toLocaleString() },
-  { name: 'balance', label: 'Balance', field: 'balance', align: 'right', sortable: true, format: val => val?.toLocaleString() }
+  {
+    name: 'appropriation',
+    label: 'Appropriation',
+    field: 'appropriation',
+    align: 'right',
+    sortable: true,
+    format: (val) => val?.toLocaleString(),
+  },
+  {
+    name: 'obligation',
+    label: 'Obligation',
+    field: 'obligation',
+    align: 'right',
+    sortable: true,
+    format: (val) => val?.toLocaleString(),
+  },
+  {
+    name: 'balance',
+    label: 'Balance',
+    field: 'balance',
+    align: 'right',
+    sortable: true,
+    format: (val) => val?.toLocaleString(),
+  },
 ])
 
 const dateRangeDisplay = computed(() => {
   if (!CurrentRacDateRange.value.from && !CurrentRacDateRange.value.to) return ''
-  if (CurrentRacDateRange.value.from && !CurrentRacDateRange.value.to) return `From ${CurrentRacDateRange.value.from}`
-  if (!CurrentRacDateRange.value.from && CurrentRacDateRange.value.to) return `To ${CurrentRacDateRange.value.to}`
+  if (CurrentRacDateRange.value.from && !CurrentRacDateRange.value.to)
+    return `From ${CurrentRacDateRange.value.from}`
+  if (!CurrentRacDateRange.value.from && CurrentRacDateRange.value.to)
+    return `To ${CurrentRacDateRange.value.to}`
   return `${CurrentRacDateRange.value.from} - ${CurrentRacDateRange.value.to}`
 })
 
 const continuingDateRangeDisplay = computed(() => {
   if (!continuingRacDateRange.value.from && !continuingRacDateRange.value.to) return ''
-  if (continuingRacDateRange.value.from && !continuingRacDateRange.value.to) return `From ${continuingRacDateRange.value.from}`
-  if (!continuingRacDateRange.value.from && continuingRacDateRange.value.to) return `To ${continuingRacDateRange.value.to}`
+  if (continuingRacDateRange.value.from && !continuingRacDateRange.value.to)
+    return `From ${continuingRacDateRange.value.from}`
+  if (!continuingRacDateRange.value.from && continuingRacDateRange.value.to)
+    return `To ${continuingRacDateRange.value.to}`
   return `${continuingRacDateRange.value.from} - ${continuingRacDateRange.value.to}`
 })
 
 const currentSacbDateRangeDisplay = computed(() => {
   if (!currentSacbDateRange.value.from && !currentSacbDateRange.value.to) return ''
-  if (currentSacbDateRange.value.from && !currentSacbDateRange.value.to) return `From ${currentSacbDateRange.value.from}`
-  if (!currentSacbDateRange.value.from && currentSacbDateRange.value.to) return `To ${currentSacbDateRange.value.to}`
+  if (currentSacbDateRange.value.from && !currentSacbDateRange.value.to)
+    return `From ${currentSacbDateRange.value.from}`
+  if (!currentSacbDateRange.value.from && currentSacbDateRange.value.to)
+    return `To ${currentSacbDateRange.value.to}`
   return `${currentSacbDateRange.value.from} - ${currentSacbDateRange.value.to}`
 })
 
 const continuingSacbDateRangeDisplay = computed(() => {
   if (!continuingSacbDateRange.value.from && !continuingSacbDateRange.value.to) return ''
-  if (continuingSacbDateRange.value.from && !continuingSacbDateRange.value.to) return `From ${continuingSacbDateRange.value.from}`
-  if (!continuingSacbDateRange.value.from && continuingSacbDateRange.value.to) return `To ${continuingSacbDateRange.value.to}`
+  if (continuingSacbDateRange.value.from && !continuingSacbDateRange.value.to)
+    return `From ${continuingSacbDateRange.value.from}`
+  if (!continuingSacbDateRange.value.from && continuingSacbDateRange.value.to)
+    return `To ${continuingSacbDateRange.value.to}`
   return `${continuingSacbDateRange.value.from} - ${continuingSacbDateRange.value.to}`
 })
 
@@ -968,9 +1264,9 @@ async function loadRacReport($date) {
   }
 }
 
-async function loadSacbReport($from,$to) {
+async function loadSacbReport($from, $to) {
   try {
-    await reportStore.fetchSacbReport($from,$to)
+    await reportStore.fetchSacbReport($from, $to)
   } catch (error) {
     console.error(error)
     $q.notify({
@@ -982,10 +1278,9 @@ async function loadSacbReport($from,$to) {
 
 async function exportToPDF() {
   exportingPDF.value = true
-  const html2canvas = (await import('html2canvas')).default;
-  const jsPDF = (await import('jspdf')).default;
+  const html2canvas = (await import('html2canvas')).default
+  const jsPDF = (await import('jspdf')).default
   try {
-
     const element = document.querySelector('#rac-print-content')
 
     if (!element) {
@@ -996,7 +1291,6 @@ async function exportToPDF() {
       return
     }
 
-
     const canvas = await html2canvas(element, {
       scale: 2,
       useCORS: true,
@@ -1006,7 +1300,6 @@ async function exportToPDF() {
     // Create PDF in landscape orientation with A4 dimensions
     const pdf = new jsPDF('l', 'mm', 'a4') // 'l' for landscape
 
-
     const pageWidth = pdf.internal.pageSize.getWidth() // 297mm (A4 landscape width)
     const pageHeight = pdf.internal.pageSize.getHeight() // 210mm (A4 landscape height)
     const imgWidth = pageWidth
@@ -1015,10 +1308,8 @@ async function exportToPDF() {
     let heightLeft = imgHeight
     let position = 0
 
-
     pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
     heightLeft -= pageHeight
-
 
     while (heightLeft > 0) {
       position = heightLeft - imgHeight
@@ -1026,7 +1317,6 @@ async function exportToPDF() {
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
       heightLeft -= pageHeight
     }
-
 
     pdf.save('rac-report.pdf')
 
@@ -1047,10 +1337,9 @@ async function exportToPDF() {
 
 async function exportSACBToPDF() {
   exportingSACBPDF.value = true
-  const html2canvas = (await import('html2canvas')).default;
-  const jsPDF = (await import('jspdf')).default;
+  const html2canvas = (await import('html2canvas')).default
+  const jsPDF = (await import('jspdf')).default
   try {
-
     const element = document.querySelector('#sacb-print-content')
 
     if (!element) {
@@ -1139,7 +1428,7 @@ function saveAsTemplate() {
     notedBy: SetupModal.Notedby,
     notedPosition: SetupModal.Notedposition,
     certifiedBy: SetupModal.Certifiedby,
-    certifiedPosition: SetupModal.Certifiedposition
+    certifiedPosition: SetupModal.Certifiedposition,
   }
 
   localStorage.setItem('sacbSignatoryTemplate', JSON.stringify(template))
@@ -1154,7 +1443,6 @@ onActivated(async () => {
   await loadAllData()
 })
 </script>
-
 
 <style scoped>
 .report-page {
@@ -1174,7 +1462,7 @@ onActivated(async () => {
 .section-title {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #187C19;
+  color: #187c19;
   margin: 0;
 }
 
@@ -1237,7 +1525,7 @@ onActivated(async () => {
   position: relative;
 }
 
-.print-modal>.a4-divider {
+.print-modal > .a4-divider {
   width: 100%;
   height: 0;
   border-top: 2px dashed #bdbdbd;
@@ -1274,7 +1562,7 @@ onActivated(async () => {
 }
 
 .calend-icon:hover {
-  color: #187C19;
+  color: #187c19;
 }
 
 /* Input and button enhancements */
@@ -1323,7 +1611,6 @@ onActivated(async () => {
     max-width: 95vw;
   }
 
-
   .report-card {
     margin-bottom: 20px;
   }
@@ -1354,7 +1641,6 @@ onActivated(async () => {
   z-index: 10;
   background-color: #f5f5f5;
   border-bottom: 1px solid #e0e0e0;
-
 }
 
 .pages-group {
@@ -1418,8 +1704,8 @@ onActivated(async () => {
 }
 
 .info-card {
-  background: linear-gradient(135deg, #E0FFE7 0%, #69B31E 100%);
-  border: 1px solid #187C19;
+  background: linear-gradient(135deg, #e0ffe7 0%, #69b31e 100%);
+  border: 1px solid #187c19;
 }
 
 .info-item {
@@ -1442,7 +1728,7 @@ onActivated(async () => {
 
 .info-value {
   font-weight: 600;
-  color: #187C19;
+  color: #187c19;
   font-size: 0.9em;
   text-align: right;
   flex: 1;
@@ -1463,8 +1749,8 @@ onActivated(async () => {
 }
 
 .signatory-group:hover {
-  background-color: #E0FFE7;
-  border-color: #187C19;
+  background-color: #e0ffe7;
+  border-color: #187c19;
   box-shadow: 0 2px 8px rgba(24, 124, 25, 0.1);
 }
 
@@ -1544,19 +1830,19 @@ onActivated(async () => {
 }
 
 .sacb-table tr:hover {
-  background-color: #E0FFE7;
+  background-color: #e0ffe7;
 }
 
 /* Enhanced table header styling for SACB */
 .sacb-table .q-table thead tr:first-child th {
-  background: linear-gradient(135deg, #187C19 0%, #0E780E 100%);
+  background: linear-gradient(135deg, #187c19 0%, #0e780e 100%);
   color: white;
   font-weight: 600;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .sacb-table .q-table thead tr:last-child th {
-  background: linear-gradient(135deg, #69B31E 0%, #187C19 100%);
+  background: linear-gradient(135deg, #69b31e 0%, #187c19 100%);
   color: white;
   font-weight: 500;
 }
@@ -1596,13 +1882,14 @@ onActivated(async () => {
 }
 
 .stat-label {
-  font-weight: 500;
+  font-weight: 100;
   color: #424242;
+  font-size: small;
 }
 
 .stat-value {
   font-weight: 600;
-  color: #187C19;
+  color: #187c19;
   font-size: 1.1em;
 }
 
@@ -1626,15 +1913,15 @@ onActivated(async () => {
 }
 
 .signature-line:hover {
-  background-color: #E0FFE7;
-  border-color: #187C19;
+  background-color: #e0ffe7;
+  border-color: #187c19;
   box-shadow: 0 2px 8px rgba(24, 124, 25, 0.1);
 }
 
 .signature-name {
   font-weight: 600;
   font-size: 1em;
-  color: #187C19;
+  color: #187c19;
   margin-bottom: 4px;
   border-bottom: 1px solid #ccc;
   padding-bottom: 4px;
@@ -1698,19 +1985,19 @@ onActivated(async () => {
 }
 
 .rac-table tr:hover {
-  background-color: #E0FFE7;
+  background-color: #e0ffe7;
 }
 
 /* Enhanced table header styling for RAC */
 .rac-table .q-table thead tr:first-child th {
-  background: linear-gradient(135deg, #187C19 0%, #0E780E 100%);
+  background: linear-gradient(135deg, #187c19 0%, #0e780e 100%);
   color: white;
   font-weight: 600;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .rac-table .q-table thead tr:last-child th {
-  background: linear-gradient(135deg, #69B31E 0%, #187C19 100%);
+  background: linear-gradient(135deg, #69b31e 0%, #187c19 100%);
   color: white;
   font-weight: 500;
 }
@@ -1808,7 +2095,7 @@ onActivated(async () => {
   font-weight: bold;
   font-size: 14px;
   padding: 12px;
-  background: linear-gradient(135deg, #187C19 0%, #0E780E 100%);
+  background: linear-gradient(135deg, #187c19 0%, #0e780e 100%);
   color: white;
   border-bottom: 2px solid #dee2e6;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -1830,45 +2117,59 @@ onActivated(async () => {
 
 /* Main header row styling */
 .preview-table .header-row-main th {
-  background: linear-gradient(135deg, #187C19 0%, #0E780E 100%);
-  color: white;
+  background: whitesmoke;
+  color: black;
   font-weight: 600;
   font-size: 20px;
+  font-family:  'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   text-transform: uppercase;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   text-align: center;
+  justify-content: center;
+  align-items: center;
 }
 
 /* Expense class header styling */
 .preview-table .col-expense-class {
-  background: linear-gradient(135deg, #187C19 0%, #0E780E 100%) !important;
-  color: white !important;
+  background: whitesmoke !important;
+  color: black !important;
   font-weight: 600 !important;
-  font-size: 12px !important;
+  font-size: 15px !important;
+   font-family:  'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   text-transform: uppercase !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
   text-align: center !important;
+     justify-content: center;
+  align-items: center;
 }
 
 /* Obligation header styling */
 .preview-table .col-obligation-header {
-  background: linear-gradient(135deg, #187C19 0%, #0E780E 100%) !important;
-  color: white !important;
+  background: whitesmoke!important;
+   font-family:  'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: black !important;
   font-weight: 600 !important;
-  font-size: 12px !important;
+  font-size: 15px !important;
   text-transform: uppercase !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
   text-align: center !important;
+      justify-content: center;
+  align-items: center;
 }
 
 /* Regular header row styling */
 .preview-table .header-row th {
-  background: linear-gradient(135deg, #69B31E 0%, #187C19 100%);
-  color: white;
+  background: whitesmoke;
+   font-family:  'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: black;
   font-weight: 600;
-  font-size: 11px;
+  font-size: 12px;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
   text-transform: uppercase;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+
 }
 
 .preview-table .text-right {
@@ -1884,7 +2185,7 @@ onActivated(async () => {
 }
 
 .preview-table tr:hover {
-  background-color: #E0FFE7;
+  background-color: #e0ffe7;
 }
 
 .preview-table .data-row:nth-child(even) {
@@ -1897,11 +2198,21 @@ onActivated(async () => {
 }
 
 /* Column widths to match preview */
-.col-date { width: 8%; }
-.col-particulars { width: 20%; }
-.col-dv { width: 15%; }
-.col-payee { width: 15%; }
-.col-appropriation { width: 12%; }
+.col-date {
+  width: 8%;
+}
+.col-particulars {
+  width: 20%;
+}
+.col-dv {
+  width: 15%;
+}
+.col-payee {
+  width: 15%;
+}
+.col-appropriation {
+  width: 12%;
+}
 .col-account-title {
   width: calc((100% - 70%) / max(1, var(--dynamic-columns, 1)));
   min-width: 80px;
@@ -1913,12 +2224,24 @@ onActivated(async () => {
   --dynamic-columns: 1;
 }
 
-.preview-table[data-columns="0"] { --dynamic-columns: 1; }
-.preview-table[data-columns="1"] { --dynamic-columns: 1; }
-.preview-table[data-columns="2"] { --dynamic-columns: 2; }
-.preview-table[data-columns="3"] { --dynamic-columns: 3; }
-.preview-table[data-columns="4"] { --dynamic-columns: 4; }
-.preview-table[data-columns="5"] { --dynamic-columns: 5; }
+.preview-table[data-columns='0'] {
+  --dynamic-columns: 1;
+}
+.preview-table[data-columns='1'] {
+  --dynamic-columns: 1;
+}
+.preview-table[data-columns='2'] {
+  --dynamic-columns: 2;
+}
+.preview-table[data-columns='3'] {
+  --dynamic-columns: 3;
+}
+.preview-table[data-columns='4'] {
+  --dynamic-columns: 4;
+}
+.preview-table[data-columns='5'] {
+  --dynamic-columns: 5;
+}
 
 /* Print styles */
 @media print {
@@ -1939,27 +2262,22 @@ onActivated(async () => {
   }
 
   .preview-header {
-    background: linear-gradient(135deg, #187C19 0%, #0E780E 100%) !important;
-    color: white !important;
-    -webkit-print-color-adjust: exact;
-    color-adjust: exact;
+    background: linear-gradient(135deg, #187c19 0%, #0e780e 100%) !important;
+    color: black !important;
   }
 
   /* Main header row print styling */
   .preview-table .header-row-main th {
-    background: linear-gradient(135deg, #187C19 0%, #0E780E 100%) !important;
-    color: white !important;
-    -webkit-print-color-adjust: exact;
-    color-adjust: exact;
+    background: linear-gradient(135deg, #187c19 0%, #0e780e 100%) !important;
+    color: black !important;
+
     font-size: 20px;
   }
 
   /* Regular header row print styling */
   .preview-table .header-row th {
-    background: linear-gradient(135deg, #69B31E 0%, #187C19 100%) !important;
-    color: white !important;
-    -webkit-print-color-adjust: exact;
-    color-adjust: exact;
+    background: linear-gradient(135deg, #69b31e 0%, #187c19 100%) !important;
+    color: black !important;
   }
 
   /* Landscape print optimization */
