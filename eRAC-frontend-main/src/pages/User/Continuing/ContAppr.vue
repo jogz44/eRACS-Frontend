@@ -43,6 +43,7 @@
           @click="showContinueDialog = true"
           color="secondary"
           v-permission="'add'"
+          :loading="generalLoading"
         />
       </div>
     </div>
@@ -68,11 +69,14 @@
             <q-select
               outlined
               dense
-              v-model="selectedYear"
-              :options="yearOptions"
+              v-model="contApprStore.selectedYear"
+              :options="contApprStore.years"
+              option-label="label"
               label="Select Year"
               style="min-width: 150px"
-              @keydown.enter="handleEnterKey"
+              :loading="generalLoading"
+              emit-value
+              map-options
             />
           </div>
 
@@ -268,10 +272,13 @@ const clearAllFilters = () => {
   dateTo.value = ''
 }
 
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
+import { useContApprStore } from 'src/stores/contApprStore'
+//import { useContApprStore } from 'src/stores/contApprStore'
 
 const $q = useQuasar()
+const contApprStore =useContApprStore();
 
 const showContinueDialog = ref(false)
 const showAllocationDialog = ref(false)
@@ -282,25 +289,9 @@ const dateFrom = ref('')
 const dateTo = ref('')
 const returnAmount = ref(0)
 const augmentationAmount = ref(0)
-const selectedYear = ref(null)
 
-const filteredAccounts = computed(() => {
-  if (!searchQuery.value) return continueAccounts.value
+const generalLoading = ref(true)
 
-  return continueAccounts.value.filter((account) =>
-    Object.values(account).join(' ').toLowerCase().includes(searchQuery.value.toLowerCase()),
-  )
-})
-
-const yearOptions = ['2023', '2024', '2025']
-const continueAccounts = ref([
-  { id: 1, accountName: 'Capital Outlays > OFFICE EQUIPMENT', balance: 12000 },
-  { id: 2, accountName: 'Capital Outlays > IT EQUIPMENT AND SOFTWARE', balance: 7600 },
-  { id: 3, accountName: 'Capital Outlays > VEHICLES', balance: 50000 },
-  { id: 4, accountName: 'Capital Outlays > FURNITURE AND FIXTURES', balance: 8300 },
-  { id: 5, accountName: 'Capital Outlays > BUILDING IMPROVEMENTS', balance: 42000 },
-  { id: 6, accountName: 'Capital Outlays > MEDICAL EQUIPMENT', balance: 15000 },
-])
 
 const continueColumns = [
   { name: 'accountName', label: 'Accounts Name', field: 'accountName', align: 'left' },
@@ -329,6 +320,15 @@ const columns = [
   { name: 'action', label: 'Action', field: 'action', align: 'center' },
 ]
 
+const continueAccounts = ref([
+  { id: 1, accountName: 'Capital Outlays > OFFICE EQUIPMENT', balance: 12000 },
+  { id: 2, accountName: 'Capital Outlays > IT EQUIPMENT AND SOFTWARE', balance: 7600 },
+  { id: 3, accountName: 'Capital Outlays > VEHICLES', balance: 50000 },
+  { id: 4, accountName: 'Capital Outlays > FURNITURE AND FIXTURES', balance: 8300 },
+  { id: 5, accountName: 'Capital Outlays > BUILDING IMPROVEMENTS', balance: 42000 },
+  { id: 6, accountName: 'Capital Outlays > MEDICAL EQUIPMENT', balance: 15000 },
+])
+
 const parseDate = (str) => {
   const [m, d, y] = str.split('/')
   return new Date(`${y}-${m.padStart?.(2, '0') ?? m}-${d.padStart?.(2, '0') ?? d}`)
@@ -339,6 +339,14 @@ const availableBudget = computed(() => {
   const returns = selectedRow.value.returnAmount || 0
   const augmentation = selectedRow.value.augmentationAmount || 0
   return base + returns + augmentation
+})
+
+const filteredAccounts = computed(() => {
+  if (!searchQuery.value) return continueAccounts.value
+
+  return continueAccounts.value.filter((account) =>
+    Object.values(account).join(' ').toLowerCase().includes(searchQuery.value.toLowerCase()),
+  )
 })
 
 const filteredAppropriations = computed(() => {
@@ -546,6 +554,19 @@ const saveAllocation = () => {
 
   showAllocationDialog.value = false
 }
+onMounted(async () => {
+  try {
+    await contApprStore.fetchYears()
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to load data',
+      position: 'top',
+    })
+  }finally{
+    generalLoading.value=false;
+  }
+})
 
 defineExpose({
   openAllocationDialog,

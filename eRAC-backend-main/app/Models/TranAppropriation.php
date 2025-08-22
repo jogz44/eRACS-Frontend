@@ -48,4 +48,8 @@ class TranAppropriation extends Model
     {
         return $this->hasMany(TranExpenseDetail::class, 'appropriation_id');
     }
+    public function continuing()
+    {
+        return $this->hasMany(ContApproAccounts::class, 'contAppropriation_id');
+    }
 }
