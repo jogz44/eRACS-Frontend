@@ -14,82 +14,73 @@ class ContinuingAppropriationController extends Controller
     public function index(Request $request)
     {
         // Log user activity
-        if ($request->user()) {
-            AdminAuthController::logUserAction($request->user(),'Visited Appropriation Page' ,'Visited Appropriation Page');
-        }
-
-        $request->validate([
-            'year' => 'nullable|integer',
-            'date_from' => 'nullable|date',
-            'date_to' => 'nullable|date|after_or_equal:date_from'
-        ]);
-
-        // Get base query
-        $query = Budget::with(['tranAppropriations.expenseType', 'fiscalYear'])
-            ->where('barangay_id', $request->user()->barangay_id);
-
-        // Apply year filter
-        if ($request->year) {
-            $query->whereHas('fiscalYear', function($q) use ($request) {
-                $q->where('year', $request->year);
-            });
-        }
-
-        // Apply other filters
-        if ($request->search) {
-            $query->where('description', 'like', '%'.$request->search.'%');
-        }
-
-        if ($request->date_from) {
-            $query->where('start_date', '>=', $request->date_from);
-        }
-
-        if ($request->date_to) {
-            $query->where('end_date', '<=', $request->date_to);
-        }
-
-        // Get budgets with their total appropriations
-        $budgets = $query->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function($budget) {
-                $hasAllocations = $budget->tranAppropriations->isNotEmpty();
-                
-                // Calculate total available budget (original + augmentation)
-                $totalAvailable = (float)$budget->original_amount + (float)$budget->augmentation;
-                
-                // Calculate total appropriated amount
-                $totalAppropriated = $budget->tranAppropriations->sum('amount');
-                
-                // Calculate unappropriated amount
-                $unappropriated = $totalAvailable - $totalAppropriated;
-                
+        // if ($request->user()) {
+        //     AdminAuthController::logUserAction($request->user(),'Visited Appropriation Page' ,'Visited Appropriation Page');
+        // }
+        $query = TranAppropriation::select(
+                        DB::raw('MIN(tran_appropriations.id) as id'),
+                        'tran_appropriations.expense_class_id',
+                        'tran_appropriations.expense_type_id',
+                        'tran_appropriations.expense_item_id',
+                        DB::raw('SUM(tran_appropriations.amount) as total_amount')
+                    )
+                    ->with(['expenseClass.fiscalYear', 'expenseType', 'expenseItem'])
+                    ->where('tran_appropriations.barangay_id', $request->user()->barangay_id)
+                    ->whereRelation('expenseClass.fiscalYear', 'year', '=', now()->year)
+                    ->groupBy(
+                        'tran_appropriations.expense_class_id',
+                        'tran_appropriations.expense_type_id',
+                        'tran_appropriations.expense_item_id'
+                    );
 
 
-                return [
-                    'id' => $budget->id,
-                    'date' => $budget->created_at->format('Y-m-d'),
-                    'description' => $budget->description,
-                    'amount' => $totalAvailable,
-                    'unappropriated' => $unappropriated,
-                    'fiscal_year' => $budget->fiscalYear->year,
-                    'allocations' => $budget->tranAppropriations->map(function($tranAppropriations) {
-                        return [
-                            'id' => $tranAppropriations->id,
-                            'amount' => (float)$tranAppropriations->amount,
-                            'expense_type' => $tranAppropriations->expenseType->name ?? null
-                        ];
-                    })
-                ];
-            });
+        $detail = TranAppropriation::select(
+                        DB::raw('MIN(tran_appropriations.id) as id'), 
+                        'tran_appropriations.expense_class_id',
+                        'tran_appropriations.expense_type_id',
+                        'tran_appropriations.expense_item_id',
+                        DB::raw('SUM(ISNULL(tran_expense_details.amount, 0)) as details_amount')
+                    )
+                    ->leftJoin('tran_expense_details', 'tran_expense_details.appropriation_id', '=', 'tran_appropriations.id')
+                    ->with(['expenseClass.fiscalYear', 'expenseType', 'expenseItem'])
+                    ->where('tran_appropriations.barangay_id', $request->user()->barangay_id)
+                    ->whereRelation('expenseClass.fiscalYear', 'year', '=', now()->year)
+                    ->groupBy(
+                        'tran_appropriations.expense_class_id',
+                        'tran_appropriations.expense_type_id',
+                        'tran_appropriations.expense_item_id'
+                    );
+
+
+        $totals = $query->get();
+        $details = $detail->get();
+
+        $rows = $totals->map(function ($o) use ($details) {
+            $d = $details->first(fn($d) =>
+                $d->expense_class_id == $o->expense_class_id &&
+                $d->expense_type_id == $o->expense_type_id &&
+                $d->expense_item_id == $o->expense_item_id
+            );
+
+            $details_amount = $d->details_amount ?? 0;
+
+            return [
+                'id' => $o->id, 
+                'year' => $o->expenseClass?->fiscalYear?->year,
+                'expenseClass' => $o->expenseClass?->name,
+                'expenseType' => $o->expenseType?->name,
+                'expenseItem' => $o->expenseItem?->name,
+                'total_amount' => (float) $o->total_amount,
+                'details_amount' => (float) $details_amount,
+                'remaining_amount' => (float) $o->total_amount - (float) $details_amount,
+            ];
+        })
+        ->filter(fn($row) => $row['remaining_amount'] != 0)
+        ->values()
+        ->toArray();
 
         return response()->json([
-            'status' => true,
-            'data' => $budgets,
-            'total_available' => (float)Budget::where('barangay_id', $request->user()->barangay_id)
-                                        ->get()
-                                        ->sum(function($budget) {
-                                            return (float)$budget->original_amount + (float)$budget->augmentation;
-                                        })
+            'rows' => $rows,
         ]);
     }
 
