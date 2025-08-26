@@ -62,14 +62,11 @@
       <q-card-section>
         <div class="text-h6 text-weight-medium">Disbursement Overview</div>
         <div class="text-caption text-grey-6">Current year</div>
-        <div class="text-caption text-grey-6 q-mt-xs">
-          <q-icon name="info" size="xs" class="q-mr-xs" />
-          Aging shows days since disbursement creation (Pending/Partial only). Liquidated items show "Completed".
-        </div>
+
 
         <!-- Filter Controls and Refresh -->
-        <div class="row q-gutter-sm q-mt-md items-center justify-between">
-          <div class="row q-gutter-sm">
+        <div class="row q-gutter-sm q-mt-md items-center justify-between ">
+          <div class="row q-gutter-sm ">
             <q-btn
               v-for="filter in disbursementFilters"
               :key="filter.value"
@@ -98,7 +95,11 @@
         </div>
 
         <!-- Status Count Summary -->
-        <div class="row q-gutter-sm q-mt-sm">
+
+      </q-card-section>
+
+      <q-separator />
+         <div class="row q-gutter-sm q-mt-sm q-ml-sm">
           <div
             v-for="status in ['Pending', 'Partial', 'Liquidated']"
             :key="status"
@@ -115,8 +116,6 @@
             />
           </div>
         </div>
-      </q-card-section>
-      <q-separator />
       <q-card-section style="height: 350px; position: relative; width: 100%; overflow-x: auto;">
         <div v-if="chartStore.isLoading" class="absolute-center">
           <q-spinner color="primary" size="3em" />
@@ -156,9 +155,7 @@
           <template v-slot:body-cell-aging="props">
             <q-td :props="props">
               <!-- Debug info (remove in production) -->
-              <div class="text-caption text-grey-4" style="font-size: 10px;">
-                Debug: {{ props.value }} | {{ props.row.status }}
-              </div>
+
 
               <div v-if="props.value !== '-' && props.row.status !== 'Liquidated'" class="aging-display">
                 <q-chip
@@ -178,10 +175,7 @@
                   </q-tooltip>
                 </q-chip>
               </div>
-              <div v-else class="text-grey-6">
-                <q-icon name="check_circle" size="xs" class="q-mr-xs" />
-                Completed
-              </div>
+
             </q-td>
           </template>
 

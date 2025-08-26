@@ -264,38 +264,11 @@ const showAllocationDialog = ref(false)
 const description = ref('')
 const selectedAccounts = ref([])
 const searchQuery = ref('')
-const continueAccounts = ref([
-  {
-    id: 1,
-    accountName: 'Capital Outlays > OFFICE EQUIPMENT',
-    balance: 12000,
-  },
-  {
-    id: 2,
-    accountName: 'Capital Outlays > IT EQUIPMENT AND SOFTWARE',
-    balance: 7600,
-  },
-  {
-    id: 3,
-    accountName: 'Capital Outlays > VEHICLES',
-    balance: 50000,
-  },
-  {
-    id: 4,
-    accountName: 'Capital Outlays > FURNITURE AND FIXTURES',
-    balance: 8300,
-  },
-  {
-    id: 5,
-    accountName: 'Capital Outlays > BUILDING IMPROVEMENTS',
-    balance: 42000,
-  },
-  {
-    id: 6,
-    accountName: 'Capital Outlays > MEDICAL EQUIPMENT',
-    balance: 15000,
-  },
-])
+// Use store-fetched continuing accounts (flattened for table rows)
+const flatContinueAccounts = computed(() => {
+  if (!Array.isArray(contApprStore.continueAccounts)) return []
+  return contApprStore.continueAccounts.flatMap(group => group.children || [])
+})
 
 const returnAmount = ref(0)
 const augmentationAmount = ref(0)
@@ -347,10 +320,11 @@ const availableBudget = computed(() => {
 })
 
 const filteredAccounts = computed(() => {
-  if (!searchQuery.value) return continueAccounts.value
-
-  return continueAccounts.value.filter((account) =>
-    Object.values(account).join(' ').toLowerCase().includes(searchQuery.value.toLowerCase()),
+  const base = flatContinueAccounts.value
+  if (!searchQuery.value) return base
+  const q = searchQuery.value.toLowerCase()
+  return base.filter((account) =>
+    Object.values(account).join(' ').toLowerCase().includes(q),
   )
 })
 
@@ -553,6 +527,7 @@ const saveAllocation = () => {
 }
 onMounted(async () => {
   try {
+    await contApprStore.fetchContinueAccounts()
     await contApprStore.fetchYears()
   } catch (error) {
     $q.notify({
