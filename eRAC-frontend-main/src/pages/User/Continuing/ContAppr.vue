@@ -52,7 +52,7 @@
     <q-dialog v-model="showContinueDialog" @keydown.enter="handleEnterKey">
       <q-card style="min-width: 600px; max-width: 90vw">
         <q-card-section class="q-pb-none">
-          <div class="text-h6">Select Accounts to Continue</div>
+          <div class="text-h6">Select Accounts to Continue Last Year</div>
         </q-card-section>
 
         <q-card-section>
@@ -66,18 +66,9 @@
               style="min-width: 250px"
               @keydown.enter="handleEnterKey"
             />
-            <q-select
-              outlined
-              dense
-              v-model="contApprStore.selectedYear"
-              :options="contApprStore.years"
-              option-label="label"
-              label="Select Year"
-              style="min-width: 150px"
-              :loading="generalLoading"
-              emit-value
-              map-options
-            />
+            <label>
+
+            </label>
           </div>
 
           <q-table
