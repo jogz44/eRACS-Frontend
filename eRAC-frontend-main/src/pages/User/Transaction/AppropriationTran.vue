@@ -300,12 +300,11 @@ import ViewCommitDialog from 'components/appropriation/ViewCommitDialog.vue'
 import { useAppropriationStore } from 'stores/appropriationStore'
 import { useAccountsLibraryStore } from 'stores/accountsLibstore'
 import { api } from 'src/boot/axios'
-// import { useAuthStore } from 'src/stores/auth'
+import { usePageLogging } from '../../../composables/usePageLogging'
 
 const $q = useQuasar()
 const accountLibraryStore = useAccountsLibraryStore()
 const appropriationStore = useAppropriationStore()
-// const authStore = useAuthStore()
 
 const showDialog = ref(false)
 const selectedFiscalYear = ref(null)
@@ -720,6 +719,10 @@ const saveEditedAllocation = async () => {
 onMounted(async () => {
   try {
     await appropriationStore.fetchBudgets()
+    
+    // Log page visit
+    const { logPageVisit } = usePageLogging()
+    await logPageVisit('Current Appropriation')
   } catch (error) {
     $q.notify({
       type: 'negative',

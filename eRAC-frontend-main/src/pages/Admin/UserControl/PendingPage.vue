@@ -208,6 +208,7 @@
 
 <script>
 import { api } from 'boot/axios'
+import { usePageLogging } from 'composables/usePageLogging'
 
 export default {
   data() {
@@ -297,6 +298,10 @@ export default {
         this.users = [];
       }
     }
+    
+    // Log page visit
+    const { logPageVisit } = usePageLogging()
+    await logPageVisit('User Control')
     await this.loadPendingUsers();
   },
   activated() {

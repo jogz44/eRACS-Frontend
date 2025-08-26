@@ -111,10 +111,10 @@ export default {
       loading.value = true
       try {
         const response = await api.get(`/api/admin/logs/${props.selectedUser.id}/${props.selectedUser.log_date}`)
-
-        activities.value = response.data
+        activities.value = response.data || []
       } catch (error) {
         console.error('Error loading activities:', error)
+        activities.value = []
       } finally {
         loading.value = false
       }

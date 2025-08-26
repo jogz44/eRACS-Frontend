@@ -907,6 +907,7 @@ import SetupDialog from 'components/SetupDialog.vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'stores/auth'
 import { useReportStore } from 'stores/reportStore'
+import { usePageLogging } from 'composables/usePageLogging'
 
 const computedSACBRows = computed(() => {
   const result = []
@@ -986,6 +987,7 @@ const hasDynamicColumns = computed(() => {
 const $q = useQuasar()
 const reportStore = useReportStore()
 const authStore = useAuthStore()
+const { logPageVisit } = usePageLogging()
 
 /* -------------------- STATE -------------------- */
 const showSetupDialog = ref(false)
@@ -1438,6 +1440,8 @@ function saveAsTemplate() {
 /* -------------------- LIFECYCLE -------------------- */
 onMounted(async () => {
   await loadAllData()
+  // Log page visit
+  await logPageVisit('Reports')
 })
 onActivated(async () => {
   await loadAllData()

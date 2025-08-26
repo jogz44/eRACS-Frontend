@@ -307,12 +307,14 @@ import CommitDialog from 'components/appropriation/CommitDialog.vue'
 import ViewCommitDialog from 'components/appropriation/ViewCommitDialog.vue'
 import { useAppropriationStore } from 'stores/appropriationStore'
 import { useAccountsLibraryStore } from 'stores/accountsLibstore'
+import { usePageLogging } from 'composables/usePageLogging'
 // import { api } from 'src/boot/axios' // No longer needed since we use appropriationStore.commitAllocation
 // import SearchFilters from 'src/components/appropriation/SearchFilters.vue'
 
 const $q = useQuasar()
 const accountLibraryStore = useAccountsLibraryStore()
 const appropriationStore = useAppropriationStore()
+const { logPageVisit } = usePageLogging()
 
 const showDialog = ref(false)
 const selectedFiscalYear = computed({
@@ -703,6 +705,8 @@ const saveEditedAllocation = async () => {
 onMounted(async () => {
   try {
     await appropriationStore.initialize()
+    // Log page visit
+    await logPageVisit('Current Appropriation')
   } catch (error) {
     $q.notify({
       type: 'negative',

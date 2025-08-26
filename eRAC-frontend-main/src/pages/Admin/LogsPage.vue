@@ -128,6 +128,7 @@
 import { api } from 'boot/axios'
 import { date } from 'quasar'
 import AdminLogsActivity from './AdminLogsActivity.vue'
+import { usePageLogging } from 'composables/usePageLogging'
 
 export default {
   name: 'LogsPage',
@@ -256,6 +257,10 @@ export default {
   },
   async mounted() {
     await this.loadLogs()
+    
+    // Log page visit
+    const { logPageVisit } = usePageLogging()
+    await logPageVisit('Log Activities')
   },
   methods: {
     openAdminLogsActivity(row) {

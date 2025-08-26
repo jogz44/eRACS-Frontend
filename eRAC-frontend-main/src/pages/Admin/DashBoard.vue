@@ -78,9 +78,11 @@
 <script>
 import { api } from 'boot/axios'
 import { ref, onMounted, computed, onUnmounted } from 'vue'
+import { usePageLogging } from 'composables/usePageLogging'
 
 export default {
   setup() {
+    const { logPageVisit } = usePageLogging()
     const barangaySummary = ref([])
     const isLoading = ref(true)
     const totalBudget = ref(0)
@@ -158,8 +160,10 @@ export default {
         clearInterval(refreshInterval.value)
       }
     })
-    onMounted(() => {
+    onMounted(async () => {
       startAutoRefresh()
+      // Log page visit
+      await logPageVisit('Dashboard')
     })
 
 

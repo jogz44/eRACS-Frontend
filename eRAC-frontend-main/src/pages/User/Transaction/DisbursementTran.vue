@@ -351,13 +351,14 @@
 </template>
 
 <script setup>
-import { watch, onMounted, onActivated, onUnmounted } from 'vue'
+import { watch, onMounted } from 'vue'
 import SearchFilters from 'components/disbursement/SearchFilters.vue'
 import OrDetailsDialog from 'components/disbursement/OrDetailsDialog.vue'
 import ViewOrDetails from 'components/disbursement/ViewOrDetails.vue'
 import EditDisbursement from 'components/disbursement/EditDisbursement.vue'
 import { useDisbursementStore } from 'stores/disbursementStore'
 import { useBankStore } from 'stores/bankStore'
+import { usePageLogging } from '../../../composables/usePageLogging'
 
 const store = useDisbursementStore()
 const bankStore = useBankStore()
@@ -444,20 +445,10 @@ onMounted(async () => {
   // Refresh expense accounts with updated balances
   store.refreshExpenseAccountsWithBalances()
 
-  // Remove the periodic refresh to reduce excessive API calls
-  // The data will be refreshed when needed (after disbursements are saved/edited)
+  // Log page visit
+  const { logPageVisit } = usePageLogging()
+  await logPageVisit('Current Disbursement')
 })
-
-// Refresh data when component is activated (when navigating back to this page)
-onActivated(async () => {
-  await loadAllData()
-})
-
-// Clean up interval when component is unmounted
-onUnmounted(() => {
-  // No longer needed since we removed the periodic refresh
-})
-
 
 // Auto-refresh expense accounts when the expense dialog is opened
 watch(

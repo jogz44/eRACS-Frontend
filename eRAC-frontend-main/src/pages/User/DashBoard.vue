@@ -214,10 +214,12 @@ import { useChartDataStore } from 'src/stores/chartDataStore'
 import PieChart from 'components/PieChart.vue'
 import { useAuthStore } from 'stores/auth'
 import { useQuasar } from 'quasar'
+import { usePageLogging } from '../../composables/usePageLogging'
 const chartStore = useChartDataStore()
 const allocationError = ref('')
 const authStore = useAuthStore()
 const $q = useQuasar()
+const { logPageVisit } = usePageLogging()
 
 // Disbursement filtering
 const selectedDisbursementFilter = ref('all')
@@ -384,8 +386,10 @@ watch(
 )
 
 // Load data when component mounts
-onMounted(() => {
+onMounted(async () => {
   loadDashboardData()
+  // Log page visit
+  await logPageVisit('Dashboard')
 })
 </script>
 

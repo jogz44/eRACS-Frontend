@@ -260,10 +260,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAppropriationStore } from 'stores/appropriationStore'
+import { usePageLogging } from 'composables/usePageLogging'
 
 const $q = useQuasar()
 const appropriationStore = useAppropriationStore()
 const loading = ref(false)
+const { logPageVisit } = usePageLogging()
 
 const loadPendingUsers = async () => {
   loading.value = true
@@ -315,6 +317,8 @@ const clearAllFilters = () => {
 onMounted(async () => {
   try {
     await appropriationStore.initialize()
+    // Log page visit
+    await logPageVisit('Continuing Appropriation')
   } catch (error) {
     $q.notify({
       type: 'negative',

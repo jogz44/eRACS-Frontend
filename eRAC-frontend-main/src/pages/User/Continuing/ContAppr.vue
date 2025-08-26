@@ -255,6 +255,7 @@ const clearAllFilters = () => {
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useContApprStore } from 'src/stores/contApprStore'
+import { usePageLogging } from '../../../composables/usePageLogging'
 
 const $q = useQuasar()
 const contApprStore = useContApprStore();
@@ -529,6 +530,10 @@ onMounted(async () => {
   try {
     await contApprStore.fetchContinueAccounts()
     await contApprStore.fetchYears()
+    
+    // Log page visit
+    const { logPageVisit } = usePageLogging()
+    await logPageVisit('Continuing Appropriation')
   } catch (error) {
     $q.notify({
       type: 'negative',
