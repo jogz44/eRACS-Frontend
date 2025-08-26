@@ -9,6 +9,7 @@ use App\Http\Controllers\Library\LibParticularController;
 use App\Http\Controllers\Library\AccountsLibController;
 use App\Http\Controllers\Library\BankLibraryController;
 use App\Http\Controllers\Transaction\AppropriationController;
+use App\Http\Controllers\Transaction\ContinuingAppropriationController;
 use App\Http\Controllers\BudgetAugmentationController;
 use App\Http\Middleware\AuthTokenValid;
 use App\Models\Barangay;
@@ -164,6 +165,9 @@ Route::prefix('barangay')->group(function () {
         // Particular route by Dan Steve
         Route::get('/particulars', [DisbursementController::class, 'getParticular']); 
         
+        // Continuing Appropriation
+        Route::get('/continuing-appropriations', [ContinuingAppropriationController::class, 'index']);
+
 
     });
 
