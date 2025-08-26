@@ -62,6 +62,10 @@
       <q-card-section>
         <div class="text-h6 text-weight-medium">Disbursement Overview</div>
         <div class="text-caption text-grey-6">Current year</div>
+        <div class="text-caption text-grey-6 q-mt-xs">
+          <q-icon name="info" size="xs" class="q-mr-xs" />
+          Aging shows days since disbursement creation (Pending/Partial only). Liquidated items show "Completed".
+        </div>
 
         <!-- Filter Controls and Refresh -->
         <div class="row q-gutter-sm q-mt-md items-center justify-between">
@@ -148,6 +152,39 @@
             </q-td>
           </template>
 
+          <!-- Aging column with color coding -->
+          <template v-slot:body-cell-aging="props">
+            <q-td :props="props">
+              <!-- Debug info (remove in production) -->
+              <div class="text-caption text-grey-4" style="font-size: 10px;">
+                Debug: {{ props.value }} | {{ props.row.status }}
+              </div>
+
+              <div v-if="props.value !== '-' && props.row.status !== 'Liquidated'" class="aging-display">
+                <q-chip
+                  :color="getAgingColor(props.value)"
+                  text-color="white"
+                  size="sm"
+                  :label="`${props.value} days`"
+                >
+                  <q-tooltip>
+                    <div class="text-center">
+                      <div class="text-weight-bold">Aging Information</div>
+                      <div>Created: {{ getAgingTooltipText(props.value) }}</div>
+                      <div class="text-caption q-mt-xs">
+                        {{ getAgingDescription(props.value) }}
+                      </div>
+                    </div>
+                  </q-tooltip>
+                </q-chip>
+              </div>
+              <div v-else class="text-grey-6">
+                <q-icon name="check_circle" size="xs" class="q-mr-xs" />
+                Completed
+              </div>
+            </q-td>
+          </template>
+
           <!-- Liquidated amount column with currency formatting -->
           <template v-slot:body-cell-liquidated_amount="props">
             <q-td :props="props">
@@ -210,6 +247,31 @@ const getStatusColor = (status) => {
     'Liquidated': 'green'
   }
   return statusColors[status] || 'grey'
+}
+
+// Helper function to get aging color based on days
+const getAgingColor = (days) => {
+  if (days <= 7) return 'green'        // 0-7 days: Green (Good)
+  if (days <= 14) return 'orange'      // 8-14 days: Orange (Warning)
+  if (days <= 30) return 'deep-orange' // 15-30 days: Deep Orange (Caution)
+  return 'red'                         // 31+ days: Red (Critical)
+}
+
+// Helper function to get aging tooltip text
+const getAgingTooltipText = (days) => {
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return `${days} days ago`
+  if (days < 30) return `${Math.floor(days / 7)} weeks ago`
+  return `${Math.floor(days / 30)} months ago`
+}
+
+// Helper function to get aging description
+const getAgingDescription = (days) => {
+  if (days <= 7) return 'Good - Within normal processing time'
+  if (days <= 14) return 'Warning - Should be processed soon'
+  if (days <= 30) return 'Caution - Requires attention'
+  return 'Critical - Immediate action needed'
 }
 
 // Helper function to get filter button color
@@ -580,6 +642,25 @@ onMounted(() => {
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     }
   }
+}
+
+/* Aging display styling */
+.aging-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  .q-chip {
+    font-weight: 500;
+    min-width: 70px;
+    justify-content: center;
+  }
+}
+
+/* Info icon styling */
+.text-caption .q-icon {
+  vertical-align: middle;
+  opacity: 0.7;
 }
 
 .welcome-user {

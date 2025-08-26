@@ -147,7 +147,7 @@ export const useChartDataStore = defineStore('chartData', {
           align: 'left',
           sortable: true,
           field: 'dv_number',
-          style: 'width: 20%'
+          style: 'width: 18%'
         },
         {
           name: 'date',
@@ -155,7 +155,7 @@ export const useChartDataStore = defineStore('chartData', {
           align: 'center',
           sortable: true,
           field: 'date',
-          style: 'width: 15%'
+          style: 'width: 12%'
         },
         {
           name: 'payee',
@@ -163,7 +163,7 @@ export const useChartDataStore = defineStore('chartData', {
           align: 'left',
           sortable: true,
           field: 'payee',
-          style: 'width: 25%'
+          style: 'width: 22%'
         },
         {
           name: 'dv_amount',
@@ -171,7 +171,15 @@ export const useChartDataStore = defineStore('chartData', {
           align: 'right',
           field: 'dv_amount',
           sortable: true,
-          style: 'width: 20%'
+          style: 'width: 18%'
+        },
+        {
+          name: 'aging',
+          label: 'Aging (Days)',
+          align: 'center',
+          field: 'aging',
+          sortable: true,
+          style: 'width: 15%'
         },
         {
           name: 'status',
@@ -179,7 +187,7 @@ export const useChartDataStore = defineStore('chartData', {
           align: 'center',
           field: 'status',
           sortable: true,
-          style: 'width: 20%'
+          style: 'width: 15%'
         }
       ]).value,
 
@@ -263,6 +271,25 @@ export const useChartDataStore = defineStore('chartData', {
       const year = fullYear ? d.getFullYear() : String(d.getFullYear()).slice(-2)
 
       return [month, day, year].join(separator)
+    },
+
+    // Calculate aging in days from creation date
+    calculateAging(createdDate, status) {
+      console.log('calculateAging called with:', { createdDate, status })
+
+      // Return '-' for liquidated or if no creation date
+      if (!createdDate || status === 'Liquidated' || status === 'liquidated') {
+        console.log('Returning "-" for:', { createdDate, status })
+        return '-'
+      }
+
+      const created = new Date(createdDate)
+      const today = new Date()
+      const diffTime = Math.abs(today - created)
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+      console.log('Calculated aging:', { created, today, diffTime, diffDays })
+      return diffDays
     },
 
     getStatusColor(status) {
@@ -493,17 +520,30 @@ export const useChartDataStore = defineStore('chartData', {
         const disbResponse = await api.get('/api/barangay/disbursements', this.getAuthConfig())
         if (disbResponse.data && disbResponse.data.data) {
           // Transform data for the overview table
-          this.disbursementOverviewRows = disbResponse.data.data.map(row => ({
-            id: row.id,
-            dv_number: row.dv_number,
-            date: this.formatDate(row.date, { fullYear: true }),
-            payee: row.payee,
-            dv_amount: parseFloat(row.dv_amount) || 0,
-            status: row.status,
-            liquidated_amount: row.liquidated_amount ? parseFloat(row.liquidated_amount) : null,
-            bank_name: row.bank_name,
-            cheque_number: row.cheque_number
-          }))
+          this.disbursementOverviewRows = disbResponse.data.data.map(row => {
+            console.log('Processing row:', {
+              id: row.id,
+              status: row.status,
+              created_at: row.created_at,
+              dv_number: row.dv_number
+            })
+
+            const aging = this.calculateAging(row.created_at, row.status)
+            console.log('Calculated aging for row:', { id: row.id, status: row.status, aging })
+
+            return {
+              id: row.id,
+              dv_number: row.dv_number,
+              date: this.formatDate(row.date, { fullYear: true }),
+              payee: row.payee,
+              dv_amount: parseFloat(row.dv_amount) || 0,
+              status: row.status,
+              liquidated_amount: row.liquidated_amount ? parseFloat(row.liquidated_amount) : null,
+              bank_name: row.bank_name,
+              cheque_number: row.cheque_number,
+              aging: aging
+            }
+          })
 
           return this.disbursementOverviewRows
         }
@@ -593,17 +633,30 @@ export const useChartDataStore = defineStore('chartData', {
             const disbResponse = await api.get('/api/barangay/disbursements', this.getAuthConfig())
             if (disbResponse.data && disbResponse.data.data) {
               // Transform data for the overview table
-              this.disbursementOverviewRows = disbResponse.data.data.map(row => ({
-                id: row.id,
-                dv_number: row.dv_number,
-                date: this.formatDate(row.date, { fullYear: true }),
-                payee: row.payee,
-                dv_amount: parseFloat(row.dv_amount) || 0,
-                status: row.status,
-                liquidated_amount: row.liquidated_amount ? parseFloat(row.liquidated_amount) : null,
-                bank_name: row.bank_name,
-                cheque_number: row.cheque_number
-              }))
+              this.disbursementOverviewRows = disbResponse.data.data.map(row => {
+                console.log('Processing row in loadDashboardData:', {
+                  id: row.id,
+                  status: row.status,
+                  created_at: row.created_at,
+                  dv_number: row.dv_number
+                })
+
+                const aging = this.calculateAging(row.created_at, row.status)
+                console.log('Calculated aging for row in loadDashboardData:', { id: row.id, status: row.status, aging })
+
+                return {
+                  id: row.id,
+                  dv_number: row.dv_number,
+                  date: this.formatDate(row.date, { fullYear: true }),
+                  payee: row.payee,
+                  dv_amount: parseFloat(row.dv_amount) || 0,
+                  status: row.status,
+                  liquidated_amount: row.liquidated_amount ? parseFloat(row.liquidated_amount) : null,
+                  bank_name: row.bank_name,
+                  cheque_number: row.cheque_number,
+                  aging: aging
+                }
+              })
 
               // Also populate the old recent disbursement rows for backward compatibility
               const liquidatedRows = disbResponse.data.data
