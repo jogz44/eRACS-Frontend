@@ -120,32 +120,14 @@
 
     <!-- Main Table -->
     <q-card flat bordered>
-      <q-table flat :rows="filteredAppropriations" :columns="columns" row-key="id">
-        <template v-slot:body-cell-amount="props">
-          <q-td :props="props">{{ formatCurrency(props.row.amount) }}</q-td>
-        </template>
-
-        <template v-slot:body-cell-action="props">
-          <q-td :props="props">
-            <div class="q-gutter-xs">
-              <q-btn
-                dense
-                icon="visibility"
-                color="blue"
-                @click="viewDetails(props.row)"
-                v-permission="'view'"
-              />
-              <q-btn
-                dense
-                label="Commit"
-                color="primary"
-                @click="openAllocationDialog(props.row)"
-                v-permission="'edit'"
-              />
-            </div>
-          </q-td>
-        </template>
-      </q-table>
+             <q-table
+         flat
+         :rows="filteredAppropriations"
+         :columns="columns"
+         row-key="id"
+         :pagination="{ rowsPerPage: 10 }"
+         class="my-sticky-header-table"
+       />
     </q-card>
 
     <!-- Allocation Dialog -->
@@ -264,8 +246,6 @@ const loadPendingUsers = async () => {
 
 const clearAllFilters = () => {
   searchQuery.value = ''
-  dateFrom.value = ''
-  dateTo.value = ''
 }
 
 import { ref, computed } from 'vue'
@@ -278,8 +258,7 @@ const showAllocationDialog = ref(false)
 const description = ref('')
 const selectedAccounts = ref([])
 const searchQuery = ref('')
-const dateFrom = ref('')
-const dateTo = ref('')
+
 const returnAmount = ref(0)
 const augmentationAmount = ref(0)
 const selectedYear = ref(null)
@@ -316,23 +295,59 @@ const continueColumns = [
 const mergedAppropriations = ref([])
 
 const columns = [
-  { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: 'true' },
-  { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: 'true' },
+  {
+    name: 'id',
+    label: 'ID',
+    field: 'id',
+    align: 'left',
+    sortable: true,
+    style: 'width: 10%'
+  },
   {
     name: 'description',
     label: 'Description',
     field: 'description',
     align: 'left',
-    sortable: 'true',
+    sortable: true,
+    style: 'width: 25%'
   },
-  { name: 'amount', label: 'Total Amount', field: 'amount', align: 'right', sortable: 'true' },
-  { name: 'action', label: 'Action', field: 'action', align: 'center' },
+  {
+    name: 'year',
+    label: 'Year',
+    field: 'year',
+    align: 'left',
+    sortable: true,
+    style: 'width: 25%'
+  },
+  {
+    name: 'originalAppropriation',
+    label: 'Original Appropriation',
+    field: 'originalAppropriation',
+    align: 'right',
+    sortable: true,
+    format: val => formatCurrency(val),
+    style: 'width: 25%'
+  },
+  {
+    name: 'balance',
+    label: 'Remaining Balance',
+    field: 'balance',
+    align: 'right',
+    sortable: true,
+    format: val => formatCurrency(val),
+    style: 'width: 25%'
+  },
+  {
+    name: 'remarks',
+    label: 'Remarks',
+    field: 'remarks',
+    align: 'left',
+    sortable: true,
+    style: 'width: calc(35% - 80px)'
+  }
 ]
 
-const parseDate = (str) => {
-  const [m, d, y] = str.split('/')
-  return new Date(`${y}-${m.padStart?.(2, '0') ?? m}-${d.padStart?.(2, '0') ?? d}`)
-}
+
 
 const availableBudget = computed(() => {
   const base = selectedRow.value.unappropriated || 0
@@ -343,18 +358,11 @@ const availableBudget = computed(() => {
 
 const filteredAppropriations = computed(() => {
   const query = searchQuery.value.toLowerCase()
-  const from = dateFrom.value ? parseDate(dateFrom.value) : null
-  const to = dateTo.value ? parseDate(dateTo.value) : null
 
   return mergedAppropriations.value.filter((row) => {
-    const matchesQuery = row.description.toLowerCase().includes(query)
-
-    if (from && to) {
-      const rowDate = parseDate(row.date)
-      return matchesQuery && rowDate >= from && rowDate <= to
-    }
-
-    return matchesQuery
+    return row.description.toLowerCase().includes(query) ||
+           row.remarks?.toLowerCase().includes(query) ||
+           row.year?.toString().includes(query)
   })
 })
 
@@ -416,9 +424,11 @@ const continueSelected = () => {
 
   mergedAppropriations.value.push({
     id: mergedAppropriations.value.length + 1,
-    date: new Date().toLocaleDateString(),
     description: description.value,
-    amount: totalAmount,
+    year: selectedYear.value,
+    originalAppropriation: totalAmount,
+    balance: totalAmount, // Initially, balance equals the original appropriation
+    remarks: '',
     accounts: [...selectedAccounts.value],
   })
 
@@ -434,9 +444,6 @@ const formatCurrency = (value) => {
   }).format(value)
 }
 
-const viewDetails = (row) => {
-  console.log('Viewing details of row:', row)
-}
 
 const selectedRow = ref({
   id: null,
@@ -566,6 +573,26 @@ defineExpose({
 .hierarchical-table {
   background: white;
   overflow: hidden;
+}
+
+.my-sticky-header-table {
+  /* height or max-height is important */
+  max-height: calc(100vh - 250px);
+
+  .q-table__top,
+  .q-table__bottom,
+  thead tr:first-child th {
+    background-color: white;
+  }
+
+  thead tr th {
+    position: sticky;
+    z-index: 1;
+  }
+
+  thead tr:first-child th {
+    top: 0;
+  }
 }
 
 @media (max-width: 768px) {
