@@ -270,24 +270,39 @@ class AppropriationController extends Controller
     return DB::transaction(function () use ($validated, $budget, $request, $netChange, $existingAllocations) {
         $appropriations = [];
 
-        // Delete existing allocations for this budget
-        $existingAllocations->each->delete();
-
-        // Create new allocations
+        // Instead of deleting, update existing allocations or create new ones
         foreach ($validated['allocations'] as $allocation) {
-            $appropriationData = [
-                'barangay_id' => $request->user()->barangay_id,
-                'budget_id' => $budget->id,
-                'amount' => $allocation['amount'],
-                'transaction_date' => now(),
-                'status' => 'committed',
-                'user_id' => $request->user()->id,
-                'expense_class_id' => $allocation['expense_class_id'] ?? null,
-                'expense_type_id' => $allocation['expense_type_id'] ?? null,
-                'expense_item_id' => $allocation['expense_item_id'] ?? null
-            ];
+            // Try to find existing appropriation with same expense hierarchy
+            $existingAppropriation = $existingAllocations->first(function($existing) use ($allocation) {
+                return $existing->expense_class_id == ($allocation['expense_class_id'] ?? null) &&
+                       $existing->expense_type_id == ($allocation['expense_type_id'] ?? null) &&
+                       $existing->expense_item_id == ($allocation['expense_item_id'] ?? null);
+            });
 
-            $appropriations[] = TranAppropriation::create($appropriationData);
+            if ($existingAppropriation) {
+                // Update existing appropriation
+                $existingAppropriation->update([
+                    'amount' => $allocation['amount'],
+                    'transaction_date' => now(),
+                    'status' => 'committed'
+                ]);
+                $appropriations[] = $existingAppropriation;
+            } else {
+                // Create new appropriation
+                $appropriationData = [
+                    'barangay_id' => $request->user()->barangay_id,
+                    'budget_id' => $budget->id,
+                    'amount' => $allocation['amount'],
+                    'transaction_date' => now(),
+                    'status' => 'committed',
+                    'user_id' => $request->user()->id,
+                    'expense_class_id' => $allocation['expense_class_id'] ?? null,
+                    'expense_type_id' => $allocation['expense_type_id'] ?? null,
+                    'expense_item_id' => $allocation['expense_item_id'] ?? null
+                ];
+
+                $appropriations[] = TranAppropriation::create($appropriationData);
+            }
 
             AdminAuthController::logUserAction(
                 $request->user(),
@@ -296,6 +311,30 @@ class AppropriationController extends Controller
                 " for budget: " . $budget->description
             );
         }
+
+        // Delete any existing allocations that are not in the new allocations
+        $newAllocationKeys = collect($validated['allocations'])->map(function($allocation) {
+            return ($allocation['expense_class_id'] ?? 'null') . '_' . 
+                   ($allocation['expense_type_id'] ?? 'null') . '_' . 
+                   ($allocation['expense_item_id'] ?? 'null');
+        })->toArray();
+
+        $existingAllocations->each(function($existing) use ($newAllocationKeys) {
+            $existingKey = ($existing->expense_class_id ?? 'null') . '_' . 
+                          ($existing->expense_type_id ?? 'null') . '_' . 
+                          ($existing->expense_item_id ?? 'null');
+            
+            if (!in_array($existingKey, $newAllocationKeys)) {
+                // Only delete if no budget augmentation details reference this appropriation
+                $hasReferences = \DB::table('budget_augmentation_details')
+                    ->where('from_appropriation_id', $existing->id)
+                    ->exists();
+                
+                if (!$hasReferences) {
+                    $existing->delete();
+                }
+            }
+        });
 
         // Update budget's current amount by the net change
         $budget->current_amount = $budget->current_amount - $netChange;

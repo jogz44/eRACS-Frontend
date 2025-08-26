@@ -440,16 +440,25 @@ export const useAppropriationStore = defineStore("appropriation", {
     },
 
     updateAllocationAmount(id, value) {
-      const parsedValue = value ? parseCurrency(value).toString() : ""
+      // Preserve numbers (finalized blur) so UI can render with .00;
+      // while typing (strings), keep raw string sanitized
+      let nextValue
+      if (typeof value === 'number') {
+        nextValue = value
+      } else if (value === '' || value === null || value === undefined) {
+        nextValue = ''
+      } else {
+        nextValue = parseCurrency(value).toString()
+      }
 
-      if (this.inputCache[id] !== parsedValue) {
+      if (this.inputCache[id] !== nextValue) {
         this.inputCache = {
           ...this.inputCache,
-          [id]: parsedValue,
+          [id]: nextValue,
         }
         this.allocationInputs = {
           ...this.allocationInputs,
-          [id]: parsedValue,
+          [id]: nextValue,
         }
       }
     },
