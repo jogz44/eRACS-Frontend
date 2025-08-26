@@ -103,12 +103,12 @@
         </q-card-section>
 
         <q-card-section>
-          <q-form @submit="handleAddBankSaveClick">
+          <q-form >
             <q-input
               v-model="newBankName"
               label="Bank Name"
               outlined
-              @keydown.enter="handleAddBankEnterKey"
+
               :rules="[
                 (val) => !!val || 'Bank name is required',
                 (val) => val.length >= 3 || 'Name must be at least 3 characters',
@@ -123,7 +123,7 @@
           <q-btn
             label="Save"
             color="primary"
-            @click="handleAddBankSaveClick"
+
             :disable="!newBankName || newBankName.length < 3 || bankStore.isLoading"
             :loading="bankStore.isLoading"
           />
@@ -866,11 +866,11 @@ const handleAddBankEnterKey = () => {
   }
 }
 
-const handleAddBankSaveClick = () => {
-  if (validateAddBank()) {
-    addBank()
-  }
-}
+// const handleAddBankSaveClick = () => {
+//   if (validateAddBank()) {
+//     addBank()
+//   }
+// }
 
 const validateEditBank = () => {
   if (!editingBank.value.name) {
