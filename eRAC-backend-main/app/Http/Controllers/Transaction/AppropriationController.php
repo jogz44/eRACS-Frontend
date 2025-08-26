@@ -301,50 +301,26 @@ class AppropriationController extends Controller
     return DB::transaction(function () use ($validated, $budget, $request, $netChange, $existingAllocations) {
         $appropriations = [];
 
-        // Instead of deleting all existing allocations, update them intelligently
-        // This preserves the TranExpenseDetail records that are linked to appropriations
-        
-        // Create a map of existing allocations for easy lookup
-        $existingAllocationMap = [];
-        foreach ($existingAllocations as $existing) {
-            $key = $this->getAllocationKey($existing);
-            $existingAllocationMap[$key] = $existing;
-        }
 
-        // Process new allocations
+        // Instead of deleting, update existing allocations or create new ones
         foreach ($validated['allocations'] as $allocation) {
-            $allocationKey = $this->getAllocationKey($allocation);
-            
-            if (isset($existingAllocationMap[$allocationKey])) {
-                // Update existing allocation
-                $existingAllocation = $existingAllocationMap[$allocationKey];
-                $previousAmount = (float) $existingAllocation->amount;
-                $existingAllocation->update([
+            // Try to find existing appropriation with same expense hierarchy
+            $existingAppropriation = $existingAllocations->first(function($existing) use ($allocation) {
+                return $existing->expense_class_id == ($allocation['expense_class_id'] ?? null) &&
+                       $existing->expense_type_id == ($allocation['expense_type_id'] ?? null) &&
+                       $existing->expense_item_id == ($allocation['expense_item_id'] ?? null);
+            });
+
+            if ($existingAppropriation) {
+                // Update existing appropriation
+                $existingAppropriation->update([
                     'amount' => $allocation['amount'],
                     'transaction_date' => now(),
-                    'status' => 'committed',
-                    'user_id' => $request->user()->id,
+                    'status' => 'committed'
                 ]);
-                $appropriations[] = $existingAllocation;
-                
-                // Remove from map to track which ones were updated
-                unset($existingAllocationMap[$allocationKey]);
-
-                // Log edited allocation with previous vs new amount
-                $identifier = $this->getExpenseIdentifier($allocation);
-                AdminAuthController::logUserAction(
-                    $request->user(),
-                    'Edited Allocation',
-                    sprintf(
-                        'Edited allocation %s: from ₱%s to ₱%s for budget "%s"',
-                        $identifier,
-                        number_format($previousAmount, 2),
-                        number_format($allocation['amount'], 2),
-                        $budget->description
-                    )
-                );
+                $appropriations[] = $existingAppropriation;
             } else {
-                // Create new allocation
+                // Create new appropriation
                 $appropriationData = [
                     'barangay_id' => $request->user()->barangay_id,
                     'budget_id' => $budget->id,
@@ -358,27 +334,38 @@ class AppropriationController extends Controller
                 ];
 
                 $appropriations[] = TranAppropriation::create($appropriationData);
-
-                // Log committed allocation
-                $identifier = $this->getExpenseIdentifier($allocation);
-                AdminAuthController::logUserAction(
-                    $request->user(),
-                    'Committed Allocation',
-                    sprintf(
-                        'Committed allocation %s: ₱%s for budget "%s"',
-                        $identifier,
-                        number_format($allocation['amount'], 2),
-                        $budget->description
-                    )
-                );
             }
-        }
+
 
         // Delete only the allocations that are no longer needed
         // This preserves TranExpenseDetail records for allocations that still exist
         foreach ($existingAllocationMap as $existingAllocation) {
             $existingAllocation->delete();
         }
+
+        // Delete any existing allocations that are not in the new allocations
+        $newAllocationKeys = collect($validated['allocations'])->map(function($allocation) {
+            return ($allocation['expense_class_id'] ?? 'null') . '_' . 
+                   ($allocation['expense_type_id'] ?? 'null') . '_' . 
+                   ($allocation['expense_item_id'] ?? 'null');
+        })->toArray();
+
+        $existingAllocations->each(function($existing) use ($newAllocationKeys) {
+            $existingKey = ($existing->expense_class_id ?? 'null') . '_' . 
+                          ($existing->expense_type_id ?? 'null') . '_' . 
+                          ($existing->expense_item_id ?? 'null');
+            
+            if (!in_array($existingKey, $newAllocationKeys)) {
+                // Only delete if no budget augmentation details reference this appropriation
+                $hasReferences = \DB::table('budget_augmentation_details')
+                    ->where('from_appropriation_id', $existing->id)
+                    ->exists();
+                
+                if (!$hasReferences) {
+                    $existing->delete();
+                }
+            }
+        });
 
         // Update budget's current amount by the net change
         $budget->current_amount = $budget->current_amount - $netChange;
