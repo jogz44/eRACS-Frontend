@@ -117,10 +117,18 @@
                     <q-input
                       v-if="!expenseType.children || expenseType.children.length === 0"
                       dense
-                      :model-value="expenseType.amount"
+                      :model-value="formatInputValue(expenseType.amount)"
                       @update:model-value="
                         (val) => {
-                          appropriationStore.updateAllocationAmount(`type-${expenseType.id}`, val)
+                          const cleanValue = handleAmountInput(val)
+                          appropriationStore.updateAllocationAmount(`type-${expenseType.id}`, cleanValue)
+                          updateUnappropriated()
+                        }
+                      "
+                      @blur="
+                        (event) => {
+                          const formatted = formatToTwoDecimals(event.target.value)
+                          appropriationStore.updateAllocationAmount(`type-${expenseType.id}`, formatted)
                           updateUnappropriated()
                         }
                       "
@@ -129,9 +137,7 @@
                       style="max-width: 230px; width: 100%; display: inline-block"
                       class="q-pa-none"
                       input-class="q-py-xs"
-                      type="number"
-                      step="0.01"
-                      min="0"
+                      placeholder="0.00"
                     />
                   </div>
                 </div>
@@ -161,10 +167,18 @@
                         <div class="col-6 text-right">
                           <q-input
                             dense
-                            :model-value="expenseItem.amount"
+                            :model-value="formatInputValue(expenseItem.amount)"
                             @update:model-value="
                               (val) => {
-                                appropriationStore.updateAllocationAmount(`item-${expenseItem.id}`, val)
+                                const cleanValue = handleAmountInput(val)
+                                appropriationStore.updateAllocationAmount(`item-${expenseItem.id}`, cleanValue)
+                                updateUnappropriated()
+                              }
+                            "
+                            @blur="
+                              (event) => {
+                                const formatted = formatToTwoDecimals(event.target.value)
+                                appropriationStore.updateAllocationAmount(`item-${expenseItem.id}`, formatted)
                                 updateUnappropriated()
                               }
                             "
@@ -173,9 +187,7 @@
                             style="max-width: 230px; width: 100%; display: inline-block"
                             class="q-pa-none"
                             input-class="q-py-xs"
-                            type="number"
-                            step="0.01"
-                            min="0"
+                            placeholder="0.00"
                           />
                         </div>
                       </div>
@@ -339,14 +351,14 @@ const netChange = computed(() => {
   const existingTotal = appropriationStore.existingAllocationsTotal || 0
   const newTotal = newAllocationsTotal.value
   const netChange = Math.round((newTotal - existingTotal) * 100) / 100
-  
+
   // Debug logging
   console.log('[DEBUG] Net Change Calculation:', {
     newAllocations: newTotal,
     existingTotal: existingTotal,
     netChange: netChange
   })
-  
+
   return netChange
 })
 
@@ -354,14 +366,14 @@ const netChange = computed(() => {
 const remainingAfterChanges = computed(() => {
   // Remaining = Available budget - Net change
   const remaining = Math.round((availableBudget.value - netChange.value) * 100) / 100
-  
+
   // Debug logging
   console.log('[DEBUG] Remaining After Changes Calculation:', {
     availableBudget: availableBudget.value,
     netChange: netChange.value,
     remaining: remaining
   })
-  
+
   return remaining
 })
 
@@ -370,7 +382,7 @@ const canSave = computed(() => {
   const hasValidAllocation = newAllocationsTotal.value > 0
   const withinBudget = netChange.value <= (availableBudget.value + 0.01) // Small tolerance
   const hasValidAmounts = newAllocationsTotal.value >= 0
-  
+
   console.log('[DEBUG] canSave calculation:', {
     hasValidAllocation,
     withinBudget,
@@ -379,7 +391,7 @@ const canSave = computed(() => {
     netChange: netChange.value,
     availableBudget: availableBudget.value
   })
-  
+
   return hasValidAllocation && withinBudget && hasValidAmounts
 })
 
@@ -463,10 +475,10 @@ const submitAllocation = async () => {
 
     // Calculate total new allocation amount
     const totalNewAllocation = allocations.reduce((sum, allocation) => sum + allocation.amount, 0)
-    
+
     // Get existing allocations total
     const existingTotal = appropriationStore.existingAllocationsTotal || 0
-    
+
     // Calculate the actual amount being allocated (new allocations - existing allocations)
     const actualAllocationAmount = totalNewAllocation - existingTotal
 
@@ -523,6 +535,50 @@ const submitAllocation = async () => {
       position: 'top',
     })
   }
+}
+
+// Display function: while typing (string), show commas only; after blur (number), show 2 decimals
+const formatInputValue = (value) => {
+  if (value === '' || value === null || value === undefined) return ''
+  const isNumber = typeof value === 'number'
+  const cleanValue = String(value).replace(/,/g, '')
+  const num = parseFloat(cleanValue)
+  if (isNaN(num)) return ''
+  return isNumber
+    ? num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : num.toLocaleString('en-US')
+}
+
+// Handle input changes while typing: return cleaned STRING (no forced decimals)
+const handleAmountInput = (value) => {
+  let cleanValue = String(value).replace(/[^\d.]/g, '')
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    cleanValue = parts[0] + '.' + parts.slice(1).join('')
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
+  }
+  return cleanValue
+}
+
+// On blur: force exactly two decimals
+const formatToTwoDecimals = (value) => {
+  const cleanValue = String(value).replace(/[^\d.]/g, '')
+  if (cleanValue === '') return 0
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    // collapse extra dots
+    const collapsed = parts[0] + '.' + parts.slice(1).join('')
+    return formatToTwoDecimals(collapsed)
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    parts[1] = parts[1].substring(0, 2)
+  }
+  const num = parseFloat(parts.join('.'))
+  if (isNaN(num)) return 0
+  // return numeric value with two decimals, UI will render via formatInputValue
+  return Math.round(num * 100) / 100
 }
 
 const updateUnappropriated = () => {

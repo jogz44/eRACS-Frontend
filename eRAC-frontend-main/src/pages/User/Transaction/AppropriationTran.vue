@@ -122,11 +122,13 @@
 
           <q-input
             outlined
-            v-model="amount"
+            :model-value="formatInputValue(amount)"
+            @update:model-value="handleAmountInput"
+            @blur="handleAmountBlur"
             label="Amount"
             prefix="₱"
-            type="number"
             @keydown.enter="handleEnterKey"
+            placeholder="0.00"
           />
         </q-card-section>
 
@@ -239,13 +241,14 @@
                     <div class="col-6 text-right">
                       <q-input
                         v-if="canEditType(expenseType)"
-                        v-model.number="expenseType.amount"
-                        type="number"
+                        :model-value="formatInputValue(expenseType.amount)"
+                        @update:model-value="(val) => handleEditAmountInput(expenseType, val)"
+                        @blur="(event) => handleEditAmountBlur(expenseType, event.target.value)"
                         dense
                         outlined
-                        min="0"
                         style="width: 100px"
                         :class="{ 'text-negative': typeErrorMap[expenseType.id] }"
+                        placeholder="0.00"
                       />
                       <div v-else class="text-weight-medium">
                         {{ appropriationStore.formatCurrency(calculateTypeTotal(expenseType)) }}
@@ -261,14 +264,15 @@
                           <span>{{ expenseItem.name }}</span>
                         </div>
                         <div class="col-6 text-right">
-                          <q-input
-                            v-model.number="expenseItem.amount"
-                            type="number"
-                            dense
-                            outlined
-                            min="0"
-                            style="width: 100px"
-                          />
+                                                  <q-input
+                          :model-value="formatInputValue(expenseItem.amount)"
+                          @update:model-value="(val) => handleEditAmountInput(expenseItem, val)"
+                          @blur="(event) => handleEditAmountBlur(expenseItem, event.target.value)"
+                          dense
+                          outlined
+                          style="width: 100px"
+                          placeholder="0.00"
+                        />
                         </div>
                       </div>
                     </template>
@@ -775,6 +779,44 @@ const columns = [
     align: 'center',
   },
 ]
+
+// Real-time input formatting function: strings (typing) show commas only; numbers (after blur) show two decimals
+const formatInputValue = (value) => {
+  if (!value && value !== 0) return ''
+  const isNumber = typeof value === 'number'
+  const cleanValue = String(value).replace(/,/g, '')
+  const num = parseFloat(cleanValue)
+  if (isNaN(num)) return ''
+  return isNumber
+    ? num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : num.toLocaleString('en-US')
+}
+
+// Handle input changes while typing: keep cleaned STRING, prevent >2 decimals
+const handleAmountInput = (value) => {
+  let cleanValue = String(value).replace(/[^\d.]/g, '')
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    cleanValue = parts[0] + '.' + parts.slice(1).join('')
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
+  }
+  amount.value = cleanValue
+}
+
+// Handle edit allocation input while typing: keep cleaned STRING
+const handleEditAmountInput = (item, value) => {
+  let cleanValue = String(value).replace(/[^\d.]/g, '')
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    cleanValue = parts[0] + '.' + parts.slice(1).join('')
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
+  }
+  item.amount = cleanValue
+}
 
 const handleEnterKey = (event) => {
   event.preventDefault()
