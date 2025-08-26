@@ -12,196 +12,190 @@
       </div>
     </div>
 
-    <!-- Summary Cards Row -->
-    <div class="row q-col-gutter-lg q-mb-lg">
-      <div
-        v-for="(card, index) in chartStore.summaryCards"
-        :key="index"
-        class="col-xs-12 col-sm-6 col-md-4 q-mb-md"
-      >
-        <q-card class="summary-card" :class="`card-${index}`">
-          <q-card-section class="row items-center justify-evenly q-pa-md" style="height: 100%">
-            <div class="row items-center" style="max-width: 90%">
-              <q-avatar
-                :icon="card.icon"
-                size="45px"
-                :color="card.color || 'primary'"
+<!-- Summary Cards Row -->
+<div class="row q-col-gutter-lg q-mb-lg">
+  <div
+    v-for="(card, index) in chartStore.summaryCards"
+    :key="index"
+    class="col-xs-12 col-sm-6 col-md-4 q-mb-md"
+  >
+    <q-card class="summary-card" :class="`card-${index}`">
+      <q-card-section class="row items-center justify-evenly q-pa-md" style="height: 100%">
+        <div class="row items-center" style="max-width: 90%">
+          <q-avatar
+            :icon="card.icon"
+            size="45px"
+            :color="card.color || 'primary'"
+            text-color="white"
+            class="q-mr-md"
+          />
+          <div class="text-left">
+            <div class="Custome-text text-caption text-grey">{{ card.label }}</div>
+            <div class="text-h5 text-weight-bold">{{ card.value }}</div>
+          </div>
+        </div>
+      </q-card-section>
+    </q-card>
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row q-col-gutter-lg chart-section">
+  <div class="col-xs-12 col-md-6 q-mb-md">
+    <q-card class="chart-card responsive-card">
+      <q-card-section>
+        <div class="text-h6 text-weight-medium">Commitment Distribution</div>
+        <div class="text-caption text-grey-6">Current year</div>
+      </q-card-section>
+      <q-separator />
+      <q-card-section style="height: 350px; position: relative; width: 100%; overflow-x: auto;">
+        <div v-if="chartStore.chartLoading" class="absolute-center">
+          <q-spinner color="primary" size="3em" />
+        </div>
+        <PieChart v-else :chart-data="chartStore.pieChartData" :options="chartOptions" />
+      </q-card-section>
+    </q-card>
+  </div>
+
+  <div class="col-xs-12 col-md-6 q-mb-md">
+    <q-card class="chart-card responsive-card">
+      <q-card-section>
+        <div class="text-h6 text-weight-medium">Disbursement Overview</div>
+        <div class="text-caption text-grey-6">Current year</div>
+
+
+        <!-- Filter Controls and Refresh -->
+        <div class="row q-gutter-sm q-mt-md items-center justify-between ">
+          <div class="row q-gutter-sm ">
+            <q-btn
+              v-for="filter in disbursementFilters"
+              :key="filter.value"
+              :label="filter.label"
+              :color="getFilterButtonColor(filter.value)"
+              :text-color="getFilterButtonTextColor(filter.value)"
+              :outline="selectedDisbursementFilter !== filter.value"
+              size="sm"
+              @click="selectedDisbursementFilter = filter.value"
+              class="filter-btn"
+            />
+          </div>
+
+          <q-btn
+            icon="refresh"
+            color="primary"
+            flat
+            dense
+            size="sm"
+            @click="refreshDisbursements"
+            :loading="chartStore.isLoading"
+            class="refresh-btn"
+          >
+            <q-tooltip>Refresh Disbursements</q-tooltip>
+          </q-btn>
+        </div>
+
+        <!-- Status Count Summary -->
+
+      </q-card-section>
+
+      <q-separator />
+         <div class="row q-gutter-sm q-mt-sm q-ml-sm">
+          <div
+            v-for="status in ['Pending', 'Partial', 'Liquidated']"
+            :key="status"
+            class="status-count-chip"
+            :class="{ 'active': selectedDisbursementFilter === status }"
+            @click="selectedDisbursementFilter = status"
+          >
+            <q-chip
+              :color="getStatusColor(status)"
+              text-color="white"
+              size="sm"
+              :label="`${status}: ${getStatusCount(status)}`"
+              clickable
+            />
+          </div>
+        </div>
+      <q-card-section style="height: 350px; position: relative; width: 100%; overflow-x: auto;">
+        <div v-if="chartStore.isLoading" class="absolute-center">
+          <q-spinner color="primary" size="3em" />
+        </div>
+
+        <q-table
+          v-else
+          :rows="filteredDisbursementRows"
+          :columns="chartStore.disbursementOverviewColumns"
+          row-key="id"
+          flat
+          bordered
+          :pagination="{ rowsPerPage: 5 }"
+          class="disbursement-table responsive-table"
+          style="height: 100%;"
+        >
+          <!-- Status column with color coding -->
+          <template v-slot:body-cell-status="props">
+            <q-td :props="props">
+              <q-chip
+                :color="getStatusColor(props.value)"
                 text-color="white"
-                class="q-mr-md"
-              />
-              <div class="text-left">
-                <div class="Custome-text text-caption text-grey">{{ card.label }}</div>
-                <div class="text-h5 text-weight-bold">{{ card.value }}</div>
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
-
-    <!-- Charts Row -->
-    <div class="row q-col-gutter-lg chart-section">
-      <div class="col-xs-12 col-md-6 q-mb-md">
-        <q-card class="chart-card responsive-card">
-          <q-card-section>
-            <div class="text-h6 text-weight-medium">Commitment Distribution</div>
-            <div class="text-caption text-grey-6">Current year</div>
-          </q-card-section>
-          <q-separator />
-          <q-card-section style="height: 350px; position: relative; width: 100%; overflow-x: auto">
-            <div v-if="chartStore.chartLoading" class="absolute-center">
-              <q-spinner color="primary" size="3em" />
-            </div>
-            <PieChart v-else :chart-data="chartStore.pieChartData" :options="chartOptions" />
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <div class="col-xs-12 col-md-6 q-mb-md">
-        <q-card class="chart-card responsive-card">
-          <q-card-section>
-            <div class="row items-center justify-between">
-              <div class="text-h6 text-weight-medium">Disbursement Overview</div>
-              <div class="row q-gutter-sm ">
-                <div
-                  v-for="status in ['Pending', 'Partial', 'Liquidated']"
-                  :key="status"
-                  class="status-count-chip"
-                  :class="{ active: selectedDisbursementFilter === status }"
-                  @click="selectedDisbursementFilter = status"
-                >
-                  <q-chip
-                    :color="getStatusColor(status)"
-                    text-color="white"
-                    size="sm"
-                    :label="`${status}: ${getStatusCount(status)}`"
-                    clickable
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div class="text-caption text-grey-6">Current year</div>
-
-            <!-- Filter Controls and Refresh -->
-            <div class="row q-gutter-sm q-mt-md items-center justify-between">
-              <div class="row q-gutter-sm">
-                <q-btn
-                  v-for="filter in disbursementFilters"
-                  :key="filter.value"
-                  :label="filter.label"
-                  :color="getFilterButtonColor(filter.value)"
-                  :text-color="getFilterButtonTextColor(filter.value)"
-                  :outline="selectedDisbursementFilter !== filter.value"
-                  size="sm"
-                  @click="selectedDisbursementFilter = filter.value"
-                  class="filter-btn"
-                />
-              </div>
-
-              <q-btn
-                icon="refresh"
-                color="primary"
-                flat
-                dense
                 size="sm"
-                @click="refreshDisbursements"
-                :loading="chartStore.isLoading"
-                class="refresh-btn"
-              >
-                <q-tooltip>Refresh Disbursements</q-tooltip>
-              </q-btn>
-            </div>
+                :label="props.value"
+              />
+            </q-td>
+          </template>
 
-            <!-- Status Count Summary -->
-          </q-card-section>
+          <!-- Amount column with currency formatting -->
+          <template v-slot:body-cell-dv_amount="props">
+            <q-td :props="props">
+              {{ chartStore.formatCurrency(props.value) }}
+            </q-td>
+          </template>
 
-          <q-separator />
+          <!-- Aging column with color coding -->
+          <template v-slot:body-cell-aging="props">
+            <q-td :props="props">
+              <!-- Debug info (remove in production) -->
 
-          <q-card-section style="height: 350px; position: relative; width: 100%; overflow-x: auto">
-            <div v-if="chartStore.isLoading" class="absolute-center">
-              <q-spinner color="primary" size="3em" />
-            </div>
 
-            <q-table
-              v-else
-              :rows="filteredDisbursementRows"
-              :columns="chartStore.disbursementOverviewColumns"
-              row-key="id"
-              flat
-              bordered
-              :pagination="{ rowsPerPage: 5 }"
-              class="disbursement-table responsive-table"
-              style="height: 100%"
-            >
-              <!-- Status column with color coding -->
-              <template v-slot:body-cell-status="props">
-                <q-td :props="props">
-                  <q-chip
-                    :color="getStatusColor(props.value)"
-                    text-color="white"
-                    size="sm"
-                    :label="props.value"
-                  />
-                </q-td>
-              </template>
+              <div v-if="props.value !== '-' && props.row.status !== 'Liquidated'" class="aging-display">
+                <q-chip
+                  :color="getAgingColor(props.value)"
+                  text-color="white"
+                  size="sm"
+                  :label="`${props.value} days`"
+                >
+                  <q-tooltip>
+                    <div class="text-center">
+                      <div class="text-weight-bold">Aging Information</div>
+                      <div>Created: {{ getAgingTooltipText(props.value) }}</div>
+                      <div class="text-caption q-mt-xs">
+                        {{ getAgingDescription(props.value) }}
+                      </div>
+                    </div>
+                  </q-tooltip>
+                </q-chip>
+              </div>
 
-              <!-- Amount column with currency formatting -->
-              <template v-slot:body-cell-dv_amount="props">
-                <q-td :props="props">
-                  {{ chartStore.formatCurrency(props.value) }}
-                </q-td>
-              </template>
+            </q-td>
+          </template>
 
-              <!-- Aging column with color coding -->
-              <template v-slot:body-cell-aging="props">
-                <q-td :props="props">
-                  <!-- Debug info (remove in production) -->
+          <!-- Liquidated amount column with currency formatting -->
+          <template v-slot:body-cell-liquidated_amount="props">
+            <q-td :props="props">
+              {{ props.value ? chartStore.formatCurrency(props.value) : '-' }}
+            </q-td>
+          </template>
+        </q-table>
 
-                  <div
-                    v-if="props.value !== '-' && props.row.status !== 'Liquidated'"
-                    class="aging-display"
-                  >
-                    <q-chip
-                      :color="getAgingColor(props.value)"
-                      text-color="white"
-                      size="sm"
-                      :label="`${props.value} days`"
-                    >
-                      <q-tooltip>
-                        <div class="text-center">
-                          <div class="text-weight-bold">Aging Information</div>
-                          <div>Created: {{ getAgingTooltipText(props.value) }}</div>
-                          <div class="text-caption q-mt-xs">
-                            {{ getAgingDescription(props.value) }}
-                          </div>
-                        </div>
-                      </q-tooltip>
-                    </q-chip>
-                  </div>
-                </q-td>
-              </template>
-
-              <!-- Liquidated amount column with currency formatting -->
-              <template v-slot:body-cell-liquidated_amount="props">
-                <q-td :props="props">
-                  {{ props.value ? chartStore.formatCurrency(props.value) : '-' }}
-                </q-td>
-              </template>
-            </q-table>
-
-            <!-- Empty state when no data -->
-            <div
-              v-if="!chartStore.isLoading && filteredDisbursementRows.length === 0"
-              class="text-center q-pa-lg"
-            >
-              <q-icon name="inbox" size="3em" color="grey-4" />
-              <div class="text-grey-6 q-mt-sm">No disbursements found for the selected filter</div>
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
+        <!-- Empty state when no data -->
+        <div v-if="!chartStore.isLoading && filteredDisbursementRows.length === 0" class="text-center q-pa-lg">
+          <q-icon name="inbox" size="3em" color="grey-4" />
+          <div class="text-grey-6 q-mt-sm">No disbursements found for the selected filter</div>
+        </div>
+      </q-card-section>
+    </q-card>
+  </div>
+</div>
     <div v-if="allocationError" class="q-mb-md text-negative text-bold">
       {{ allocationError }}
     </div>
@@ -226,7 +220,7 @@ const disbursementFilters = ref([
   { label: 'All', value: 'all' },
   { label: 'Pending', value: 'Pending' },
   { label: 'Partial', value: 'Partial' },
-  { label: 'Liquidated', value: 'Liquidated' },
+  { label: 'Liquidated', value: 'Liquidated' }
 ])
 
 // Computed properties for filtered disbursements
@@ -235,26 +229,26 @@ const filteredDisbursementRows = computed(() => {
     return chartStore.disbursementOverviewRows
   }
   return chartStore.disbursementOverviewRows.filter(
-    (row) => row.status === selectedDisbursementFilter.value,
+    row => row.status === selectedDisbursementFilter.value
   )
 })
 
 // Helper function to get status color
 const getStatusColor = (status) => {
   const statusColors = {
-    Pending: 'orange',
-    Partial: 'blue',
-    Liquidated: 'green',
+    'Pending': 'orange',
+    'Partial': 'blue',
+    'Liquidated': 'green'
   }
   return statusColors[status] || 'grey'
 }
 
 // Helper function to get aging color based on days
 const getAgingColor = (days) => {
-  if (days <= 7) return 'green' // 0-7 days: Green (Good)
-  if (days <= 14) return 'orange' // 8-14 days: Orange (Warning)
+  if (days <= 7) return 'green'        // 0-7 days: Green (Good)
+  if (days <= 14) return 'orange'      // 8-14 days: Orange (Warning)
   if (days <= 30) return 'deep-orange' // 15-30 days: Deep Orange (Caution)
-  return 'red' // 31+ days: Red (Critical)
+  return 'red'                         // 31+ days: Red (Critical)
 }
 
 // Helper function to get aging tooltip text
@@ -292,7 +286,7 @@ const getFilterButtonTextColor = (value) => {
 
 // Helper function to get status count
 const getStatusCount = (status) => {
-  return filteredDisbursementRows.value.filter((row) => row.status === status).length
+  return filteredDisbursementRows.value.filter(row => row.status === status).length
 }
 
 // Refresh disbursement data
@@ -304,7 +298,7 @@ const refreshDisbursements = async () => {
       message: 'Disbursement data refreshed!',
       icon: 'refresh',
       position: 'top',
-      timeout: 2000,
+      timeout: 2000
     })
   } catch (error) {
     console.error('Error refreshing disbursements:', error)
@@ -313,7 +307,7 @@ const refreshDisbursements = async () => {
       message: 'Failed to refresh disbursement data',
       icon: 'error',
       position: 'top',
-      timeout: 3000,
+      timeout: 3000
     })
   }
 }
@@ -413,8 +407,8 @@ onMounted(() => {
     transform 0.3s ease,
     box-shadow 0.3s ease;
   height: 100%;
-  background-color: #c2ffc2;
-  overflow-y: hidden;
+    background-color: #C2FFC2;
+    overflow-y: hidden;
 
   &:hover {
     transform: translateY(-5px);
@@ -427,11 +421,11 @@ onMounted(() => {
   }
   &.card-1 {
     border-top: 4px solid rgba(88, 178, 101, 1);
-    background-color: white;
+      background-color: white;
   }
   &.card-2 {
     border-top: 4px solid rgba(88, 178, 101, 1);
-    background-color: white;
+      background-color: white;
   }
 }
 
@@ -495,9 +489,7 @@ onMounted(() => {
     min-width: unset !important;
     width: 100% !important;
   }
-  .chart-card,
-  .responsive-card,
-  .responsive-table {
+  .chart-card, .responsive-card, .responsive-table {
     width: 100% !important;
     min-width: unset !important;
   }
@@ -508,9 +500,7 @@ onMounted(() => {
     min-width: unset !important;
     width: 100% !important;
   }
-  .chart-card,
-  .responsive-card,
-  .responsive-table {
+  .chart-card, .responsive-card, .responsive-table {
     width: 100% !important;
     min-width: unset !important;
   }
@@ -672,7 +662,7 @@ onMounted(() => {
   color: Black; /* Dark green */
   margin-top: -10px;
 }
-.dashboard-page {
+.dashboard-page{
   background: whitesmoke;
 }
 </style>
