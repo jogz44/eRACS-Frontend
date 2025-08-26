@@ -29,6 +29,7 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     // Current selections
     currentLiquidation: null,
+    lockedTotalAmount: null, // Store the original DV amount for edit mode
 
     // Search/filters
     searchQuery: '',
@@ -193,7 +194,20 @@ export const useDisbursementStore = defineStore('disbursement', {
         align: 'left',
         sortable: true,
       },
-      { name: 'aging', label: 'Aging', field: 'aging', align: 'center', sortable: true },
+      { 
+        name: 'aging', 
+        label: 'Aging', 
+        field: 'aging', 
+        align: 'center', 
+        sortable: true,
+        format: (val, row) => {
+          // Don't show aging for liquidated disbursements
+          if (row.status === 'Liquidated') {
+            return '-'
+          }
+          return val
+        }
+      },
       { name: 'status', label: 'Status', field: 'status', align: 'center', sortable: true },
       { name: 'action', label: 'Action', field: '', align: 'center' },
       { name: 'liquidate', label: 'Liquidate', field: '', align: 'center' },
@@ -695,6 +709,8 @@ export const useDisbursementStore = defineStore('disbursement', {
           }
 
           this.currentItem = { ...disbursement }
+          // Store the original DV amount for validation during editing
+          this.lockedTotalAmount = parseFloat(disbursement.dv_amount) || 0
           this.dialogs.editDisbursement = true
         }
         return disbursement;
@@ -1310,6 +1326,24 @@ export const useDisbursementStore = defineStore('disbursement', {
         throw new Error(`Amount exceeds available balance. Available: ₱${currentAvailableBalance.toLocaleString()}, Requested: ₱${amount.toLocaleString()}`)
       }
 
+      // Check if we're in edit mode and validate against locked total amount
+      if (this.lockedTotalAmount !== null) {
+        // Calculate what the total would be after this change
+        const currentTotal = this.expenses.reduce((sum, exp) => {
+          if (this.forms.expense.isEditing && exp.id === this.forms.expense.editingExpenseId) {
+            // Exclude the expense being edited from current total
+            return sum
+          }
+          return sum + (parseFloat(exp.amount) || 0)
+        }, 0)
+        
+        const newTotal = currentTotal + amount
+        
+        if (newTotal > this.lockedTotalAmount) {
+          throw new Error(`Total amount cannot exceed the original DV amount of ₱${this.lockedTotalAmount.toLocaleString()}. Current total would be ₱${newTotal.toLocaleString()}`)
+        }
+      }
+
       // Check if this is an edit operation
       if (this.forms.expense.isEditing && this.forms.expense.editingExpenseId) {
         // Update existing expense - keep the existing database ID
@@ -1536,9 +1570,8 @@ export const useDisbursementStore = defineStore('disbursement', {
           }
         }
 
-        // Compute dv amount from the CURRENT in-memory edited expenses to reflect latest changes
-        const dvAmountFromForm = (this.expenses || [])
-          .reduce((sum, exp) => sum + (parseFloat(exp.amount) || 0), 0)
+        // Use the locked total amount to ensure consistency
+        const dvAmount = this.lockedTotalAmount || 0
 
         // Prepare the payload with ids for all expenses so backend keeps them
         const payload = {
@@ -1547,7 +1580,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           cheque_number: this.forms.disbursement.chequeNumber,
           bank_id: this.forms.disbursement.bank_id,
           payee: this.forms.disbursement.payee,
-          dv_amount: dvAmountFromForm,
+          dv_amount: dvAmount,
           expenses: this.expenses.map(expense => ({
             id: Number(expense.id) || undefined,
             accountId: expense.accountId,
@@ -1588,6 +1621,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     resetEditDisbursement() {
       this.currentItem = null
       this.expenses = []
+      this.lockedTotalAmount = null
       this.selectedBank = null
       this.autoBookletID = null
       this.autoCheque = null

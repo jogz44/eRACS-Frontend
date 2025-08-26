@@ -241,6 +241,27 @@
       </q-card-actions>
     </q-card>
   </q-dialog>
+
+  <!-- Custom Confirmation Dialog -->
+  <q-dialog v-model="showConfirmationDialog" persistent>
+    <q-card style="min-width: 400px">
+      <q-card-section class="text-left">
+        <div class="text-h6 q-mb-md">Confirm Liquidation</div>
+        <div v-if="parseFloat(totalReturnAmount) > 0" class="text-body1 text-negative q-mb-md">
+          There's still an amount to return to appropriation: <strong>₱{{ totalReturnAmount }}</strong>
+        </div>
+        <div class="text-body1 q-mb-md">
+          Are you sure you want to submit this liquidation? This action cannot be undone.
+        </div>
+      </q-card-section>
+
+      <q-card-actions align="right" class="q-pa-md">
+        <q-btn flat label="Cancel" @click="showConfirmationDialog = false" />
+        <q-btn flat label="Partial" color="warning" @click="handleConfirmationPartial" />
+        <q-btn label="Submit" color="green" @click="handleConfirmationSubmit" />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
 </template>
 
 <script setup>
@@ -251,6 +272,7 @@ import { useQuasar } from 'quasar'
 const $q = useQuasar()
 const savingPartial = ref(false)
 const savingSubmit = ref(false)
+const showConfirmationDialog = ref(false)
 
 const store = useDisbursementStore()
 
@@ -593,28 +615,19 @@ const handlePartialLiquidation = async () => {
 
 const showSubmitConfirmation = () => {
   console.log('Showing confirmation dialog...')
+  showConfirmationDialog.value = true
+}
 
-  // Show Quasar confirmation dialog
-  $q.dialog({
-    title: 'Confirm Liquidation',
-    message: 'Are you sure you want to submit this liquidation? This action cannot be undone.',
-    ok: {
-      label: 'Confirm',
-      color: 'green',
-      flat: false
-    },
-    cancel: {
-      label: 'Cancel',
-      color: 'grey',
-      flat: true
-    },
-    persistent: true
-  }).onOk(() => {
-    console.log('User confirmed liquidation, proceeding...')
-    handleSaveOrDetails()
-  }).onCancel(() => {
-    console.log('User cancelled liquidation')
-  })
+const handleConfirmationSubmit = () => {
+  showConfirmationDialog.value = false
+  console.log('User confirmed liquidation, proceeding...')
+  handleSaveOrDetails()
+}
+
+const handleConfirmationPartial = () => {
+  showConfirmationDialog.value = false
+  console.log('User chose partial liquidation...')
+  handlePartialLiquidation()
 }
 
 const handleSaveOrDetails = async () => {
