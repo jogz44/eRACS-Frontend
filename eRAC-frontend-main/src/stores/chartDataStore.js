@@ -74,6 +74,10 @@ export const useChartDataStore = defineStore('chartData', {
       ],
     },
 
+    // Disbursement overview data - comprehensive list for filtering
+    disbursementOverviewRows: [],
+
+    // Old recent disbursement data (keeping for backward compatibility)
     recentDisbursementRows: [
       {
         dvNumber: '',
@@ -133,6 +137,52 @@ export const useChartDataStore = defineStore('chartData', {
   }),
 
   getters: {
+    // New comprehensive disbursement overview columns
+    disbursementOverviewColumns: () =>
+      computed(() => [
+        {
+          name: 'dv_number',
+          required: true,
+          label: 'DV Number',
+          align: 'left',
+          sortable: true,
+          field: 'dv_number',
+          style: 'width: 20%'
+        },
+        {
+          name: 'date',
+          label: 'Date',
+          align: 'center',
+          sortable: true,
+          field: 'date',
+          style: 'width: 15%'
+        },
+        {
+          name: 'payee',
+          label: 'Payee',
+          align: 'left',
+          sortable: true,
+          field: 'payee',
+          style: 'width: 25%'
+        },
+        {
+          name: 'dv_amount',
+          label: 'DV Amount',
+          align: 'right',
+          field: 'dv_amount',
+          sortable: true,
+          style: 'width: 20%'
+        },
+        {
+          name: 'status',
+          label: 'Status',
+          align: 'center',
+          field: 'status',
+          sortable: true,
+          style: 'width: 20%'
+        }
+      ]).value,
+
     recentDisbursementColumns: () =>
       computed(() => [
         {
@@ -228,11 +278,11 @@ export const useChartDataStore = defineStore('chartData', {
     async fetchDashboardSummary() {
       try {
         this.isLoading = true
-        
+
         // Get budgets data
         const budgetsResponse = await api.get('/api/barangay/budgets', this.getAuthConfig())
         const budgets = budgetsResponse.data.data || []
-        
+
         // Calculate totals
         const totalAppropriation = budgets.reduce((sum, budget) => sum + (parseFloat(budget.amount) || 0), 0)
         const totalObligation = budgets.reduce((sum, budget) => {
@@ -288,7 +338,7 @@ export const useChartDataStore = defineStore('chartData', {
           ...this.getAuthConfig(),
           params: { fiscal_year_id: fiscalYearId }
         })
-        
+
         const expenseHierarchy = hierarchyResponse.data || []
 
         // Get budgets to fetch allocations
@@ -308,10 +358,10 @@ export const useChartDataStore = defineStore('chartData', {
         }
 
         // Fetch allocations for all budgets
-        const allocationPromises = budgets.map(budget => 
+        const allocationPromises = budgets.map(budget =>
           api.get(`/api/barangay/budgets/${budget.id}/allocations`, this.getAuthConfig())
         )
-        
+
         const allocationResponses = await Promise.all(allocationPromises)
         const allAllocations = allocationResponses.flatMap(response => response.data.data || [])
 
@@ -398,7 +448,7 @@ export const useChartDataStore = defineStore('chartData', {
           data: [5000000, 3000000, 2000000, 1000000],
           backgroundColor: [
             '#2E7D32',
-            '#1565C0', 
+            '#1565C0',
             '#FFA000',
             '#C62828'
           ],
@@ -406,7 +456,7 @@ export const useChartDataStore = defineStore('chartData', {
           hoverOffset: 12,
         }]
       }
-      
+
       this.summaryCards = [
         {
           label: 'Total Appropriation',
@@ -433,8 +483,36 @@ export const useChartDataStore = defineStore('chartData', {
           change: '3.8%',
         },
       ]
-      
+
       console.log('Test data set:', this.pieChartData)
+    },
+
+    // Fetch disbursement overview data
+    async fetchDisbursementOverview() {
+      try {
+        const disbResponse = await api.get('/api/barangay/disbursements', this.getAuthConfig())
+        if (disbResponse.data && disbResponse.data.data) {
+          // Transform data for the overview table
+          this.disbursementOverviewRows = disbResponse.data.data.map(row => ({
+            id: row.id,
+            dv_number: row.dv_number,
+            date: this.formatDate(row.date, { fullYear: true }),
+            payee: row.payee,
+            dv_amount: parseFloat(row.dv_amount) || 0,
+            status: row.status,
+            liquidated_amount: row.liquidated_amount ? parseFloat(row.liquidated_amount) : null,
+            bank_name: row.bank_name,
+            cheque_number: row.cheque_number
+          }))
+
+          return this.disbursementOverviewRows
+        }
+        return []
+      } catch (error) {
+        console.error('Error fetching disbursement overview:', error)
+        this.disbursementOverviewRows = []
+        throw error
+      }
     },
 
     // Load all dashboard data
@@ -442,12 +520,12 @@ export const useChartDataStore = defineStore('chartData', {
       try {
         this.isLoading = true
         console.log('Loading dashboard data...')
-        
+
         try {
           // Try the new optimized dashboard endpoint first
           const response = await api.get('/api/barangay/dashboard/summary', this.getAuthConfig())
           console.log('Dashboard API response:', response.data)
-          
+
           const dashboardData = response.data.data
           console.log('Dashboard data:', dashboardData)
 
@@ -510,30 +588,62 @@ export const useChartDataStore = defineStore('chartData', {
             console.log('No pie chart data available, showing placeholder')
           }
 
-          // Fetch recent liquidated disbursements from backend
+          // Fetch comprehensive disbursement data for overview
           try {
-            const disbResponse = await api.get('/api/barangay/disbursements/recent-liquidated')
+            const disbResponse = await api.get('/api/barangay/disbursements', this.getAuthConfig())
             if (disbResponse.data && disbResponse.data.data) {
-              this.recentDisbursementRows = disbResponse.data.data.map(row => ({
-                dvNumber: row.dv_number,
-                dvAmount: row.dv_amount,
-                date: row.date,
+              // Transform data for the overview table
+              this.disbursementOverviewRows = disbResponse.data.data.map(row => ({
+                id: row.id,
+                dv_number: row.dv_number,
+                date: this.formatDate(row.date, { fullYear: true }),
+                payee: row.payee,
+                dv_amount: parseFloat(row.dv_amount) || 0,
                 status: row.status,
-                liquidatedAmount: row.liquidated_amount || '',
+                liquidated_amount: row.liquidated_amount ? parseFloat(row.liquidated_amount) : null,
+                bank_name: row.bank_name,
+                cheque_number: row.cheque_number
               }))
+
+              // Also populate the old recent disbursement rows for backward compatibility
+              const liquidatedRows = disbResponse.data.data
+                .filter(row => row.status === 'Liquidated')
+                .slice(0, 4)
+                .map(row => ({
+                  dvNumber: row.dv_number,
+                  dvAmount: this.formatCurrency(row.dv_amount),
+                  date: this.formatDate(row.date),
+                  status: row.status,
+                  liquidatedAmount: row.liquidated_amount ? this.formatCurrency(row.liquidated_amount) : '',
+                }))
+
+              // Fill remaining slots if less than 4 liquidated disbursements
+              while (liquidatedRows.length < 4) {
+                liquidatedRows.push({
+                  dvNumber: '',
+                  dvAmount: '',
+                  date: '',
+                  status: '',
+                  liquidatedAmount: '',
+                })
+              }
+              this.recentDisbursementRows = liquidatedRows
             }
           } catch (err) {
-            console.error('Error fetching recent liquidated disbursements:', err)
+            console.error('Error fetching disbursement data:', err)
+            // Set empty data on error
+            this.disbursementOverviewRows = []
+            this.recentDisbursementRows = []
           }
 
           return dashboardData
         } catch (dashboardError) {
           console.warn('Dashboard endpoint failed, trying fallback method:', dashboardError)
-          
+
           // Fallback: Use existing endpoints
           await this.fetchDashboardSummary()
           await this.fetchPieChartData()
-          
+
           return { fallback: true }
         }
       } catch (error) {

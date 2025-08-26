@@ -45,7 +45,7 @@
     <q-card class="chart-card responsive-card">
       <q-card-section>
         <div class="text-h6 text-weight-medium">Commitment Distribution</div>
-        <div class="text-caption text-grey-6">Current Year</div>
+        <div class="text-caption text-grey-6">Current year</div>
       </q-card-section>
       <q-separator />
       <q-card-section style="height: 350px; position: relative; width: 100%; overflow-x: auto;">
@@ -60,24 +60,107 @@
   <div class="col-xs-12 col-md-6 q-mb-md">
     <q-card class="chart-card responsive-card">
       <q-card-section>
-        <div class="text-h6 text-weight-medium">Recent Liquidated Disbursements</div>
+        <div class="text-h6 text-weight-medium">Disbursement Overview</div>
         <div class="text-caption text-grey-6">Current year</div>
+
+        <!-- Filter Controls and Refresh -->
+        <div class="row q-gutter-sm q-mt-md items-center justify-between">
+          <div class="row q-gutter-sm">
+            <q-btn
+              v-for="filter in disbursementFilters"
+              :key="filter.value"
+              :label="filter.label"
+              :color="getFilterButtonColor(filter.value)"
+              :text-color="getFilterButtonTextColor(filter.value)"
+              :outline="selectedDisbursementFilter !== filter.value"
+              size="sm"
+              @click="selectedDisbursementFilter = filter.value"
+              class="filter-btn"
+            />
+          </div>
+
+          <q-btn
+            icon="refresh"
+            color="primary"
+            flat
+            dense
+            size="sm"
+            @click="refreshDisbursements"
+            :loading="chartStore.isLoading"
+            class="refresh-btn"
+          >
+            <q-tooltip>Refresh Disbursements</q-tooltip>
+          </q-btn>
+        </div>
+
+        <!-- Status Count Summary -->
+        <div class="row q-gutter-sm q-mt-sm">
+          <div
+            v-for="status in ['Pending', 'Partial', 'Liquidated']"
+            :key="status"
+            class="status-count-chip"
+            :class="{ 'active': selectedDisbursementFilter === status }"
+            @click="selectedDisbursementFilter = status"
+          >
+            <q-chip
+              :color="getStatusColor(status)"
+              text-color="white"
+              size="sm"
+              :label="`${status}: ${getStatusCount(status)}`"
+              clickable
+            />
+          </div>
+        </div>
       </q-card-section>
       <q-separator />
-      <q-card-section>
-        <q-table
-          :rows="chartStore.recentDisbursementRows"
-          :columns="chartStore.recentDisbursementColumns"
-          row-key="id"
+      <q-card-section style="height: 350px; position: relative; width: 100%; overflow-x: auto;">
+        <div v-if="chartStore.isLoading" class="absolute-center">
+          <q-spinner color="primary" size="3em" />
+        </div>
 
+        <q-table
+          v-else
+          :rows="filteredDisbursementRows"
+          :columns="chartStore.disbursementOverviewColumns"
+          row-key="id"
           flat
           bordered
-          :pagination="{ rowsPerPage: 4 }"
+          :pagination="{ rowsPerPage: 5 }"
           class="disbursement-table responsive-table"
-          style="overflow-x:auto; height: 320px;"
+          style="height: 100%;"
         >
-          <!-- Highlight fully liquidated rows -->
+          <!-- Status column with color coding -->
+          <template v-slot:body-cell-status="props">
+            <q-td :props="props">
+              <q-chip
+                :color="getStatusColor(props.value)"
+                text-color="white"
+                size="sm"
+                :label="props.value"
+              />
+            </q-td>
+          </template>
+
+          <!-- Amount column with currency formatting -->
+          <template v-slot:body-cell-dv_amount="props">
+            <q-td :props="props">
+              {{ chartStore.formatCurrency(props.value) }}
+            </q-td>
+          </template>
+
+          <!-- Liquidated amount column with currency formatting -->
+          <template v-slot:body-cell-liquidated_amount="props">
+            <q-td :props="props">
+              {{ props.value ? chartStore.formatCurrency(props.value) : '-' }}
+            </q-td>
+          </template>
         </q-table>
+
+        <!-- Empty state when no data -->
+        <div v-if="!chartStore.isLoading && filteredDisbursementRows.length === 0" class="text-center q-pa-lg">
+          <q-icon name="inbox" size="3em" color="grey-4" />
+          <div class="text-grey-6 q-mt-sm">No disbursements found for the selected filter</div>
+        </div>
       </q-card-section>
     </q-card>
   </div>
@@ -93,9 +176,85 @@ import { ref, watch, computed, onMounted } from 'vue'
 import { useChartDataStore } from 'src/stores/chartDataStore'
 import PieChart from 'components/PieChart.vue'
 import { useAuthStore } from 'stores/auth'
+import { useQuasar } from 'quasar'
 const chartStore = useChartDataStore()
 const allocationError = ref('')
 const authStore = useAuthStore()
+const $q = useQuasar()
+
+// Disbursement filtering
+const selectedDisbursementFilter = ref('all')
+
+const disbursementFilters = ref([
+  { label: 'All', value: 'all' },
+  { label: 'Pending', value: 'Pending' },
+  { label: 'Partial', value: 'Partial' },
+  { label: 'Liquidated', value: 'Liquidated' }
+])
+
+// Computed properties for filtered disbursements
+const filteredDisbursementRows = computed(() => {
+  if (selectedDisbursementFilter.value === 'all') {
+    return chartStore.disbursementOverviewRows
+  }
+  return chartStore.disbursementOverviewRows.filter(
+    row => row.status === selectedDisbursementFilter.value
+  )
+})
+
+// Helper function to get status color
+const getStatusColor = (status) => {
+  const statusColors = {
+    'Pending': 'orange',
+    'Partial': 'blue',
+    'Liquidated': 'green'
+  }
+  return statusColors[status] || 'grey'
+}
+
+// Helper function to get filter button color
+const getFilterButtonColor = (value) => {
+  if (selectedDisbursementFilter.value === value) {
+    return value === 'all' ? 'primary' : 'primary'
+  }
+  return 'grey-3'
+}
+
+// Helper function to get filter button text color
+const getFilterButtonTextColor = (value) => {
+  if (selectedDisbursementFilter.value === value) {
+    return 'white'
+  }
+  return 'dark'
+}
+
+// Helper function to get status count
+const getStatusCount = (status) => {
+  return filteredDisbursementRows.value.filter(row => row.status === status).length
+}
+
+// Refresh disbursement data
+const refreshDisbursements = async () => {
+  try {
+    await chartStore.fetchDisbursementOverview()
+    $q.notify({
+      type: 'positive',
+      message: 'Disbursement data refreshed!',
+      icon: 'refresh',
+      position: 'top',
+      timeout: 2000
+    })
+  } catch (error) {
+    console.error('Error refreshing disbursements:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to refresh disbursement data',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000
+    })
+  }
+}
 
 // Chart options
 const chartOptions = computed(() => ({
@@ -143,8 +302,11 @@ const chartOptions = computed(() => ({
 const loadDashboardData = async () => {
   try {
     await chartStore.loadDashboardData()
+    // Also fetch disbursement overview data
+    await chartStore.fetchDisbursementOverview()
   } catch (error) {
     console.error('Error loading dashboard data:', error)
+    allocationError.value = 'Failed to load dashboard data. Please try again.'
   }
 }
 
@@ -211,12 +373,29 @@ onMounted(() => {
   }
 }
 
+.chart-section {
+  .col-md-6 {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chart-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
 .chart-card {
   border-radius: 12px;
   transition: transform 0.3s ease;
   background-color: white;
   width: 100%;
   min-width: unset;
+  height: 100%;
+  min-height: 500px;
+  display: flex;
+  flex-direction: column;
 
   &:hover {
     transform: translateY(-2px);
@@ -226,10 +405,14 @@ onMounted(() => {
   .q-card__section {
     &:first-child {
       padding-bottom: 7px;
+      flex-shrink: 0;
     }
     &:last-child {
       height: 350px;
       padding-top: 1;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
     }
   }
 }
@@ -310,6 +493,95 @@ onMounted(() => {
     }
   }
 }
+
+/* Filter button styling */
+.filter-btn {
+  transition: all 0.2s ease;
+  border-radius: 8px;
+  font-weight: 500;
+  min-width: 80px;
+  border: 2px solid transparent;
+  margin: 2px;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Unselected state styling */
+  &.q-btn--outline {
+    border-color: #e0e0e0;
+    background: white;
+    color: #424242;
+
+    &:hover {
+      border-color: #1976d2;
+      color: #1976d2;
+    }
+  }
+
+  /* Selected state styling */
+  &.q-btn--standard.q-btn--standard {
+    &.q-btn--primary {
+      background: #1976d2 !important;
+      color: white !important;
+      border-color: #1976d2;
+      box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
+      font-weight: 600;
+    }
+  }
+
+  /* Special styling for "All" button when selected */
+  &.q-btn--primary {
+    background: #1976d2 !important;
+    color: white !important;
+    border-color: #1976d2;
+    box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
+    font-weight: 600;
+  }
+
+  /* Ensure text is always readable */
+  .q-btn__content {
+    color: inherit !important;
+    font-weight: inherit;
+  }
+}
+
+.refresh-btn {
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+/* Disbursement table improvements */
+.disbursement-table {
+  .q-table__top {
+    padding: 8px 16px;
+  }
+
+  .q-table__bottom {
+    padding: 8px 16px;
+  }
+}
+
+/* Status count chips styling */
+.status-count-chip {
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+
+  &.active {
+    .q-chip {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+  }
+}
+
 .welcome-user {
   font-weight: bold;
   color: Black; /* Dark green */
