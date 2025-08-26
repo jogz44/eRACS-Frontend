@@ -77,40 +77,6 @@ export default {
     const loading = ref(false)
     const activities = ref([])
 
-    // Sample data - remove this when connecting to real API
-    const sampleActivities = [
-      {
-        id: 1,
-        created_at: '2025-07-29T08:30:00',
-        action: 'Login',
-        description: 'User logged into the system'
-      },
-      {
-        id: 2,
-        created_at: '2025-07-29T09:15:00',
-        action: 'Create Budget',
-        description: 'Created new budget allocation for Q3 2025'
-      },
-      {
-        id: 3,
-        created_at: '2025-07-29T10:45:00',
-        action: 'Update Disbursement',
-        description: 'Modified disbursement record #12345'
-      },
-      {
-        id: 4,
-        created_at: '2025-07-29T11:30:00',
-        action: 'Generate Report',
-        description: 'Generated monthly expenditure report'
-      },
-      {
-        id: 5,
-        created_at: '2025-07-29T13:20:00',
-        action: 'Add Appropriation',
-        description: 'Added new appropriation for Infrastructure project'
-      }
-    ]
-
     const columns = [
       {
         name: 'created_at',
@@ -144,9 +110,7 @@ export default {
     const loadActivities = async () => {
       loading.value = true
       try {
-        // For demo purposes, use sample data
-        activities.value = sampleActivities
-        const response = await api.get(`/api/admin/admin/logs/${props.selectedUser.id}/${props.selectedUser.log_date}`)
+        const response = await api.get(`/api/admin/logs/${props.selectedUser.id}/${props.selectedUser.log_date}`)
 
         activities.value = response.data
       } catch (error) {
@@ -206,11 +170,9 @@ export default {
 
 .no-data-message {
   min-height: 200px;
-}.card-table{
+}
 
-
-
-}.activity-table{
+.activity-table{
   max-height: 400px;
 }
 </style>

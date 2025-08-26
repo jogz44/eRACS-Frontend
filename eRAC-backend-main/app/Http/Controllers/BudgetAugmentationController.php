@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Models\TranAppropriation; // Added this import
+use App\Http\Controllers\AdminAuthController;
 
 class BudgetAugmentationController extends Controller
 {
@@ -220,6 +221,7 @@ class BudgetAugmentationController extends Controller
                 'user_id' => $request->user()->id
             ]);
 
+            $logDetails = [];
             // Create augmentation details and perform transfers
             foreach ($request->details as $detail) {
                 // Find source appropriation (FROM)
@@ -263,12 +265,34 @@ class BudgetAugmentationController extends Controller
                     'amount' => $detail['amount'],
                     'particulars' => $detail['particulars'] ?? null
                 ]);
+
+                // Prepare log detail line
+                $fromName = $this->buildAccountName($fromAppropriation->expenseClass, $fromAppropriation->expenseType, $fromAppropriation->expenseItem);
+                $toName = $this->buildAccountName($toAppropriation->expenseClass, $toAppropriation->expenseType, $toAppropriation->expenseItem);
+                $logDetails[] = sprintf('%s → %s ₱%s%s',
+                    $fromName,
+                    $toName,
+                    number_format((float)$detail['amount'], 2),
+                    isset($detail['particulars']) && $detail['particulars'] ? ' | Particulars: "' . $detail['particulars'] . '"' : ''
+                );
             }
 
             // Note: Budget augmentation per budget was adjusted per-detail when crossing budgets.
             // No aggregate adjustment here to avoid double counting.
             
 
+
+            // Log creation
+            AdminAuthController::logUserAction(
+                $request->user(),
+                'Created Augmentation',
+                sprintf(
+                    '#%s total ₱%s%s',
+                    $refNumber,
+                    number_format((float)$totalAmount, 2),
+                    empty($logDetails) ? '' : ' | Transfers: ' . implode('; ', $logDetails)
+                )
+            );
 
             return response()->json([
                 'status' => true,
@@ -335,6 +359,7 @@ class BudgetAugmentationController extends Controller
             // Calculate new total amount
             $newTotalAmount = collect($request->details)->sum('amount');
             $oldTotalAmount = $augmentation->total_amount;
+            $oldRemarks = $augmentation->remarks ?? '';
 
             // Find the first appropriation to determine the new budget
             $firstDetail = $request->details[0];
@@ -381,10 +406,26 @@ class BudgetAugmentationController extends Controller
                 }
             }
 
+            // Snapshot old detail summary for logging
+            $oldSummary = [];
+            foreach ($augmentation->details as $oldDetail) {
+                $fromAppr = TranAppropriation::with(['expenseClass','expenseType','expenseItem'])->find($oldDetail->from_appropriation_id);
+                $toAppr = TranAppropriation::with(['expenseClass','expenseType','expenseItem'])->find($oldDetail->to_appropriation_id);
+                $fromName = $this->buildAccountName($fromAppr?->expenseClass, $fromAppr?->expenseType, $fromAppr?->expenseItem);
+                $toName = $this->buildAccountName($toAppr?->expenseClass, $toAppr?->expenseType, $toAppr?->expenseItem);
+                $key = $oldDetail->from_appropriation_id . ':' . $oldDetail->to_appropriation_id;
+                $oldSummary[$key] = [
+                    'from' => $fromName,
+                    'to' => $toName,
+                    'amount' => (float)$oldDetail->amount,
+                ];
+            }
+
             // Delete old details
             $augmentation->details()->delete();
 
             // Create new details and perform new transfers
+            $newSummary = [];
             foreach ($request->details as $detail) {
                 // Find source appropriation (FROM)
                 $fromAppropriation = TranAppropriation::find($detail['from_appropriation_id']);
@@ -423,9 +464,56 @@ class BudgetAugmentationController extends Controller
                     'amount' => $detail['amount'],
                     'particulars' => $detail['particulars'] ?? null
                 ]);
+
+                // For logging build new summary
+                $fromName = $this->buildAccountName($fromAppropriation->expenseClass, $fromAppropriation->expenseType, $fromAppropriation->expenseItem);
+                $toName = $this->buildAccountName($toAppropriation->expenseClass, $toAppropriation->expenseType, $toAppropriation->expenseItem);
+                $key = $fromAppropriation->id . ':' . $toAppropriation->id;
+                $newSummary[$key] = [
+                    'from' => $fromName,
+                    'to' => $toName,
+                    'amount' => (float)$detail['amount'],
+                ];
             }
 
             // Budget augmentation values were adjusted per-detail above to reflect cross-budget transfers.
+
+            // Build unified log for edit
+            $topChanges = [];
+            $amountChange = null;
+            if (($oldRemarks ?? '') !== ($request->remarks ?? '')) { $topChanges[] = sprintf('Remarks "%s" → "%s"', $oldRemarks, $request->remarks ?? ''); }
+            if ((float)$oldTotalAmount !== (float)$newTotalAmount) { $amountChange = sprintf('Overall Amount ₱%s → ₱%s', number_format((float)$oldTotalAmount, 2), number_format((float)$newTotalAmount, 2)); }
+
+            $added = [];
+            $edited = [];
+            $deleted = [];
+            $allKeys = array_unique(array_merge(array_keys($oldSummary), array_keys($newSummary)));
+            foreach ($allKeys as $key) {
+                $old = $oldSummary[$key] ?? null;
+                $new = $newSummary[$key] ?? null;
+                if ($old && !$new) {
+                    $deleted[] = sprintf('%s → %s ₱%s', $old['from'], $old['to'], number_format($old['amount'], 2));
+                } elseif (!$old && $new) {
+                    $added[] = sprintf('%s → %s ₱%s', $new['from'], $new['to'], number_format($new['amount'], 2));
+                } elseif ($old && $new && $old['amount'] !== $new['amount']) {
+                    $edited[] = sprintf('%s → %s Amount ₱%s → ₱%s', $new['from'], $new['to'], number_format($old['amount'], 2), number_format($new['amount'], 2));
+                }
+            }
+
+            $parts = [];
+            if (!empty($topChanges)) { $parts[] = implode(', ', $topChanges); }
+            if (!empty($added)) { $parts[] = 'Added: ' . implode('; ', $added); }
+            if (!empty($edited)) { $parts[] = 'Edited: ' . implode('; ', $edited); }
+            if (!empty($deleted)) { $parts[] = 'Deleted: ' . implode('; ', $deleted); }
+            if (!empty($amountChange)) { $parts[] = $amountChange; }
+
+            if (!empty($parts)) {
+                AdminAuthController::logUserAction(
+                    $request->user(),
+                    'Edited Augmentation',
+                    sprintf('#%s | %s', $augmentation->ref_number, implode(' | ', $parts))
+                );
+            }
 
             return response()->json([
                 'status' => true,
@@ -471,6 +559,13 @@ class BudgetAugmentationController extends Controller
 
             // Delete augmentation and details
             $augmentation->delete();
+
+            // Log deletion
+            AdminAuthController::logUserAction(
+                request()->user(),
+                'Deleted Augmentation',
+                sprintf('#%s total ₱%s', $augmentation->ref_number, number_format((float)$augmentation->total_amount, 2))
+            );
 
             return response()->json([
                 'status' => true,

@@ -70,8 +70,8 @@ class BudgetAugmentationSeeder extends Seeder
         $augmentation = BudgetAugmentation::create([
             'barangay_id' => $barangay->id,
             'budget_id' => $sourceBudget->id, // Attach to source budget
-            'ref_number' => 'AUG-' . $augmentationDate->format('y') . '-' . $augmentationDate->format('m') . '-' . str_pad($sourceBudget->id, 2, '0', STR_PAD_LEFT) . '-' . str_pad($index, 3, '0', STR_PAD_LEFT),
-            'augmentation_date' => $augmentationDate->format('Y-m-d'),
+            'ref_number' => 'AUG-' . $augmentationDate->format('y') . '-' . $augmentationDate->format('m') . '-' . str_pad($index, 3, '0', STR_PAD_LEFT),
+            'augmentation_date' => $augmentationDate->format('Y-m'),
             'total_amount' => 0, // Will be calculated from details
             'remarks' => $this->generateRemarks($sourceBudget->description ?? 'Source Budget', $destinationBudget->description ?? 'Destination Budget', $index),
             'user_id' => $user->id

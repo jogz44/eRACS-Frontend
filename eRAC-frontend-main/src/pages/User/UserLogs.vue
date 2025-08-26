@@ -182,7 +182,7 @@ export default {
         filtered = filtered.filter(log => {
           const idMatch = String(log.id).includes(query)
           const nameMatch = log.fullname.toLowerCase().includes(query)
-          const date = new Date(log.created_at)
+          const date = new Date(log.log_date)
           const dateString = date.toLocaleDateString('en-US', {
             month: 'long',
             day: 'numeric',
@@ -199,7 +199,7 @@ export default {
 
       if (this.dateRange && this.dateRange.from && this.dateRange.to) {
         filtered = filtered.filter(log => {
-          const logDate = new Date(log.created_at)
+          const logDate = new Date(log.log_date)
           const fromDate = new Date(this.dateRange.from)
           const toDate = new Date(this.dateRange.to)
 
@@ -233,7 +233,8 @@ export default {
       this.loading = true
       try {
         const response = await api.get(`/api/barangay/getlogs`, getAuthConfig())
-        this.logs = response.data.data
+        // Backend returns an array directly
+        this.logs = Array.isArray(response.data) ? response.data : (response.data?.data || [])
         console.log('Loaded logs:', this.logs)
       } catch (error) {
         console.error('Error loading logs:', error)

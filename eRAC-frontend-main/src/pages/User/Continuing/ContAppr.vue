@@ -43,6 +43,7 @@
           @click="showContinueDialog = true"
           color="secondary"
           v-permission="'add'"
+          :loading="generalLoading"
         />
       </div>
     </div>
@@ -68,11 +69,14 @@
             <q-select
               outlined
               dense
-              v-model="selectedYear"
-              :options="yearOptions"
+              v-model="contApprStore.selectedYear"
+              :options="contApprStore.years"
+              option-label="label"
               label="Select Year"
               style="min-width: 150px"
-              @keydown.enter="handleEnterKey"
+              :loading="generalLoading"
+              emit-value
+              map-options
             />
           </div>
 
@@ -120,32 +124,14 @@
 
     <!-- Main Table -->
     <q-card flat bordered>
-      <q-table flat :rows="filteredAppropriations" :columns="columns" row-key="id">
-        <template v-slot:body-cell-amount="props">
-          <q-td :props="props">{{ formatCurrency(props.row.amount) }}</q-td>
-        </template>
-
-        <template v-slot:body-cell-action="props">
-          <q-td :props="props">
-            <div class="q-gutter-xs">
-              <q-btn
-                dense
-                icon="visibility"
-                color="blue"
-                @click="viewDetails(props.row)"
-                v-permission="'view'"
-              />
-              <q-btn
-                dense
-                label="Commit"
-                color="primary"
-                @click="openAllocationDialog(props.row)"
-                v-permission="'edit'"
-              />
-            </div>
-          </q-td>
-        </template>
-      </q-table>
+             <q-table
+         flat
+         :rows="filteredAppropriations"
+         :columns="columns"
+         row-key="id"
+         :pagination="{ rowsPerPage: 10 }"
+         class="my-sticky-header-table"
+       />
     </q-card>
 
     <!-- Allocation Dialog -->
@@ -264,43 +250,31 @@ const loadPendingUsers = async () => {
 
 const clearAllFilters = () => {
   searchQuery.value = ''
-  dateFrom.value = ''
-  dateTo.value = ''
 }
 
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
+import { useContApprStore } from 'src/stores/contApprStore'
 
 const $q = useQuasar()
+const contApprStore = useContApprStore();
 
 const showContinueDialog = ref(false)
 const showAllocationDialog = ref(false)
 const description = ref('')
 const selectedAccounts = ref([])
 const searchQuery = ref('')
-const dateFrom = ref('')
-const dateTo = ref('')
-const returnAmount = ref(0)
-const augmentationAmount = ref(0)
-const selectedYear = ref(null)
-
-const filteredAccounts = computed(() => {
-  if (!searchQuery.value) return continueAccounts.value
-
-  return continueAccounts.value.filter((account) =>
-    Object.values(account).join(' ').toLowerCase().includes(searchQuery.value.toLowerCase()),
-  )
+// Use store-fetched continuing accounts (flattened for table rows)
+const flatContinueAccounts = computed(() => {
+  if (!Array.isArray(contApprStore.continueAccounts)) return []
+  return contApprStore.continueAccounts.flatMap(group => group.children || [])
 })
 
-const yearOptions = ['2023', '2024', '2025']
-const continueAccounts = ref([
-  { id: 1, accountName: 'Capital Outlays > OFFICE EQUIPMENT', balance: 12000 },
-  { id: 2, accountName: 'Capital Outlays > IT EQUIPMENT AND SOFTWARE', balance: 7600 },
-  { id: 3, accountName: 'Capital Outlays > VEHICLES', balance: 50000 },
-  { id: 4, accountName: 'Capital Outlays > FURNITURE AND FIXTURES', balance: 8300 },
-  { id: 5, accountName: 'Capital Outlays > BUILDING IMPROVEMENTS', balance: 42000 },
-  { id: 6, accountName: 'Capital Outlays > MEDICAL EQUIPMENT', balance: 15000 },
-])
+const returnAmount = ref(0)
+const augmentationAmount = ref(0)
+
+const generalLoading = ref(true)
+
 
 const continueColumns = [
   { name: 'accountName', label: 'Accounts Name', field: 'accountName', align: 'left' },
@@ -316,23 +290,27 @@ const continueColumns = [
 const mergedAppropriations = ref([])
 
 const columns = [
-  { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: 'true' },
-  { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: 'true' },
+  {
+    name: 'id',
+    label: 'ID',
+    field: 'id',
+    align: 'left',
+    sortable: true,
+    style: 'width: 10%'
+  },
   {
     name: 'description',
     label: 'Description',
     field: 'description',
     align: 'left',
-    sortable: 'true',
+    sortable: true,
+    style: 'width: 25%'
   },
   { name: 'amount', label: 'Total Amount', field: 'amount', align: 'right', sortable: 'true' },
   { name: 'action', label: 'Action', field: 'action', align: 'center' },
 ]
 
-const parseDate = (str) => {
-  const [m, d, y] = str.split('/')
-  return new Date(`${y}-${m.padStart?.(2, '0') ?? m}-${d.padStart?.(2, '0') ?? d}`)
-}
+
 
 const availableBudget = computed(() => {
   const base = selectedRow.value.unappropriated || 0
@@ -341,20 +319,22 @@ const availableBudget = computed(() => {
   return base + returns + augmentation
 })
 
+const filteredAccounts = computed(() => {
+  const base = flatContinueAccounts.value
+  if (!searchQuery.value) return base
+  const q = searchQuery.value.toLowerCase()
+  return base.filter((account) =>
+    Object.values(account).join(' ').toLowerCase().includes(q),
+  )
+})
+
 const filteredAppropriations = computed(() => {
   const query = searchQuery.value.toLowerCase()
-  const from = dateFrom.value ? parseDate(dateFrom.value) : null
-  const to = dateTo.value ? parseDate(dateTo.value) : null
 
   return mergedAppropriations.value.filter((row) => {
-    const matchesQuery = row.description.toLowerCase().includes(query)
-
-    if (from && to) {
-      const rowDate = parseDate(row.date)
-      return matchesQuery && rowDate >= from && rowDate <= to
-    }
-
-    return matchesQuery
+    return row.description.toLowerCase().includes(query) ||
+           row.remarks?.toLowerCase().includes(query) ||
+           row.year?.toString().includes(query)
   })
 })
 
@@ -416,9 +396,11 @@ const continueSelected = () => {
 
   mergedAppropriations.value.push({
     id: mergedAppropriations.value.length + 1,
-    date: new Date().toLocaleDateString(),
     description: description.value,
-    amount: totalAmount,
+    year: contApprStore.selectedYear,
+    originalAppropriation: totalAmount,
+    balance: totalAmount, // Initially, balance equals the original appropriation
+    remarks: '',
     accounts: [...selectedAccounts.value],
   })
 
@@ -434,9 +416,6 @@ const formatCurrency = (value) => {
   }).format(value)
 }
 
-const viewDetails = (row) => {
-  console.log('Viewing details of row:', row)
-}
 
 const selectedRow = ref({
   id: null,
@@ -546,6 +525,20 @@ const saveAllocation = () => {
 
   showAllocationDialog.value = false
 }
+onMounted(async () => {
+  try {
+    await contApprStore.fetchContinueAccounts()
+    await contApprStore.fetchYears()
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to load data',
+      position: 'top',
+    })
+  }finally{
+    generalLoading.value=false;
+  }
+})
 
 defineExpose({
   openAllocationDialog,
@@ -566,6 +559,26 @@ defineExpose({
 .hierarchical-table {
   background: white;
   overflow: hidden;
+}
+
+.my-sticky-header-table {
+  /* height or max-height is important */
+  max-height: calc(100vh - 250px);
+
+  .q-table__top,
+  .q-table__bottom,
+  thead tr:first-child th {
+    background-color: white;
+  }
+
+  thead tr th {
+    position: sticky;
+    z-index: 1;
+  }
+
+  thead tr:first-child th {
+    top: 0;
+  }
 }
 
 @media (max-width: 768px) {

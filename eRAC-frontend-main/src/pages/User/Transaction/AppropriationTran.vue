@@ -11,13 +11,10 @@
           @click="loadAppropriation"
           :loading="loading"
         />
-
-        <q-btn class="get-barangay" @click="getBarangay">
-
-        </q-btn>
       </div>
     </div>
 
+    <!-- Simplified the search and filter section structure -->
     <div class="q-mb-sm">
       <div class="row items-center q-gutter-sm">
         <q-input
@@ -25,8 +22,7 @@
           dense
           placeholder="Search Description..."
           v-model="appropriationStore.searchQuery"
-          class="col-auto"
-          style="min-width: 400px; background-color: white;"
+          class="search-input"
         >
           <template v-slot:append>
             <q-icon name="search" />
@@ -38,8 +34,7 @@
           dense
           :model-value="dateRangeDisplay"
           label="Date Range"
-          class="col-auto"
-          style="min-width: 250px; background-color: white;"
+          class="date-input"
           clearable
           @clear="onDateRangeClear"
           readonly
@@ -64,8 +59,6 @@
           icon="clear_all"
           label="Clear All"
           @click="clearAllFilters"
-          class="clear-all-btn"
-          style="width: 9%;"
         />
 
         <q-space />
@@ -180,8 +173,8 @@
               label="Commit"
               :color="props.row.unappropriated <= 0 ? 'grey' : 'primary'"
               @click="openAllocationDialog(props.row)"
-               :disable="props.row.unappropriated <= 0"
-               v-permission="'add'"
+              :disable="props.row.unappropriated <= 0"
+              v-permission="'add'"
             />
           </q-td>
         </template>
@@ -294,9 +287,6 @@
           <q-btn flat label="Cancel" v-close-popup @click="closeEditAllocationDialog" />
           <q-btn label="Save Changes" color="primary" @click="saveEditedAllocation" />
         </q-card-actions>
-
-
-
       </q-card>
     </q-dialog>
   </q-page>
@@ -310,11 +300,12 @@ import ViewCommitDialog from 'components/appropriation/ViewCommitDialog.vue'
 import { useAppropriationStore } from 'stores/appropriationStore'
 import { useAccountsLibraryStore } from 'stores/accountsLibstore'
 import { api } from 'src/boot/axios'
-import { useAuthStore } from 'src/stores/auth'
+// import { useAuthStore } from 'src/stores/auth'
 
 const $q = useQuasar()
 const accountLibraryStore = useAccountsLibraryStore()
 const appropriationStore = useAppropriationStore()
+// const authStore = useAuthStore()
 
 const showDialog = ref(false)
 const selectedFiscalYear = ref(null)
@@ -325,13 +316,6 @@ const amount = ref(null)
 const loading = ref(false)
 const addLoading = ref(false)
 const dateRange = ref(null)
-const authStore = useAuthStore()
-
-
-const getBarangay = () => {
-  return authStore.user?.barangay || 'Unknown Barangay'
-}
-
 
 const loadAppropriation = async () => {
   loading.value = true
@@ -534,8 +518,26 @@ const openEditAllocationDialog = async (row) => {
   try {
     const response = await api.get(`/api/barangay/budgets/${row.id}/history`)
     const allHistory = response.data.data?.history || []
-    const latestAllocations = allHistory.length > 0 ? allHistory[0].allocations : []
-    editAllocations.value = JSON.parse(JSON.stringify(latestAllocations))
+    
+    // Combine ALL allocations from all history sessions, not just the latest
+    const allAllocations = allHistory.flatMap(session => session.allocations || [])
+    
+    // Group by expense hierarchy to combine amounts for the same expense items/types
+    const allocationMap = new Map()
+    
+    allAllocations.forEach(allocation => {
+      const key = `${allocation.expense_class_id}-${allocation.expense_type_id}-${allocation.expense_item_id || 'null'}`
+      
+      if (allocationMap.has(key)) {
+        // Add amounts for the same expense
+        allocationMap.get(key).amount += allocation.amount
+      } else {
+        // Create new entry
+        allocationMap.set(key, { ...allocation })
+      }
+    })
+    
+    editAllocations.value = Array.from(allocationMap.values())
     initializeEditDisplayAccounts()
     appropriationStore.selectedRow = row
     showEditAllocationDialog.value = true
@@ -657,12 +659,28 @@ const saveEditedAllocation = async () => {
       })
     })
 
-    const availableBudget = appropriationStore.selectedRow?.unappropriated || 0
-    if (totalAllocated > availableBudget) {
-      throw new Error(`Total allocation (₱${totalAllocated.toFixed(2)}) exceeds available budget (₱${availableBudget.toFixed(2)})`)
+    const currentUnappropriated = appropriationStore.selectedRow?.unappropriated || 0
+
+    const originalAllocationsTotal = editAllocations.value.reduce((sum, allocation) => {
+      return sum + (allocation.amount || 0)
+    }, 0)
+
+    console.log("[v0] Debug - currentUnappropriated:", currentUnappropriated)
+    console.log("[v0] Debug - originalAllocationsTotal:", originalAllocationsTotal)
+    console.log("[v0] Debug - totalAllocated:", totalAllocated)
+
+    // Calculate available budget by adding back the original allocations
+    const availableBudgetForEdit = currentUnappropriated + originalAllocationsTotal
+
+    console.log("[v0] Debug - availableBudgetForEdit:", availableBudgetForEdit)
+
+    if (totalAllocated > availableBudgetForEdit) {
+      throw new Error(`Total allocation (₱${totalAllocated.toFixed(2)}) exceeds available budget (₱${availableBudgetForEdit.toFixed(2)})`)
     }
 
-    await api.post(`/api/barangay/budgets/${appropriationStore.selectedRow.id}/allocate`, { allocations })
+    // Use the appropriation store's commitAllocation method instead of calling API directly
+    await appropriationStore.commitAllocation(appropriationStore.selectedRow.id, allocations)
+    
     $q.notify({
       type: 'positive',
       message: 'Allocations updated',
@@ -859,6 +877,17 @@ const openDialog = async () => {
   background: white;
 }
 
+/* Added specific styles for inputs to replace inline styles */
+.search-input {
+  min-width: 400px;
+  background-color: white;
+}
+
+.date-input {
+  min-width: 250px;
+  background-color: white;
+}
+
 @media (max-width: 768px) {
   .q-pa-md {
     padding: 8px;
@@ -874,8 +903,9 @@ const openDialog = async () => {
     width: 100%;
   }
 
-  .col-auto {
-    min-width: 100% !important;
+  .search-input,
+  .date-input {
+    min-width: 100%;
   }
 }
 </style>

@@ -9,10 +9,16 @@
       <template v-slot:body-cell-action="props">
         <q-td :props="props">
           <div class="button-group">
-            <q-btn class="edit-btn" icon="edit" @click="store.editAugmentation(props.row)" v-permission="'edit'" />
             <q-btn
-              outlined
-              class="view-btn"
+              dense
+              icon="edit"
+              color="orange"
+              @click="store.editAugmentation(props.row)"
+              v-permission="'edit'"
+            />
+            <q-btn
+              dense
+              color="red"
               icon="delete"
               @click="handleDelete(props.row.id)"
               v-permission="'delete'"
@@ -38,20 +44,20 @@ const handleDelete = async (id) => {
       $q.notify({
         type: 'positive',
         message: 'Augmentation deleted successfully',
-        position: 'top'
+        position: 'top',
       })
     } else {
       $q.notify({
         type: 'negative',
         message: result.error || 'Failed to delete augmentation',
-        position: 'top'
+        position: 'top',
       })
     }
   } catch {
     $q.notify({
       type: 'negative',
       message: 'An error occurred while deleting',
-      position: 'top'
+      position: 'top',
     })
   }
 }

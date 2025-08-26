@@ -4,7 +4,10 @@
     <q-card style="min-width: 1100px">
       <q-card-section>
         <div class="text-h6">
-          Add Expenses to Disbursement #{{ store.forms.disbursement.dvNumber }}
+          Edit Expenses for Disbursement #{{ store.forms.disbursement.dvNumber }}
+        </div>
+        <div class="text-caption text-grey-6 q-mt-sm">
+          Note: Total amount is locked to ₱{{ store.lockedTotalAmount?.toLocaleString() || '0' }}. You can only redistribute amounts between expenses.
         </div>
       </q-card-section>
 
@@ -77,19 +80,8 @@
         </div>
       </q-card-section>
 
-      <!-- Add Expense Button -->
+      <!-- Expense Table Section -->
       <q-card-section>
-        <div class="row justify-end q-mb-md">
-          <q-btn
-            label="Add"
-            class="add-table-btn"
-            icon="add"
-            @click="handleAddExpense"
-            @mouseenter="preloadExpenseAccounts"
-            :loading="addingExpense || store.expenseTypeLoading"
-            v-permission="'add'"
-          />
-        </div>
         <!-- Expense Table -->
         <q-table
           :rows="store.expenses"
@@ -108,14 +100,6 @@
                   icon="edit"
                   @click="editExpenseInline(props.row)"
                 />
-                <q-btn
-                  size="sm"
-                  flat
-                  round
-                  color="red"
-                  icon="delete"
-                  @click="store.deleteItem(props.row)"
-                />
               </div>
             </q-td>
           </template>
@@ -123,15 +107,19 @@
 
         <!-- Amount Display -->
         <div class="q-mt-md">
-          <q-item-label class="q-mb-xs">Amount:</q-item-label>
+          <q-item-label class="q-mb-xs">Total Amount:</q-item-label>
           <q-input
             filled
             outlined
             dense
             :model-value="`₱${(store.totalExpensesAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`"
+            :class="getTotalAmountClass()"
             style="width: 40%"
             readonly
           />
+          <div v-if="getAmountDifference() !== 0" class="text-caption text-negative q-mt-xs">
+            {{ getAmountDifferenceMessage() }}
+          </div>
         </div>
       </q-card-section>
 
@@ -152,70 +140,17 @@
           class="modal-save-btn" 
           @click="handleSaveEditedDisbursement"
           :loading="saving"
-          :disable="!store.expenses || store.expenses.length === 0"
+          :disable="!store.expenses || store.expenses.length === 0 || store.totalExpensesAmount !== store.lockedTotalAmount"
         />
       </q-card-actions>
     </q-card>
   </q-dialog>
 
-  <!-- Expense Selection Dialog -->
-  <q-dialog v-model="store.dialogs.expense" persistent>
-    <q-card style="min-width: 800px; max-width: 90vw">
-      <q-card-section class="q-pb-none">
-        <div class="text-h6">Select Expense Account</div>
-      </q-card-section>
-
-      <q-card-section>
-        <q-input
-          outlined
-          dense
-          placeholder="Search expense account..."
-          v-model="store.expenseSearch"
-          class="q-mb-sm"
-          style="width: 300px"
-        >
-          <template v-slot:append>
-            <q-icon name="search" />
-          </template>
-        </q-input>
-
-        <q-table
-          :rows="store.filteredExpenseAccounts"
-          :columns="store.expenseAccountColumns"
-          row-key="id"
-          :loading="store.loading || store.expenseTypeLoading"
-          :filter="store.expenseSearch"
-          flat
-          bordered
-        >
-          <template v-slot:body-cell-action="props">
-            <q-td :props="props">
-              <q-btn
-                dense
-                label="Select"
-                color="primary"
-                @click="store.openExpenseDetail(props.row)"
-              />
-            </q-td>
-          </template>
-        </q-table>
-      </q-card-section>
-
-      <q-card-actions align="right" class="q-pa-md">
-        <q-btn
-          flat
-          label="Cancel"
-          @click="store.closeDialog('expense')"
-        />
-      </q-card-actions>
-    </q-card>
-  </q-dialog>
-
-  <!-- Add Expense Dialog -->
+  <!-- Edit Expense Dialog -->
   <q-dialog v-model="store.dialogs.expenseDetail">
     <q-card style="min-width: 500px">
       <q-card-section class="q-pb-none">
-        <div class="text-h6">Add Expense</div>
+        <div class="text-h6">Edit Expense</div>
       </q-card-section>
 
       <q-card-section>
@@ -223,7 +158,7 @@
           <strong>Account:</strong> {{ store.forms.expense.account }}
         </div>
         <div class="text-subtitle1 q-mb-md">
-          <strong>Balance:</strong> ₱{{ store.forms.expense.balance.toLocaleString() }}
+          <strong>Available Balance:</strong> ₱{{ store.forms.expense.balance.toLocaleString() }}
         </div>
 
         <q-input
@@ -269,7 +204,6 @@ const store = useDisbursementStore()
 const bankStore = useBankStore()
 const $q = useQuasar()
 const saving = ref(false)
-const addingExpense = ref(false)
 
 onMounted(async () => {
   await bankStore.fetchBanks()
@@ -281,6 +215,18 @@ const currentBankLabel = computed(() => {
 })
 
 const handleSaveEditedDisbursement = async () => {
+  // Validate total amount before saving
+  if (store.totalExpensesAmount !== store.lockedTotalAmount) {
+    $q.notify({
+      type: 'negative',
+      message: `Total amount must equal the original DV amount of ₱${store.lockedTotalAmount?.toLocaleString()}. Current total: ₱${store.totalExpensesAmount?.toLocaleString()}`,
+      icon: 'warning',
+      position: 'top',
+      timeout: 5000
+    })
+    return
+  }
+
   saving.value = true
   try {
     const result = await store.saveEditedDisbursement()
@@ -319,32 +265,34 @@ const editExpenseInline = (expense) => {
   store.openExpenseDetailForEdit(expense)
 }
 
-// Expense management functions copied from DisbursementTran
-const preloadExpenseAccounts = () => {
-  // Preload expense accounts when user hovers over Add button
-  if (store.expenseData.length === 0 && !store.expenseTypeLoading) {
-    store.fetchExpenseAccounts().catch(error => {
-      console.warn('Failed to preload expense accounts:', error)
-    })
+const getTotalAmountClass = () => {
+  const currentTotal = store.totalExpensesAmount || 0
+  const lockedTotal = store.lockedTotalAmount || 0
+  
+  if (currentTotal > lockedTotal) {
+    return 'text-negative'
+  } else if (currentTotal < lockedTotal) {
+    return 'text-warning'
+  } else {
+    return 'text-positive'
   }
 }
 
-const handleAddExpense = async () => {
-  addingExpense.value = true
-  try {
-    await store.openDialog('expense')
-  } catch (error) {
-    console.error('Error opening expense dialog:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Failed to open expense dialog',
-      icon: 'error',
-      position: 'top',
-      timeout: 3000
-    })
-  } finally {
-    addingExpense.value = false
+const getAmountDifference = () => {
+  const currentTotal = store.totalExpensesAmount || 0
+  const lockedTotal = store.lockedTotalAmount || 0
+  return currentTotal - lockedTotal
+}
+
+const getAmountDifferenceMessage = () => {
+  const difference = getAmountDifference()
+  
+  if (difference > 0) {
+    return `Amount exceeds original DV amount by ₱${difference.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  } else if (difference < 0) {
+    return `Amount is less than original DV amount by ₱${Math.abs(difference).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
+  return ''
 }
 
 const handleSaveExpense = async () => {
@@ -352,7 +300,7 @@ const handleSaveExpense = async () => {
     await store.saveExpense()
     $q.notify({
       type: 'positive',
-      message: 'Expense added successfully!',
+      message: 'Expense updated successfully!',
       icon: 'check_circle',
       position: 'top',
       timeout: 3000
@@ -369,16 +317,6 @@ const handleSaveExpense = async () => {
   }
 }
 
-// Watch for changes in the expense dialog to refresh data when needed
-watch(
-  () => store.dialogs.expense,
-  async (isOpen) => {
-    if (isOpen) {
-      // Refresh expense accounts when dialog opens to ensure latest data
-      store.refreshExpenseAccountsInBackground()
-    }
-  }
-)
 
 // Watch for changes in the expense detail dialog
 watch(
@@ -413,6 +351,19 @@ watch(
   background-color: #f5f5f5;
 }
 
+/* Amount validation colors */
+.text-negative {
+  color: #c10015 !important;
+}
+
+.text-warning {
+  color: #f57c00 !important;
+}
+
+.text-positive {
+  color: #21ba45 !important;
+}
+
 /* Responsive design for mobile */
 @media (max-width: 768px) {
   .q-card {
@@ -429,3 +380,4 @@ watch(
   }
 }
 </style>
+
