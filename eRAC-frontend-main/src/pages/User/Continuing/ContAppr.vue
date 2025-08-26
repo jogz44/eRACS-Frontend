@@ -255,16 +255,47 @@ const clearAllFilters = () => {
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useContApprStore } from 'src/stores/contApprStore'
-//import { useContApprStore } from 'src/stores/contApprStore'
 
 const $q = useQuasar()
-const contApprStore =useContApprStore();
+const contApprStore = useContApprStore();
 
 const showContinueDialog = ref(false)
 const showAllocationDialog = ref(false)
 const description = ref('')
 const selectedAccounts = ref([])
 const searchQuery = ref('')
+const continueAccounts = ref([
+  {
+    id: 1,
+    accountName: 'Capital Outlays > OFFICE EQUIPMENT',
+    balance: 12000,
+  },
+  {
+    id: 2,
+    accountName: 'Capital Outlays > IT EQUIPMENT AND SOFTWARE',
+    balance: 7600,
+  },
+  {
+    id: 3,
+    accountName: 'Capital Outlays > VEHICLES',
+    balance: 50000,
+  },
+  {
+    id: 4,
+    accountName: 'Capital Outlays > FURNITURE AND FIXTURES',
+    balance: 8300,
+  },
+  {
+    id: 5,
+    accountName: 'Capital Outlays > BUILDING IMPROVEMENTS',
+    balance: 42000,
+  },
+  {
+    id: 6,
+    accountName: 'Capital Outlays > MEDICAL EQUIPMENT',
+    balance: 15000,
+  },
+])
 
 const returnAmount = ref(0)
 const augmentationAmount = ref(0)
@@ -306,10 +337,7 @@ const columns = [
   { name: 'action', label: 'Action', field: 'action', align: 'center' },
 ]
 
-const parseDate = (str) => {
-  const [m, d, y] = str.split('/')
-  return new Date(`${y}-${m.padStart?.(2, '0') ?? m}-${d.padStart?.(2, '0') ?? d}`)
-}
+
 
 const availableBudget = computed(() => {
   const base = selectedRow.value.unappropriated || 0
@@ -395,7 +423,7 @@ const continueSelected = () => {
   mergedAppropriations.value.push({
     id: mergedAppropriations.value.length + 1,
     description: description.value,
-    year: selectedYear.value,
+    year: contApprStore.selectedYear,
     originalAppropriation: totalAmount,
     balance: totalAmount, // Initially, balance equals the original appropriation
     remarks: '',
