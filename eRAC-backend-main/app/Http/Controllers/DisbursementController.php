@@ -9,6 +9,7 @@ use App\Models\TranExpenseDetail;
 use App\Models\TranAppropriation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\AdminAuthController;
 
 class DisbursementController extends Controller
 {
@@ -27,6 +28,19 @@ class DisbursementController extends Controller
             'status' => true,
             'data' => $disbursements
         ]);
+    }
+
+    private function getAccountNameFromAppropriationId($appropriationId)
+    {
+        $appr = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem'])->find($appropriationId);
+        if (!$appr) {
+            return 'Unknown Account';
+        }
+        $parts = [];
+        if ($appr->expenseClass) { $parts[] = $appr->expenseClass->name; }
+        if ($appr->expenseType) { $parts[] = $appr->expenseType->name; }
+        if ($appr->expenseItem) { $parts[] = $appr->expenseItem->name; }
+        return implode(' > ', $parts) ?: 'Unknown Account';
     }
 
     // GET /api/barangay/disbursements
@@ -150,6 +164,18 @@ class DisbursementController extends Controller
                 }
             }
 
+            // Log created disbursement
+            AdminAuthController::logUserAction(
+                $user,
+                'Created Disbursement',
+                sprintf(
+                    '#%s for %s amount ₱%s',
+                    $disbursement->dv_number,
+                    $disbursement->payee,
+                    number_format((float)$disbursement->dv_amount, 2)
+                )
+            );
+
             return response()->json([
                 'status' => true,
                 'message' => 'Disbursement created successfully',
@@ -256,6 +282,18 @@ class DisbursementController extends Controller
                 'liquidated_amount' => $request->liquidatedAmount,
                 'liquidated_at' => now(),
             ]);
+
+            // Log liquidation action
+            AdminAuthController::logUserAction(
+                $user,
+                $isPartial ? 'Partial Liquidation' : 'Liquidated Disbursement',
+                sprintf(
+                    '#%s liquidated amount ₱%s (%s)',
+                    $disbursement->dv_number,
+                    number_format((float)$request->liquidatedAmount, 2),
+                    $isPartial ? 'Partial' : 'Full'
+                )
+            );
 
             return response()->json([
                 'status' => true,
@@ -437,6 +475,16 @@ class DisbursementController extends Controller
             $dateParts = explode('/', $request->date);
             $formattedDate = $dateParts[2] . '-' . $dateParts[1] . '-' . $dateParts[0];
 
+            // Capture previous values for logging
+            $prev = [
+                'date' => $disbursement->date,
+                'dv_number' => $disbursement->dv_number,
+                'cheque_number' => $disbursement->cheque_number,
+                'bank_id' => $disbursement->bank_id,
+                'payee' => $disbursement->payee,
+                'dv_amount' => $disbursement->dv_amount,
+            ];
+
             // Update the disbursement
             $disbursement->update([
                 'date' => $formattedDate,
@@ -450,9 +498,13 @@ class DisbursementController extends Controller
             // Update expense details - handle existing and new ones
             if ($request->has('expenses') && is_array($request->expenses)) {
                 // Get existing expense detail IDs for this disbursement
-                $existingExpenseDetailIds = TranExpenseDetail::where('disbursement_id', $disbursement->id)
-                    ->pluck('id')
-                    ->toArray();
+                $existingExpenseDetails = TranExpenseDetail::where('disbursement_id', $disbursement->id)
+                    ->get();
+                $existingExpenseDetailIds = $existingExpenseDetails->pluck('id')->toArray();
+                $existingExpenseDetailMap = $existingExpenseDetails->keyBy('id');
+                $expenseAddedLogs = [];
+                $expenseEditedLogs = [];
+                $expenseDeletedLogs = [];
                 
                 // Process each expense
                 foreach ($request->expenses as $expense) {
@@ -476,19 +528,54 @@ class DisbursementController extends Controller
                     if ($appropriation) {
                         if (isset($expense['id']) && in_array($expense['id'], $existingExpenseDetailIds)) {
                             // Update existing expense detail
+                            $existing = $existingExpenseDetailMap[$expense['id']];
+                            $previousAmount = (float) $existing->amount;
+                            $previousParticulars = $existing->particulars ?? '';
+                            $previousAppropriationId = $existing->appropriation_id;
+
                             TranExpenseDetail::where('id', $expense['id'])->update([
                                 'appropriation_id' => $appropriation->id,
                                 'amount' => $expense['amount'],
                                 'particulars' => $expense['particular'] ?? '',
                             ]);
+
+                            // Log edit specifics
+                            $newAmount = (float) $expense['amount'];
+                            $newParticulars = $expense['particular'] ?? '';
+                            $changedFields = [];
+
+                            $newName = $this->getAccountNameFromAppropriationId($appropriation->id);
+                            $accountDisplay = $previousAppropriationId !== $appropriation->id
+                                ? sprintf('%s', $newName)
+                                : $newName;
+                            // Detect amount change
+                            if ($previousAmount !== $newAmount) {
+                                $changedFields[] = sprintf('Amount ₱%s → ₱%s', number_format($previousAmount, 2), number_format($newAmount, 2));
+                            }
+                            // Detect particulars change
+                            if ($previousParticulars !== $newParticulars) {
+                                $changedFields[] = sprintf('Particulars "%s" → "%s"', $previousParticulars, $newParticulars);
+                            }
+
+                            if (!empty($changedFields)) {
+                                $expenseEditedLogs[] = sprintf('%s%s', $accountDisplay, empty($changedFields) ? '' : ' | ' . implode(', ', $changedFields));
+                            }
                         } else {
                             // Create new expense detail
-                            TranExpenseDetail::create([
+                            $created = TranExpenseDetail::create([
                                 'disbursement_id' => $disbursement->id,
                                 'appropriation_id' => $appropriation->id,
                                 'amount' => $expense['amount'],
                                 'particulars' => $expense['particular'] ?? '',
                             ]);
+
+                            // Log added expense account
+                            $accountName = $this->getAccountNameFromAppropriationId($appropriation->id);
+                            $expenseAddedLogs[] = sprintf('%s amount ₱%s%s',
+                                $accountName,
+                                number_format((float)$expense['amount'], 2),
+                                isset($expense['particular']) && $expense['particular'] !== '' ? ' | Particulars: "' . $expense['particular'] . '"' : ''
+                            );
                         }
                     }
                 }
@@ -498,11 +585,59 @@ class DisbursementController extends Controller
                     ->pluck('id')
                     ->filter()
                     ->toArray();
-                
-                TranExpenseDetail::where('disbursement_id', $disbursement->id)
-                    ->whereNotIn('id', $requestedIds)
-                    ->delete();
+
+                $toDeleteIds = array_diff($existingExpenseDetailIds, $requestedIds);
+                foreach ($toDeleteIds as $delId) {
+                    $detail = $existingExpenseDetailMap[$delId] ?? null;
+                    if ($detail) {
+                        $accountName = $this->getAccountNameFromAppropriationId($detail->appropriation_id);
+                        $expenseDeletedLogs[] = sprintf('%s amount ₱%s%s',
+                            $accountName,
+                            number_format((float)$detail->amount, 2),
+                            $detail->particulars ? ' | Particulars: "' . $detail->particulars . '"' : ''
+                        );
+                    }
+                    TranExpenseDetail::where('id', $delId)->delete();
+                }
+
+                // Build unified log message for expense changes and top-level updates
+                $topLevelChanges = [];
+                $amountChange = null;
+                if ($prev['dv_number'] !== $disbursement->dv_number) { $topLevelChanges[] = sprintf('DV# %s → %s', $prev['dv_number'], $disbursement->dv_number); }
+                if ($prev['payee'] !== $disbursement->payee) { $topLevelChanges[] = sprintf('Payee %s → %s', $prev['payee'], $disbursement->payee); }
+                if ($prev['date'] !== $disbursement->date) { $topLevelChanges[] = sprintf('Date %s → %s', $prev['date'], $disbursement->date); }
+                if ((float)$prev['dv_amount'] !== (float)$disbursement->dv_amount) { $amountChange = sprintf('Overall Amount ₱%s → ₱%s', number_format((float)$prev['dv_amount'], 2), number_format((float)$disbursement->dv_amount, 2)); }
+
+                $parts = [];
+                if (!empty($topLevelChanges)) {
+                    $parts[] = implode(', ', $topLevelChanges);
+                }
+                if (!empty($expenseAddedLogs)) {
+                    $parts[] = 'Added: ' . implode('; ', $expenseAddedLogs);
+                }
+                if (!empty($expenseEditedLogs)) {
+                    $parts[] = 'Edited: ' . implode('; ', $expenseEditedLogs);
+                }
+                if (!empty($expenseDeletedLogs)) {
+                    $parts[] = 'Deleted: ' . implode('; ', $expenseDeletedLogs);
+                }
+                if (!empty($amountChange)) {
+                    $parts[] = $amountChange;
+                }
+
+                if (!empty($parts)) {
+                    AdminAuthController::logUserAction(
+                        $user,
+                        'Edited Disbursement',
+                        sprintf(
+                            '#%s | %s',
+                            $disbursement->dv_number,
+                            implode(' | ', $parts)
+                        )
+                    );
+                }
             }
+
 
             return response()->json([
                 'status' => true,
@@ -526,11 +661,26 @@ class DisbursementController extends Controller
         $request->validate([
             'liquidated_amount' => 'required|numeric|min:0',
         ]);
+        $user = $request->user();
         $disbursement = Disbursement::findOrFail($id);
+        $previous = (float) ($disbursement->liquidated_amount ?? 0);
         $disbursement->status = 'Liquidated';
         $disbursement->liquidated_amount = $request->liquidated_amount;
         $disbursement->liquidated_at = now();
         $disbursement->save();
+
+        // Log liquidation via direct endpoint
+        AdminAuthController::logUserAction(
+            $user,
+            'Liquidated Disbursement',
+            sprintf(
+                '#%s liquidated amount ₱%s (prev ₱%s)',
+                $disbursement->dv_number,
+                number_format((float)$disbursement->liquidated_amount, 2),
+                number_format($previous, 2)
+            )
+        );
+
         return response()->json(['status' => true, 'data' => $disbursement]);
     }
 
@@ -600,6 +750,18 @@ class DisbursementController extends Controller
             // Delete the disbursement
             $disbursement->delete();
             
+            // Log deletion
+            AdminAuthController::logUserAction(
+                $user,
+                'Deleted Disbursement',
+                sprintf(
+                    'Deleted #%s for %s amount ₱%s',
+                    $disbursement->dv_number,
+                    $disbursement->payee,
+                    number_format((float)$disbursement->dv_amount, 2)
+                )
+            );
+
             return response()->json([
                 'status' => true,
                 'message' => 'Disbursement deleted successfully'

@@ -18,10 +18,7 @@ class AppropriationController extends Controller
 {
     public function index(Request $request)
     {
-        // Log user activity
-        if ($request->user()) {
-            AdminAuthController::logUserAction($request->user(),'Visited Appropriation Page' ,'Visited Appropriation Page');
-        }
+        // Removed page visit logging as requested
 
         $request->validate([
             'year' => 'nullable|integer',
@@ -129,7 +126,12 @@ class AppropriationController extends Controller
         AdminAuthController::logUserAction(
             $request->user(),
             'Created Budget',
-            "Created new budget with amount ₱" . number_format($validated['original_amount'], 2) . " - " . $validated['description']
+            sprintf(
+                'Created budget "%s" with amount ₱%s (FY #%s)',
+                $validated['description'],
+                number_format($validated['original_amount'], 2),
+                $validated['fiscal_year_id']
+            )
         );
 
         return response()->json($budget, 201);
@@ -316,6 +318,7 @@ class AppropriationController extends Controller
             if (isset($existingAllocationMap[$allocationKey])) {
                 // Update existing allocation
                 $existingAllocation = $existingAllocationMap[$allocationKey];
+                $previousAmount = (float) $existingAllocation->amount;
                 $existingAllocation->update([
                     'amount' => $allocation['amount'],
                     'transaction_date' => now(),
@@ -326,6 +329,20 @@ class AppropriationController extends Controller
                 
                 // Remove from map to track which ones were updated
                 unset($existingAllocationMap[$allocationKey]);
+
+                // Log edited allocation with previous vs new amount
+                $identifier = $this->getExpenseIdentifier($allocation);
+                AdminAuthController::logUserAction(
+                    $request->user(),
+                    'Edited Allocation',
+                    sprintf(
+                        'Edited allocation %s: from ₱%s to ₱%s for budget "%s"',
+                        $identifier,
+                        number_format($previousAmount, 2),
+                        number_format($allocation['amount'], 2),
+                        $budget->description
+                    )
+                );
             } else {
                 // Create new allocation
                 $appropriationData = [
@@ -341,14 +358,20 @@ class AppropriationController extends Controller
                 ];
 
                 $appropriations[] = TranAppropriation::create($appropriationData);
-            }
 
-            AdminAuthController::logUserAction(
-                $request->user(),
-                'Updated Appropriation',
-                "Set appropriation amount to ₱" . number_format($allocation['amount'], 2) .
-                " for budget: " . $budget->description
-            );
+                // Log committed allocation
+                $identifier = $this->getExpenseIdentifier($allocation);
+                AdminAuthController::logUserAction(
+                    $request->user(),
+                    'Committed Allocation',
+                    sprintf(
+                        'Committed allocation %s: ₱%s for budget "%s"',
+                        $identifier,
+                        number_format($allocation['amount'], 2),
+                        $budget->description
+                    )
+                );
+            }
         }
 
         // Delete only the allocations that are no longer needed
@@ -601,7 +624,7 @@ class AppropriationController extends Controller
             ], 422);
         }
 
-        return DB::transaction(function () use ($validated, $budget, $totalAllocated) {
+        return DB::transaction(function () use ($validated, $budget, $totalAllocated, $request) {
             // Get existing item-level appropriations for this budget
             $existingAllocations = $budget->tranAppropriations()
                 ->whereNotNull('expense_item_id')
@@ -621,12 +644,26 @@ class AppropriationController extends Controller
                 if (isset($existingAllocationMap[$allocationKey])) {
                     // Update existing allocation
                     $existingAllocation = $existingAllocationMap[$allocationKey];
+                    $previousAmount = (float) $existingAllocation->amount;
                     $existingAllocation->update([
                         'amount' => $alloc['amount'],
                         'transaction_date' => now(),
                         'status' => 'committed',
                         'user_id' => $budget->user_id,
                     ]);
+                    // Log edited allocation
+                    $identifier = $this->getExpenseIdentifier($alloc);
+                    AdminAuthController::logUserAction(
+                        $request->user(),
+                        'Edited Allocation',
+                        sprintf(
+                            'Edited allocation %s: from ₱%s to ₱%s for budget "%s"',
+                            $identifier,
+                            number_format($previousAmount, 2),
+                            number_format($alloc['amount'], 2),
+                            $budget->description
+                        )
+                    );
                     
                     // Remove from map to track which ones were updated
                     unset($existingAllocationMap[$allocationKey]);
@@ -642,6 +679,18 @@ class AppropriationController extends Controller
                         'status' => 'committed',
                         'user_id' => $budget->user_id,
                     ]);
+                    // Log committed allocation
+                    $identifier = $this->getExpenseIdentifier($alloc);
+                    AdminAuthController::logUserAction(
+                        $request->user(),
+                        'Committed Allocation',
+                        sprintf(
+                            'Committed allocation %s: ₱%s for budget "%s"',
+                            $identifier,
+                            number_format($alloc['amount'], 2),
+                            $budget->description
+                        )
+                    );
                 }
             }
 

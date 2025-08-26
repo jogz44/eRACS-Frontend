@@ -1022,11 +1022,79 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     // Method to open expense detail for editing existing expenses
     openExpenseDetailForEdit(existingExpense) {
+      // Derive original allocated amount and expense level (type or item)
+      let originalAllocatedAmount = 0
+      let expenseLevel = 'type'
+      let balanceKeyId = null
+
+      try {
+        // Traverse expense hierarchy to find the matching node
+        for (const expenseClass of this.expenseData || []) {
+          if (!expenseClass?.children) continue
+          for (const expenseType of expenseClass.children || []) {
+            // If item-level
+            if (existingExpense.expense_item_id) {
+              if (expenseType?.children) {
+                const matchedItem = (expenseType.children || []).find(ci => String(ci.id) === String(existingExpense.expense_item_id))
+                if (matchedItem) {
+                  originalAllocatedAmount = parseFloat(matchedItem.amount) || 0
+                  expenseLevel = 'item'
+                  balanceKeyId = matchedItem.id
+                  throw new Error('__found')
+                }
+              }
+            } else {
+              // Type-level
+              if (String(expenseType.id) === String(existingExpense.expense_type_id)) {
+                originalAllocatedAmount = parseFloat(expenseType.amount) || 0
+                expenseLevel = 'type'
+                balanceKeyId = expenseType.id
+                throw new Error('__found')
+              }
+            }
+          }
+        }
+      } catch (e) {
+        if (e?.message !== '__found') {
+          // Silent fallthrough, keep defaults
+        }
+      }
+
+      // Fallbacks if not found in hierarchy
+      if (!Number.isFinite(originalAllocatedAmount)) originalAllocatedAmount = 0
+
+      // Calculate remaining balance from DB-backed expense details
+      let remainingBalance = this.calculateRemainingBalance(
+        balanceKeyId || existingExpense.accountId,
+        originalAllocatedAmount,
+        expenseLevel
+      )
+
+      // If the current expense is already persisted in DB for this disbursement and account,
+      // add it back to compute the editable available balance
+      let includeCurrentAmountBack = false
+      try {
+        includeCurrentAmountBack = (this.expenseDetailsData || []).some(ed => {
+          const sameDisbursement = String(ed.disbursement_id) === String(this.currentItem?.id)
+          if (!sameDisbursement) return false
+          const isItemLevel = Boolean(existingExpense.expense_item_id)
+          if (isItemLevel) {
+            return String(ed.expense_item_id) === String(existingExpense.expense_item_id)
+          }
+          // Type-level: ensure it's a type record (no item) and matches type id
+          return (ed.expense_item_id == null) && String(ed.expense_type_id) === String(existingExpense.expense_type_id)
+        })
+      } catch {
+        includeCurrentAmountBack = false
+      }
+
+      const availableBalance = remainingBalance + (includeCurrentAmountBack ? (parseFloat(existingExpense.amount) || 0) : 0)
+
       this.forms.expense = {
         account: existingExpense.accountName,
         accountId: existingExpense.accountId,
-        balance: existingExpense.amount, // Use current amount as available balance
-        originalBalance: existingExpense.amount,
+        balance: availableBalance,
+        originalBalance: originalAllocatedAmount || existingExpense.amount,
         particulars: existingExpense.particular,
         amount: existingExpense.amount,
         disbursementId: this.currentItem?.id || null,
@@ -1144,13 +1212,20 @@ export const useDisbursementStore = defineStore('disbursement', {
       const mm = String(today.getMonth() + 1).padStart(2, '0')
       const yyyy = today.getFullYear()
 
-     // Generate new DV number
-      const lastDV = this.disbursements.reduce((max, d) => {
-        const num = parseInt(d.dvNumber?.split('-')?.pop()) || 0
-        return Math.max(max, num)
-      }, 0)
-
-      const newDVNumber = `DV-${String(yyyy).slice(-2)}-${mm}-${String(lastDV + 1).padStart(3, '0')}`
+      // Generate new DV number
+      // Prefer only DV numbers that match our pattern: DV-YY-MM-XXX
+      const dvPattern = /^DV-\d{2}-\d{2}-\d{3}$/
+      let lastSequence = 0
+      for (const d of this.disbursements) {
+        const dv = d.dvNumber || ''
+        if (dvPattern.test(dv)) {
+          const seg = dv.split('-').pop() // last segment XXX
+          const seq = parseInt(seg, 10) || 0
+          if (seq > lastSequence) lastSequence = seq
+        }
+      }
+      // Fallback: if no matching DV pattern found, start from 0
+      const newDVNumber = `DV-${String(yyyy).slice(-2)}-${mm}-${String(lastSequence + 1).padStart(3, '0')}`
 
       // Update form with new defaults
       this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
@@ -1461,11 +1536,9 @@ export const useDisbursementStore = defineStore('disbursement', {
           }
         }
 
-        // Refresh expense details from DB to compute dv_amount accurately
-        await this.fetchExpenseDetails()
-        const dvAmountFromDb = (this.expenseDetailsData || [])
-          .filter(ed => String(ed.disbursement_id) === String(this.currentItem.id))
-          .reduce((sum, ed) => sum + (parseFloat(ed.amount) || 0), 0)
+        // Compute dv amount from the CURRENT in-memory edited expenses to reflect latest changes
+        const dvAmountFromForm = (this.expenses || [])
+          .reduce((sum, exp) => sum + (parseFloat(exp.amount) || 0), 0)
 
         // Prepare the payload with ids for all expenses so backend keeps them
         const payload = {
@@ -1474,7 +1547,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           cheque_number: this.forms.disbursement.chequeNumber,
           bank_id: this.forms.disbursement.bank_id,
           payee: this.forms.disbursement.payee,
-          dv_amount: dvAmountFromDb,
+          dv_amount: dvAmountFromForm,
           expenses: this.expenses.map(expense => ({
             id: Number(expense.id) || undefined,
             accountId: expense.accountId,

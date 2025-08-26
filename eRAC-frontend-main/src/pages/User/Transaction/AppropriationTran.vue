@@ -514,8 +514,26 @@ const openEditAllocationDialog = async (row) => {
   try {
     const response = await api.get(`/api/barangay/budgets/${row.id}/history`)
     const allHistory = response.data.data?.history || []
-    const latestAllocations = allHistory.length > 0 ? allHistory[0].allocations : []
-    editAllocations.value = JSON.parse(JSON.stringify(latestAllocations))
+    
+    // Combine ALL allocations from all history sessions, not just the latest
+    const allAllocations = allHistory.flatMap(session => session.allocations || [])
+    
+    // Group by expense hierarchy to combine amounts for the same expense items/types
+    const allocationMap = new Map()
+    
+    allAllocations.forEach(allocation => {
+      const key = `${allocation.expense_class_id}-${allocation.expense_type_id}-${allocation.expense_item_id || 'null'}`
+      
+      if (allocationMap.has(key)) {
+        // Add amounts for the same expense
+        allocationMap.get(key).amount += allocation.amount
+      } else {
+        // Create new entry
+        allocationMap.set(key, { ...allocation })
+      }
+    })
+    
+    editAllocations.value = Array.from(allocationMap.values())
     initializeEditDisplayAccounts()
     appropriationStore.selectedRow = row
     showEditAllocationDialog.value = true

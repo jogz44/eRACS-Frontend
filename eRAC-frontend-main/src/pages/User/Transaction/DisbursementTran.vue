@@ -143,6 +143,7 @@
                       icon="delete"
                       color="red"
                       @click="handleDeleteExpense(props.row)"
+                      v-permission="'delete'"
                     />
                   </div>
                 </q-td>
@@ -168,13 +169,14 @@
               label="Cancel"
               @click="store.closeDialog('disbursement')"
             />
-            <q-btn 
-              label="Save" 
-              color="primary" 
-              @click="handleSaveClick" 
+            <q-btn
+              label="Save"
+              color="primary"
+              @click="handleSaveClick"
               v-permission="'add'"
               :loading="store.savingDisbursement"
               :disable="store.savingDisbursement"
+
             />
           </q-card-actions>
         </q-card>
@@ -317,6 +319,7 @@
                   :color="canDelete(props.row) ? 'red' : 'grey'"
                   :disable="!canDelete(props.row)"
                   @click.stop="() => canDelete(props.row) && handleDeleteDisbursement(props.row)"
+                  v-permission="'delete'"
                 />
               </div>
             </q-td>
@@ -378,10 +381,10 @@ function filterFn (val, update) {
 function canDelete(row) {
   const aging = Number(getAgingDays(row.aging))
   if (Number.isNaN(aging)) return false
-  
+
   // Cannot delete if liquidated (regardless of return amount)
   if (row.status === 'Liquidated') return false
-  
+
   // Can only delete if pending or partial and aging <= 1 day
   return (row.status === 'Pending' || row.status === 'Partial') && aging <= 1
 }
