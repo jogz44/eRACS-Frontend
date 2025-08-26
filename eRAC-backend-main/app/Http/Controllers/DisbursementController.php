@@ -288,10 +288,10 @@ class DisbursementController extends Controller
                 $user,
                 $isPartial ? 'Partial Liquidation' : 'Liquidated Disbursement',
                 sprintf(
-                    '#%s liquidated amount ₱%s (%s)',
+                    '#%s %s amount ₱%s',
                     $disbursement->dv_number,
-                    number_format((float)$request->liquidatedAmount, 2),
-                    $isPartial ? 'Partial' : 'Full'
+                    $isPartial ? 'partialized' : 'liquidated',
+                    number_format((float)$request->liquidatedAmount, 2)
                 )
             );
 
