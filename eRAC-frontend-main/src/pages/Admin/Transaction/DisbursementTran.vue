@@ -322,7 +322,7 @@
         </q-table>
       </q-card>
 
-      <OrDetailsDialog v-model="store.dialogs.orDetails" />
+      <OrDetailsDialog />
       <ViewOrDetails v-model="store.dialogs.viewOrDetails" />
       <EditDisbursement />
     </div>

@@ -7,10 +7,12 @@ export function initialState() {
     Augexpenses: ref([]),
 
     AugexpenseAccounts: ref([]),
+    availableBudgets: ref([]),
 
     // Loading states
     expenseAccountsLoading: ref(false),
     toExpenseSelectionLoading: ref(false),
+    loadingBudgets: ref(false),
 
     // Search/filters
     searchQuery: ref(''),

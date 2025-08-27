@@ -76,39 +76,7 @@ export default {
     const loading = ref(false)
     const activities = ref([])
 
-    // Sample data - remove this when connecting to real API
-    const sampleActivities = [
-      {
-        id: 1,
-        created_at: '2025-07-29T08:30:00',
-        action: 'Login',
-        description: 'User logged into the system'
-      },
-      {
-        id: 2,
-        created_at: '2025-07-29T09:15:00',
-        action: 'Create Budget',
-        description: 'Created new budget allocation for Q3 2025'
-      },
-      {
-        id: 3,
-        created_at: '2025-07-29T10:45:00',
-        action: 'Update Disbursement',
-        description: 'Modified disbursement record #12345'
-      },
-      {
-        id: 4,
-        created_at: '2025-07-29T11:30:00',
-        action: 'Generate Report',
-        description: 'Generated monthly expenditure report'
-      },
-      {
-        id: 5,
-        created_at: '2025-07-29T13:20:00',
-        action: 'Add Appropriation',
-        description: 'Added new appropriation for Infrastructure project'
-      }
-    ]
+
 
     const columns = [
       {

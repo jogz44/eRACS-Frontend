@@ -410,6 +410,39 @@ export function useAugmentationActions(state) {
     state.selectedBarangayId.value = barangayId
   }
 
+  // Fetch available budgets for augmentation
+  const fetchAvailableBudgets = async () => {
+    try {
+      state.loadingBudgets.value = true
+      
+      // Use different endpoints and tokens for admin vs regular users
+      const endpoint = authStore.admin ? "/api/admin/budgets" : "/api/barangay/budgets"
+      const token = authStore.admin ? authStore.adminToken : authStore.token
+      
+      const params = { year: new Date().getFullYear() }
+      
+      // Add barangay filter for admin users
+      if (authStore.admin && state.selectedBarangayId.value) {
+        params.barangay_id = state.selectedBarangayId.value
+      }
+      
+      const response = await api.get(endpoint, {
+        params: params,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+      })
+
+      state.availableBudgets.value = response.data.data || []
+    } catch (error) {
+      console.error('Failed to fetch available budgets:', error)
+      state.availableBudgets.value = []
+    } finally {
+      state.loadingBudgets.value = false
+    }
+  }
+
   return {
     fetchAugmentations,
     fetchExpenseAccounts,
@@ -422,5 +455,6 @@ export function useAugmentationActions(state) {
     generateNewAugmentationDefaults,
     refreshAugmentationDialog,
     setSelectedBarangay,
+    fetchAvailableBudgets,
   }
 }

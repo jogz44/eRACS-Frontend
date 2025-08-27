@@ -1,5 +1,5 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
+  <q-layout view="lHh Lpr lFf" class="admin-layout">
     <!-- HEADER -->
     <q-header elevated class="custom-header">
       <q-toolbar class="q-pr-md items-center" style="justify-content: space-between;">
@@ -52,15 +52,7 @@
       </q-toolbar>
     </q-header>
 
-    <!-- Barangay Selection Warning -->
-    <q-banner
-      v-if="!isBarangaySelected"
-      class="bg-orange text-white text-center"
-      style="margin: 0; border-radius: 0;"
-    >
-      <q-icon name="info" class="q-mr-sm" />
-      Please select a barangay to access transaction features
-    </q-banner>
+
 
     <!-- DRAWER -->
     <q-drawer
@@ -338,15 +330,24 @@ onMounted(async () => {
         id: b.id,
       }))
 
-      // Initialize barangay selection - only if store already has one
-      const { useAppropriationStore } = await import('stores/appropriationStore')
-      const appropriationStore = useAppropriationStore()
+      // Restore barangay selection from localStorage first
+      const savedBarangayId = localStorage.getItem('admin_selected_barangay')
+      if (savedBarangayId) {
+        barangay.value = parseInt(savedBarangayId)
+        
+        // Also update stores with saved selection
+        const { useAppropriationStore } = await import('stores/appropriationStore')
+        const appropriationStore = useAppropriationStore()
+        appropriationStore.setSelectedBarangay(parseInt(savedBarangayId))
 
-      // Only use existing selection from store, don't auto-select first barangay
-      if (appropriationStore.selectedBarangayId) {
-        barangay.value = appropriationStore.selectedBarangayId
+        const { useDisbursementStore } = await import('stores/disbursementStore')
+        const disbursementStore = useDisbursementStore()
+        disbursementStore.setSelectedBarangay(parseInt(savedBarangayId))
+
+        const { useAugmentationStore } = await import('stores/augmentation')
+        const augmentationStore = useAugmentationStore()
+        augmentationStore.setSelectedBarangay(parseInt(savedBarangayId))
       }
-      // Remove automatic selection of first barangay
     }
   } catch (error) {
     console.error('Error loading setup data:', error)
@@ -359,6 +360,30 @@ onMounted(async () => {
 const isBarangaySelected = computed(() => {
   return barangay.value !== null && barangay.value !== undefined
 })
+
+// Show info notification when no barangay is selected on load
+watch(isBarangaySelected, (newValue, oldValue) => {
+  // Only show notification if user was initially without barangay selection
+  // and we're not in the process of loading saved selection
+  if (!newValue && oldValue !== undefined) {
+    setTimeout(() => {
+      if (!isBarangaySelected.value) {
+        $q.notify({
+          type: 'info',
+          message: 'Select a barangay from the dropdown to access transaction features',
+          position: 'top',
+          timeout: 6000,
+          icon: 'info',
+          color: 'blue',
+          textColor: 'white',
+          actions: [
+            { label: 'OK', color: 'white', handler: () => {} }
+          ]
+        })
+      }
+    }, 1000)
+  }
+}, { immediate: false })
 
 // Admin functions data
 const favorites = computed(() => {
@@ -412,18 +437,15 @@ const navigateTo = (link) => {
 
   if (transactionPages.includes(link) && !isBarangaySelected.value) {
     $q.notify({
-      type: 'warning',
-      message: 'Please select a barangay first to access transactions',
+      type: 'info',
+      message: 'Please select a barangay first to access transaction features',
       position: 'top',
-      timeout: 4000,
+      timeout: 5000,
+      icon: 'info',
+      color: 'blue',
+      textColor: 'white',
       actions: [
-        { label: 'Select Barangay', color: 'white', handler: () => {
-          // Focus on the barangay select dropdown
-          const barangaySelect = document.querySelector('.q-select')
-          if (barangaySelect) {
-            barangaySelect.focus()
-          }
-        }}
+        { label: 'Got it', color: 'white', handler: () => {} }
       ]
     })
     return
@@ -477,6 +499,7 @@ const handleLogout = async () => {
   }).onOk(async () => {
     // Clear barangay selection before logout
     barangay.value = null
+    localStorage.removeItem('admin_selected_barangay')
 
     // Clear barangay selection from stores
     try {
@@ -502,6 +525,13 @@ const handleLogout = async () => {
 
                     const onBarangayChange = async (barangayId) => {
                       try {
+                        // Save to localStorage for persistence across page refreshes
+                        if (barangayId) {
+                          localStorage.setItem('admin_selected_barangay', barangayId.toString())
+                        } else {
+                          localStorage.removeItem('admin_selected_barangay')
+                        }
+
                         // Update appropriation store if we're on appropriation pages
                         const { useAppropriationStore } = await import('stores/appropriationStore')
                         const appropriationStore = useAppropriationStore()
@@ -701,10 +731,14 @@ watch(
 
 .saved-searches-list {
   padding: 0 8px;
-  color: white !important;
   width: 95%;
   max-width: 280px;
   margin: 0 auto;
+}
+
+/* Layout Styles */
+.admin-layout {
+  overflow-x: hidden;
 }
 
 .saved-search-item {

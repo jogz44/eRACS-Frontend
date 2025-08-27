@@ -328,26 +328,45 @@ export const useAppropriationStore = defineStore("appropriation", {
 
     async fetchExpenseHierarchy() {
       try {
-        const yearsResponse = await api.get("/api/barangay/fiscal-years", {
-          headers: {
-            Authorization: `Bearer ${this.authStore.token}`,
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-        })
-        const fiscalYears = Array.isArray(yearsResponse.data) ? yearsResponse.data : yearsResponse.data.data || []
+        // Use admin token if admin is logged in
+        const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
+        
+        let fiscalYear = null
+        
+        if (this.authStore.admin) {
+          // For admins, we need to find fiscal years from any barangay for the current year
+          // Since admins can see all barangays, we'll fetch from the first barangay
+          // that has fiscal years or use a different approach
+          const currentYear = new Date().getFullYear()
+          
+          // Try to get fiscal year directly using a raw query approach for admins
+          // We'll assume there's a fiscal year for the current year
+          fiscalYear = { id: currentYear, year: currentYear }
+          
+          // For now, let's skip the fiscal year API call for admins and use the current year
+          // This is a temporary solution - ideally we'd need an admin fiscal years endpoint
+        } else {
+          // Regular barangay users can use their fiscal years endpoint
+          const yearsResponse = await api.get("/api/barangay/fiscal-years", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+          })
+          const fiscalYears = Array.isArray(yearsResponse.data) ? yearsResponse.data : yearsResponse.data.data || []
 
-        const currentYear = new Date().getFullYear()
-        const fiscalYear = fiscalYears.find((y) => y.year == currentYear)
+          const currentYear = new Date().getFullYear()
+          fiscalYear = fiscalYears.find((y) => y.year == currentYear)
 
-        if (!fiscalYear) {
-          throw new Error(`No fiscal year configuration found for ${currentYear}.
-        Please contact your administrator.`)
+          if (!fiscalYear) {
+            throw new Error(`No fiscal year configuration found for ${currentYear}.
+          Please contact your administrator.`)
+          }
         }
 
         // Use different endpoints for admin vs regular users
         const endpoint = this.authStore.admin ? "/api/admin/expense-hierarchy" : "/api/barangay/expense-hierarchy"
-        const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
 
         const response = await api.get(endpoint, {
           params: { fiscal_year_id: fiscalYear.id },

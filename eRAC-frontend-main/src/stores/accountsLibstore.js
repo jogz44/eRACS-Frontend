@@ -7,14 +7,17 @@ import { reactive } from 'vue'
 const getAuthConfig = () => {
   const authStore = useAuthStore()
 
-  if (!authStore.token) {
+  // Use admin token if admin is logged in, otherwise use regular token
+  const token = authStore.admin ? authStore.adminToken : authStore.token
+
+  if (!token) {
     console.warn('No authentication token found')
     throw new Error('Authentication required')
   }
 
   return {
     headers: {
-      Authorization: `Bearer ${authStore.token}`,
+      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
   }

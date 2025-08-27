@@ -200,17 +200,7 @@
           </q-td>
         </template>
 
-        <template v-slot:body-cell-commit="props">
-          <q-td :props="props">
-            <q-btn
-              dense
-              label="Commit"
-              :color="props.row.unappropriated <= 0 ? 'primary' : 'grey-4'"
-              @click="openAllocationDialog(props.row)"
-              :disable="props.row.unappropriated <= 0"
-            />
-          </q-td>
-        </template>
+
 
         <template v-slot:body-cell-action="props">
           <q-td :props="props">
@@ -530,9 +520,7 @@ const toggleEditType = (typeId) => {
   }
 }
 
-const openAllocationDialog = async (row) => {
-  await appropriationStore.openAllocationDialog(row)
-}
+
 
 const viewDialogRef = ref(null)
 
@@ -817,12 +805,6 @@ const columns = [
     label: 'Action',
     align: 'center',
     field: 'action',
-  },
-  {
-    name: 'commit',
-    label: 'Commit',
-    field: 'commit',
-    align: 'center',
   },
 ]
 
