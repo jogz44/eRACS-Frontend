@@ -162,9 +162,7 @@ const goToUser = () => {
 
 // Get signin title based on email
 const getSigninTitle = () => {
-  if (email.value === 'accounting@gmail.com') {
-    return 'Accounting Officer'
-  } else if (email.value === 'coa@gmail.com') {
+  if (email.value === 'coa@gmail.com') {
     return 'COA Officer'
   } else if (email.value === 'admin@gmail.com') {
     return 'Super Administrator'
@@ -241,8 +239,6 @@ onMounted(() => {
   const role = route.query.role
   if (role === 'coa') {
     email.value = 'coa@gmail.com'
-  } else if (role === 'accounting') {
-    email.value = 'accounting@gmail.com'
   } else if (role === 'superadmin') {
     email.value = 'admin@gmail.com'
   }

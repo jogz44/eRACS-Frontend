@@ -396,7 +396,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     async fetchExpenseDetails() {
       try {
         const authStore = useAuthStore()
-        const token = authStore.token
+        const token = authStore.admin ? authStore.adminToken : authStore.token
         
         const response = await api.get('/api/barangay/expense-details', {
           headers: {
@@ -682,7 +682,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     async fetchDisbursementById(id) {
       try {
         const authStore = useAuthStore();
-        const token = authStore.token;
+        const token = authStore.admin ? authStore.adminToken : authStore.token;
         const response = await api.get(`/api/barangay/disbursements/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -745,7 +745,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     async liquidateDisbursement(id, liquidatedAmount) {
       try {
         const authStore = useAuthStore();
-        const token = authStore.token;
+        const token = authStore.admin ? authStore.adminToken : authStore.token;
         const response = await api.patch(`/api/barangay/disbursements/${id}/liquidate`,
           { liquidated_amount: liquidatedAmount },
           {
@@ -848,7 +848,7 @@ export const useDisbursementStore = defineStore('disbursement', {
 
           // Fetch booklets for the selected bank
           const authStore = useAuthStore();
-          const token = authStore.token;
+          const token = authStore.admin ? authStore.adminToken : authStore.token;
           const bankData = await api.get(`/api/barangay/banks/${bankId}/available-cheques`, {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -1152,7 +1152,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.savingDisbursement = true; // Start loading
       try {
         const authStore = useAuthStore()
-        const token = authStore.token
+        const token = authStore.admin ? authStore.adminToken : authStore.token
 
         // Validate required fields
         if (!this.forms.disbursement.bank_id) {
@@ -1557,7 +1557,7 @@ export const useDisbursementStore = defineStore('disbursement', {
 
       try {
         const authStore = useAuthStore()
-        const token = authStore.token
+        const token = authStore.admin ? authStore.adminToken : authStore.token
 
         // Ensure we have up-to-date expense details
         if (!this.expenseDetailsData || this.expenseDetailsData.length === 0) {
@@ -1693,7 +1693,7 @@ export const useDisbursementStore = defineStore('disbursement', {
 
       try {
         const authStore = useAuthStore()
-        const token = authStore.token
+        const token = authStore.admin ? authStore.adminToken : authStore.token
 
         // Calculate total actual expense from OR details
         const totalActualExpense = this.currentLiquidation.orDetails?.reduce(
@@ -1754,7 +1754,7 @@ export const useDisbursementStore = defineStore('disbursement', {
 
       try {
         const authStore = useAuthStore()
-        const token = authStore.token
+        const token = authStore.admin ? authStore.adminToken : authStore.token
 
         // Calculate total actual expense from OR details
         const totalActualExpense = this.currentLiquidation.orDetails?.reduce(
@@ -1846,7 +1846,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     async uploadOrPhoto(file) {
       try {
         const authStore = useAuthStore()
-        const token = authStore.token
+        const token = authStore.admin ? authStore.adminToken : authStore.token
 
         const formData = new FormData();
         formData.append('photo', file, file.name);
@@ -1874,7 +1874,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     async deleteOrDetail(disbursementId, orDetailId) {
       try {
         const authStore = useAuthStore()
-        const token = authStore.token
+        const token = authStore.admin ? authStore.adminToken : authStore.token
 
         const response = await api.delete(`/api/barangay/disbursements/${disbursementId}/or-details/${orDetailId}`, {
           headers: {
@@ -1907,7 +1907,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     async deleteDisbursement(id) {
       try {
         const authStore = useAuthStore();
-        const token = authStore.token;
+        const token = authStore.admin ? authStore.adminToken : authStore.token;
 
         const response = await api.delete(`/api/barangay/disbursements/${id}`, {
           headers: {
