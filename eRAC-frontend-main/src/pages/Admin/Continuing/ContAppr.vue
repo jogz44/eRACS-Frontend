@@ -251,10 +251,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { storeToRefs } from 'pinia'
-import { useAppropriationStore } from 'stores/appropriationStore'
+import { useContApprStore } from 'stores/appropriationStore'
+
 
 const $q = useQuasar()
-const appropriationStore = useAppropriationStore()
+const appropriationStore = useContApprStore()
 const loading = ref(false)
 
 const loadPendingUsers = async () => {
@@ -326,6 +327,7 @@ const dateFrom = ref('')
 const dateTo = ref('')
 const returnAmount = ref(0)
 const augmentationAmount = ref(0)
+
 const { continueAccounts } = storeToRefs(appropriationStore)
 
 const filteredAccounts = computed(() => {
