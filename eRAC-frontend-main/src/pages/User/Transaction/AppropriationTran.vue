@@ -77,7 +77,7 @@
 
     <!-- Add Budget Dialog -->
     <q-dialog v-model="showDialog" @keydown.enter="handleEnterKey">
-      <q-card style="min-width: 400px">
+      <q-card style="min-width: 500px">
         <q-card-section class="q-pb-none">
           <div class="text-h6">Add New Budget</div>
         </q-card-section>
@@ -208,7 +208,7 @@
 
     <!-- Edit Allocation Dialog -->
     <q-dialog v-model="showEditAllocationDialog">
-      <q-card style="min-width: 700px">
+      <q-card style="min-width: 900px">
         <q-card-section class="q-pb-none">
           <div class="text-h6">Edit Allocation</div>
         </q-card-section>
@@ -246,8 +246,9 @@
                         @blur="(event) => handleEditAmountBlur(expenseType, event.target.value)"
                         dense
                         outlined
-                        style="width: 100px"
+                        class="edit-allocation-input"
                         :class="{ 'text-negative': typeErrorMap[expenseType.id] }"
+                        prefix="₱"
                         placeholder="0.00"
                       />
                       <div v-else class="text-weight-medium">
@@ -264,15 +265,16 @@
                           <span>{{ expenseItem.name }}</span>
                         </div>
                         <div class="col-6 text-right">
-                                                  <q-input
-                          :model-value="formatInputValue(expenseItem.amount)"
-                          @update:model-value="(val) => handleEditAmountInput(expenseItem, val)"
-                          @blur="(event) => handleEditAmountBlur(expenseItem, event.target.value)"
-                          dense
-                          outlined
-                          style="width: 100px"
-                          placeholder="0.00"
-                        />
+                          <q-input
+                            :model-value="formatInputValue(expenseItem.amount)"
+                            @update:model-value="(val) => handleEditAmountInput(expenseItem, val)"
+                            @blur="(event) => handleEditAmountBlur(expenseItem, event.target.value)"
+                            dense
+                            outlined
+                            class="edit-allocation-input"
+                            prefix="₱"
+                            placeholder="0.00"
+                          />
                         </div>
                       </div>
                     </template>
@@ -520,16 +522,16 @@ const openEditAllocationDialog = async (row) => {
   try {
     const response = await api.get(`/api/barangay/budgets/${row.id}/history`)
     const allHistory = response.data.data?.history || []
-    
+
     // Combine ALL allocations from all history sessions, not just the latest
     const allAllocations = allHistory.flatMap(session => session.allocations || [])
-    
+
     // Group by expense hierarchy to combine amounts for the same expense items/types
     const allocationMap = new Map()
-    
+
     allAllocations.forEach(allocation => {
       const key = `${allocation.expense_class_id}-${allocation.expense_type_id}-${allocation.expense_item_id || 'null'}`
-      
+
       if (allocationMap.has(key)) {
         // Add amounts for the same expense
         allocationMap.get(key).amount += allocation.amount
@@ -538,7 +540,7 @@ const openEditAllocationDialog = async (row) => {
         allocationMap.set(key, { ...allocation })
       }
     })
-    
+
     editAllocations.value = Array.from(allocationMap.values())
     initializeEditDisplayAccounts()
     appropriationStore.selectedRow = row
@@ -685,7 +687,7 @@ const saveEditedAllocation = async () => {
 
     // Use the appropriation store's commitAllocation method instead of calling API directly
     await appropriationStore.commitAllocation(appropriationStore.selectedRow.id, allocations)
-    
+
     $q.notify({
       type: 'positive',
       message: 'Allocations updated',
@@ -899,6 +901,27 @@ const openDialog = async () => {
   background-color: white;
 }
 
+/* Edit Allocation Dialog Text Box Styles */
+.edit-allocation-input {
+  min-width: 180px;
+  width: 180px;
+}
+
+/* Responsive text box sizing for Edit Allocation dialog */
+@media (max-width: 1200px) {
+  .edit-allocation-input {
+    min-width: 150px;
+    width: 150px;
+  }
+}
+
+@media (max-width: 900px) {
+  .edit-allocation-input {
+    min-width: 120px;
+    width: 120px;
+  }
+}
+
 @media (max-width: 768px) {
   .q-pa-md {
     padding: 8px;
@@ -917,6 +940,19 @@ const openDialog = async () => {
   .search-input,
   .date-input {
     min-width: 100%;
+  }
+
+  /* Mobile adjustments for Edit Allocation dialog */
+  .edit-allocation-input {
+    min-width: 100px;
+    width: 100px;
+  }
+
+  /* Ensure dialog is properly sized on mobile */
+  .q-dialog .q-card {
+    min-width: 95vw !important;
+    max-width: 95vw !important;
+    width: 95vw !important;
   }
 }
 </style>
