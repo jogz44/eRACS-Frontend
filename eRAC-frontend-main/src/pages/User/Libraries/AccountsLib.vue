@@ -1494,7 +1494,7 @@ watch(
 }
 
 .main-card {
-  max-width: 1400px;
+  max-width: 2000px;
   margin: 0 auto;
 }
 
