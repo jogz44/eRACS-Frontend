@@ -218,7 +218,7 @@
 
     <!-- Edit Allocation Dialog -->
     <q-dialog v-model="showEditAllocationDialog">
-      <q-card style="min-width: 700px">
+      <q-card style="min-width: 900px">
         <q-card-section class="q-pb-none">
           <div class="text-h6">Edit Allocation</div>
         </q-card-section>
@@ -256,8 +256,9 @@
                         dense
                         outlined
                         min="0"
-                        style="width: 100px"
+                        style="width: 180px"
                         :class="{ 'text-negative': typeErrorMap[expenseType.id] }"
+                        prefix="₱"
                       />
                       <div v-else class="text-weight-medium">
                         {{ appropriationStore.formatCurrency(calculateTypeTotal(expenseType)) }}
@@ -279,7 +280,8 @@
                             dense
                             outlined
                             min="0"
-                            style="width: 100px"
+                            style="width: 180px"
+                            prefix="₱"
                           />
                         </div>
                       </div>

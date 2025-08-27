@@ -221,7 +221,7 @@
                         v-model.number="subcategory.amount"
                         prefix="₱"
                         :rules="[(val) => validateAmount(val)]"
-                        style="width: 150px"
+                        style="width: 200px"
                         :disable="availableBudget <= 0"
                         @keydown.enter="handleAllocationEnterKey"
                       />
