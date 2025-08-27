@@ -56,6 +56,7 @@
 import { ref, computed, watch } from 'vue'
 import { date } from 'quasar'
 import { api } from 'boot/axios' // Adjust the import based on your axios setup
+import { useAuthStore } from 'stores/auth'
 
 export default {
   name: 'LogsActivity',
@@ -75,39 +76,7 @@ export default {
     const loading = ref(false)
     const activities = ref([])
 
-    // Sample data - remove this when connecting to real API
-    const sampleActivities = [
-      {
-        id: 1,
-        created_at: '2025-07-29T08:30:00',
-        action: 'Login',
-        description: 'User logged into the system'
-      },
-      {
-        id: 2,
-        created_at: '2025-07-29T09:15:00',
-        action: 'Create Budget',
-        description: 'Created new budget allocation for Q3 2025'
-      },
-      {
-        id: 3,
-        created_at: '2025-07-29T10:45:00',
-        action: 'Update Disbursement',
-        description: 'Modified disbursement record #12345'
-      },
-      {
-        id: 4,
-        created_at: '2025-07-29T11:30:00',
-        action: 'Generate Report',
-        description: 'Generated monthly expenditure report'
-      },
-      {
-        id: 5,
-        created_at: '2025-07-29T13:20:00',
-        action: 'Add Appropriation',
-        description: 'Added new appropriation for Infrastructure project'
-      }
-    ]
+
 
     const columns = [
       {
@@ -141,14 +110,62 @@ export default {
 
     const loadActivities = async () => {
       loading.value = true
+      
+      // Validate selectedUser data
+      if (!props.selectedUser || !props.selectedUser.id || !props.selectedUser.log_date) {
+        console.error('Invalid selectedUser data:', props.selectedUser)
+        activities.value = []
+        loading.value = false
+        return
+      }
+      
+      // Debug: Log the selectedUser data
+      console.log('Loading activities for user:', {
+        userId: props.selectedUser?.id,
+        logDate: props.selectedUser?.log_date,
+        fullUser: props.selectedUser
+      })
+      
       try {
-        // For demo purposes, use sample data
-        activities.value = sampleActivities
-        const response = await api.get(`/api/admin/admin/logs/${props.selectedUser.id}/${props.selectedUser.log_date}`)
-
-        activities.value = response.data
+        const apiUrl = `/api/admin/logs/${props.selectedUser.id}/${props.selectedUser.log_date}`
+        console.log('Making API call to:', apiUrl)
+        
+        const response = await api.get(apiUrl, {
+          headers: {
+            'Authorization': `Bearer ${useAuthStore().adminToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        })
+        
+        console.log('API response:', response.data)
+        
+        if (response.data && Array.isArray(response.data)) {
+          activities.value = response.data
+        } else {
+          console.warn('Invalid response format:', response.data)
+          activities.value = []
+        }
       } catch (error) {
         console.error('Error loading activities:', error)
+        // Clear activities on error and show empty state
+        activities.value = []
+        
+        // Show user-friendly error message
+        if (error.response?.status === 404) {
+          console.warn('No logs found for this user and date')
+          // Show a user-friendly message in the UI
+          activities.value = []
+        } else if (error.response?.status === 401) {
+          console.error('Unauthorized - please check your login status')
+          activities.value = []
+        } else if (error.code === 'ERR_NETWORK') {
+          console.error('Network error - please check your connection')
+          activities.value = []
+        } else {
+          // For other errors, still clear the activities
+          activities.value = []
+        }
       } finally {
         loading.value = false
       }

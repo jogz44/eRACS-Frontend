@@ -32,6 +32,27 @@
           </template>
         </q-input>
 
+        <!-- Barangay Filter for Admin -->
+        <q-select
+          outlined
+          dense
+          v-model="selectedBarangay"
+          :options="barangayOptions"
+          option-label="name"
+          option-value="id"
+          emit-value
+          map-options
+          label="Filter by Barangay"
+          class="col-auto"
+          style="min-width: 250px; background-color: white;"
+          clearable
+          @update:model-value="onBarangayChange"
+        >
+          <template v-slot:prepend>
+            <q-icon name="location_on" />
+          </template>
+        </q-select>
+
         <q-input
           outlined
           dense
@@ -179,17 +200,7 @@
           </q-td>
         </template>
 
-        <template v-slot:body-cell-commit="props">
-          <q-td :props="props">
-            <q-btn
-              dense
-              label="Commit"
-              :color="props.row.unappropriated <= 0 ? 'primary' : 'grey-4'"
-              @click="openAllocationDialog(props.row)"
-              :disable="props.row.unappropriated <= 0"
-            />
-          </q-td>
-        </template>
+
 
         <template v-slot:body-cell-action="props">
           <q-td :props="props">
@@ -309,12 +320,14 @@ import CommitDialog from 'components/appropriation/CommitDialog.vue'
 import ViewCommitDialog from 'components/appropriation/ViewCommitDialog.vue'
 import { useAppropriationStore } from 'stores/appropriationStore'
 import { useAccountsLibraryStore } from 'stores/accountsLibstore'
-// import { api } from 'src/boot/axios' // No longer needed since we use appropriationStore.commitAllocation
+import { api } from 'boot/axios'
+import { useAuthStore } from 'stores/auth'
 // import SearchFilters from 'src/components/appropriation/SearchFilters.vue'
 
 const $q = useQuasar()
 const accountLibraryStore = useAccountsLibraryStore()
 const appropriationStore = useAppropriationStore()
+const authStore = useAuthStore()
 
 const showDialog = ref(false)
 const selectedFiscalYear = computed({
@@ -327,6 +340,8 @@ const description = ref('')
 const amount = ref(null)
 const loading = ref(false)
 const dateRange = ref(null)
+const selectedBarangay = ref(null)
+const barangayOptions = ref([])
 
 const loadAppropriation = async () => {
   loading.value = true
@@ -386,6 +401,8 @@ const clearAllFilters = () => {
   appropriationStore.dateFrom = ''
   appropriationStore.dateTo = ''
   dateRange.value = null
+  selectedBarangay.value = null
+  appropriationStore.setSelectedBarangay(null)
   // Reset fiscal year to current year if available, otherwise first available year
   const currentYear = new Date().getFullYear().toString()
   const defaultYear = appropriationStore.fiscalYears.includes(currentYear)
@@ -505,9 +522,7 @@ const toggleEditType = (typeId) => {
   }
 }
 
-const openAllocationDialog = async (row) => {
-  await appropriationStore.openAllocationDialog(row)
-}
+
 
 const viewDialogRef = ref(null)
 
@@ -569,6 +584,9 @@ const saveBudget = async () => {
     }
 
     await appropriationStore.addBudget(payload)
+
+    // Refresh the budgets list to show the new budget
+    await appropriationStore.fetchBudgets()
 
     $q.notify({
       type: 'positive',
@@ -705,6 +723,7 @@ const saveEditedAllocation = async () => {
 onMounted(async () => {
   try {
     await appropriationStore.initialize()
+    await loadBarangayOptions()
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -714,6 +733,32 @@ onMounted(async () => {
     })
   }
 })
+
+const loadBarangayOptions = async () => {
+  try {
+    // Use admin token for barangay options
+    const response = await api.get('/api/barangay/barangays', {
+      headers: {
+        Authorization: `Bearer ${authStore.adminToken}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    })
+    if (response.data && Array.isArray(response.data)) {
+      barangayOptions.value = response.data.map((b) => ({
+        id: b.id,
+        name: b.name,
+      }))
+    }
+  } catch (error) {
+    console.error('Error loading barangay options:', error)
+  }
+}
+
+const onBarangayChange = async (barangayId) => {
+  appropriationStore.setSelectedBarangay(barangayId)
+  await appropriationStore.fetchBudgets()
+}
 
 const columns = [
   {
@@ -730,6 +775,12 @@ const columns = [
     align: 'left',
     sortable: true,
     format: (val) => appropriationStore.formatDate(val),
+  },
+  {
+    name: 'barangay',
+    label: 'Barangay',
+    field: 'barangay_name',
+    align: 'left',
   },
   {
     name: 'description',
@@ -756,12 +807,6 @@ const columns = [
     label: 'Action',
     align: 'center',
     field: 'action',
-  },
-  {
-    name: 'commit',
-    label: 'Commit',
-    field: 'commit',
-    align: 'center',
   },
 ]
 

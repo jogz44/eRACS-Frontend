@@ -9,7 +9,7 @@
           flat
           dense
           @click="loadPendingUsers"
-          :loading="loading"
+          :loading="store.loadingAugmentations"
         />
       </div>
     </div>
@@ -63,6 +63,8 @@ const loadPendingUsers = async () => {
 onMounted(async () => {
   await store.fetchAugmentations()
 })
+
+
 </script>
 
 <style scoped>

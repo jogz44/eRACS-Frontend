@@ -158,10 +158,33 @@ class AdminAuthController extends Controller  // <-- This is crucial
 
     // Update user permissions
     public function updateUserPermissions(Request $request, $id) {
-        $user = BarangayUser::findOrFail($id);
-        $user->permissions = $request->input('permissions');
-        $user->save();
-        return response()->json(['success' => true]);
+        try {
+            $user = BarangayUser::findOrFail($id);
+            
+            // Validate the permissions data
+            $validated = $request->validate([
+                'permissions' => 'required|array',
+                'permissions.view' => 'boolean',
+                'permissions.add' => 'boolean',
+                'permissions.edit' => 'boolean',
+                'permissions.delete' => 'boolean',
+                'permissions.print' => 'boolean',
+            ]);
+            
+            $user->permissions = $validated['permissions'];
+            $user->save();
+            
+            return response()->json([
+                'status' => 'success',
+                'message' => 'User permissions updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to update user permissions',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     // Get logs

@@ -20,7 +20,6 @@ export const useAuthStore = defineStore('auth', {
     
     // Admin role getters
     isSuperAdmin: (state) => state.admin?.role === 'super_admin',
-    isAccounting: (state) => state.admin?.role === 'accounting',
     isCOA: (state) => state.admin?.role === 'coa',
     canManageUsers: (state) => state.admin?.role === 'super_admin',
   },
@@ -30,7 +29,13 @@ export const useAuthStore = defineStore('auth', {
 
   actions: {
     // Helper methods
-        setToken(token) {
+    restoreAdminAuth() {
+      if (this.adminToken) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${this.adminToken}`
+      }
+    },
+    
+    setToken(token) {
       this.token = token
     },
     setUser(user) {

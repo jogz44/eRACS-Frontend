@@ -237,6 +237,9 @@ const handleSave = async () => {
       position: 'top'
     })
     store.closeDialog('augmentation')
+    
+    // Refresh the augmentation list after saving
+    await store.fetchAugmentations()
   } else {
     $q.notify({
       type: 'negative',
