@@ -87,15 +87,6 @@
               style="min-width: 250px"
               @keydown.enter="handleEnterKey"
             />
-            <q-select
-              outlined
-              dense
-              v-model="selectedYear"
-              :options="yearOptions"
-              label="Select Year"
-              style="min-width: 150px"
-              @keydown.enter="handleEnterKey"
-            />
           </div>
 
           <q-table
@@ -259,10 +250,12 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
-import { useAppropriationStore } from 'stores/appropriationStore'
+import { storeToRefs } from 'pinia'
+import { useContApprStore } from 'stores/appropriationStore'
+
 
 const $q = useQuasar()
-const appropriationStore = useAppropriationStore()
+const appropriationStore = useContApprStore()
 const loading = ref(false)
 
 const loadPendingUsers = async () => {
@@ -334,7 +327,8 @@ const dateFrom = ref('')
 const dateTo = ref('')
 const returnAmount = ref(0)
 const augmentationAmount = ref(0)
-const selectedYear = ref(null)
+
+const { continueAccounts } = storeToRefs(appropriationStore)
 
 const filteredAccounts = computed(() => {
   if (!searchQuery.value) return continueAccounts.value
@@ -344,15 +338,6 @@ const filteredAccounts = computed(() => {
   )
 })
 
-const yearOptions = ['2023', '2024', '2025']
-const continueAccounts = ref([
-  { id: 1, accountName: 'Capital Outlays > OFFICE EQUIPMENT', balance: 12000 },
-  { id: 2, accountName: 'Capital Outlays > IT EQUIPMENT AND SOFTWARE', balance: 7600 },
-  { id: 3, accountName: 'Capital Outlays > VEHICLES', balance: 50000 },
-  { id: 4, accountName: 'Capital Outlays > FURNITURE AND FIXTURES', balance: 8300 },
-  { id: 5, accountName: 'Capital Outlays > BUILDING IMPROVEMENTS', balance: 42000 },
-  { id: 6, accountName: 'Capital Outlays > MEDICAL EQUIPMENT', balance: 15000 },
-])
 
 const continueColumns = [
   { name: 'accountName', label: 'Accounts Name', field: 'accountName', align: 'left' },

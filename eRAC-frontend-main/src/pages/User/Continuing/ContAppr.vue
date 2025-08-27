@@ -245,22 +245,18 @@ const clearAllFilters = () => {
 
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
+import { storeToRefs } from 'pinia'
 import { useContApprStore } from 'src/stores/contApprStore'
 
 const $q = useQuasar()
 const contApprStore = useContApprStore();
+const { continueAccounts } = storeToRefs(contApprStore)
 
 const showContinueDialog = ref(false)
 const showAllocationDialog = ref(false)
 const description = ref('')
 const selectedAccounts = ref([])
 const searchQuery = ref('')
-// Use store-fetched continuing accounts (flattened for table rows)
-const flatContinueAccounts = computed(() => {
-  if (!Array.isArray(contApprStore.continueAccounts)) return []
-  return contApprStore.continueAccounts.flatMap(group => group.children || [])
-})
-
 const returnAmount = ref(0)
 const augmentationAmount = ref(0)
 
@@ -311,14 +307,12 @@ const availableBudget = computed(() => {
 })
 
 const filteredAccounts = computed(() => {
-  const base = flatContinueAccounts.value
-  if (!searchQuery.value) return base
-  const q = searchQuery.value.toLowerCase()
-  return base.filter((account) =>
-    Object.values(account).join(' ').toLowerCase().includes(q),
+  if (!searchQuery.value) return continueAccounts.value
+
+  return continueAccounts.value.filter((account) =>
+    Object.values(account).join(' ').toLowerCase().includes(searchQuery.value.toLowerCase()),
   )
 })
-
 const filteredAppropriations = computed(() => {
   const query = searchQuery.value.toLowerCase()
 
