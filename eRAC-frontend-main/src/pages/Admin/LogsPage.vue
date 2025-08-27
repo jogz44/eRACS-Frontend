@@ -128,7 +128,7 @@
 import { api } from 'boot/axios'
 import { date } from 'quasar'
 import AdminLogsActivity from './AdminLogsActivity.vue'
-import { usePageLogging } from 'composables/usePageLogging'
+import { usePageLogging } from '../../composables/usePageLogging'
 
 export default {
   name: 'LogsPage',

@@ -254,7 +254,7 @@ import { useContDisbursementStore } from 'stores/contDisburseStore'
 import { useAppropriationStore } from 'stores/appropriationStore'
 import ContLiquidateDialog from 'components/contDisburse/ContOrDetails.vue'
 import ContViewOr from 'components/contDisburse/ContViewOr.vue'
-import { usePageLogging } from 'composables/usePageLogging'
+import { usePageLogging } from '../../../composables/usePageLogging'
 
 const $q = useQuasar()
 const loading = ref(false)

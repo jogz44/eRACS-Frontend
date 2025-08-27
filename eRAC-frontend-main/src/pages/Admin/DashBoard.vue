@@ -78,7 +78,7 @@
 <script>
 import { api } from 'boot/axios'
 import { ref, onMounted, computed, onUnmounted } from 'vue'
-import { usePageLogging } from 'composables/usePageLogging'
+import { usePageLogging } from '../../composables/usePageLogging'
 
 export default {
   setup() {

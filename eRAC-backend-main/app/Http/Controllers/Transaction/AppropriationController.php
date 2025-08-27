@@ -127,10 +127,9 @@ class AppropriationController extends Controller
             $request->user(),
             'Created Budget',
             sprintf(
-                'Created budget "%s" with amount ₱%s (FY #%s)',
+                'Created budget "%s" with amount ₱%s',
                 $validated['description'],
-                number_format($validated['original_amount'], 2),
-                $validated['fiscal_year_id']
+                number_format($validated['original_amount'], 2)
             )
         );
 
@@ -330,19 +329,21 @@ class AppropriationController extends Controller
                 // Remove from map to track which ones were updated
                 unset($existingAllocationMap[$allocationKey]);
 
-                // Log edited allocation with previous vs new amount
-                $identifier = $this->getExpenseIdentifier($allocation);
-                AdminAuthController::logUserAction(
-                    $request->user(),
-                    'Edited Allocation',
-                    sprintf(
-                        'Edited allocation %s: from ₱%s to ₱%s for budget "%s"',
-                        $identifier,
-                        number_format($previousAmount, 2),
-                        number_format($allocation['amount'], 2),
-                        $budget->description
-                    )
-                );
+                // Log edited allocation with previous vs new amount only if amount actually changed
+                if (abs($previousAmount - $allocation['amount']) > 0.01) { // Use small threshold for float comparison
+                    $identifier = $this->getExpenseIdentifier($allocation);
+                    AdminAuthController::logUserAction(
+                        $request->user(),
+                        'Edited Allocation',
+                        sprintf(
+                            'Edited allocation %s: from ₱%s to ₱%s for budget "%s"',
+                            $identifier,
+                            number_format($previousAmount, 2),
+                            number_format($allocation['amount'], 2),
+                            $budget->description
+                        )
+                    );
+                }
             } else {
                 // Create new allocation
                 $appropriationData = [
@@ -651,19 +652,21 @@ class AppropriationController extends Controller
                         'status' => 'committed',
                         'user_id' => $budget->user_id,
                     ]);
-                    // Log edited allocation
-                    $identifier = $this->getExpenseIdentifier($alloc);
-                    AdminAuthController::logUserAction(
-                        $request->user(),
-                        'Edited Allocation',
-                        sprintf(
-                            'Edited allocation %s: from ₱%s to ₱%s for budget "%s"',
-                            $identifier,
-                            number_format($previousAmount, 2),
-                            number_format($alloc['amount'], 2),
-                            $budget->description
-                        )
-                    );
+                    // Log edited allocation only if amount actually changed
+                    if (abs($previousAmount - $alloc['amount']) > 0.01) { // Use small threshold for float comparison
+                        $identifier = $this->getExpenseIdentifier($alloc);
+                        AdminAuthController::logUserAction(
+                            $request->user(),
+                            'Edited Allocation',
+                            sprintf(
+                                'Edited allocation %s: from ₱%s to ₱%s for budget "%s"',
+                                $identifier,
+                                number_format($previousAmount, 2),
+                                number_format($alloc['amount'], 2),
+                                $budget->description
+                            )
+                        );
+                    }
                     
                     // Remove from map to track which ones were updated
                     unset($existingAllocationMap[$allocationKey]);

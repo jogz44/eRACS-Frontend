@@ -180,7 +180,7 @@
 <script>
 import { api } from 'boot/axios'
 import { useUserControlStore } from 'stores/userControlStore'
-import { usePageLogging } from 'composables/usePageLogging'
+import { usePageLogging } from '../../../composables/usePageLogging'
 
 export default {
   name: 'UserControlAcceptedPage',

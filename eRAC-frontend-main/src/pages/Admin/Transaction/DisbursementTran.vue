@@ -336,7 +336,7 @@ import ViewOrDetails from 'components/disbursement/ViewOrDetails.vue'
 import EditDisbursement from 'components/disbursement/EditDisbursement.vue'
 import { useDisbursementStore } from 'stores/disbursementStore'
 import { useBankStore } from 'stores/bankStore'
-import { usePageLogging } from 'composables/usePageLogging'
+import { usePageLogging } from '../../../composables/usePageLogging'
 
 const store = useDisbursementStore()
 const bankStore = useBankStore()

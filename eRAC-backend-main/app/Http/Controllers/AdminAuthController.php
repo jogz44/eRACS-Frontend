@@ -32,6 +32,9 @@ class AdminAuthController extends Controller  // <-- This is crucial
 
         $token = $admin->createToken('admin-token', ['admin'])->plainTextToken;
 
+        // Log admin login
+        AdminAuthController::logUserAction($admin, 'Login', 'Admin login to system');
+
         $cookie = cookie(
             'admin_token',
             $token,
@@ -59,7 +62,14 @@ class AdminAuthController extends Controller  // <-- This is crucial
 
     public function logout(Request $request)
     {
-        $request->user('admin')->tokens()->delete();
+        $admin = $request->user('admin');
+        
+        // Log admin logout
+        if ($admin) {
+            AdminAuthController::logUserAction($admin, 'Logout', 'Admin logout from system');
+        }
+        
+        $admin->tokens()->delete();
         $cookie = Cookie::forget('admin_token');
 
         return response()->json([
@@ -159,7 +169,45 @@ class AdminAuthController extends Controller  // <-- This is crucial
     // Update user permissions
     public function updateUserPermissions(Request $request, $id) {
         $user = BarangayUser::findOrFail($id);
-        $user->permissions = $request->input('permissions');
+        $admin = $request->user();
+        
+        // Log the permission change
+        $oldPermissions = $user->permissions ?? [];
+        $newPermissions = $request->input('permissions');
+        
+        // If user has no permissions set, assume they have default permissions (all enabled except delete)
+        if (empty($oldPermissions)) {
+            $oldPermissions = [
+                'view' => true,
+                'add' => true,
+                'edit' => true,
+                'delete' => false,
+                'print' => true
+            ];
+        }
+        
+        // Create a detailed log of what changed
+        $changes = [];
+        $permissionNames = ['view' => 'View', 'add' => 'Add', 'edit' => 'Edit', 'delete' => 'Delete', 'print' => 'Print'];
+        
+        foreach ($permissionNames as $key => $label) {
+            $oldValue = $oldPermissions[$key] ?? false;
+            $newValue = $newPermissions[$key] ?? false;
+            
+            if ($oldValue !== $newValue) {
+                $changes[] = sprintf('%s: %s → %s', $label, $oldValue ? 'Yes' : 'No', $newValue ? 'Yes' : 'No');
+            }
+        }
+        
+        $changeDescription = !empty($changes) ? 'Changed: ' . implode(', ', $changes) : 'No changes detected';
+        
+        AdminAuthController::logUserAction(
+            $admin, 
+            'Updated User Permissions', 
+            sprintf('Admin updated permissions for user "%s %s" - %s', $user->first_name, $user->last_name, $changeDescription)
+        );
+        
+        $user->permissions = $newPermissions;
         $user->save();
         return response()->json(['success' => true]);
     }

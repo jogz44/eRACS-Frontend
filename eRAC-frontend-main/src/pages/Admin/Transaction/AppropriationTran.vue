@@ -307,7 +307,7 @@ import CommitDialog from 'components/appropriation/CommitDialog.vue'
 import ViewCommitDialog from 'components/appropriation/ViewCommitDialog.vue'
 import { useAppropriationStore } from 'stores/appropriationStore'
 import { useAccountsLibraryStore } from 'stores/accountsLibstore'
-import { usePageLogging } from 'composables/usePageLogging'
+import { usePageLogging } from '../../../composables/usePageLogging'
 // import { api } from 'src/boot/axios' // No longer needed since we use appropriationStore.commitAllocation
 // import SearchFilters from 'src/components/appropriation/SearchFilters.vue'
 

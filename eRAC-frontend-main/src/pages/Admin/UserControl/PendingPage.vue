@@ -208,7 +208,7 @@
 
 <script>
 import { api } from 'boot/axios'
-import { usePageLogging } from 'composables/usePageLogging'
+import { usePageLogging } from '../../../composables/usePageLogging'
 
 export default {
   data() {

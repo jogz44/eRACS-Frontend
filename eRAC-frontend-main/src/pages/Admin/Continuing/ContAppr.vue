@@ -260,7 +260,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAppropriationStore } from 'stores/appropriationStore'
-import { usePageLogging } from 'composables/usePageLogging'
+import { usePageLogging } from '../../../composables/usePageLogging'
 
 const $q = useQuasar()
 const appropriationStore = useAppropriationStore()
