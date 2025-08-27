@@ -21,7 +21,6 @@ export function useGetters(state) {
       align: 'left',
       sortable: true,
     },
-    { name: 'action', label: 'Action', field: '', align: 'center' },
   ])
 
   const expenseAugColumns = computed(() => [

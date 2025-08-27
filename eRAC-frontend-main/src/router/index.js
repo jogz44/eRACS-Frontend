@@ -50,6 +50,22 @@ export default defineRouter(function (/* { store, ssrContext } */) {
             authStore.adminReturnUrl = to.fullPath
             return next('/admin/login')
           }
+        } else {
+          // 3.1. Check if transaction pages require barangay selection
+          const transactionPages = [
+            '/admin/appropriation', '/admin/disbursement', '/admin/augmentation',
+            '/admin/contAppropriation', '/admin/contDisbursement', '/admin/contAugmentation'
+          ]
+          
+          if (transactionPages.includes(to.path)) {
+            const selectedBarangay = localStorage.getItem('admin_selected_barangay')
+            if (!selectedBarangay) {
+              // Redirect to dashboard with a message
+              if (from.path !== '/admin/dashboard') {
+                return next('/admin/dashboard')
+              }
+            }
+          }
         }
       }
       // 4. Check regular user routes

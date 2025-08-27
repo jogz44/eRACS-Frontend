@@ -9,7 +9,7 @@
           flat
           dense
           @click="loadPendingUsers"
-          :loading="loading"
+          :loading="store.loadingAugmentations"
         />
       </div>
     </div>
@@ -66,6 +66,8 @@ onMounted(async () => {
     store.fetchAvailableBudgets()
   ])
 })
+
+
 </script>
 
 <style scoped>

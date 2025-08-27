@@ -1,20 +1,11 @@
 <template>
   <q-page class="q-pa-md logs-page">
     <div class="page-header q-mb-md">
-      <div class="row items-center justify-between">
-        <div class="text-h6 text-weight-medium">Log Activities</div>
-        <q-btn
-          icon="refresh"
-          color="primary"
-          flat
-          dense
-          @click="loadLogs"
-          :loading="loading"
-        />
-      </div>
+      <div class="text-h6 text-weight-medium">Log Activities</div>
     </div>
 
     <AdminLogsActivity
+      v-if="selectedLog"
       v-model="showAdminLogsActivity"
       :selected-user="selectedLog"
     />
@@ -26,7 +17,7 @@
           dense
           v-model="search"
           placeholder="Search by ID, Name, Barangay, Position, or Date..."
-          style="min-width: 300px"
+          style="min-width: 300px; max-width: 300px;"
           clearable
           @clear="onSearchClear"
         >
@@ -41,7 +32,7 @@
           v-model="selectedBarangay"
           :options="barangayOptions"
           label="Filter by Barangay"
-          style="min-width: 200px"
+          style="min-width: 200px; max-width: 200px;"
           clearable
           @clear="onBarangayClear"
           emit-value
@@ -54,7 +45,7 @@
           v-model="selectedPosition"
           :options="positionOptions"
           label="Filter by Position"
-          style="min-width: 200px"
+          style="min-width: 200px; max-width: 200px;"
           clearable
           @clear="onPositionClear"
           emit-value
@@ -66,7 +57,7 @@
           dense
           :model-value="dateRangeDisplay"
           label="Date Range"
-          style="min-width: 200px"
+          style="min-width: 200px; max-width: 200px;"
           clearable
           @clear="onDateRangeClear"
           readonly
@@ -87,8 +78,10 @@
         <q-btn
           dense
           outlined
-          color="negative"
-          icon="clear"
+          color="red-10"
+          icon="clear_all"
+          label="Clear All"
+          style="width: 120px;"
           @click="clearAllFilters"
         />
       </div>
@@ -269,7 +262,8 @@ export default {
     async loadLogs() {
       this.loading = true
       try {
-        const response = await api.get('/api/admin/admin/logs')
+        // Use the correct admin logs endpoint
+        const response = await api.get('/api/admin/logs')
         this.logs = response.data
       } catch (error) {
         console.error('Error loading logs:', error)
@@ -318,6 +312,25 @@ export default {
   padding-bottom: 8px;
 }
 
+/* Prevent dropdown stretching */
+.q-select {
+  max-width: 200px !important;
+}
+
+.q-input {
+  max-width: 300px !important;
+}
+
+/* Ensure proper filter layout */
+.row.items-center.q-gutter-sm {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.row.items-center.q-gutter-sm > * {
+  flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
   .q-pa-md {
     padding: 8px;
@@ -331,6 +344,11 @@ export default {
   .row.items-center.q-gutter-sm > * {
     margin-bottom: 8px;
     width: 100%;
+  }
+
+  .q-select,
+  .q-input {
+    max-width: 100% !important;
   }
 }
 </style>

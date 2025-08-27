@@ -9,7 +9,7 @@
           flat
           dense
           @click="loadPendingUsers"
-          :loading="loading"
+          :loading="store.loadingDisbursements"
         />
       </div>
     </div>
@@ -290,6 +290,7 @@
           :columns="store.disbursementColumns"
           row-key="id"
           :pagination="store.pagination"
+          :loading="store.loadingDisbursements"
           flat
         >
           <template v-slot:body-cell-action="props">
@@ -321,7 +322,7 @@
         </q-table>
       </q-card>
 
-      <OrDetailsDialog v-model="store.dialogs.orDetails" />
+      <OrDetailsDialog />
       <ViewOrDetails v-model="store.dialogs.viewOrDetails" />
       <EditDisbursement />
     </div>
@@ -451,8 +452,10 @@ const handleEnterKey = (event) => {
   validateAndSave()
 }
 
-const handleSaveClick = () => {
-  validateAndSave()
+const handleSaveClick = async () => {
+  await validateAndSave()
+  // Refresh the disbursement list after saving
+  await store.fetchDisbursements()
 }
 
 const loadPendingUsers = async () => {

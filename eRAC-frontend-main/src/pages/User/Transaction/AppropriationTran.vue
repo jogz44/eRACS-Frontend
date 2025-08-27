@@ -375,6 +375,8 @@ const clearAllFilters = () => {
   appropriationStore.dateFrom = ''
   appropriationStore.dateTo = ''
   dateRange.value = null
+  // Ensure user only sees their barangay data
+  appropriationStore.setSelectedBarangay(null)
 }
 
 const showEditAllocationDialog = ref(false)
@@ -571,6 +573,9 @@ const saveBudget = async () => {
 
     await appropriationStore.addBudget(payload)
 
+    // Refresh the budgets list to show the new budget
+    await appropriationStore.fetchBudgets()
+
     $q.notify({
       type: 'positive',
       message: 'Budget added successfully!',
@@ -745,6 +750,12 @@ const columns = [
     align: 'left',
     sortable: true,
     format: (val) => appropriationStore.formatDate(val),
+  },
+  {
+    name: 'barangay',
+    label: 'Barangay',
+    field: 'barangay_name',
+    align: 'left',
   },
   {
     name: 'description',

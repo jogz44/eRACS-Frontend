@@ -235,14 +235,19 @@ export const useChartDataStore = defineStore('chartData', {
   actions: {
     getAuthConfig() {
       const authStore = useAuthStore()
-      if (!authStore.token) {
+      
+      // Use admin token if admin is logged in, otherwise use regular token
+      const token = authStore.admin ? authStore.adminToken : authStore.token
+      
+      if (!token) {
         console.error('No authentication token found')
         throw new Error('Authentication required')
       }
-      console.log('Auth token available:', authStore.token ? 'Yes' : 'No')
+      
+      console.log('Auth token available:', token ? 'Yes' : 'No')
       return {
         headers: {
-          Authorization: `Bearer ${authStore.token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
