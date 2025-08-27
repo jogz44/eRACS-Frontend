@@ -6,15 +6,24 @@ export function useAugmentationActions(state) {
 
 
   const fetchAugmentations = async () => {
+    state.loadingAugmentations.value = true
     try {
-      const token = authStore.token
+      // Use different endpoints and tokens for admin vs regular users
+      const endpoint = authStore.admin ? "/api/admin/augmentations" : "/api/barangay/budget-augmentations"
+      const token = authStore.admin ? authStore.adminToken : authStore.token
+      
       const params = {}
       
       if (state.searchQuery.value) params.search = state.searchQuery.value
       if (state.dateFrom.value) params.date_from = state.dateFrom.value
       if (state.dateTo.value) params.date_to = state.dateTo.value
 
-      const response = await api.get('/api/barangay/budget-augmentations', {
+      // Add barangay_id parameter for admin users if selected
+      if (authStore.admin && state.selectedBarangayId.value) {
+        params.barangay_id = state.selectedBarangayId.value
+      }
+
+      const response = await api.get(endpoint, {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: 'application/json',
@@ -26,6 +35,8 @@ export function useAugmentationActions(state) {
     } catch (error) {
       console.error('Failed to fetch augmentations:', error)
       state.augmentation.value = []
+    } finally {
+      state.loadingAugmentations.value = false
     }
   }
 
@@ -33,7 +44,8 @@ export function useAugmentationActions(state) {
   const fetchExpenseAccounts = async () => {
     try {
       state.expenseAccountsLoading.value = true
-      const token = authStore.token
+      // Use different tokens for admin vs regular users
+      const token = authStore.admin ? authStore.adminToken : authStore.token
       
       // Get the current fiscal year
       const fiscalYearResponse = await api.get('/api/barangay/fiscal-years', {
@@ -109,8 +121,6 @@ export function useAugmentationActions(state) {
   const saveAugmentation = async () => {
     state.loading.value.saveAugmentation = true
     try {
-      const token = authStore.token
-      
       // Validate required fields
       if (!state.forms.value.augmentation.augmentation_date) {
         throw new Error('Augmentation date is required')
@@ -146,6 +156,15 @@ export function useAugmentationActions(state) {
       console.log('Augexpenses array:', state.Augexpenses.value)
       console.log('Sending payload:', payload)
 
+      // Add barangay_id for admin users if selected
+      if (authStore.admin && state.selectedBarangayId.value) {
+        payload.barangay_id = state.selectedBarangayId.value
+      }
+
+      // Use different endpoints for admin vs regular users
+      const endpoint = authStore.admin ? "/api/admin/augmentations/create" : "/api/barangay/budget-augmentations"
+      const token = authStore.admin ? authStore.adminToken : authStore.token
+
       let response
       if (state.currentItem.value?.id) {
         // Update existing augmentation
@@ -157,7 +176,7 @@ export function useAugmentationActions(state) {
         })
       } else {
         // Create new augmentation
-        response = await api.post('/api/barangay/budget-augmentations', payload, {
+        response = await api.post(endpoint, payload, {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',
@@ -189,7 +208,8 @@ export function useAugmentationActions(state) {
 
   const updateAugmentation = async (id) => {
     try {
-      const token = authStore.token
+      // Use different tokens for admin vs regular users
+      const token = authStore.admin ? authStore.adminToken : authStore.token
       
       // Validate required fields
       if (!state.forms.value.augmentation.augmentation_date) {
@@ -251,7 +271,8 @@ export function useAugmentationActions(state) {
 
   const deleteAugmentation = async (id) => {
     try {
-      const token = authStore.token
+      // Use different tokens for admin vs regular users
+      const token = authStore.admin ? authStore.adminToken : authStore.token
       await api.delete(`/api/barangay/budget-augmentations/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -274,7 +295,8 @@ export function useAugmentationActions(state) {
 
   const fetchAugmentationById = async (id) => {
     try {
-      const token = authStore.token
+      // Use different tokens for admin vs regular users
+      const token = authStore.admin ? authStore.adminToken : authStore.token
       const response = await api.get(`/api/barangay/budget-augmentations/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -383,6 +405,11 @@ export function useAugmentationActions(state) {
     resetForm('augmentation')
   }
 
+  // Set selected barangay for admin filtering
+  const setSelectedBarangay = (barangayId) => {
+    state.selectedBarangayId.value = barangayId
+  }
+
   return {
     fetchAugmentations,
     fetchExpenseAccounts,
@@ -394,5 +421,6 @@ export function useAugmentationActions(state) {
     resetForm,
     generateNewAugmentationDefaults,
     refreshAugmentationDialog,
+    setSelectedBarangay,
   }
 }

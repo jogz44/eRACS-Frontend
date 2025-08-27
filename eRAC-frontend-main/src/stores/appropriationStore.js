@@ -24,6 +24,7 @@ export const useAppropriationStore = defineStore("appropriation", {
     fiscalYears: [],
     currentFiscalYearId: null,
     currentYear: new Date().getFullYear().toString(),
+    selectedBarangayId: null, // For admin barangay filtering
 
     allocations: [],
     authStore: useAuthStore(), // Moved hook call inside state
@@ -238,9 +239,18 @@ export const useAppropriationStore = defineStore("appropriation", {
 
     async addBudget(newBudget) {
       try {
-        const response = await api.post("/api/barangay/budgets/create", newBudget, {
+        // Add barangay_id for admin users if selected
+        if (this.authStore.admin && this.selectedBarangayId) {
+          newBudget.barangay_id = this.selectedBarangayId
+        }
+        
+        // Use different endpoints for admin vs regular users
+        const endpoint = this.authStore.admin ? "/api/admin/budgets/create" : "/api/barangay/budgets/create"
+        const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
+        
+        const response = await api.post(endpoint, newBudget, {
           headers: {
-            Authorization: `Bearer ${this.authStore.token}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
             Accept: "application/json",
           },
@@ -267,10 +277,21 @@ export const useAppropriationStore = defineStore("appropriation", {
       this.loading = true
       try {
         const currentYear = new Date().getFullYear()
-        const response = await api.get("/api/barangay/budgets", {
-          params: { year: currentYear },
+        const params = { year: currentYear }
+        
+        // Add barangay filter for admin users
+        if (this.authStore.admin && this.selectedBarangayId) {
+          params.barangay_id = this.selectedBarangayId
+        }
+        
+        // Use different endpoints for admin vs regular users
+        const endpoint = this.authStore.admin ? "/api/admin/budgets" : "/api/barangay/budgets"
+        const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
+        
+        const response = await api.get(endpoint, {
+          params: params,
           headers: {
-            Authorization: `Bearer ${this.authStore.token}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
             Accept: "application/json",
           },
@@ -283,6 +304,8 @@ export const useAppropriationStore = defineStore("appropriation", {
           amount: parseCurrency(budget.amount),
           unappropriated: parseCurrency(budget.unappropriated),
           fiscal_year: budget.fiscal_year,
+          barangay_name: budget.barangay_name,
+          barangay_id: budget.barangay_id,
           allocations: budget.allocations,
         }))
 
@@ -292,6 +315,11 @@ export const useAppropriationStore = defineStore("appropriation", {
       } finally {
         this.loading = false
       }
+    },
+
+    // Method to set selected barangay for admin filtering
+    setSelectedBarangay(barangayId) {
+      this.selectedBarangayId = barangayId
     },
 
     async initialize() {
@@ -317,10 +345,14 @@ export const useAppropriationStore = defineStore("appropriation", {
         Please contact your administrator.`)
         }
 
-        const response = await api.get("/api/barangay/expense-hierarchy", {
+        // Use different endpoints for admin vs regular users
+        const endpoint = this.authStore.admin ? "/api/admin/expense-hierarchy" : "/api/barangay/expense-hierarchy"
+        const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
+
+        const response = await api.get(endpoint, {
           params: { fiscal_year_id: fiscalYear.id },
           headers: {
-            Authorization: `Bearer ${this.authStore.token}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
             Accept: "application/json",
           },
@@ -335,9 +367,13 @@ export const useAppropriationStore = defineStore("appropriation", {
 
     async fetchExistingAllocations(budgetId) {
       try {
-        const response = await api.get(`/api/barangay/budgets/${budgetId}/allocations`, {
+        // Use different endpoints for admin vs regular users
+        const endpoint = this.authStore.admin ? `/api/admin/budgets/${budgetId}/allocations` : `/api/barangay/budgets/${budgetId}/allocations`
+        const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
+        
+        const response = await api.get(endpoint, {
           headers: {
-            Authorization: `Bearer ${this.authStore.token}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
             Accept: "application/json",
           },
@@ -395,12 +431,16 @@ export const useAppropriationStore = defineStore("appropriation", {
           amount: parseCurrency(allocation.amount),
         }))
 
+        // Use different endpoints for admin vs regular users
+        const endpoint = this.authStore.admin ? `/api/admin/budgets/${budgetId}/allocate` : `/api/barangay/budgets/${budgetId}/allocate`
+        const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
+
         const response = await api.post(
-          `/api/barangay/budgets/${budgetId}/allocate`,
+          endpoint,
           { allocations: cleanedAllocations },
           {
             headers: {
-              Authorization: `Bearer ${this.authStore.token}`,
+              Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
               Accept: "application/json",
             },
@@ -504,9 +544,13 @@ export const useAppropriationStore = defineStore("appropriation", {
 
     async fetchAllocationHistory(id) {
       try {
-        const response = await api.get(`/api/barangay/appropriations/${id}/history`, {
+        // Use different endpoints for admin vs regular users
+        const endpoint = this.authStore.admin ? `/api/admin/budgets/${id}/history` : `/api/barangay/budgets/${id}/history`
+        const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
+        
+        const response = await api.get(endpoint, {
           headers: {
-            Authorization: `Bearer ${this.authStore.token}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
             Accept: "application/json",
           },

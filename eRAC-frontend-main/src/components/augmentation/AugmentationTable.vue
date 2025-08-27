@@ -5,6 +5,7 @@
       :columns="store.augmentationColumns"
       row-key="id"
       :pagination="store.pagination"
+      :loading="store.loadingAugmentations"
     >
       <template v-slot:body-cell-action="props">
         <q-td :props="props">

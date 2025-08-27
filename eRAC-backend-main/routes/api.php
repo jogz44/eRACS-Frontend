@@ -187,7 +187,22 @@ Route::prefix('admin')->group(function () {
         Route::patch('/users/{user}/approve', [AdminAuthController::class, 'approveUser']);
         Route::delete('/users/{user}', [AdminAuthController::class, 'deleteUser']);
 
-
+        // Admin appropriation endpoints - can access all barangay data
+        Route::get('/budgets', [AppropriationController::class, 'adminIndex']);
+        Route::post('/budgets/create', [AppropriationController::class, 'storeBudget']);
+        Route::get('/budgets/{budget}/allocations', [AppropriationController::class, 'getBudgetAllocations']);
+        Route::post('/budgets/{budget}/allocate', [AppropriationController::class, 'saveAllocation']);
+        Route::get('/budgets/{id}/history', [AppropriationController::class, 'getAllocationHistory']);
+        Route::patch('/budgets/{budget}/allocations', [AppropriationController::class, 'updateAllocations']);
+        Route::get('/expense-hierarchy', [AppropriationController::class, 'getExpenseHierarchy']);
+        
+        // Admin disbursement endpoints - can access all barangay data
+        Route::get('/disbursements', [DisbursementController::class, 'adminIndex']);
+        Route::post('/disbursements/create', [DisbursementController::class, 'store']);
+        
+        // Admin augmentation endpoints - can access all barangay data
+        Route::get('/augmentations', [BudgetAugmentationController::class, 'adminIndex']);
+        Route::post('/augmentations/create', [BudgetAugmentationController::class, 'store']);
     });
 
     // Dashboard Routes upadtaed

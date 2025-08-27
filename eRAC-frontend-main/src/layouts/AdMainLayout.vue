@@ -42,7 +42,8 @@
           v-model="barangay"
           :options="barangayOptions"
           option-label="name"
-          option-value="value"
+          option-value="id"
+          @update:model-value="onBarangayChange"
         />
       </q-toolbar>
     </q-header>
@@ -250,18 +251,51 @@ const authStore = useAuthStore()
 const leftDrawerOpen = ref(false)
 const activePanel = ref(null)
 const barangayOptions = ref([])
-const barangay = ref('')
+const barangay = ref(null)
 
 onMounted(async () => {
   try {
-    // Load barangay options
-    const response = await api.get('/api/barangay/barangays')
+    // Load barangay options with admin token
+    const response = await api.get('/api/barangay/barangays', {
+      headers: {
+        Authorization: `Bearer ${authStore.adminToken}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    })
     if (response.data && Array.isArray(response.data)) {
       barangayOptions.value = response.data.map((b) => ({
         name: b.name,
-        value: b.name,
+        id: b.id,
       }))
-    }  } catch (error) {
+      
+      // Initialize barangay selection
+      const { useAppropriationStore } = await import('stores/appropriationStore')
+      const appropriationStore = useAppropriationStore()
+      
+      // If appropriation store has a selected barangay, use it
+      if (appropriationStore.selectedBarangayId) {
+        barangay.value = appropriationStore.selectedBarangayId
+      } else if (barangayOptions.value.length > 0) {
+        // Otherwise, set to first barangay and update store
+        barangay.value = barangayOptions.value[0].id
+        appropriationStore.setSelectedBarangay(barangay.value)
+        await appropriationStore.fetchBudgets()
+      }
+      
+                              // Also initialize disbursement store with the same barangay
+                        const { useDisbursementStore } = await import('stores/disbursementStore')
+                        const disbursementStore = useDisbursementStore()
+                        disbursementStore.setSelectedBarangay(barangay.value)
+                        await disbursementStore.fetchDisbursements()
+
+                        // Also initialize augmentation store with the same barangay
+                        const { useAugmentationStore } = await import('stores/augmentation')
+                        const augmentationStore = useAugmentationStore()
+                        augmentationStore.setSelectedBarangay(barangay.value)
+                        await augmentationStore.fetchAugmentations()
+    }
+  } catch (error) {
     console.error('Error loading setup data:', error)
     // Don't show notification if it might break the page
     // Just log the error for debugging
@@ -353,6 +387,63 @@ const handleLogout = async () => {
     router.push('/admin/login')
   })
 }
+
+                    const onBarangayChange = async (barangayId) => {
+                      try {
+                        // Update appropriation store if we're on appropriation pages
+                        const { useAppropriationStore } = await import('stores/appropriationStore')
+                        const appropriationStore = useAppropriationStore()
+                        appropriationStore.setSelectedBarangay(barangayId)
+                        await appropriationStore.fetchBudgets()
+
+                        // Update disbursement store if we're on disbursement pages
+                        const { useDisbursementStore } = await import('stores/disbursementStore')
+                        const disbursementStore = useDisbursementStore()
+                        disbursementStore.setSelectedBarangay(barangayId)
+                        await disbursementStore.fetchDisbursements()
+
+                        // Update augmentation store if we're on augmentation pages
+                        const { useAugmentationStore } = await import('stores/augmentation')
+                        const augmentationStore = useAugmentationStore()
+                        augmentationStore.setSelectedBarangay(barangayId)
+                        await augmentationStore.fetchAugmentations()
+                      } catch (error) {
+                        console.error('Error updating barangay filter:', error)
+                      }
+                    }
+
+// Watch for changes in appropriation store's selectedBarangayId
+watch(async () => {
+  const { useAppropriationStore } = await import('stores/appropriationStore')
+  const appropriationStore = useAppropriationStore()
+  return appropriationStore.selectedBarangayId
+}, (newBarangayId) => {
+  if (newBarangayId !== barangay.value) {
+    barangay.value = newBarangayId
+  }
+}, { immediate: false })
+
+                    // Watch for changes in disbursement store's selectedBarangayId
+                    watch(async () => {
+                      const { useDisbursementStore } = await import('stores/disbursementStore')
+                      const disbursementStore = useDisbursementStore()
+                      return disbursementStore.selectedBarangayId
+                    }, (newBarangayId) => {
+                      if (newBarangayId !== barangay.value) {
+                        barangay.value = newBarangayId
+                      }
+                    }, { immediate: false })
+
+                    // Watch for changes in augmentation store's selectedBarangayId
+                    watch(async () => {
+                      const { useAugmentationStore } = await import('stores/augmentation')
+                      const augmentationStore = useAugmentationStore()
+                      return augmentationStore.selectedBarangayId
+                    }, (newBarangayId) => {
+                      if (newBarangayId !== barangay.value) {
+                        barangay.value = newBarangayId
+                      }
+                    }, { immediate: false })
 
 const handleKeydown = (event) => {
   if (event.key === 'Escape' && activePanel.value) {

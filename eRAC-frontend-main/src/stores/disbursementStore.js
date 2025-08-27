@@ -14,6 +14,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     expenses: [], // Initialize expenses array
     expenseSearch: '',
     currentItem: null,
+    selectedBarangayId: null, // Added for admin barangay filtering
 
     // Track expense details from tran_expense_details table for balance calculations
     expenseDetailsData: [], // Array to store all expense details from the database
@@ -54,6 +55,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     expenseTypeLoading: false,
     savingDisbursement: false, // New loading state for save button
     loadingEditDisbursement: null, // Loading state for edit disbursement (stores the ID of the disbursement being loaded)
+    loadingDisbursements: false, // Loading state for fetching disbursements
 
     // Form data
     forms: {
@@ -609,20 +611,33 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     async fetchDisbursements() {
+      this.loadingDisbursements = true
       try {
         const authStore = useAuthStore()
-        const token = authStore.token
+        
+        // Use different endpoints and tokens for admin vs regular users
+        const endpoint = authStore.admin ? "/api/admin/disbursements" : "/api/barangay/disbursements"
+        const token = authStore.admin ? authStore.adminToken : authStore.token
+        
         const particular= await api.get('/api/barangay/particulars', {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',
           },
         })
-        const response = await api.get('/api/barangay/disbursements', {
+        
+        // Add barangay_id parameter for admin users if selected
+        const params = {}
+        if (authStore.admin && this.selectedBarangayId) {
+          params.barangay_id = this.selectedBarangayId
+        }
+        
+        const response = await api.get(endpoint, {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',
           },
+          params: params
         })
         this.particulars = particular.data.data.map(item => ({
           label: item.particulars
@@ -648,7 +663,14 @@ export const useDisbursementStore = defineStore('disbursement', {
       } catch (error) {
         console.error('Failed to fetch disbursements:', error)
         this.disbursements = []
+      } finally {
+        this.loadingDisbursements = false
       }
+    },
+
+    // Set selected barangay for admin filtering
+    setSelectedBarangay(barangayId) {
+      this.selectedBarangayId = barangayId
     },
 
 
@@ -1162,7 +1184,14 @@ export const useDisbursementStore = defineStore('disbursement', {
           }))
         }
 
-        const response = await api.post('/api/barangay/disbursements', payload, {
+        // Add barangay_id for admin users if selected
+        if (authStore.admin && this.selectedBarangayId) {
+          payload.barangay_id = this.selectedBarangayId
+        }
+
+        // Use different endpoints for admin vs regular users
+        const endpoint = authStore.admin ? "/api/admin/disbursements/create" : "/api/barangay/disbursements"
+        const response = await api.post(endpoint, payload, {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',
