@@ -20,9 +20,9 @@
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date 
-                      v-model="store.forms.augmentation.augmentation_date" 
-                      mask="DD/MM/YYYY" 
+                    <q-date
+                      v-model="store.forms.augmentation.augmentation_date"
+                      mask="DD/MM/YYYY"
                     />
                   </q-popup-proxy>
                 </q-icon>
@@ -32,12 +32,12 @@
           <!-- Ref No. -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">Ref No.:</q-item-label>
-            <q-input 
-              filled 
-              outlined 
-              dense 
-              v-model="store.forms.augmentation.refNo" 
-              readonly 
+            <q-input
+              filled
+              outlined
+              dense
+              v-model="store.forms.augmentation.refNo"
+              readonly
               @keydown.enter="handleEnterKey"
             />
           </div>
@@ -45,11 +45,11 @@
           <!-- Remarks -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">Remarks:</q-item-label>
-            <q-input 
-              filled 
-              outlined 
-              dense 
-              v-model="store.forms.augmentation.remarks" 
+            <q-input
+              filled
+              outlined
+              dense
+              v-model="store.forms.augmentation.remarks"
               @keydown.enter="handleEnterKey"
             />
           </div>
@@ -59,6 +59,25 @@
       <!-- Add Expense Button -->
       <q-card-section>
         <div class="row justify-end q-mb-md">
+          <div class="row align-left q-mt-sm justify-start items-start">
+            <q-select
+              label="Select Budget"
+              v-model="store.selectedBudget"
+              :options="store.budgetOptions"
+              outlined
+              dense
+              style="width: 200px; margin-right: 16px"
+            >
+              <template v-slot:no-option>
+                <q-item>
+                  <q-item-section class="text-left">
+                    Annual Budget
+                    <span> Supplemental Budget </span>
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+          </div>
           <q-btn
             label="Add"
             class="add-table-btn"
@@ -105,11 +124,11 @@
         <!-- Amount Field -->
         <div class="q-mt-md">
           <q-item-label class="q-mb-xs">Total Amount:</q-item-label>
-          <q-input 
-            filled 
-            outlined 
-            readonly 
-            dense 
+          <q-input
+            filled
+            outlined
+            readonly
+            dense
             :model-value="`₱${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`"
             style="width: 40%"
           />
@@ -124,9 +143,9 @@
           @click="store.closeDialog('augmentation')"
           :disable="store.loading.saveAugmentation"
         />
-        <q-btn 
-          label="Save" 
-          class="modal-save-btn" 
+        <q-btn
+          label="Save"
+          class="modal-save-btn"
           @click="handleSaveClick"
           :loading="store.loading.saveAugmentation"
           :disable="store.loading.saveAugmentation"
@@ -159,7 +178,7 @@ const dialogModel = computed({
     if (store.dialogs) {
       store.dialogs.augmentation = value
     }
-  }
+  },
 })
 const handleAddExpense = async () => {
   await store.openDialog('augExpense')
@@ -170,11 +189,11 @@ const validateAndSave = async () => {
   if (dialogModel.value) {
     // Validate required fields before saving
     const form = store.forms.augmentation
-    const hasRequiredFields = form.augmentation_date && form.remarks 
- 
+    const hasRequiredFields = form.augmentation_date && form.remarks
+
     // Check if expenses are added
     const hasExpenses = store.Augexpenses && store.Augexpenses.length > 0
-  
+
     if (!hasRequiredFields) {
       $q.notify({
         type: 'negative',
@@ -184,7 +203,7 @@ const validateAndSave = async () => {
       })
       return
     }
-    
+
     if (!hasExpenses) {
       $q.notify({
         type: 'negative',
@@ -194,7 +213,7 @@ const validateAndSave = async () => {
       })
       return
     }
-    
+
     // If validation passes, proceed with save
     await handleSave()
   }
@@ -211,12 +230,11 @@ const handleSaveClick = () => {
 }
 
 const handleSave = async () => {
-
   if (!store.Augexpenses || store.Augexpenses.length === 0) {
     $q.notify({
       type: 'negative',
       message: 'Please add at least one expense',
-      position: 'top'
+      position: 'top',
     })
     return
   }
@@ -234,21 +252,20 @@ const handleSave = async () => {
     $q.notify({
       type: 'positive',
       message: `Augmentation saved successfully! Ref No: ${refNumber}`,
-      position: 'top'
+      position: 'top',
     })
     store.closeDialog('augmentation')
-    
+
     // Refresh the augmentation list after saving
     await store.fetchAugmentations()
   } else {
     $q.notify({
       type: 'negative',
       message: result.error || 'Failed to save augmentation',
-      position: 'top'
+      position: 'top',
     })
   }
 }
-
 </script>
 
 <style scoped>
@@ -261,31 +278,31 @@ const handleSave = async () => {
     max-width: 95vw !important;
     margin: 8px !important;
   }
-  
+
   .q-dialog .q-card-section {
     padding: 12px !important;
   }
-  
+
   .q-dialog .q-gutter-md {
     gap: 8px !important;
   }
-  
+
   .q-dialog .q-select,
   .q-dialog .q-input {
     width: 100% !important;
     min-width: 0 !important;
   }
-  
+
   .q-dialog .q-btn {
     min-height: 44px !important;
   }
-  
+
   /* Mobile Dialog Content Organization */
   .q-dialog .row.q-col-gutter-md {
     flex-direction: column !important;
     gap: 12px !important;
   }
-  
+
   .q-dialog .col-md-4,
   .q-dialog .col-sm-6,
   .q-dialog .col-sm-12 {
@@ -293,27 +310,27 @@ const handleSave = async () => {
     max-width: 100% !important;
     flex: 1 1 100% !important;
   }
-  
+
   .q-dialog .q-item-label {
     font-size: 14px !important;
     margin-bottom: 4px !important;
   }
-  
+
   .q-dialog .q-table {
     font-size: 12px !important;
   }
-  
+
   .q-dialog .q-table th,
   .q-dialog .q-table td {
     padding: 8px 4px !important;
   }
-  
+
   .q-dialog .button-group {
     display: flex !important;
     gap: 4px !important;
     flex-wrap: wrap !important;
   }
-  
+
   .q-dialog .button-group .q-btn {
     min-width: 32px !important;
     height: 32px !important;
@@ -327,62 +344,62 @@ const handleSave = async () => {
     min-width: 90vw !important;
     max-width: 90vw !important;
   }
-  
+
   .q-dialog .q-card-section {
     padding: 16px !important;
   }
-  
+
   .q-dialog .q-gutter-md {
     gap: 12px !important;
   }
-  
+
   .q-dialog .q-select,
   .q-dialog .q-input {
     width: 100% !important;
     min-width: 0 !important;
   }
-  
+
   .q-dialog .q-btn {
     min-height: 44px !important;
   }
-  
+
   /* Small Tablet Dialog Content Organization */
   .q-dialog .row.q-col-gutter-md {
     gap: 16px !important;
   }
-  
+
   .q-dialog .col-md-4 {
     width: 50% !important;
     max-width: 50% !important;
     flex: 1 1 50% !important;
   }
-  
+
   .q-dialog .col-sm-6,
   .q-dialog .col-sm-12 {
     width: 100% !important;
     max-width: 100% !important;
     flex: 1 1 100% !important;
   }
-  
+
   .q-dialog .q-item-label {
     font-size: 14px !important;
     margin-bottom: 6px !important;
   }
-  
+
   .q-dialog .q-table {
     font-size: 13px !important;
   }
-  
+
   .q-dialog .q-table th,
   .q-dialog .q-table td {
     padding: 10px 6px !important;
   }
-  
+
   .q-dialog .button-group {
     display: flex !important;
     gap: 6px !important;
   }
-  
+
   .q-dialog .button-group .q-btn {
     min-width: 36px !important;
     height: 36px !important;
@@ -396,63 +413,63 @@ const handleSave = async () => {
     min-width: 80vw !important;
     max-width: 80vw !important;
   }
-  
+
   .q-dialog .q-card-section {
     padding: 20px !important;
   }
-  
+
   .q-dialog .q-gutter-md {
     gap: 16px !important;
   }
-  
+
   .q-dialog .q-select,
   .q-dialog .q-input {
     width: 100% !important;
     min-width: 0 !important;
   }
-  
+
   /* Large Tablet Dialog Content Organization */
   .q-dialog .row.q-col-gutter-md {
     gap: 20px !important;
   }
-  
+
   .q-dialog .col-md-4 {
     width: 33.33% !important;
     max-width: 33.33% !important;
     flex: 1 1 33.33% !important;
   }
-  
+
   .q-dialog .col-sm-6 {
     width: 50% !important;
     max-width: 50% !important;
     flex: 1 1 50% !important;
   }
-  
+
   .q-dialog .col-sm-12 {
     width: 100% !important;
     max-width: 100% !important;
     flex: 1 1 100% !important;
   }
-  
+
   .q-dialog .q-item-label {
     font-size: 15px !important;
     margin-bottom: 8px !important;
   }
-  
+
   .q-dialog .q-table {
     font-size: 14px !important;
   }
-  
+
   .q-dialog .q-table th,
   .q-dialog .q-table td {
     padding: 12px 8px !important;
   }
-  
+
   .q-dialog .button-group {
     display: flex !important;
     gap: 8px !important;
   }
-  
+
   .q-dialog .button-group .q-btn {
     min-width: 40px !important;
     height: 40px !important;
