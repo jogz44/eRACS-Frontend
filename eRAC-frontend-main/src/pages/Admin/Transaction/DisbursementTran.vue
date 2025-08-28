@@ -337,9 +337,11 @@ import ViewOrDetails from 'components/disbursement/ViewOrDetails.vue'
 import EditDisbursement from 'components/disbursement/EditDisbursement.vue'
 import { useDisbursementStore } from 'stores/disbursementStore'
 import { useBankStore } from 'stores/bankStore'
+import { usePageLogging } from '../../../composables/usePageLogging'
 
 const store = useDisbursementStore()
 const bankStore = useBankStore()
+const { logPageVisit } = usePageLogging()
 
 onMounted(async () => {
   try {
@@ -349,6 +351,9 @@ onMounted(async () => {
     if (!bankStore.banks.length) {
       await bankStore.fetchBanks()
     }
+    
+    // Log page visit
+    await logPageVisit('Current Disbursement')
   } catch (error) {
     console.error('Error during component initialization:', error)
     $q.notify({

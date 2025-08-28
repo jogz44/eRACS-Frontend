@@ -324,11 +324,13 @@ import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useContAugmentationStore } from 'stores/contAugmentation'
 import { useAppropriationStore } from 'stores/appropriationStore'
+import { usePageLogging } from '../../../composables/usePageLogging'
 
 const $q = useQuasar()
 const store = useContAugmentationStore()
 const loading = ref(false)
 const appropriationStore = useAppropriationStore()
+const { logPageVisit } = usePageLogging()
 
 const selectedFiscalYear = computed({
   get: () => appropriationStore.selectedFiscalYear,
@@ -345,6 +347,8 @@ const onFiscalYearChange = (value) => {
 onMounted(async () => {
   try {
     await appropriationStore.initialize()
+    // Log page visit
+    await logPageVisit('Continuing Augmentation')
   } catch (error) {
     console.error('Failed to initialize fiscal years:', error)
   }

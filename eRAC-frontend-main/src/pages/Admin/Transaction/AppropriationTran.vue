@@ -320,6 +320,7 @@ import CommitDialog from 'components/appropriation/CommitDialog.vue'
 import ViewCommitDialog from 'components/appropriation/ViewCommitDialog.vue'
 import { useAppropriationStore } from 'stores/appropriationStore'
 import { useAccountsLibraryStore } from 'stores/accountsLibstore'
+import { usePageLogging } from '../../../composables/usePageLogging'
 import { api } from 'boot/axios'
 import { useAuthStore } from 'stores/auth'
 // import SearchFilters from 'src/components/appropriation/SearchFilters.vue'
@@ -327,6 +328,7 @@ import { useAuthStore } from 'stores/auth'
 const $q = useQuasar()
 const accountLibraryStore = useAccountsLibraryStore()
 const appropriationStore = useAppropriationStore()
+const { logPageVisit } = usePageLogging()
 const authStore = useAuthStore()
 
 const showDialog = ref(false)
@@ -723,6 +725,9 @@ const saveEditedAllocation = async () => {
 onMounted(async () => {
   try {
     await appropriationStore.initialize()
+    // Log page visit
+    await logPageVisit('Current Appropriation')
+    
     await loadBarangayOptions()
   } catch (error) {
     $q.notify({

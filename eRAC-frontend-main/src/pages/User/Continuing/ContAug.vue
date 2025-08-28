@@ -302,9 +302,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useContAugmentationStore } from 'stores/contAugmentation'
+import { usePageLogging } from '../../../composables/usePageLogging'
 
 const $q = useQuasar()
 const store = useContAugmentationStore()
@@ -377,6 +378,12 @@ const clearAllFilters = () => {
   store.dateFrom = ''
   store.dateTo = ''
 }
+
+onMounted(async () => {
+  // Log page visit
+  const { logPageVisit } = usePageLogging()
+  await logPageVisit('Continuing Augmentation')
+})
 </script>
 
 <style scoped>

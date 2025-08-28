@@ -222,7 +222,7 @@
           class="modal-save-btn"
           @click="submitAllocation"
           :loading="appropriationStore.loading"
-          :disable="!canSave"
+          :disable="appropriationStore.loading || !canSave"
         />
       </q-card-actions>
     </q-card>
@@ -514,10 +514,11 @@ const submitAllocation = async () => {
 
     // Submit allocation
     console.log('Submitting allocation to backend...')
-    await appropriationStore.commitAllocation(appropriationStore.selectedRow.id, allocations)
+    // Trigger background refresh so we can close immediately
+    await appropriationStore.commitAllocation(appropriationStore.selectedRow.id, allocations, { backgroundRefresh: true })
 
-    // Refresh data
-    await appropriationStore.fetchBudgets()
+    // Close dialog immediately after successful allocation
+    // Next-tick hide to avoid any repaint timing issues
     appropriationStore.showAllocationDialog = false
 
     $q.notify({

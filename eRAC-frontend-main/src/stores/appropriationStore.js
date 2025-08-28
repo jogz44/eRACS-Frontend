@@ -273,8 +273,9 @@ export const useAppropriationStore = defineStore("appropriation", {
       }
     },
 
-    async fetchBudgets() {
-      this.loading = true
+    async fetchBudgets(options = { silent: false }) {
+      const silent = options?.silent === true
+      if (!silent) this.loading = true
       try {
         const currentYear = new Date().getFullYear()
         const params = { year: currentYear }
@@ -313,7 +314,7 @@ export const useAppropriationStore = defineStore("appropriation", {
       } catch (error) {
         console.error("Error fetching budgets:", error)
       } finally {
-        this.loading = false
+        if (!silent) this.loading = false
       }
     },
 
@@ -443,7 +444,9 @@ export const useAppropriationStore = defineStore("appropriation", {
       }
     },
 
-    async commitAllocation(budgetId, allocations) {
+    async commitAllocation(budgetId, allocations, options = { backgroundRefresh: false }) {
+      const doBackground = options?.backgroundRefresh === true
+      if (!doBackground) this.loading = true
       try {
         const cleanedAllocations = allocations.map((allocation) => ({
           ...allocation,
@@ -476,21 +479,31 @@ export const useAppropriationStore = defineStore("appropriation", {
           }
         }
 
-        // Refresh the budgets list to ensure we have the latest data from the database
-        await this.fetchBudgets()
-
-        // Refresh disbursement store expense data to reflect appropriation changes
-        try {
-          const { useDisbursementStore } = await import('./disbursementStore')
-          const disbursementStore = useDisbursementStore()
-          
-          // Force refresh expense details to ensure we have latest disbursement data
-          await disbursementStore.forceRefreshExpenseDetails()
-          
-          // Then refresh expense accounts
-          await disbursementStore.refreshExpenseAccountsInBackground()
-        } catch (error) {
-          console.warn('Failed to refresh disbursement store after appropriation update:', error)
+        // Optionally refresh in the background so UI can close immediately
+        if (doBackground) {
+          ;(async () => {
+            try {
+              await this.fetchBudgets({ silent: true })
+              const { useDisbursementStore } = await import('./disbursementStore')
+              const disbursementStore = useDisbursementStore()
+              await disbursementStore.forceRefreshExpenseDetails()
+              await disbursementStore.refreshExpenseAccountsInBackground()
+            } catch (error) {
+              console.warn('Background refresh after appropriation update failed:', error)
+            }
+          })()
+        } else {
+          // Refresh the budgets list to ensure we have the latest data from the database
+          await this.fetchBudgets()
+          // Refresh disbursement store expense data to reflect appropriation changes
+          try {
+            const { useDisbursementStore } = await import('./disbursementStore')
+            const disbursementStore = useDisbursementStore()
+            await disbursementStore.forceRefreshExpenseDetails()
+            await disbursementStore.refreshExpenseAccountsInBackground()
+          } catch (error) {
+            console.warn('Failed to refresh disbursement store after appropriation update:', error)
+          }
         }
 
         return response.data
@@ -499,6 +512,8 @@ export const useAppropriationStore = defineStore("appropriation", {
         console.error("[ERROR] Response data:", error.response?.data)
         console.error("[ERROR] Response status:", error.response?.status)
         throw error
+      } finally {
+        if (!doBackground) this.loading = false
       }
     },
 

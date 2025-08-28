@@ -240,10 +240,11 @@
 
 <script setup>
 import { useQuasar } from 'quasar'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useContDisbursementStore } from 'stores/contDisburseStore'
 import ContLiquidateDialog from 'components/contDisburse/ContOrDetails.vue'
 import ContViewOr from 'components/contDisburse/ContViewOr.vue'
+import { usePageLogging } from '../../../composables/usePageLogging'
 
 const $q = useQuasar()
 const loading = ref(false)
@@ -320,6 +321,12 @@ const clearAllFilters = () => {
   store.dateFrom = ''
   store.dateTo = ''
 }
+
+onMounted(async () => {
+  // Log page visit
+  const { logPageVisit } = usePageLogging()
+  await logPageVisit('Continuing Disbursement')
+})
 </script>
 
 <style scoped>

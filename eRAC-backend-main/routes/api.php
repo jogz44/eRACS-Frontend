@@ -50,7 +50,7 @@ Route::prefix('barangay')->group(function () {
 
     Route::middleware(['auth:sanctum', 'auth.barangay'])->group(function () {
         // Route::middleware(['check.role'])->group(function () {
-            Route::post('/setlogs', [AdminAuthController::class, 'logUserAction']);
+            Route::post('/setlogs', [AdminAuthController::class, 'logUserActionRequest']);
             Route::get('/getlogs', [AuthController::class, 'getBarangayLogs']);
         // });
         Route::post('/logout', [AuthController::class, 'logout']);
@@ -215,6 +215,7 @@ Route::prefix('admin')->group(function () {
         // Fixed path to avoid double 'admin' in route: now /api/admin/user-access/{id}
         Route::post('/user-access/{id}', [AdminAuthController::class, 'updateUserPermissions']);
         Route::get('/logs', [AdminAuthController::class, 'getAllLogs']);
+        Route::post('/setlogs', [AdminAuthController::class, 'logAdminAction']);
 
         // Admin Individual Log Open
         Route::get('/logs/{user}/{day}', [AdminAuthController::class, 'getUserLogs']);

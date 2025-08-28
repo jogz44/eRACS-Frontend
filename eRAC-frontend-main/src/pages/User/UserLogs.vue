@@ -107,6 +107,7 @@
 import { api } from 'boot/axios'
 import { useAuthStore } from 'stores/auth'
 import LogsActivity from './LogsActivity.vue'
+import { usePageLogging } from '../../composables/usePageLogging'
 
 const authStore = useAuthStore()
 const getAuthConfig = () => {
@@ -215,6 +216,10 @@ export default {
   },
   async mounted() {
     await this.loadLogs()
+    
+    // Log page visit
+    const { logPageVisit } = usePageLogging()
+    await logPageVisit('Log Activities')
   },
   methods: {
     openLogsActivity(row) {

@@ -32,6 +32,9 @@ class AdminAuthController extends Controller  // <-- This is crucial
 
         $token = $admin->createToken('admin-token', ['admin'])->plainTextToken;
 
+        // Log admin login
+        AdminAuthController::logUserAction($admin, 'Login', 'Admin login to system');
+
         $cookie = cookie(
             'admin_token',
             $token,
@@ -59,7 +62,14 @@ class AdminAuthController extends Controller  // <-- This is crucial
 
     public function logout(Request $request)
     {
-        $request->user('admin')->tokens()->delete();
+        $admin = $request->user('admin');
+        
+        // Log admin logout
+        if ($admin) {
+            AdminAuthController::logUserAction($admin, 'Logout', 'Admin logout from system');
+        }
+        
+        $admin->tokens()->delete();
         $cookie = Cookie::forget('admin_token');
 
         return response()->json([
@@ -248,16 +258,48 @@ class AdminAuthController extends Controller  // <-- This is crucial
             'updated_at' => now(),
         ]);
     }
-    // public static function logAdminAction($activity, $details = null) {
-    //     DB::table('logs')->insert([
-    //         'user_id' => 1,
-    //         'fullname' => 'Admin',
-    //         'activity' => $activity,
-    //         'details' => $details,
-    //         'created_at' => now(),
-    //         'updated_at' => now(),
-    //     ]);
-    // }
+
+    // Log admin actions
+    public function logAdminAction(Request $request) {
+        $validated = $request->validate([
+            'activity' => 'required|string',
+            'details' => 'nullable|string'
+        ]);
+
+        $admin = $request->user();
+        
+        DB::table('logs')->insert([
+            'user_id' => $admin->id,
+            'fullname' => $admin->name ?? 'Admin',
+            'activity' => $validated['activity'],
+            'details' => $validated['details'],
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json(['message' => 'Action logged successfully']);
+    }
+
+    // Log user actions (instance method for route)
+    public function logUserActionRequest(Request $request) {
+        $validated = $request->validate([
+            'activity' => 'required|string',
+            'details' => 'nullable|string'
+        ]);
+
+        $user = $request->user();
+        
+        DB::table('logs')->insert([
+            'user_id' => $user->id,
+            'fullname' => $user->first_name . ' ' . $user->last_name,
+            'activity' => $validated['activity'],
+            'details' => $validated['details'],
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json(['message' => 'Action logged successfully']);
+    }
     public static function getPerBarangaysBudgets()
     {
         $data = DB::table('barangays')

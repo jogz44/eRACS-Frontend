@@ -572,9 +572,11 @@ import Sortable from 'sortablejs'
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAccountsLibraryStore } from 'stores/accountsLibstore'
+import { usePageLogging } from '../../../composables/usePageLogging'
 
 const $q = useQuasar()
 const accountsStore = useAccountsLibraryStore()
+const { logPageVisit } = usePageLogging()
 
 // State
 const searchQuery = ref('')
@@ -1411,6 +1413,9 @@ onMounted(async () => {
         accountsStore.yearOptions.find((y) => y.value === accountsStore.selectedYear)?.yearValue ||
         null
     }
+    
+    // Log page visit
+    await logPageVisit('Accounts Library')
   } catch (error) {
     $q.notify({
       type: 'negative',
