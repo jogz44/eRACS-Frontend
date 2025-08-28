@@ -149,23 +149,23 @@ Route::prefix('barangay')->group(function () {
         Route::post('disbursements/or-photo/upload', [DisbursementController::class, 'uploadOrPhoto']);
         // Delete OR photo
         Route::delete('disbursements/or-photo/delete', [DisbursementController::class, 'deleteOrPhoto']);
-        
+
         // Expense Details endpoints
         Route::get('expense-details', [DisbursementController::class, 'getExpenseDetails']);
         Route::post('expense-details', [DisbursementController::class, 'storeExpenseDetail']);
         Route::patch('expense-details/{id}', [DisbursementController::class, 'updateExpenseDetail']);
         Route::delete('expense-details/{id}', [DisbursementController::class, 'destroyExpenseDetail']);
-        
+
         // Budget Augmentation endpoints
         Route::apiResource('budget-augmentations', BudgetAugmentationController::class);
 
         // Report routes aka Preview and PDF download by Dan Steve
-        Route::get('/report/rac', [ReportController::class, 'getRacReport']);  
+        Route::get('/report/rac', [ReportController::class, 'getRacReport']);
         Route::get('/report/sacb', [ReportController::class, 'getSacbReport']);
 
         // Particular route by Dan Steve
-        Route::get('/particulars', [DisbursementController::class, 'getParticular']); 
-        
+        Route::get('/particulars', [DisbursementController::class, 'getParticular']);
+
         // Continuing Appropriation
         Route::get('/continuing-appropriations', [ContinuingAppropriationController::class, 'index']);
 
@@ -196,11 +196,11 @@ Route::prefix('admin')->group(function () {
         Route::get('/budgets/{id}/history', [AppropriationController::class, 'getAllocationHistory']);
         Route::patch('/budgets/{budget}/allocations', [AppropriationController::class, 'updateAllocations']);
         Route::get('/expense-hierarchy', [AppropriationController::class, 'getExpenseHierarchy']);
-        
+
         // Admin disbursement endpoints - can access all barangay data
         Route::get('/disbursements', [DisbursementController::class, 'adminIndex']);
         Route::post('/disbursements/create', [DisbursementController::class, 'store']);
-        
+
         // Admin augmentation endpoints - can access all barangay data
         Route::get('/augmentations', [BudgetAugmentationController::class, 'adminIndex']);
         Route::post('/augmentations/create', [BudgetAugmentationController::class, 'store']);

@@ -221,6 +221,21 @@
             </div>
           </q-td>
         </template>
+        <template v-slot:body-cell-remarks="props">
+          <q-td :props="props">
+            <q-btn
+              dense
+              :icon="isAppropriationReviewed(props.row.id) ? 'check' : 'rate_review'"
+              :label="isAppropriationReviewed(props.row.id) ? 'Reviewed' : 'Review'"
+              :color="isAppropriationReviewed(props.row.id) ? 'positive' : 'primary'"
+              :outline="!isAppropriationReviewed(props.row.id)"
+              :disable="isAppropriationReviewed(props.row.id)"
+              :unelevated="!isAppropriationReviewed(props.row.id)"
+              rounded
+              @click="!isAppropriationReviewed(props.row.id) && handleAppropriationReviewClick(props.row)"
+            />
+          </q-td>
+        </template>
       </q-table>
     </q-card>
 
@@ -727,7 +742,7 @@ onMounted(async () => {
     await appropriationStore.initialize()
     // Log page visit
     await logPageVisit('Current Appropriation')
-    
+
     await loadBarangayOptions()
   } catch (error) {
     $q.notify({
@@ -813,7 +828,30 @@ const columns = [
     align: 'center',
     field: 'action',
   },
+  {
+    name: 'remarks',
+    label: 'Remarks',
+    align: 'center',
+    field: 'action',
+  },
 ]
+
+// Local reviewed state for appropriation rows
+const appropriationReviewedSet = ref(new Set())
+
+const isAppropriationReviewed = (id) => appropriationReviewedSet.value.has(id)
+
+const handleAppropriationReviewClick = (row) => {
+  if (isAppropriationReviewed(row.id)) return
+  $q.dialog({
+    title: 'Confirm Review',
+    message: `Mark Appropriation "${row.description}" as reviewed?`,
+    cancel: true,
+    persistent: true
+  }).onOk(() => {
+    appropriationReviewedSet.value.add(row.id)
+  })
+}
 
 const handleEnterKey = (event) => {
   event.preventDefault()

@@ -319,6 +319,21 @@
               </div>
             </q-td>
           </template>
+          <template v-slot:body-cell-remarks="props">
+            <q-td :props="props">
+              <q-btn
+                dense
+                :icon="isReviewed(props.row.id) ? 'check' : 'rate_review'"
+                :label="isReviewed(props.row.id) ? 'Reviewed' : 'Review'"
+                :color="isReviewed(props.row.id) ? 'positive' : 'primary'"
+                :outline="!isReviewed(props.row.id)"
+                :disable="isReviewed(props.row.id)"
+                :unelevated="!isReviewed(props.row.id)"
+                rounded
+                @click="!isReviewed(props.row.id) && handleReviewClick(props.row)"
+              />
+            </q-td>
+          </template>
         </q-table>
       </q-card>
 
@@ -351,7 +366,7 @@ onMounted(async () => {
     if (!bankStore.banks.length) {
       await bankStore.fetchBanks()
     }
-    
+
     // Log page visit
     await logPageVisit('Current Disbursement')
   } catch (error) {
@@ -388,6 +403,23 @@ import { useQuasar } from 'quasar'
 
 const $q = useQuasar()
 const loading = ref(false)
+
+// Local reviewed state per disbursement row (non-persistent)
+const reviewedSet = ref(new Set())
+
+const isReviewed = (id) => reviewedSet.value.has(id)
+
+const handleReviewClick = (row) => {
+  if (isReviewed(row.id)) return
+  $q.dialog({
+    title: 'Confirm Review',
+    message: `Mark DV ${row.dvNumber} as reviewed?`,
+    cancel: true,
+    persistent: true
+  }).onOk(() => {
+    reviewedSet.value.add(row.id)
+  })
+}
 
 const currentBankLabel = computed(() => {
   if (store.forms.disbursement.bank_id) {

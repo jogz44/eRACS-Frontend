@@ -43,4 +43,4 @@ class Disbursement extends Model
     {
         return $this->hasMany(TranExpenseDetail::class, 'disbursement_id');
     }
-} 
+}
