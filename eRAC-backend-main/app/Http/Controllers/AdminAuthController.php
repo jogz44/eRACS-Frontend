@@ -317,4 +317,32 @@ class AdminAuthController extends Controller  // <-- This is crucial
 
         return response()->json($data);
     }
+
+    /**
+     * Heartbeat endpoint to keep admin session alive
+     */
+    public function heartbeat(Request $request)
+    {
+        try {
+            $admin = Auth::user();
+            
+            if (!$admin) {
+                return response()->json([
+                    'message' => 'Unauthorized'
+                ], 401);
+            }
+
+            // Don't log heartbeat activity to keep logs clean
+
+            return response()->json([
+                'message' => 'Heartbeat received',
+                'timestamp' => now(),
+                'admin_id' => $admin->id
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error processing heartbeat: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

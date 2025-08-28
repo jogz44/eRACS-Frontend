@@ -406,4 +406,32 @@ public function resetPassword(Request $request)
 
         return response()->json($logs);
     }
+
+    /**
+     * Heartbeat endpoint to keep user session alive
+     */
+    public function heartbeat(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            
+            if (!$user) {
+                return response()->json([
+                    'message' => 'Unauthorized'
+                ], 401);
+            }
+
+            // Don't log heartbeat activity to keep logs clean
+
+            return response()->json([
+                'message' => 'Heartbeat received',
+                'timestamp' => now(),
+                'user_id' => $user->id
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error processing heartbeat: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

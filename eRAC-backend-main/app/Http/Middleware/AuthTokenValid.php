@@ -6,7 +6,6 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Laravel\Sanctum\PersonalAccessToken;
-use Carbon\Carbon;
 
 class AuthTokenValid
 {
@@ -32,27 +31,37 @@ class AuthTokenValid
             ], 401);
         }
 
-        // 3. Check timeout (1 min inactivity)
-        if ($accessToken->last_used_at) {
-            $minutes = Carbon::parse($accessToken->created_at)->diffInMinutes(now());
-
-            if ($minutes >= 1) {
-                $accessToken->delete();
-
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Session expired. Please login again.',
-                ], 401);
-            }
-        } else {
-            // First use → set it now
-            $accessToken->forceFill(['created_at' => now()])->save();
+        // 3. Check if token is expired (24 hours from creation)
+        $tokenAge = now()->diffInHours($accessToken->created_at);
+        if ($tokenAge >= 24) {
+            $accessToken->delete();
+            return response()->json([
+                'status' => false,
+                'message' => 'Session expired. Please login again.',
+            ], 401);
         }
 
-        // 5. Continue request
+        // 4. Check for 5-minute inactivity timeout (skip for heartbeat requests)
+        if (!$request->is('*/heartbeat')) {
+            if ($accessToken->last_used_at) {
+                $inactiveMinutes = now()->diffInMinutes($accessToken->last_used_at);
+                if ($inactiveMinutes >= 5) {
+                    $accessToken->delete();
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Session expired due to inactivity. Please login again.',
+                    ], 401);
+                }
+            }
+        }
+
+        // 5. Update last used timestamp
+        $accessToken->update(['last_used_at' => now()]);
+
+        // 6. Continue request
         $response = $next($request);
 
-        // 6. Wrap JSON response
+        // 7. Wrap JSON response
         if ($request->wantsJson() && $response->getStatusCode() === 200) {
             $originalData = json_decode($response->content(), true) ?? [];
 
