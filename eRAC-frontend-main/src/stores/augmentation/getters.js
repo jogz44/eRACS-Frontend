@@ -13,13 +13,19 @@ export function useGetters(state) {
       sortable: true,
       format: (val) => `₱${val ? val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}`,
     },
-
     {
       name: 'remarks',
       label: 'Remarks',
       field: 'remarks',
       align: 'left',
       sortable: true,
+    },
+    { 
+      name: 'actions', 
+      label: 'Actions', 
+      field: '', 
+      align: 'center',
+      sortable: false
     },
   ])
 
