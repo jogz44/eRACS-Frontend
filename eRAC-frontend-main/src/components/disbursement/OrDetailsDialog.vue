@@ -20,9 +20,8 @@
                 filled
                 unelaveted
                 outlined
-                :model-value="totalActualExpense"
+                :model-value="formatCurrency(totalActualExpense)"
                 placeholder="0.00"
-                type="number"
                 prefix="₱"
                 readonly
               />
@@ -35,7 +34,7 @@
                 filled
                 unelaveted
                 outlined
-                :model-value="Number(store.currentLiquidation.dvAmount || 0).toFixed(2)"
+                :model-value="formatCurrency(store.currentLiquidation.dvAmount || 0)"
                 prefix="₱"
                 readonly
               />
@@ -48,7 +47,7 @@
                 filled
                 unelaveted
                 outlined
-                :model-value="totalReturnAmount"
+                :model-value="formatCurrency(totalReturnAmount)"
                 prefix="₱"
                 readonly
                 :color="actualReturnAmount < 0 ? 'negative' : undefined"
@@ -161,11 +160,15 @@
                       filled
                       unelaveted
                       outlined
-                      v-model="orDetail.orAmount"
+                      :model-value="formatInputValue(orDetail.orAmount)"
+                      @update:model-value="(val) => { orDetail.orAmount = handleAmountInput(val); calculateTotals() }"
+                      @blur="(e) => { orDetail.orAmount = formatToTwoDecimals(e.target.value); calculateTotals() }"
                       placeholder="0.00"
-                      type="number"
                       prefix="₱"
-                      @update:model-value="calculateTotals"
+                      inputmode="decimal"
+                      pattern="\\d*\\.?\\d{0,2}"
+                      @keypress="blockNonNumeric"
+                      @paste.prevent="handlePasteNumeric"
                     />
                     <!-- Over-liquidation warning -->
                     <div v-if="actualReturnAmount < 0" class="text-negative q-mt-xs text-caption">
@@ -689,5 +692,86 @@ const handleSaveOrDetails = async () => {
   } finally {
     savingSubmit.value = false
   }
+}
+
+// Formatting utilities for currency inputs
+const formatCurrency = (value) => {
+  const num = Number(String(value).replace(/[,\s]/g, '')) || 0
+  return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+const formatInputValue = (value) => {
+  if (value === '' || value === null || value === undefined) return ''
+  const isNumber = typeof value === 'number'
+  const cleanValue = String(value).replace(/[₱,\s]/g, '').replace(/,/g, '')
+  const num = parseFloat(cleanValue)
+  if (isNaN(num)) return ''
+  return isNumber ?
+    num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) :
+    num.toLocaleString('en-US')
+}
+
+const handleAmountInput = (value) => {
+  let cleanValue = String(value).replace(/[₱,\s]/g, '')
+  cleanValue = cleanValue.replace(/[^\d.]/g, '')
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    cleanValue = parts[0] + '.' + parts.slice(1).join('')
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
+  }
+  return cleanValue
+}
+
+const formatToTwoDecimals = (value) => {
+  const cleanValue = String(value).replace(/[₱,\s]/g, '')
+  if (cleanValue === '') return 0
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    const collapsed = parts[0] + '.' + parts.slice(1).join('')
+    return formatToTwoDecimals(collapsed)
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    parts[1] = parts[1].substring(0, 2)
+  }
+  const num = parseFloat(parts.join('.'))
+  if (isNaN(num)) return 0
+  return Math.round(num * 100) / 100
+}
+
+const blockNonNumeric = (event) => {
+  const key = event.key
+  const isControl = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter'].includes(key)
+  if (isControl) return
+  const isDigit = /\d/.test(key)
+  const isDot = key === '.'
+  if (isDot && event.target?.value?.includes?.('.')) {
+    event.preventDefault()
+    return
+  }
+  if (!isDigit && !isDot) {
+    event.preventDefault()
+  }
+}
+
+const handlePasteNumeric = (event) => {
+  const text = (event.clipboardData || window.clipboardData).getData('text')
+  let clean = String(text).replace(/[^\d.]/g, '')
+  const parts = clean.split('.')
+  if (parts.length > 2) {
+    clean = parts[0] + '.' + parts.slice(1).join('')
+  }
+  if (parts.length >= 2) {
+    parts[1] = parts[1].slice(0, 2)
+    clean = parts[0] + '.' + parts[1]
+  }
+  const input = event.target
+  const start = input.selectionStart
+  const end = input.selectionEnd
+  const current = input.value
+  input.value = current.slice(0, start) + clean + current.slice(end)
+  const e = new Event('input', { bubbles: true })
+  input.dispatchEvent(e)
 }
 </script>

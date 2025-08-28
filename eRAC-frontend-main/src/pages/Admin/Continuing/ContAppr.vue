@@ -221,7 +221,7 @@
                         v-model.number="subcategory.amount"
                         prefix="₱"
                         :rules="[(val) => validateAmount(val)]"
-                        style="width: 150px"
+                        style="width: 200px"
                         :disable="availableBudget <= 0"
                         @keydown.enter="handleAllocationEnterKey"
                       />
@@ -250,13 +250,14 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
+import { usePageLogging } from '../../../composables/usePageLogging'
 import { storeToRefs } from 'pinia'
 import { useContApprStore } from 'stores/appropriationStore'
-
 
 const $q = useQuasar()
 const appropriationStore = useContApprStore()
 const loading = ref(false)
+const { logPageVisit } = usePageLogging()
 
 const loadPendingUsers = async () => {
   loading.value = true
@@ -308,6 +309,8 @@ const clearAllFilters = () => {
 onMounted(async () => {
   try {
     await appropriationStore.initialize()
+    // Log page visit
+    await logPageVisit('Continuing Appropriation')
   } catch (error) {
     $q.notify({
       type: 'negative',

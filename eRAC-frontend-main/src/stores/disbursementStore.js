@@ -191,8 +191,10 @@ export const useDisbursementStore = defineStore('disbursement', {
         name: 'dvAmount',
         label: 'Amount',
         field: 'dvAmount',
-        format: (val) =>
-          `₱${val ? val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}`,
+        format: (val) => {
+          const num = Number(val) || 0
+          return `₱${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        },
         align: 'left',
         sortable: true,
       },
@@ -230,8 +232,10 @@ export const useDisbursementStore = defineStore('disbursement', {
         field: 'amount',
         align: 'left',
         sortable: true,
-        format: (val) =>
-          `₱${val ? val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}`,
+        format: (val) => {
+          const num = Number(val) || 0
+          return `₱${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        },
       },
       {
         name: 'particular',
@@ -269,8 +273,10 @@ export const useDisbursementStore = defineStore('disbursement', {
         name: 'balance',
         label: 'Balance',
         field: 'balance',
-        format: (val) =>
-          `₱${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        format: (val) => {
+          const num = Number(val) || 0
+          return `₱${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        },
         align: 'right',
         sortable: true,
       },
@@ -396,7 +402,9 @@ export const useDisbursementStore = defineStore('disbursement', {
     async fetchExpenseDetails() {
       try {
         const authStore = useAuthStore()
+
         const token = authStore.admin ? authStore.adminToken : authStore.token
+
 
         const response = await api.get('/api/barangay/expense-details', {
           headers: {

@@ -229,7 +229,7 @@
 
     <!-- Edit Allocation Dialog -->
     <q-dialog v-model="showEditAllocationDialog">
-      <q-card style="min-width: 700px">
+      <q-card style="min-width: 900px">
         <q-card-section class="q-pb-none">
           <div class="text-h6">Edit Allocation</div>
         </q-card-section>
@@ -267,8 +267,9 @@
                         dense
                         outlined
                         min="0"
-                        style="width: 100px"
+                        style="width: 180px"
                         :class="{ 'text-negative': typeErrorMap[expenseType.id] }"
+                        prefix="₱"
                       />
                       <div v-else class="text-weight-medium">
                         {{ appropriationStore.formatCurrency(calculateTypeTotal(expenseType)) }}
@@ -290,7 +291,8 @@
                             dense
                             outlined
                             min="0"
-                            style="width: 100px"
+                            style="width: 180px"
+                            prefix="₱"
                           />
                         </div>
                       </div>
@@ -318,6 +320,7 @@ import CommitDialog from 'components/appropriation/CommitDialog.vue'
 import ViewCommitDialog from 'components/appropriation/ViewCommitDialog.vue'
 import { useAppropriationStore } from 'stores/appropriationStore'
 import { useAccountsLibraryStore } from 'stores/accountsLibstore'
+import { usePageLogging } from '../../../composables/usePageLogging'
 import { api } from 'boot/axios'
 import { useAuthStore } from 'stores/auth'
 // import SearchFilters from 'src/components/appropriation/SearchFilters.vue'
@@ -325,6 +328,7 @@ import { useAuthStore } from 'stores/auth'
 const $q = useQuasar()
 const accountLibraryStore = useAccountsLibraryStore()
 const appropriationStore = useAppropriationStore()
+const { logPageVisit } = usePageLogging()
 const authStore = useAuthStore()
 
 const showDialog = ref(false)
@@ -721,6 +725,9 @@ const saveEditedAllocation = async () => {
 onMounted(async () => {
   try {
     await appropriationStore.initialize()
+    // Log page visit
+    await logPageVisit('Current Appropriation')
+    
     await loadBarangayOptions()
   } catch (error) {
     $q.notify({

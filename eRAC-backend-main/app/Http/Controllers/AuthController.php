@@ -159,6 +159,42 @@ public function updateUserPermissions(Request $request, $userId)
             'permissions.print' => 'boolean',
         ]);
 
+        // Log the permission change
+        $oldPermissions = $targetUser->permissions ?? [];
+        $newPermissions = $validated['permissions'];
+        
+        // If user has no permissions set, assume they have default permissions (all enabled except delete)
+        if (empty($oldPermissions)) {
+            $oldPermissions = [
+                'view' => true,
+                'add' => true,
+                'edit' => true,
+                'delete' => false,
+                'print' => true
+            ];
+        }
+        
+        // Create a detailed log of what changed
+        $changes = [];
+        $permissionNames = ['view' => 'View', 'add' => 'Add', 'edit' => 'Edit', 'delete' => 'Delete', 'print' => 'Print'];
+        
+        foreach ($permissionNames as $key => $label) {
+            $oldValue = $oldPermissions[$key] ?? false;
+            $newValue = $newPermissions[$key] ?? false;
+            
+            if ($oldValue !== $newValue) {
+                $changes[] = sprintf('%s %s', $newValue ? 'Enabled' : 'Disabled', $label);
+            }
+        }
+        
+        $changeDescription = !empty($changes) ? 'Changed: ' . implode(', ', $changes) : 'No changes detected';
+        
+        AdminAuthController::logUserAction(
+            $user, 
+            'Updated User Permissions', 
+            sprintf('Updated permissions for user "%s %s" - %s', $targetUser->first_name, $targetUser->last_name, $changeDescription)
+        );
+        
         // Update permissions
         $targetUser->permissions = $validated['permissions'];
         $targetUser->save();
@@ -344,23 +380,23 @@ public function resetPassword(Request $request)
 }
 
     public function getBarangayLogs() {
-        
         $logs = DB::table('logs')
             ->join('barangay_users', 'logs.user_id', '=', 'barangay_users.id')
             ->join('barangays', 'barangay_users.barangay_id', '=', 'barangays.id')
             ->join('barangay_positions', 'barangay_users.position_id', '=', 'barangay_positions.id')
+            ->where('barangay_users.barangay_id', Auth::user()->barangay_id)
+            ->whereNotNull('logs.user_id')
             ->select(
                 'logs.user_id as id',
-                'logs.fullname',
+                DB::raw("COALESCE(NULLIF(logs.fullname, ''), CONCAT(barangay_users.first_name, ' ', barangay_users.last_name)) as fullname"),
                 DB::raw('CAST(logs.created_at AS DATE) as log_date'),
                 DB::raw('COUNT(logs.id) as total_logs'),
                 'barangays.name as barangay',
                 'barangay_positions.name as position'
             )
-            ->where('barangay_users.barangay_id', Auth::user()->barangay_id)
             ->groupBy(
                 'logs.user_id',
-                'logs.fullname',
+                DB::raw("COALESCE(NULLIF(logs.fullname, ''), CONCAT(barangay_users.first_name, ' ', barangay_users.last_name))"),
                 DB::raw('CAST(logs.created_at AS DATE)'),
                 'barangays.name',
                 'barangay_positions.name'
@@ -369,5 +405,33 @@ public function resetPassword(Request $request)
             ->get();
 
         return response()->json($logs);
+    }
+
+    /**
+     * Heartbeat endpoint to keep user session alive
+     */
+    public function heartbeat(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            
+            if (!$user) {
+                return response()->json([
+                    'message' => 'Unauthorized'
+                ], 401);
+            }
+
+            // Don't log heartbeat activity to keep logs clean
+
+            return response()->json([
+                'message' => 'Heartbeat received',
+                'timestamp' => now(),
+                'user_id' => $user->id
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error processing heartbeat: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

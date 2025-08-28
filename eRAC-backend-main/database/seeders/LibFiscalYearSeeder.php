@@ -10,18 +10,21 @@ class LibFiscalYearSeeder extends Seeder
 {
     public function run()
     {
-        $barangay = Barangay::first();
+        $years = [2023, 2024, 2025];
+        $activeYear = 2025; // set 2025 as active
 
-        // Use updateOrCreate instead of create to handle existing records
-        $currentYear = date('Y');
-        LibFiscalYear::updateOrCreate(
-            [
-                'barangay_id' => $barangay->id,
-                'year' => $currentYear, // Use current year
-            ],
-            [
-                'is_active' => true,
-            ]
-        );
+        foreach (Barangay::all() as $barangay) {
+            foreach ($years as $year) {
+                LibFiscalYear::updateOrCreate(
+                    [
+                        'barangay_id' => $barangay->id,
+                        'year' => $year,
+                    ],
+                    [
+                        'is_active' => $year == $activeYear,
+                    ]
+                );
+            }
+        }
     }
 }
