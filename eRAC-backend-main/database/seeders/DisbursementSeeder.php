@@ -12,16 +12,18 @@ use App\Models\DisbursementOrDetail;
 use App\Models\TranExpenseDetail;
 use App\Models\TranAppropriation;
 use Carbon\Carbon;
+use Faker\Factory as Faker;
 
 class DisbursementSeeder extends Seeder
 {
     public function run()
     {
+        $faker = Faker::create();
         $barangays = Barangay::all();
         $now = Carbon::now();
         $yy = $now->format('y');
         $mm = $now->format('m');
-        $dvCounter = 1; // global counter so DV-YY-MM-XXX continues cleanly
+        $dvCounter = 1; // global counter
 
         foreach ($barangays as $barangay) {
             $banks = LibBank::where('barangay_id', $barangay->id)->get();
@@ -29,7 +31,6 @@ class DisbursementSeeder extends Seeder
                 continue;
             }
 
-            // Use available appropriations from this barangay
             $appropriations = TranAppropriation::where('barangay_id', $barangay->id)
                 ->where('status', 'committed')
                 ->where('amount', '>', 0)
@@ -38,13 +39,15 @@ class DisbursementSeeder extends Seeder
                 continue;
             }
 
-            // Three disbursements: Pending, Partial, Liquidated
-            $statuses = ['Pending', 'Partial', 'Liquidated'];
-            foreach ($statuses as $idx => $status) {
-                $bank = $banks[$idx % $banks->count()];
-                $date = $now->copy()->subDays(($idx + 1));
+            // Randomize how many DVs per barangay (3–6)
+            $numDisbursements = $faker->numberBetween(5, 10);
 
-                // Find an available cheque number for this bank
+            for ($d = 0; $d < $numDisbursements; $d++) {
+                $status = $faker->randomElement(['Pending', 'Partial', 'Liquidated']);
+                $bank = $banks->random();
+                $date = $faker->dateTimeBetween('-2 months', 'now');
+
+                // Find an available cheque number
                 $chequeNumber = null;
                 $bookletIds = LibBooklet::where('bank_id', $bank->id)->pluck('id');
                 if ($bookletIds->isNotEmpty()) {
@@ -54,52 +57,48 @@ class DisbursementSeeder extends Seeder
                         ->first();
                     if ($cheque) {
                         $chequeNumber = $cheque->cheque_number;
+                        $cheque->update(['status' => 'issued']);
                     }
                 }
-
-                // If no cheque available for this bank, skip this disbursement
                 if (!$chequeNumber) {
                     continue;
                 }
 
-                // Clean amounts (multiples of 100)
-                $dvAmount = (int) (1000 * ($idx + 2)); // 2000, 3000, 4000
+                // DV amount: random 5,000–50,000 in multiples of 1000
+                $dvAmount = $faker->numberBetween(5, 50) * 1000;
 
                 $dvNumber = 'DV-' . $yy . '-' . $mm . '-' . str_pad($dvCounter, 3, '0', STR_PAD_LEFT);
 
-                $disb = Disbursement::create([
-                    'barangay_id' => $barangay->id,
-                    'date' => $date->format('Y-m-d'),
-                    'dv_number' => $dvNumber,
-                    'cheque_number' => $chequeNumber,
-                    'bank_id' => $bank->id,
-                    'payee' => 'Seeded Payee ' . $dvCounter,
-                    'dv_amount' => $dvAmount,
-                    'status' => $status,
-                    'liquidated_amount' => $status === 'Liquidated' ? $dvAmount : ($status === 'Partial' ? (int) ($dvAmount * 0.6) : null),
-                    'liquidated_at' => $status === 'Pending' ? null : $date->format('Y-m-d'),
-                    'created_at' => $date,
-                    'updated_at' => $date,
-                ]);
-
-                // Mark cheque as issued
-                if (isset($cheque)) {
-                    $cheque->update(['status' => 'issued']);
+                $liquidatedAmount = null;
+                if ($status === 'Liquidated') {
+                    $liquidatedAmount = $dvAmount;
+                } elseif ($status === 'Partial') {
+                    $liquidatedAmount = (int) ($dvAmount * $faker->randomFloat(2, 0.3, 0.8)); // 30–80%
                 }
 
-                // Create 1-3 expense details that sum to dv_amount
-                $this->seedExpenseDetails($disb->id, $appropriations, $dvAmount, $date);
+                $disb = Disbursement::create([
+                    'barangay_id'       => $barangay->id,
+                    'date'              => $date->format('Y-m-d'),
+                    'dv_number'         => $dvNumber,
+                    'cheque_number'     => $chequeNumber,
+                    'bank_id'           => $bank->id,
+                    'payee'             => $faker->name,
+                    'dv_amount'         => $dvAmount,
+                    'status'            => $status,
+                    'liquidated_amount' => $liquidatedAmount,
+                    'liquidated_at'     => $liquidatedAmount ? $faker->dateTimeBetween($date, 'now') : null,
+                    'created_at'        => $date,
+                    'updated_at'        => $date,
+                ]);
 
-                // OR details
-                if ($status === 'Liquidated') {
-                    // Sum equals dv_amount
-                    $orSplits = [$dvAmount * 0.6, $dvAmount * 0.4];
-                    $this->seedOrDetails($disb->id, $orSplits, $date, $dvCounter);
-                } elseif ($status === 'Partial') {
-                    // Sum is less than dv_amount (e.g., 60%)
-                    $liq = (int) ($dvAmount * 0.6);
-                    $orSplits = [$liq];
-                    $this->seedOrDetails($disb->id, $orSplits, $date, $dvCounter);
+                // Create expense details
+                $this->seedExpenseDetails($faker, $disb->id, $appropriations, $dvAmount, Carbon::parse($date));
+
+                // OR details if liquidated/partial
+                if ($status === 'Liquidated' || $status === 'Partial') {
+                    $liq = $liquidatedAmount ?? 0;
+                    $splits = $this->randomSplits($liq, $faker->numberBetween(1, 3));
+                    $this->seedOrDetails($disb->id, $splits, Carbon::parse($date), $dvCounter);
                 }
 
                 $dvCounter++;
@@ -107,53 +106,43 @@ class DisbursementSeeder extends Seeder
         }
     }
 
-    private function seedExpenseDetails(int $disbursementId, $appropriations, int $totalAmount, Carbon $baseDate): void
+    private function seedExpenseDetails($faker, int $disbursementId, $appropriations, int $totalAmount, Carbon $baseDate): void
     {
         $remaining = $totalAmount;
-        $num = rand(1, 3);
+        $num = $faker->numberBetween(1, 4);
         $used = [];
 
         for ($i = 0; $i < $num && $remaining > 0; $i++) {
             $available = $appropriations->whereNotIn('id', $used);
-            if ($available->isEmpty()) {
-                break;
-            }
+            if ($available->isEmpty()) break;
+
             $appr = $available->random();
             $used[] = $appr->id;
 
-            // Last line gets remainder, others split evenly
-            if ($i === $num - 1) {
-                $amount = $remaining;
-            } else {
-                $partsLeft = max(1, $num - $i);
-                $amount = (int) floor($remaining / $partsLeft / 100) * 100; // keep multiples of 100
-                if ($amount <= 0) {
-                    $amount = min(100, $remaining);
-                }
-            }
+            $amount = ($i === $num - 1) ? $remaining : $faker->numberBetween(100, $remaining);
+            $amount = (int) floor($amount / 100) * 100;
 
             TranExpenseDetail::create([
-                'disbursement_id' => $disbursementId,
+                'disbursement_id'  => $disbursementId,
                 'appropriation_id' => $appr->id,
-                'amount' => $amount,
-                'particulars' => 'Seeded expense',
-                'created_at' => $baseDate,
-                'updated_at' => $baseDate,
+                'amount'           => $amount,
+                'particulars'      => $faker->sentence(3),
+                'created_at'       => $baseDate,
+                'updated_at'       => $baseDate,
             ]);
 
             $remaining -= $amount;
         }
 
-        // If anything remains due to rounding, add one more detail
         if ($remaining > 0) {
             $appr = $appropriations->first();
             TranExpenseDetail::create([
-                'disbursement_id' => $disbursementId,
+                'disbursement_id'  => $disbursementId,
                 'appropriation_id' => $appr->id,
-                'amount' => $remaining,
-                'particulars' => 'Seeded expense (adjustment)',
-                'created_at' => $baseDate,
-                'updated_at' => $baseDate,
+                'amount'           => $remaining,
+                'particulars'      => 'Adjustment entry',
+                'created_at'       => $baseDate,
+                'updated_at'       => $baseDate,
             ]);
         }
     }
@@ -164,14 +153,34 @@ class DisbursementSeeder extends Seeder
             $orDate = $baseDate->copy()->addDays($k + 1);
             DisbursementOrDetail::create([
                 'disbursement_id' => $disbursementId,
-                'or_date' => $orDate->format('Y-m-d'),
-                'or_number' => 'OR-' . str_pad($dvIndex, 3, '0', STR_PAD_LEFT) . '-' . ($k + 1),
-                'or_amount' => $amount,
-                'or_photo' => 'or-photos/vm8wtjh7G05yx1SzPm46RCpSMxUlEJiDNeC6YE8A.png',
-                'remarks' => 'Seeded OR detail',
-                'created_at' => $orDate,
-                'updated_at' => $orDate,
+                'or_date'         => $orDate->format('Y-m-d'),
+                'or_number'       => 'OR-' . str_pad($dvIndex, 3, '0', STR_PAD_LEFT) . '-' . ($k + 1),
+                'or_amount'       => $amount,
+                'or_photo'        => 'or-photos/sample.png',
+                'remarks'         => 'Seeded OR detail',
+                'created_at'      => $orDate,
+                'updated_at'      => $orDate,
             ]);
         }
     }
-} 
+
+    private function randomSplits(int $total, int $parts): array
+    {
+        if ($total <= 0) return [];
+
+        $splits = [];
+        $remaining = $total;
+
+        for ($i = 0; $i < $parts; $i++) {
+            if ($i === $parts - 1) {
+                $splits[] = $remaining;
+            } else {
+                $amount = rand(100, max(100, $remaining - ($parts - $i - 1) * 100));
+                $amount = (int) floor($amount / 100) * 100;
+                $splits[] = $amount;
+                $remaining -= $amount;
+            }
+        }
+        return $splits;
+    }
+}

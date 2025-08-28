@@ -10,11 +10,13 @@ use App\Models\BarangayUser;
 use App\Models\LibExpenseItem;
 use App\Models\LibExpenseType;
 use App\Models\LibExpenseClass;
+use Faker\Factory as Faker;
 
 class TranAppropriationSeeder extends Seeder
 {
     public function run()
     {
+        $faker = Faker::create();
         $now = now();
         $barangays = Barangay::all();
 
@@ -35,43 +37,46 @@ class TranAppropriationSeeder extends Seeder
                 continue;
             }
 
-            foreach ($budgets as $budgetIndex => $budget) {
+            foreach ($budgets as $budget) {
                 $remaining = $budget->original_amount;
                 $totalAllocated = 0;
 
-                // Rotate through expense classes for fairness
-                $expenseClass = $expenseClasses->get($budgetIndex % $expenseClasses->count());
+                // Make several appropriations per budget
+                $numAppropriations = $faker->numberBetween(3, 8);
 
-                if (!$expenseClass) continue;
+                for ($i = 0; $i < $numAppropriations; $i++) {
+                    if ($remaining <= 0) break;
 
-                // Get a random expense type for this class
-                $expenseType = LibExpenseType::where('expense_class_id', $expenseClass->id)->inRandomOrder()->first();
+                    $expenseClass = $expenseClasses->random();
+                    $expenseType = LibExpenseType::where('expense_class_id', $expenseClass->id)
+                        ->inRandomOrder()->first();
+                    if (!$expenseType) continue;
 
-                if (!$expenseType) {
-                    \Log::warning("Expense class {$expenseClass->id} has no types, skipping");
-                    continue;
-                }
+                    $expenseItem = LibExpenseItem::where('expense_type_id', $expenseType->id)
+                        ->inRandomOrder()->first();
 
-                // Try to get random expense item
-                $expenseItem = LibExpenseItem::where('expense_type_id', $expenseType->id)->inRandomOrder()->first();
+                    // Random allocation between 5%–25% of remaining, but max 200k
+                    $allocationAmount = min(
+                        $faker->numberBetween((int)($remaining * 0.05), (int)($remaining * 0.25)),
+                        200000
+                    );
 
-                $allocationAmount = min(50000, max(1000, $remaining * 0.4)); // 40% but not less than 1000
+                    if ($allocationAmount > 0) {
+                        TranAppropriation::create([
+                            'barangay_id'      => $barangay->id,
+                            'budget_id'        => $budget->id,
+                            'expense_class_id' => $expenseClass->id,
+                            'expense_type_id'  => $expenseType->id,
+                            'expense_item_id'  => $expenseItem?->id, // nullable
+                            'amount'           => $allocationAmount,
+                            'transaction_date' => $faker->dateTimeBetween($now->startOfYear(), $now->endOfYear()),
+                            'status'           => $faker->randomElement(['draft', 'committed', 'reverted']),
+                            'user_id'          => $user->id,
+                        ]);
 
-                if ($allocationAmount > 0 && $remaining > 0) {
-                    TranAppropriation::create([
-                        'barangay_id'      => $barangay->id,
-                        'budget_id'        => $budget->id,
-                        'expense_class_id' => $expenseClass->id,
-                        'expense_type_id'  => $expenseType->id,
-                        'expense_item_id'  => $expenseItem?->id, // nullable
-                        'amount'           => $allocationAmount,
-                        'transaction_date' => $now,
-                        'status'           => 'committed',
-                        'user_id'          => $user->id,
-                    ]);
-
-                    $remaining -= $allocationAmount;
-                    $totalAllocated += $allocationAmount;
+                        $remaining -= $allocationAmount;
+                        $totalAllocated += $allocationAmount;
+                    }
                 }
 
                 // Update budget
@@ -80,9 +85,9 @@ class TranAppropriationSeeder extends Seeder
                     $budget->save();
 
                     \Log::info("Barangay {$barangay->id} | Budget {$budget->id} updated", [
-                        'original_amount'   => $budget->original_amount,
-                        'total_allocated'   => $totalAllocated,
-                        'new_current_amount'=> $budget->current_amount,
+                        'original_amount'    => $budget->original_amount,
+                        'total_allocated'    => $totalAllocated,
+                        'new_current_amount' => $budget->current_amount,
                     ]);
                 }
             }
