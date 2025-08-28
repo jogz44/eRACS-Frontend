@@ -250,7 +250,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
-import { useAppropriationStore } from 'stores/appropriationStore'
 import { usePageLogging } from '../../../composables/usePageLogging'
 import { storeToRefs } from 'pinia'
 import { useContApprStore } from 'stores/appropriationStore'
