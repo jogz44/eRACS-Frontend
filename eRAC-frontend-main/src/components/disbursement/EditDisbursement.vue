@@ -61,14 +61,14 @@
             <q-input
               outlined
               dense
-              v-model="store.forms.disbursement.chequeNumber" 
+              v-model="store.forms.disbursement.chequeNumber"
               :disable="true"
             ></q-input>
           </div>
           <!-- DV Number Field -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">DV Number:</q-item-label>
-            <q-input filled outlined dense v-model="store.forms.disbursement.dvNumber" 
+            <q-input filled outlined dense v-model="store.forms.disbursement.dvNumber"
               :disable="true"/>
           </div>
 
@@ -135,9 +135,9 @@
             }
           "
         />
-        <q-btn 
-          label="Save" 
-          class="modal-save-btn" 
+        <q-btn
+          label="Save"
+          class="modal-save-btn"
           @click="handleSaveEditedDisbursement"
           :loading="saving"
           :disable="!store.expenses || store.expenses.length === 0 || store.totalExpensesAmount !== store.lockedTotalAmount"
@@ -268,7 +268,7 @@ const editExpenseInline = (expense) => {
 const getTotalAmountClass = () => {
   const currentTotal = store.totalExpensesAmount || 0
   const lockedTotal = store.lockedTotalAmount || 0
-  
+
   if (currentTotal > lockedTotal) {
     return 'text-negative'
   } else if (currentTotal < lockedTotal) {
@@ -286,7 +286,7 @@ const getAmountDifference = () => {
 
 const getAmountDifferenceMessage = () => {
   const difference = getAmountDifference()
-  
+
   if (difference > 0) {
     return `Amount exceeds original DV amount by ₱${difference.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   } else if (difference < 0) {
@@ -369,11 +369,11 @@ watch(
   .q-card {
     min-width: 95vw !important;
   }
-  
+
   .q-table {
     font-size: 12px;
   }
-  
+
   .button-group .q-btn {
     min-width: 28px;
     padding: 4px;

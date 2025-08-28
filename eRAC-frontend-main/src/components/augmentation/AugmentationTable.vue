@@ -13,7 +13,9 @@
               dense
               icon="edit"
               color="orange"
-              @click="store.editAugmentation(props.row)"
+              @click="handleEditAugmentation(props.row)"
+              :loading="editLoading[props.row.id]"
+              :disable="editLoading[props.row.id]"
               v-permission="'edit'"
             />
             <q-btn
@@ -33,9 +35,11 @@
 <script setup>
 import { useAugmentationStore } from 'stores/augmentation'
 import { useQuasar } from 'quasar'
+import { ref } from 'vue'
 
 const store = useAugmentationStore()
 const $q = useQuasar()
+const editLoading = ref({})
 
 const handleDelete = async (id) => {
   try {
@@ -59,6 +63,24 @@ const handleDelete = async (id) => {
       message: 'An error occurred while deleting',
       position: 'top',
     })
+  }
+}
+
+const handleEditAugmentation = async (row) => {
+  editLoading.value[row.id] = true
+  try {
+    await store.editAugmentation(row)
+  } catch (error) {
+    console.error('Error opening edit augmentation:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to open edit augmentation',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000
+    })
+  } finally {
+    editLoading.value[row.id] = false
   }
 }
 </script>
