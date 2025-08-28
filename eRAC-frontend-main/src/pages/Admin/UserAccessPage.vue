@@ -4,7 +4,7 @@
       <div class="row items-center justify-between">
         <div class="text-h6 text-weight-medium">
           User Control
-          <span class="text-caption q-ml-sm">({{ users.length }} users)</span>
+          <span class="text-caption q-ml-sm">({{ filteredUsers.length }} users from all barangays)</span>
         </div>
         <q-btn
           icon="refresh"
@@ -23,8 +23,8 @@
           outlined
           dense
           v-model="search"
-          placeholder="Search by ID or Name"
-          style="min-width: 300px"
+          placeholder="Search by ID, Name, or Position..."
+          style="min-width: 300px; max-width: 300px;"
           clearable
           @clear="onSearchClear"
         >
@@ -39,7 +39,7 @@
           v-model="selectedBarangay"
           :options="barangayOptions"
           label="Filter by Barangay"
-          style="min-width: 200px"
+          style="min-width: 200px; max-width: 200px;"
           clearable
           @clear="onBarangayClear"
           emit-value
@@ -52,7 +52,7 @@
           v-model="selectedPosition"
           :options="positionOptions"
           label="Filter by Position"
-          style="min-width: 200px"
+          style="min-width: 200px; max-width: 200px;"
           clearable
           @clear="onPositionClear"
           emit-value
@@ -62,15 +62,27 @@
         <q-btn
           dense
           outlined
-          color="negative"
-          icon="clear"
+          color="red-10"
+          icon="clear_all"
+          label="Clear All"
+          style="width: 120px;"
           @click="clearAllFilters"
         />
       </div>
     </div>
 
     <q-card flat bordered>
+      <!-- No Users Message -->
+      <div v-if="!loading && filteredUsers.length === 0" class="q-pa-lg text-center">
+        <q-icon name="people" size="48px" color="grey-5" />
+        <div class="text-h6 text-grey-6 q-mt-md">No Users Found</div>
+        <div class="text-body2 text-grey-6">
+          {{ users.length === 0 ? 'No users available.' : 'No users match your current filters.' }}
+        </div>
+      </div>
+
       <q-table
+        v-else
         flat
         :rows="filteredUsers"
         :columns="columns"
@@ -142,6 +154,7 @@
 <script>
 import { api } from 'boot/axios'
 import { useUserControlStore } from 'stores/userControlStore'
+import { useAuthStore } from 'stores/auth'
 
 export default {
   name: 'UserControlAcceptedPage',
@@ -215,6 +228,18 @@ export default {
     },
   },
   async mounted() {
+    // Restore admin auth state and set headers
+    const authStore = useAuthStore()
+    authStore.restoreAdminAuth()
+    
+    // Test API connectivity
+    try {
+      const testResponse = await api.get('/api/admin/users/accepted')
+      console.log('API connectivity test successful:', testResponse.status)
+    } catch (error) {
+      console.error('API connectivity test failed:', error)
+    }
+    
     const cached = localStorage.getItem('acceptedUsers');
     if (cached) {
       try {
@@ -242,13 +267,14 @@ export default {
         const response = await api.get('/api/admin/users/accepted')
         this.users = response.data
         localStorage.setItem('acceptedUsers', JSON.stringify(this.users));
-      } //catch (error) {
-        //this.$q.notify({
-       //   type: 'negative',
-      //    message: 'Failed to load users',
-      //    position: 'top',
-      //  })
-      finally {
+      } catch (error) {
+        console.error('Error loading users:', error)
+        this.$q.notify({
+          type: 'negative',
+          message: 'Failed to load users',
+          position: 'top',
+        })
+      } finally {
         this.loading = false
       }
     },
@@ -313,17 +339,56 @@ export default {
 
     async saveAccess() {
       try {
-        const permissions = {
-          view: this.accessModal.permissions.view.value,
-          add: this.accessModal.permissions.add.value,
-          edit: this.accessModal.permissions.edit.value,
-          delete: this.accessModal.permissions.delete.value,
-          print: this.accessModal.permissions.print.value,
+        // Validate user selection
+        if (!this.accessModal.selectedUser || !this.accessModal.selectedUser.id) {
+          throw new Error('No user selected')
+        }
+        
+        // Validate user ID is a valid number
+        const userId = parseInt(this.accessModal.selectedUser.id)
+        if (isNaN(userId) || userId <= 0) {
+          throw new Error('Invalid user ID')
         }
 
-        const response = await api.post(`/api/user-access/${this.accessModal.selectedUser.id}`, {
-          permissions
+        // Ensure all permission values are boolean
+        const permissions = {
+          view: Boolean(this.accessModal.permissions.view.value),
+          add: Boolean(this.accessModal.permissions.add.value),
+          edit: Boolean(this.accessModal.permissions.edit.value),
+          delete: Boolean(this.accessModal.permissions.delete.value),
+          print: Boolean(this.accessModal.permissions.print.value),
+        }
+        
+        // Validate permissions structure
+        console.log('Permissions structure validation:', {
+          hasView: 'view' in permissions,
+          hasAdd: 'add' in permissions,
+          hasEdit: 'edit' in permissions,
+          hasDelete: 'delete' in permissions,
+          hasPrint: 'print' in permissions,
+          allValuesAreBoolean: Object.values(permissions).every(val => typeof val === 'boolean')
         })
+
+        console.log('Sending permissions data:', {
+          userId: userId,
+          permissions: permissions
+        })
+        
+        // Log current auth headers
+        console.log('Current auth headers:', api.defaults.headers.common['Authorization'])
+        console.log('Admin token from store:', useAuthStore().adminToken)
+
+        const response = await api.post(`/api/admin/user-access/${userId}`, {
+          permissions
+        }, {
+          headers: {
+            'Authorization': `Bearer ${useAuthStore().adminToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        })
+
+        console.log('Response received:', response.data)
 
         if (response.data.status === 'success') {
           this.$q.notify({
@@ -343,9 +408,46 @@ export default {
         }
       } catch (error) {
         console.error('Error saving permissions:', error)
+        console.error('Error response:', error.response)
+        console.error('Error response data:', error.response?.data)
+        console.error('Error request:', error.request)
+        console.error('Error config:', error.config)
+        
+        let errorMessage = 'Failed to save permissions. Please try again.'
+        
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message
+        } else if (error.response?.data?.error) {
+          errorMessage = error.response.data.error
+        } else if (error.message) {
+          errorMessage = error.message
+        }
+        
+        // Check for network errors
+        if (error.code === 'ERR_NETWORK') {
+          errorMessage = 'Network error - please check your connection'
+        } else if (error.response?.status === 401) {
+          errorMessage = 'Unauthorized - please log in again'
+        } else if (error.response?.status === 404) {
+          errorMessage = 'API endpoint not found - please contact administrator'
+        } else if (error.response?.status === 422) {
+          // Validation error
+          const validationErrors = error.response.data.errors
+          if (validationErrors) {
+            const errorDetails = Object.entries(validationErrors)
+              .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
+              .join('; ')
+            errorMessage = `Validation error: ${errorDetails}`
+          } else {
+            errorMessage = 'Validation error - please check your input'
+          }
+        } else if (error.response?.status === 500) {
+          errorMessage = 'Server error - please try again later'
+        }
+        
         this.$q.notify({
           type: 'negative',
-          message: error.response?.data?.message || 'Failed to save permissions. Please try again.',
+          message: errorMessage,
           position: 'top',
         })
       }
@@ -381,6 +483,25 @@ export default {
   padding-bottom: 8px;
 }
 
+/* Prevent dropdown stretching */
+.q-select {
+  max-width: 200px !important;
+}
+
+.q-input {
+  max-width: 300px !important;
+}
+
+/* Ensure proper filter layout */
+.row.items-center.q-gutter-sm {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.row.items-center.q-gutter-sm > * {
+  flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
   .q-pa-md {
     padding: 8px;
@@ -394,6 +515,11 @@ export default {
   .row.items-center.q-gutter-sm > * {
     margin-bottom: 8px;
     width: 100%;
+  }
+
+  .q-select,
+  .q-input {
+    max-width: 100% !important;
   }
 }
 </style>

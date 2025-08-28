@@ -202,8 +202,8 @@
         </q-card>
       </div>
     </div>
-    <div v-if="allocationError" class="q-mb-md text-negative text-bold">
-      {{ allocationError }}
+    <div v-if="unliquidatedocationError" class="q-mb-md text-negative text-bold">
+      {{ unliquidatedocationError }}
     </div>
   </q-page>
 </template>
@@ -216,29 +216,36 @@ import { useAuthStore } from 'stores/auth'
 import { useQuasar } from 'quasar'
 import { usePageLogging } from '../../composables/usePageLogging'
 const chartStore = useChartDataStore()
-const allocationError = ref('')
+const unliquidatedocationError = ref('')
 const authStore = useAuthStore()
 const $q = useQuasar()
 const { logPageVisit } = usePageLogging()
 
 // Disbursement filtering
-const selectedDisbursementFilter = ref('all')
+const selectedDisbursementFilter = ref('unliquidated')
 
 const disbursementFilters = ref([
-  { label: 'All', value: 'all' },
-  { label: 'Pending', value: 'Pending' },
-  { label: 'Partial', value: 'Partial' },
+  { label: 'Unliquidated', value: 'unliquidated' },
   { label: 'Liquidated', value: 'Liquidated' },
 ])
 
 // Computed properties for filtered disbursements
 const filteredDisbursementRows = computed(() => {
-  if (selectedDisbursementFilter.value === 'all') {
-    return chartStore.disbursementOverviewRows
+  let rows = []
+
+  if (selectedDisbursementFilter.value === 'unliquidated') {
+    rows = chartStore.disbursementOverviewRows.filter(
+      (row) =>
+        (row.status === 'Pending' || row.status === 'Partial') &&
+        row.aging &&
+        row.aging > 0
+    )
+  } else {
+    rows = chartStore.disbursementOverviewRows.filter(
+      (row) => row.status === selectedDisbursementFilter.value
+    )
   }
-  return chartStore.disbursementOverviewRows.filter(
-    (row) => row.status === selectedDisbursementFilter.value,
-  )
+    return rows.sort((a, b) => (b.aging || 0) - (a.aging || 0))
 })
 
 // Helper function to get status color
@@ -279,7 +286,7 @@ const getAgingDescription = (days) => {
 // Helper function to get filter button color
 const getFilterButtonColor = (value) => {
   if (selectedDisbursementFilter.value === value) {
-    return value === 'all' ? 'primary' : 'primary'
+    return value === 'unliquidated' ? 'primary' : 'primary'
   }
   return 'grey-3'
 }
@@ -349,7 +356,7 @@ const chartOptions = computed(() => ({
       bodyFont: {
         size: 12,
       },
-      callbacks: {
+      cunliquidatedbacks: {
         label: (context) => {
           const label = context.label || ''
           const value = context.raw
@@ -370,7 +377,7 @@ const loadDashboardData = async () => {
     await chartStore.fetchDisbursementOverview()
   } catch (error) {
     console.error('Error loading dashboard data:', error)
-    allocationError.value = 'Failed to load dashboard data. Please try again.'
+    unliquidatedocationError.value = 'Failed to load dashboard data. Please try again.'
   }
 }
 
@@ -566,7 +573,7 @@ onMounted(async () => {
 
 /* Filter button styling */
 .filter-btn {
-  transition: all 0.2s ease;
+  transition: unliquidated 0.2s ease;
   border-radius: 8px;
   font-weight: 500;
   min-width: 80px;
@@ -601,7 +608,7 @@ onMounted(async () => {
     }
   }
 
-  /* Special styling for "All" button when selected */
+  /* Special styling for "unliquidated" button when selected */
   &.q-btn--primary {
     background: #1976d2 !important;
     color: white !important;
@@ -618,7 +625,7 @@ onMounted(async () => {
 }
 
 .refresh-btn {
-  transition: all 0.2s ease;
+  transition: unliquidated 0.2s ease;
 
   &:hover {
     transform: scale(1.1);
@@ -639,7 +646,7 @@ onMounted(async () => {
 /* Status count chips styling */
 .status-count-chip {
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: unliquidated 0.2s ease;
 
   &:hover {
     transform: translateY(-1px);

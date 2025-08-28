@@ -120,7 +120,8 @@ class BudgetAugmentationController extends Controller
             $query = BudgetAugmentation::with([
                 'budget', 
                 'details.fromAppropriation', 
-                'details.toAppropriation'
+                'details.toAppropriation',
+                'barangay'
             ])->forBarangay($request->user()->barangay_id);
 
             // Apply filters
@@ -151,6 +152,7 @@ class BudgetAugmentationController extends Controller
                         'augmentation_date' => $augmentation->augmentation_date->format('Y-m-d'),
                         'total_amount' => (float)$augmentation->total_amount,
                         'remarks' => $augmentation->remarks,
+                        'barangay_name' => $augmentation->barangay ? $augmentation->barangay->name : 'Unknown',
                         'details' => $augmentation->details->map(function($detail) {
                             return $this->mapDetailToResponse($detail);
                         })
@@ -159,6 +161,71 @@ class BudgetAugmentationController extends Controller
             ]);
         } catch (\Exception $e) {
             \Log::error('BudgetAugmentation index error: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            return response()->json([
+                'status' => false,
+                'message' => 'An error occurred while fetching augmentations',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Admin endpoint to fetch augmentations across all barangays
+     */
+    public function adminIndex(Request $request)
+    {
+        try {
+            $query = BudgetAugmentation::with([
+                'budget', 
+                'details.fromAppropriation', 
+                'details.toAppropriation',
+                'barangay'
+            ]);
+
+            // Filter by barangay_id if provided
+            if ($request->filled('barangay_id')) {
+                $query->where('barangay_id', $request->barangay_id);
+            }
+
+            // Apply filters
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('ref_number', 'like', "%{$search}%")
+                      ->orWhere('remarks', 'like', "%{$search}%");
+                });
+            }
+
+            if ($request->filled('date_from')) {
+                $query->where('augmentation_date', '>=', $request->date_from);
+            }
+
+            if ($request->filled('date_to')) {
+                $query->where('augmentation_date', '<=', $request->date_to);
+            }
+
+            $augmentations = $query->orderBy('created_at', 'desc')->get();
+
+            return response()->json([
+                'status' => true,
+                'data' => $augmentations->map(function($augmentation) {
+                    return [
+                        'id' => $augmentation->id,
+                        'ref_number' => $augmentation->ref_number,
+                        'augmentation_date' => $augmentation->augmentation_date->format('Y-m-d'),
+                        'total_amount' => (float)$augmentation->total_amount,
+                        'remarks' => $augmentation->remarks,
+                        'barangay_name' => $augmentation->barangay ? $augmentation->barangay->name : 'Unknown',
+                        'details' => $augmentation->details->map(function($detail) {
+                            return $this->mapDetailToResponse($detail);
+                        })
+                    ];
+                })
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('BudgetAugmentation adminIndex error: ' . $e->getMessage());
             \Log::error('Stack trace: ' . $e->getTraceAsString());
             
             return response()->json([
@@ -181,7 +248,8 @@ class BudgetAugmentationController extends Controller
             'details.*.from_appropriation_id' => 'required|exists:tran_appropriations,id',
             'details.*.to_appropriation_id' => 'required|exists:tran_appropriations,id',
             'details.*.amount' => 'required|numeric|min:0',
-            'details.*.particulars' => 'nullable|string'
+            'details.*.particulars' => 'nullable|string',
+            'barangay_id' => 'nullable|exists:barangays,id' // Added for admin
         ]);
 
         if ($validator->fails()) {
@@ -210,9 +278,19 @@ class BudgetAugmentationController extends Controller
             // Get the budget from the first appropriation
             $correctBudget = $firstFromAppropriation->budget;
 
+            // Determine barangay_id based on user type
+            $barangayId = null;
+            if ($request->barangay_id) {
+                // Admin user providing barangay_id
+                $barangayId = $request->barangay_id;
+            } else {
+                // Regular user - use their barangay_id
+                $barangayId = $request->user()->barangay_id;
+            }
+
             // Create budget augmentation
             $augmentation = BudgetAugmentation::create([
-                'barangay_id' => $request->user()->barangay_id,
+                'barangay_id' => $barangayId, // Use determined barangayId
                 'budget_id' => $correctBudget->id,
                 'ref_number' => $refNumber,
                 'augmentation_date' => $request->augmentation_date,

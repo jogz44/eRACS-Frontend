@@ -5,6 +5,8 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Laravel\Sanctum\PersonalAccessToken;
+use Carbon\Carbon;
 
 class AuthTokenValid
 {
@@ -20,18 +22,37 @@ class AuthTokenValid
             ], 401);
         }
 
-        // 2. Your existing token validation (keep this as-is)
-        if (!$this->isValidToken($token)) {
+        // 2. Validate and fetch token
+        $accessToken = PersonalAccessToken::findToken($token);
+
+        if (!$accessToken) {
             return response()->json([
                 'status' => false,
                 'message' => 'Unauthorized. Invalid token.',
             ], 401);
         }
 
-        // 3. Get the response from the next middleware/controller
+        // 3. Check timeout (1 min inactivity)
+        if ($accessToken->last_used_at) {
+            $minutes = Carbon::parse($accessToken->created_at)->diffInMinutes(now());
+
+            if ($minutes >= 1) {
+                $accessToken->delete();
+
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Session expired. Please login again.',
+                ], 401);
+            }
+        } else {
+            // First use → set it now
+            $accessToken->forceFill(['created_at' => now()])->save();
+        }
+
+        // 5. Continue request
         $response = $next($request);
 
-        // 4. ONLY ADD THIS PART - Adds success status to JSON responses
+        // 6. Wrap JSON response
         if ($request->wantsJson() && $response->getStatusCode() === 200) {
             $originalData = json_decode($response->content(), true) ?? [];
 
@@ -39,18 +60,11 @@ class AuthTokenValid
                 $response->setData([
                     'status' => true,
                     'message' => 'Request successful',
-                    'data' => $originalData
+                    'data' => $originalData,
                 ]);
             }
         }
 
         return $response;
-    }
-
-    // Keep your existing isValidToken() method
-    protected function isValidToken(string $token): bool
-    {
-        // Your actual token validation logic here
-        return true; // Replace with real implementation
     }
 }

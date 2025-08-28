@@ -52,7 +52,7 @@
     <q-dialog v-model="showContinueDialog" @keydown.enter="handleEnterKey">
       <q-card style="min-width: 600px; max-width: 90vw">
         <q-card-section class="q-pb-none">
-          <div class="text-h6">Select Accounts to Continue</div>
+          <div class="text-h6">Select Accounts to Continue Last Year</div>
         </q-card-section>
 
         <q-card-section>
@@ -66,18 +66,9 @@
               style="min-width: 250px"
               @keydown.enter="handleEnterKey"
             />
-            <q-select
-              outlined
-              dense
-              v-model="contApprStore.selectedYear"
-              :options="contApprStore.years"
-              option-label="label"
-              label="Select Year"
-              style="min-width: 150px"
-              :loading="generalLoading"
-              emit-value
-              map-options
-            />
+            <label>
+
+            </label>
           </div>
 
           <q-table
@@ -196,7 +187,7 @@
                         v-model.number="subcategory.amount"
                         prefix="₱"
                         :rules="[(val) => validateAmount(val)]"
-                        style="width: 150px"
+                        style="width: 200px"
                         :disable="availableBudget <= 0"
                         @keydown.enter="handleAllocationEnterKey"
                       />
@@ -254,23 +245,19 @@ const clearAllFilters = () => {
 
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
+import { storeToRefs } from 'pinia'
 import { useContApprStore } from 'src/stores/contApprStore'
 import { usePageLogging } from '../../../composables/usePageLogging'
 
 const $q = useQuasar()
 const contApprStore = useContApprStore();
+const { continueAccounts } = storeToRefs(contApprStore)
 
 const showContinueDialog = ref(false)
 const showAllocationDialog = ref(false)
 const description = ref('')
 const selectedAccounts = ref([])
 const searchQuery = ref('')
-// Use store-fetched continuing accounts (flattened for table rows)
-const flatContinueAccounts = computed(() => {
-  if (!Array.isArray(contApprStore.continueAccounts)) return []
-  return contApprStore.continueAccounts.flatMap(group => group.children || [])
-})
-
 const returnAmount = ref(0)
 const augmentationAmount = ref(0)
 
@@ -321,14 +308,12 @@ const availableBudget = computed(() => {
 })
 
 const filteredAccounts = computed(() => {
-  const base = flatContinueAccounts.value
-  if (!searchQuery.value) return base
-  const q = searchQuery.value.toLowerCase()
-  return base.filter((account) =>
-    Object.values(account).join(' ').toLowerCase().includes(q),
+  if (!searchQuery.value) return continueAccounts.value
+
+  return continueAccounts.value.filter((account) =>
+    Object.values(account).join(' ').toLowerCase().includes(searchQuery.value.toLowerCase()),
   )
 })
-
 const filteredAppropriations = computed(() => {
   const query = searchQuery.value.toLowerCase()
 

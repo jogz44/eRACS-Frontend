@@ -15,12 +15,16 @@ export const useContApprStore = defineStore('continuing-appropriation',{
         
         getAuthConfig() {
             const authStore = useAuthStore()
-            if (!authStore.token) {
+            
+            // Use admin token if admin is logged in, otherwise use regular token
+            const token = authStore.admin ? authStore.adminToken : authStore.token
+            
+            if (!token) {
                 throw new Error('Authentication token not found')
             }
             return {
                 headers: {
-                Authorization: `Bearer ${authStore.token}`,
+                Authorization: `Bearer ${token}`,
                 'Content-Type': 'application/json',
                 Accept: 'application/json',
                 },
@@ -29,35 +33,23 @@ export const useContApprStore = defineStore('continuing-appropriation',{
         async fetchContinueAccounts() {
             const config = this.getAuthConfig()
             try {
+                
                 const response = await api.get(`/api/barangay/continuing-appropriations`, config)
                 const rows = response.data?.data?.rows || []
-
-                // group by expenseClass
-                const grouped = {}
-                rows.forEach(item => {
-                if (!grouped[item.expenseClass]) {
-                    grouped[item.expenseClass] = []
-                }
-
-                let accountName = item.expenseType
-                if (item.expenseItem) {
-                    accountName += ` > ${item.expenseItem}`
-                }
-
-                grouped[item.expenseClass].push({
-                    id: item.id,
-                    accountName,
-                    balance: item.remaining_amount
-                })
-                })
-
-                // convert into array
-                this.continueAccounts = Object.keys(grouped).map(expClass => ({
-                class: expClass,
-                children: grouped[expClass]
+                
+                // map into a clean array of objects
+                this.continueAccounts = rows.map(row => ({
+                    id: row.id,
+                    year: row.year,
+                    accountName: [row.expenseClass, row.expenseType, row.expenseItem]
+                        .filter(Boolean)
+                        .join(" > "),
+                    total: row.total_amount,
+                    details: row.details_amount,
+                    balance: row.remaining_amount,
                 }))
-
                 console.log('Mapped Continuing Appropriations:', this.continueAccounts)
+                return this.continueAccounts
             } catch (error) {
                 this.error = error.response?.data?.message || error.message
                 return []

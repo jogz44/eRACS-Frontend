@@ -9,7 +9,7 @@
           flat
           dense
           @click="loadPendingUsers"
-          :loading="loading"
+          :loading="store.loadingAugmentations"
         />
       </div>
     </div>
@@ -70,6 +70,8 @@ onMounted(async () => {
   // Log page visit
   await logPageVisit('Current Augmentation')
 })
+
+
 </script>
 
 <style scoped>

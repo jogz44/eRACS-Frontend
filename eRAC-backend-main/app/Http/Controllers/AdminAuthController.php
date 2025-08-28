@@ -168,48 +168,33 @@ class AdminAuthController extends Controller  // <-- This is crucial
 
     // Update user permissions
     public function updateUserPermissions(Request $request, $id) {
-        $user = BarangayUser::findOrFail($id);
-        $admin = $request->user();
-        
-        // Log the permission change
-        $oldPermissions = $user->permissions ?? [];
-        $newPermissions = $request->input('permissions');
-        
-        // If user has no permissions set, assume they have default permissions (all enabled except delete)
-        if (empty($oldPermissions)) {
-            $oldPermissions = [
-                'view' => true,
-                'add' => true,
-                'edit' => true,
-                'delete' => false,
-                'print' => true
-            ];
-        }
-        
-        // Create a detailed log of what changed
-        $changes = [];
-        $permissionNames = ['view' => 'View', 'add' => 'Add', 'edit' => 'Edit', 'delete' => 'Delete', 'print' => 'Print'];
-        
-        foreach ($permissionNames as $key => $label) {
-            $oldValue = $oldPermissions[$key] ?? false;
-            $newValue = $newPermissions[$key] ?? false;
+        try {
+            $user = BarangayUser::findOrFail($id);
             
-            if ($oldValue !== $newValue) {
-                $changes[] = sprintf('%s: %s → %s', $label, $oldValue ? 'Yes' : 'No', $newValue ? 'Yes' : 'No');
-            }
+            // Validate the permissions data
+            $validated = $request->validate([
+                'permissions' => 'required|array',
+                'permissions.view' => 'boolean',
+                'permissions.add' => 'boolean',
+                'permissions.edit' => 'boolean',
+                'permissions.delete' => 'boolean',
+                'permissions.print' => 'boolean',
+            ]);
+            
+            $user->permissions = $validated['permissions'];
+            $user->save();
+            
+            return response()->json([
+                'status' => 'success',
+                'message' => 'User permissions updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to update user permissions',
+                'error' => $e->getMessage()
+            ], 500);
         }
-        
-        $changeDescription = !empty($changes) ? 'Changed: ' . implode(', ', $changes) : 'No changes detected';
-        
-        AdminAuthController::logUserAction(
-            $admin, 
-            'Updated User Permissions', 
-            sprintf('Admin updated permissions for user "%s %s" - %s', $user->first_name, $user->last_name, $changeDescription)
-        );
-        
-        $user->permissions = $newPermissions;
-        $user->save();
-        return response()->json(['success' => true]);
     }
 
     // Get logs

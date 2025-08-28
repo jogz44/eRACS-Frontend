@@ -7,16 +7,19 @@ export function initialState() {
     Augexpenses: ref([]),
 
     AugexpenseAccounts: ref([]),
+    availableBudgets: ref([]),
 
     // Loading states
     expenseAccountsLoading: ref(false),
     toExpenseSelectionLoading: ref(false),
+    loadingBudgets: ref(false),
 
     // Search/filters
     searchQuery: ref(''),
     dateFrom: ref(''),
     dateTo: ref(''),
     expenseSearch: ref(''),
+    selectedBarangayId: ref(null), // Added for admin barangay filtering
 
     // Pagination
     pagination: ref({
@@ -57,5 +60,6 @@ export function initialState() {
       saveAugmentation: false,
       addExpense: false,
     }),
+    loadingAugmentations: ref(false), // Loading state for fetching augmentations
   }
 }

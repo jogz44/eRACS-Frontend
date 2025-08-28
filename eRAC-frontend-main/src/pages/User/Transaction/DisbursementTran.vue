@@ -11,7 +11,7 @@
           flat
           dense
           @click="loadPendingUsers"
-          :loading="loading"
+          :loading="store.loadingDisbursements"
         />
       </div>
     </div>
@@ -290,7 +290,7 @@
           :columns="store.disbursementColumns"
           row-key="id"
           :pagination="store.pagination"
-          :loading="loading"
+          :loading="store.loadingDisbursements"
           flat
         >
           <template v-slot:body-cell-action="props">
@@ -528,8 +528,10 @@ const handleEnterKey = (event) => {
   validateAndSave()
 }
 
-const handleSaveClick = () => {
-  validateAndSave()
+const handleSaveClick = async () => {
+  await validateAndSave()
+  // Refresh the disbursement list after saving
+  await store.fetchDisbursements()
 }
 
 const preloadExpenseAccounts = () => {

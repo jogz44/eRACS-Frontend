@@ -133,6 +133,10 @@
                         }
                       "
                       prefix="₱"
+                      inputmode="decimal"
+                      pattern="\\d*\\.?\\d{0,2}"
+                      @keypress="blockNonNumeric"
+                      @paste.prevent="handlePasteNumeric"
                       :rules="[validateAmountRule]"
                       style="max-width: 230px; width: 100%; display: inline-block"
                       class="q-pa-none"
@@ -183,6 +187,10 @@
                               }
                             "
                             prefix="₱"
+                            inputmode="decimal"
+                            pattern="\\d*\\.?\\d{0,2}"
+                            @keypress="blockNonNumeric"
+                            @paste.prevent="handlePasteNumeric"
                             :rules="[validateAmountRule]"
                             style="max-width: 230px; width: 100%; display: inline-block"
                             class="q-pa-none"
@@ -538,48 +546,107 @@ const submitAllocation = async () => {
   }
 }
 
-// Display function: while typing (string), show commas only; after blur (number), show 2 decimals
+// Display function:
+// - While typing (string), show commas only (no forced decimals)
+// - After blur (number), show two decimals
 const formatInputValue = (value) => {
   if (value === '' || value === null || value === undefined) return ''
+
   const isNumber = typeof value === 'number'
-  const cleanValue = String(value).replace(/,/g, '')
+  const cleanValue = String(value).replace(/[₱,\s]/g, '').replace(/,/g, '')
   const num = parseFloat(cleanValue)
   if (isNaN(num)) return ''
+
   return isNumber
     ? num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : num.toLocaleString('en-US')
 }
 
-// Handle input changes while typing: return cleaned STRING (no forced decimals)
+// Handle input changes while typing: return CLEANED STRING (no commas, no peso)
 const handleAmountInput = (value) => {
-  let cleanValue = String(value).replace(/[^\d.]/g, '')
+  // Remove peso sign, commas, and spaces
+  let cleanValue = String(value).replace(/[₱,\s]/g, '')
+
+  // Only allow digits and one decimal point
+  cleanValue = cleanValue.replace(/[^\d.]/g, '')
+
+  // Handle multiple decimal points
   const parts = cleanValue.split('.')
   if (parts.length > 2) {
     cleanValue = parts[0] + '.' + parts.slice(1).join('')
   }
+
+  // Limit decimal places to 2
   if (parts.length === 2 && parts[1].length > 2) {
     cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
   }
+
   return cleanValue
 }
 
-// On blur: force exactly two decimals
+// On blur: force exactly two decimals and proper formatting
 const formatToTwoDecimals = (value) => {
-  const cleanValue = String(value).replace(/[^\d.]/g, '')
+  // Remove peso sign, commas, and spaces
+  const cleanValue = String(value).replace(/[₱,\s]/g, '')
+
   if (cleanValue === '') return 0
+
+  // Handle multiple decimal points
   const parts = cleanValue.split('.')
   if (parts.length > 2) {
-    // collapse extra dots
     const collapsed = parts[0] + '.' + parts.slice(1).join('')
     return formatToTwoDecimals(collapsed)
   }
+
+  // Limit decimal places to 2
   if (parts.length === 2 && parts[1].length > 2) {
     parts[1] = parts[1].substring(0, 2)
   }
+
   const num = parseFloat(parts.join('.'))
   if (isNaN(num)) return 0
-  // return numeric value with two decimals, UI will render via formatInputValue
+
+  // Return numeric value with two decimals
   return Math.round(num * 100) / 100
+}
+
+// Block any non-numeric keypress except one decimal point
+const blockNonNumeric = (event) => {
+  const key = event.key
+  const isControl = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter'].includes(key)
+  if (isControl) return
+  const isDigit = /\d/.test(key)
+  const isDot = key === '.'
+  // Prevent multiple dots
+  if (isDot && event.target?.value?.includes?.('.')) {
+    event.preventDefault()
+    return
+  }
+  if (!isDigit && !isDot) {
+    event.preventDefault()
+  }
+}
+
+// Sanitize pasted content to numbers with optional single decimal (max 2 decimals)
+const handlePasteNumeric = (event) => {
+  const text = (event.clipboardData || window.clipboardData).getData('text')
+  let clean = String(text).replace(/[^\d.]/g, '')
+  const parts = clean.split('.')
+  if (parts.length > 2) {
+    clean = parts[0] + '.' + parts.slice(1).join('')
+  }
+  if (parts.length >= 2) {
+    parts[1] = parts[1].slice(0, 2)
+    clean = parts[0] + '.' + parts[1]
+  }
+  // Insert cleaned value at cursor
+  const input = event.target
+  const start = input.selectionStart
+  const end = input.selectionEnd
+  const current = input.value
+  input.value = current.slice(0, start) + clean + current.slice(end)
+  const e = new Event('input', { bubbles: true })
+  input.dispatchEvent(e)
 }
 
 const updateUnappropriated = () => {
@@ -587,6 +654,10 @@ const updateUnappropriated = () => {
     appropriationStore.calculateTotals()
   }
 }
+
+// Currency formatting functions
+// Expected format: 1,000.00, 10,000.00, 100,000.00, 1,000,000.00
+// All values will display with comma separators and exactly two decimal places
 </script>
 
 <style scoped>
@@ -604,5 +675,30 @@ const updateUnappropriated = () => {
 }
 .text-positive {
   color: #21ba45;
+}
+
+/* Currency input formatting styles */
+.q-input input {
+  text-align: right;
+  font-family: 'Courier New', monospace;
+}
+
+/* Ensure proper spacing for currency values */
+.edit-allocation-input,
+.q-input[style*="max-width: 230px"] {
+  min-width: 180px;
+}
+
+/* Responsive adjustments for currency inputs */
+@media (max-width: 1200px) {
+  .q-input[style*="max-width: 230px"] {
+    min-width: 150px;
+  }
+}
+
+@media (max-width: 900px) {
+  .q-input[style*="max-width: 230px"] {
+    min-width: 120px;
+  }
 }
 </style>
