@@ -334,7 +334,7 @@ onMounted(async () => {
       const savedBarangayId = localStorage.getItem('admin_selected_barangay')
       if (savedBarangayId) {
         barangay.value = parseInt(savedBarangayId)
-        
+
         // Also update stores with saved selection
         const { useAppropriationStore } = await import('stores/appropriationStore')
         const appropriationStore = useAppropriationStore()
@@ -417,7 +417,7 @@ const navigateToSearch = (link) => {
   if (!authStore.canManageUsers) {
     $q.notify({
       type: 'warning',
-      message: 'Access denied. Only Super Administrators can manage users.',
+      message: 'Access denied. Only Admins can manage users.',
       position: 'top',
     })
     return
@@ -485,7 +485,7 @@ const closePanel = () => {
 }
 
 const getRoleDisplayName = () => {
-  if (authStore.isSuperAdmin) return 'Super Administrator'
+  if (authStore.isSuperAdmin) return 'Accounting Office'
   if (authStore.isCOA) return 'COA'
   return 'Administrator'
 }

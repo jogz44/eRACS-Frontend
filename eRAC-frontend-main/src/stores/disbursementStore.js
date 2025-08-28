@@ -214,6 +214,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       },
       { name: 'status', label: 'Status', field: 'status', align: 'center', sortable: true },
       { name: 'action', label: 'Action', field: '', align: 'center' },
+       { name: 'liquidate', label: 'Liquidate', field: '', align: 'center' },
     ],
 
     expenseColumns: () => [
@@ -401,7 +402,10 @@ export const useDisbursementStore = defineStore('disbursement', {
     async fetchExpenseDetails() {
       try {
         const authStore = useAuthStore()
-        const token = authStore.token
+
+        const token = authStore.admin ? authStore.adminToken : authStore.token
+
+
         const response = await api.get('/api/barangay/expense-details', {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -618,24 +622,24 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.loadingDisbursements = true
       try {
         const authStore = useAuthStore()
-        
+
         // Use different endpoints and tokens for admin vs regular users
         const endpoint = authStore.admin ? "/api/admin/disbursements" : "/api/barangay/disbursements"
         const token = authStore.admin ? authStore.adminToken : authStore.token
-        
+
         const particular= await api.get('/api/barangay/particulars', {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',
           },
         })
-        
+
         // Add barangay_id parameter for admin users if selected
         const params = {}
         if (authStore.admin && this.selectedBarangayId) {
           params.barangay_id = this.selectedBarangayId
         }
-        
+
         const response = await api.get(endpoint, {
           headers: {
             Authorization: `Bearer ${token}`,
