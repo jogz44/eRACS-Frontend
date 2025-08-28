@@ -7,6 +7,7 @@
       :pagination="store.pagination"
       :loading="store.loadingAugmentations"
     >
+
       <template #body-cell-actions="props">
         <q-td :props="props">
           <div class="row items-center justify-center q-gutter-xs">
@@ -38,6 +39,7 @@
 <script setup>
 import { useAugmentationStore } from 'stores/augmentation'
 import { useQuasar } from 'quasar'
+
 
 const store = useAugmentationStore()
 const $q = useQuasar()
@@ -85,5 +87,6 @@ const confirmDelete = (row) => {
       console.error('Error deleting augmentation:', error)
     }
   })
+
 }
 </script>

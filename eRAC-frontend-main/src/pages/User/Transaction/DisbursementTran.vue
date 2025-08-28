@@ -170,7 +170,7 @@
               @click="store.closeDialog('disbursement')"
             />
             <q-btn
-              label="Save"
+              label="Disburse"
               color="primary"
               @click="handleSaveClick"
               v-permission="'add'"
@@ -309,7 +309,9 @@
                   dense
                   icon="visibility"
                   color="blue"
-                  @click="store.openViewOrDetails(props.row)"
+                  @click="handleViewDisbursement(props.row)"
+                  :loading="viewLoading[props.row.id]"
+                  :disable="viewLoading[props.row.id]"
                   v-permission="'view'"
                 />
 
@@ -325,18 +327,20 @@
             </q-td>
           </template>
 
-          <template v-slot:body-cell-liquidate="props">
-            <q-td :props="props">
-                <q-btn
-                  dense
-                  label="Liquidate"
-                  color="primary"
-                  v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
-                  @click="store.openOrDetailsDialog(props.row)"
-                  v-permission="'add'"
-                />
-            </q-td>
-          </template>
+                     <template v-slot:body-cell-liquidate="props">
+             <q-td :props="props">
+                 <q-btn
+                   dense
+                   label="Liquidate"
+                   color="primary"
+                   v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
+                   @click="handleLiquidateDisbursement(props.row)"
+                   :loading="liquidateLoading[props.row.id]"
+                   :disable="liquidateLoading[props.row.id]"
+                   v-permission="'add'"
+                 />
+             </q-td>
+           </template>
 
         </q-table>
 
@@ -467,6 +471,8 @@ const $q = useQuasar()
 const loading = ref(false)
 const addingExpense = ref(false)
 const initialLoading = ref(true)
+const viewLoading = ref({})
+const liquidateLoading = ref({})
 
 const currentBankLabel = computed(() => {
   if (store.forms.disbursement.bank_id) {
@@ -707,6 +713,44 @@ const handleEditDisbursement = async (row) => {
       position: 'top',
       timeout: 3000
     })
+  }
+}
+
+// Handle view disbursement with loading state
+const handleViewDisbursement = async (row) => {
+  viewLoading.value[row.id] = true
+  try {
+    await store.openViewOrDetails(row)
+  } catch (error) {
+    console.error('Error opening view disbursement:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to open view disbursement',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000
+    })
+  } finally {
+    viewLoading.value[row.id] = false
+  }
+}
+
+// Handle liquidate disbursement with loading state
+const handleLiquidateDisbursement = async (row) => {
+  liquidateLoading.value[row.id] = true
+  try {
+    await store.openOrDetailsDialog(row)
+  } catch (error) {
+    console.error('Error opening liquidate disbursement:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to open liquidate disbursement',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000
+    })
+  } finally {
+    liquidateLoading.value[row.id] = false
   }
 }
 </script>
