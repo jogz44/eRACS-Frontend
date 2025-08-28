@@ -50,8 +50,9 @@ Route::prefix('barangay')->group(function () {
 
     Route::middleware(['auth:sanctum', 'auth.barangay'])->group(function () {
         // Route::middleware(['check.role'])->group(function () {
-            Route::post('/setlogs', [AdminAuthController::class, 'logUserActionRequest']);
-            Route::get('/getlogs', [AuthController::class, 'getBarangayLogs']);
+                    Route::post('/setlogs', [AdminAuthController::class, 'logUserActionRequest']);
+        Route::get('/getlogs', [AuthController::class, 'getBarangayLogs']);
+        Route::post('/heartbeat', [AuthController::class, 'heartbeat']);
         // });
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/user', [AuthController::class, 'user']);
@@ -216,6 +217,7 @@ Route::prefix('admin')->group(function () {
         Route::post('/user-access/{id}', [AdminAuthController::class, 'updateUserPermissions']);
         Route::get('/logs', [AdminAuthController::class, 'getAllLogs']);
         Route::post('/setlogs', [AdminAuthController::class, 'logAdminAction']);
+Route::post('/heartbeat', [AdminAuthController::class, 'heartbeat']);
 
         // Admin Individual Log Open
         Route::get('/logs/{user}/{day}', [AdminAuthController::class, 'getUserLogs']);

@@ -29,9 +29,9 @@
             <q-tr :props="props">
               <q-td key="created_at" :props="props" class="text-weight-medium">
                 {{ props.row.headerTime }}
-              </q-td>
+            </q-td>
               <q-td key="description" :props="props">
-                <div class="activity-description">
+              <div class="activity-description">
                   <span class="text-weight-medium">{{ props.row.header.activity }}:</span>
                   {{ props.row.header.details }}
                 </div>
@@ -45,8 +45,8 @@
                     <span class="child-sep">-</span>
                     <span class="child-text"><span class="text-weight-medium">{{ child.activity }}:</span> {{ child.details }}</span>
                   </div>
-                </div>
-              </q-td>
+              </div>
+            </q-td>
             </q-tr>
           </template>
 
