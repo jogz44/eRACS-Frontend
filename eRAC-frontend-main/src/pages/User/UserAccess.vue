@@ -171,6 +171,7 @@
 import { api } from 'boot/axios'
 import { useUserControlStore } from 'stores/userControlStore'
 import { useAuthStore } from 'stores/auth'
+import { usePageLogging } from '../../composables/usePageLogging'
 
 export default {
   name: 'UserControlAcceptedPage',
@@ -255,6 +256,7 @@ export default {
        return filtered
      },
   },
+  
      async mounted() {
      // Initialize users as empty array
      this.users = []
@@ -272,6 +274,10 @@ export default {
        }
      }
      await this.loadAcceptedUsers();
+
+     // Log page visit (moved from invalid top-level onMounted)
+     const { logPageVisit } = usePageLogging()
+     await logPageVisit('User Control')
    },
   activated() {
     const userControlStore = useUserControlStore()

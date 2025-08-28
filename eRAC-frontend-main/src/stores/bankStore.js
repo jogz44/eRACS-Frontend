@@ -127,12 +127,17 @@ export const useBankStore = defineStore('bank', {
   actions: {
     getAuthConfig() {
       const authStore = useAuthStore()
-      if (!authStore.token) {
+      
+      // Use admin token if admin is logged in, otherwise use regular token
+      const token = authStore.admin ? authStore.adminToken : authStore.token
+      
+      if (!token) {
         throw new Error('Authentication token not found')
       }
+      
       return {
         headers: {
-          Authorization: `Bearer ${authStore.token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },

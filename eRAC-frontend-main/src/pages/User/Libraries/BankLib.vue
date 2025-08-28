@@ -454,9 +454,11 @@ const clearAllFilters = () => {
 import { useBankStore } from 'src/stores/bankStore'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
+import { usePageLogging } from '../../../composables/usePageLogging'
 
 const $q = useQuasar()
 const bankStore = useBankStore()
+const { logPageVisit } = usePageLogging()
 
 const tableRefreshKey = ref(0)
 
@@ -466,6 +468,9 @@ onMounted(async () => {
     console.log('Fetching banks...')
     await bankStore.fetchBanks()
     console.log('Banks after fetch:', bankStore.banks)
+    
+    // Log page visit
+    await logPageVisit('Bank Library')
   } catch (error) {
     console.error('Error in onMounted:', error)
     $q.notify({

@@ -18,7 +18,7 @@ return new class extends Migration
         $table->string('email')->unique();
         $table->string('password');
         $table->string('name')->nullable();
-        $table->enum('role', ['super_admin', 'accounting', 'coa'])->default('super_admin');
+        $table->enum('role', ['super_admin', 'coa'])->default('super_admin');
         $table->rememberToken();
         $table->timestamps();
     });
@@ -29,16 +29,6 @@ return new class extends Migration
         'password' => Hash::make('admin123'),
         'name' => 'Super Administrator',
         'role' => 'super_admin',
-        'created_at' => now(),
-        'updated_at' => now()
-    ]);
-
-    // Insert accounting account
-    DB::table('admins')->insert([
-        'email' => 'accounting@gmail.com',
-        'password' => Hash::make('accounting123'),
-        'name' => 'Accounting Officer',
-        'role' => 'accounting',
         'created_at' => now(),
         'updated_at' => now()
     ]);

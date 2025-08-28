@@ -9,7 +9,7 @@
           flat
           dense
           @click="loadPendingUsers"
-          :loading="loading"
+          :loading="store.loadingAugmentations"
         />
       </div>
     </div>
@@ -33,6 +33,7 @@ import SearchFilters from 'components/augmentation/SearchFilters.vue'
 import AugmentationDialog from 'components/augmentation/AugmentationDialog.vue'
 import AugExpenseSelecDial from 'components/augmentation/AugExpenseSelecDial.vue'
 import AugExpenseDetailDial from 'components/augmentation/AugExpenseDetailDial.vue'
+import { usePageLogging } from '../../../composables/usePageLogging'
 
 const $q = useQuasar()
 const store = useAugmentationStore()
@@ -62,7 +63,13 @@ const loadPendingUsers = async () => {
 
 onMounted(async () => {
   await store.fetchAugmentations()
+  
+  // Log page visit
+  const { logPageVisit } = usePageLogging()
+  await logPageVisit('Current Augmentation')
 })
+
+
 </script>
 
 <style scoped>

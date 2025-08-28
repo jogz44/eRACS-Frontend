@@ -1,5 +1,5 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
+  <q-layout view="lHh Lpr lFf" class="admin-layout">
     <!-- HEADER -->
     <q-header elevated class="custom-header">
       <q-toolbar class="q-pr-md items-center" style="justify-content: space-between;">
@@ -29,23 +29,30 @@
 
         <q-space/>
 
-        <q-select
-          outlined
-          dense
-          bg-color="light-green-1 "
-          label="Select Barangay"
-          color="green"
-          class="q-mb-sm q-pt-sm"
-          style="width: 200px;"
-          emit-value
-          map-options
-          v-model="barangay"
-          :options="barangayOptions"
-          option-label="name"
-          option-value="value"
-        />
+        <div class="row items-center q-gutter-sm">
+          <q-select
+            outlined
+            dense
+            bg-color="light-green-1 "
+            label="Select Barangay"
+            placeholder="Choose a barangay to enable transactions"
+            color="green"
+            class="q-mb-sm q-pt-sm"
+            style="width: 200px;"
+            emit-value
+            map-options
+            v-model="barangay"
+            :options="barangayOptions"
+            option-label="name"
+            option-value="id"
+            @update:model-value="onBarangayChange"
+          />
+
+        </div>
       </q-toolbar>
     </q-header>
+
+
 
     <!-- DRAWER -->
     <q-drawer
@@ -74,7 +81,7 @@
         </div>
 
         <!-- Main Functions Section -->
-        <!-- All admin types (Super Admin, Accounting, COA) can access these functions -->
+        <!-- All admin types (Super Admin, COA) can access these functions -->
         <div class="favorites-section">
           <div class="section-title">Main Functions </div>
           <div class="favorites-list q-pa-sm">
@@ -91,36 +98,61 @@
           </div>
         </div>
 
-        <!-- Collapsed Transactions for COA and Accounting -->
-        <!-- Super Admin sees sliding panel, COA/Accounting see collapsed view -->
+        <!-- Collapsed Transactions for COA -->
+        <!-- Super Admin sees sliding panel, COA sees collapsed view -->
         <div v-if="!authStore.canManageUsers" class="collapsed-transactions-section">
           <!-- Current Transactions -->
           <div class="transaction-group">
             <div class="transaction-group-title">Current Transactions</div>
-            <div class="transaction-item" @click="navigateTo('/admin/appropriation')">
+            <div
+              class="transaction-item"
+              :class="{ 'disabled': !isBarangaySelected }"
+              @click="navigateTo('/admin/appropriation')"
+            >
               <q-icon name="account_balance" size="16px" />
               <span>Appropriation</span>
+              <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
             </div>
-            <div class="transaction-item" @click="navigateTo('/admin/disbursement')">
+            <div
+              class="transaction-item"
+              :class="{ 'disabled': !isBarangaySelected }"
+              @click="navigateTo('/admin/disbursement')"
+            >
               <q-icon name="payments" size="16px" />
               <span>Disbursement</span>
+              <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
             </div>
-            <div class="transaction-item" @click="navigateTo('/admin/augmentation')">
+            <div
+              class="transaction-item"
+              :class="{ 'disabled': !isBarangaySelected }"
+              @click="navigateTo('/admin/augmentation')"
+            >
               <q-icon name="add_circle" size="16px" />
               <span>Augmentation</span>
+              <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
             </div>
           </div>
 
           <!-- Continuing Transactions -->
           <div class="transaction-group">
             <div class="transaction-group-title">Continuing Transactions</div>
-            <div class="transaction-item" @click="navigateTo('/admin/contAppropriation')">
+            <div
+              class="transaction-item"
+              :class="{ 'disabled': !isBarangaySelected }"
+              @click="navigateTo('/admin/contAppropriation')"
+            >
               <q-icon name="account_balance_wallet" size="16px" />
               <span>Appropriation</span>
+              <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
             </div>
-            <div class="transaction-item" @click="navigateTo('/admin/contDisbursement')">
+            <div
+              class="transaction-item"
+              :class="{ 'disabled': !isBarangaySelected }"
+              @click="navigateTo('/admin/contDisbursement')"
+            >
               <q-icon name="credit_card" size="16px" />
               <span>Disbursement</span>
+              <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
             </div>
 
           </div>
@@ -190,33 +222,63 @@
         <!-- Current Transactions -->
         <div class="panel-section">
           <div class="panel-section-title">Current</div>
-          <div class="panel-item" @click="navigateTo('/admin/appropriation')">
+          <div
+            class="panel-item"
+            :class="{ 'disabled': !isBarangaySelected }"
+            @click="navigateTo('/admin/appropriation')"
+          >
             <div class="colored-dot dot-pink"></div>
             <span>Appropriation</span>
+            <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
           </div>
-          <div class="panel-item" @click="navigateTo('/admin/disbursement')">
+          <div
+            class="panel-item"
+            :class="{ 'disabled': !isBarangaySelected }"
+            @click="navigateTo('/admin/disbursement')"
+          >
             <div class="colored-dot dot-red"></div>
             <span>Disbursement</span>
+            <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
           </div>
-          <div class="panel-item" @click="navigateTo('/admin/augmentation')">
+          <div
+            class="panel-item"
+            :class="{ 'disabled': !isBarangaySelected }"
+            @click="navigateTo('/admin/augmentation')"
+          >
             <div class="colored-dot dot-blue"></div>
             <span>Augmentation</span>
+            <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
           </div>
         </div>
         <!-- Continuing Transactions -->
         <div class="panel-section">
           <div class="panel-section-title">Continuing</div>
-          <div class="panel-item" @click="navigateTo('/admin/contAppropriation')">
+          <div
+            class="panel-item"
+            :class="{ 'disabled': !isBarangaySelected }"
+            @click="navigateTo('/admin/contAppropriation')"
+          >
             <div class="colored-dot dot-orange"></div>
             <span>Appropriation</span>
+            <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
           </div>
-          <div class="panel-item" @click="navigateTo('/admin/contDisbursement')">
+          <div
+            class="panel-item"
+            :class="{ 'disabled': !isBarangaySelected }"
+            @click="navigateTo('/admin/contDisbursement')"
+          >
             <div class="colored-dot dot-purple"></div>
             <span>Disbursement</span>
+            <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
           </div>
-          <div class="panel-item" @click="navigateTo('/admin/contAugmentation')">
+          <div
+            class="panel-item"
+            :class="{ 'disabled': !isBarangaySelected }"
+            @click="navigateTo('/admin/contAugmentation')"
+          >
             <div class="colored-dot dot-green"></div>
             <span>Augmentation</span>
+            <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
           </div>
         </div>
       </div>
@@ -250,23 +312,78 @@ const authStore = useAuthStore()
 const leftDrawerOpen = ref(false)
 const activePanel = ref(null)
 const barangayOptions = ref([])
-const barangay = ref('')
+const barangay = ref(null)
 
 onMounted(async () => {
   try {
-    // Load barangay options
-    const response = await api.get('/api/barangay/barangays')
+    // Load barangay options with admin token
+    const response = await api.get('/api/barangay/barangays', {
+      headers: {
+        Authorization: `Bearer ${authStore.adminToken}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    })
     if (response.data && Array.isArray(response.data)) {
       barangayOptions.value = response.data.map((b) => ({
         name: b.name,
-        value: b.name,
+        id: b.id,
       }))
-    }  } catch (error) {
+
+      // Restore barangay selection from localStorage first
+      const savedBarangayId = localStorage.getItem('admin_selected_barangay')
+      if (savedBarangayId) {
+        barangay.value = parseInt(savedBarangayId)
+
+        // Also update stores with saved selection
+        const { useAppropriationStore } = await import('stores/appropriationStore')
+        const appropriationStore = useAppropriationStore()
+        appropriationStore.setSelectedBarangay(parseInt(savedBarangayId))
+
+        const { useDisbursementStore } = await import('stores/disbursementStore')
+        const disbursementStore = useDisbursementStore()
+        disbursementStore.setSelectedBarangay(parseInt(savedBarangayId))
+
+        const { useAugmentationStore } = await import('stores/augmentation')
+        const augmentationStore = useAugmentationStore()
+        augmentationStore.setSelectedBarangay(parseInt(savedBarangayId))
+      }
+    }
+  } catch (error) {
     console.error('Error loading setup data:', error)
     // Don't show notification if it might break the page
     // Just log the error for debugging
   }
 })
+
+// Check if barangay is selected
+const isBarangaySelected = computed(() => {
+  return barangay.value !== null && barangay.value !== undefined
+})
+
+// Show info notification when no barangay is selected on load
+watch(isBarangaySelected, (newValue, oldValue) => {
+  // Only show notification if user was initially without barangay selection
+  // and we're not in the process of loading saved selection
+  if (!newValue && oldValue !== undefined) {
+    setTimeout(() => {
+      if (!isBarangaySelected.value) {
+        $q.notify({
+          type: 'info',
+          message: 'Select a barangay from the dropdown to access transaction features',
+          position: 'top',
+          timeout: 6000,
+          icon: 'info',
+          color: 'blue',
+          textColor: 'white',
+          actions: [
+            { label: 'OK', color: 'white', handler: () => {} }
+          ]
+        })
+      }
+    }, 1000)
+  }
+}, { immediate: false })
 
 // Admin functions data
 const favorites = computed(() => {
@@ -300,7 +417,7 @@ const navigateToSearch = (link) => {
   if (!authStore.canManageUsers) {
     $q.notify({
       type: 'warning',
-      message: 'Access denied. Only Super Administrators can manage users.',
+      message: 'Access denied. Only Admins can manage users.',
       position: 'top',
     })
     return
@@ -309,6 +426,31 @@ const navigateToSearch = (link) => {
 }
 
 const navigateTo = (link) => {
+  // Check if trying to access transaction pages
+  const transactionPages = [
+    '/admin/appropriation',
+    '/admin/disbursement',
+    '/admin/augmentation',
+    '/admin/contAppropriation',
+    '/admin/contDisbursement'
+  ]
+
+  if (transactionPages.includes(link) && !isBarangaySelected.value) {
+    $q.notify({
+      type: 'info',
+      message: 'Please select a barangay first to access transaction features',
+      position: 'top',
+      timeout: 5000,
+      icon: 'info',
+      color: 'blue',
+      textColor: 'white',
+      actions: [
+        { label: 'Got it', color: 'white', handler: () => {} }
+      ]
+    })
+    return
+  }
+
   router.push(link)
   if ($q.screen.lt.md) {
     leftDrawerOpen.value = false
@@ -342,6 +484,12 @@ const closePanel = () => {
   }
 }
 
+const getRoleDisplayName = () => {
+  if (authStore.isSuperAdmin) return 'Accounting Office'
+  if (authStore.isCOA) return 'COA'
+  return 'Administrator'
+}
+
 const handleLogout = async () => {
   $q.dialog({
     title: 'Confirm Logout',
@@ -349,10 +497,95 @@ const handleLogout = async () => {
     cancel: true,
     persistent: true,
   }).onOk(async () => {
+    // Clear barangay selection before logout
+    barangay.value = null
+    localStorage.removeItem('admin_selected_barangay')
+
+    // Clear barangay selection from stores
+    try {
+      const { useAppropriationStore } = await import('stores/appropriationStore')
+      const appropriationStore = useAppropriationStore()
+      appropriationStore.setSelectedBarangay(null)
+
+      const { useDisbursementStore } = await import('stores/disbursementStore')
+      const disbursementStore = useDisbursementStore()
+      disbursementStore.setSelectedBarangay(null)
+
+      const { useAugmentationStore } = await import('stores/augmentation')
+      const augmentationStore = useAugmentationStore()
+      augmentationStore.setSelectedBarangay(null)
+    } catch (error) {
+      console.error('Error clearing store barangay selections:', error)
+    }
+
     await authStore.adminLogout()
     router.push('/admin/login')
   })
 }
+
+                    const onBarangayChange = async (barangayId) => {
+                      try {
+                        // Save to localStorage for persistence across page refreshes
+                        if (barangayId) {
+                          localStorage.setItem('admin_selected_barangay', barangayId.toString())
+                        } else {
+                          localStorage.removeItem('admin_selected_barangay')
+                        }
+
+                        // Update appropriation store if we're on appropriation pages
+                        const { useAppropriationStore } = await import('stores/appropriationStore')
+                        const appropriationStore = useAppropriationStore()
+                        appropriationStore.setSelectedBarangay(barangayId)
+                        await appropriationStore.fetchBudgets()
+
+                        // Update disbursement store if we're on disbursement pages
+                        const { useDisbursementStore } = await import('stores/disbursementStore')
+                        const disbursementStore = useDisbursementStore()
+                        disbursementStore.setSelectedBarangay(barangayId)
+                        await disbursementStore.fetchDisbursements()
+
+                        // Update augmentation store if we're on augmentation pages
+                        const { useAugmentationStore } = await import('stores/augmentation')
+                        const augmentationStore = useAugmentationStore()
+                        augmentationStore.setSelectedBarangay(barangayId)
+                        await augmentationStore.fetchAugmentations()
+                      } catch (error) {
+                        console.error('Error updating barangay filter:', error)
+                      }
+                    }
+
+// Watch for changes in appropriation store's selectedBarangayId
+watch(async () => {
+  const { useAppropriationStore } = await import('stores/appropriationStore')
+  const appropriationStore = useAppropriationStore()
+  return appropriationStore.selectedBarangayId
+}, (newBarangayId) => {
+  if (newBarangayId !== barangay.value) {
+    barangay.value = newBarangayId
+  }
+}, { immediate: false })
+
+                    // Watch for changes in disbursement store's selectedBarangayId
+                    watch(async () => {
+                      const { useDisbursementStore } = await import('stores/disbursementStore')
+                      const disbursementStore = useDisbursementStore()
+                      return disbursementStore.selectedBarangayId
+                    }, (newBarangayId) => {
+                      if (newBarangayId !== barangay.value) {
+                        barangay.value = newBarangayId
+                      }
+                    }, { immediate: false })
+
+                    // Watch for changes in augmentation store's selectedBarangayId
+                    watch(async () => {
+                      const { useAugmentationStore } = await import('stores/augmentation')
+                      const augmentationStore = useAugmentationStore()
+                      return augmentationStore.selectedBarangayId
+                    }, (newBarangayId) => {
+                      if (newBarangayId !== barangay.value) {
+                        barangay.value = newBarangayId
+                      }
+                    }, { immediate: false })
 
 const handleKeydown = (event) => {
   if (event.key === 'Escape' && activePanel.value) {
@@ -382,17 +615,7 @@ watch(
   }
 )
 
-const getRoleDisplayName = () => {
-  if (authStore.admin?.role === 'super_admin') {
-    return 'SUPER ADMIN'
-  } else if (authStore.admin?.role === 'accounting') {
-    return 'ACCOUNTING OFFICER'
-  } else if (authStore.admin?.role === 'coa') {
-    return 'COA OFFICER'
-  } else {
-    return 'ADMIN'
-  }
-}
+
 </script>
 
 <style>
@@ -508,10 +731,14 @@ const getRoleDisplayName = () => {
 
 .saved-searches-list {
   padding: 0 8px;
-  color: white !important;
   width: 95%;
   max-width: 280px;
   margin: 0 auto;
+}
+
+/* Layout Styles */
+.admin-layout {
+  overflow-x: hidden;
 }
 
 .saved-search-item {
@@ -910,5 +1137,37 @@ const getRoleDisplayName = () => {
   font-size: 15px;
   font-weight: 500;
   color: white !important;
+}
+
+/* Disabled state for transaction items */
+.transaction-item.disabled {
+  background-color: #9e9e9e !important;
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: 0 2px 4px rgba(158, 158, 158, 0.3);
+}
+
+.transaction-item.disabled:hover {
+  background-color: #9e9e9e !important;
+  transform: none;
+}
+
+.transaction-item.disabled span {
+  color: #e0e0e0 !important;
+}
+
+/* Panel item disabled state */
+.panel-item.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #f5f5f5;
+}
+
+.panel-item.disabled:hover {
+  background-color: #f5f5f5;
+}
+
+.panel-item.disabled span {
+  color: #9e9e9e !important;
 }
 </style>

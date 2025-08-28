@@ -32,6 +32,9 @@ class AdminAuthController extends Controller  // <-- This is crucial
 
         $token = $admin->createToken('admin-token', ['admin'])->plainTextToken;
 
+        // Log admin login
+        AdminAuthController::logUserAction($admin, 'Login', 'Admin login to system');
+
         $cookie = cookie(
             'admin_token',
             $token,
@@ -59,7 +62,14 @@ class AdminAuthController extends Controller  // <-- This is crucial
 
     public function logout(Request $request)
     {
-        $request->user('admin')->tokens()->delete();
+        $admin = $request->user('admin');
+        
+        // Log admin logout
+        if ($admin) {
+            AdminAuthController::logUserAction($admin, 'Logout', 'Admin logout from system');
+        }
+        
+        $admin->tokens()->delete();
         $cookie = Cookie::forget('admin_token');
 
         return response()->json([
@@ -158,10 +168,33 @@ class AdminAuthController extends Controller  // <-- This is crucial
 
     // Update user permissions
     public function updateUserPermissions(Request $request, $id) {
-        $user = BarangayUser::findOrFail($id);
-        $user->permissions = $request->input('permissions');
-        $user->save();
-        return response()->json(['success' => true]);
+        try {
+            $user = BarangayUser::findOrFail($id);
+            
+            // Validate the permissions data
+            $validated = $request->validate([
+                'permissions' => 'required|array',
+                'permissions.view' => 'boolean',
+                'permissions.add' => 'boolean',
+                'permissions.edit' => 'boolean',
+                'permissions.delete' => 'boolean',
+                'permissions.print' => 'boolean',
+            ]);
+            
+            $user->permissions = $validated['permissions'];
+            $user->save();
+            
+            return response()->json([
+                'status' => 'success',
+                'message' => 'User permissions updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to update user permissions',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     // Get logs
@@ -225,16 +258,48 @@ class AdminAuthController extends Controller  // <-- This is crucial
             'updated_at' => now(),
         ]);
     }
-    // public static function logAdminAction($activity, $details = null) {
-    //     DB::table('logs')->insert([
-    //         'user_id' => 1,
-    //         'fullname' => 'Admin',
-    //         'activity' => $activity,
-    //         'details' => $details,
-    //         'created_at' => now(),
-    //         'updated_at' => now(),
-    //     ]);
-    // }
+
+    // Log admin actions
+    public function logAdminAction(Request $request) {
+        $validated = $request->validate([
+            'activity' => 'required|string',
+            'details' => 'nullable|string'
+        ]);
+
+        $admin = $request->user();
+        
+        DB::table('logs')->insert([
+            'user_id' => $admin->id,
+            'fullname' => $admin->name ?? 'Admin',
+            'activity' => $validated['activity'],
+            'details' => $validated['details'],
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json(['message' => 'Action logged successfully']);
+    }
+
+    // Log user actions (instance method for route)
+    public function logUserActionRequest(Request $request) {
+        $validated = $request->validate([
+            'activity' => 'required|string',
+            'details' => 'nullable|string'
+        ]);
+
+        $user = $request->user();
+        
+        DB::table('logs')->insert([
+            'user_id' => $user->id,
+            'fullname' => $user->first_name . ' ' . $user->last_name,
+            'activity' => $validated['activity'],
+            'details' => $validated['details'],
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return response()->json(['message' => 'Action logged successfully']);
+    }
     public static function getPerBarangaysBudgets()
     {
         $data = DB::table('barangays')
@@ -251,5 +316,33 @@ class AdminAuthController extends Controller  // <-- This is crucial
             ->get();
 
         return response()->json($data);
+    }
+
+    /**
+     * Heartbeat endpoint to keep admin session alive
+     */
+    public function heartbeat(Request $request)
+    {
+        try {
+            $admin = Auth::user();
+            
+            if (!$admin) {
+                return response()->json([
+                    'message' => 'Unauthorized'
+                ], 401);
+            }
+
+            // Don't log heartbeat activity to keep logs clean
+
+            return response()->json([
+                'message' => 'Heartbeat received',
+                'timestamp' => now(),
+                'admin_id' => $admin->id
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error processing heartbeat: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

@@ -180,6 +180,7 @@
 <script>
 import { api } from 'boot/axios'
 import { useUserControlStore } from 'stores/userControlStore'
+import { usePageLogging } from '../../../composables/usePageLogging'
 
 export default {
   name: 'UserControlAcceptedPage',
@@ -264,6 +265,10 @@ export default {
         this.users = [];
       }
     }
+    
+    // Log page visit
+    const { logPageVisit } = usePageLogging()
+    await logPageVisit('User Control')
     await this.loadAcceptedUsers();
   },
   activated() {

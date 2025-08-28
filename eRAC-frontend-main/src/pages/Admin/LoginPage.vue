@@ -135,6 +135,38 @@
         </div>
       </div>
     </div>
+
+    <!-- Inactivity Logout Dialog -->
+    <q-dialog v-model="showInactivityDialog" persistent>
+      <q-card style="min-width: 400px">
+        <q-card-section class="q-pb-none">
+          <div class="row items-center justify-between">
+            <div class="text-h6">Session Expired</div>
+            <q-btn
+              flat
+              dense
+              round
+              icon="close"
+              @click="closeInactivityDialog"
+            />
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <div class="text-body1 q-mb-md">
+            You have been logged out due to inactivity. Please sign in again to continue.
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn 
+            label="OK" 
+            color="primary" 
+            @click="closeInactivityDialog"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -155,6 +187,7 @@ const password = ref('')
 const loading = ref(false)
 const isPasswordVisible = ref(false)
 const showValidation = ref(false)
+const showInactivityDialog = ref(false)
 
 const goToUser = () => {
   router.push('/') // Make sure this matches your signup route
@@ -162,9 +195,7 @@ const goToUser = () => {
 
 // Get signin title based on email
 const getSigninTitle = () => {
-  if (email.value === 'accounting@gmail.com') {
-    return 'Accounting Officer'
-  } else if (email.value === 'coa@gmail.com') {
+  if (email.value === 'coa@gmail.com') {
     return 'COA Officer'
   } else if (email.value === 'admin@gmail.com') {
     return 'Super Administrator'
@@ -226,6 +257,10 @@ const handleLoginClick = () => {
   handleLogin()
 }
 
+const closeInactivityDialog = () => {
+  showInactivityDialog.value = false
+}
+
 // Global keyboard event handler
 const handleGlobalKeydown = (event) => {
   if (event.key === 'Enter') {
@@ -241,14 +276,18 @@ onMounted(() => {
   const role = route.query.role
   if (role === 'coa') {
     email.value = 'coa@gmail.com'
-  } else if (role === 'accounting') {
-    email.value = 'accounting@gmail.com'
   } else if (role === 'superadmin') {
     email.value = 'admin@gmail.com'
   }
 
   document.addEventListener('keydown', handleGlobalKeydown)
   console.log('Global keyboard listener added for admin login')
+  
+  // Check if user was logged out due to inactivity
+  if (localStorage.getItem('inactivity_logout')) {
+    localStorage.removeItem('inactivity_logout')
+    showInactivityDialog.value = true
+  }
 })
 
 onUnmounted(() => {

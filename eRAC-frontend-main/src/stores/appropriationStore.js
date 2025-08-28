@@ -24,6 +24,7 @@ export const useAppropriationStore = defineStore("appropriation", {
     fiscalYears: [],
     currentFiscalYearId: null,
     currentYear: new Date().getFullYear().toString(),
+    selectedBarangayId: null, // For admin barangay filtering
 
     allocations: [],
     authStore: useAuthStore(), // Moved hook call inside state
@@ -238,9 +239,18 @@ export const useAppropriationStore = defineStore("appropriation", {
 
     async addBudget(newBudget) {
       try {
-        const response = await api.post("/api/barangay/budgets/create", newBudget, {
+        // Add barangay_id for admin users if selected
+        if (this.authStore.admin && this.selectedBarangayId) {
+          newBudget.barangay_id = this.selectedBarangayId
+        }
+        
+        // Use different endpoints for admin vs regular users
+        const endpoint = this.authStore.admin ? "/api/admin/budgets/create" : "/api/barangay/budgets/create"
+        const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
+        
+        const response = await api.post(endpoint, newBudget, {
           headers: {
-            Authorization: `Bearer ${this.authStore.token}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
             Accept: "application/json",
           },
@@ -263,14 +273,26 @@ export const useAppropriationStore = defineStore("appropriation", {
       }
     },
 
-    async fetchBudgets() {
-      this.loading = true
+    async fetchBudgets(options = { silent: false }) {
+      const silent = options?.silent === true
+      if (!silent) this.loading = true
       try {
         const currentYear = new Date().getFullYear()
-        const response = await api.get("/api/barangay/budgets", {
-          params: { year: currentYear },
+        const params = { year: currentYear }
+        
+        // Add barangay filter for admin users
+        if (this.authStore.admin && this.selectedBarangayId) {
+          params.barangay_id = this.selectedBarangayId
+        }
+        
+        // Use different endpoints for admin vs regular users
+        const endpoint = this.authStore.admin ? "/api/admin/budgets" : "/api/barangay/budgets"
+        const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
+        
+        const response = await api.get(endpoint, {
+          params: params,
           headers: {
-            Authorization: `Bearer ${this.authStore.token}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
             Accept: "application/json",
           },
@@ -283,6 +305,8 @@ export const useAppropriationStore = defineStore("appropriation", {
           amount: parseCurrency(budget.amount),
           unappropriated: parseCurrency(budget.unappropriated),
           fiscal_year: budget.fiscal_year,
+          barangay_name: budget.barangay_name,
+          barangay_id: budget.barangay_id,
           allocations: budget.allocations,
         }))
 
@@ -290,8 +314,13 @@ export const useAppropriationStore = defineStore("appropriation", {
       } catch (error) {
         console.error("Error fetching budgets:", error)
       } finally {
-        this.loading = false
+        if (!silent) this.loading = false
       }
+    },
+
+    // Method to set selected barangay for admin filtering
+    setSelectedBarangay(barangayId) {
+      this.selectedBarangayId = barangayId
     },
 
     async initialize() {
@@ -300,27 +329,50 @@ export const useAppropriationStore = defineStore("appropriation", {
 
     async fetchExpenseHierarchy() {
       try {
-        const yearsResponse = await api.get("/api/barangay/fiscal-years", {
-          headers: {
-            Authorization: `Bearer ${this.authStore.token}`,
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-        })
-        const fiscalYears = Array.isArray(yearsResponse.data) ? yearsResponse.data : yearsResponse.data.data || []
+        // Use admin token if admin is logged in
+        const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
+        
+        let fiscalYear = null
+        
+        if (this.authStore.admin) {
+          // For admins, we need to find fiscal years from any barangay for the current year
+          // Since admins can see all barangays, we'll fetch from the first barangay
+          // that has fiscal years or use a different approach
+          const currentYear = new Date().getFullYear()
+          
+          // Try to get fiscal year directly using a raw query approach for admins
+          // We'll assume there's a fiscal year for the current year
+          fiscalYear = { id: currentYear, year: currentYear }
+          
+          // For now, let's skip the fiscal year API call for admins and use the current year
+          // This is a temporary solution - ideally we'd need an admin fiscal years endpoint
+        } else {
+          // Regular barangay users can use their fiscal years endpoint
+          const yearsResponse = await api.get("/api/barangay/fiscal-years", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+          })
+          const fiscalYears = Array.isArray(yearsResponse.data) ? yearsResponse.data : yearsResponse.data.data || []
 
-        const currentYear = new Date().getFullYear()
-        const fiscalYear = fiscalYears.find((y) => y.year == currentYear)
+          const currentYear = new Date().getFullYear()
+          fiscalYear = fiscalYears.find((y) => y.year == currentYear)
 
-        if (!fiscalYear) {
-          throw new Error(`No fiscal year configuration found for ${currentYear}.
-        Please contact your administrator.`)
+          if (!fiscalYear) {
+            throw new Error(`No fiscal year configuration found for ${currentYear}.
+          Please contact your administrator.`)
+          }
         }
 
-        const response = await api.get("/api/barangay/expense-hierarchy", {
+        // Use different endpoints for admin vs regular users
+        const endpoint = this.authStore.admin ? "/api/admin/expense-hierarchy" : "/api/barangay/expense-hierarchy"
+
+        const response = await api.get(endpoint, {
           params: { fiscal_year_id: fiscalYear.id },
           headers: {
-            Authorization: `Bearer ${this.authStore.token}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
             Accept: "application/json",
           },
@@ -335,9 +387,13 @@ export const useAppropriationStore = defineStore("appropriation", {
 
     async fetchExistingAllocations(budgetId) {
       try {
-        const response = await api.get(`/api/barangay/budgets/${budgetId}/allocations`, {
+        // Use different endpoints for admin vs regular users
+        const endpoint = this.authStore.admin ? `/api/admin/budgets/${budgetId}/allocations` : `/api/barangay/budgets/${budgetId}/allocations`
+        const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
+        
+        const response = await api.get(endpoint, {
           headers: {
-            Authorization: `Bearer ${this.authStore.token}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
             Accept: "application/json",
           },
@@ -388,19 +444,25 @@ export const useAppropriationStore = defineStore("appropriation", {
       }
     },
 
-    async commitAllocation(budgetId, allocations) {
+    async commitAllocation(budgetId, allocations, options = { backgroundRefresh: false }) {
+      const doBackground = options?.backgroundRefresh === true
+      if (!doBackground) this.loading = true
       try {
         const cleanedAllocations = allocations.map((allocation) => ({
           ...allocation,
           amount: parseCurrency(allocation.amount),
         }))
 
+        // Use different endpoints for admin vs regular users
+        const endpoint = this.authStore.admin ? `/api/admin/budgets/${budgetId}/allocate` : `/api/barangay/budgets/${budgetId}/allocate`
+        const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
+
         const response = await api.post(
-          `/api/barangay/budgets/${budgetId}/allocate`,
+          endpoint,
           { allocations: cleanedAllocations },
           {
             headers: {
-              Authorization: `Bearer ${this.authStore.token}`,
+              Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
               Accept: "application/json",
             },
@@ -417,21 +479,31 @@ export const useAppropriationStore = defineStore("appropriation", {
           }
         }
 
-        // Refresh the budgets list to ensure we have the latest data from the database
-        await this.fetchBudgets()
-
-        // Refresh disbursement store expense data to reflect appropriation changes
-        try {
-          const { useDisbursementStore } = await import('./disbursementStore')
-          const disbursementStore = useDisbursementStore()
-          
-          // Force refresh expense details to ensure we have latest disbursement data
-          await disbursementStore.forceRefreshExpenseDetails()
-          
-          // Then refresh expense accounts
-          await disbursementStore.refreshExpenseAccountsInBackground()
-        } catch (error) {
-          console.warn('Failed to refresh disbursement store after appropriation update:', error)
+        // Optionally refresh in the background so UI can close immediately
+        if (doBackground) {
+          ;(async () => {
+            try {
+              await this.fetchBudgets({ silent: true })
+              const { useDisbursementStore } = await import('./disbursementStore')
+              const disbursementStore = useDisbursementStore()
+              await disbursementStore.forceRefreshExpenseDetails()
+              await disbursementStore.refreshExpenseAccountsInBackground()
+            } catch (error) {
+              console.warn('Background refresh after appropriation update failed:', error)
+            }
+          })()
+        } else {
+          // Refresh the budgets list to ensure we have the latest data from the database
+          await this.fetchBudgets()
+          // Refresh disbursement store expense data to reflect appropriation changes
+          try {
+            const { useDisbursementStore } = await import('./disbursementStore')
+            const disbursementStore = useDisbursementStore()
+            await disbursementStore.forceRefreshExpenseDetails()
+            await disbursementStore.refreshExpenseAccountsInBackground()
+          } catch (error) {
+            console.warn('Failed to refresh disbursement store after appropriation update:', error)
+          }
         }
 
         return response.data
@@ -440,6 +512,8 @@ export const useAppropriationStore = defineStore("appropriation", {
         console.error("[ERROR] Response data:", error.response?.data)
         console.error("[ERROR] Response status:", error.response?.status)
         throw error
+      } finally {
+        if (!doBackground) this.loading = false
       }
     },
 
@@ -504,9 +578,13 @@ export const useAppropriationStore = defineStore("appropriation", {
 
     async fetchAllocationHistory(id) {
       try {
-        const response = await api.get(`/api/barangay/appropriations/${id}/history`, {
+        // Use different endpoints for admin vs regular users
+        const endpoint = this.authStore.admin ? `/api/admin/budgets/${id}/history` : `/api/barangay/budgets/${id}/history`
+        const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
+        
+        const response = await api.get(endpoint, {
           headers: {
-            Authorization: `Bearer ${this.authStore.token}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
             Accept: "application/json",
           },

@@ -56,14 +56,6 @@ class Admin extends Authenticatable
     }
 
     /**
-     * Check if admin is accounting officer
-     */
-    public function isAccounting()
-    {
-        return $this->role === 'accounting';
-    }
-
-    /**
      * Check if admin is COA officer
      */
     public function isCOA()

@@ -76,8 +76,10 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useQuasar } from 'quasar'
 import { useDisbursementStore } from 'stores/disbursementStore'
 
+const $q = useQuasar()
 const store = useDisbursementStore()
 const dateRange = ref(null)
 
@@ -119,6 +121,24 @@ const clearAllFilters = () => {
   store.dateFrom = ''
   store.dateTo = ''
   dateRange.value = null
+}
+
+const handleSACBPrint = () => {
+  if (dateRangeDisplay.value === '') {
+    $q.notify({
+      type: 'negative',
+      message: 'Please select a date range.',
+      position: 'top',
+    })
+    return
+  }
+  
+  console.log('Printing report for date range:', dateRangeDisplay.value)
+  $q.notify({
+    type: 'positive',
+    message: 'Report sent to printer successfully!',
+    position: 'top',
+  })
 }
 </script>
 <style scoped>

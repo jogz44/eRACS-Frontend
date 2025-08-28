@@ -50,8 +50,9 @@ Route::prefix('barangay')->group(function () {
 
     Route::middleware(['auth:sanctum', 'auth.barangay'])->group(function () {
         // Route::middleware(['check.role'])->group(function () {
-            Route::post('/setlogs', [AdminAuthController::class, 'logUserAction']);
-            Route::get('/getlogs', [AuthController::class, 'getBarangayLogs']);
+                    Route::post('/setlogs', [AdminAuthController::class, 'logUserActionRequest']);
+        Route::get('/getlogs', [AuthController::class, 'getBarangayLogs']);
+        Route::post('/heartbeat', [AuthController::class, 'heartbeat']);
         // });
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/user', [AuthController::class, 'user']);
@@ -187,7 +188,22 @@ Route::prefix('admin')->group(function () {
         Route::patch('/users/{user}/approve', [AdminAuthController::class, 'approveUser']);
         Route::delete('/users/{user}', [AdminAuthController::class, 'deleteUser']);
 
-
+        // Admin appropriation endpoints - can access all barangay data
+        Route::get('/budgets', [AppropriationController::class, 'adminIndex']);
+        Route::post('/budgets/create', [AppropriationController::class, 'storeBudget']);
+        Route::get('/budgets/{budget}/allocations', [AppropriationController::class, 'getBudgetAllocations']);
+        Route::post('/budgets/{budget}/allocate', [AppropriationController::class, 'saveAllocation']);
+        Route::get('/budgets/{id}/history', [AppropriationController::class, 'getAllocationHistory']);
+        Route::patch('/budgets/{budget}/allocations', [AppropriationController::class, 'updateAllocations']);
+        Route::get('/expense-hierarchy', [AppropriationController::class, 'getExpenseHierarchy']);
+        
+        // Admin disbursement endpoints - can access all barangay data
+        Route::get('/disbursements', [DisbursementController::class, 'adminIndex']);
+        Route::post('/disbursements/create', [DisbursementController::class, 'store']);
+        
+        // Admin augmentation endpoints - can access all barangay data
+        Route::get('/augmentations', [BudgetAugmentationController::class, 'adminIndex']);
+        Route::post('/augmentations/create', [BudgetAugmentationController::class, 'store']);
     });
 
     // Dashboard Routes upadtaed
@@ -200,6 +216,8 @@ Route::prefix('admin')->group(function () {
         // Fixed path to avoid double 'admin' in route: now /api/admin/user-access/{id}
         Route::post('/user-access/{id}', [AdminAuthController::class, 'updateUserPermissions']);
         Route::get('/logs', [AdminAuthController::class, 'getAllLogs']);
+        Route::post('/setlogs', [AdminAuthController::class, 'logAdminAction']);
+Route::post('/heartbeat', [AdminAuthController::class, 'heartbeat']);
 
         // Admin Individual Log Open
         Route::get('/logs/{user}/{day}', [AdminAuthController::class, 'getUserLogs']);

@@ -9,7 +9,7 @@
           flat
           dense
           @click="loadPendingUsers"
-          :loading="loading"
+          :loading="store.loadingDisbursements"
         />
       </div>
     </div>
@@ -290,6 +290,7 @@
           :columns="store.disbursementColumns"
           row-key="id"
           :pagination="store.pagination"
+          :loading="store.loadingDisbursements"
           flat
         >
           <template v-slot:body-cell-action="props">
@@ -321,7 +322,7 @@
         </q-table>
       </q-card>
 
-      <OrDetailsDialog v-model="store.dialogs.orDetails" />
+      <OrDetailsDialog />
       <ViewOrDetails v-model="store.dialogs.viewOrDetails" />
       <EditDisbursement />
     </div>
@@ -336,9 +337,11 @@ import ViewOrDetails from 'components/disbursement/ViewOrDetails.vue'
 import EditDisbursement from 'components/disbursement/EditDisbursement.vue'
 import { useDisbursementStore } from 'stores/disbursementStore'
 import { useBankStore } from 'stores/bankStore'
+import { usePageLogging } from '../../../composables/usePageLogging'
 
 const store = useDisbursementStore()
 const bankStore = useBankStore()
+const { logPageVisit } = usePageLogging()
 
 onMounted(async () => {
   try {
@@ -348,6 +351,9 @@ onMounted(async () => {
     if (!bankStore.banks.length) {
       await bankStore.fetchBanks()
     }
+    
+    // Log page visit
+    await logPageVisit('Current Disbursement')
   } catch (error) {
     console.error('Error during component initialization:', error)
     $q.notify({
@@ -451,8 +457,10 @@ const handleEnterKey = (event) => {
   validateAndSave()
 }
 
-const handleSaveClick = () => {
-  validateAndSave()
+const handleSaveClick = async () => {
+  await validateAndSave()
+  // Refresh the disbursement list after saving
+  await store.fetchDisbursements()
 }
 
 const loadPendingUsers = async () => {

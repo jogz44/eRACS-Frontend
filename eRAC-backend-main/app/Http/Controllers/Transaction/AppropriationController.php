@@ -25,12 +25,41 @@ class AppropriationController extends Controller
             'status' => 'nullable|in:draft,committed,reverted',
             'search' => 'nullable|string',
             'date_from' => 'nullable|date',
-            'date_to' => 'nullable|date|after_or_equal:date_from'
+            'date_to' => 'nullable|date|after_or_equal:date_from',
+            'barangay_id' => 'nullable|exists:barangays,id'
         ]);
 
         // Get base query
-        $query = Budget::with(['tranAppropriations.expenseType', 'fiscalYear'])
-            ->where('barangay_id', $request->user()->barangay_id);
+        $query = Budget::with(['tranAppropriations.expenseType', 'fiscalYear', 'barangay']);
+        
+        // Check if user is admin (from admin guard) or barangay user with admin role
+        $isAdmin = false;
+        
+        // Try to get admin user first
+        try {
+            $adminUser = $request->user('admin');
+            if ($adminUser) {
+                $isAdmin = true;
+            }
+        } catch (\Exception $e) {
+            // Not an admin user, check if barangay user is admin
+            $barangayUser = $request->user('barangay');
+            if ($barangayUser && $barangayUser->role === 'admin') {
+                $isAdmin = true;
+            }
+        }
+        
+        // Filter by barangay - admin can view all, regular users only see their barangay
+        if ($request->barangay_id && $isAdmin) {
+            // Admin can filter by specific barangay
+            $query->where('barangay_id', $request->barangay_id);
+        } else {
+            // Regular users only see their barangay
+            $user = $request->user('barangay');
+            if ($user) {
+                $query->where('barangay_id', $user->barangay_id);
+            }
+        }
 
         // Apply year filter
         if ($request->year) {
@@ -76,6 +105,8 @@ class AppropriationController extends Controller
                     'amount' => $totalAvailable,
                     'unappropriated' => $unappropriated,
                     'fiscal_year' => $budget->fiscalYear->year,
+                    'barangay_name' => $budget->barangay->name ?? null,
+                    'barangay_id' => $budget->barangay_id,
                     'allocations' => $budget->tranAppropriations->map(function($tranAppropriations) {
                         return [
                             'id' => $tranAppropriations->id,
@@ -86,14 +117,99 @@ class AppropriationController extends Controller
                 ];
             });
 
+        // Calculate total available based on filtered results
+        $totalAvailable = $budgets->sum('amount');
+
         return response()->json([
             'status' => true,
             'data' => $budgets,
-            'total_available' => (float)Budget::where('barangay_id', $request->user()->barangay_id)
-                                        ->get()
-                                        ->sum(function($budget) {
-                                            return (float)$budget->original_amount + (float)$budget->augmentation;
-                                        })
+            'total_available' => $totalAvailable
+        ]);
+    }
+
+    /**
+     * Admin version of index - can view all barangay budgets
+     */
+    public function adminIndex(Request $request)
+    {
+        $request->validate([
+            'year' => 'nullable|integer',
+            'status' => 'nullable|in:draft,committed,reverted',
+            'search' => 'nullable|string',
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date|after_or_equal:date_from',
+            'barangay_id' => 'nullable|exists:barangays,id'
+        ]);
+
+        // Get base query - admin can see all barangays
+        $query = Budget::with(['tranAppropriations.expenseType', 'fiscalYear', 'barangay']);
+        
+        // Filter by specific barangay if requested
+        if ($request->barangay_id) {
+            $query->where('barangay_id', $request->barangay_id);
+        }
+
+        // Apply year filter
+        if ($request->year) {
+            $query->whereHas('fiscalYear', function($q) use ($request) {
+                $q->where('year', $request->year);
+            });
+        }
+
+        // Apply other filters
+        if ($request->search) {
+            $query->where('description', 'like', '%'.$request->search.'%');
+        }
+
+        if ($request->date_from) {
+            $query->where('start_date', '>=', $request->date_from);
+        }
+
+        if ($request->date_to) {
+            $query->where('end_date', '<=', $request->date_to);
+        }
+
+        // Get budgets with their total appropriations
+        $budgets = $query->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function($budget) {
+                $hasAllocations = $budget->tranAppropriations->isNotEmpty();
+                
+                // Calculate total available budget (original + augmentation)
+                $totalAvailable = (float)$budget->original_amount + (float)$budget->augmentation;
+                
+                // Calculate total appropriated amount
+                $totalAppropriated = $budget->tranAppropriations->sum('amount');
+                
+                // Calculate unappropriated amount
+                $unappropriated = $totalAvailable - $totalAppropriated;
+
+                return [
+                    'id' => $budget->id,
+                    'date' => $budget->created_at->format('Y-m-d'),
+                    'description' => $budget->description,
+                    'amount' => $totalAvailable,
+                    'unappropriated' => $unappropriated,
+                    'fiscal_year' => $budget->fiscalYear->year,
+                    'barangay_name' => $budget->barangay->name ?? null,
+                    'barangay_id' => $budget->barangay_id,
+                    'allocations' => $budget->tranAppropriations->map(function($tranAppropriations) {
+                        return [
+                            'id' => $tranAppropriations->id,
+                            'amount' => (float)$tranAppropriations->amount,
+                            'expense_type' => $tranAppropriations->expenseType->name ?? null
+                        ];
+                    })
+                ];
+            });
+
+        // Calculate total available based on filtered results
+        $totalAvailable = $budgets->sum('amount');
+
+        return response()->json([
+            'status' => true,
+            'data' => $budgets,
+            'total_available' => $totalAvailable
         ]);
     }
 
@@ -107,11 +223,22 @@ class AppropriationController extends Controller
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
             'description' => 'required|string|max:255',
-            'original_amount' => 'required|numeric|min:0'
+            'original_amount' => 'required|numeric|min:0',
+            'barangay_id' => 'nullable|exists:barangays,id'
         ]);
 
+        // Determine barangay_id based on user type
+        $barangayId = null;
+        if ($request->barangay_id) {
+            // Admin user providing barangay_id
+            $barangayId = $request->barangay_id;
+        } else {
+            // Regular user - use their barangay_id
+            $barangayId = $request->user()->barangay_id;
+        }
+
         $budget = Budget::create([
-            'barangay_id' => $request->user()->barangay_id,
+            'barangay_id' => $barangayId,
             'fiscal_year_id' => $validated['fiscal_year_id'],
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
@@ -127,10 +254,9 @@ class AppropriationController extends Controller
             $request->user(),
             'Created Budget',
             sprintf(
-                'Created budget "%s" with amount ₱%s (FY #%s)',
+                'Created budget "%s" with amount ₱%s',
                 $validated['description'],
-                number_format($validated['original_amount'], 2),
-                $validated['fiscal_year_id']
+                number_format($validated['original_amount'], 2)
             )
         );
 
@@ -330,19 +456,21 @@ class AppropriationController extends Controller
                 // Remove from map to track which ones were updated
                 unset($existingAllocationMap[$allocationKey]);
 
-                // Log edited allocation with previous vs new amount
-                $identifier = $this->getExpenseIdentifier($allocation);
-                AdminAuthController::logUserAction(
-                    $request->user(),
-                    'Edited Allocation',
-                    sprintf(
-                        'Edited allocation %s: from ₱%s to ₱%s for budget "%s"',
-                        $identifier,
-                        number_format($previousAmount, 2),
-                        number_format($allocation['amount'], 2),
-                        $budget->description
-                    )
-                );
+                // Log edited allocation with previous vs new amount only if amount actually changed
+                if (abs($previousAmount - $allocation['amount']) > 0.01) { // Use small threshold for float comparison
+                    $identifier = $this->getExpenseIdentifier($allocation);
+                    AdminAuthController::logUserAction(
+                        $request->user(),
+                        'Edited Allocation',
+                        sprintf(
+                            'Edited allocation %s: from ₱%s to ₱%s for budget "%s"',
+                            $identifier,
+                            number_format($previousAmount, 2),
+                            number_format($allocation['amount'], 2),
+                            $budget->description
+                        )
+                    );
+                }
             } else {
                 // Create new allocation
                 $appropriationData = [
@@ -651,19 +779,21 @@ class AppropriationController extends Controller
                         'status' => 'committed',
                         'user_id' => $budget->user_id,
                     ]);
-                    // Log edited allocation
-                    $identifier = $this->getExpenseIdentifier($alloc);
-                    AdminAuthController::logUserAction(
-                        $request->user(),
-                        'Edited Allocation',
-                        sprintf(
-                            'Edited allocation %s: from ₱%s to ₱%s for budget "%s"',
-                            $identifier,
-                            number_format($previousAmount, 2),
-                            number_format($alloc['amount'], 2),
-                            $budget->description
-                        )
-                    );
+                    // Log edited allocation only if amount actually changed
+                    if (abs($previousAmount - $alloc['amount']) > 0.01) { // Use small threshold for float comparison
+                        $identifier = $this->getExpenseIdentifier($alloc);
+                        AdminAuthController::logUserAction(
+                            $request->user(),
+                            'Edited Allocation',
+                            sprintf(
+                                'Edited allocation %s: from ₱%s to ₱%s for budget "%s"',
+                                $identifier,
+                                number_format($previousAmount, 2),
+                                number_format($alloc['amount'], 2),
+                                $budget->description
+                            )
+                        );
+                    }
                     
                     // Remove from map to track which ones were updated
                     unset($existingAllocationMap[$allocationKey]);

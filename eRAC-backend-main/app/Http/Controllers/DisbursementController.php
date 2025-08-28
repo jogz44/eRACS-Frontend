@@ -74,6 +74,39 @@ class DisbursementController extends Controller
         ]);
     }
 
+    // GET /api/admin/disbursements - Admin endpoint to fetch disbursements across all barangays
+    public function adminIndex(Request $request)
+    {
+        $query = Disbursement::with('bank', 'barangay');
+        
+        // Filter by barangay_id if provided
+        if ($request->filled('barangay_id')) {
+            $query->where('barangay_id', $request->barangay_id);
+        }
+        
+        $disbursements = $query->orderByDesc('date')->get();
+        $result = $disbursements->map(function($d) {
+            return [
+                'id' => $d->id,
+                'date' => $d->date,
+                'dv_number' => $d->dv_number,
+                'cheque_number' => $d->cheque_number,
+                'bank_id' => $d->bank_id,
+                'bank_name' => $d->bank->bank_name,
+                'payee' => $d->payee,
+                'dv_amount' => $d->dv_amount,
+                'status' => $d->status,
+                'barangay_name' => $d->barangay ? $d->barangay->name : 'Unknown',
+                'created_at' => $d->created_at,
+                'updated_at' => $d->updated_at,
+            ];
+        });
+        return response()->json([
+            'status' => true,
+            'data' => $result
+        ]);
+    }
+
     public function getParticular(Request $request)
     {
         $particular = TranExpenseDetail::select('particulars')
@@ -101,17 +134,28 @@ class DisbursementController extends Controller
             'expenses.*.expense_class_id' => 'nullable|exists:lib_expense_classes,id',
             'expenses.*.expense_type_id' => 'nullable|exists:lib_expense_types,id',
             'expenses.*.expense_item_id' => 'nullable|exists:lib_expense_items,id',
+            'barangay_id' => 'nullable|exists:barangays,id', // Added for admin
         ]);
 
         try {
             $user = $request->user();
+            
+            // Determine barangay_id based on user type
+            $barangayId = null;
+            if ($request->barangay_id) {
+                // Admin user providing barangay_id
+                $barangayId = $request->barangay_id;
+            } else {
+                // Regular user - use their barangay_id
+                $barangayId = $user->barangay_id;
+            }
             
             // Convert date from DD/MM/YYYY to YYYY-MM-DD
             $dateParts = explode('/', $request->date);
             $formattedDate = $dateParts[2] . '-' . $dateParts[1] . '-' . $dateParts[0];
 
             $disbursement = Disbursement::create([
-                'barangay_id' => $user->barangay_id,
+                'barangay_id' => $barangayId,
                 'date' => $formattedDate,
                 'dv_number' => $request->dv_number,
                 'cheque_number' => $request->cheque_number,
@@ -136,7 +180,7 @@ class DisbursementController extends Controller
             if ($request->has('expenses') && is_array($request->expenses)) {
                 foreach ($request->expenses as $expense) {
                     // Find the appropriate appropriation based on expense hierarchy
-                    $appropriationQuery = TranAppropriation::where('barangay_id', $user->barangay_id)
+                    $appropriationQuery = TranAppropriation::where('barangay_id', $barangayId)
                         ->where('status', 'committed');
                     
                     if (isset($expense['expense_item_id'])) {

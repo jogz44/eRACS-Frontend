@@ -254,11 +254,13 @@ import { useContDisbursementStore } from 'stores/contDisburseStore'
 import { useAppropriationStore } from 'stores/appropriationStore'
 import ContLiquidateDialog from 'components/contDisburse/ContOrDetails.vue'
 import ContViewOr from 'components/contDisburse/ContViewOr.vue'
+import { usePageLogging } from '../../../composables/usePageLogging'
 
 const $q = useQuasar()
 const loading = ref(false)
 const store = useContDisbursementStore()
 const appropriationStore = useAppropriationStore()
+const { logPageVisit } = usePageLogging()
 
 const selectedFiscalYear = computed({
   get: () => appropriationStore.selectedFiscalYear,
@@ -275,6 +277,8 @@ const onFiscalYearChange = (value) => {
 onMounted(async () => {
   try {
     await appropriationStore.initialize()
+    // Log page visit
+    await logPageVisit('Continuing Disbursement')
   } catch (error) {
     console.error('Failed to initialize fiscal years:', error)
   }

@@ -147,7 +147,7 @@ export const useChartDataStore = defineStore('chartData', {
           align: 'left',
           sortable: true,
           field: 'dv_number',
-          style: 'width: 18%'
+          style: 'width: 18%',
         },
         {
           name: 'date',
@@ -155,7 +155,7 @@ export const useChartDataStore = defineStore('chartData', {
           align: 'center',
           sortable: true,
           field: 'date',
-          style: 'width: 12%'
+          style: 'width: 12%',
         },
         {
           name: 'payee',
@@ -163,7 +163,7 @@ export const useChartDataStore = defineStore('chartData', {
           align: 'left',
           sortable: true,
           field: 'payee',
-          style: 'width: 22%'
+          style: 'width: 22%',
         },
         {
           name: 'dv_amount',
@@ -171,7 +171,7 @@ export const useChartDataStore = defineStore('chartData', {
           align: 'right',
           field: 'dv_amount',
           sortable: true,
-          style: 'width: 18%'
+          style: 'width: 18%',
         },
         {
           name: 'aging',
@@ -179,7 +179,7 @@ export const useChartDataStore = defineStore('chartData', {
           align: 'center',
           field: 'aging',
           sortable: true,
-          style: 'width: 15%'
+          style: 'width: 15%',
         },
         {
           name: 'status',
@@ -187,8 +187,8 @@ export const useChartDataStore = defineStore('chartData', {
           align: 'center',
           field: 'status',
           sortable: true,
-          style: 'width: 15%'
-        }
+          style: 'width: 15%',
+        },
       ]).value,
 
     recentDisbursementColumns: () =>
@@ -235,14 +235,19 @@ export const useChartDataStore = defineStore('chartData', {
   actions: {
     getAuthConfig() {
       const authStore = useAuthStore()
-      if (!authStore.token) {
+      
+      // Use admin token if admin is logged in, otherwise use regular token
+      const token = authStore.admin ? authStore.adminToken : authStore.token
+      
+      if (!token) {
         console.error('No authentication token found')
         throw new Error('Authentication required')
       }
-      console.log('Auth token available:', authStore.token ? 'Yes' : 'No')
+      
+      console.log('Auth token available:', token ? 'Yes' : 'No')
       return {
         headers: {
-          Authorization: `Bearer ${authStore.token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
@@ -261,10 +266,7 @@ export const useChartDataStore = defineStore('chartData', {
       if (!date) return ''
 
       const d = new Date(date)
-      const {
-        fullYear = false,
-        separator = '/',
-      } = options
+      const { fullYear = false, separator = '/' } = options
 
       const month = String(d.getMonth() + 1).padStart(2, '0')
       const day = String(d.getDate()).padStart(2, '0')
@@ -275,21 +277,19 @@ export const useChartDataStore = defineStore('chartData', {
 
     // Calculate aging in days from creation date
     calculateAging(createdDate, status) {
-      console.log('calculateAging called with:', { createdDate, status })
-
-      // Return '-' for liquidated or if no creation date
-      if (!createdDate || status === 'Liquidated' || status === 'liquidated') {
-        console.log('Returning "-" for:', { createdDate, status })
-        return '-'
-      }
+      if (!createdDate || status.toLowerCase() === 'liquidated') return '-'
 
       const created = new Date(createdDate)
       const today = new Date()
-      const diffTime = Math.abs(today - created)
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
-      console.log('Calculated aging:', { created, today, diffTime, diffDays })
-      return diffDays
+      // Normalize both to midnight (removes hours/minutes offset issue)
+      created.setHours(0, 0, 0, 0)
+      today.setHours(0, 0, 0, 0)
+
+      const diffTime = today - created
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) // <-- FLOOR, not CEIL
+
+      return diffDays < 0 ? 0 : diffDays // Prevent negative values
     },
 
     getStatusColor(status) {
@@ -311,9 +311,16 @@ export const useChartDataStore = defineStore('chartData', {
         const budgets = budgetsResponse.data.data || []
 
         // Calculate totals
-        const totalAppropriation = budgets.reduce((sum, budget) => sum + (parseFloat(budget.amount) || 0), 0)
+        const totalAppropriation = budgets.reduce(
+          (sum, budget) => sum + (parseFloat(budget.amount) || 0),
+          0,
+        )
         const totalObligation = budgets.reduce((sum, budget) => {
-          const allocated = budget.allocations?.reduce((allocSum, alloc) => allocSum + (parseFloat(alloc.amount) || 0), 0) || 0
+          const allocated =
+            budget.allocations?.reduce(
+              (allocSum, alloc) => allocSum + (parseFloat(alloc.amount) || 0),
+              0,
+            ) || 0
           return sum + allocated
         }, 0)
         const totalBalance = totalAppropriation - totalObligation
@@ -363,7 +370,7 @@ export const useChartDataStore = defineStore('chartData', {
         // Get expense hierarchy
         const hierarchyResponse = await api.get('/api/barangay/expense-hierarchy', {
           ...this.getAuthConfig(),
-          params: { fiscal_year_id: fiscalYearId }
+          params: { fiscal_year_id: fiscalYearId },
         })
 
         const expenseHierarchy = hierarchyResponse.data || []
@@ -375,35 +382,39 @@ export const useChartDataStore = defineStore('chartData', {
         if (budgets.length === 0) {
           this.pieChartData = {
             labels: ['No Data Available'],
-            datasets: [{
-              data: [1],
-              backgroundColor: ['#FFA000'],
-              borderWidth: 0,
-            }]
+            datasets: [
+              {
+                data: [1],
+                backgroundColor: ['#FFA000'],
+                borderWidth: 0,
+              },
+            ],
           }
           return
         }
 
         // Fetch allocations for all budgets
-        const allocationPromises = budgets.map(budget =>
-          api.get(`/api/barangay/budgets/${budget.id}/allocations`, this.getAuthConfig())
+        const allocationPromises = budgets.map((budget) =>
+          api.get(`/api/barangay/budgets/${budget.id}/allocations`, this.getAuthConfig()),
         )
 
         const allocationResponses = await Promise.all(allocationPromises)
-        const allAllocations = allocationResponses.flatMap(response => response.data.data || [])
+        const allAllocations = allocationResponses.flatMap((response) => response.data.data || [])
 
         // Process allocations and create pie chart data
         const classTotals = this.processAllocationsForPieChart(expenseHierarchy, allAllocations)
 
         // Update pie chart data
         this.pieChartData = {
-          labels: classTotals.map(item => item.name),
-          datasets: [{
-            data: classTotals.map(item => item.total),
-            backgroundColor: this.pieChartData.datasets[0].backgroundColor,
-            borderWidth: 0,
-            hoverOffset: 12,
-          }]
+          labels: classTotals.map((item) => item.name),
+          datasets: [
+            {
+              data: classTotals.map((item) => item.total),
+              backgroundColor: this.pieChartData.datasets[0].backgroundColor,
+              borderWidth: 0,
+              hoverOffset: 12,
+            },
+          ],
         }
 
         return classTotals
@@ -411,11 +422,13 @@ export const useChartDataStore = defineStore('chartData', {
         console.error('Error fetching pie chart data:', error)
         this.pieChartData = {
           labels: ['Error Loading Data'],
-          datasets: [{
-            data: [1],
-            backgroundColor: ['#C62828'],
-            borderWidth: 0,
-          }]
+          datasets: [
+            {
+              data: [1],
+              backgroundColor: ['#C62828'],
+              borderWidth: 0,
+            },
+          ],
         }
         throw error
       } finally {
@@ -427,26 +440,26 @@ export const useChartDataStore = defineStore('chartData', {
     processAllocationsForPieChart(expenseHierarchy, allocations) {
       const classTotals = []
 
-      expenseHierarchy.forEach(expenseClass => {
+      expenseHierarchy.forEach((expenseClass) => {
         let classTotal = 0
 
         // Sum allocations for this expense class
-        allocations.forEach(allocation => {
+        allocations.forEach((allocation) => {
           if (allocation.expense_class_id === expenseClass.id) {
             classTotal += parseFloat(allocation.amount) || 0
           }
         })
 
         // Also sum allocations from child types and items
-        expenseClass.children?.forEach(expenseType => {
-          allocations.forEach(allocation => {
+        expenseClass.children?.forEach((expenseType) => {
+          allocations.forEach((allocation) => {
             if (allocation.expense_type_id === expenseType.id) {
               classTotal += parseFloat(allocation.amount) || 0
             }
           })
 
-          expenseType.children?.forEach(expenseItem => {
-            allocations.forEach(allocation => {
+          expenseType.children?.forEach((expenseItem) => {
+            allocations.forEach((allocation) => {
               if (allocation.expense_item_id === expenseItem.id) {
                 classTotal += parseFloat(allocation.amount) || 0
               }
@@ -458,7 +471,7 @@ export const useChartDataStore = defineStore('chartData', {
           classTotals.push({
             id: expenseClass.id,
             name: expenseClass.name,
-            total: classTotal
+            total: classTotal,
           })
         }
       })
@@ -471,17 +484,14 @@ export const useChartDataStore = defineStore('chartData', {
       console.log('Setting test data for pie chart')
       this.pieChartData = {
         labels: ['Personnel Services', 'Maintenance', 'Capital Outlay', 'Financial Expenses'],
-        datasets: [{
-          data: [5000000, 3000000, 2000000, 1000000],
-          backgroundColor: [
-            '#2E7D32',
-            '#1565C0',
-            '#FFA000',
-            '#C62828'
-          ],
-          borderWidth: 0,
-          hoverOffset: 12,
-        }]
+        datasets: [
+          {
+            data: [5000000, 3000000, 2000000, 1000000],
+            backgroundColor: ['#2E7D32', '#1565C0', '#FFA000', '#C62828'],
+            borderWidth: 0,
+            hoverOffset: 12,
+          },
+        ],
       }
 
       this.summaryCards = [
@@ -520,12 +530,12 @@ export const useChartDataStore = defineStore('chartData', {
         const disbResponse = await api.get('/api/barangay/disbursements', this.getAuthConfig())
         if (disbResponse.data && disbResponse.data.data) {
           // Transform data for the overview table
-          this.disbursementOverviewRows = disbResponse.data.data.map(row => {
+          this.disbursementOverviewRows = disbResponse.data.data.map((row) => {
             console.log('Processing row:', {
               id: row.id,
               status: row.status,
               created_at: row.created_at,
-              dv_number: row.dv_number
+              dv_number: row.dv_number,
             })
 
             const aging = this.calculateAging(row.created_at, row.status)
@@ -541,7 +551,7 @@ export const useChartDataStore = defineStore('chartData', {
               liquidated_amount: row.liquidated_amount ? parseFloat(row.liquidated_amount) : null,
               bank_name: row.bank_name,
               cheque_number: row.cheque_number,
-              aging: aging
+              aging: aging,
             }
           })
 
@@ -600,30 +610,53 @@ export const useChartDataStore = defineStore('chartData', {
           // Update pie chart data
           if (dashboardData.pie_chart_data.labels.length > 0) {
             const palette = [
-              '#2E7D32', '#1565C0', '#FFA000', '#C62828', '#6A1B9A', '#00838F', '#EF6C00', '#4E342E',
-              '#AD1457', '#00796B', '#5D4037', '#4527A0', '#689F38', '#D84315', '#283593', '#F4511E', '#00695C', '#512DA8'
-            ];
-            const colorCount = dashboardData.pie_chart_data.labels.length;
-            const backgroundColor = Array.from({length: colorCount}, (_, i) => palette[i % palette.length]);
+              '#2E7D32',
+              '#1565C0',
+              '#FFA000',
+              '#C62828',
+              '#6A1B9A',
+              '#00838F',
+              '#EF6C00',
+              '#4E342E',
+              '#AD1457',
+              '#00796B',
+              '#5D4037',
+              '#4527A0',
+              '#689F38',
+              '#D84315',
+              '#283593',
+              '#F4511E',
+              '#00695C',
+              '#512DA8',
+            ]
+            const colorCount = dashboardData.pie_chart_data.labels.length
+            const backgroundColor = Array.from(
+              { length: colorCount },
+              (_, i) => palette[i % palette.length],
+            )
 
             this.pieChartData = {
               labels: dashboardData.pie_chart_data.labels,
-              datasets: [{
-                data: dashboardData.pie_chart_data.data,
-                backgroundColor: backgroundColor,
-                borderWidth: 0,
-                hoverOffset: 12,
-              }]
+              datasets: [
+                {
+                  data: dashboardData.pie_chart_data.data,
+                  backgroundColor: backgroundColor,
+                  borderWidth: 0,
+                  hoverOffset: 12,
+                },
+              ],
             }
             console.log('Updated pie chart data:', this.pieChartData)
           } else {
             this.pieChartData = {
               labels: ['No Data Available'],
-              datasets: [{
-                data: [1],
-                backgroundColor: ['#FFA000'],
-                borderWidth: 0,
-              }]
+              datasets: [
+                {
+                  data: [1],
+                  backgroundColor: ['#FFA000'],
+                  borderWidth: 0,
+                },
+              ],
             }
             console.log('No pie chart data available, showing placeholder')
           }
@@ -633,16 +666,20 @@ export const useChartDataStore = defineStore('chartData', {
             const disbResponse = await api.get('/api/barangay/disbursements', this.getAuthConfig())
             if (disbResponse.data && disbResponse.data.data) {
               // Transform data for the overview table
-              this.disbursementOverviewRows = disbResponse.data.data.map(row => {
+              this.disbursementOverviewRows = disbResponse.data.data.map((row) => {
                 console.log('Processing row in loadDashboardData:', {
                   id: row.id,
                   status: row.status,
                   created_at: row.created_at,
-                  dv_number: row.dv_number
+                  dv_number: row.dv_number,
                 })
 
                 const aging = this.calculateAging(row.created_at, row.status)
-                console.log('Calculated aging for row in loadDashboardData:', { id: row.id, status: row.status, aging })
+                console.log('Calculated aging for row in loadDashboardData:', {
+                  id: row.id,
+                  status: row.status,
+                  aging,
+                })
 
                 return {
                   id: row.id,
@@ -651,23 +688,27 @@ export const useChartDataStore = defineStore('chartData', {
                   payee: row.payee,
                   dv_amount: parseFloat(row.dv_amount) || 0,
                   status: row.status,
-                  liquidated_amount: row.liquidated_amount ? parseFloat(row.liquidated_amount) : null,
+                  liquidated_amount: row.liquidated_amount
+                    ? parseFloat(row.liquidated_amount)
+                    : null,
                   bank_name: row.bank_name,
                   cheque_number: row.cheque_number,
-                  aging: aging
+                  aging: aging,
                 }
               })
 
               // Also populate the old recent disbursement rows for backward compatibility
               const liquidatedRows = disbResponse.data.data
-                .filter(row => row.status === 'Liquidated')
+                .filter((row) => row.status === 'Liquidated')
                 .slice(0, 4)
-                .map(row => ({
+                .map((row) => ({
                   dvNumber: row.dv_number,
                   dvAmount: this.formatCurrency(row.dv_amount),
                   date: this.formatDate(row.date),
                   status: row.status,
-                  liquidatedAmount: row.liquidated_amount ? this.formatCurrency(row.liquidated_amount) : '',
+                  liquidatedAmount: row.liquidated_amount
+                    ? this.formatCurrency(row.liquidated_amount)
+                    : '',
                 }))
 
               // Fill remaining slots if less than 4 liquidated disbursements
@@ -704,11 +745,13 @@ export const useChartDataStore = defineStore('chartData', {
         // Set error state for pie chart
         this.pieChartData = {
           labels: ['Error Loading Data'],
-          datasets: [{
-            data: [1],
-            backgroundColor: ['#C62828'],
-            borderWidth: 0,
-          }]
+          datasets: [
+            {
+              data: [1],
+              backgroundColor: ['#C62828'],
+              borderWidth: 0,
+            },
+          ],
         }
         throw error
       } finally {

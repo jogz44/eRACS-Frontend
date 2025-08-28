@@ -14,10 +14,10 @@ export default function useAllocationDialog() {
 
   const accounts = ref([
     { name: 'Personal Service', amount: '' },
-    { name: '• Honorarium', amount: '5000000.00' },
+    { name: '• Honorarium', amount: '' },
     { name: '• Cash Gift', amount: '' },
     { name: 'MOOE', amount: '' },
-  ])  
+  ])
 
   const filteredAccounts = computed(() => {
     return accounts.value.filter((account) =>

@@ -20,7 +20,6 @@ export const useAuthStore = defineStore('auth', {
     
     // Admin role getters
     isSuperAdmin: (state) => state.admin?.role === 'super_admin',
-    isAccounting: (state) => state.admin?.role === 'accounting',
     isCOA: (state) => state.admin?.role === 'coa',
     canManageUsers: (state) => state.admin?.role === 'super_admin',
   },
@@ -30,7 +29,13 @@ export const useAuthStore = defineStore('auth', {
 
   actions: {
     // Helper methods
-        setToken(token) {
+    restoreAdminAuth() {
+      if (this.adminToken) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${this.adminToken}`
+      }
+    },
+    
+    setToken(token) {
       this.token = token
     },
     setUser(user) {
@@ -220,33 +225,27 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async logout() {
-      try {
-        if (this.token) {
-          await api.post(
-            '/api/barangay/logout',
-            {},
-            {
-              headers: { Authorization: `Bearer ${this.token}` },
-            },
-          )
-        }
-      } catch (error) {
-        console.error('Logout error:', error)
-      } finally {
-        this.user = null
-        this.token = null
-        localStorage.removeItem('barangay_token')
-        
-        // Reset permissions on logout
-        try {
-          const { usePermissionsStore } = await import('./permissionsStore')
-          const permissionsStore = usePermissionsStore()
-          permissionsStore.reset()
-        } catch (permError) {
-          console.warn('Failed to reset permissions:', permError)
-        }
-      }
+    // Comprehensive logout method for both user and admin
+    logout() {
+      // Clear all auth data
+      this.user = null
+      this.token = null
+      this.admin = null
+      this.adminToken = null
+      
+      // Clear localStorage
+      localStorage.removeItem('user_data')
+      localStorage.removeItem('barangay_token')
+      localStorage.removeItem('admin_data')
+      localStorage.removeItem('admin_token')
+      
+      // Clear axios headers
+      delete api.defaults.headers.common['Authorization']
+      
+      // Clear any other stored data
+      localStorage.removeItem('acceptedUsers')
+      
+      console.log('User logged out successfully')
     },
 
     async initialize() {
@@ -333,14 +332,6 @@ export const useAuthStore = defineStore('auth', {
           setTimeout(() => window.location.reload(), 100)
         }
       })
-    },
-
-    _clearAdminAuth() {
-      this.admin = null
-      this.adminToken = null
-      localStorage.removeItem('admin_data')
-      localStorage.removeItem('admin_token')
-      delete api.defaults.headers.common['Authorization']
     },
 
     // Password reset methods
