@@ -182,21 +182,24 @@
         <template v-slot:body-cell-action="props">
           <q-td :props="props">
             <div class="q-gutter-xs">
-              <q-btn
-                dense
-                icon="edit"
-                color="orange"
-                @click="openEditAllocationDialog(props.row)"
-                :disable="!props.row.allocations || props.row.allocations.length === 0"
-                v-permission="'edit'"
-              />
-              <q-btn
-                dense
-                icon="visibility"
-                color="blue"
-                @click="openViewDialog(props.row)"
-                v-permission="'view'"
-              />
+                             <q-btn
+                 dense
+                 icon="edit"
+                 color="orange"
+                 @click="openEditAllocationDialog(props.row)"
+                 :disable="!props.row.allocations || props.row.allocations.length === 0 || editLoading[props.row.id]"
+                 :loading="editLoading[props.row.id]"
+                 v-permission="'edit'"
+               />
+                             <q-btn
+                 dense
+                 icon="visibility"
+                 color="blue"
+                 @click="openViewDialog(props.row)"
+                 :loading="viewLoading[props.row.id]"
+                 :disable="viewLoading[props.row.id]"
+                 v-permission="'view'"
+               />
             </div>
           </q-td>
         </template>
@@ -385,6 +388,8 @@ const editAllocations = ref([])
 const expandedEditTypes = ref({})
 const typeErrorMap = ref({})
 const editDisplayAccounts = ref([])
+const editLoading = ref({})
+const viewLoading = ref({})
 
 const initializeEditDisplayAccounts = () => {
   if (!editAllocations.value || editAllocations.value.length === 0) {
@@ -497,11 +502,24 @@ const openAllocationDialog = async (row) => {
 
 const viewDialogRef = ref(null)
 
-const openViewDialog = (row) => {
-  if (viewDialogRef.value) {
-    viewDialogRef.value.openDialog(row)
-  } else {
-    console.error('View dialog reference is not available')
+const openViewDialog = async (row) => {
+  viewLoading.value[row.id] = true
+  try {
+    if (viewDialogRef.value) {
+      await viewDialogRef.value.openDialog(row)
+    } else {
+      console.error('View dialog reference is not available')
+    }
+  } catch (error) {
+    console.error('Failed to open view dialog:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to open view dialog',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    viewLoading.value[row.id] = false
   }
 }
 
@@ -518,6 +536,7 @@ watch(selectedFiscalYear, (newYearId) => {
 })
 
 const openEditAllocationDialog = async (row) => {
+  editLoading.value[row.id] = true
   try {
     const response = await api.get(`/api/barangay/budgets/${row.id}/history`)
     const allHistory = response.data.data?.history || []
@@ -552,6 +571,8 @@ const openEditAllocationDialog = async (row) => {
       icon: 'error',
       position: 'top',
     })
+  } finally {
+    editLoading.value[row.id] = false
   }
 }
 
