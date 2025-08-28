@@ -531,15 +531,8 @@ export const useChartDataStore = defineStore('chartData', {
         if (disbResponse.data && disbResponse.data.data) {
           // Transform data for the overview table
           this.disbursementOverviewRows = disbResponse.data.data.map((row) => {
-            console.log('Processing row:', {
-              id: row.id,
-              status: row.status,
-              created_at: row.created_at,
-              dv_number: row.dv_number,
-            })
 
             const aging = this.calculateAging(row.created_at, row.status)
-            console.log('Calculated aging for row:', { id: row.id, status: row.status, aging })
 
             return {
               id: row.id,
@@ -667,19 +660,9 @@ export const useChartDataStore = defineStore('chartData', {
             if (disbResponse.data && disbResponse.data.data) {
               // Transform data for the overview table
               this.disbursementOverviewRows = disbResponse.data.data.map((row) => {
-                console.log('Processing row in loadDashboardData:', {
-                  id: row.id,
-                  status: row.status,
-                  created_at: row.created_at,
-                  dv_number: row.dv_number,
-                })
 
                 const aging = this.calculateAging(row.created_at, row.status)
-                console.log('Calculated aging for row in loadDashboardData:', {
-                  id: row.id,
-                  status: row.status,
-                  aging,
-                })
+                
 
                 return {
                   id: row.id,

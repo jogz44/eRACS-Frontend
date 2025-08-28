@@ -33,6 +33,14 @@ export default defineBoot(({ app }) => {
 
   // Function to reset inactivity timer
   const resetInactivityTimer = () => {
+    // Check if user is still authenticated before setting timer
+    const authStore = useAuthStore()
+    if (!authStore.token && !authStore.adminToken) {
+      console.log('User not authenticated, stopping inactivity monitoring')
+      stopActivityMonitoring()
+      return
+    }
+
     if (activityTimeout) {
       clearTimeout(activityTimeout)
     }
@@ -75,6 +83,14 @@ export default defineBoot(({ app }) => {
   const sendHeartbeat = async () => {
     try {
       const authStore = useAuthStore()
+      
+      // Check if user is still authenticated
+      if (!authStore.token && !authStore.adminToken) {
+        console.log('User not authenticated, stopping heartbeat')
+        stopActivityMonitoring()
+        return
+      }
+
       if (authStore.token || authStore.adminToken) {
         // Send a lightweight request to keep session alive
         const endpoint = authStore.adminToken ? '/api/admin/heartbeat' : '/api/barangay/heartbeat'
@@ -90,6 +106,16 @@ export default defineBoot(({ app }) => {
 
   // Function to start activity monitoring
   const startActivityMonitoring = () => {
+    const authStore = useAuthStore()
+    
+    // Only start monitoring if user is authenticated
+    if (!authStore.token && !authStore.adminToken) {
+      console.log('User not authenticated, skipping activity monitoring')
+      return
+    }
+
+    console.log('Starting activity monitoring for authenticated user')
+    
     // Reset timer on any user activity
     const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click']
     
@@ -110,9 +136,11 @@ export default defineBoot(({ app }) => {
   const stopActivityMonitoring = () => {
     if (activityTimeout) {
       clearTimeout(activityTimeout)
+      activityTimeout = null
     }
     if (heartbeatInterval) {
       clearInterval(heartbeatInterval)
+      heartbeatInterval = null
     }
     
     // Remove event listeners
@@ -120,6 +148,25 @@ export default defineBoot(({ app }) => {
     activityEvents.forEach(event => {
       document.removeEventListener(event, resetInactivityTimer)
     })
+    
+    console.log('Activity monitoring stopped')
+  }
+
+  // Function to check authentication status and manage monitoring
+  const checkAuthAndManageMonitoring = () => {
+    const authStore = useAuthStore()
+    
+    if (authStore.token || authStore.adminToken) {
+      // User is authenticated, start monitoring if not already running
+      if (!heartbeatInterval) {
+        startActivityMonitoring()
+      }
+    } else {
+      // User is not authenticated, stop monitoring
+      if (heartbeatInterval || activityTimeout) {
+        stopActivityMonitoring()
+      }
+    }
   }
 
   // Listen for session expiration events from axios interceptor
@@ -136,32 +183,6 @@ export default defineBoot(({ app }) => {
     // Clear auth state
     authStore.logout()
     
-    // Show notification
-    if (app.config.globalProperties.$q) {
-      app.config.globalProperties.$q.notify({
-        type: 'negative',
-        message: 'Session expired. Please login again.',
-        position: 'top',
-        timeout: 5000,
-        actions: [
-          { 
-            label: 'Login', 
-            color: 'white', 
-            handler: () => {
-              // Redirect to appropriate login page
-              if (app.config.globalProperties.$router) {
-                const currentPath = app.config.globalProperties.$router.currentRoute.value.path
-                if (currentPath.startsWith('/admin')) {
-                  app.config.globalProperties.$router.push('/admin/login')
-                } else {
-                  app.config.globalProperties.$router.push('/')
-                }
-              }
-            }
-          }
-        ]
-      })
-    }
     
     // Redirect to appropriate login page
     if (app.config.globalProperties.$router) {
@@ -183,11 +204,30 @@ export default defineBoot(({ app }) => {
 
   // Start monitoring when the app is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startActivityMonitoring)
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check authentication status after DOM is loaded
+      setTimeout(checkAuthAndManageMonitoring, 100)
+    })
   } else {
-    startActivityMonitoring()
+    // DOM already loaded, check immediately
+    setTimeout(checkAuthAndManageMonitoring, 100)
   }
 
   // Clean up when the app is unmounted
   window.addEventListener('beforeunload', stopActivityMonitoring)
+
+  // Listen for storage changes to detect logout
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'barangay_token' || event.key === 'admin_token') {
+      if (!event.newValue) {
+        // Token was removed (user logged out)
+        console.log('Token removed from storage, stopping activity monitoring')
+        stopActivityMonitoring()
+      } else if (event.newValue && !heartbeatInterval) {
+        // Token was added (user logged in)
+        console.log('Token added to storage, starting activity monitoring')
+        setTimeout(checkAuthAndManageMonitoring, 100)
+      }
+    }
+  })
 })
