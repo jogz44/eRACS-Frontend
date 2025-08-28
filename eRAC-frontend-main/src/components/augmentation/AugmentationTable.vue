@@ -7,23 +7,26 @@
       :pagination="store.pagination"
       :loading="store.loadingAugmentations"
     >
-      <template v-slot:body-cell-action="props">
+
+      <template #body-cell-actions="props">
         <q-td :props="props">
-          <div class="button-group">
+          <div class="row items-center justify-center q-gutter-xs">
             <q-btn
-              dense
-              icon="edit"
-              color="orange"
-              @click="handleEditAugmentation(props.row)"
-              :loading="editLoading[props.row.id]"
-              :disable="editLoading[props.row.id]"
-              v-permission="'edit'"
+               dense
+                  icon="visibility"
+                  color="blue"
+
+              size="md"
+              @click="viewAugmentation(props.row)"
+              title="View Details"
             />
             <q-btn
-              dense
-              color="red"
-              icon="delete"
-              @click="handleDelete(props.row.id)"
+              color="negative"
+               dense
+                  icon="delete"
+              size="md"
+              @click="confirmDelete(props.row)"
+              title="Delete"
               v-permission="'delete'"
             />
           </div>
@@ -36,52 +39,54 @@
 <script setup>
 import { useAugmentationStore } from 'stores/augmentation'
 import { useQuasar } from 'quasar'
-import { ref } from 'vue'
+
 
 const store = useAugmentationStore()
 const $q = useQuasar()
-const editLoading = ref({})
 
-const handleDelete = async (id) => {
-  try {
-    const result = await store.deleteAugmentation(id)
-    if (result.success) {
-      $q.notify({
-        type: 'positive',
-        message: 'Augmentation deleted successfully',
-        position: 'top',
-      })
-    } else {
-      $q.notify({
-        type: 'negative',
-        message: result.error || 'Failed to delete augmentation',
-        position: 'top',
-      })
-    }
-  } catch {
-    $q.notify({
-      type: 'negative',
-      message: 'An error occurred while deleting',
-      position: 'top',
-    })
-  }
+const viewAugmentation = (row) => {
+  store.editAugmentation(row)
 }
 
-const handleEditAugmentation = async (row) => {
-  editLoading.value[row.id] = true
-  try {
-    await store.editAugmentation(row)
-  } catch (error) {
-    console.error('Error opening edit augmentation:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Failed to open edit augmentation',
-      icon: 'error',
-      position: 'top',
-      timeout: 3000
-    })
-  } finally {
-    editLoading.value[row.id] = false
-  }
+const confirmDelete = (row) => {
+  $q.dialog({
+    title: 'Confirm Delete',
+    message: `Are you sure you want to delete augmentation ${row.ref_number}?`,
+    cancel: true,
+    persistent: true,
+    ok: {
+      label: 'Delete',
+      color: 'negative'
+    }
+  }).onOk(async () => {
+    try {
+      const result = await store.deleteAugmentation(row.id)
+      if (result.success) {
+        $q.notify({
+          type: 'positive',
+          message: 'Augmentation deleted successfully!',
+          icon: 'check_circle',
+          position: 'top',
+        })
+      } else {
+        $q.notify({
+          type: 'negative',
+          message: result.error || 'Failed to delete augmentation',
+          icon: 'error',
+          position: 'top',
+        })
+      }
+    } catch (error) {
+    //   $q.notify({
+    //     type: 'negative',
+    //     message: 'An error occurred while deleting the augmentation',
+    //     icon: 'error',
+    //     position: 'top',
+    //   })
+    // }
+      console.error('Error deleting augmentation:', error)
+    }
+  })
+
 }
 </script>
