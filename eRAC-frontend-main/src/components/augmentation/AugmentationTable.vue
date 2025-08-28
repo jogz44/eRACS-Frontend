@@ -20,7 +20,6 @@
               title="View Details"
             />
             <q-btn
-
               color="negative"
                dense
                   icon="delete"
