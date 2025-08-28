@@ -11,9 +11,9 @@ class LibFiscalYearSeeder extends Seeder
     public function run()
     {
         $years = [2023, 2024, 2025];
-        $activeYear = 2025; // set 2025 as active
 
         foreach (Barangay::all() as $barangay) {
+            // Ensure all years exist for the barangay
             foreach ($years as $year) {
                 LibFiscalYear::updateOrCreate(
                     [
@@ -21,9 +21,20 @@ class LibFiscalYearSeeder extends Seeder
                         'year' => $year,
                     ],
                     [
-                        'is_active' => $year == $activeYear,
+                        'is_active' => false, // set below
                     ]
                 );
+            }
+
+            // Mark the latest year as active for this barangay
+            $latest = LibFiscalYear::where('barangay_id', $barangay->id)
+                ->orderByDesc('year')
+                ->first();
+
+            if ($latest) {
+                LibFiscalYear::where('barangay_id', $barangay->id)->update(['is_active' => false]);
+                $latest->is_active = true;
+                $latest->save();
             }
         }
     }
