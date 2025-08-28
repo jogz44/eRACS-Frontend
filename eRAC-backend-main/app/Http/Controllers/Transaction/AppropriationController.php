@@ -867,9 +867,19 @@ class AppropriationController extends Controller
 
             \Log::info('Totals - Appropriation: ' . $totalAppropriation . ', Obligation: ' . $totalObligation . ', Balance: ' . $totalBalance);
 
-            // Get expense hierarchy for pie chart
+            // Get expense hierarchy for pie chart scoped to user's barangay
             $currentYear = now()->year;
-            $fiscalYear = LibFiscalYear::where('year', $currentYear)->first();
+            $fiscalYear = LibFiscalYear::where('barangay_id', $barangayId)
+                ->where('year', $currentYear)
+                ->first();
+            // Fallback to latest active or latest year for this barangay
+            if (!$fiscalYear) {
+                $fiscalYear = LibFiscalYear::where('barangay_id', $barangayId)
+                    ->where('is_active', true)
+                    ->orderByDesc('year')
+                    ->first()
+                    ?: LibFiscalYear::where('barangay_id', $barangayId)->orderByDesc('year')->first();
+            }
 
             \Log::info('Current year: ' . $currentYear . ', Fiscal year found: ' . ($fiscalYear ? 'yes' : 'no'));
 
