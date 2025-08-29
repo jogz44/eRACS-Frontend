@@ -59,8 +59,12 @@ class DisbursementSeeder extends Seeder
                     }
                     if (!$chequeNumber) continue;
 
+                    $base = Carbon::create($year, rand(1, 8), rand(1, 28));
+                    $startDate = $base->copy()->subMonths(1)->subDays(15);
+                    $endDate   = $base->copy()->addMonths(1)->addDays(15);
+
                     $dvAmount = $faker->numberBetween(5, 50) * 1000;
-                    $dvNumber = "DV-$year-" . str_pad($dvCounter, 3, '0', STR_PAD_LEFT);
+                    $dvNumber = "DV-".substr($startDate->year, -2)."-".str_pad($startDate->month, 2, '0', STR_PAD_LEFT)."-" . str_pad($dvCounter, 3, '0', STR_PAD_LEFT);
 
                     $liquidatedAmount = null;
                     if ($status === 'Liquidated') {
@@ -68,9 +72,6 @@ class DisbursementSeeder extends Seeder
                     } elseif ($status === 'Partial') {
                         $liquidatedAmount = (int) ($dvAmount * $faker->randomFloat(2, 0.3, 0.8));
                     }
-                    $base = Carbon::create($year, rand(1, 8), rand(1, 28));
-                    $startDate = $base->copy()->subMonths(1)->subDays(15);
-                    $endDate   = $base->copy()->addMonths(1)->addDays(15);
                     $disb = Disbursement::create([
                         'barangay_id'       => $barangay->id,
                         'date'              => $date->format('Y-m-d'),
