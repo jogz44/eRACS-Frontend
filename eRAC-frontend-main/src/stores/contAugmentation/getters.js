@@ -13,13 +13,14 @@ export function useGetters(state) {
       sortable: true,
     },
     {
-      name: 'remarks',
-      label: 'Remarks',
+      name: 'description',
+      label: 'Description',
       field: 'remarks',
       align: 'left',
       sortable: true,
     },
     { name: 'action', label: 'Action', field: '', align: 'center' },
+    { name: 'remarks', label: 'Remarks', field: '', align: 'center' },
   ])
 
   const expenseAugColumns = computed(() => [
