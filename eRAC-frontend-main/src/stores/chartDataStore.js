@@ -497,7 +497,7 @@ export const useChartDataStore = defineStore('chartData', {
       this.summaryCards = [
         {
           label: 'Total Appropriation',
-          value: this.formatCurrency(11000000),
+          value: this.formatCurrency(0),
           icon: 'account_balance',
           color: 'secondary',
           trend: 'up',
@@ -505,7 +505,7 @@ export const useChartDataStore = defineStore('chartData', {
         },
         {
           label: 'Total Obligation',
-          value: this.formatCurrency(8000000),
+          value: this.formatCurrency(0),
           icon: 'assignment',
           color: 'secondary',
           trend: 'down',
@@ -513,7 +513,7 @@ export const useChartDataStore = defineStore('chartData', {
         },
         {
           label: 'Total Balance',
-          value: this.formatCurrency(3000000),
+          value: this.formatCurrency(0),
           icon: 'balance',
           color: 'secondary',
           trend: 'up',

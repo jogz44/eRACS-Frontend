@@ -853,6 +853,10 @@ class AppropriationController extends Controller
             // Get all budgets for this barangay
             $budgets = Budget::with(['tranAppropriations', 'fiscalYear'])
                 ->where('barangay_id', $barangayId)
+                //where fiscal year is current year
+                ->whereHas('fiscalYear', function($q) {
+                    $q->where('year', now()->year);
+                })
                 ->get();
 
             \Log::info('Found ' . $budgets->count() . ' budgets');
