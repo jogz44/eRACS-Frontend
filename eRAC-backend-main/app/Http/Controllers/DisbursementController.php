@@ -863,10 +863,15 @@ class DisbursementController extends Controller
 
             $query = TranExpenseDetail::with(['appropriation.expenseClass', 'appropriation.expenseType', 'appropriation.expenseItem']);
 
-            // If user is authenticated and has barangay_id, filter by it
-            if ($user && isset($user->barangay_id)) {
-                $query->whereHas('appropriation', function($q) use ($user) {
-                    $q->where('barangay_id', $user->barangay_id);
+            // Determine target barangay: allow explicit barangay_id (for admin), else fallback to user's barangay
+            $targetBarangayId = $request->input('barangay_id');
+            if (!$targetBarangayId && $user && isset($user->barangay_id)) {
+                $targetBarangayId = $user->barangay_id;
+            }
+
+            if ($targetBarangayId) {
+                $query->whereHas('appropriation', function($q) use ($targetBarangayId) {
+                    $q->where('barangay_id', $targetBarangayId);
                 });
             }
 

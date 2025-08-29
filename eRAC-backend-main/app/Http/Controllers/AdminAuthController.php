@@ -225,6 +225,22 @@ class AdminAuthController extends Controller  // <-- This is crucial
         return response()->json($logs);
     }
 
+    // Get admin logs
+    public function getAdminLogs() {
+        $logs = DB::table('admin_logs')
+            ->join('admins', 'admin_logs.admin_id', '=', 'admins.id')
+            ->select(
+                'admin_logs.id',
+                'admin_logs.activity',
+                'admin_logs.details',
+                'admin_logs.created_at',
+                'admins.name as admin_name'
+            )
+            ->orderByDesc('admin_logs.created_at')
+            ->get();
+        return response()->json($logs);
+    }
+
     // Get individual user logs
     public function getUserLogs($userId, $day) {
         $logs = DB::table('logs')
@@ -267,13 +283,41 @@ class AdminAuthController extends Controller  // <-- This is crucial
             'details' => 'nullable|string'
         ]);
 
+        // Ensure we resolve the authenticated admin explicitly
         $admin = $request->user();
-        
-        DB::table('logs')->insert([
-            'user_id' => $admin->id,
+        if (!$admin) {
+            $admin = Auth::user();
+        }
+        if (!$admin || !($admin instanceof Admin)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+        $admin = $request->user();
+        if (!$admin) {
+            $admin = Auth::user();
+        }
+        if (!$admin || !($admin instanceof Admin)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
+        DB::table('admin_logs')->insert([
+            'admin_id' => $admin->id,
             'fullname' => $admin->name ?? 'Admin',
             'activity' => $validated['activity'],
-            'details' => $validated['details'],
+            'details' => $validated['details'] ?? null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('admin_logs')->insert([
+            'admin_id' => $admin->id,
+            'fullname' => $admin->name ?? 'Admin',
+            'activity' => $validated['activity'],
+            'details' => $validated['details'] ?? null,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
