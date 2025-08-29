@@ -327,6 +327,11 @@ export const useAppropriationStore = defineStore("appropriation", {
       await this.fetchAppropriations()
     },
 
+    // Backwards-compat: some components call fetchAppropriations; route to fetchBudgets
+    async fetchAppropriations(options = { silent: false }) {
+      return this.fetchBudgets(options)
+    },
+
     async fetchExpenseHierarchy() {
       try {
         // Use admin token if admin is logged in
@@ -369,8 +374,14 @@ export const useAppropriationStore = defineStore("appropriation", {
         // Use different endpoints for admin vs regular users
         const endpoint = this.authStore.admin ? "/api/admin/expense-hierarchy" : "/api/barangay/expense-hierarchy"
 
+        // Admin sends year (not fiscal_year_id) because validation expects a real fiscal_years.id for that rule
+        const currentYear = new Date().getFullYear()
+        const params = this.authStore.admin
+          ? { year: currentYear, ...(this.selectedBarangayId ? { barangay_id: this.selectedBarangayId } : {}) }
+          : { fiscal_year_id: fiscalYear.id }
+
         const response = await api.get(endpoint, {
-          params: { fiscal_year_id: fiscalYear.id },
+          params: params,
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -708,6 +719,9 @@ export const useAppropriationStore = defineStore("appropriation", {
     },
   },
 })
+
+// Backwards-compat export for components expecting `useContApprStore`
+export const useContApprStore = useAppropriationStore
 
 // Utility function for consistent currency parsing
 const parseCurrency = (value) => {

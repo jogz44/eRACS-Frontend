@@ -150,7 +150,10 @@ export const useBankStore = defineStore('bank', {
       this.loading = true
       try {
         const config = this.getAuthConfig()
-        const response = await api.get('/api/barangay/banks', config)
+        // Use admin banks endpoint when admin is logged in
+        const authStore = useAuthStore()
+        const endpoint = authStore.admin ? '/api/admin/banks' : '/api/barangay/banks'
+        const response = await api.get(endpoint, config)
 
         this.banks = (response.data.data || response.data || []).map((bank) => ({
           id: bank.id,

@@ -330,19 +330,23 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     filteredExpenseAccounts(state) {
+      // Build a set of accountIds already added to prevent duplicates
+      const addedIds = new Set((state.expenses || []).map(e => String(e.accountId)))
+
+      const base = this.expenseAccounts.filter(item => !addedIds.has(String(item.id)))
+
       if (!state.expenseSearch.trim()) {
-        return this.expenseAccounts
+        return base
       }
 
       const query = state.expenseSearch.toLowerCase()
-      const filtered = this.expenseAccounts.filter(
+      return base.filter(
         (item) =>
           item.account.toLowerCase().includes(query) ||
           item.expenseType.toLowerCase().includes(query) ||
           (item.expenseItem && item.expenseItem.toLowerCase().includes(query)) ||
           (item.description && item.description.toLowerCase().includes(query)),
       )
-      return filtered
     },
 
     aging: () => (dateString) => {
@@ -421,15 +425,20 @@ export const useDisbursementStore = defineStore('disbursement', {
     async fetchExpenseDetails() {
       try {
         const authStore = useAuthStore()
-
         const token = authStore.admin ? authStore.adminToken : authStore.token
 
+        const endpoint = authStore.admin ? '/api/admin/expense-details' : '/api/barangay/expense-details'
+        const params = {}
+        if (authStore.admin && this.selectedBarangayId) {
+          params.barangay_id = this.selectedBarangayId
+        }
 
-        const response = await api.get('/api/barangay/expense-details', {
+        const response = await api.get(endpoint, {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',
           },
+          params,
         })
 
         if (response.data.status) {
@@ -523,6 +532,12 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Dynamically import to avoid circular dependencies
         const { useAccountsLibraryStore } = await import('./accountsLibstore')
         const accountsStore = useAccountsLibraryStore()
+
+        // Skip accounts library fetches for admin context (uses different data flow)
+        const authStore = useAuthStore()
+        if (authStore.admin) {
+          return
+        }
 
         // Fetch years if not already loaded
         if (!accountsStore.years.length) {
@@ -646,7 +661,8 @@ export const useDisbursementStore = defineStore('disbursement', {
         const endpoint = authStore.admin ? "/api/admin/disbursements" : "/api/barangay/disbursements"
         const token = authStore.admin ? authStore.adminToken : authStore.token
 
-        const particular= await api.get('/api/barangay/particulars', {
+        const particularEndpoint = authStore.admin ? '/api/admin/particulars' : '/api/barangay/particulars'
+        const particular= await api.get(particularEndpoint, {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',
@@ -666,9 +682,8 @@ export const useDisbursementStore = defineStore('disbursement', {
           },
           params: params
         })
-        this.particulars = particular.data.data.map(item => ({
-          label: item.particulars
-        }))
+        const pData = Array.isArray(particular.data?.data) ? particular.data.data : (Array.isArray(particular.data) ? particular.data : [])
+        this.particulars = pData.map(item => ({ label: item.particulars }))
 
         // Map backend fields to frontend fields if needed
         this.disbursements = (response.data.data || []).map(d => ({
@@ -1238,27 +1253,30 @@ export const useDisbursementStore = defineStore('disbursement', {
         })
 
         // The backend now automatically creates expense details, so we don't need to do it manually
-        // Close dialog and reset form immediately for better UX
-        this.resetForm('disbursement')
-        this.expenses = []
+        // Close the dialog immediately to avoid showing cleared fields briefly
+        this.dialogs.disbursement = false
 
-        const today = new Date()
-        const dd = String(today.getDate()).padStart(2, '0')
-        const mm = String(today.getMonth() + 1).padStart(2, '0')
-        const yyyy = today.getFullYear()
+        // Defer clearing form and regenerating fields until after dialog hide animation
+        setTimeout(async () => {
+          this.resetForm('disbursement')
+          this.expenses = []
 
-        this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
+          const today = new Date()
+          const dd = String(today.getDate()).padStart(2, '0')
+          const mm = String(today.getMonth() + 1).padStart(2, '0')
+          const yyyy = today.getFullYear()
 
-        try {
-          const response = await api.get('/api/barangay/generate-dvnumber',getAuthConfig());
-          const newDVNumber = response.data.data.dv_number || ''
-          this.forms.disbursement.dvNumber= newDVNumber
-        } catch (error) {
-          console.error('Failed to generate new DV number:', error)
-          this.forms.disbursement.dvNumber= ''
-        }
+          this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
 
-        this.closeDialog('disbursement')
+          try {
+            const response = await api.get('/api/barangay/generate-dvnumber', getAuthConfig());
+            const newDVNumber = response.data.data.dv_number || ''
+            this.forms.disbursement.dvNumber = newDVNumber
+          } catch (error) {
+            console.error('Failed to generate new DV number:', error)
+            this.forms.disbursement.dvNumber = ''
+          }
+        }, 350) // match Quasar default transition
 
         // Do data refreshes in background (non-blocking)
         this.refreshDataInBackground().catch(error => {
@@ -1468,7 +1486,7 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     // Alias functions for EditDisbursement component
     editItem(row) {
-      this.editExpense(row)
+      this.openExpenseDetailForEdit(row)
     },
 
     deleteItem(row) {

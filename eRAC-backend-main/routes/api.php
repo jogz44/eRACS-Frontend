@@ -186,6 +186,8 @@ Route::prefix('admin')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'logout']);
         Route::post('/inactivity-logout', [AdminAuthController::class, 'inactivityLogout']);
+        Route::post('/setlogs', [AdminAuthController::class, 'logAdminAction']);
+        Route::post('/heartbeat', [AdminAuthController::class, 'heartbeat']);
 
         // User management endpoints
         Route::get('/users/pending', [AdminAuthController::class, 'getPendingUsers']);
@@ -205,24 +207,30 @@ Route::prefix('admin')->group(function () {
         // Admin disbursement endpoints - can access all barangay data
         Route::get('/disbursements', [DisbursementController::class, 'adminIndex']);
         Route::post('/disbursements/create', [DisbursementController::class, 'store']);
+        // Admin can fetch expense details for a selected barangay
+        Route::get('/expense-details', [DisbursementController::class, 'getExpenseDetails']);
+
+        // Admin banks endpoint (list all banks for selection in admin UI)
+        Route::get('/banks', [\App\Http\Controllers\Library\BankLibraryController::class, 'getBanks']);
 
         // Admin augmentation endpoints - can access all barangay data
         Route::get('/augmentations', [BudgetAugmentationController::class, 'adminIndex']);
         Route::post('/augmentations/create', [BudgetAugmentationController::class, 'store']);
     });
 
-    // Dashboard Routes upadtaed
+    // Dashboard Routes updated
     // Outered from sanctum middleware
     Route::get('/per-barangay-budgets',[AdminAuthController::class, 'getPerBarangaysBudgets']);
 
     // Admin user access and logs endpoints
     // Route::middleware(['check.role'])->group(function () {
         Route::get('/users', [AdminAuthController::class, 'getUsersWithPermissions']);
+        // Admin view of particulars
+        Route::get('/particulars', [DisbursementController::class, 'getParticular']);
         // Fixed path to avoid double 'admin' in route: now /api/admin/user-access/{id}
         Route::post('/user-access/{id}', [AdminAuthController::class, 'updateUserPermissions']);
         Route::get('/logs', [AdminAuthController::class, 'getAllLogs']);
-        Route::post('/setlogs', [AdminAuthController::class, 'logAdminAction']);
-Route::post('/heartbeat', [AdminAuthController::class, 'heartbeat']);
+        Route::get('/admin-logs', [AdminAuthController::class, 'getAdminLogs']);
 
         // Admin Individual Log Open
         Route::get('/logs/{user}/{day}', [AdminAuthController::class, 'getUserLogs']);
