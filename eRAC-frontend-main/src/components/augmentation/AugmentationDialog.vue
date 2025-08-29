@@ -16,9 +16,10 @@
               v-model="store.forms.augmentation.augmentation_date"
               mask="##/##/####"
               @keydown.enter="handleEnterKey"
+              :readonly="store.isViewOnly"
             >
               <template v-slot:append>
-                <q-icon name="event" class="cursor-pointer">
+                <q-icon name="event" class="cursor-pointer" v-if="!store.isViewOnly">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                     <q-date
                       v-model="store.forms.augmentation.augmentation_date"
@@ -44,13 +45,14 @@
 
           <!-- Remarks -->
           <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">Remarks:</q-item-label>
+            <q-item-label class="q-mb-xs">Description:</q-item-label>
             <q-input
               filled
               outlined
               dense
               v-model="store.forms.augmentation.remarks"
               @keydown.enter="handleEnterKey"
+              :readonly="store.isViewOnly"
             />
           </div>
         </div>
@@ -86,6 +88,7 @@
             @click="handleAddExpense"
             :disable="store.loading.addExpense"
             v-permission="'add'"
+            v-if="!store.isViewOnly"
           />
         </div>
 
@@ -107,15 +110,7 @@
                   icon="edit"
                   @click="store.editItem(props.row)"
                   v-permission="'edit'"
-                />
-                <q-btn
-                  size="sm"
-                  flat
-                  round
-                  color="red"
-                  icon="delete"
-                  @click="store.deleteItem(props.row.id)"
-                  v-permission="'delete'"
+                  v-if="!store.isViewOnly"
                 />
               </div>
             </q-td>
@@ -138,12 +133,13 @@
       <q-card-actions align="right" class="custom-actions">
         <q-btn
           flat
-          label="Cancel"
+          :label="store.isViewOnly ? 'Close' : 'Cancel'"
           class="modal-cancel-btn"
           @click="store.closeDialog('augmentation')"
           :disable="store.loading.saveAugmentation"
         />
         <q-btn
+          v-if="!store.isViewOnly"
           label="Save"
           class="modal-save-btn"
           @click="handleSaveClick"

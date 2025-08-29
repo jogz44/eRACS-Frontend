@@ -61,5 +61,8 @@ export function initialState() {
       addExpense: false,
     }),
     loadingAugmentations: ref(false), // Loading state for fetching augmentations
+
+    // View mode state
+    isViewOnly: ref(false), // Flag to indicate if dialog is in view-only mode
   }
 }
