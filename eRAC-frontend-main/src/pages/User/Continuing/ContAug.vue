@@ -177,14 +177,6 @@
                       @click="store.editItem(props.row)"
                       v-permission="'edit'"
                     />
-                    <q-btn
-                      size="sm"
-                      dense
-                      icon="delete"
-                      color="red"
-                      @click="store.deleteItem(props.row)"
-                      v-permission="'delete'"
-                    />
                   </div>
                 </q-td>
               </template>

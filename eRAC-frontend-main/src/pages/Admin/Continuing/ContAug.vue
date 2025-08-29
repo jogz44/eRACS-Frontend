@@ -196,13 +196,6 @@
                       color="orange"
                       @click="store.editItem(props.row)"
                     />
-                    <q-btn
-                      size="sm"
-                      dense
-                      icon="delete"
-                      color="red"
-                      @click="store.deleteItem(props.row)"
-                    />
                   </div>
                 </q-td>
               </template>
