@@ -36,10 +36,10 @@ class BudgetSeeder extends Seeder
                 ], [
                     'start_date'      => now()->copy()->setYear($year)->startOfYear(),
                     'end_date'        => now()->copy()->setYear($year)->endOfYear(),
-                    'original_amount' => $faker->numberBetween(800000, 2000000),
-                    'current_amount'  => $faker->numberBetween(800000, 2000000),
-                    'augmentation'    => $faker->numberBetween(0, 200000),
-                    'return_amount'   => $faker->numberBetween(0, 100000),
+                    'original_amount' => 2000000,
+                    'current_amount'  => 0,
+                    'augmentation'    => 0,
+                    'return_amount'   => 0,
                     'user_id'         => $user->id,
                 ]);
 

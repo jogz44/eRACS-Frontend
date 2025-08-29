@@ -2,8 +2,8 @@
 # GET http://localhost:8000/api/barangay/barangays
 # Accept: application/json
 
-GET http://localhost:8000/api/barangay/particulars
-Authorization: Bearer 3|it4Zuz738eWnkD3ygd9NGAJL8RceTHYZLDIcGEFl8b04598a
+GET http://localhost:8000/api/barangay/dashboard/summary
+Authorization: Bearer 11|QC9pEX09wq8hYmbUddnqvkRKit9Y9TFm8tME5x7Y00656414
 Accept: application/json
 
 # GET http://localhost:8000/api/user

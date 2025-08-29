@@ -1,4 +1,4 @@
-<?php
+<?php 
 
 namespace Database\Seeders;
 
@@ -19,6 +19,8 @@ class LibExpenseClassAndTypeSeeder extends Seeder
             return;
         }
 
+        $years = [2023, 2024, 2025]; // pre-generate fiscal years
+
         $classes = [
             ['name' => 'SANGUNIANG KABATAAN (SK) - 10%', 'order' => 0],
             ['name' => 'PERSONAL SERVICES', 'order' => 1],
@@ -29,7 +31,6 @@ class LibExpenseClassAndTypeSeeder extends Seeder
             ['name' => '20% DEVELOPMENT FUND', 'order' => 6],
         ];
 
-        // Class -> Types mapping
         $typesMap = [
             'SANGUNIANG KABATAAN (SK) - 10%' => [
                 ['name' => 'MOOE', 'order' => 0],
@@ -103,21 +104,32 @@ class LibExpenseClassAndTypeSeeder extends Seeder
                 ['name' => 'Maintenance of Roads', 'order' => 6],
             ],
         ];
-        foreach ($barangays as $barangay) {
-            $fiscalYears = \App\Models\LibFiscalYear::where('barangay_id', $barangay->id)->get();
 
-            foreach ($fiscalYears as $fiscalYear) {
+        foreach ($barangays as $barangay) {
+            foreach ($years as $year) {
+                // Ensure fiscal years exist
+                $fiscalYear = LibFiscalYear::firstOrCreate(
+                    [
+                        'barangay_id' => $barangay->id,
+                        'year'        => $year,
+                    ],
+                    [
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ]
+                );
+
                 foreach ($classes as $class) {
                     $classModel = LibExpenseClass::firstOrCreate(
                         [
-                            'barangay_id'   => $barangay->id,
-                            'fiscal_year_id'=> $fiscalYear->id,
-                            'name'          => $class['name'],
+                            'barangay_id'    => $barangay->id,
+                            'fiscal_year_id' => $fiscalYear->id,
+                            'name'           => $class['name'],
                         ],
                         [
-                            'order'         => $class['order'],
-                            'created_at'    => $now,
-                            'updated_at'    => $now,
+                            'order'      => $class['order'],
+                            'created_at' => $now,
+                            'updated_at' => $now,
                         ]
                     );
 
@@ -129,9 +141,9 @@ class LibExpenseClassAndTypeSeeder extends Seeder
                                 'name'             => $type['name'],
                             ],
                             [
-                                'order'           => $type['order'],
-                                'created_at'      => $now,
-                                'updated_at'      => $now,
+                                'order'      => $type['order'],
+                                'created_at' => $now,
+                                'updated_at' => $now,
                             ]
                         );
                     }

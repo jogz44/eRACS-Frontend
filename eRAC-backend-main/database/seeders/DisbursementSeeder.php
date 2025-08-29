@@ -24,86 +24,81 @@ class DisbursementSeeder extends Seeder
         $yy = $now->format('y');
         $mm = $now->format('m');
         $dvCounter = 1; // global counter
-
+        // inside run()
         foreach ($barangays as $barangay) {
             $banks = LibBank::where('barangay_id', $barangay->id)->get();
-            if ($banks->isEmpty()) {
-                continue;
-            }
+            if ($banks->isEmpty()) continue;
 
-            $appropriations = TranAppropriation::where('barangay_id', $barangay->id)
-                ->where('status', 'committed')
-                ->where('amount', '>', 0)
-                ->get();
-            if ($appropriations->isEmpty()) {
-                continue;
-            }
+            foreach ([2023, 2024, 2025] as $year) {
+                $appropriations = TranAppropriation::where('barangay_id', $barangay->id)
+                    ->where('status', 'committed')
+                    ->where('amount', '>', 0)
+                    ->whereHas('expenseClass', fn($q) => $q->whereHas('fiscalYear', fn($y) => $y->where('year', $year)))
+                    ->get();
 
-            // Randomize how many DVs per barangay (3–6)
-            $numDisbursements = $faker->numberBetween(5, 10);
+                if ($appropriations->isEmpty()) continue;
 
-            for ($d = 0; $d < $numDisbursements; $d++) {
-                $status = $faker->randomElement(['Pending', 'Partial', 'Liquidated']);
-                $bank = $banks->random();
-                $date = $faker->dateTimeBetween('-2 months', 'now');
+                // exactly 6 disbursements per year
+                for ($d = 0; $d < 6; $d++) {
+                    $status = $faker->randomElement(['Pending', 'Partial', 'Liquidated']);
+                    $bank = $banks->random();
+                    $date = $faker->dateTimeBetween("$year-01-01", "$year-12-31");
 
-                // Find an available cheque number
-                $chequeNumber = null;
-                $bookletIds = LibBooklet::where('bank_id', $bank->id)->pluck('id');
-                if ($bookletIds->isNotEmpty()) {
-                    $cheque = LibCheque::whereIn('booklet_id', $bookletIds)
-                        ->where('status', 'unused')
-                        ->orderBy('cheque_number')
-                        ->first();
-                    if ($cheque) {
-                        $chequeNumber = $cheque->cheque_number;
-                        $cheque->update(['status' => 'issued']);
+                    // cheque selection same as before...
+                    $chequeNumber = null;
+                    $bookletIds = LibBooklet::where('bank_id', $bank->id)->pluck('id');
+                    if ($bookletIds->isNotEmpty()) {
+                        $cheque = LibCheque::whereIn('booklet_id', $bookletIds)
+                            ->where('status', 'unused')
+                            ->orderBy('cheque_number')
+                            ->first();
+                        if ($cheque) {
+                            $chequeNumber = $cheque->cheque_number;
+                            $cheque->update(['status' => 'issued']);
+                        }
                     }
+                    if (!$chequeNumber) continue;
+
+                    $dvAmount = $faker->numberBetween(5, 50) * 1000;
+                    $dvNumber = "DV-$year-" . str_pad($dvCounter, 3, '0', STR_PAD_LEFT);
+
+                    $liquidatedAmount = null;
+                    if ($status === 'Liquidated') {
+                        $liquidatedAmount = $dvAmount;
+                    } elseif ($status === 'Partial') {
+                        $liquidatedAmount = (int) ($dvAmount * $faker->randomFloat(2, 0.3, 0.8));
+                    }
+                    $base = Carbon::create($year, rand(1, 8), rand(1, 28));
+                    $startDate = $base->copy()->subMonths(1)->subDays(15);
+                    $endDate   = $base->copy()->addMonths(1)->addDays(15);
+                    $disb = Disbursement::create([
+                        'barangay_id'       => $barangay->id,
+                        'date'              => $date->format('Y-m-d'),
+                        'dv_number'         => $dvNumber,
+                        'cheque_number'     => $chequeNumber,
+                        'bank_id'           => $bank->id,
+                        'payee'             => $faker->name,
+                        'dv_amount'         => $dvAmount,
+                        'status'            => $status,
+                        'liquidated_amount' => $liquidatedAmount,
+                        'liquidated_at'     => $liquidatedAmount ? $endDate: null,
+                        'created_at'        => $startDate,
+                        'updated_at'        => $startDate,
+                    ]);
+
+                    $this->seedExpenseDetails($faker, $disb->id, $appropriations, $dvAmount, Carbon::parse($startDate));
+
+                    if ($status === 'Liquidated' || $status === 'Partial') {
+                        $liq = $liquidatedAmount ?? 0;
+                        $splits = $this->randomSplits($liq, $faker->numberBetween(1, 3));
+                        $this->seedOrDetails($disb->id, $splits, Carbon::parse($startDate), $dvCounter);
+                    }
+
+                    $dvCounter++;
                 }
-                if (!$chequeNumber) {
-                    continue;
-                }
-
-                // DV amount: random 5,000–50,000 in multiples of 1000
-                $dvAmount = $faker->numberBetween(5, 50) * 1000;
-
-                $dvNumber = 'DV-' . $yy . '-' . $mm . '-' . str_pad($dvCounter, 3, '0', STR_PAD_LEFT);
-
-                $liquidatedAmount = null;
-                if ($status === 'Liquidated') {
-                    $liquidatedAmount = $dvAmount;
-                } elseif ($status === 'Partial') {
-                    $liquidatedAmount = (int) ($dvAmount * $faker->randomFloat(2, 0.3, 0.8)); // 30–80%
-                }
-
-                $disb = Disbursement::create([
-                    'barangay_id'       => $barangay->id,
-                    'date'              => $date->format('Y-m-d'),
-                    'dv_number'         => $dvNumber,
-                    'cheque_number'     => $chequeNumber,
-                    'bank_id'           => $bank->id,
-                    'payee'             => $faker->name,
-                    'dv_amount'         => $dvAmount,
-                    'status'            => $status,
-                    'liquidated_amount' => $liquidatedAmount,
-                    'liquidated_at'     => $liquidatedAmount ? $faker->dateTimeBetween($date, 'now') : null,
-                    'created_at'        => $date,
-                    'updated_at'        => $date,
-                ]);
-
-                // Create expense details
-                $this->seedExpenseDetails($faker, $disb->id, $appropriations, $dvAmount, Carbon::parse($date));
-
-                // OR details if liquidated/partial
-                if ($status === 'Liquidated' || $status === 'Partial') {
-                    $liq = $liquidatedAmount ?? 0;
-                    $splits = $this->randomSplits($liq, $faker->numberBetween(1, 3));
-                    $this->seedOrDetails($disb->id, $splits, Carbon::parse($date), $dvCounter);
-                }
-
-                $dvCounter++;
             }
         }
+
     }
 
     private function seedExpenseDetails($faker, int $disbursementId, $appropriations, int $totalAmount, Carbon $baseDate): void
