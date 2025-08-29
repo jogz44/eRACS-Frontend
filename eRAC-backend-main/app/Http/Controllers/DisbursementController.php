@@ -48,10 +48,17 @@ class DisbursementController extends Controller
     {
         $user = $request->user();
         $query = Disbursement::with('bank');
+        
         // If user is authenticated and has barangay_id, filter by it
         if ($user && isset($user->barangay_id)) {
             $query->where('barangay_id', $user->barangay_id);
         }
+        
+        // Apply year filter if provided
+        if ($request->filled('year') && $request->year !== 'all') {
+            $query->whereYear('date', $request->year);
+        }
+        
         $disbursements = $query->orderByDesc('date')->get();
         $result = $disbursements->map(function($d) {
             return [
