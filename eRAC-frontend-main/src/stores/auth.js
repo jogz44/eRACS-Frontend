@@ -227,11 +227,15 @@ export const useAuthStore = defineStore('auth', {
 
     // Comprehensive logout method for both user and admin
     async logout() {
+      // Store tokens before clearing them
+      const hadToken = !!this.token
+      const hadAdminToken = !!this.adminToken
+      
       try {
-        // Call backend logout endpoint to delete tokens
-        if (this.token) {
+        // Call backend logout endpoint to delete tokens only if we have them
+        if (hadToken) {
           await api.post('/api/barangay/logout')
-        } else if (this.adminToken) {
+        } else if (hadAdminToken) {
           await api.post('/api/admin/logout')
         }
       } catch (error) {
