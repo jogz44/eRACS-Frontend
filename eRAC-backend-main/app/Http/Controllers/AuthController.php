@@ -290,8 +290,8 @@ public function login(Request $request)
             ], 401);
         }
 
-        // Revoke the current token
-        $user->currentAccessToken()->delete();
+        // Delete ALL tokens for this user to ensure complete logout
+        $user->tokens()->delete();
         AdminAuthController::logUserAction($user, 'Logout','User logout from the System');
 
         return response()->json([
@@ -431,6 +431,39 @@ public function resetPassword(Request $request)
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error processing heartbeat: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Inactivity logout endpoint - deletes all tokens for the user
+     */
+    public function inactivityLogout(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            
+            if (!$user) {
+                return response()->json([
+                    'message' => 'No authenticated user found'
+                ], 401);
+            }
+
+            // Delete ALL tokens for this user
+            $user->tokens()->delete();
+            
+            // Log the inactivity logout
+            AdminAuthController::logUserAction($user, 'Logout', 'Logged out due to inactivity');
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Successfully logged out due to inactivity'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Inactivity logout failed',
+                'error' => $e->getMessage()
             ], 500);
         }
     }

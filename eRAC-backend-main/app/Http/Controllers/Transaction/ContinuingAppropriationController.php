@@ -26,7 +26,7 @@ class ContinuingAppropriationController extends Controller
                     )
                     ->with(['expenseClass.fiscalYear', 'expenseType', 'expenseItem'])
                     ->where('tran_appropriations.barangay_id', $request->user()->barangay_id)
-                    ->whereRelation('expenseClass.fiscalYear', 'year', '=', now()->year)
+                    ->whereRelation('expenseClass.fiscalYear', 'year', '!=', now()->year)
                     ->groupBy(
                         'tran_appropriations.expense_class_id',
                         'tran_appropriations.expense_type_id',

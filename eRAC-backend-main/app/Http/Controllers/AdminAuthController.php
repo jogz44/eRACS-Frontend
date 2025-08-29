@@ -69,6 +69,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
             AdminAuthController::logUserAction($admin, 'Logout', 'Admin logout from system');
         }
         
+        // Delete ALL tokens for this admin to ensure complete logout
         $admin->tokens()->delete();
         $cookie = Cookie::forget('admin_token');
 
@@ -342,6 +343,39 @@ class AdminAuthController extends Controller  // <-- This is crucial
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error processing heartbeat: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Inactivity logout endpoint - deletes all tokens for the admin
+     */
+    public function inactivityLogout(Request $request)
+    {
+        try {
+            $admin = Auth::user();
+            
+            if (!$admin) {
+                return response()->json([
+                    'message' => 'No authenticated admin found'
+                ], 401);
+            }
+
+            // Delete ALL tokens for this admin
+            $admin->tokens()->delete();
+            
+            // Log the inactivity logout
+            AdminAuthController::logUserAction($admin, 'Logout', 'Logged out due to inactivity');
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Successfully logged out due to inactivity'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Inactivity logout failed',
+                'error' => $e->getMessage()
             ], 500);
         }
     }

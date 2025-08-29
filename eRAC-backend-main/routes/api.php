@@ -53,6 +53,7 @@ Route::prefix('barangay')->group(function () {
                     Route::post('/setlogs', [AdminAuthController::class, 'logUserActionRequest']);
         Route::get('/getlogs', [AuthController::class, 'getBarangayLogs']);
         Route::post('/heartbeat', [AuthController::class, 'heartbeat']);
+        Route::post('/inactivity-logout', [AuthController::class, 'inactivityLogout']);
         // });
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/user', [AuthController::class, 'user']);
@@ -156,6 +157,9 @@ Route::prefix('barangay')->group(function () {
         Route::patch('expense-details/{id}', [DisbursementController::class, 'updateExpenseDetail']);
         Route::delete('expense-details/{id}', [DisbursementController::class, 'destroyExpenseDetail']);
 
+        // DVnumber generation endpoint- by Dan Steve
+        Route::get('generate-dvnumber', [DisbursementController::class, 'generateDvNumber']);
+
         // Budget Augmentation endpoints
         Route::apiResource('budget-augmentations', BudgetAugmentationController::class);
 
@@ -181,6 +185,7 @@ Route::prefix('admin')->group(function () {
     // Just use Sanctum's default auth
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'logout']);
+        Route::post('/inactivity-logout', [AdminAuthController::class, 'inactivityLogout']);
 
         // User management endpoints
         Route::get('/users/pending', [AdminAuthController::class, 'getPendingUsers']);
@@ -223,4 +228,3 @@ Route::post('/heartbeat', [AdminAuthController::class, 'heartbeat']);
         Route::get('/logs/{user}/{day}', [AdminAuthController::class, 'getUserLogs']);
     // });
 });
-

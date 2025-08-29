@@ -267,15 +267,46 @@ class AppropriationController extends Controller
     public function getExpenseHierarchy(Request $request)
     {
         $request->validate([
-            'fiscal_year_id' => 'required|exists:lib_fiscal_years,id',
+            'fiscal_year_id' => 'nullable|exists:lib_fiscal_years,id',
+            'year' => 'nullable|integer|min:2000|max:2100',
             'budget_id' => 'nullable|exists:budgets,id'
         ]);
 
         $barangayId = $request->user()->barangay_id;
         $budgetId = $request->budget_id;
+        $year = $request->input('year');
+        $fiscalYearId = $request->input('fiscal_year_id');
+
+        // Determine fiscal year ID from year if not provided
+        if (!$fiscalYearId && $year) {
+            $fiscalYear = LibFiscalYear::where('barangay_id', $barangayId)
+                ->where('year', $year)
+                ->first();
+            if ($fiscalYear) {
+                $fiscalYearId = $fiscalYear->id;
+            }
+        }
+
+        // If still no fiscal year ID, use current year
+        if (!$fiscalYearId) {
+            $currentYear = now()->year;
+            $fiscalYear = LibFiscalYear::where('barangay_id', $barangayId)
+                ->where('year', $currentYear)
+                ->first();
+            if ($fiscalYear) {
+                $fiscalYearId = $fiscalYear->id;
+            }
+        }
+
+        if (!$fiscalYearId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'No fiscal year found for the specified criteria'
+            ], 400);
+        }
 
         $classes = LibExpenseClass::with(['types.items'])
-            ->where('fiscal_year_id', $request->fiscal_year_id)
+            ->where('fiscal_year_id', $fiscalYearId)
             ->get()
             ->map(function($class) use ($barangayId, $budgetId) {
                 // Calculate allocated amount for this expense class
@@ -848,14 +879,25 @@ class AppropriationController extends Controller
             \Log::info('Dashboard summary requested for user: ' . $request->user()->id);
 
             $barangayId = $request->user()->barangay_id;
-            \Log::info('Barangay ID: ' . $barangayId);
+            $year = $request->input('year', now()->year); // Default to current year if not specified
+            
+            \Log::info('Barangay ID: ' . $barangayId . ', Year: ' . $year);
 
-            // Get all budgets for this barangay
-            $budgets = Budget::with(['tranAppropriations', 'fiscalYear'])
-                ->where('barangay_id', $barangayId)
-                ->get();
 
-            \Log::info('Found ' . $budgets->count() . ' budgets');
+            // Get budgets for this barangay with year filter
+            $budgetsQuery = Budget::with(['tranAppropriations', 'fiscalYear'])
+                ->where('barangay_id', $barangayId);
+            
+            if ($year !== 'all') {
+                $budgetsQuery->whereHas('fiscalYear', function($q) use ($year) {
+                    $q->where('year', $year);
+                });
+            }
+            
+            $budgets = $budgetsQuery->get();
+
+
+            \Log::info('Found ' . $budgets->count() . ' budgets for year ' . $year);
 
             // Calculate totals
             $totalAppropriation = $budgets->sum('original_amount');
@@ -867,27 +909,27 @@ class AppropriationController extends Controller
 
             \Log::info('Totals - Appropriation: ' . $totalAppropriation . ', Obligation: ' . $totalObligation . ', Balance: ' . $totalBalance);
 
-            // Get expense hierarchy for pie chart scoped to user's barangay
-            $currentYear = now()->year;
-            $fiscalYear = LibFiscalYear::where('barangay_id', $barangayId)
-                ->where('year', $currentYear)
-                ->first();
-            // Fallback to latest active or latest year for this barangay
-            if (!$fiscalYear) {
+
+            // Get expense hierarchy for pie chart
+            $fiscalYear = null;
+            if ($year !== 'all') {
+                $fiscalYear = LibFiscalYear::where('year', $year)->first();
+            } else {
+                // For "all years", get the most recent fiscal year for structure reference
                 $fiscalYear = LibFiscalYear::where('barangay_id', $barangayId)
-                    ->where('is_active', true)
-                    ->orderByDesc('year')
-                    ->first()
-                    ?: LibFiscalYear::where('barangay_id', $barangayId)->orderByDesc('year')->first();
+                    ->orderBy('year', 'desc')
+                    ->first();
+
             }
 
-            \Log::info('Current year: ' . $currentYear . ', Fiscal year found: ' . ($fiscalYear ? 'yes' : 'no'));
+            \Log::info('Fiscal year found: ' . ($fiscalYear ? 'yes' : 'no'));
 
             $expenseHierarchy = [];
             if ($fiscalYear) {
-                $expenseHierarchy = LibExpenseClass::with(['types.items'])
-                    ->where('fiscal_year_id', $fiscalYear->id)
-                    ->get()
+                $expenseHierarchyQuery = LibExpenseClass::with(['types.items'])
+                    ->where('fiscal_year_id', $fiscalYear->id);
+                
+                $expenseHierarchy = $expenseHierarchyQuery->get()
                     ->map(function($class) {
                         return [
                             'id' => $class->id,
@@ -1012,7 +1054,9 @@ class AppropriationController extends Controller
                     'top_expense_classes' => $topExpenseClasses,
                     'recent_allocations' => $recentAllocations,
                     'budgets_count' => $budgets->count(),
-                    'current_fiscal_year' => $currentYear,
+                    'selected_year' => $year,
+                    'fiscal_year_id' => $fiscalYear ? $fiscalYear->id : null,
+                    'fiscal_year_name' => $fiscalYear ? $fiscalYear->year : null,
                 ]
             ];
 

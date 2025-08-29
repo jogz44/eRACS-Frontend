@@ -33,7 +33,7 @@
         </q-input>
 
         <!-- Barangay Filter for Admin -->
-        <q-select
+        <!-- <q-select
           outlined
           dense
           v-model="selectedBarangay"
@@ -51,7 +51,7 @@
           <template v-slot:prepend>
             <q-icon name="location_on" />
           </template>
-        </q-select>
+        </q-select> -->
 
         <q-input
           outlined
@@ -775,10 +775,10 @@ const loadBarangayOptions = async () => {
   }
 }
 
-const onBarangayChange = async (barangayId) => {
-  appropriationStore.setSelectedBarangay(barangayId)
-  await appropriationStore.fetchBudgets()
-}
+// const onBarangayChange = async (barangayId) => {
+//   appropriationStore.setSelectedBarangay(barangayId)
+//   await appropriationStore.fetchBudgets()
+// }
 
 const columns = [
   {

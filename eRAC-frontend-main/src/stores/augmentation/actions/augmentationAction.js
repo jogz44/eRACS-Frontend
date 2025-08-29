@@ -11,9 +11,9 @@ export function useAugmentationActions(state) {
       // Use different endpoints and tokens for admin vs regular users
       const endpoint = authStore.admin ? "/api/admin/augmentations" : "/api/barangay/budget-augmentations"
       const token = authStore.admin ? authStore.adminToken : authStore.token
-      
+
       const params = {}
-      
+
       if (state.searchQuery.value) params.search = state.searchQuery.value
       if (state.dateFrom.value) params.date_from = state.dateFrom.value
       if (state.dateTo.value) params.date_to = state.dateTo.value
@@ -46,7 +46,7 @@ export function useAugmentationActions(state) {
       state.expenseAccountsLoading.value = true
       // Use different tokens for admin vs regular users
       const token = authStore.admin ? authStore.adminToken : authStore.token
-      
+
       // Get the current fiscal year
       const fiscalYearResponse = await api.get('/api/barangay/fiscal-years', {
         headers: {
@@ -54,12 +54,12 @@ export function useAugmentationActions(state) {
           Accept: 'application/json',
         }
       })
-      
+
       if (!fiscalYearResponse.data.data || fiscalYearResponse.data.data.length === 0) {
         state.AugexpenseAccounts.value = []
         return
       }
-      
+
       const currentFiscalYear = fiscalYearResponse.data.data[0]
       const params = { fiscal_year_id: currentFiscalYear.id }
       const response = await api.get('/api/barangay/expense-hierarchy', {
@@ -69,10 +69,10 @@ export function useAugmentationActions(state) {
         },
         params
       })
-      
+
       // Store the hierarchy for possible future use
       state.expenseData = response.data.data || []
-      
+
       // Fetch appropriations instead of expense hierarchy
       const appropriationResponse = await api.get('/api/barangay/appropriations', {
         headers: {
@@ -81,10 +81,10 @@ export function useAugmentationActions(state) {
         },
         params: { status: 'committed' }
       })
-      
+
       const appropriations = appropriationResponse.data.data || []
       console.log('Raw appropriations from API:', appropriations)
-      
+
       const flattened = appropriations.map(appropriation => ({
         id: appropriation.id,
         account: appropriation.account_name || 'Unknown Account',
@@ -96,9 +96,9 @@ export function useAugmentationActions(state) {
         expense_item_id: appropriation.expense_item_id,
         appropriation_ids: appropriation.appropriation_ids || [appropriation.id] // All IDs in the group
       }))
-      
+
       console.log('Flattened appropriations:', flattened)
-      
+
       // If we're selecting TO expense, filter out the FROM expense
       if (state.isSelectingToExpense.value && state.forms.value.augExpense?.value) {
         const fromExpense = state.forms.value.augExpense.value
@@ -131,7 +131,7 @@ export function useAugmentationActions(state) {
       if (!state.Augexpenses.value || state.Augexpenses.value.length === 0) {
         throw new Error('At least one expense is required')
       }
-      
+
       // Convert date format from DD/MM/YYYY to YYYY-MM-DD for backend
       let backendDate = state.forms.value.augmentation.augmentation_date
       if (backendDate && backendDate.includes('/')) {
@@ -140,7 +140,7 @@ export function useAugmentationActions(state) {
           backendDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`
         }
       }
-      
+
       // Create payload with appropriation IDs
       const payload = {
         augmentation_date: backendDate,
@@ -152,7 +152,7 @@ export function useAugmentationActions(state) {
           particulars: expense.particulars
         }))
       }
-      
+
       console.log('Augexpenses array:', state.Augexpenses.value)
       console.log('Sending payload:', payload)
 
@@ -186,19 +186,19 @@ export function useAugmentationActions(state) {
 
       // Refresh the list
       await fetchAugmentations()
-      
+
       // Reset form
       resetForm('augmentation')
       state.Augexpenses.value = []
       state.currentItem.value = null
-      
+
       return { success: true, data: response.data.data }
     } catch (error) {
       console.error('Failed to save augmentation:', error)
       console.error('Error response:', error.response?.data)
       console.error('Error status:', error.response?.status)
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: error.response?.data?.message || 'Failed to save augmentation'
       }
     } finally {
@@ -210,7 +210,7 @@ export function useAugmentationActions(state) {
     try {
       // Use different tokens for admin vs regular users
       const token = authStore.admin ? authStore.adminToken : authStore.token
-      
+
       // Validate required fields
       if (!state.forms.value.augmentation.augmentation_date) {
         throw new Error('Augmentation date is required')
@@ -221,7 +221,7 @@ export function useAugmentationActions(state) {
       if (!state.Augexpenses.value || state.Augexpenses.value.length === 0) {
         throw new Error('At least one expense is required')
       }
-      
+
       // Convert date format from DD/MM/YYYY to YYYY-MM-DD for backend
       let backendDate = state.forms.value.augmentation.augmentation_date
       if (backendDate && backendDate.includes('/')) {
@@ -230,7 +230,7 @@ export function useAugmentationActions(state) {
           backendDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`
         }
       }
-      
+
       // Create backward-compatible payload that matches the original structure
       const payload = {
         augmentation_date: backendDate,
@@ -252,18 +252,18 @@ export function useAugmentationActions(state) {
 
       // Refresh the list
       await fetchAugmentations()
-      
+
       // Reset form
       resetForm('augmentation')
       state.Augexpenses.value = []
-      
+
       return { success: true, data: response.data.data }
     } catch (error) {
             console.error('Failed to update augmentation:', error)
       console.error('Error response:', error.response?.data)
       console.error('Error status:', error.response?.status)
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: error.response?.data?.message || 'Failed to update augmentation'
       }
     }
@@ -282,13 +282,13 @@ export function useAugmentationActions(state) {
 
       // Refresh the list
       await fetchAugmentations()
-      
+
       return { success: true }
     } catch (error) {
       console.error('Failed to delete augmentation:', error)
-      return { 
-        success: false, 
-        error: error.response?.data?.message || 'Failed to delete augmentation' 
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to delete augmentation'
       }
     }
   }
@@ -318,21 +318,21 @@ export function useAugmentationActions(state) {
         // Convert date format from YYYY-MM-DD to DD/MM/YYYY for frontend
         const dateParts = augmentation.augmentation_date.split('-')
         const formattedDate = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : augmentation.augmentation_date
-        
+
         state.forms.value.augmentation = {
           augmentation_date: formattedDate,
           remarks: augmentation.remarks || '',
           refNo: augmentation.ref_number || '',
         }
-        
+
         // Map the backend details to the new appropriation structure
         const mappedDetails = (augmentation.details || []).map(detail => {
           // Build FROM expense account name
           const fromExpense = detail.from_account || ''
-          
+
           // Build TO expense account name
           const toExpense = detail.to_account || ''
-          
+
           return {
             id: detail.id,
             from_expense: fromExpense,
@@ -343,13 +343,59 @@ export function useAugmentationActions(state) {
             particulars: detail.particulars
           }
         })
-        
+
         state.Augexpenses.value = mappedDetails
         state.currentItem.value = augmentation
         state.dialogs.value.augmentation = true
       }
     } catch (error) {
       console.error('Failed to edit augmentation:', error)
+    }
+  }
+
+  const viewAugmentationOnly = async (row) => {
+    try {
+      const augmentation = await fetchAugmentationById(row.id)
+      if (augmentation) {
+        // Convert date format from YYYY-MM-DD to DD/MM/YYYY for frontend
+        const dateParts = augmentation.augmentation_date.split('-')
+        const formattedDate = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : augmentation.augmentation_date
+
+        // Set form data for display only (read-only)
+        state.forms.value.augmentation = {
+          augmentation_date: formattedDate,
+          remarks: augmentation.remarks || '',
+          refNo: augmentation.ref_number || '',
+        }
+
+        // Map the backend details to the new appropriation structure
+        const mappedDetails = (augmentation.details || []).map(detail => {
+          // Build FROM expense account name
+          const fromExpense = detail.from_account || ''
+
+          // Build TO expense account name
+          const toExpense = detail.to_account || ''
+
+          return {
+            id: detail.id,
+            from_expense: fromExpense,
+            to_expense: toExpense,
+            from_appropriation_id: detail.from_appropriation_id,
+            to_appropriation_id: detail.to_appropriation_id,
+            amount: detail.amount,
+            particulars: detail.particulars
+          }
+        })
+
+        state.Augexpenses.value = mappedDetails
+        state.currentItem.value = augmentation
+        state.dialogs.value.augmentation = true
+
+        // Set view-only mode flag
+        state.isViewOnly.value = true
+      }
+    } catch (error) {
+      console.error('Failed to view augmentation:', error)
     }
   }
 
@@ -361,11 +407,14 @@ export function useAugmentationActions(state) {
         remarks: '',
         refNo: '',
       }
-      
+
       // Clear all related state
       state.Augexpenses.value = []
       state.currentItem.value = null
-      
+
+      // Reset view-only mode
+      state.isViewOnly.value = false
+
       // Generate fresh defaults including new ref number
       generateNewAugmentationDefaults()
     } else if (formName === 'augExpense') {
@@ -414,18 +463,18 @@ export function useAugmentationActions(state) {
   const fetchAvailableBudgets = async () => {
     try {
       state.loadingBudgets.value = true
-      
+
       // Use different endpoints and tokens for admin vs regular users
       const endpoint = authStore.admin ? "/api/admin/budgets" : "/api/barangay/budgets"
       const token = authStore.admin ? authStore.adminToken : authStore.token
-      
+
       const params = { year: new Date().getFullYear() }
-      
+
       // Add barangay filter for admin users
       if (authStore.admin && state.selectedBarangayId.value) {
         params.barangay_id = state.selectedBarangayId.value
       }
-      
+
       const response = await api.get(endpoint, {
         params: params,
         headers: {
@@ -451,6 +500,7 @@ export function useAugmentationActions(state) {
     deleteAugmentation,
     fetchAugmentationById,
     editAugmentation,
+    viewAugmentationOnly,
     resetForm,
     generateNewAugmentationDefaults,
     refreshAugmentationDialog,
