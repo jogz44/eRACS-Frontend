@@ -6,6 +6,11 @@ import { computed } from 'vue'
 
 export const useChartDataStore = defineStore('chartData', {
   state: () => ({
+    // Year filter state
+    selectedYear: new Date().getFullYear(),
+    availableYears: [],
+    isYearFilterLoading: false,
+
     // Reactive date range
     dateFrom: new Date(new Date().getFullYear(), 0, 1), // Start of current year
     dateTo: new Date(), // Current date
@@ -306,8 +311,16 @@ export const useChartDataStore = defineStore('chartData', {
       try {
         this.isLoading = true
 
-        // Get budgets data
-        const budgetsResponse = await api.get('/api/barangay/budgets', this.getAuthConfig())
+        // Get budgets data with year filter
+        const params = {}
+        if (this.selectedYear !== 'all') {
+          params.year = this.selectedYear
+        }
+        
+        const budgetsResponse = await api.get('/api/barangay/budgets', {
+          ...this.getAuthConfig(),
+          params
+        })
         const budgets = budgetsResponse.data.data || []
 
         // Calculate totals
@@ -367,16 +380,32 @@ export const useChartDataStore = defineStore('chartData', {
       try {
         this.chartLoading = true
 
-        // Get expense hierarchy
+        // Get expense hierarchy with year filter
+        const params = {}
+        if (this.selectedYear !== 'all') {
+          params.year = this.selectedYear
+        }
+        if (fiscalYearId) {
+          params.fiscal_year_id = fiscalYearId
+        }
+
         const hierarchyResponse = await api.get('/api/barangay/expense-hierarchy', {
           ...this.getAuthConfig(),
-          params: { fiscal_year_id: fiscalYearId },
+          params
         })
 
         const expenseHierarchy = hierarchyResponse.data || []
 
-        // Get budgets to fetch allocations
-        const budgetsResponse = await api.get('/api/barangay/budgets', this.getAuthConfig())
+        // Get budgets to fetch allocations with year filter
+        const budgetParams = {}
+        if (this.selectedYear !== 'all') {
+          budgetParams.year = this.selectedYear
+        }
+        
+        const budgetsResponse = await api.get('/api/barangay/budgets', {
+          ...this.getAuthConfig(),
+          params: budgetParams
+        })
         const budgets = budgetsResponse.data.data || []
 
         if (budgets.length === 0) {
@@ -527,7 +556,16 @@ export const useChartDataStore = defineStore('chartData', {
     // Fetch disbursement overview data
     async fetchDisbursementOverview() {
       try {
-        const disbResponse = await api.get('/api/barangay/disbursements', this.getAuthConfig())
+        // Add year filter to disbursements API call
+        const params = {}
+        if (this.selectedYear !== 'all') {
+          params.year = this.selectedYear
+        }
+        
+        const disbResponse = await api.get('/api/barangay/disbursements', {
+          ...this.getAuthConfig(),
+          params
+        })
         if (disbResponse.data && disbResponse.data.data) {
           // Transform data for the overview table
           this.disbursementOverviewRows = disbResponse.data.data.map((row) => {
@@ -563,10 +601,14 @@ export const useChartDataStore = defineStore('chartData', {
       try {
         this.isLoading = true
         console.log('Loading dashboard data...')
+        console.log('Selected year for API call:', this.selectedYear, 'Type:', typeof this.selectedYear)
 
         try {
           // Try the new optimized dashboard endpoint first
-          const response = await api.get('/api/barangay/dashboard/summary', this.getAuthConfig())
+          const response = await api.get('/api/barangay/dashboard/summary', {
+            ...this.getAuthConfig(),
+            params: { year: this.selectedYear }
+          })
           console.log('Dashboard API response:', response.data)
 
           const dashboardData = response.data.data
@@ -656,7 +698,10 @@ export const useChartDataStore = defineStore('chartData', {
 
           // Fetch comprehensive disbursement data for overview
           try {
-            const disbResponse = await api.get('/api/barangay/disbursements', this.getAuthConfig())
+            const disbResponse = await api.get('/api/barangay/disbursements', {
+              ...this.getAuthConfig(),
+              params: { year: this.selectedYear }
+            })
             if (disbResponse.data && disbResponse.data.data) {
               // Transform data for the overview table
               this.disbursementOverviewRows = disbResponse.data.data.map((row) => {
@@ -740,6 +785,69 @@ export const useChartDataStore = defineStore('chartData', {
       } finally {
         this.isLoading = false
       }
+    },
+
+    // Year filter methods
+    async fetchAvailableYears() {
+      try {
+        this.isYearFilterLoading = true
+        console.log('Fetching available years...')
+        
+        const response = await api.get('/api/barangay/fiscal-years', this.getAuthConfig())
+        console.log('Fiscal years API response:', response.data)
+        
+        // Fix: Access the nested data property correctly
+        const fiscalYears = response.data?.data || []
+        console.log('Extracted fiscal years:', fiscalYears)
+        
+        // Extract years and add "All Years" option
+        this.availableYears = [
+          { value: 'all', label: 'All Years' },
+          ...fiscalYears.map(fy => ({
+            value: fy.year,
+            label: fy.year.toString()
+          }))
+        ]
+        
+        console.log('Final available years array:', this.availableYears)
+        
+        // Set default to current year if not already set
+        if (!this.selectedYear || this.selectedYear === 'all') {
+          this.selectedYear = new Date().getFullYear()
+        }
+        
+        console.log('Selected year set to:', this.selectedYear)
+      } catch (error) {
+        console.error('Error fetching available years:', error)
+        this.availableYears = []
+      } finally {
+        this.isYearFilterLoading = false
+      }
+    },
+
+    setSelectedYear(year) {
+      // Ensure year is a simple value, not an object
+      const yearValue = typeof year === 'object' ? year.value : year
+      this.selectedYear = yearValue
+      
+      // Update date range based on selected year
+      if (yearValue === 'all') {
+        // For "All Years", set a wide range (e.g., last 10 years)
+        const currentYear = new Date().getFullYear()
+        this.dateFrom = new Date(currentYear - 10, 0, 1)
+        this.dateTo = new Date()
+      } else {
+        // For specific year, set range for that year
+        this.dateFrom = new Date(yearValue, 0, 1)
+        this.dateTo = new Date(yearValue, 11, 31)
+      }
+      
+      console.log('Year filter changed to:', yearValue, 'Date range:', this.dateFrom, 'to', this.dateTo)
+    },
+
+    resetToCurrentYear() {
+      const currentYear = new Date().getFullYear()
+      this.setSelectedYear(currentYear)
     },
   },
 })

@@ -12,6 +12,108 @@
       </div>
     </div>
 
+    <!-- Year Filter Section -->
+    <div class="year-filter-section q-mb-lg">
+      <q-card class="filter-card">
+        <q-card-section class="row items-center justify-between q-pa-md">
+          <div class="row items-center q-gutter-md">
+            <div class="text-subtitle2 text-weight-medium">Year Filter:</div>
+            <q-select
+              v-model="chartStore.selectedYear"
+              :options="chartStore.availableYears"
+              option-value="value"
+              option-label="label"
+              emit-value
+              map-options
+              dense
+              outlined
+              style="min-width: 150px"
+              :loading="chartStore.isYearFilterLoading"
+              :disable="chartStore.isYearFilterLoading"
+              @update:model-value="onYearChange"
+            >
+              <template v-slot:prepend>
+                <q-icon name="calendar_today" />
+              </template>
+              <template v-slot:loading>
+                <q-spinner color="primary" size="20px" />
+              </template>
+            </q-select>
+            
+            <!-- Refresh years button -->
+            <q-btn
+              icon="refresh"
+              color="primary"
+              flat
+              dense
+              size="sm"
+              @click="refreshYears"
+              :loading="chartStore.isYearFilterLoading"
+              :disable="chartStore.isYearFilterLoading"
+            >
+              <q-tooltip>Refresh available years</q-tooltip>
+            </q-btn>
+            
+            <!-- Loading indicator for year filter -->
+            <div v-if="chartStore.isYearFilterLoading" class="text-caption text-grey-6">
+              Loading years...
+            </div>
+            
+            <!-- Error state for year filter -->
+            <div v-if="chartStore.availableYears.length === 0 && !chartStore.isYearFilterLoading" class="text-caption text-negative">
+              No years available
+            </div>
+          </div>
+          
+          <div class="row items-center q-gutter-sm">
+            <q-btn
+              icon="refresh"
+              label="Reset to Current Year"
+              color="secondary"
+              outline
+              dense
+              size="sm"
+              @click="resetToCurrentYear"
+              :loading="chartStore.isLoading"
+              :disable="chartStore.selectedYear === new Date().getFullYear()"
+            >
+              <q-tooltip>Reset to current year view</q-tooltip>
+            </q-btn>
+            
+            <q-btn
+              icon="refresh"
+              color="primary"
+              flat
+              dense
+              size="sm"
+              @click="refreshAllData"
+              :loading="chartStore.isLoading"
+            >
+              <q-tooltip>Refresh all data for selected year</q-tooltip>
+            </q-btn>
+          </div>
+        </q-card-section>
+        
+        <!-- Year Filter Summary -->
+        <q-card-section class="q-pt-none q-pb-md year-filter-summary">
+          <div class="row items-center q-gutter-md">
+            <q-icon 
+              name="info" 
+              color="primary" 
+              size="sm"
+            />
+            <div class="text-caption text-grey-7">
+              <span class="text-weight-medium">Currently viewing:</span>
+              {{ chartStore.selectedYear === 'all' ? 'Data from all available years' : `Data for the year ${chartStore.selectedYear}` }}
+              <span v-if="chartStore.selectedYear === new Date().getFullYear()" class="text-positive q-ml-sm">
+                (Current Year)
+              </span>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </div>
+
     <!-- Summary Cards Row -->
     <div class="row q-col-gutter-lg q-mb-lg">
       <div
@@ -45,7 +147,9 @@
         <q-card class="chart-card responsive-card">
           <q-card-section>
             <div class="text-h6 text-weight-medium">Commitment Distribution</div>
-            <div class="text-caption text-grey-6">Current year</div>
+            <div class="text-caption text-grey-6">
+              {{ chartStore.selectedYear === 'all' ? 'All Years' : chartStore.selectedYear }}
+            </div>
           </q-card-section>
           <q-separator />
           <q-card-section style="height: 350px; position: relative; width: 100%; overflow-x: auto">
@@ -81,7 +185,9 @@
               </div>
             </div>
 
-            <div class="text-caption text-grey-6">Current year</div>
+            <div class="text-caption text-grey-6">
+              {{ chartStore.selectedYear === 'all' ? 'All Years' : chartStore.selectedYear }}
+            </div>
 
             <!-- Filter Controls and Refresh -->
             <div class="row q-gutter-sm q-mt-md items-center justify-between">
@@ -205,6 +311,15 @@
     <div v-if="unliquidatedocationError" class="q-mb-md text-negative text-bold">
       {{ unliquidatedocationError }}
     </div>
+    
+    <!-- Loading Overlay for Year Changes -->
+    <q-inner-loading :showing="chartStore.isLoading && isYearChanging" color="primary">
+      <q-spinner size="50px" color="primary" />
+      <div class="text-center q-mt-md">
+        <div class="text-h6">Loading Data</div>
+        <div class="text-caption">Please wait while we fetch data for the selected year...</div>
+      </div>
+    </q-inner-loading>
   </q-page>
 </template>
 
@@ -215,11 +330,18 @@ import PieChart from 'components/PieChart.vue'
 import { useAuthStore } from 'stores/auth'
 import { useQuasar } from 'quasar'
 import { usePageLogging } from '../../composables/usePageLogging'
+import { onUnmounted } from 'vue'
 const chartStore = useChartDataStore()
 const unliquidatedocationError = ref('')
 const authStore = useAuthStore()
 const $q = useQuasar()
 const { logPageVisit } = usePageLogging()
+
+// Year change state
+const isYearChanging = ref(false)
+
+// Page visibility handler for refreshing years
+let visibilityChangeHandler = null
 
 // Disbursement filtering
 const selectedDisbursementFilter = ref('unliquidated')
@@ -327,6 +449,121 @@ const refreshDisbursements = async () => {
   }
 }
 
+// Year filter methods
+const onYearChange = async (newYear) => {
+  try {
+    console.log('Year changed to:', newYear)
+    
+    // Set year changing state
+    isYearChanging.value = true
+    
+    // Show loading notification
+    $q.notify({
+      type: 'info',
+      message: `Loading data for ${newYear === 'all' ? 'all years' : newYear}...`,
+      icon: 'hourglass_empty',
+      position: 'top',
+      timeout: 2000,
+    })
+    
+    // Update the store's selected year
+    chartStore.setSelectedYear(newYear)
+    
+    // Refresh all dashboard data for the new year
+    await refreshAllData()
+    
+    // Show success notification
+    $q.notify({
+      type: 'positive',
+      message: `Data loaded for ${newYear === 'all' ? 'all years' : newYear}!`,
+      icon: 'check_circle',
+      position: 'top',
+      timeout: 2000,
+    })
+  } catch (error) {
+    console.error('Error changing year:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to load data for selected year',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000,
+    })
+  } finally {
+    // Clear year changing state
+    isYearChanging.value = false
+  }
+}
+
+const resetToCurrentYear = async () => {
+  try {
+    const currentYear = new Date().getFullYear()
+    console.log('Resetting to current year:', currentYear)
+    
+    // Update the store
+    chartStore.resetToCurrentYear()
+    
+    // Refresh all data
+    await refreshAllData()
+    
+    $q.notify({
+      type: 'positive',
+      message: `Reset to current year (${currentYear})`,
+      icon: 'restore',
+      position: 'top',
+      timeout: 2000,
+    })
+  } catch (error) {
+    console.error('Error resetting to current year:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to reset to current year',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000,
+    })
+  }
+}
+
+const refreshAllData = async () => {
+  try {
+    isYearChanging.value = true
+    await loadDashboardData()
+    $q.notify({
+      type: 'positive',
+      message: 'Dashboard data refreshed successfully',
+      position: 'top',
+    })
+  } catch (error) {
+    console.error('Error refreshing data:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to refresh dashboard data',
+      position: 'top',
+    })
+  } finally {
+    isYearChanging.value = false
+  }
+}
+
+const refreshYears = async () => {
+  try {
+    await chartStore.fetchAvailableYears()
+    $q.notify({
+      type: 'positive',
+      message: 'Available years refreshed successfully',
+      position: 'top',
+    })
+  } catch (error) {
+    console.error('Error refreshing years:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to refresh available years',
+      position: 'top',
+    })
+  }
+}
+
 // Chart options
 const chartOptions = computed(() => ({
   responsive: true,
@@ -394,9 +631,51 @@ watch(
 
 // Load data when component mounts
 onMounted(async () => {
-  loadDashboardData()
-  // Log page visit
-  await logPageVisit('Dashboard')
+  try {
+    // First fetch available years and set default
+    await chartStore.fetchAvailableYears()
+    
+    // Set default to current year
+    chartStore.setSelectedYear(new Date().getFullYear())
+    
+    // Then load dashboard data
+    await loadDashboardData()
+    
+    // Log page visit
+    await logPageVisit('Dashboard')
+  } catch (error) {
+    console.error('Error initializing dashboard:', error)
+    
+    // Try to set fallback year and load data
+    try {
+      chartStore.selectedYear = new Date().getFullYear()
+      await loadDashboardData()
+    } catch (fallbackError) {
+      console.error('Fallback also failed:', fallbackError)
+      unliquidatedocationError.value = 'Failed to initialize dashboard. Please refresh the page and try again.'
+    }
+  }
+  
+  // Add page visibility listener to refresh years when user returns to dashboard
+  visibilityChangeHandler = async () => {
+    if (!document.hidden && chartStore.availableYears.length > 0) {
+      // User returned to the dashboard tab, refresh years to catch any newly added fiscal years
+      try {
+        await chartStore.fetchAvailableYears()
+        console.log('Years refreshed due to page visibility change')
+      } catch (error) {
+        console.error('Error refreshing years on visibility change:', error)
+      }
+    }
+  }
+  
+  document.addEventListener('visibilitychange', visibilityChangeHandler)
+})
+
+onUnmounted(() => {
+  if (visibilityChangeHandler) {
+    document.removeEventListener('visibilitychange', visibilityChangeHandler)
+  }
 })
 </script>
 
@@ -410,6 +689,62 @@ onMounted(async () => {
 .filter-card {
   border-radius: 1px;
   box-shadow: 0 2px 15px rgba(102, 96, 96, 0.05);
+}
+
+.year-filter-section {
+  .filter-card {
+    background-color: white;
+    border-radius: 12px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(88, 178, 101, 0.15);
+    }
+    
+    .q-card__section {
+      padding: 16px 20px;
+      
+      &:last-child {
+        padding-top: 0;
+        padding-bottom: 16px;
+        border-top: 1px solid #f0f0f0;
+        background-color: #fafafa;
+        border-radius: 0 0 12px 12px;
+      }
+    }
+  }
+  
+  .q-select {
+    .q-field__control {
+      border-radius: 8px;
+    }
+  }
+  
+  .q-btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+  }
+  
+  .year-filter-summary {
+    .text-caption {
+      line-height: 1.4;
+      
+      .text-weight-medium {
+        color: #424242;
+      }
+      
+      .text-positive {
+        font-weight: 500;
+      }
+    }
+  }
 }
 
 .summary-card {
@@ -512,6 +847,18 @@ onMounted(async () => {
     width: 100% !important;
     min-width: unset !important;
   }
+  
+  .year-filter-section {
+    .filter-card .q-card__section {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 16px;
+      
+      .row {
+        justify-content: center;
+      }
+    }
+  }
 }
 @media (max-width: 600px) {
   .summary-card {
@@ -537,6 +884,25 @@ onMounted(async () => {
   }
   .Custome-text {
     font-size: 12px;
+  }
+  
+  .year-filter-section {
+    .filter-card .q-card__section {
+      padding: 12px 16px;
+      
+      .row {
+        gap: 12px;
+      }
+      
+      .q-select {
+        min-width: 120px !important;
+      }
+      
+      .q-btn {
+        font-size: 12px;
+        padding: 8px 12px;
+      }
+    }
   }
 }
 
