@@ -226,7 +226,19 @@ export const useAuthStore = defineStore('auth', {
     },
 
     // Comprehensive logout method for both user and admin
-    logout() {
+    async logout() {
+      try {
+        // Call backend logout endpoint to delete tokens
+        if (this.token) {
+          await api.post('/api/barangay/logout')
+        } else if (this.adminToken) {
+          await api.post('/api/admin/logout')
+        }
+      } catch (error) {
+        console.warn('Backend logout failed:', error)
+        // Continue with frontend logout even if backend fails
+      }
+      
       // Clear all auth data
       this.user = null
       this.token = null
