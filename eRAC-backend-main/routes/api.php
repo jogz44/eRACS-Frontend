@@ -157,6 +157,9 @@ Route::prefix('barangay')->group(function () {
         Route::patch('expense-details/{id}', [DisbursementController::class, 'updateExpenseDetail']);
         Route::delete('expense-details/{id}', [DisbursementController::class, 'destroyExpenseDetail']);
 
+        // DVnumber generation endpoint- by Dan Steve
+        Route::get('generate-dvnumber', [DisbursementController::class, 'generateDvNumber']);
+
         // Budget Augmentation endpoints
         Route::apiResource('budget-augmentations', BudgetAugmentationController::class);
 

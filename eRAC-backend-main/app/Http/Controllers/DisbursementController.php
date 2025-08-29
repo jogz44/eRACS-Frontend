@@ -1115,4 +1115,41 @@ class DisbursementController extends Controller
             ], 500);
         }
     }
+    
+    public function generateDvNumber(Request $request)
+    {
+        $today = now();
+        $dd = str_pad($today->day, 2, '0', STR_PAD_LEFT);
+        $mm = str_pad($today->month, 2, '0', STR_PAD_LEFT);
+        $yyyy = $today->year;
+
+        $user = $request->user();
+        $barangayId = $user->barangay_id;
+
+        $likePattern = 'DV-%'.substr($yyyy, -2).'-'.$mm.'-%';
+
+        $lastDisbursement = Disbursement::where('barangay_id', $barangayId)
+            ->where('dv_number', 'like', $likePattern)
+            ->orderByDesc('dv_number')
+            ->first();
+
+        $lastSequence = 0;
+        if ($lastDisbursement) {
+            $dv = $lastDisbursement->dv_number;
+            $segments = explode('-', $dv);
+            if (count($segments) === 4) {
+                $lastSegment = $segments[3];
+                $lastSequence = (int)$lastSegment;
+            }
+        }
+        $newDvNumber = sprintf('DV-%s-%s-%s', substr($yyyy, -2), $mm, str_pad($lastSequence + 1, 3, '0', STR_PAD_LEFT));
+        return response()->json([
+            'status' => true,
+            'data' => [
+                'date' => sprintf('%s/%s/%s', $dd, $mm, $yyyy),
+                'dv_number' => $newDvNumber,
+            ]
+        ]);
+
+    }
 }
