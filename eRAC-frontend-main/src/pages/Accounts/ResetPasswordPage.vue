@@ -399,6 +399,26 @@ const goToLogin = () => router.push('/')
 }
 
 /* Responsive Design */
+@media (max-width: 1023px) {
+  .split-login-page {
+    flex-direction: column;
+  }
+
+  .photo-section {
+    display: none; /* Hide photo section on mobile/tablet */
+  }
+
+  .login-section {
+    flex: 1;
+    width: 100%; /* Login section takes full width */
+    padding: 1rem;
+  }
+
+  .login-container {
+    max-width: 100%;
+  }
+}
+
 @media (max-width: 768px) {
   .split-login-page {
     flex-direction: column;

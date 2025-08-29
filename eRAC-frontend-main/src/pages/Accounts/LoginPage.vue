@@ -541,32 +541,24 @@ const goToAdmin = () => router.push('/admin/login')
   padding: 12px 16px;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
+/* Responsive Design - Hide photo section on mobile/tablet, keep desktop unchanged */
+@media (max-width: 1023px) {
   .split-login-page {
     flex-direction: column;
   }
 
   .photo-section {
-    flex: 1;
-    height: 40vh;
+    display: none;
   }
 
   .login-section {
     flex: 1;
+    width: 100%;
     padding: 1rem;
   }
 
-  .photo-title {
-    font-size: 2rem;
-  }
-
-  .photo-subtitle {
-    font-size: 1rem;
-  }
-
-  .photo-description {
-    font-size: 0.9rem;
+  .login-container {
+    max-width: 100%;
   }
 }
 
