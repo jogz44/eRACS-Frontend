@@ -42,7 +42,7 @@ class TranAppropriationSeeder extends Seeder
                 $totalAllocated = 0;
 
                 // Make several appropriations per budget
-                $numAppropriations = $faker->numberBetween(3, 8);
+                $numAppropriations = 8;
 
                 for ($i = 0; $i < $numAppropriations; $i++) {
                     if ($remaining <= 0) break;
@@ -70,7 +70,7 @@ class TranAppropriationSeeder extends Seeder
                             'expense_item_id'  => $expenseItem?->id, // nullable
                             'amount'           => $allocationAmount,
                             'transaction_date' => $faker->dateTimeBetween($now->startOfYear(), $now->endOfYear()),
-                            'status'           => $faker->randomElement(['draft', 'committed', 'reverted']),
+                            'status'           => 'committed',
                             'user_id'          => $user->id,
                         ]);
 

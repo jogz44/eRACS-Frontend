@@ -883,6 +883,7 @@ class AppropriationController extends Controller
             
             \Log::info('Barangay ID: ' . $barangayId . ', Year: ' . $year);
 
+
             // Get budgets for this barangay with year filter
             $budgetsQuery = Budget::with(['tranAppropriations', 'fiscalYear'])
                 ->where('barangay_id', $barangayId);
@@ -894,6 +895,7 @@ class AppropriationController extends Controller
             }
             
             $budgets = $budgetsQuery->get();
+
 
             \Log::info('Found ' . $budgets->count() . ' budgets for year ' . $year);
 
@@ -907,6 +909,7 @@ class AppropriationController extends Controller
 
             \Log::info('Totals - Appropriation: ' . $totalAppropriation . ', Obligation: ' . $totalObligation . ', Balance: ' . $totalBalance);
 
+
             // Get expense hierarchy for pie chart
             $fiscalYear = null;
             if ($year !== 'all') {
@@ -916,6 +919,7 @@ class AppropriationController extends Controller
                 $fiscalYear = LibFiscalYear::where('barangay_id', $barangayId)
                     ->orderBy('year', 'desc')
                     ->first();
+
             }
 
             \Log::info('Fiscal year found: ' . ($fiscalYear ? 'yes' : 'no'));

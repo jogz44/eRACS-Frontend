@@ -526,7 +526,7 @@ export const useChartDataStore = defineStore('chartData', {
       this.summaryCards = [
         {
           label: 'Total Appropriation',
-          value: this.formatCurrency(11000000),
+          value: this.formatCurrency(0),
           icon: 'account_balance',
           color: 'secondary',
           trend: 'up',
@@ -534,7 +534,7 @@ export const useChartDataStore = defineStore('chartData', {
         },
         {
           label: 'Total Obligation',
-          value: this.formatCurrency(8000000),
+          value: this.formatCurrency(0),
           icon: 'assignment',
           color: 'secondary',
           trend: 'down',
@@ -542,7 +542,7 @@ export const useChartDataStore = defineStore('chartData', {
         },
         {
           label: 'Total Balance',
-          value: this.formatCurrency(3000000),
+          value: this.formatCurrency(0),
           icon: 'balance',
           color: 'secondary',
           trend: 'up',
@@ -569,15 +569,8 @@ export const useChartDataStore = defineStore('chartData', {
         if (disbResponse.data && disbResponse.data.data) {
           // Transform data for the overview table
           this.disbursementOverviewRows = disbResponse.data.data.map((row) => {
-            console.log('Processing row:', {
-              id: row.id,
-              status: row.status,
-              created_at: row.created_at,
-              dv_number: row.dv_number,
-            })
 
             const aging = this.calculateAging(row.created_at, row.status)
-            console.log('Calculated aging for row:', { id: row.id, status: row.status, aging })
 
             return {
               id: row.id,
@@ -712,19 +705,9 @@ export const useChartDataStore = defineStore('chartData', {
             if (disbResponse.data && disbResponse.data.data) {
               // Transform data for the overview table
               this.disbursementOverviewRows = disbResponse.data.data.map((row) => {
-                console.log('Processing row in loadDashboardData:', {
-                  id: row.id,
-                  status: row.status,
-                  created_at: row.created_at,
-                  dv_number: row.dv_number,
-                })
 
                 const aging = this.calculateAging(row.created_at, row.status)
-                console.log('Calculated aging for row in loadDashboardData:', {
-                  id: row.id,
-                  status: row.status,
-                  aging,
-                })
+                
 
                 return {
                   id: row.id,

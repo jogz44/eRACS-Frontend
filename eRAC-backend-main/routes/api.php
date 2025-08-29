@@ -53,6 +53,7 @@ Route::prefix('barangay')->group(function () {
                     Route::post('/setlogs', [AdminAuthController::class, 'logUserActionRequest']);
         Route::get('/getlogs', [AuthController::class, 'getBarangayLogs']);
         Route::post('/heartbeat', [AuthController::class, 'heartbeat']);
+        Route::post('/inactivity-logout', [AuthController::class, 'inactivityLogout']);
         // });
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/user', [AuthController::class, 'user']);
@@ -149,23 +150,26 @@ Route::prefix('barangay')->group(function () {
         Route::post('disbursements/or-photo/upload', [DisbursementController::class, 'uploadOrPhoto']);
         // Delete OR photo
         Route::delete('disbursements/or-photo/delete', [DisbursementController::class, 'deleteOrPhoto']);
-        
+
         // Expense Details endpoints
         Route::get('expense-details', [DisbursementController::class, 'getExpenseDetails']);
         Route::post('expense-details', [DisbursementController::class, 'storeExpenseDetail']);
         Route::patch('expense-details/{id}', [DisbursementController::class, 'updateExpenseDetail']);
         Route::delete('expense-details/{id}', [DisbursementController::class, 'destroyExpenseDetail']);
-        
+
+        // DVnumber generation endpoint- by Dan Steve
+        Route::get('generate-dvnumber', [DisbursementController::class, 'generateDvNumber']);
+
         // Budget Augmentation endpoints
         Route::apiResource('budget-augmentations', BudgetAugmentationController::class);
 
         // Report routes aka Preview and PDF download by Dan Steve
-        Route::get('/report/rac', [ReportController::class, 'getRacReport']);  
+        Route::get('/report/rac', [ReportController::class, 'getRacReport']);
         Route::get('/report/sacb', [ReportController::class, 'getSacbReport']);
 
         // Particular route by Dan Steve
-        Route::get('/particulars', [DisbursementController::class, 'getParticular']); 
-        
+        Route::get('/particulars', [DisbursementController::class, 'getParticular']);
+
         // Continuing Appropriation
         Route::get('/continuing-appropriations', [ContinuingAppropriationController::class, 'index']);
 
@@ -181,6 +185,7 @@ Route::prefix('admin')->group(function () {
     // Just use Sanctum's default auth
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'logout']);
+        Route::post('/inactivity-logout', [AdminAuthController::class, 'inactivityLogout']);
 
         // User management endpoints
         Route::get('/users/pending', [AdminAuthController::class, 'getPendingUsers']);
@@ -196,11 +201,11 @@ Route::prefix('admin')->group(function () {
         Route::get('/budgets/{id}/history', [AppropriationController::class, 'getAllocationHistory']);
         Route::patch('/budgets/{budget}/allocations', [AppropriationController::class, 'updateAllocations']);
         Route::get('/expense-hierarchy', [AppropriationController::class, 'getExpenseHierarchy']);
-        
+
         // Admin disbursement endpoints - can access all barangay data
         Route::get('/disbursements', [DisbursementController::class, 'adminIndex']);
         Route::post('/disbursements/create', [DisbursementController::class, 'store']);
-        
+
         // Admin augmentation endpoints - can access all barangay data
         Route::get('/augmentations', [BudgetAugmentationController::class, 'adminIndex']);
         Route::post('/augmentations/create', [BudgetAugmentationController::class, 'store']);
@@ -223,4 +228,3 @@ Route::post('/heartbeat', [AdminAuthController::class, 'heartbeat']);
         Route::get('/logs/{user}/{day}', [AdminAuthController::class, 'getUserLogs']);
     // });
 });
-

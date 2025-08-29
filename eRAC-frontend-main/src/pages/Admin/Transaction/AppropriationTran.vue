@@ -33,7 +33,7 @@
         </q-input>
 
         <!-- Barangay Filter for Admin -->
-        <q-select
+        <!-- <q-select
           outlined
           dense
           v-model="selectedBarangay"
@@ -51,7 +51,7 @@
           <template v-slot:prepend>
             <q-icon name="location_on" />
           </template>
-        </q-select>
+        </q-select> -->
 
         <q-input
           outlined
@@ -219,6 +219,21 @@
                 @click="openViewDialog(props.row)"
               />
             </div>
+          </q-td>
+        </template>
+        <template v-slot:body-cell-remarks="props">
+          <q-td :props="props">
+            <q-btn
+              dense
+              :icon="isAppropriationReviewed(props.row.id) ? 'check' : 'rate_review'"
+              :label="isAppropriationReviewed(props.row.id) ? 'Reviewed' : 'Review'"
+              :color="isAppropriationReviewed(props.row.id) ? 'positive' : 'primary'"
+              :outline="!isAppropriationReviewed(props.row.id)"
+              :disable="isAppropriationReviewed(props.row.id)"
+              :unelevated="!isAppropriationReviewed(props.row.id)"
+              rounded
+              @click="!isAppropriationReviewed(props.row.id) && handleAppropriationReviewClick(props.row)"
+            />
           </q-td>
         </template>
       </q-table>
@@ -727,7 +742,7 @@ onMounted(async () => {
     await appropriationStore.initialize()
     // Log page visit
     await logPageVisit('Current Appropriation')
-    
+
     await loadBarangayOptions()
   } catch (error) {
     $q.notify({
@@ -760,10 +775,10 @@ const loadBarangayOptions = async () => {
   }
 }
 
-const onBarangayChange = async (barangayId) => {
-  appropriationStore.setSelectedBarangay(barangayId)
-  await appropriationStore.fetchBudgets()
-}
+// const onBarangayChange = async (barangayId) => {
+//   appropriationStore.setSelectedBarangay(barangayId)
+//   await appropriationStore.fetchBudgets()
+// }
 
 const columns = [
   {
@@ -813,7 +828,30 @@ const columns = [
     align: 'center',
     field: 'action',
   },
+  {
+    name: 'remarks',
+    label: 'Remarks',
+    align: 'center',
+    field: 'action',
+  },
 ]
+
+// Local reviewed state for appropriation rows
+const appropriationReviewedSet = ref(new Set())
+
+const isAppropriationReviewed = (id) => appropriationReviewedSet.value.has(id)
+
+const handleAppropriationReviewClick = (row) => {
+  if (isAppropriationReviewed(row.id)) return
+  $q.dialog({
+    title: 'Confirm Review',
+    message: `Mark Appropriation "${row.description}" as reviewed?`,
+    cancel: true,
+    persistent: true
+  }).onOk(() => {
+    appropriationReviewedSet.value.add(row.id)
+  })
+}
 
 const handleEnterKey = (event) => {
   event.preventDefault()

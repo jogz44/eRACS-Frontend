@@ -4,6 +4,25 @@ import { useAppropriationStore } from './appropriationStore'
 import { api } from 'src/boot/axios'
 import { useAuthStore } from './auth'
 
+const getAuthConfig = () => {
+  const authStore = useAuthStore()
+
+  // Use admin token if admin is logged in, otherwise use regular token
+  const token = authStore.admin ? authStore.adminToken : authStore.token
+
+  if (!token) {
+    console.warn('No authentication token found')
+    throw new Error('Authentication required')
+  }
+
+  return {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  }
+}
+
 export const useDisbursementStore = defineStore('disbursement', {
   state: () => ({
     particulars: [
@@ -214,7 +233,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       },
       { name: 'status', label: 'Status', field: 'status', align: 'center', sortable: true },
       { name: 'action', label: 'Action', field: '', align: 'center' },
-       { name: 'liquidate', label: 'Liquidate', field: '', align: 'center' },
+       { name: 'remarks', label: 'Remarks', field: '', align: 'center' },
     ],
 
     expenseColumns: () => [
@@ -905,8 +924,20 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Reset the form first to clear any previous data
         this.resetForm('disbursement')
 
-        // Generate new disbursement defaults including DV number
-        this.generateNewDisbursementDefaults()
+        const today = new Date()
+        const dd = String(today.getDate()).padStart(2, '0')
+        const mm = String(today.getMonth() + 1).padStart(2, '0')
+        const yyyy = today.getFullYear()
+
+        this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
+        try {
+          const response = await api.get('/api/barangay/generate-dvnumber',getAuthConfig());
+          const newDVNumber = response.data.data.dv_number || ''
+          this.forms.disbursement.dvNumber= newDVNumber
+        } catch (error) {
+          console.error('Failed to generate new DV number:', error)
+          this.forms.disbursement.dvNumber= ''
+        }
 
         // Generate cheque number (separate logic)
         const lastCheque = this.disbursements.reduce(
@@ -1210,7 +1241,23 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Close dialog and reset form immediately for better UX
         this.resetForm('disbursement')
         this.expenses = []
-        this.generateNewDisbursementDefaults()
+
+        const today = new Date()
+        const dd = String(today.getDate()).padStart(2, '0')
+        const mm = String(today.getMonth() + 1).padStart(2, '0')
+        const yyyy = today.getFullYear()
+
+        this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
+
+        try {
+          const response = await api.get('/api/barangay/generate-dvnumber',getAuthConfig());
+          const newDVNumber = response.data.data.dv_number || ''
+          this.forms.disbursement.dvNumber= newDVNumber
+        } catch (error) {
+          console.error('Failed to generate new DV number:', error)
+          this.forms.disbursement.dvNumber= ''
+        }
+
         this.closeDialog('disbursement')
 
         // Do data refreshes in background (non-blocking)
@@ -1259,31 +1306,6 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
-    generateNewDisbursementDefaults() {
-      const today = new Date()
-      const dd = String(today.getDate()).padStart(2, '0')
-      const mm = String(today.getMonth() + 1).padStart(2, '0')
-      const yyyy = today.getFullYear()
-
-      // Generate new DV number
-      // Prefer only DV numbers that match our pattern: DV-YY-MM-XXX
-      const dvPattern = /^DV-\d{2}-\d{2}-\d{3}$/
-      let lastSequence = 0
-      for (const d of this.disbursements) {
-        const dv = d.dvNumber || ''
-        if (dvPattern.test(dv)) {
-          const seg = dv.split('-').pop() // last segment XXX
-          const seq = parseInt(seg, 10) || 0
-          if (seq > lastSequence) lastSequence = seq
-        }
-      }
-      // Fallback: if no matching DV pattern found, start from 0
-      const newDVNumber = `DV-${String(yyyy).slice(-2)}-${mm}-${String(lastSequence + 1).padStart(3, '0')}`
-
-      // Update form with new defaults
-      this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
-      this.forms.disbursement.dvNumber = newDVNumber
-    },
 
           // Generate next available incremental ID for expenses
     getNextExpenseId() {

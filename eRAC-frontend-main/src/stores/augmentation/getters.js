@@ -14,16 +14,23 @@ export function useGetters(state) {
       format: (val) => `₱${val ? val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}`,
     },
     {
-      name: 'remarks',
-      label: 'Remarks',
+      name: 'description',
+      label: 'Description',
       field: 'remarks',
       align: 'left',
       sortable: true,
     },
-    { 
-      name: 'actions', 
-      label: 'Actions', 
-      field: '', 
+    {
+      name: 'actions',
+      label: 'Actions',
+      field: '',
+      align: 'center',
+      sortable: false
+    },
+    {
+      name: 'remarks',
+      label: 'Remarks',
+      field: '',
       align: 'center',
       sortable: false
     },
@@ -58,11 +65,11 @@ export function useGetters(state) {
   ])
 
   const AugexpenseAccountColumns = computed(() => [
-    { 
-      name: 'account', 
-      label: 'Account', 
-      field: 'account', 
-      align: 'left', 
+    {
+      name: 'account',
+      label: 'Account',
+      field: 'account',
+      align: 'left',
       sortable: true,
       style: 'width: 50%; min-width: 300px;'
     },
@@ -75,10 +82,10 @@ export function useGetters(state) {
       sortable: true,
       style: 'width: 25%; min-width: 120px;'
     },
-    { 
-      name: 'action', 
-      label: 'Action', 
-      field: '', 
+    {
+      name: 'action',
+      label: 'Action',
+      field: '',
       align: 'center',
       style: 'width: 25%; min-width: 100px;'
     },

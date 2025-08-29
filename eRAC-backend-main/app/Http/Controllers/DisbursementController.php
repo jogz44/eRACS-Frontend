@@ -85,12 +85,12 @@ class DisbursementController extends Controller
     public function adminIndex(Request $request)
     {
         $query = Disbursement::with('bank', 'barangay');
-        
+
         // Filter by barangay_id if provided
         if ($request->filled('barangay_id')) {
             $query->where('barangay_id', $request->barangay_id);
         }
-        
+
         $disbursements = $query->orderByDesc('date')->get();
         $result = $disbursements->map(function($d) {
             return [
@@ -146,7 +146,7 @@ class DisbursementController extends Controller
 
         try {
             $user = $request->user();
-            
+
             // Determine barangay_id based on user type
             $barangayId = null;
             if ($request->barangay_id) {
@@ -156,7 +156,7 @@ class DisbursementController extends Controller
                 // Regular user - use their barangay_id
                 $barangayId = $user->barangay_id;
             }
-            
+
             // Convert date from DD/MM/YYYY to YYYY-MM-DD
             $dateParts = explode('/', $request->date);
             $formattedDate = $dateParts[2] . '-' . $dateParts[1] . '-' . $dateParts[0];
@@ -189,7 +189,7 @@ class DisbursementController extends Controller
                     // Find the appropriate appropriation based on expense hierarchy
                     $appropriationQuery = TranAppropriation::where('barangay_id', $barangayId)
                         ->where('status', 'committed');
-                    
+
                     if (isset($expense['expense_item_id'])) {
                         $appropriationQuery->where('expense_item_id', $expense['expense_item_id']);
                     } elseif (isset($expense['expense_type_id'])) {
@@ -200,9 +200,9 @@ class DisbursementController extends Controller
                             ->whereNull('expense_type_id')
                             ->where('expense_class_id', $expense['expense_class_id']);
                     }
-                    
+
                     $appropriation = $appropriationQuery->first();
-                    
+
                     if ($appropriation) {
                         // Create expense detail with the disbursement ID
                         TranExpenseDetail::create([
@@ -267,7 +267,7 @@ class DisbursementController extends Controller
 
         try {
             $user = $request->user();
-            
+
             // Find the disbursement
             $disbursement = Disbursement::where('id', $id)
                 ->where('barangay_id', $user->barangay_id)
@@ -275,7 +275,7 @@ class DisbursementController extends Controller
 
             // Check if this is a continuation of partial liquidation
             $isContinuation = $disbursement->status === 'Partial';
-            
+
             if (!$isContinuation) {
                 // Delete existing OR details only if not continuing partial liquidation
                 DisbursementOrDetail::where('disbursement_id', $id)->delete();
@@ -283,7 +283,7 @@ class DisbursementController extends Controller
 
             // Get existing OR details for comparison
             $existingOrDetails = DisbursementOrDetail::where('disbursement_id', $id)->get();
-            
+
             // Process OR details - update existing ones or create new ones
             foreach ($request->orDetails as $orDetail) {
                 // Convert date from DD/MM/YYYY to YYYY-MM-DD if provided
@@ -300,7 +300,7 @@ class DisbursementController extends Controller
                     $existingOrDetail = DisbursementOrDetail::where('id', $orDetail['id'])
                         ->where('disbursement_id', $id)
                         ->first();
-                    
+
                     if ($existingOrDetail) {
                         $existingOrDetail->update([
                             'or_date' => $orDate,
@@ -322,7 +322,7 @@ class DisbursementController extends Controller
                     ]);
                 }
             }
-            
+
 
 
             // Update disbursement status based on whether it's partial or full liquidation
@@ -374,12 +374,12 @@ class DisbursementController extends Controller
 
         try {
             $user = $request->user();
-            
+
             if ($request->hasFile('photo')) {
                 $file = $request->file('photo');
                 $fileName = time() . '_' . $user->id . '_' . $file->getClientOriginalName();
                 $path = $file->storeAs('or-photos', $fileName, 'public');
-                
+
                 return response()->json([
                     'status' => true,
                     'message' => 'Photo uploaded successfully',
@@ -411,10 +411,10 @@ class DisbursementController extends Controller
 
         try {
             $path = $request->path;
-            
+
             if (\Storage::disk('public')->exists($path)) {
                 \Storage::disk('public')->delete($path);
-                
+
                 return response()->json([
                     'status' => true,
                     'message' => 'Photo deleted successfully'
@@ -441,26 +441,26 @@ class DisbursementController extends Controller
     {
         try {
             \Log::info("Fetching disbursement with ID: " . $id);
-            
+
             $user = request()->user();
             \Log::info("User: ", ['user_id' => $user ? $user->id : 'null', 'barangay_id' => $user ? $user->barangay_id : 'null']);
-            
+
             $query = Disbursement::with(['bank', 'expenseDetails.appropriation']);
-            
+
             // If user is authenticated and has barangay_id, filter by it
             if ($user && isset($user->barangay_id)) {
                 $query->where('barangay_id', $user->barangay_id);
             }
             $query->orderByDesc('created_at');
             $disbursement = $query->find($id);
-            
+
             if (!$disbursement) {
                 \Log::warning("Disbursement not found with ID: " . $id);
                 return response()->json(['error' => 'Disbursement not found'], 404);
             }
-            
+
             \Log::info("Found disbursement: ", ['id' => $disbursement->id, 'dv_number' => $disbursement->dv_number]);
-            
+
             return response()->json([
                 'status' => true,
                 'data' => [
@@ -516,12 +516,12 @@ class DisbursementController extends Controller
 
         try {
             $user = $request->user();
-            
+
             // Find the disbursement
             $disbursement = Disbursement::where('id', $id)
                 ->where('barangay_id', $user->barangay_id)
                 ->firstOrFail();
-            
+
             // Convert date from DD/MM/YYYY to YYYY-MM-DD
             $dateParts = explode('/', $request->date);
             $formattedDate = $dateParts[2] . '-' . $dateParts[1] . '-' . $dateParts[0];
@@ -556,13 +556,13 @@ class DisbursementController extends Controller
                 $expenseAddedLogs = [];
                 $expenseEditedLogs = [];
                 $expenseDeletedLogs = [];
-                
+
                 // Process each expense
                 foreach ($request->expenses as $expense) {
                     // Find the appropriate appropriation based on expense hierarchy
                     $appropriationQuery = TranAppropriation::where('barangay_id', $user->barangay_id)
                         ->where('status', 'committed');
-                    
+
                     if (isset($expense['expense_item_id'])) {
                         $appropriationQuery->where('expense_item_id', $expense['expense_item_id']);
                     } elseif (isset($expense['expense_type_id'])) {
@@ -573,9 +573,9 @@ class DisbursementController extends Controller
                             ->whereNull('expense_type_id')
                             ->where('expense_class_id', $expense['expense_class_id']);
                     }
-                    
+
                     $appropriation = $appropriationQuery->first();
-                    
+
                     if ($appropriation) {
                         if (isset($expense['id']) && in_array($expense['id'], $existingExpenseDetailIds)) {
                             // Update existing expense detail
@@ -630,7 +630,7 @@ class DisbursementController extends Controller
                         }
                     }
                 }
-                
+
                 // Delete any remaining expense details that are no longer in the request
                 $requestedIds = collect($request->expenses)
                     ->pluck('id')
@@ -740,12 +740,12 @@ class DisbursementController extends Controller
     {
         try {
             $user = $request->user();
-            
+
             // Find the disbursement and ensure it belongs to the user's barangay
             $disbursement = Disbursement::where('id', $id)
                 ->where('barangay_id', $user->barangay_id)
                 ->firstOrFail();
-            
+
             // Check if disbursement can be modified (only if status is Pending or Partial)
             if ($disbursement->status !== 'Pending' && $disbursement->status !== 'Partial') {
                 return response()->json([
@@ -753,19 +753,19 @@ class DisbursementController extends Controller
                     'message' => 'Only pending and partial disbursements can be modified'
                 ], 400);
             }
-            
+
             // Find and delete the OR detail
             $orDetail = DisbursementOrDetail::where('id', $orDetailId)
                 ->where('disbursement_id', $id)
                 ->firstOrFail();
-            
+
             $orDetail->delete();
-            
+
             return response()->json([
                 'status' => true,
                 'message' => 'OR Detail deleted successfully'
             ]);
-            
+
         } catch (\Exception $e) {
             \Log::error('Error deleting OR detail: ' . $e->getMessage());
             return response()->json([
@@ -781,12 +781,12 @@ class DisbursementController extends Controller
     {
         try {
             $user = $request->user();
-            
+
             // Find the disbursement and ensure it belongs to the user's barangay
             $disbursement = Disbursement::where('id', $id)
                 ->where('barangay_id', $user->barangay_id)
                 ->firstOrFail();
-            
+
             // Check if disbursement can be deleted (only if status is Pending or Partial)
             if ($disbursement->status !== 'Pending' && $disbursement->status !== 'Partial') {
                 return response()->json([
@@ -794,13 +794,13 @@ class DisbursementController extends Controller
                     'message' => 'Only pending and partial disbursements can be deleted'
                 ], 400);
             }
-            
+
             // Delete expense details first (they will be automatically deleted due to cascade, but being explicit)
             TranExpenseDetail::where('disbursement_id', $disbursement->id)->delete();
-            
+
             // Delete the disbursement
             $disbursement->delete();
-            
+
             // Log deletion
             AdminAuthController::logUserAction(
                 $user,
@@ -817,7 +817,7 @@ class DisbursementController extends Controller
                 'status' => true,
                 'message' => 'Disbursement deleted successfully'
             ]);
-            
+
         } catch (\Exception $e) {
             \Log::error('Error deleting disbursement: ' . $e->getMessage());
             return response()->json([
@@ -833,18 +833,18 @@ class DisbursementController extends Controller
     {
         try {
             $user = $request->user();
-            
+
             $query = TranExpenseDetail::with(['appropriation.expenseClass', 'appropriation.expenseType', 'appropriation.expenseItem']);
-            
+
             // If user is authenticated and has barangay_id, filter by it
             if ($user && isset($user->barangay_id)) {
                 $query->whereHas('appropriation', function($q) use ($user) {
                     $q->where('barangay_id', $user->barangay_id);
                 });
             }
-            
+
             $expenseDetails = $query->get();
-            
+
             $result = $expenseDetails->map(function($detail) {
                 return [
                     'id' => $detail->id,
@@ -859,12 +859,12 @@ class DisbursementController extends Controller
                     'updated_at' => $detail->updated_at,
                 ];
             });
-            
+
             return response()->json([
                 'status' => true,
                 'data' => $result
             ]);
-            
+
         } catch (\Exception $e) {
             \Log::error('Error fetching expense details: ' . $e->getMessage());
             return response()->json([
@@ -891,7 +891,7 @@ class DisbursementController extends Controller
 
         try {
             $user = $request->user();
-            
+
             \Log::info('Starting expense detail creation:', [
                 'user_id' => $user->id,
                 'barangay_id' => $user->barangay_id,
@@ -952,7 +952,7 @@ class DisbursementController extends Controller
             // Find all matching appropriations and treat them as one budget pool
             $matchingAppropriationsQuery = TranAppropriation::where('barangay_id', $user->barangay_id)
                 ->where('status', 'committed');
-            
+
             if ($appropriation->expense_item_id) {
                 $matchingAppropriationsQuery->where('expense_item_id', $appropriation->expense_item_id);
             } elseif ($appropriation->expense_type_id) {
@@ -1057,14 +1057,14 @@ class DisbursementController extends Controller
 
         try {
             $user = $request->user();
-            
+
             // Find the expense detail and ensure it belongs to the user's barangay
             $expenseDetail = TranExpenseDetail::where('id', $id)
                 ->whereHas('appropriation', function($q) use ($user) {
                     $q->where('barangay_id', $user->barangay_id);
                 })
                 ->firstOrFail();
-            
+
             $expenseDetail->update([
                 'disbursement_id' => $request->disbursement_id,
             ]);
@@ -1074,7 +1074,7 @@ class DisbursementController extends Controller
                 'message' => 'Expense detail updated successfully',
                 'data' => $expenseDetail
             ]);
-            
+
         } catch (\Exception $e) {
             \Log::error('Error updating expense detail: ' . $e->getMessage());
             return response()->json([
@@ -1090,14 +1090,14 @@ class DisbursementController extends Controller
     {
         try {
             $user = $request->user();
-            
+
             // Find the expense detail and ensure it belongs to the user's barangay
             $expenseDetail = TranExpenseDetail::where('id', $id)
                 ->whereHas('appropriation', function($q) use ($user) {
                     $q->where('barangay_id', $user->barangay_id);
                 })
                 ->firstOrFail();
-            
+
             // Only allow deletion if disbursement_id is null (unsaved)
             if ($expenseDetail->disbursement_id !== null) {
                 return response()->json([
@@ -1105,14 +1105,14 @@ class DisbursementController extends Controller
                     'message' => 'Cannot delete expense detail that is already associated with a disbursement'
                 ], 400);
             }
-            
+
             $expenseDetail->delete();
-            
+
             return response()->json([
                 'status' => true,
                 'message' => 'Expense detail deleted successfully'
             ]);
-            
+
         } catch (\Exception $e) {
             \Log::error('Error deleting expense detail: ' . $e->getMessage());
             return response()->json([
@@ -1122,4 +1122,41 @@ class DisbursementController extends Controller
             ], 500);
         }
     }
-} 
+    
+    public function generateDvNumber(Request $request)
+    {
+        $today = now();
+        $dd = str_pad($today->day, 2, '0', STR_PAD_LEFT);
+        $mm = str_pad($today->month, 2, '0', STR_PAD_LEFT);
+        $yyyy = $today->year;
+
+        $user = $request->user();
+        $barangayId = $user->barangay_id;
+
+        $likePattern = 'DV-%'.substr($yyyy, -2).'-'.$mm.'-%';
+
+        $lastDisbursement = Disbursement::where('barangay_id', $barangayId)
+            ->where('dv_number', 'like', $likePattern)
+            ->orderByDesc('dv_number')
+            ->first();
+
+        $lastSequence = 0;
+        if ($lastDisbursement) {
+            $dv = $lastDisbursement->dv_number;
+            $segments = explode('-', $dv);
+            if (count($segments) === 4) {
+                $lastSegment = $segments[3];
+                $lastSequence = (int)$lastSegment;
+            }
+        }
+        $newDvNumber = sprintf('DV-%s-%s-%s', substr($yyyy, -2), $mm, str_pad($lastSequence + 1, 3, '0', STR_PAD_LEFT));
+        return response()->json([
+            'status' => true,
+            'data' => [
+                'date' => sprintf('%s/%s/%s', $dd, $mm, $yyyy),
+                'dv_number' => $newDvNumber,
+            ]
+        ]);
+
+    }
+}

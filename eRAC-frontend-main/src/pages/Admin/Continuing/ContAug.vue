@@ -95,6 +95,21 @@
               </div>
             </q-td>
           </template>
+          <template v-slot:body-cell-remarks="props">
+            <q-td :props="props">
+              <q-btn
+                dense
+                :icon="isAugmentationReviewed(props.row.id) ? 'check' : 'rate_review'"
+                :label="isAugmentationReviewed(props.row.id) ? 'Reviewed' : 'Review'"
+                :color="isAugmentationReviewed(props.row.id) ? 'positive' : 'primary'"
+                :outline="!isAugmentationReviewed(props.row.id)"
+                :disable="isAugmentationReviewed(props.row.id)"
+                :unelevated="!isAugmentationReviewed(props.row.id)"
+                rounded
+                @click="!isAugmentationReviewed(props.row.id) && handleAugmentationReviewClick(props.row)"
+              />
+            </q-td>
+          </template>
         </q-table>
       </q-card>
 
@@ -180,13 +195,6 @@
                       icon="edit"
                       color="orange"
                       @click="store.editItem(props.row)"
-                    />
-                    <q-btn
-                      size="sm"
-                      dense
-                      icon="delete"
-                      color="red"
-                      @click="store.deleteItem(props.row)"
                     />
                   </div>
                 </q-td>
@@ -325,6 +333,23 @@ import { useQuasar } from 'quasar'
 import { useContAugmentationStore } from 'stores/contAugmentation'
 import { useAppropriationStore } from 'stores/appropriationStore'
 import { usePageLogging } from '../../../composables/usePageLogging'
+
+// Local reviewed state for augmentation rows
+const augmentationReviewedSet = ref(new Set())
+
+const isAugmentationReviewed = (id) => augmentationReviewedSet.value.has(id)
+
+const handleAugmentationReviewClick = (row) => {
+  // Add the augmentation to reviewed set
+  augmentationReviewedSet.value.add(row.id)
+
+  $q.notify({
+    type: 'positive',
+    message: 'Augmentation reviewed successfully!',
+    icon: 'check_circle',
+    position: 'top',
+  })
+}
 
 const $q = useQuasar()
 const store = useContAugmentationStore()
