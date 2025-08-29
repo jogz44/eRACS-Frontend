@@ -327,6 +327,11 @@ export const useAppropriationStore = defineStore("appropriation", {
       await this.fetchAppropriations()
     },
 
+    // Backwards-compat: some components call fetchAppropriations; route to fetchBudgets
+    async fetchAppropriations(options = { silent: false }) {
+      return this.fetchBudgets(options)
+    },
+
     async fetchExpenseHierarchy() {
       try {
         // Use admin token if admin is logged in
@@ -714,6 +719,9 @@ export const useAppropriationStore = defineStore("appropriation", {
     },
   },
 })
+
+// Backwards-compat export for components expecting `useContApprStore`
+export const useContApprStore = useAppropriationStore
 
 // Utility function for consistent currency parsing
 const parseCurrency = (value) => {
