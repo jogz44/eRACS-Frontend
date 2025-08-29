@@ -13,7 +13,7 @@
     </div>
 
     <!-- Year Filter Section -->
-    <div class="year-filter-section q-mb-lg">
+    <div class="year-filter-section q-mb-lg" style="width: 320px;">
       <q-card class="filter-card">
         <q-card-section class="row items-center justify-between q-pa-md">
           <div class="row items-center q-gutter-md">
@@ -54,10 +54,7 @@
               <q-tooltip>Refresh available years</q-tooltip>
             </q-btn>
 
-            <!-- Loading indicator for year filter -->
-            <div v-if="chartStore.isYearFilterLoading" class="text-caption text-grey-6">
-              Loading years...
-            </div>
+
 
             <!-- Error state for year filter -->
             <div
@@ -71,17 +68,7 @@
           <div class="row items-center q-gutter-sm">
 
 
-            <q-btn
-              icon="refresh"
-              color="primary"
-              flat
-              dense
-              size="sm"
-              @click="refreshAllData"
-              :loading="chartStore.isLoading"
-            >
-              <q-tooltip>Refresh all data for selected year</q-tooltip>
-            </q-btn>
+
           </div>
         </q-card-section>
 
@@ -467,35 +454,7 @@ const onYearChange = async (newYear) => {
   }
 }
 
-// const resetToCurrentYear = async () => {
-//   try {
-//     const currentYear = new Date().getFullYear()
-//     console.log('Resetting to current year:', currentYear)
 
-//     // Update the store
-//     chartStore.resetToCurrentYear()
-
-//     // Refresh all data
-//     await refreshAllData()
-
-//     $q.notify({
-//       type: 'positive',
-//       message: `Reset to current year (${currentYear})`,
-//       icon: 'restore',
-//       position: 'top',
-//       timeout: 2000,
-//     })
-//   } catch (error) {
-//     console.error('Error resetting to current year:', error)
-//     $q.notify({
-//       type: 'negative',
-//       message: 'Failed to reset to current year',
-//       icon: 'error',
-//       position: 'top',
-//       timeout: 3000,
-//     })
-//   }
-// }
 
 const refreshAllData = async () => {
   try {
