@@ -122,7 +122,19 @@
          row-key="id"
          :pagination="{ rowsPerPage: 10 }"
          class="my-sticky-header-table"
-       />
+      >
+        <template v-slot:body-cell-action="props">
+          <q-td :props="props">
+            <q-btn dense round color="orange" icon="edit" class="q-mr-xs" @click="handleEdit(props.row)" />
+            <q-btn dense round color="primary" icon="visibility" @click="handleView(props.row)" />
+          </q-td>
+        </template>
+        <template v-slot:body-cell-commit="props">
+          <q-td :props="props">
+            <q-btn color="positive" label="COMMIT" size="sm" @click="handleCommit(props.row)" />
+          </q-td>
+        </template>
+      </q-table>
     </q-card>
 
     <!-- Allocation Dialog -->
@@ -280,11 +292,34 @@ const mergedAppropriations = ref([])
 const columns = [
   {
     name: 'id',
-    label: 'ID',
+    label: '#',
     field: 'id',
     align: 'left',
     sortable: true,
-    style: 'width: 10%'
+    style: 'width: 11%'
+  },
+  {
+    name: 'continuedDate',
+    label: 'Continued Date',
+    field: (row) => row.continuedDate || '-',
+    align: 'left',
+    sortable: true,
+    style: 'width: 11%'
+  },
+  {
+    name: 'year',
+    label: 'Year',
+    field: 'year',
+    align: 'left',
+    sortable: true,
+    style: 'width: 11%'
+  },
+  {
+    name: 'expenseClass',
+    label: 'Expense Class',
+    field: (row) => row.expenseClass || '-',
+    align: 'left',
+    style: 'width: 11%'
   },
   {
     name: 'description',
@@ -292,10 +327,28 @@ const columns = [
     field: 'description',
     align: 'left',
     sortable: true,
-    style: 'width: 25%'
+    style: 'width: 11%'
   },
-  { name: 'amount', label: 'Total Amount', field: 'amount', align: 'right', sortable: 'true' },
-  { name: 'action', label: 'Action', field: 'action', align: 'center' },
+  {
+    name: 'appropriation',
+    label: 'Appropriation',
+    field: (row) => row.originalAppropriation ?? row.appropriation ?? 0,
+    align: 'right',
+    sortable: true,
+    format: (val) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(val || 0),
+    style: 'width: 11%'
+  },
+  {
+    name: 'unappropriated',
+    label: 'Unappropriated',
+    field: (row) => row.unappropriated ?? row.balance ?? 0,
+    align: 'right',
+    sortable: true,
+    format: (val) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(val || 0),
+    style: 'width: 11%'
+  },
+  { name: 'action', label: 'Action', field: 'action', align: 'center', style: 'width: 11%' },
+  { name: 'commit', label: 'Commit', field: 'commit', align: 'center', style: 'width: 11%' },
 ]
 
 
@@ -515,7 +568,7 @@ onMounted(async () => {
   try {
     await contApprStore.fetchContinueAccounts()
     await contApprStore.fetchYears()
-    
+
     // Log page visit
     const { logPageVisit } = usePageLogging()
     await logPageVisit('Continuing Appropriation')
@@ -529,6 +582,17 @@ onMounted(async () => {
     generalLoading.value=false;
   }
 })
+
+// Row action handlers
+const handleEdit = (row) => {
+  openAllocationDialog(row)
+}
+const handleView = (row) => {
+  $q.notify({ type: 'info', message: `Viewing: ${row.description || ''}` })
+}
+const handleCommit = (row) => {
+  $q.notify({ type: 'positive', message: `Committed successfully${row?.id ? ` (ID: ${row.id})` : ''}` })
+}
 
 defineExpose({
   openAllocationDialog,
