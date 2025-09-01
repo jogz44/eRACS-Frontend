@@ -14,6 +14,7 @@
       </div>
     </div>
 
+    <!-- Simplified the search and filter section structure -->
     <div class="q-mb-sm">
       <div class="row items-center q-gutter-sm">
         <q-input
@@ -21,7 +22,7 @@
           dense
           placeholder="Search Description..."
           v-model="searchQuery"
-          style="min-width: 300px"
+          class="search-input"
         >
           <template v-slot:append>
             <q-icon name="search" />
@@ -31,8 +32,9 @@
         <q-btn
           dense
           outlined
-          color="negative"
-          icon="clear"
+          color="red-10"
+          icon="clear_all"
+          label="Clear All"
           @click="clearAllFilters"
         />
 
@@ -61,18 +63,15 @@
               dense
               outlined
               debounce="300"
-              v-model="searchQuery"
+              v-model="dialogSearchQuery"
               placeholder="Search accounts..."
               style="min-width: 250px"
               @keydown.enter="handleEnterKey"
             />
-            <label>
-
-            </label>
           </div>
 
           <q-table
-            :rows="filteredAccounts"
+            :rows="filteredDialogAccounts"
             :columns="continueColumns"
             row-key="id"
             selection="multiple"
@@ -113,25 +112,60 @@
       </q-card>
     </q-dialog>
 
-    <!-- Main Table -->
+    <!-- Main Data Table -->
     <q-card flat bordered>
-             <q-table
-         flat
-         :rows="filteredAppropriations"
-         :columns="columns"
-         row-key="id"
-         :pagination="{ rowsPerPage: 10 }"
-         class="my-sticky-header-table"
+
+      <q-table
+        :rows="filteredAppropriations"
+        :columns="columns"
+        :loading="loading"
+        row-key="id"
+        flat
       >
-        <template v-slot:body-cell-action="props">
+        <template v-slot:body-cell-index="props">
           <q-td :props="props">
-            <q-btn dense round color="orange" icon="edit" class="q-mr-xs" @click="handleEdit(props.row)" />
-            <q-btn dense round color="primary" icon="visibility" @click="handleView(props.row)" />
+            {{ props.pageIndex + 1 }}
           </q-td>
         </template>
-        <template v-slot:body-cell-commit="props">
+
+        <template v-slot:body-cell-amount="props">
           <q-td :props="props">
-            <q-btn color="positive" label="COMMIT" size="sm" @click="handleCommit(props.row)" />
+            {{ formatCurrency(props.row.amount) }}
+          </q-td>
+        </template>
+
+        <template v-slot:body-cell-balance="props">
+          <q-td :props="props">
+            {{ formatCurrency(props.row.balance) }}
+          </q-td>
+        </template>
+
+        <template v-slot:body-cell-unappropriated="props">
+          <q-td :props="props">
+            {{ formatCurrency(props.row.unappropriated || props.row.balance) }}
+          </q-td>
+        </template>
+
+        <template v-slot:body-cell-action="props">
+          <q-td :props="props">
+            <div class="q-gutter-xs">
+              <q-btn
+                dense
+                label="Allocate"
+                color="primary"
+                @click="openAllocationDialog(props.row)"
+                :disable="!props.row.balance || props.row.balance <= 0"
+                v-permission="'edit'"
+              />
+              <q-btn
+                dense
+                icon="visibility"
+                color="blue"
+                @click="openViewDialog(props.row)"
+                v-permission="'view'"
+              />
+            </div>
+
           </q-td>
         </template>
       </q-table>
@@ -139,7 +173,7 @@
 
     <!-- Allocation Dialog -->
     <q-dialog v-model="showAllocationDialog" persistent @keydown.enter="handleAllocationEnterKey">
-      <q-card style="min-width: 700px; max-width: 90vw">
+      <q-card style="min-width: 900px; max-width: 90vw">
         <q-card-section class="q-pb-none">
           <div class="row items-center justify-between">
             <div class="text-h6">Allocate Amounts</div>
@@ -171,40 +205,72 @@
           </div>
 
           <!-- Hierarchical Table -->
-          <div class="hierarchical-table" style="border: 1px solid #e0e0e0; border-radius: 4px">
-            <div class="row bg-grey-2 text-weight-medium q-pa-sm">
-              <div class="col-6">Account</div>
+          <div class="hierarchical-table" style="border: 1px solid #e0e0e0">
+            <div class="row q-pa-sm bg-grey-2 text-weight-medium">
+              <div class="col-6">Type</div>
               <div class="col-6 text-right">Amount (₱)</div>
             </div>
 
-            <div style="max-height: 400px; overflow-y: auto">
-              <template v-for="category in displayAccounts" :key="'cat-' + category.id">
-                <div class="row bg-grey-1 text-weight-medium q-pa-sm">
-                  <div class="col-6">CAPITAL OUTLAYS</div>
-                  <div class="col-6 text-right">
-                    {{ formatCurrency(calculateCategoryTotal(category)) }}
-                  </div>
+            <div class="hierarchical-body" style="max-height: 400px; overflow-y: auto">
+              <template v-for="expenseClass in displayAccounts" :key="'class-' + expenseClass.id">
+                <div class="row q-pa-sm bg-grey-1 text-weight-medium">
+                  <div class="col-12">{{ expenseClass.name }}</div>
                 </div>
 
-                <template v-for="subcategory in category.children" :key="'sub-' + subcategory.id">
-                  <div class="row q-pa-sm" style="border-bottom: 1px solid #f0f0f0">
+                <template v-for="expenseType in expenseClass.children" :key="'type-' + expenseType.id">
+                  <div class="row q-pa-xs" style="border-bottom: 1px solid #f0f0f0">
                     <div class="col-6" style="padding-left: 16px; display: flex; align-items: center">
-                      <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
-                      {{ subcategory.name }}
+                      <q-btn
+                        dense
+                        flat
+                        :icon="(expenseType.children && expenseType.children.length > 0 && expandedTypes[expenseType.id]) ? 'expand_more' : 'chevron_right'"
+                        @click="(expenseType.children && expenseType.children.length > 0) ? toggleType(expenseType.id) : null"
+                        size="sm"
+                      />
+                      <span>{{ expenseType.name }}</span>
                     </div>
                     <div class="col-6 text-right">
                       <q-input
+                        v-if="canEditType(expenseType)"
+                        :model-value="formatInputValue(expenseType.amount)"
+                        @update:model-value="(val) => handleAmountInput(expenseType, val)"
+                        @blur="(event) => handleAmountBlur(expenseType, event.target.value)"
                         dense
                         outlined
-                        v-model.number="subcategory.amount"
+                        class="allocation-input"
                         prefix="₱"
-                        :rules="[(val) => validateAmount(val)]"
-                        style="width: 200px"
-                        :disable="availableBudget <= 0"
+                        placeholder="0.00"
                         @keydown.enter="handleAllocationEnterKey"
                       />
+                      <div v-else class="text-weight-medium">
+                        {{ formatCurrency(calculateTypeTotal(expenseType)) }}
+                      </div>
                     </div>
                   </div>
+
+                  <template v-if="expandedTypes[expenseType.id] && expenseType.children && expenseType.children.length > 0">
+                    <template v-for="expenseItem in expenseType.children" :key="'item-' + expenseItem.id">
+                      <div class="row q-pa-xs" style="border-bottom: 1px solid #f0f0f0">
+                        <div class="col-6" style="padding-left: 32px; display: flex; align-items: center">
+                          <q-icon name="arrow_right" size="xs" class="q-mr-xs" />
+                          <span>{{ expenseItem.name }}</span>
+                        </div>
+                        <div class="col-6 text-right">
+                          <q-input
+                            :model-value="formatInputValue(expenseItem.amount)"
+                            @update:model-value="(val) => handleAmountInput(expenseItem, val)"
+                            @blur="(event) => handleAmountBlur(expenseItem, event.target.value)"
+                            dense
+                            outlined
+                            class="allocation-input"
+                            prefix="₱"
+                            placeholder="0.00"
+                            @keydown.enter="handleAllocationEnterKey"
+                          />
+                        </div>
+                      </div>
+                    </template>
+                  </template>
                 </template>
               </template>
             </div>
@@ -227,7 +293,137 @@
 </template>
 
 <script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useQuasar } from 'quasar'
+import { storeToRefs } from 'pinia'
+import { useContApprStore } from 'src/stores/contApprStore'
+import { usePageLogging } from '../../../composables/usePageLogging'
+
+const $q = useQuasar()
+const contApprStore = useContApprStore();
+const { continueAccounts } = storeToRefs(contApprStore)
+
 const loading = ref(false)
+const showContinueDialog = ref(false)
+const showAllocationDialog = ref(false)
+const description = ref('')
+const selectedAccounts = ref([])
+const searchQuery = ref('')
+const dialogSearchQuery = ref('')
+const returnAmount = ref(0)
+const augmentationAmount = ref(0)
+const generalLoading = ref(true)
+
+// New state variables for enhanced functionality
+const expandedTypes = ref({})
+const selectedRow = ref({
+  id: null,
+  amount: 0,
+  unappropriated: 0,
+  returnAmount: 0,
+  augmentationAmount: 0,
+})
+
+const continueColumns = [
+  { name: 'accountName', label: 'Accounts Name', field: 'accountName', align: 'left' },
+  {
+    name: 'balance',
+    label: 'Remaining Balance',
+    field: 'balance',
+    align: 'right',
+    format: (val) => `₱ ${val.toLocaleString()}`,
+  },
+]
+
+const mergedAppropriations = ref([])
+
+const columns = [
+  {
+
+    name: 'index',
+    label: '#',
+    field: 'index',
+    align: 'left',
+    sortable: false,
+
+  },
+  {
+    name: 'description',
+    label: 'Description',
+    field: 'description',
+    align: 'left',
+    sortable: true,
+
+  },
+  { 
+    name: 'amount', 
+    label: 'Total Amount', 
+    field: 'amount', 
+    align: 'right', 
+    sortable: true 
+  },
+  { 
+    name: 'balance', 
+    label: 'Balance', 
+    field: 'balance', 
+    align: 'right', 
+    sortable: true 
+  },
+  { 
+    name: 'unappropriated', 
+    label: 'Unappropriated', 
+    field: 'unappropriated', 
+    align: 'right', 
+    sortable: true 
+  },
+  {
+    name: 'action',
+    label: 'Action',
+    align: 'center',
+    field: 'action',
+  },
+
+]
+
+const availableBudget = computed(() => {
+  const base = selectedRow.value.unappropriated || selectedRow.value.balance || 0
+  const returns = selectedRow.value.returnAmount || 0
+  const augmentation = selectedRow.value.augmentationAmount || 0
+  return base + returns + augmentation
+})
+
+const filteredDialogAccounts = computed(() => {
+  if (!dialogSearchQuery.value) return continueAccounts.value
+
+  return continueAccounts.value.filter((account) =>
+    Object.values(account).join(' ').toLowerCase().includes(dialogSearchQuery.value.toLowerCase()),
+  )
+})
+
+const filteredAppropriations = computed(() => {
+  const query = searchQuery.value.toLowerCase()
+
+  return mergedAppropriations.value.filter((row) => {
+    return row.description.toLowerCase().includes(query) ||
+           row.remarks?.toLowerCase().includes(query) ||
+           row.year?.toString().includes(query)
+  })
+})
+
+const sampleAccounts = [
+  {
+    id: 1,
+    name: 'Capital Outlays',
+    children: [
+      { id: 11, name: 'OFFICE EQUIPMENT', amount: 12000 },
+      { id: 12, name: 'IT EQUIPMENT AND SOFTWARE', amount: 7600 },
+      { id: 13, name: 'VEHICLES', amount: 50000 },
+      { id: 14, name: 'FURNITURE AND FIXTURES', amount: 8300 },
+      { id: 15, name: 'BUILDING IMPROVEMENTS', amount: 42000 },
+      { id: 16, name: 'MEDICAL EQUIPMENT', amount: 15000 },
+    ],
+  },
+]
 
 const loadPendingUsers = async () => {
   loading.value = true
@@ -253,144 +449,8 @@ const loadPendingUsers = async () => {
 
 const clearAllFilters = () => {
   searchQuery.value = ''
+  dialogSearchQuery.value = ''
 }
-
-import { ref, computed, onMounted } from 'vue'
-import { useQuasar } from 'quasar'
-import { storeToRefs } from 'pinia'
-import { useContApprStore } from 'src/stores/contApprStore'
-import { usePageLogging } from '../../../composables/usePageLogging'
-
-const $q = useQuasar()
-const contApprStore = useContApprStore();
-const { continueAccounts } = storeToRefs(contApprStore)
-
-const showContinueDialog = ref(false)
-const showAllocationDialog = ref(false)
-const description = ref('')
-const selectedAccounts = ref([])
-const searchQuery = ref('')
-const returnAmount = ref(0)
-const augmentationAmount = ref(0)
-
-const generalLoading = ref(true)
-
-
-const continueColumns = [
-  { name: 'accountName', label: 'Accounts Name', field: 'accountName', align: 'left' },
-  {
-    name: 'balance',
-    label: 'Remaining Balance',
-    field: 'balance',
-    align: 'right',
-    format: (val) => `₱ ${val.toLocaleString()}`,
-  },
-]
-
-const mergedAppropriations = ref([])
-
-const columns = [
-  {
-    name: 'id',
-    label: '#',
-    field: 'id',
-    align: 'left',
-    sortable: true,
-    style: 'width: 11%'
-  },
-  {
-    name: 'continuedDate',
-    label: 'Continued Date',
-    field: (row) => row.continuedDate || '-',
-    align: 'left',
-    sortable: true,
-    style: 'width: 11%'
-  },
-  {
-    name: 'year',
-    label: 'Year',
-    field: 'year',
-    align: 'left',
-    sortable: true,
-    style: 'width: 11%'
-  },
-  {
-    name: 'expenseClass',
-    label: 'Expense Class',
-    field: (row) => row.expenseClass || '-',
-    align: 'left',
-    style: 'width: 11%'
-  },
-  {
-    name: 'description',
-    label: 'Description',
-    field: 'description',
-    align: 'left',
-    sortable: true,
-    style: 'width: 11%'
-  },
-  {
-    name: 'appropriation',
-    label: 'Appropriation',
-    field: (row) => row.originalAppropriation ?? row.appropriation ?? 0,
-    align: 'right',
-    sortable: true,
-    format: (val) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(val || 0),
-    style: 'width: 11%'
-  },
-  {
-    name: 'unappropriated',
-    label: 'Unappropriated',
-    field: (row) => row.unappropriated ?? row.balance ?? 0,
-    align: 'right',
-    sortable: true,
-    format: (val) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(val || 0),
-    style: 'width: 11%'
-  },
-  { name: 'action', label: 'Action', field: 'action', align: 'center', style: 'width: 11%' },
-  { name: 'commit', label: 'Commit', field: 'commit', align: 'center', style: 'width: 11%' },
-]
-
-
-
-const availableBudget = computed(() => {
-  const base = selectedRow.value.unappropriated || 0
-  const returns = selectedRow.value.returnAmount || 0
-  const augmentation = selectedRow.value.augmentationAmount || 0
-  return base + returns + augmentation
-})
-
-const filteredAccounts = computed(() => {
-  if (!searchQuery.value) return continueAccounts.value
-
-  return continueAccounts.value.filter((account) =>
-    Object.values(account).join(' ').toLowerCase().includes(searchQuery.value.toLowerCase()),
-  )
-})
-const filteredAppropriations = computed(() => {
-  const query = searchQuery.value.toLowerCase()
-
-  return mergedAppropriations.value.filter((row) => {
-    return row.description.toLowerCase().includes(query) ||
-           row.remarks?.toLowerCase().includes(query) ||
-           row.year?.toString().includes(query)
-  })
-})
-
-const sampleAccounts = [
-  {
-    id: 1,
-    name: 'Capital Outlays',
-    children: [
-      { id: 11, name: 'OFFICE EQUIPMENT', amount: 12000 },
-      { id: 12, name: 'IT EQUIPMENT AND SOFTWARE', amount: 7600 },
-      { id: 13, name: 'VEHICLES', amount: 50000 },
-      { id: 14, name: 'FURNITURE AND FIXTURES', amount: 8300 },
-      { id: 15, name: 'BUILDING IMPROVEMENTS', amount: 42000 },
-      { id: 16, name: 'MEDICAL EQUIPMENT', amount: 15000 },
-    ],
-  },
-]
 
 const validateAndContinue = () => {
   if (showContinueDialog.value) {
@@ -438,28 +498,27 @@ const continueSelected = () => {
     description: description.value,
     year: contApprStore.selectedYear,
     originalAppropriation: totalAmount,
+    amount: totalAmount,
     balance: totalAmount, // Initially, balance equals the original appropriation
+    unappropriated: totalAmount,
     remarks: '',
     accounts: [...selectedAccounts.value],
   })
 
   selectedAccounts.value = []
   description.value = ''
+  dialogSearchQuery.value = ''
   showContinueDialog.value = false
 }
 
 const formatCurrency = (value) => {
+  if (!value && value !== 0) return '₱0.00'
   return new Intl.NumberFormat('en-PH', {
     style: 'currency',
     currency: 'PHP',
   }).format(value)
 }
 
-
-const selectedRow = ref({
-  id: null,
-  unappropriated: 100000,
-})
 const displayAccounts = ref(JSON.parse(JSON.stringify(sampleAccounts)))
 
 const openAllocationDialog = (row) => {
@@ -476,7 +535,7 @@ const openAllocationDialog = (row) => {
         name: 'CAPITAL OUTLAYS',
         children: row.accounts.map((acc) => ({
           id: acc.id,
-          name: acc.accountName.split('>')[1].trim(),
+          name: acc.accountName.split('>')[1]?.trim() || acc.accountName,
           amount: acc.balance,
         })),
       },
@@ -505,16 +564,64 @@ const calculateCategoryTotal = (category) => {
   return category.children.reduce((sum, item) => sum + (item.amount || 0), 0)
 }
 
+const calculateTypeTotal = (type) => {
+  if (!type || !type.children) return 0
+  return type.children.reduce((sum, item) => sum + (item.amount || 0), 0)
+}
+
 const totalAllocated = computed(() => {
   return displayAccounts.value.reduce((total, category) => {
     return total + calculateCategoryTotal(category)
   }, 0)
 })
 
-const validateAmount = (val) => {
-  if (val === null || val === '') return true
-  const num = Number(val)
-  return !isNaN(num) && num >= 0
+const canEditType = (expenseType) => {
+  return !expenseType.children || expenseType.children.length === 0
+}
+
+const toggleType = (typeId) => {
+  let hasChildren = false
+  displayAccounts.value.forEach(expenseClass => {
+    const expenseType = expenseClass.children?.find(type => type.id === typeId)
+    if (expenseType && expenseType.children && expenseType.children.length > 0) {
+      hasChildren = true
+    }
+  })
+
+  if (hasChildren) {
+    expandedTypes.value[typeId] = !expandedTypes.value[typeId]
+  }
+}
+
+// Enhanced input handling functions
+const formatInputValue = (value) => {
+  if (!value && value !== 0) return ''
+  const isNumber = typeof value === 'number'
+  const cleanValue = String(value).replace(/,/g, '')
+  const num = parseFloat(cleanValue)
+  if (isNaN(num)) return ''
+  return isNumber
+    ? num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : num.toLocaleString('en-US')
+}
+
+const handleAmountInput = (item, value) => {
+  let cleanValue = String(value).replace(/[^\d.]/g, '')
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    cleanValue = parts[0] + '.' + parts.slice(1).join('')
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
+  }
+  item.amount = cleanValue
+}
+
+const handleAmountBlur = (item, value) => {
+  const parsed = parseFloat(value.replace(/[₱,\s]/g, ''))
+  if (!isNaN(parsed)) {
+    item.amount = Math.round(parsed * 100) / 100
+  }
 }
 
 const canSaveAllocation = computed(() => {
@@ -563,7 +670,20 @@ const saveAllocation = () => {
   }
 
   showAllocationDialog.value = false
+  
+  $q.notify({
+    type: 'positive',
+    message: 'Allocation saved successfully!',
+    icon: 'check_circle',
+    position: 'top',
+  })
 }
+
+const openViewDialog = (row) => {
+  // Implement view functionality
+  console.log('Viewing row:', row)
+}
+
 onMounted(async () => {
   try {
     await contApprStore.fetchContinueAccounts()
@@ -578,21 +698,10 @@ onMounted(async () => {
       message: error.message || 'Failed to load data',
       position: 'top',
     })
-  }finally{
-    generalLoading.value=false;
+  } finally {
+    generalLoading.value = false
   }
 })
-
-// Row action handlers
-const handleEdit = (row) => {
-  openAllocationDialog(row)
-}
-const handleView = (row) => {
-  $q.notify({ type: 'info', message: `Viewing: ${row.description || ''}` })
-}
-const handleCommit = (row) => {
-  $q.notify({ type: 'positive', message: `Committed successfully${row?.id ? ` (ID: ${row.id})` : ''}` })
-}
 
 defineExpose({
   openAllocationDialog,
@@ -611,27 +720,38 @@ defineExpose({
 }
 
 .hierarchical-table {
-  background: white;
+  border-radius: 4px;
   overflow: hidden;
 }
 
-.my-sticky-header-table {
-  /* height or max-height is important */
-  max-height: calc(100vh - 250px);
+.hierarchical-body {
+  background: white;
+}
 
-  .q-table__top,
-  .q-table__bottom,
-  thead tr:first-child th {
-    background-color: white;
+/* Added specific styles for inputs to replace inline styles */
+.search-input {
+  min-width: 400px;
+  background-color: white;
+}
+
+/* Allocation Dialog Text Box Styles */
+.allocation-input {
+  min-width: 180px;
+  width: 180px;
+}
+
+/* Responsive text box sizing for Allocation dialog */
+@media (max-width: 1200px) {
+  .allocation-input {
+    min-width: 150px;
+    width: 150px;
   }
+}
 
-  thead tr th {
-    position: sticky;
-    z-index: 1;
-  }
-
-  thead tr:first-child th {
-    top: 0;
+@media (max-width: 900px) {
+  .allocation-input {
+    min-width: 120px;
+    width: 120px;
   }
 }
 
@@ -648,6 +768,23 @@ defineExpose({
   .row.items-center.q-gutter-sm > * {
     margin-bottom: 8px;
     width: 100%;
+  }
+
+  .search-input {
+    min-width: 100%;
+  }
+
+  /* Mobile adjustments for Allocation dialog */
+  .allocation-input {
+    min-width: 100px;
+    width: 100px;
+  }
+
+  /* Ensure dialog is properly sized on mobile */
+  .q-dialog .q-card {
+    min-width: 95vw !important;
+    max-width: 95vw !important;
+    width: 95vw !important;
   }
 }
 </style>
