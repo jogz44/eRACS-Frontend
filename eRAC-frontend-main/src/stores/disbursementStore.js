@@ -297,6 +297,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       },
       { name: 'status', label: 'Status', field: 'status', align: 'center', sortable: true },
       { name: 'action', label: 'Action', field: '', align: 'center' },
+      { name: 'liquidate', label: 'Liquidate', field: '', align: 'center' },
        { name: 'remarks', label: 'Remarks', field: '', align: 'center' },
     ],
 

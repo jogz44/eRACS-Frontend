@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { api } from "src/boot/axios";
+import { api } from "../boot/axios";
 import { useAuthStore } from './auth'
 
 
@@ -9,8 +9,10 @@ export const useContApprStore = defineStore('continuing-appropriation',{
         selectedYear: null,
         continueAccounts: [],
         continuingAppropriations: [],
+        expenseHierarchy: [],
         loading: false,
         error: null,
+        selectedRow: null,
     }),
     getters: {
     },
@@ -160,8 +162,68 @@ export const useContApprStore = defineStore('continuing-appropriation',{
             } finally {
                 this.loading = false
             }
-        }
+        },
 
+        async fetchExpenseHierarchy(fiscalYearId, budgetId = null) {
+            const config = this.getAuthConfig()
+            try {
+                const params = { fiscal_year_id: fiscalYearId }
+                if (budgetId) params.budget_id = budgetId
+
+                const response = await api.get('/api/barangay/expense-hierarchy', { ...config, params })
+                
+                if (response.data.status) {
+                    this.expenseHierarchy = response.data.data
+                    return this.expenseHierarchy
+                } else {
+                    this.error = response.data.message || 'Failed to fetch expense hierarchy'
+                    return []
+                }
+            } catch (error) {
+                this.error = error.response?.data?.message || error.message
+                return []
+            }
+        },
+
+        async commitAllocation(id, allocations) {
+            const config = this.getAuthConfig()
+            try {
+                const response = await api.post(`/api/barangay/continuing-appropriations/${id}/allocate`, { allocations }, config)
+                
+                if (response.data.status) {
+                    // Update the local state
+                    const index = this.continuingAppropriations.findIndex(item => item.id === id)
+                    if (index !== -1) {
+                        this.continuingAppropriations[index] = {
+                            ...this.continuingAppropriations[index],
+                            ...response.data.data
+                        }
+                    }
+                    return { success: true, data: response.data.data }
+                } else {
+                    throw new Error(response.data.message || 'Failed to commit allocation')
+                }
+            } catch (error) {
+                throw new Error(error.response?.data?.message || error.message)
+            }
+        },
+
+        formatCurrency(value) {
+            if (!value && value !== 0) return '₱0.00'
+            return new Intl.NumberFormat('en-PH', {
+                style: 'currency',
+                currency: 'PHP',
+            }).format(value)
+        },
+
+        formatDate(date) {
+            if (!date) return '-'
+            return new Date(date).toLocaleDateString('en-PH', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            })
+        }
     }
 
 })

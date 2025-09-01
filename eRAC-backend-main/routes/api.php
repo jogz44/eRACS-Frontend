@@ -182,6 +182,8 @@ Route::prefix('barangay')->group(function () {
         Route::post('/continuing-appropriations', [ContinuingAppropriationController::class, 'store']);
         Route::get('/continuing-appropriations/list', [ContinuingAppropriationController::class, 'getContinuingAppropriations']);
         Route::patch('/continuing-appropriations/{id}/status', [ContinuingAppropriationController::class, 'updateStatus']);
+        Route::get('/continuing-appropriations/{id}/history', [ContinuingAppropriationController::class, 'getAllocationHistory']);
+        Route::post('/continuing-appropriations/{id}/allocate', [ContinuingAppropriationController::class, 'commitAllocation']);
 
 
     });
