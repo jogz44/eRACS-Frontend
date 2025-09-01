@@ -361,7 +361,6 @@ import PieChart from 'components/PieChart.vue'
 import { useAuthStore } from 'stores/auth'
 import { useQuasar } from 'quasar'
 import { usePageLogging } from '../../composables/usePageLogging'
-import { onUnmounted } from 'vue'
 const chartStore = useChartDataStore()
 const unliquidatedocationError = ref('')
 const authStore = useAuthStore()
@@ -846,23 +845,6 @@ onMounted(async () => {
   }
 
   document.addEventListener('visibilitychange', visibilityChangeHandler)
-
-  // Add keyboard shortcut for debug panel (Ctrl+Shift+D)
-  const debugKeyHandler = (event) => {
-    if (event.ctrlKey && event.shiftKey && event.key === 'D') {
-      showDebugPanel.value = !showDebugPanel.value
-      console.log('Debug panel toggled:', showDebugPanel.value)
-    }
-  }
-  document.addEventListener('keydown', debugKeyHandler)
-})
-
-onUnmounted(() => {
-  if (visibilityChangeHandler) {
-    document.removeEventListener('visibilitychange', visibilityChangeHandler)
-  }
-  // Remove debug key handler
-  document.removeEventListener('keydown', debugKeyHandler)
 })
 </script>
 
