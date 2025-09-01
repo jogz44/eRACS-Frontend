@@ -295,9 +295,11 @@ export function useAugmentationActions(state) {
 
   const fetchAugmentationById = async (id) => {
     try {
-      // Use different tokens for admin vs regular users
+      // Use different endpoints and tokens for admin vs regular users
+      const endpoint = authStore.admin ? `/api/admin/augmentations/${id}` : `/api/barangay/budget-augmentations/${id}`
       const token = authStore.admin ? authStore.adminToken : authStore.token
-      const response = await api.get(`/api/barangay/budget-augmentations/${id}`, {
+      
+      const response = await api.get(endpoint, {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: 'application/json',
