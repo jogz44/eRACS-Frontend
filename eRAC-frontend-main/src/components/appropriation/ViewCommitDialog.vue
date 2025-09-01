@@ -118,10 +118,12 @@
 <script setup>
 import { useQuasar } from 'quasar'
 import { useAppropriationStore } from '../../stores/appropriationStore'
+import { useAuthStore } from '../../stores/auth'
 import { ref, computed, watch } from 'vue'
 import { api } from 'src/boot/axios'
 
 const appropriationStore = useAppropriationStore()
+const authStore = useAuthStore()
 const showDialog = ref(false)
 const searchQuery = ref('')
 const viewAllocationData = ref(null)
@@ -277,7 +279,17 @@ const openDialog = async (row) => {
 
 const fetchAllocationData = async (id) => {
   try {
-    const response = await api.get(`/api/barangay/budgets/${id}/history`)
+    // Use different endpoints for admin vs regular users
+    const endpoint = authStore.admin ? `/api/admin/budgets/${id}/history` : `/api/barangay/budgets/${id}/history`
+    const token = authStore.admin ? authStore.adminToken : authStore.token
+    
+    const response = await api.get(endpoint, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      }
+    })
+    
     allHistoryData.value = response.data.data?.history || []
 
     if (allHistoryData.value.length > 0) {

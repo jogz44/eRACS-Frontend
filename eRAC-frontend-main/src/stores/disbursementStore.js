@@ -1055,7 +1055,17 @@ export const useDisbursementStore = defineStore('disbursement', {
       // Fetch OR Details from backend
       if (row.id) {
         try {
-          const res = await api.get(`/api/barangay/disbursements/${row.id}/or-details`);
+          // Use different endpoints for admin vs regular users
+          const endpoint = this.authStore.admin ? `/api/admin/disbursements/${row.id}/or-details` : `/api/barangay/disbursements/${row.id}/or-details`
+          const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
+          
+          const res = await api.get(endpoint, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            }
+          });
+          
           const backendUrl = 'http://localhost:8000'; // Change if your backend runs elsewhere
           this.currentLiquidation.orDetails = res.data.data.map(or => ({
             orDate: or.or_date,

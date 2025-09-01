@@ -13,6 +13,9 @@ export const useAuthStore = defineStore('auth', {
     admin: JSON.parse(localStorage.getItem('admin_data')) || null,
     adminToken: localStorage.getItem('admin_token') || null,
     adminReturnUrl: '/admin/dashboard',
+    
+    // Logout state
+    isLoggingOut: false,
   }),
    getters: {
     isAuthenticated: (state) => !!state.token,
@@ -227,6 +230,8 @@ export const useAuthStore = defineStore('auth', {
 
     // Comprehensive logout method for both user and admin
     async logout() {
+      this.isLoggingOut = true
+      
       // Store tokens before clearing them
       const hadToken = !!this.token
       const hadAdminToken = !!this.adminToken
@@ -261,6 +266,7 @@ export const useAuthStore = defineStore('auth', {
       // Clear any other stored data
       localStorage.removeItem('acceptedUsers')
       
+      this.isLoggingOut = false
       console.log('User logged out successfully')
     },
 
@@ -340,14 +346,39 @@ export const useAuthStore = defineStore('auth', {
       })
     },
 
+    clearAdminAuth() {
+      this.admin = null
+      this.adminToken = null
+      delete api.defaults.headers.common['Authorization']
+      localStorage.removeItem('admin_token')
+      localStorage.removeItem('admin_data')
+    },
+
     adminLogout(router) {
-      return api.post('/api/admin/logout').finally(() => {
-        this._clearAdminAuth()
+      this.isLoggingOut = true
+      
+      // Only call backend logout if we have a token
+      const hadAdminToken = !!this.adminToken
+      
+      if (hadAdminToken) {
+        return api.post('/api/admin/logout').finally(() => {
+          this.clearAdminAuth()
+          this.isLoggingOut = false
+          if (router) {
+            router.replace('/admin/login')
+            setTimeout(() => window.location.reload(), 100)
+          }
+        })
+      } else {
+        // No token, just clear frontend state
+        this.clearAdminAuth()
+        this.isLoggingOut = false
         if (router) {
           router.replace('/admin/login')
           setTimeout(() => window.location.reload(), 100)
         }
-      })
+        return Promise.resolve()
+      }
     },
 
     // Password reset methods

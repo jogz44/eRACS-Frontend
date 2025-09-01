@@ -335,10 +335,12 @@ import { useAppropriationStore } from 'stores/appropriationStore'
 import { useAccountsLibraryStore } from 'stores/accountsLibstore'
 import { api } from 'src/boot/axios'
 import { usePageLogging } from '../../../composables/usePageLogging'
+import { useAuthStore } from 'stores/auth'
 
 const $q = useQuasar()
 const accountLibraryStore = useAccountsLibraryStore()
 const appropriationStore = useAppropriationStore()
+const authStore = useAuthStore()
 
 const showDialog = ref(false)
 const selectedFiscalYear = ref(null)
@@ -567,7 +569,16 @@ watch(selectedFiscalYear, (newYearId) => {
 const openEditAllocationDialog = async (row) => {
   editLoading.value[row.id] = true
   try {
-    const response = await api.get(`/api/barangay/budgets/${row.id}/history`)
+        // Use different endpoints for admin vs regular users
+    const endpoint = authStore.admin ? `/api/admin/budgets/${row.id}/history` : `/api/barangay/budgets/${row.id}/history`
+    const token = authStore.admin ? authStore.adminToken : authStore.token
+    
+    const response = await api.get(endpoint, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      }
+    })
     const allHistory = response.data.data?.history || []
 
     // Combine ALL allocations from all history sessions, not just the latest
