@@ -876,6 +876,84 @@ export default {
 }
 
 /* Responsive Design */
+@media (max-width: 1023px) {
+  .split-login-page {
+    flex-direction: column;
+  }
+
+  .photo-section {
+    display: none; /* Hide photo section on mobile/tablet */
+  }
+
+  .login-section {
+    flex: 1;
+    width: 100%; /* Login section takes full width */
+    padding: 1rem;
+  }
+
+  .login-container {
+    max-width: 100%;
+  }
+
+  /* Adjust form layout for mobile/tablet */
+  .signup-form {
+    padding: 0;
+  }
+
+  .signup-card {
+    padding: 1rem;
+  }
+
+  /* Make columns stack on smaller screens */
+  .row .col-6 {
+    width: 100% !important;
+    margin-bottom: 1rem;
+  }
+
+  /* Adjust input field sizes */
+  .q-input {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+
+  /* Adjust stepper navigation */
+  .q-stepper-navigation {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .q-stepper-navigation .row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  /* Responsive stepper styling - keep tabs in one line */
+  .q-stepper__header {
+    padding: 0.5rem;
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  .q-stepper__tab {
+    min-height: auto;
+    padding: 0.75rem 0.5rem;
+    flex: 1;
+    max-width: 50%;
+  }
+
+  .q-stepper__tab--active {
+    background-color: rgba(76, 175, 80, 0.1);
+  }
+
+  .q-stepper__tab-icon {
+    font-size: 1.2rem;
+  }
+
+  .q-stepper__tab-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+}
+
 @media (max-width: 768px) {
   .split-login-page {
     flex-direction: column;
@@ -906,6 +984,40 @@ export default {
   .tagline-text {
     font-size: 0.9rem;
   }
+
+  /* Further adjustments for mobile */
+  .login-container {
+    padding: 0.5rem;
+  }
+
+  .signup-card {
+    padding: 0.75rem;
+  }
+
+  .office-name {
+    font-size: 1.5rem;
+  }
+
+  .signin-title {
+    font-size: 1.1rem;
+  }
+
+  /* Mobile stepper adjustments - keep in one line */
+  .q-stepper__header {
+    padding: 0.25rem;
+  }
+
+  .q-stepper__tab {
+    padding: 0.5rem 0.25rem;
+  }
+
+  .q-stepper__tab-icon {
+    font-size: 1rem;
+  }
+
+  .q-stepper__tab-title {
+    font-size: 0.8rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -931,10 +1043,46 @@ export default {
 
   .login-container {
     max-width: 100%;
+    padding: 0.25rem;
   }
 
   .signup-card {
     padding: 0.5rem;
+  }
+
+  /* Extra small screen adjustments */
+  .office-name {
+    font-size: 1.3rem;
+  }
+
+  .system-name {
+    font-size: 0.8rem;
+  }
+
+  .signin-title {
+    font-size: 1rem;
+  }
+
+  /* Ensure proper spacing for stacked inputs */
+  .row .col-6 {
+    margin-bottom: 0.75rem;
+  }
+
+  /* Small screen stepper adjustments - keep in one line */
+  .q-stepper__header {
+    padding: 0.25rem;
+  }
+
+  .q-stepper__tab {
+    padding: 0.4rem 0.2rem;
+  }
+
+  .q-stepper__tab-icon {
+    font-size: 0.9rem;
+  }
+
+  .q-stepper__tab-title {
+    font-size: 0.75rem;
   }
 }
 </style>

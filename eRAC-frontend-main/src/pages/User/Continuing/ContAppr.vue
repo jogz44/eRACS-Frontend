@@ -114,6 +114,7 @@
 
     <!-- Main Data Table -->
     <q-card flat bordered>
+
       <q-table
         :rows="filteredAppropriations"
         :columns="columns"
@@ -164,6 +165,7 @@
                 v-permission="'view'"
               />
             </div>
+
           </q-td>
         </template>
       </q-table>
@@ -337,11 +339,13 @@ const mergedAppropriations = ref([])
 
 const columns = [
   {
+
     name: 'index',
     label: '#',
     field: 'index',
     align: 'left',
     sortable: false,
+
   },
   {
     name: 'description',
@@ -349,6 +353,7 @@ const columns = [
     field: 'description',
     align: 'left',
     sortable: true,
+
   },
   { 
     name: 'amount', 
@@ -377,6 +382,7 @@ const columns = [
     align: 'center',
     field: 'action',
   },
+
 ]
 
 const availableBudget = computed(() => {
@@ -688,7 +694,7 @@ onMounted(async () => {
   try {
     await contApprStore.fetchContinueAccounts()
     await contApprStore.fetchYears()
-    
+
     // Log page visit
     const { logPageVisit } = usePageLogging()
     await logPageVisit('Continuing Appropriation')
@@ -702,6 +708,17 @@ onMounted(async () => {
     generalLoading.value = false
   }
 })
+
+// Row action handlers
+const handleEdit = (row) => {
+  openAllocationDialog(row)
+}
+const handleView = (row) => {
+  $q.notify({ type: 'info', message: `Viewing: ${row.description || ''}` })
+}
+const handleCommit = (row) => {
+  $q.notify({ type: 'positive', message: `Committed successfully${row?.id ? ` (ID: ${row.id})` : ''}` })
+}
 
 defineExpose({
   openAllocationDialog,

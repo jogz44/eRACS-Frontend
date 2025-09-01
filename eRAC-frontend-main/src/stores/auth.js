@@ -317,10 +317,10 @@ export const useAuthStore = defineStore('auth', {
               this.adminToken = response.data.token
               localStorage.setItem('admin_data', JSON.stringify(this.admin))
               localStorage.setItem('admin_token', this.adminToken)
+              // Set defaults for subsequent requests
               api.defaults.headers.common['Authorization'] = `Bearer ${this.adminToken}`
               if (router) {
                 router.replace('/admin/dashboard')
-                setTimeout(() => window.location.reload(), 100)
               }
               resolve(response.data)
             } else {

@@ -15,7 +15,7 @@
     </div>
 
     <!-- Simplified the search and filter section structure -->
-    <div class="q-mb-sm">
+    <div class="q-mb-sm search-filter-container">
       <div class="row items-center q-gutter-sm">
         <q-input
           outlined
@@ -59,6 +59,7 @@
           icon="clear_all"
           label="Clear All"
           @click="clearAllFilters"
+          class="desktop-clear-btn"
         />
 
         <q-space />
@@ -71,6 +72,19 @@
           :loading="addLoading"
           :disable="addLoading"
           v-permission="'add'"
+          class="desktop-add-btn"
+        />
+      </div>
+      
+      <!-- Mobile Clear All button positioned below search inputs -->
+      <div class="mobile-clear-btn-container">
+        <q-btn
+          round
+          dense
+          color="red-10"
+          icon="delete"
+          class="mobile-clear-btn"
+          @click="clearAllFilters"
         />
       </div>
     </div>
@@ -140,7 +154,7 @@
     </q-dialog>
 
     <!-- Data Table -->
-    <q-card flat bordered>
+    <q-card flat bordered class="table-container">
       <q-table
         :rows="appropriationStore.filteredAppropriations"
         :columns="columns"
@@ -295,6 +309,21 @@
       </q-card>
     </q-dialog>
   </q-page>
+
+  <!-- Mobile Add Button -->
+  <div class="mobile-add-btn-container">
+    <q-btn
+      round
+      dense
+      color="primary"
+      icon="add"
+      class="mobile-add-btn"
+      @click="addBudget"
+      :loading="addLoading"
+      :disable="addLoading"
+      v-permission="'add'"
+    />
+  </div>
 </template>
 
 <script setup>
@@ -966,6 +995,45 @@ const openDialog = async () => {
     min-width: 100%;
   }
 
+  /* Hide desktop buttons on mobile */
+  .desktop-clear-btn,
+  .desktop-add-btn {
+    display: none !important;
+  }
+
+  /* Show mobile Clear All button */
+  .mobile-clear-btn-container {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+  }
+
+  .mobile-clear-btn {
+    display: block !important;
+  }
+
+  /* Show mobile Add button */
+  .mobile-add-btn-container {
+    display: flex;
+    justify-content: flex-end;
+    position: fixed;
+    bottom: 32px;
+    right: 16px;
+    z-index: 1000;
+  }
+
+  .mobile-add-btn {
+    display: block !important;
+    width: 56px !important;
+    height: 56px !important;
+    font-size: 24px !important;
+  }
+
+  /* Make table container relative for absolute positioning */
+  .table-container {
+    position: relative;
+  }
+
   /* Mobile adjustments for Edit Allocation dialog */
   .edit-allocation-input {
     min-width: 100px;
@@ -979,4 +1047,100 @@ const openDialog = async () => {
     width: 95vw !important;
   }
 }
+
+  /* Tablet styles - show desktop layout but stack inputs vertically */
+  @media (min-width: 769px) and (max-width: 1023px) {
+    .mobile-clear-btn-container,
+    .mobile-add-btn-container {
+      display: none !important;
+    }
+
+    .mobile-clear-btn,
+    .mobile-add-btn {
+      display: none !important;
+    }
+
+    .desktop-clear-btn,
+    .desktop-add-btn {
+      display: block !important;
+    }
+
+    /* Stack search and date range vertically on tablet */
+    .row.items-center.q-gutter-sm {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .row.items-center.q-gutter-sm > * {
+      margin-bottom: 8px;
+      width: 100%;
+    }
+
+    .search-input,
+    .date-input {
+      min-width: 100%;
+    }
+
+    /* Create a separate row for buttons aligned to the right */
+    .row.items-center.q-gutter-sm .desktop-clear-btn,
+    .row.items-center.q-gutter-sm .desktop-add-btn {
+      width: auto;
+      margin-bottom: 0;
+    }
+
+    /* Add a new button container for tablet view */
+    .row.items-center.q-gutter-sm::after {
+      content: '';
+      display: block;
+      height: 0;
+      clear: both;
+    }
+
+    /* Position buttons in a row on the right side */
+    .row.items-center.q-gutter-sm .desktop-clear-btn {
+      float: right;
+      margin-left: 8px;
+    }
+
+    .row.items-center.q-gutter-sm .desktop-add-btn {
+      float: right;
+    }
+  }
+
+  /* Desktop styles - hide mobile buttons and show full layout */
+  @media (min-width: 1024px) {
+    .mobile-clear-btn-container,
+    .mobile-add-btn-container {
+      display: none !important;
+    }
+
+    .mobile-clear-btn,
+    .mobile-add-btn {
+      display: none !important;
+    }
+
+    .desktop-clear-btn,
+    .desktop-add-btn {
+      display: block !important;
+    }
+
+    /* Reset to horizontal layout for desktop */
+    .row.items-center.q-gutter-sm {
+      flex-direction: row;
+      align-items: center;
+    }
+
+    .row.items-center.q-gutter-sm > * {
+      margin-bottom: 0;
+      width: auto;
+    }
+
+    .search-input {
+      min-width: 400px;
+    }
+
+    .date-input {
+      min-width: 250px;
+    }
+  }
 </style>

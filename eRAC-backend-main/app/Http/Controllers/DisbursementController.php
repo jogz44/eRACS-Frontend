@@ -192,6 +192,7 @@ class DisbursementController extends Controller
 
 
             // Save expense details to tran_expense_details table
+            $logExpenseLines = [];
             if ($request->has('expenses') && is_array($request->expenses)) {
                 foreach ($request->expenses as $expense) {
                     // Find the appropriate appropriation based on expense hierarchy
@@ -219,21 +220,47 @@ class DisbursementController extends Controller
                             'amount' => $expense['amount'],
                             'particulars' => $expense['particular'] ?? '',
                         ]);
+
+                        // Prepare log line per expense
+                        $accountName = $this->getAccountNameFromAppropriationId($appropriation->id);
+                        $logExpenseLines[] = sprintf(
+                            'Disbursed Expense %s with the amount ₱%s%s',
+                            $accountName,
+                            number_format((float)$expense['amount'], 2),
+                            isset($expense['particular']) && $expense['particular'] !== '' ? ' for "' . $expense['particular'] . '"' : ''
+                        );
                     }
                 }
             }
 
             // Log created disbursement
-            AdminAuthController::logUserAction(
-                $user,
-                'Created Disbursement',
-                sprintf(
-                    '#%s for %s amount ₱%s',
+            try {
+                $disbursement->load('bank');
+                $topLine = sprintf(
+                    '#%s for Payee "%s" with the amount ₱%s. Uses %s with the cheque: %s',
                     $disbursement->dv_number,
                     $disbursement->payee,
-                    number_format((float)$disbursement->dv_amount, 2)
-                )
-            );
+                    number_format((float)$disbursement->dv_amount, 2),
+                    $disbursement->bank ? '(' . $disbursement->bank->bank_name . ')' : '(bank)',
+                    $disbursement->cheque_number
+                );
+                // Header log
+                AdminAuthController::logUserAction(
+                    $user,
+                    'Created Disbursement',
+                    $topLine
+                );
+                // Detail logs per expense (kept concise to avoid length limits)
+                foreach ($logExpenseLines as $line) {
+                    AdminAuthController::logUserAction(
+                        $user,
+                        'Disbursed Expense',
+                        sprintf('#%s | %s', $disbursement->dv_number, $line)
+                    );
+                }
+            } catch (\Throwable $logEx) {
+                \Log::warning('Failed to write disbursement logs: ' . $logEx->getMessage());
+            }
 
             return response()->json([
                 'status' => true,
@@ -844,10 +871,15 @@ class DisbursementController extends Controller
 
             $query = TranExpenseDetail::with(['appropriation.expenseClass', 'appropriation.expenseType', 'appropriation.expenseItem']);
 
-            // If user is authenticated and has barangay_id, filter by it
-            if ($user && isset($user->barangay_id)) {
-                $query->whereHas('appropriation', function($q) use ($user) {
-                    $q->where('barangay_id', $user->barangay_id);
+            // Determine target barangay: allow explicit barangay_id (for admin), else fallback to user's barangay
+            $targetBarangayId = $request->input('barangay_id');
+            if (!$targetBarangayId && $user && isset($user->barangay_id)) {
+                $targetBarangayId = $user->barangay_id;
+            }
+
+            if ($targetBarangayId) {
+                $query->whereHas('appropriation', function($q) use ($targetBarangayId) {
+                    $q->where('barangay_id', $targetBarangayId);
                 });
             }
 

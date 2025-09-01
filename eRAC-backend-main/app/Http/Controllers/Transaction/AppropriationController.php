@@ -269,10 +269,12 @@ class AppropriationController extends Controller
         $request->validate([
             'fiscal_year_id' => 'nullable|exists:lib_fiscal_years,id',
             'year' => 'nullable|integer|min:2000|max:2100',
-            'budget_id' => 'nullable|exists:budgets,id'
+            'budget_id' => 'nullable|exists:budgets,id',
+            'barangay_id' => 'nullable|exists:barangays,id'
         ]);
 
-        $barangayId = $request->user()->barangay_id;
+        // Allow admin to specify barangay_id; fallback to authenticated user's barangay
+        $barangayId = $request->input('barangay_id') ?: optional($request->user())->barangay_id;
         $budgetId = $request->budget_id;
         $year = $request->input('year');
         $fiscalYearId = $request->input('fiscal_year_id');

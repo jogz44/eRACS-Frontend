@@ -21,13 +21,19 @@ export function usePageLogging() {
         details: `Visited ${pageName} Page`
       }
 
-      // Set authorization header
+      // Prepare per-request auth headers to avoid race with defaults
       const token = isAdmin ? authStore.adminToken : authStore.token
-      if (token) {
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      if (!token) {
+        // Skip logging if token not ready yet
+        return
       }
 
-      await api.post(endpoint, payload)
+      await api.post(endpoint, payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+      })
       console.log(`Page visit logged: ${pageName}`)
     } catch (error) {
       console.error('Error logging page visit:', error)
