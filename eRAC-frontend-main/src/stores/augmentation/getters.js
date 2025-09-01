@@ -27,13 +27,7 @@ export function useGetters(state) {
       align: 'center',
       sortable: false
     },
-    {
-      name: 'remarks',
-      label: 'Remarks',
-      field: '',
-      align: 'center',
-      sortable: false
-    },
+
   ])
 
   const expenseAugColumns = computed(() => [

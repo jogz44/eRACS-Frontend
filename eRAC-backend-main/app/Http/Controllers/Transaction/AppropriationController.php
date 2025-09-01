@@ -915,16 +915,22 @@ class AppropriationController extends Controller
             // Get expense hierarchy for pie chart
             $fiscalYear = null;
             if ($year !== 'all') {
-                $fiscalYear = LibFiscalYear::where('year', $year)->first();
+                $fiscalYear = LibFiscalYear::where('barangay_id', $barangayId)
+                    ->where('year', $year)
+                    ->first();
+                \Log::info('Looking for fiscal year ' . $year . ' for barangay ' . $barangayId . ': ' . ($fiscalYear ? 'found' : 'not found'));
             } else {
                 // For "all years", get the most recent fiscal year for structure reference
                 $fiscalYear = LibFiscalYear::where('barangay_id', $barangayId)
                     ->orderBy('year', 'desc')
                     ->first();
-
+                \Log::info('Looking for most recent fiscal year for barangay ' . $barangayId . ': ' . ($fiscalYear ? 'found year ' . $fiscalYear->year : 'not found'));
             }
 
             \Log::info('Fiscal year found: ' . ($fiscalYear ? 'yes' : 'no'));
+            if ($fiscalYear) {
+                \Log::info('Fiscal year details - ID: ' . $fiscalYear->id . ', Year: ' . $fiscalYear->year . ', Barangay: ' . $fiscalYear->barangay_id);
+            }
 
             $expenseHierarchy = [];
             if ($fiscalYear) {
@@ -950,6 +956,21 @@ class AppropriationController extends Controller
                             })
                         ];
                     });
+                
+                \Log::info('Found ' . $expenseHierarchy->count() . ' expense classes for fiscal year ' . $fiscalYear->id);
+                foreach ($expenseHierarchy as $class) {
+                    \Log::info('Expense class: ' . $class['name'] . ' (ID: ' . $class['id'] . ') with ' . count($class['children']) . ' types');
+                }
+            } else {
+                \Log::warning('No fiscal year found, cannot get expense hierarchy');
+                // Create a basic expense hierarchy structure for the pie chart
+                $expenseHierarchy = [
+                    [
+                        'id' => 0,
+                        'name' => 'No Expense Classes',
+                        'children' => []
+                    ]
+                ];
             }
 
             \Log::info('Expense hierarchy count: ' . count($expenseHierarchy));
@@ -970,10 +991,25 @@ class AppropriationController extends Controller
                         'name' => $expenseClass['name'],
                         'total' => $classTotal
                     ];
+                    \Log::info('Class ' . $expenseClass['name'] . ' has total allocation: ' . $classTotal);
+                } else {
+                    \Log::info('Class ' . $expenseClass['name'] . ' has no allocations');
                 }
             }
 
             \Log::info('Class totals count: ' . count($classTotals));
+            
+            // If no class totals found, create a placeholder
+            if (empty($classTotals)) {
+                \Log::info('No class totals found, creating placeholder data');
+                $classTotals = [
+                    [
+                        'id' => 0,
+                        'name' => 'No Allocations',
+                        'total' => 1
+                    ]
+                ];
+            }
 
             // Get top expense classes by allocation amount
             $topExpenseClasses = collect($classTotals)
@@ -1071,6 +1107,87 @@ class AppropriationController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Error fetching dashboard data: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Debug endpoint to troubleshoot dashboard issues
+     */
+    public function getDashboardDebug(Request $request)
+    {
+        try {
+            $user = $request->user();
+            $barangayId = $user->barangay_id;
+            
+            \Log::info('Dashboard debug requested for user: ' . $user->id . ', barangay: ' . $barangayId);
+            
+            // Check fiscal years
+            $fiscalYears = LibFiscalYear::where('barangay_id', $barangayId)->get();
+            \Log::info('Found ' . $fiscalYears->count() . ' fiscal years for barangay ' . $barangayId);
+            
+            // Check budgets
+            $budgets = Budget::where('barangay_id', $barangayId)->get();
+            \Log::info('Found ' . $budgets->count() . ' budgets for barangay ' . $barangayId);
+            
+            // Check expense classes
+            $expenseClasses = LibExpenseClass::where('barangay_id', $barangayId)->get();
+            \Log::info('Found ' . $expenseClasses->count() . ' expense classes for barangay ' . $barangayId);
+            
+            // Check appropriations
+            $appropriations = TranAppropriation::where('barangay_id', $barangayId)->get();
+            \Log::info('Found ' . $appropriations->count() . ' appropriations for barangay ' . $barangayId);
+            
+            // Check disbursements
+            $disbursements = \App\Models\Disbursement::where('barangay_id', $barangayId)->get();
+            \Log::info('Found ' . $disbursements->count() . ' disbursements for barangay ' . $barangayId);
+            
+            return response()->json([
+                'status' => true,
+                'data' => [
+                    'barangay_id' => $barangayId,
+                    'fiscal_years_count' => $fiscalYears->count(),
+                    'budgets_count' => $budgets->count(),
+                    'expense_classes_count' => $expenseClasses->count(),
+                    'appropriations_count' => $appropriations->count(),
+                    'disbursements_count' => $disbursements->count(),
+                    'fiscal_years' => $fiscalYears->map(function($fy) {
+                        return ['id' => $fy->id, 'year' => $fy->year, 'is_active' => $fy->is_active];
+                    }),
+                    'budgets' => $budgets->map(function($budget) {
+                        return [
+                            'id' => $budget->id,
+                            'fiscal_year_id' => $budget->fiscal_year_id,
+                            'original_amount' => $budget->original_amount,
+                            'current_amount' => $budget->current_amount,
+                            'description' => $budget->description
+                        ];
+                    }),
+                    'expense_classes' => $expenseClasses->map(function($class) {
+                        return [
+                            'id' => $class->id,
+                            'name' => $class->name,
+                            'fiscal_year_id' => $class->fiscal_year_id
+                        ];
+                    }),
+                    'appropriations' => $appropriations->map(function($appr) {
+                        return [
+                            'id' => $appr->id,
+                            'amount' => $appr->amount,
+                            'status' => $appr->status,
+                            'expense_class_id' => $appr->expense_class_id,
+                            'expense_type_id' => $appr->expense_type_id,
+                            'expense_item_id' => $appr->expense_item_id
+                        ];
+                    })
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Dashboard debug error: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Error in debug endpoint: ' . $e->getMessage()
             ], 500);
         }
     }
