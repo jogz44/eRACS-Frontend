@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             LibExpenseClassAndTypeSeeder::class,
             LibExpenseItemSeeder::class,
             BudgetSeeder::class,
+
             TranAppropriationSeeder::class,
             BudgetAugmentationSeeder::class,
             BookletAndChequeSeeder::class,
