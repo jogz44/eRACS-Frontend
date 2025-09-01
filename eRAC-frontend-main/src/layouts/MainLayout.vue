@@ -54,22 +54,31 @@
 
 
 
-        <!-- Favorites Section -->
-        <div class="favorites-section">
-          <div class="section-title">Main Functions</div>
-          <div class="favorites-list q-pa-sm ">
-            <div
-              v-for="favorite in favorites"
-              :key="favorite.title"
-              class="favorite-item"
-              @click="favorite.type === 'panel' ? togglePanel(favorite.panelType) : navigateToFavorite(favorite.link)"
-            >
-              <q-icon :name="favorite.icon" size="16px" />
-              <span class="favorite-title">{{ favorite.title }}</span>
-              <q-icon v-if="favorite.type === 'panel'" name="chevron_right" size="14px" class="panel-indicator" />
-            </div>
-          </div>
-        </div>
+                          <!-- Favorites Section -->
+         <div class="favorites-section">
+           <div class="section-title">Main Functions</div>
+           <div class="favorites-list q-pa-sm ">
+             <div
+               v-for="favorite in favorites"
+               :key="favorite.title"
+               class="favorite-item"
+               @click="favorite.type === 'panel' ? togglePanel(favorite.panelType) : navigateToFavorite(favorite.link)"
+             >
+               <q-icon :name="favorite.icon" size="16px" />
+               <span class="favorite-title">{{ favorite.title }}</span>
+               <!-- Void Request Notification Badge for Transactions -->
+               <div v-if="favorite.title === 'Transactions' && voidRequestCount > 0" class="void-notification-badge">
+                 {{ voidRequestCount }}
+               </div>
+               <q-icon v-if="favorite.type === 'panel'" name="chevron_right" size="14px" class="panel-indicator" />
+
+               <!-- Tooltip for void requests -->
+               <q-tooltip v-if="favorite.title === 'Transactions' && voidRequestCount > 0">
+                 {{ voidRequestCount }} void request{{ voidRequestCount > 1 ? 's' : '' }} pending approval
+               </q-tooltip>
+             </div>
+           </div>
+         </div>
 
         <!-- Saved Searches Section -->
         <div class="saved-searches-section">
@@ -133,6 +142,27 @@
       </div>
 
       <div class="panel-content">
+        <!-- Void Request Summary Header -->
+        <div v-if="voidRequestCount > 0" class="void-request-header">
+          <div class="void-request-count">
+            <q-icon name="pending_actions" color="orange" size="20px" />
+            <span class="void-request-text">{{ voidRequestCount }} Void Request{{ voidRequestCount > 1 ? 's' : '' }}</span>
+            <q-btn
+              flat
+              round
+              dense
+              icon="refresh"
+              size="sm"
+              color="white"
+              @click="refreshVoidRequestCount"
+              class="refresh-void-btn"
+            >
+              <q-tooltip>Refresh void request count</q-tooltip>
+            </q-btn>
+          </div>
+          <div class="void-request-subtitle">Pending Approval</div>
+        </div>
+
         <!-- Current Transactions -->
         <div class="panel-section">
           <div class="panel-section-title">Current</div>
@@ -143,6 +173,10 @@
           <div class="panel-item" @click="navigateTo('/home/transactions/disbursement')">
             <div class="colored-dot dot-red"></div>
             <span>Disbursement</span>
+            <!-- Show void count on disbursement if there are void requests -->
+            <div v-if="voidRequestCount > 0" class="panel-void-badge">
+              {{ voidRequestCount }}
+            </div>
           </div>
           <div class="panel-item" @click="navigateTo('/home/transactions/augmentation')">
             <div class="colored-dot dot-blue"></div>
@@ -207,16 +241,18 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted, nextTick } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue'
 // import NavLink from 'components/Nav/NavLink.vue'
 import SetupDialog from 'components/SetupDialog.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from 'stores/auth'
+import { useDisbursementStore } from 'stores/disbursementStore'
 import { useQuasar } from 'quasar'
 
 const $q = useQuasar()
 const router = useRouter()
 const authStore = useAuthStore()
+const disbursementStore = useDisbursementStore()
 const route = useRoute()
 
 const leftDrawerOpen = ref(false)
@@ -231,6 +267,27 @@ const hasAccessToRestrictedFeatures = computed(() => {
   ]
   const userPosition = authStore.user?.position_name?.toLowerCase().trim()
   return restrictedPositions.includes(userPosition)
+})
+
+// Computed property for void request count (only for Captains/Chairpersons)
+const voidRequestCount = computed(() => {
+  // Only show count for users who can approve/reject void requests
+  // Try to get position from the relationship first, fallback to position_name
+  const userPosition = authStore.user?.position?.name?.toLowerCase().trim() ||
+                      authStore.user?.position_name?.toLowerCase().trim()
+ 
+  const canApproveVoid = userPosition && (
+    userPosition.includes('captain') ||
+    userPosition.includes('chairperson') ||
+    userPosition.includes('barangay captain') ||
+    userPosition.includes('sk chairperson')
+  )
+ 
+  if (!canApproveVoid) return 0
+ 
+  // Count disbursements with 'Void Requested' status
+  const voidCount = disbursementStore.disbursements.filter(d => d.status === 'Void Requested').length
+  return voidCount
 })
 
 // Favorites data
@@ -311,6 +368,15 @@ const closePanel = () => {
   }
 }
 
+// Method to refresh void request count
+const refreshVoidRequestCount = async () => {
+  if (authStore.user?.barangay_id) {
+    await disbursementStore.fetchDisbursements()
+  }
+}
+
+
+
 const userPhoto = computed(() => {
   if (!authStore.user) return 'src/assets/user.png'
   return authStore.user.photo_url || (authStore.user.photo_path ? `/storage/${authStore.user.photo_path}` : 'src/assets/user.png')
@@ -338,9 +404,34 @@ const handleKeydown = (event) => {
 onMounted(async () => {
   await authStore.initialize()
   document.addEventListener('keydown', handleKeydown)
+
+  // Load disbursements to get void request count
+  if (authStore.user?.barangay_id) {
+    await disbursementStore.fetchDisbursements()
+
+    // Set up periodic refresh for void request count (every 30 seconds)
+    const refreshInterval = setInterval(async () => {
+      if (authStore.user?.barangay_id) {
+        await disbursementStore.fetchDisbursements()
+      }
+    }, 30000)
+
+    // Clean up interval on component unmount
+    onUnmounted(() => {
+      clearInterval(refreshInterval)
+    })
+  }
 })
 
-watch(() => authStore.user, () => { imageLoadingFailed.value = false }, { deep: true })
+watch(() => authStore.user, async (newUser) => {
+  imageLoadingFailed.value = false
+
+  // Refresh disbursements when user changes to update void request count
+  if (newUser?.barangay_id) {
+    await disbursementStore.fetchDisbursements()
+  }
+}, { deep: true })
+
 watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${newTitle} | ERACS` : 'ERACS' })
 </script>
 
@@ -706,6 +797,93 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
 .favorite-item:hover .panel-indicator {
   transform: translateX(2px);
   color: #69B31E;
+}
+
+/* Void Request Notification Badge */
+.void-notification-badge {
+  position: absolute;
+  top: -8px;
+  right: 25px;
+  background-color: #ff4444;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+.favorite-item {
+  position: relative;
+}
+
+/* Void Request Header in Transactions Panel */
+.void-request-header {
+  background: linear-gradient(135deg, #ff9800, #ff5722);
+  color: white;
+  padding: 12px 16px;
+  margin: 0 8px 16px 8px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+}
+
+.void-request-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.refresh-void-btn {
+  margin-left: 8px;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+}
+
+.refresh-void-btn:hover {
+  opacity: 1;
+  transform: rotate(180deg);
+}
+
+.void-request-text {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.void-request-subtitle {
+  font-size: 11px;
+  opacity: 0.9;
+}
+
+/* Panel Void Badge */
+.panel-void-badge {
+  position: absolute;
+  top: -6px;
+  right: 8px;
+  background-color: #ff4444;
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.panel-item {
+  position: relative;
 }
 
 /* End of Panel */

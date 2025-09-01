@@ -373,6 +373,9 @@ const isYearChanging = ref(false)
 // Page visibility handler for refreshing years
 let visibilityChangeHandler = null
 
+// Debug key handler for keyboard shortcuts
+// let debugKeyHandler = null
+
 // Debug panel toggle (set to true to show debug info)
 const showDebugPanel = ref(false)
 

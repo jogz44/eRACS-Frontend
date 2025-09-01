@@ -400,18 +400,29 @@ const columns = [
     sortable: true,
   },
   {
-    name: 'appropriation',
-    label: 'Appropriation',
-    field: 'appropriation',
+
+    name: 'amount',
+    label: 'Total Amount',
+    field: 'amount',
     align: 'right',
-    sortable: true,
+    sortable: true
+  },
+  {
+    name: 'balance',
+    label: 'Balance',
+    field: 'balance',
+    align: 'right',
+    sortable: true
+
   },
   {
     name: 'unappropriated',
     label: 'Unappropriated',
     field: 'unappropriated',
     align: 'right',
-    sortable: true,
+
+    sortable: true
+
   },
   {
     name: 'action',
@@ -745,22 +756,16 @@ const saveAllocation = async () => {
       continuingAppropriations.value[rowIndex].unappropriated -= totalAllocated.value
     }
 
-    showAllocationDialog.value = false
-    
-    $q.notify({
-      type: 'positive',
-      message: 'Allocation saved successfully!',
-      icon: 'check_circle',
-      position: 'top',
-    })
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: 'Failed to save allocation: ' + error.message,
-      icon: 'error',
-      position: 'top',
-    })
-  }
+
+  showAllocationDialog.value = false
+
+  $q.notify({
+    type: 'positive',
+    message: 'Allocation saved successfully!',
+    icon: 'check_circle',
+    position: 'top',
+  })
+
 }
 
 const openViewDialog = (row) => {
