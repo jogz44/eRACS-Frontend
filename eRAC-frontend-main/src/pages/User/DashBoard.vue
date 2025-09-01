@@ -374,6 +374,9 @@ const isYearChanging = ref(false)
 // Page visibility handler for refreshing years
 let visibilityChangeHandler = null
 
+// Debug key handler for keyboard shortcuts
+let debugKeyHandler = null
+
 // Debug panel toggle (set to true to show debug info)
 const showDebugPanel = ref(false)
 
@@ -848,7 +851,7 @@ onMounted(async () => {
   document.addEventListener('visibilitychange', visibilityChangeHandler)
 
   // Add keyboard shortcut for debug panel (Ctrl+Shift+D)
-  const debugKeyHandler = (event) => {
+  debugKeyHandler = (event) => {
     if (event.ctrlKey && event.shiftKey && event.key === 'D') {
       showDebugPanel.value = !showDebugPanel.value
       console.log('Debug panel toggled:', showDebugPanel.value)

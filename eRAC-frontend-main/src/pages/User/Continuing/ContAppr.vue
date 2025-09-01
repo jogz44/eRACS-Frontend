@@ -293,7 +293,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { storeToRefs } from 'pinia'
 import { useContApprStore } from 'src/stores/contApprStore'
@@ -624,11 +624,7 @@ const handleAmountBlur = (item, value) => {
   }
 }
 
-const validateAmount = (val) => {
-  if (val === null || val === '') return true
-  const num = Number(val)
-  return !isNaN(num) && num >= 0
-}
+
 
 const canSaveAllocation = computed(() => {
   return totalAllocated.value > 0 && totalAllocated.value <= availableBudget.value
@@ -709,16 +705,7 @@ onMounted(async () => {
   }
 })
 
-// Row action handlers
-const handleEdit = (row) => {
-  openAllocationDialog(row)
-}
-const handleView = (row) => {
-  $q.notify({ type: 'info', message: `Viewing: ${row.description || ''}` })
-}
-const handleCommit = (row) => {
-  $q.notify({ type: 'positive', message: `Committed successfully${row?.id ? ` (ID: ${row.id})` : ''}` })
-}
+
 
 defineExpose({
   openAllocationDialog,
