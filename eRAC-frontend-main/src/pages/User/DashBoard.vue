@@ -15,94 +15,183 @@
     <!-- Year Filter Section -->
     <div class="year-filter-section q-mb-lg">
       <q-card class="filter-card">
-        <q-card-section class="row items-center justify-between q-pa-md">
-          <div class="row items-center q-gutter-md">
-            <div class="text-subtitle2 text-weight-medium">Year Filter:</div>
-            <q-select
-              v-model="chartStore.selectedYear"
-              :options="chartStore.availableYears"
-              option-value="value"
-              option-label="label"
-              emit-value
-              map-options
-              dense
-              outlined
-              style="min-width: 150px"
-              :loading="chartStore.isYearFilterLoading"
-              :disable="chartStore.isYearFilterLoading"
-              @update:model-value="onYearChange"
-            >
-              <template v-slot:prepend>
-                <q-icon name="calendar_today" />
-              </template>
-              <template v-slot:loading>
-                <q-spinner color="primary" size="20px" />
-              </template>
-            </q-select>
+        <!-- Main Filter Controls -->
+        <q-card-section class="filter-main-section">
+          <!-- Desktop/Tablet Layout -->
+          <div class="filter-desktop-layout row items-center justify-between">
+            <!-- Left Section: Filter Controls -->
+            <div class="filter-controls-section row items-center q-gutter-md">
+              <div class="filter-label text-subtitle2 text-weight-medium">Year Filter:</div>
+              <div class="filter-input-section">
+                <q-select
+                  v-model="chartStore.selectedYear"
+                  :options="chartStore.availableYears"
+                  option-value="value"
+                  option-label="label"
+                  emit-value
+                  map-options
+                  dense
+                  outlined
+                  class="year-select"
+                  :loading="chartStore.isYearFilterLoading"
+                  :disable="chartStore.isYearFilterLoading"
+                  @update:model-value="onYearChange"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="calendar_today" />
+                  </template>
+                  <template v-slot:loading>
+                    <q-spinner color="primary" size="20px" />
+                  </template>
+                </q-select>
+              </div>
+              
+              <!-- Refresh years button -->
+              <q-btn
+                icon="refresh"
+                color="primary"
+                flat
+                dense
+                size="sm"
+                class="refresh-years-btn"
+                @click="refreshYears"
+                :loading="chartStore.isYearFilterLoading"
+                :disable="chartStore.isYearFilterLoading"
+              >
+                <q-tooltip>Refresh available years</q-tooltip>
+              </q-btn>
+            </div>
             
-            <!-- Refresh years button -->
-            <q-btn
-              icon="refresh"
-              color="primary"
-              flat
-              dense
-              size="sm"
-              @click="refreshYears"
-              :loading="chartStore.isYearFilterLoading"
-              :disable="chartStore.isYearFilterLoading"
-            >
-              <q-tooltip>Refresh available years</q-tooltip>
-            </q-btn>
+            <!-- Right Section: Action Buttons -->
+            <div class="filter-actions-section row items-center q-gutter-sm">
+              <q-btn
+                icon="refresh"
+                label="Reset to Current Year"
+                color="secondary"
+                outline
+                dense
+                size="sm"
+                class="reset-year-btn"
+                @click="resetToCurrentYear"
+                :loading="chartStore.isLoading"
+                :disable="chartStore.selectedYear === new Date().getFullYear()"
+              >
+                <q-tooltip>Reset to current year view</q-tooltip>
+              </q-btn>
+              
+              <q-btn
+                icon="refresh"
+                color="primary"
+                flat
+                dense
+                size="sm"
+                class="refresh-data-btn"
+                @click="refreshAllData"
+                :loading="chartStore.isLoading"
+              >
+                <q-tooltip>Refresh all data for selected year</q-tooltip>
+              </q-btn>
+            </div>
+          </div>
+          
+          <!-- Mobile Layout -->
+          <div class="filter-mobile-layout column q-gutter-md">
+            <!-- Mobile Header -->
+            <div class="row items-center justify-between">
+              <div class="text-subtitle2 text-weight-medium">Year Filter</div>
+              <q-btn
+                icon="refresh"
+                color="primary"
+                flat
+                dense
+                size="sm"
+                @click="refreshYears"
+                :loading="chartStore.isYearFilterLoading"
+                :disable="chartStore.isYearFilterLoading"
+              >
+                <q-tooltip>Refresh years</q-tooltip>
+              </q-btn>
+            </div>
             
+            <!-- Mobile Year Select -->
+            <div class="mobile-year-select">
+              <q-select
+                v-model="chartStore.selectedYear"
+                :options="chartStore.availableYears"
+                option-value="value"
+                option-label="label"
+                emit-value
+                map-options
+                outlined
+                class="full-width"
+                :loading="chartStore.isYearFilterLoading"
+                :disable="chartStore.isYearFilterLoading"
+                @update:model-value="onYearChange"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="calendar_today" />
+                </template>
+                <template v-slot:loading>
+                  <q-spinner color="primary" size="20px" />
+                </template>
+              </q-select>
+            </div>
+            
+            <!-- Mobile Action Buttons -->
+            <div class="mobile-actions row q-gutter-sm">
+              <q-btn
+                icon="refresh"
+                label="Reset"
+                color="secondary"
+                outline
+                dense
+                size="sm"
+                class="col"
+                @click="resetToCurrentYear"
+                :loading="chartStore.isLoading"
+                :disable="chartStore.selectedYear === new Date().getFullYear()"
+              />
+              
+              <q-btn
+                icon="refresh"
+                label="Refresh Data"
+                color="primary"
+                outline
+                dense
+                size="sm"
+                class="col"
+                @click="refreshAllData"
+                :loading="chartStore.isLoading"
+              />
+            </div>
+          </div>
+          
+          <!-- Status Indicators -->
+          <div class="filter-status-section">
             <!-- Loading indicator for year filter -->
-            <div v-if="chartStore.isYearFilterLoading" class="text-caption text-grey-6">
+            <div v-if="chartStore.isYearFilterLoading" class="text-caption text-grey-6 text-center">
+              <q-spinner color="primary" size="16px" class="q-mr-xs" />
               Loading years...
             </div>
             
             <!-- Error state for year filter -->
-            <div v-if="chartStore.availableYears.length === 0 && !chartStore.isYearFilterLoading" class="text-caption text-negative">
+            <div v-if="chartStore.availableYears.length === 0 && !chartStore.isYearFilterLoading" class="text-caption text-negative text-center">
+              <q-icon name="warning" size="16px" class="q-mr-xs" />
               No years available
             </div>
-          </div>
-          
-          <div class="row items-center q-gutter-sm">
-            <q-btn
-              icon="refresh"
-              label="Reset to Current Year"
-              color="secondary"
-              outline
-              dense
-              size="sm"
-              @click="resetToCurrentYear"
-              :loading="chartStore.isLoading"
-              :disable="chartStore.selectedYear === new Date().getFullYear()"
-            >
-              <q-tooltip>Reset to current year view</q-tooltip>
-            </q-btn>
-            
-            <q-btn
-              icon="refresh"
-              color="primary"
-              flat
-              dense
-              size="sm"
-              @click="refreshAllData"
-              :loading="chartStore.isLoading"
-            >
-              <q-tooltip>Refresh all data for selected year</q-tooltip>
-            </q-btn>
           </div>
         </q-card-section>
         
         <!-- Year Filter Summary -->
-        <q-card-section class="q-pt-none q-pb-md year-filter-summary">
-          <div class="row items-center q-gutter-md">
+        <q-card-section class="year-filter-summary">
+          <div class="summary-content row items-center q-gutter-md">
             <q-icon 
               name="info" 
               color="primary" 
               size="sm"
+              class="summary-icon"
             />
-            <div class="text-caption text-grey-7">
+            <div class="text-caption text-grey-7 summary-text">
               <span class="text-weight-medium">Currently viewing:</span>
               {{ chartStore.selectedYear === 'all' ? 'Data from all available years' : `Data for the year ${chartStore.selectedYear}` }}
               <span v-if="chartStore.selectedYear === new Date().getFullYear()" class="text-positive q-ml-sm">
@@ -715,33 +804,117 @@ onUnmounted(() => {
     }
   }
   
-  .q-select {
-    .q-field__control {
-      border-radius: 8px;
-    }
-  }
-  
-  .q-btn {
-    border-radius: 8px;
-    font-weight: 500;
-    transition: all 0.2s ease;
+  // Main filter section styling
+  .filter-main-section {
+    padding: 20px !important;
     
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-  }
-  
-  .year-filter-summary {
-    .text-caption {
-      line-height: 1.4;
+    // Desktop/Tablet layout
+    .filter-desktop-layout {
+      display: flex;
+      width: 100%;
       
-      .text-weight-medium {
-        color: #424242;
+      .filter-controls-section {
+        flex: 1;
+        min-width: 0; // Allow flex shrinking
+        
+        .filter-label {
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+        
+        .filter-input-section {
+          flex: 1;
+          min-width: 150px;
+          
+          .year-select {
+            min-width: 150px;
+            max-width: 200px;
+            
+            .q-field__control {
+              border-radius: 8px;
+            }
+          }
+        }
+        
+        .refresh-years-btn {
+          flex-shrink: 0;
+        }
       }
       
-      .text-positive {
-        font-weight: 500;
+      .filter-actions-section {
+        flex-shrink: 0;
+        
+        .reset-year-btn,
+        .refresh-data-btn {
+          border-radius: 8px;
+          font-weight: 500;
+          transition: all 0.2s ease;
+          
+          &:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+          }
+        }
+      }
+    }
+    
+    // Mobile layout
+    .filter-mobile-layout {
+      display: none;
+      
+      .mobile-year-select {
+        .q-select {
+          .q-field__control {
+            border-radius: 8px;
+          }
+        }
+      }
+      
+      .mobile-actions {
+        .q-btn {
+          border-radius: 8px;
+          font-weight: 500;
+          transition: all 0.2s ease;
+          
+          &:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+          }
+        }
+      }
+    }
+    
+    // Status section
+    .filter-status-section {
+      margin-top: 12px;
+      
+      .text-caption {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+      }
+    }
+  }
+  
+  // Summary section
+  .year-filter-summary {
+    .summary-content {
+      .summary-icon {
+        flex-shrink: 0;
+      }
+      
+      .summary-text {
+        line-height: 1.4;
+        word-break: break-word;
+        
+        .text-weight-medium {
+          color: #424242;
+        }
+        
+        .text-positive {
+          font-weight: 500;
+        }
       }
     }
   }
@@ -836,7 +1009,34 @@ onUnmounted(() => {
 }
 
 // Responsive adjustments
-@media (max-width: 900px) {
+// Large tablets and small desktops (1024px and below)
+@media (max-width: 1024px) {
+  .year-filter-section {
+    .filter-main-section {
+      .filter-desktop-layout {
+        .filter-controls-section {
+          .filter-input-section .year-select {
+            min-width: 140px;
+            max-width: 180px;
+          }
+        }
+        
+        .filter-actions-section {
+          .reset-year-btn {
+            .q-btn__content {
+              .q-btn__label {
+                display: none;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Tablets (768px and below)
+@media (max-width: 768px) {
   .summary-card {
     min-width: unset !important;
     width: 100% !important;
@@ -849,17 +1049,47 @@ onUnmounted(() => {
   }
   
   .year-filter-section {
-    .filter-card .q-card__section {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 16px;
+    .filter-main-section {
+      padding: 16px !important;
       
-      .row {
-        justify-content: center;
+      // Hide desktop layout, show mobile layout
+      .filter-desktop-layout {
+        display: none;
+      }
+      
+      .filter-mobile-layout {
+        display: flex;
+        
+        .mobile-year-select {
+          .q-select {
+            width: 100%;
+          }
+        }
+        
+        .mobile-actions {
+          .q-btn {
+            min-height: 40px;
+          }
+        }
+      }
+    }
+    
+    .year-filter-summary {
+      .summary-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        
+        .summary-text {
+          text-align: left;
+          width: 100%;
+        }
       }
     }
   }
 }
+
+// Small tablets and large phones (600px and below)
 @media (max-width: 600px) {
   .summary-card {
     padding: 10px;
@@ -887,24 +1117,111 @@ onUnmounted(() => {
   }
   
   .year-filter-section {
-    .filter-card .q-card__section {
-      padding: 12px 16px;
+    .filter-card {
+      margin: 0 4px;
+      border-radius: 8px;
       
-      .row {
+      .q-card__section {
+        padding: 12px 16px;
+        
+        &:last-child {
+          padding: 12px 16px;
+        }
+      }
+    }
+    
+    .filter-main-section {
+      padding: 12px !important;
+      
+      .filter-mobile-layout {
         gap: 12px;
+        
+        .mobile-actions {
+          gap: 8px;
+          
+          .q-btn {
+            min-height: 36px;
+            font-size: 12px;
+            
+            .q-btn__content {
+              .q-btn__label {
+                font-size: 12px;
+              }
+            }
+          }
+        }
       }
       
-      .q-select {
-        min-width: 120px !important;
+      .filter-status-section {
+        margin-top: 8px;
+        
+        .text-caption {
+          font-size: 11px;
+        }
       }
-      
-      .q-btn {
-        font-size: 12px;
-        padding: 8px 12px;
+    }
+    
+    .year-filter-summary {
+      .summary-content {
+        .summary-text {
+          font-size: 11px;
+          line-height: 1.3;
+        }
       }
     }
   }
 }
+
+// Small phones (480px and below)
+@media (max-width: 480px) {
+  .year-filter-section {
+    .filter-main-section {
+      padding: 8px !important;
+      
+      .filter-mobile-layout {
+        gap: 10px;
+        
+        .mobile-actions {
+          flex-direction: column;
+          gap: 6px;
+          
+          .q-btn {
+            width: 100%;
+            min-height: 40px;
+          }
+        }
+      }
+    }
+    
+    .year-filter-summary {
+      .summary-content {
+        .summary-text {
+          font-size: 10px;
+        }
+      }
+    }
+  }
+}
+
+// Extra small phones (360px and below)
+@media (max-width: 360px) {
+  .year-filter-section {
+    .filter-main-section {
+      .filter-mobile-layout {
+        .mobile-actions {
+          .q-btn {
+            .q-btn__content {
+              .q-btn__label {
+                font-size: 11px;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 
 /* Legend adjustments */
 :deep(.chartjs-legend) {

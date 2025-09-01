@@ -13,6 +13,41 @@
           <div class="text-caption">{{ selectedUser?.position }} - {{ selectedUser?.barangay }}</div>
         </div>
 
+        <!-- Filter Section -->
+        <div class="filter-section q-mb-md">
+          <div class="row items-center q-gutter-md">
+            <div class="col-auto">
+              <q-select
+                v-model="selectedCategory"
+                :options="categoryOptions"
+                label="Filter by Category"
+                outlined
+                dense
+                clearable
+                emit-value
+                map-options
+                style="min-width: 200px;"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="filter_list" />
+                </template>
+              </q-select>
+            </div>
+            <div class="col-auto">
+              <q-btn
+                v-if="selectedCategory"
+                flat
+                dense
+                color="red-10"
+                icon="clear"
+                label="Clear Filter"
+                @click="clearCategoryFilter"
+                size="sm"
+              />
+            </div>
+          </div>
+        </div>
+
         <q-table
         :table-header-style="{ position: 'sticky', top: '0', zIndex: 3, background: 'white' }"
         class="activity-table"
@@ -80,10 +115,17 @@ export default {
   setup(props, { emit }) {
     const loading = ref(false)
     const activities = ref([])
+    const selectedCategory = ref(null)
 
     const columns = [
       { name: 'created_at', label: 'Time', field: 'created_at', sortable: false, align: 'left' },
       { name: 'description', label: 'Activity Description', field: 'description', sortable: false, align: 'left' }
+    ]
+
+    const categoryOptions = [
+      { label: 'Transactions', value: 'transactions' },
+      { label: 'Libraries', value: 'libraries' },
+      { label: 'Reports', value: 'reports' }
     ]
 
     const dialogModel = computed({
@@ -111,9 +153,42 @@ export default {
     }
 
     const VISITED_PREFIX = 'Visited '
+    
+    // Function to determine if an activity belongs to a specific category
+    const getActivityCategory = (activity) => {
+      // Use the combined activity and details for description
+      const desc = `${activity.activity} ${activity.details}`.toLowerCase();
+
+      // Transactions: Appropriation, Disbursement, Augmentation, Continuation (Appropriation/Disbursement)
+      if (
+        desc.includes('appropriation') ||
+        desc.includes('disbursement') ||
+        desc.includes('augmentation') ||
+        desc.includes('continuation (appropriation') ||
+        desc.includes('continuation (disbursement')
+      ) {
+        return 'transactions';
+      }
+      // Libraries: Library
+      if (desc.includes('library')) {
+        return 'libraries';
+      }
+      // Reports: Report
+      if (desc.includes('report')) {
+        return 'reports';
+      }
+      // Not in any filter category
+      return null;
+    }
+    
     const groupedRows = computed(() => {
+      let filteredActivities = activities.value;
+      if (selectedCategory.value) {
+        filteredActivities = activities.value.filter(activity => getActivityCategory(activity) === selectedCategory.value);
+      }
+      
       // First, find all page visits and create groups (keep original chronological order for grouping)
-      const chronologicalActivities = [...activities.value].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      const chronologicalActivities = [...filteredActivities].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
       const pageGroups = []
       const allActivities = []
       
@@ -208,8 +283,24 @@ export default {
     const formatDate = (dateString) => date.formatDate(dateString, 'MMMM D, YYYY')
 
     const closeDialog = () => { dialogModel.value = false }
+    
+    const clearCategoryFilter = () => {
+      selectedCategory.value = null
+    }
 
-    return { loading, activities, columns, formatTime, formatDate, closeDialog, dialogModel, groupedRows }
+    return { 
+      loading, 
+      activities, 
+      columns, 
+      formatTime, 
+      formatDate, 
+      closeDialog, 
+      dialogModel, 
+      groupedRows,
+      selectedCategory,
+      categoryOptions,
+      clearCategoryFilter
+    }
   }
 }
 </script>
@@ -217,6 +308,12 @@ export default {
 <style scoped>
 .card-table { background-color: white; }
 .user-info { border-bottom: 1px solid #e0e0e0; padding-bottom: 1rem; }
+.filter-section { 
+  background-color: #f8f9fa; 
+  border-radius: 8px; 
+  padding: 16px; 
+  border: 1px solid #e9ecef; 
+}
 .activity-description { white-space: normal; line-height: 1.4; }
 .children-list { border-left: 3px solid #e0e0e0; margin-left: 4px; padding-left: 10px; }
 .child-item { display: flex; align-items: baseline; padding: 4px 0; }
