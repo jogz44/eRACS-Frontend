@@ -551,7 +551,7 @@ const continueSelected = async () => {
     }
 
     const result = await contApprStore.createContinuingAppropriation(data)
-    
+
     if (result.success) {
       $q.notify({
         type: 'positive',
@@ -746,7 +746,7 @@ const saveAllocation = async () => {
     }
 
     showAllocationDialog.value = false
-    
+
     $q.notify({
       type: 'positive',
       message: 'Allocation saved successfully!',
@@ -777,7 +777,7 @@ const commitRow = async (row) => {
   }).onOk(async () => {
     try {
       const result = await contApprStore.updateContinuingAppropriationStatus(row.id, 'committed')
-      
+
       if (result.success) {
         $q.notify({
           type: 'positive',
