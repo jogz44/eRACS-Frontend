@@ -8,6 +8,9 @@ export const useContApprStore = defineStore('continuing-appropriation',{
         years: [],
         selectedYear: null,
         continueAccounts: [],
+        continuingAppropriations: [],
+        loading: false,
+        error: null,
     }),
     getters: {
     },
@@ -86,6 +89,74 @@ export const useContApprStore = defineStore('continuing-appropriation',{
             } catch (error) {
                 this.error = error.response?.data?.message || error.message
                 this.years = []
+            } finally {
+                this.loading = false
+            }
+        },
+
+        async fetchContinuingAppropriations() {
+            const config = this.getAuthConfig()
+            try {
+                this.loading = true
+                const response = await api.get('/api/barangay/continuing-appropriations/list', config)
+                
+                if (response.data.status) {
+                    this.continuingAppropriations = response.data.data || []
+                    return this.continuingAppropriations
+                } else {
+                    this.error = response.data.message || 'Failed to fetch continuing appropriations'
+                    return []
+                }
+            } catch (error) {
+                this.error = error.response?.data?.message || error.message
+                return []
+            } finally {
+                this.loading = false
+            }
+        },
+
+        async createContinuingAppropriation(data) {
+            const config = this.getAuthConfig()
+            try {
+                this.loading = true
+                const response = await api.post('/api/barangay/continuing-appropriations', data, config)
+                
+                if (response.data.status) {
+                    // Add the new appropriation to the list
+                    this.continuingAppropriations.unshift(response.data.data)
+                    return { success: true, data: response.data.data }
+                } else {
+                    this.error = response.data.message || 'Failed to create continuing appropriation'
+                    return { success: false, message: response.data.message }
+                }
+            } catch (error) {
+                this.error = error.response?.data?.message || error.message
+                return { success: false, message: this.error }
+            } finally {
+                this.loading = false
+            }
+        },
+
+        async updateContinuingAppropriationStatus(id, status) {
+            const config = this.getAuthConfig()
+            try {
+                this.loading = true
+                const response = await api.patch(`/api/barangay/continuing-appropriations/${id}/status`, { status }, config)
+                
+                if (response.data.status) {
+                    // Update the status in the local list
+                    const index = this.continuingAppropriations.findIndex(item => item.id === id)
+                    if (index !== -1) {
+                        this.continuingAppropriations[index].status = status
+                    }
+                    return { success: true, data: response.data.data }
+                } else {
+                    this.error = response.data.message || 'Failed to update status'
+                    return { success: false, message: response.data.message }
+                }
+            } catch (error) {
+                this.error = error.response?.data?.message || error.message
+                return { success: false, message: this.error }
             } finally {
                 this.loading = false
             }

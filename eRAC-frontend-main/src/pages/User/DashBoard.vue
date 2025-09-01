@@ -1010,7 +1010,34 @@ onMounted(async () => {
 }
 
 // Responsive adjustments
-@media (max-width: 900px) {
+// Large tablets and small desktops (1024px and below)
+@media (max-width: 1024px) {
+  .year-filter-section {
+    .filter-main-section {
+      .filter-desktop-layout {
+        .filter-controls-section {
+          .filter-input-section .year-select {
+            min-width: 140px;
+            max-width: 180px;
+          }
+        }
+
+        .filter-actions-section {
+          .reset-year-btn {
+            .q-btn__content {
+              .q-btn__label {
+                display: none;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Tablets (768px and below)
+@media (max-width: 768px) {
   .summary-card {
     min-width: unset !important;
     width: 100% !important;
@@ -1034,6 +1061,8 @@ onMounted(async () => {
     }
   }
 }
+
+// Small tablets and large phones (600px and below)
 @media (max-width: 600px) {
   .summary-card {
     padding: 10px;
@@ -1066,6 +1095,21 @@ onMounted(async () => {
 
       .row {
         gap: 12px;
+
+        .mobile-actions {
+          gap: 8px;
+
+          .q-btn {
+            min-height: 36px;
+            font-size: 12px;
+
+            .q-btn__content {
+              .q-btn__label {
+                font-size: 12px;
+              }
+            }
+          }
+        }
       }
 
       .q-select {
@@ -1079,6 +1123,26 @@ onMounted(async () => {
     }
   }
 }
+
+// Extra small phones (360px and below)
+@media (max-width: 360px) {
+  .year-filter-section {
+    .filter-main-section {
+      .filter-mobile-layout {
+        .mobile-actions {
+          .q-btn {
+            .q-btn__content {
+              .q-btn__label {
+                font-size: 11px;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 
 /* Legend adjustments */
 :deep(.chartjs-legend) {

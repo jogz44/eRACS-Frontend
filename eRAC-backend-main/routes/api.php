@@ -179,6 +179,9 @@ Route::prefix('barangay')->group(function () {
 
         // Continuing Appropriation
         Route::get('/continuing-appropriations', [ContinuingAppropriationController::class, 'index']);
+        Route::post('/continuing-appropriations', [ContinuingAppropriationController::class, 'store']);
+        Route::get('/continuing-appropriations/list', [ContinuingAppropriationController::class, 'getContinuingAppropriations']);
+        Route::patch('/continuing-appropriations/{id}/status', [ContinuingAppropriationController::class, 'updateStatus']);
 
 
     });
