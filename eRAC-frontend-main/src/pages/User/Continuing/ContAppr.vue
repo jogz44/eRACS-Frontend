@@ -355,26 +355,26 @@ const columns = [
     sortable: true,
 
   },
-  { 
-    name: 'amount', 
-    label: 'Total Amount', 
-    field: 'amount', 
-    align: 'right', 
-    sortable: true 
+  {
+    name: 'amount',
+    label: 'Total Amount',
+    field: 'amount',
+    align: 'right',
+    sortable: true
   },
-  { 
-    name: 'balance', 
-    label: 'Balance', 
-    field: 'balance', 
-    align: 'right', 
-    sortable: true 
+  {
+    name: 'balance',
+    label: 'Balance',
+    field: 'balance',
+    align: 'right',
+    sortable: true
   },
-  { 
-    name: 'unappropriated', 
-    label: 'Unappropriated', 
-    field: 'unappropriated', 
-    align: 'right', 
-    sortable: true 
+  {
+    name: 'unappropriated',
+    label: 'Unappropriated',
+    field: 'unappropriated',
+    align: 'right',
+    sortable: true
   },
   {
     name: 'action',
@@ -624,8 +624,6 @@ const handleAmountBlur = (item, value) => {
   }
 }
 
-
-
 const canSaveAllocation = computed(() => {
   return totalAllocated.value > 0 && totalAllocated.value <= availableBudget.value
 })
@@ -672,7 +670,7 @@ const saveAllocation = () => {
   }
 
   showAllocationDialog.value = false
-  
+
   $q.notify({
     type: 'positive',
     message: 'Allocation saved successfully!',
@@ -704,8 +702,6 @@ onMounted(async () => {
     generalLoading.value = false
   }
 })
-
-
 
 defineExpose({
   openAllocationDialog,

@@ -361,7 +361,6 @@ import PieChart from 'components/PieChart.vue'
 import { useAuthStore } from 'stores/auth'
 import { useQuasar } from 'quasar'
 import { usePageLogging } from '../../composables/usePageLogging'
-import { onUnmounted } from 'vue'
 const chartStore = useChartDataStore()
 const unliquidatedocationError = ref('')
 const authStore = useAuthStore()
@@ -467,7 +466,7 @@ const filteredDisbursementRows = computed(() => {
       (row) => row.status === selectedDisbursementFilter.value
     )
   }
-  
+
   // Sort by aging (non-liquidated) or by date (liquidated)
   if (selectedDisbursementFilter.value === 'Liquidated') {
     return rows.sort((a, b) => new Date(b.date) - new Date(a.date))
@@ -603,12 +602,12 @@ const testBackend = async () => {
         'Content-Type': 'application/json'
       }
     })
-    
+
     if (response.ok) {
       const data = await response.json()
       backendDebugData.value = data.data
       console.log('Backend debug data:', data.data)
-      
+
       $q.notify({
         type: 'positive',
         message: 'Backend data retrieved successfully',
@@ -622,7 +621,7 @@ const testBackend = async () => {
   } catch (error) {
     console.error('Error testing backend:', error)
     backendDebugData.value = { error: error.message }
-    
+
     $q.notify({
       type: 'negative',
       message: 'Failed to test backend: ' + error.message,
@@ -770,12 +769,12 @@ const loadDashboardData = async () => {
     console.log('Loading dashboard data for year:', chartStore.selectedYear)
     await chartStore.loadDashboardData()
     console.log('Dashboard data loaded successfully')
-    
+
     // Also fetch disbursement overview data
     console.log('Fetching disbursement overview...')
     await chartStore.fetchDisbursementOverview()
     console.log('Disbursement overview loaded successfully')
-    
+
     // Log final data state
     console.log('Final pie chart data:', chartStore.pieChartData)
     console.log('Final disbursement rows:', chartStore.disbursementOverviewRows.length)
@@ -792,7 +791,7 @@ watch(
     console.log('Updated pie chart data:', newVal)
     console.log('Pie chart labels:', newVal.labels)
     console.log('Pie chart data:', newVal.datasets?.[0]?.data)
-    
+
     // Validate chart data structure
     if (!newVal || !newVal.labels || !newVal.datasets || !newVal.datasets[0] || !newVal.datasets[0].data) {
       console.warn('Invalid pie chart data structure:', newVal)
@@ -849,23 +848,6 @@ onMounted(async () => {
   }
 
   document.addEventListener('visibilitychange', visibilityChangeHandler)
-
-  // Add keyboard shortcut for debug panel (Ctrl+Shift+D)
-  debugKeyHandler = (event) => {
-    if (event.ctrlKey && event.shiftKey && event.key === 'D') {
-      showDebugPanel.value = !showDebugPanel.value
-      console.log('Debug panel toggled:', showDebugPanel.value)
-    }
-  }
-  document.addEventListener('keydown', debugKeyHandler)
-})
-
-onUnmounted(() => {
-  if (visibilityChangeHandler) {
-    document.removeEventListener('visibilitychange', visibilityChangeHandler)
-  }
-  // Remove debug key handler
-  document.removeEventListener('keydown', debugKeyHandler)
 })
 </script>
 
