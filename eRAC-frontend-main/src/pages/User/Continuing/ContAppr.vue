@@ -128,15 +128,27 @@
           </q-td>
         </template>
 
-        <template v-slot:body-cell-amount="props">
+        <template v-slot:body-cell-continued_date="props">
           <q-td :props="props">
-            {{ formatCurrency(props.row.amount) }}
+            {{ props.row.continued_date || '-' }}
           </q-td>
         </template>
 
-        <template v-slot:body-cell-balance="props">
+        <template v-slot:body-cell-year="props">
           <q-td :props="props">
-            {{ formatCurrency(props.row.balance) }}
+            {{ props.row.year || '-' }}
+          </q-td>
+        </template>
+
+        <template v-slot:body-cell-expense_class="props">
+          <q-td :props="props">
+            {{ props.row.expense_class || '-' }}
+          </q-td>
+        </template>
+
+        <template v-slot:body-cell-appropriation="props">
+          <q-td :props="props">
+            {{ formatCurrency(props.row.appropriation || props.row.amount) }}
           </q-td>
         </template>
 
@@ -165,7 +177,18 @@
                 v-permission="'view'"
               />
             </div>
+          </q-td>
+        </template>
 
+        <template v-slot:body-cell-commit="props">
+          <q-td :props="props">
+            <q-btn
+              dense
+              label="Commit"
+              color="green"
+              @click="commitRow(props.row)"
+              v-permission="'edit'"
+            />
           </q-td>
         </template>
       </q-table>
@@ -301,7 +324,7 @@ import { usePageLogging } from '../../../composables/usePageLogging'
 
 const $q = useQuasar()
 const contApprStore = useContApprStore();
-const { continueAccounts } = storeToRefs(contApprStore)
+const { continueAccounts, continuingAppropriations } = storeToRefs(contApprStore)
 
 const loading = ref(false)
 const showContinueDialog = ref(false)
@@ -335,17 +358,39 @@ const continueColumns = [
   },
 ]
 
-const mergedAppropriations = ref([])
+// Use store data instead of local state
+const mergedAppropriations = computed(() => {
+  return continuingAppropriations.value || []
+})
 
 const columns = [
   {
-
     name: 'index',
     label: '#',
     field: 'index',
     align: 'left',
     sortable: false,
-
+  },
+  {
+    name: 'continued_date',
+    label: 'Continued Date',
+    field: 'continued_date',
+    align: 'left',
+    sortable: true,
+  },
+  {
+    name: 'year',
+    label: 'Year',
+    field: 'year',
+    align: 'left',
+    sortable: true,
+  },
+  {
+    name: 'expense_class',
+    label: 'Expense Class',
+    field: 'expense_class',
+    align: 'left',
+    sortable: true,
   },
   {
     name: 'description',
@@ -353,28 +398,20 @@ const columns = [
     field: 'description',
     align: 'left',
     sortable: true,
-
   },
-  { 
-    name: 'amount', 
-    label: 'Total Amount', 
-    field: 'amount', 
-    align: 'right', 
-    sortable: true 
+  {
+    name: 'appropriation',
+    label: 'Appropriation',
+    field: 'appropriation',
+    align: 'right',
+    sortable: true,
   },
-  { 
-    name: 'balance', 
-    label: 'Balance', 
-    field: 'balance', 
-    align: 'right', 
-    sortable: true 
-  },
-  { 
-    name: 'unappropriated', 
-    label: 'Unappropriated', 
-    field: 'unappropriated', 
-    align: 'right', 
-    sortable: true 
+  {
+    name: 'unappropriated',
+    label: 'Unappropriated',
+    field: 'unappropriated',
+    align: 'right',
+    sortable: true,
   },
   {
     name: 'action',
@@ -382,7 +419,12 @@ const columns = [
     align: 'center',
     field: 'action',
   },
-
+  {
+    name: 'commit',
+    label: 'Commit',
+    align: 'center',
+    field: 'commit',
+  },
 ]
 
 const availableBudget = computed(() => {
@@ -405,7 +447,7 @@ const filteredAppropriations = computed(() => {
 
   return mergedAppropriations.value.filter((row) => {
     return row.description.toLowerCase().includes(query) ||
-           row.remarks?.toLowerCase().includes(query) ||
+           row.expense_class?.toLowerCase().includes(query) ||
            row.year?.toString().includes(query)
   })
 })
@@ -490,25 +532,54 @@ const handleContinueClick = () => {
   validateAndContinue()
 }
 
-const continueSelected = () => {
+const continueSelected = async () => {
   const totalAmount = selectedAccounts.value.reduce((sum, acc) => sum + acc.balance, 0)
+  const currentDate = new Date().toISOString().split('T')[0] // Format as YYYY-MM-DD for database
 
-  mergedAppropriations.value.push({
-    id: mergedAppropriations.value.length + 1,
-    description: description.value,
-    year: contApprStore.selectedYear,
-    originalAppropriation: totalAmount,
-    amount: totalAmount,
-    balance: totalAmount, // Initially, balance equals the original appropriation
-    unappropriated: totalAmount,
-    remarks: '',
-    accounts: [...selectedAccounts.value],
-  })
+  try {
+    const data = {
+      description: description.value,
+      fiscal_year_id: contApprStore.selectedYear,
+      expense_class: 'CAPITAL OUTLAYS', // Default value, can be modified as needed
+      appropriation_amount: totalAmount,
+      unappropriated_amount: totalAmount,
+      continued_date: currentDate,
+      accounts: selectedAccounts.value.map(acc => ({
+        id: acc.id,
+        balance: acc.balance
+      }))
+    }
 
-  selectedAccounts.value = []
-  description.value = ''
-  dialogSearchQuery.value = ''
-  showContinueDialog.value = false
+    const result = await contApprStore.createContinuingAppropriation(data)
+    
+    if (result.success) {
+      $q.notify({
+        type: 'positive',
+        message: 'Continuing appropriation created successfully!',
+        icon: 'check_circle',
+        position: 'top',
+      })
+
+      selectedAccounts.value = []
+      description.value = ''
+      dialogSearchQuery.value = ''
+      showContinueDialog.value = false
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: result.message || 'Failed to create continuing appropriation',
+        icon: 'error',
+        position: 'top',
+      })
+    }
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'An error occurred while creating continuing appropriation',
+      icon: 'error',
+      position: 'top',
+    })
+  }
 }
 
 const formatCurrency = (value) => {
@@ -524,6 +595,9 @@ const displayAccounts = ref(JSON.parse(JSON.stringify(sampleAccounts)))
 const openAllocationDialog = (row) => {
   selectedRow.value = {
     ...row,
+    amount: row.appropriation,
+    balance: row.unappropriated,
+    unappropriated: row.unappropriated,
     returnAmount: row.returnAmount || 0,
     augmentationAmount: row.augmentationAmount || 0,
   }
@@ -535,7 +609,7 @@ const openAllocationDialog = (row) => {
         name: 'CAPITAL OUTLAYS',
         children: row.accounts.map((acc) => ({
           id: acc.id,
-          name: acc.accountName.split('>')[1]?.trim() || acc.accountName,
+          name: acc.accountName || 'Unknown Account',
           amount: acc.balance,
         })),
       },
@@ -628,7 +702,7 @@ const canSaveAllocation = computed(() => {
   return totalAllocated.value > 0 && totalAllocated.value <= availableBudget.value
 })
 
-const validateAndSaveAllocation = () => {
+const validateAndSaveAllocation = async () => {
   if (showAllocationDialog.value) {
     if (!canSaveAllocation.value) {
       $q.notify({
@@ -640,20 +714,20 @@ const validateAndSaveAllocation = () => {
       return
     }
 
-    saveAllocation()
+    await saveAllocation()
   }
 }
 
-const handleAllocationEnterKey = (event) => {
+const handleAllocationEnterKey = async (event) => {
   event.preventDefault()
-  validateAndSaveAllocation()
+  await validateAndSaveAllocation()
 }
 
-const handleAllocationSaveClick = () => {
-  validateAndSaveAllocation()
+const handleAllocationSaveClick = async () => {
+  await validateAndSaveAllocation()
 }
 
-const saveAllocation = () => {
+const saveAllocation = async () => {
   const allocationData = {
     budgetId: selectedRow.value.id,
     returnAmount: returnAmount.value,
@@ -664,19 +738,29 @@ const saveAllocation = () => {
 
   console.log('Saving allocation:', allocationData)
 
-  const rowIndex = mergedAppropriations.value.findIndex((r) => r.id === selectedRow.value.id)
-  if (rowIndex !== -1) {
-    mergedAppropriations.value[rowIndex].unappropriated -= totalAllocated.value
-  }
+  try {
+    // Update the unappropriated amount in the store
+    const rowIndex = continuingAppropriations.value.findIndex((r) => r.id === selectedRow.value.id)
+    if (rowIndex !== -1) {
+      continuingAppropriations.value[rowIndex].unappropriated -= totalAllocated.value
+    }
 
-  showAllocationDialog.value = false
-  
-  $q.notify({
-    type: 'positive',
-    message: 'Allocation saved successfully!',
-    icon: 'check_circle',
-    position: 'top',
-  })
+    showAllocationDialog.value = false
+    
+    $q.notify({
+      type: 'positive',
+      message: 'Allocation saved successfully!',
+      icon: 'check_circle',
+      position: 'top',
+    })
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to save allocation: ' + error.message,
+      icon: 'error',
+      position: 'top',
+    })
+  }
 }
 
 const openViewDialog = (row) => {
@@ -684,10 +768,47 @@ const openViewDialog = (row) => {
   console.log('Viewing row:', row)
 }
 
+const commitRow = async (row) => {
+  $q.dialog({
+    title: 'Confirm Commit',
+    message: `Are you sure you want to commit this appropriation: "${row.description}"?`,
+    cancel: true,
+    persistent: true
+  }).onOk(async () => {
+    try {
+      const result = await contApprStore.updateContinuingAppropriationStatus(row.id, 'committed')
+      
+      if (result.success) {
+        $q.notify({
+          type: 'positive',
+          message: 'Appropriation committed successfully!',
+          icon: 'check_circle',
+          position: 'top',
+        })
+      } else {
+        $q.notify({
+          type: 'negative',
+          message: result.message || 'Failed to commit appropriation',
+          icon: 'error',
+          position: 'top',
+        })
+      }
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: error.message || 'An error occurred while committing appropriation',
+        icon: 'error',
+        position: 'top',
+      })
+    }
+  })
+}
+
 onMounted(async () => {
   try {
     await contApprStore.fetchContinueAccounts()
     await contApprStore.fetchYears()
+    await contApprStore.fetchContinuingAppropriations()
 
     // Log page visit
     const { logPageVisit } = usePageLogging()
