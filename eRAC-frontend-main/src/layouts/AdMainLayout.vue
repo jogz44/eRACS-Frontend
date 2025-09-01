@@ -363,11 +363,9 @@ const isBarangaySelected = computed(() => {
 
 // Show info notification when no barangay is selected on load
 watch(isBarangaySelected, (newValue, oldValue) => {
-  // Only show notification if user was initially without barangay selection
-  // and we're not in the process of loading saved selection
-  if (!newValue && oldValue !== undefined) {
+  if (!newValue && oldValue !== undefined && !authStore.isLoggingOut && authStore.admin && router.currentRoute.value.path !== '/admin/login') {
     setTimeout(() => {
-      if (!isBarangaySelected.value) {
+      if (!isBarangaySelected.value && !authStore.isLoggingOut && authStore.admin && router.currentRoute.value.path !== '/admin/login') {
         $q.notify({
           type: 'info',
           message: 'Select a barangay from the dropdown to access transaction features',

@@ -32,8 +32,15 @@ class AdminAuthController extends Controller  // <-- This is crucial
 
         $token = $admin->createToken('admin-token', ['admin'])->plainTextToken;
 
-        // Log admin login
-        AdminAuthController::logUserAction($admin, 'Login', 'Admin login to system');
+        // Log admin login to admin_logs table
+        DB::table('admin_logs')->insert([
+            'admin_id' => $admin->id,
+            'fullname' => $admin->name ?? 'Admin',
+            'activity' => 'Login',
+            'details' => 'Admin login to system',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
         $cookie = cookie(
             'admin_token',
@@ -64,9 +71,16 @@ class AdminAuthController extends Controller  // <-- This is crucial
     {
         $admin = $request->user('admin');
         
-        // Log admin logout
+        // Log admin logout to admin_logs table
         if ($admin) {
-            AdminAuthController::logUserAction($admin, 'Logout', 'Admin logout from system');
+            DB::table('admin_logs')->insert([
+                'admin_id' => $admin->id,
+                'fullname' => $admin->name,
+                'activity' => 'Logout',
+                'details' => 'Admin logout from system',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
         
         // Delete ALL tokens for this admin to ensure complete logout
@@ -200,67 +214,135 @@ class AdminAuthController extends Controller  // <-- This is crucial
 
     // Get logs
     public function getAllLogs() {
-        $logs = DB::table('logs')
-        ->join('barangay_users', 'logs.user_id', '=', 'barangay_users.id')
-        ->join('barangays', 'barangay_users.barangay_id', '=', 'barangays.id')
-        ->join('barangay_positions', 'barangay_users.position_id', '=', 'barangay_positions.id')
-        ->select(
-            'logs.user_id as id',
-            'logs.fullname',
-            DB::raw('CAST(logs.created_at AS DATE) as log_date'),
-            DB::raw('COUNT(logs.id) as total_logs'),
-            'barangays.name as barangay',
-            'barangay_positions.name as position'
-        )
-        ->groupBy(
-            'logs.user_id',
-            'logs.fullname',
-            DB::raw('CAST(logs.created_at AS DATE)'),
-            'barangays.name',
-            'barangay_positions.name'
-        )
-        ->orderByDesc(DB::raw('CAST(logs.created_at AS DATE)'))
-        ->get();
+        // Get user logs
+        $userLogs = DB::table('logs')
+            ->join('barangay_users', 'logs.user_id', '=', 'barangay_users.id')
+            ->join('barangays', 'barangay_users.barangay_id', '=', 'barangays.id')
+            ->join('barangay_positions', 'barangay_users.position_id', '=', 'barangay_positions.id')
+            ->select(
+                'logs.user_id as id',
+                'logs.fullname',
+                DB::raw('CAST(logs.created_at AS DATE) as log_date'),
+                DB::raw('COUNT(logs.id) as total_logs'),
+                'barangays.name as barangay',
+                'barangay_positions.name as position',
+                DB::raw("'user' as user_type"),
+                DB::raw("NULL as admin_role")
+            )
+            ->whereNotNull('logs.fullname') // Ensure fullname is not null
+            ->where('logs.fullname', '!=', '') // Ensure fullname is not empty
+            ->where('logs.fullname', '!=', ' ') // Ensure fullname is not just a space
+            ->groupBy(
+                'logs.user_id',
+                'logs.fullname',
+                DB::raw('CAST(logs.created_at AS DATE)'),
+                'barangays.name',
+                'barangay_positions.name'
+            );
 
-        return response()->json($logs);
+        // Get admin logs
+        $adminLogs = DB::table('admin_logs')
+            ->join('admins', 'admin_logs.admin_id', '=', 'admins.id')
+            ->select(
+                'admin_logs.admin_id as id',
+                'admins.name as fullname',
+                DB::raw('CAST(admin_logs.created_at AS DATE) as log_date'),
+                DB::raw('COUNT(admin_logs.id) as total_logs'),
+                DB::raw("'Admin' as barangay"),
+                DB::raw("'Administrator' as position"),
+                DB::raw("'admin' as user_type"),
+                'admins.role as admin_role'
+            )
+            ->whereNotNull('admins.name') // Ensure admin name is not null
+            ->groupBy(
+                'admin_logs.admin_id',
+                'admins.name',
+                DB::raw('CAST(admin_logs.created_at AS DATE)'),
+                'admins.role'
+            );
+
+        // Combine and order by date (newest first)
+        $combinedLogs = $userLogs->union($adminLogs)
+            ->orderByDesc('log_date')
+            ->get();
+
+        return response()->json($combinedLogs);
     }
 
-    // Get admin logs
-    public function getAdminLogs() {
-        $logs = DB::table('admin_logs')
+    // Get admin logs with filtering
+    public function getAdminLogs(Request $request) {
+        $adminId = $request->query('admin_id');
+        $date = $request->query('date');
+        
+        \Log::info("getAdminLogs called with adminId: {$adminId}, date: {$date}");
+        
+        $query = DB::table('admin_logs')
             ->join('admins', 'admin_logs.admin_id', '=', 'admins.id')
             ->select(
                 'admin_logs.id',
                 'admin_logs.activity',
                 'admin_logs.details',
                 'admin_logs.created_at',
-                'admins.name as admin_name'
-            )
-            ->orderByDesc('admin_logs.created_at')
-            ->get();
+                'admin_logs.fullname'
+            );
+        
+        // Filter by admin_id if provided
+        if ($adminId) {
+            $query->where('admin_logs.admin_id', $adminId);
+        }
+        
+        // Filter by date if provided
+        if ($date) {
+            $query->whereDate('admin_logs.created_at', $date);
+        }
+        
+        $logs = $query->orderByDesc('admin_logs.created_at')->get();
+        
+        \Log::info("Admin logs found: " . $logs->count());
+        
         return response()->json($logs);
     }
 
     // Get individual user logs
-    public function getUserLogs($userId, $day) {
-        $logs = DB::table('logs')
-            ->join('barangay_users', 'logs.user_id', '=', 'barangay_users.id')
-            ->join('barangays', 'barangay_users.barangay_id', '=', 'barangays.id')
-            ->join('barangay_positions', 'barangay_users.position_id', '=', 'barangay_positions.id')
-            ->select(
-                'logs.id',
-                'logs.activity',
-                'logs.details',
-                'logs.created_at',
-                'barangays.name as barangay',
-                'barangay_positions.name as position',
-                'barangay_users.first_name',
-                'barangay_users.last_name'
-            )
-            ->where('barangay_users.id', $userId)
-            ->whereDate('logs.created_at', $day)
-            ->orderByDesc('logs.created_at')
-            ->get();
+    public function getUserLogs(Request $request, $userId, $day) {
+        $userType = $request->query('user_type', 'user'); // Default to user if not specified
+        
+        \Log::info("getUserLogs called with userId: '{$userId}' (type: " . gettype($userId) . "), day: '{$day}', userType: '{$userType}'");
+        
+        if ($userType === 'admin') {
+            // This is an admin user, get logs from admin_logs table
+            $logs = DB::table('admin_logs')
+                ->select(
+                    'admin_logs.id',
+                    'admin_logs.activity',
+                    'admin_logs.details',
+                    'admin_logs.created_at',
+                    'admin_logs.fullname'
+                )
+                ->where('admin_logs.admin_id', $userId)
+                ->whereDate('admin_logs.created_at', $day)
+                ->orderByDesc('admin_logs.created_at')
+                ->get();
+            
+            \Log::info("Admin logs found: " . $logs->count());
+        } else {
+            // This is a regular user, get logs from logs table
+            $logs = DB::table('logs')
+                ->select(
+                    'logs.id',
+                    'logs.activity',
+                    'logs.details',
+                    'logs.created_at',
+                    'logs.fullname'
+                )
+                ->where('logs.user_id', $userId)
+                ->whereDate('logs.created_at', $day)
+                ->orderByDesc('logs.created_at')
+                ->get();
+            
+            \Log::info("User logs found: " . $logs->count());
+        }
+        
         return response()->json($logs);
     }
 
@@ -283,21 +365,8 @@ class AdminAuthController extends Controller  // <-- This is crucial
             'details' => 'nullable|string'
         ]);
 
-        // Ensure we resolve the authenticated admin explicitly
+        // Get the authenticated admin
         $admin = $request->user();
-        if (!$admin) {
-            $admin = Auth::user();
-        }
-        if (!$admin || !($admin instanceof Admin)) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Unauthorized'
-            ], 401);
-        }
-        $admin = $request->user();
-        if (!$admin) {
-            $admin = Auth::user();
-        }
         if (!$admin || !($admin instanceof Admin)) {
             return response()->json([
                 'status' => false,
@@ -305,14 +374,6 @@ class AdminAuthController extends Controller  // <-- This is crucial
             ], 401);
         }
 
-        DB::table('admin_logs')->insert([
-            'admin_id' => $admin->id,
-            'fullname' => $admin->name ?? 'Admin',
-            'activity' => $validated['activity'],
-            'details' => $validated['details'] ?? null,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
         DB::table('admin_logs')->insert([
             'admin_id' => $admin->id,
             'fullname' => $admin->name ?? 'Admin',
@@ -334,9 +395,19 @@ class AdminAuthController extends Controller  // <-- This is crucial
 
         $user = $request->user();
         
+        // Ensure we have a proper fullname
+        $firstName = trim($user->first_name ?? '');
+        $lastName = trim($user->last_name ?? '');
+        $fullname = trim($firstName . ' ' . $lastName);
+        
+        // If fullname is empty, try to get it from the user object or use a fallback
+        if (empty($fullname)) {
+            $fullname = $user->fullname ?? $user->name ?? 'Unknown User';
+        }
+        
         DB::table('logs')->insert([
             'user_id' => $user->id,
-            'fullname' => $user->first_name . ' ' . $user->last_name,
+            'fullname' => $fullname,
             'activity' => $validated['activity'],
             'details' => $validated['details'],
             'created_at' => now(),
@@ -408,8 +479,15 @@ class AdminAuthController extends Controller  // <-- This is crucial
             // Delete ALL tokens for this admin
             $admin->tokens()->delete();
             
-            // Log the inactivity logout
-            AdminAuthController::logUserAction($admin, 'Logout', 'Logged out due to inactivity');
+            // Log the inactivity logout to admin_logs table
+            DB::table('admin_logs')->insert([
+                'admin_id' => $admin->id,
+                'fullname' => $admin->name ?? 'Admin',
+                'activity' => 'Logout',
+                'details' => 'Logged out due to inactivity',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
             return response()->json([
                 'status' => true,

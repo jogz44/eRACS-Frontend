@@ -212,6 +212,8 @@ Route::prefix('admin')->group(function () {
         Route::post('/disbursements/create', [DisbursementController::class, 'store']);
         // Admin can fetch expense details for a selected barangay
         Route::get('/expense-details', [DisbursementController::class, 'getExpenseDetails']);
+        // Admin can view OR details for any disbursement
+        Route::get('/disbursements/{id}/or-details', [DisbursementController::class, 'getOrDetails']);
 
         // Admin banks endpoint (list all banks for selection in admin UI)
         Route::get('/banks', [\App\Http\Controllers\Library\BankLibraryController::class, 'getBanks']);
@@ -219,6 +221,8 @@ Route::prefix('admin')->group(function () {
         // Admin augmentation endpoints - can access all barangay data
         Route::get('/augmentations', [BudgetAugmentationController::class, 'adminIndex']);
         Route::post('/augmentations/create', [BudgetAugmentationController::class, 'store']);
+        // Admin can view individual augmentation
+        Route::get('/augmentations/{id}', [BudgetAugmentationController::class, 'show']);
     });
 
     // Dashboard Routes updated
