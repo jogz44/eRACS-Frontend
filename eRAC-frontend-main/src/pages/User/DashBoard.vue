@@ -108,15 +108,43 @@
       <div class="col-xs-12 col-md-6 q-mb-md">
         <q-card class="chart-card responsive-card">
           <q-card-section>
-            <div class="text-h6 text-weight-medium">Commitment Distribution</div>
-            <div class="text-caption text-grey-6">
-              {{ chartStore.selectedYear === 'all' ? 'All Years' : chartStore.selectedYear }}
+            <div class="row items-center justify-between">
+              <div>
+                <div class="text-h6 text-weight-medium">Commitment Distribution</div>
+                <div class="text-caption text-grey-6">
+                  {{ chartStore.selectedYear === 'all' ? 'All Years' : chartStore.selectedYear }}
+                </div>
+              </div>
+              <q-btn
+                icon="refresh"
+                color="primary"
+                flat
+                dense
+                size="sm"
+                @click="refreshChartData"
+                :loading="chartStore.chartLoading"
+                class="refresh-btn"
+              >
+                <q-tooltip>Refresh Chart Data</q-tooltip>
+              </q-btn>
             </div>
           </q-card-section>
           <q-separator />
           <q-card-section style="height: 350px; position: relative; width: 100%; overflow-x: auto">
             <div v-if="chartStore.chartLoading" class="absolute-center">
               <q-spinner color="primary" size="3em" />
+            </div>
+            <div v-else-if="!validateChartData(chartStore.pieChartData)" class="absolute-center text-center">
+              <q-icon name="pie_chart" size="3em" color="grey-4" />
+              <div class="text-grey-6 q-mt-sm">No chart data available</div>
+              <div class="text-caption text-grey-5">Select a different year or check data availability</div>
+              <q-btn
+                label="Load Test Data"
+                color="primary"
+                size="sm"
+                class="q-mt-md"
+                @click="chartStore.setTestData()"
+              />
             </div>
             <PieChart v-else :chart-data="chartStore.pieChartData" :options="chartOptions" />
           </q-card-section>
@@ -130,17 +158,17 @@
               <div class="text-h6 text-weight-medium">Disbursement Overview</div>
               <div class="row q-gutter-sm">
                 <div
-                  v-for="status in ['Pending', 'Partial', 'Liquidated']"
+                  v-for="status in ['unliquidated', 'Pending', 'Partial', 'Liquidated']"
                   :key="status"
                   class="status-count-chip"
                   :class="{ active: selectedDisbursementFilter === status }"
                   @click="selectedDisbursementFilter = status"
                 >
                   <q-chip
-                    :color="getStatusColor(status)"
+                    :color="status === 'unliquidated' ? 'orange' : getStatusColor(status)"
                     text-color="white"
                     size="sm"
-                    :label="`${status}: ${getStatusCount(status)}`"
+                    :label="`${status === 'unliquidated' ? 'Unliquidated' : status}: ${getStatusCount(status)}`"
                     clickable
                   />
                 </div>
@@ -194,7 +222,7 @@
             <q-table
               v-else
               :rows="filteredDisbursementRows"
-              :columns="chartStore.disbursementOverviewColumns"
+              :columns="disbursementTableColumns"
               row-key="id"
               flat
               bordered
@@ -265,6 +293,12 @@
             >
               <q-icon name="inbox" size="3em" color="grey-4" />
               <div class="text-grey-6 q-mt-sm">No disbursements found for the selected filter</div>
+              <div class="text-caption text-grey-5 q-mt-xs">
+                {{ selectedDisbursementFilter === 'unliquidated' ? 'All disbursements may be liquidated' : `No ${selectedDisbursementFilter} disbursements found` }}
+              </div>
+              <div class="text-caption text-grey-5 q-mt-xs">
+                Total disbursements: {{ chartStore.disbursementOverviewRows.length }}
+              </div>
             </div>
           </q-card-section>
         </q-card>
@@ -282,6 +316,41 @@
         <div class="text-caption">Please wait while we fetch data for the selected year...</div>
       </div>
     </q-inner-loading>
+
+                <!-- Debug Panel (remove in production) -->
+            <div v-if="showDebugPanel" class="q-mt-lg">
+              <q-card class="debug-card">
+                <q-card-section>
+                  <div class="row items-center justify-between q-mb-md">
+                    <div class="text-h6">Debug Information</div>
+                    <q-btn
+                      label="Test Backend"
+                      color="secondary"
+                      size="sm"
+                      @click="testBackend"
+                      :loading="testingBackend"
+                    />
+                  </div>
+                  <div class="row q-col-gutter-md">
+                    <div class="col-12 col-md-6">
+                      <div class="text-subtitle2">Chart Data:</div>
+                      <pre class="debug-text">{{ JSON.stringify(chartStore.pieChartData, null, 2) }}</pre>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <div class="text-subtitle2">Disbursements:</div>
+                      <div>Total: {{ chartStore.disbursementOverviewRows.length }}</div>
+                      <div>Filtered: {{ filteredDisbursementRows.length }}</div>
+                      <div>Selected Filter: {{ selectedDisbursementFilter }}</div>
+                      <div class="q-mt-md">
+                        <div class="text-subtitle2">Backend Debug:</div>
+                        <pre v-if="backendDebugData" class="debug-text">{{ JSON.stringify(backendDebugData, null, 2) }}</pre>
+                        <div v-else class="text-caption text-grey-5">Click "Test Backend" to check data</div>
+                      </div>
+                    </div>
+                  </div>
+                </q-card-section>
+              </q-card>
+            </div>
   </q-page>
 </template>
 
@@ -305,28 +374,103 @@ const isYearChanging = ref(false)
 // Page visibility handler for refreshing years
 let visibilityChangeHandler = null
 
+// Debug panel toggle (set to true to show debug info)
+const showDebugPanel = ref(false)
+
+// Backend debug data
+const backendDebugData = ref(null)
+const testingBackend = ref(false)
+
 // Disbursement filtering
 const selectedDisbursementFilter = ref('unliquidated')
 
 const disbursementFilters = ref([
   { label: 'Unliquidated', value: 'unliquidated' },
+  { label: 'Pending', value: 'Pending' },
+  { label: 'Partial', value: 'Partial' },
   { label: 'Liquidated', value: 'Liquidated' },
 ])
+
+// Custom disbursement table columns
+const disbursementTableColumns = [
+  {
+    name: 'dv_number',
+    required: true,
+    label: 'DV Number',
+    align: 'left',
+    sortable: true,
+    field: 'dv_number',
+    style: 'width: 18%',
+  },
+  {
+    name: 'date',
+    label: 'Date',
+    align: 'center',
+    sortable: true,
+    field: 'date',
+    style: 'width: 12%',
+  },
+  {
+    name: 'payee',
+    label: 'Payee',
+    align: 'left',
+    sortable: true,
+    field: 'payee',
+    style: 'width: 22%',
+  },
+  {
+    name: 'dv_amount',
+    label: 'DV Amount',
+    align: 'right',
+    field: 'dv_amount',
+    sortable: true,
+    style: 'width: 18%',
+  },
+  {
+    name: 'aging',
+    label: 'Aging (Days)',
+    align: 'center',
+    field: 'aging',
+    sortable: true,
+    style: 'width: 15%',
+  },
+  {
+    name: 'status',
+    label: 'Status',
+    align: 'center',
+    field: 'status',
+    sortable: true,
+    style: 'width: 15%',
+  },
+]
 
 // Computed properties for filtered disbursements
 const filteredDisbursementRows = computed(() => {
   let rows = []
 
   if (selectedDisbursementFilter.value === 'unliquidated') {
+    // Show all non-liquidated disbursements with aging
     rows = chartStore.disbursementOverviewRows.filter(
-      (row) => (row.status === 'Pending' || row.status === 'Partial') && row.aging && row.aging > 0,
+      (row) => row.status !== 'Liquidated' && row.aging !== '-'
+    )
+  } else if (selectedDisbursementFilter.value === 'Liquidated') {
+    // Show only liquidated disbursements
+    rows = chartStore.disbursementOverviewRows.filter(
+      (row) => row.status === 'Liquidated'
     )
   } else {
+    // Show specific status (Pending, Partial)
     rows = chartStore.disbursementOverviewRows.filter(
-      (row) => row.status === selectedDisbursementFilter.value,
+      (row) => row.status === selectedDisbursementFilter.value
     )
   }
-  return rows.sort((a, b) => (b.aging || 0) - (a.aging || 0))
+  
+  // Sort by aging (non-liquidated) or by date (liquidated)
+  if (selectedDisbursementFilter.value === 'Liquidated') {
+    return rows.sort((a, b) => new Date(b.date) - new Date(a.date))
+  } else {
+    return rows.sort((a, b) => (b.aging || 0) - (a.aging || 0))
+  }
 })
 
 // Helper function to get status color
@@ -367,7 +511,7 @@ const getAgingDescription = (days) => {
 // Helper function to get filter button color
 const getFilterButtonColor = (value) => {
   if (selectedDisbursementFilter.value === value) {
-    return value === 'unliquidated' ? 'primary' : 'primary'
+    return 'primary'
   }
   return 'grey-3'
 }
@@ -382,7 +526,12 @@ const getFilterButtonTextColor = (value) => {
 
 // Helper function to get status count
 const getStatusCount = (status) => {
-  return filteredDisbursementRows.value.filter((row) => row.status === status).length
+  if (status === 'unliquidated') {
+    return chartStore.disbursementOverviewRows.filter(
+      (row) => row.status !== 'Liquidated' && row.aging !== '-'
+    ).length
+  }
+  return chartStore.disbursementOverviewRows.filter((row) => row.status === status).length
 }
 
 // Refresh disbursement data
@@ -405,6 +554,81 @@ const refreshDisbursements = async () => {
       position: 'top',
       timeout: 3000,
     })
+  }
+}
+
+// Refresh chart data
+const refreshChartData = async () => {
+  try {
+    await chartStore.fetchPieChartData()
+    $q.notify({
+      type: 'positive',
+      message: 'Chart data refreshed!',
+      icon: 'refresh',
+      position: 'top',
+      timeout: 2000,
+    })
+  } catch (error) {
+    console.error('Error refreshing chart data:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to refresh chart data',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000,
+    })
+  }
+}
+
+// Validate chart data structure
+const validateChartData = (data) => {
+  if (!data) return false
+  if (!data.labels || !Array.isArray(data.labels)) return false
+  if (!data.datasets || !Array.isArray(data.datasets) || data.datasets.length === 0) return false
+  if (!data.datasets[0].data || !Array.isArray(data.datasets[0].data)) return false
+  if (data.labels.length !== data.datasets[0].data.length) return false
+  return true
+}
+
+// Test backend data
+const testBackend = async () => {
+  try {
+    testingBackend.value = true
+    const response = await fetch('/api/barangay/dashboard/debug', {
+      headers: {
+        'Authorization': `Bearer ${authStore.token || authStore.adminToken}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      backendDebugData.value = data.data
+      console.log('Backend debug data:', data.data)
+      
+      $q.notify({
+        type: 'positive',
+        message: 'Backend data retrieved successfully',
+        icon: 'check_circle',
+        position: 'top',
+        timeout: 2000,
+      })
+    } else {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+  } catch (error) {
+    console.error('Error testing backend:', error)
+    backendDebugData.value = { error: error.message }
+    
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to test backend: ' + error.message,
+      icon: 'error',
+      position: 'top',
+      timeout: 3000,
+    })
+  } finally {
+    testingBackend.value = false
   }
 }
 
@@ -524,7 +748,7 @@ const chartOptions = computed(() => ({
       bodyFont: {
         size: 12,
       },
-      cunliquidatedbacks: {
+      callbacks: {
         label: (context) => {
           const label = context.label || ''
           const value = context.raw
@@ -540,9 +764,18 @@ const chartOptions = computed(() => ({
 // Load dashboard data
 const loadDashboardData = async () => {
   try {
+    console.log('Loading dashboard data for year:', chartStore.selectedYear)
     await chartStore.loadDashboardData()
+    console.log('Dashboard data loaded successfully')
+    
     // Also fetch disbursement overview data
+    console.log('Fetching disbursement overview...')
     await chartStore.fetchDisbursementOverview()
+    console.log('Disbursement overview loaded successfully')
+    
+    // Log final data state
+    console.log('Final pie chart data:', chartStore.pieChartData)
+    console.log('Final disbursement rows:', chartStore.disbursementOverviewRows.length)
   } catch (error) {
     console.error('Error loading dashboard data:', error)
     unliquidatedocationError.value = 'Failed to load dashboard data. Please try again.'
@@ -556,6 +789,11 @@ watch(
     console.log('Updated pie chart data:', newVal)
     console.log('Pie chart labels:', newVal.labels)
     console.log('Pie chart data:', newVal.datasets?.[0]?.data)
+    
+    // Validate chart data structure
+    if (!newVal || !newVal.labels || !newVal.datasets || !newVal.datasets[0] || !newVal.datasets[0].data) {
+      console.warn('Invalid pie chart data structure:', newVal)
+    }
   },
   { deep: true },
 )
@@ -588,6 +826,12 @@ onMounted(async () => {
     }
   }
 
+  // Set fallback pie chart data if none available
+  if (!chartStore.pieChartData.labels || chartStore.pieChartData.labels.length === 0) {
+    console.log('Setting fallback pie chart data')
+    chartStore.setTestData()
+  }
+
   // Add page visibility listener to refresh years when user returns to dashboard
   visibilityChangeHandler = async () => {
     if (!document.hidden && chartStore.availableYears.length > 0) {
@@ -602,12 +846,23 @@ onMounted(async () => {
   }
 
   document.addEventListener('visibilitychange', visibilityChangeHandler)
+
+  // Add keyboard shortcut for debug panel (Ctrl+Shift+D)
+  const debugKeyHandler = (event) => {
+    if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+      showDebugPanel.value = !showDebugPanel.value
+      console.log('Debug panel toggled:', showDebugPanel.value)
+    }
+  }
+  document.addEventListener('keydown', debugKeyHandler)
 })
 
 onUnmounted(() => {
   if (visibilityChangeHandler) {
     document.removeEventListener('visibilitychange', visibilityChangeHandler)
   }
+  // Remove debug key handler
+  document.removeEventListener('keydown', debugKeyHandler)
 })
 </script>
 
@@ -985,5 +1240,21 @@ onUnmounted(() => {
 }
 .dashboard-page {
   background: whitesmoke;
+}
+
+/* Debug panel styling */
+.debug-card {
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+}
+
+.debug-text {
+  background-color: #fff;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
 }
 </style>
