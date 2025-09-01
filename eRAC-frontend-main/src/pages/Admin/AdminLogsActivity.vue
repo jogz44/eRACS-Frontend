@@ -13,6 +13,7 @@
           <div class="text-caption">{{ selectedUser?.position }} - {{ selectedUser?.barangay }}</div>
         </div>
 
+
         <q-table
           flat
           bordered
@@ -63,7 +64,7 @@
 </template>
 
 <script>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { date } from 'quasar'
 import { api } from 'boot/axios' // Adjust the import based on your axios setup
 import { useAuthStore } from 'stores/auth'
@@ -90,11 +91,15 @@ export default {
       set: (value) => emit('update:modelValue', value)
     })
 
-    watch(() => props.modelValue, (newValue) => {
-      if (newValue && props.selectedUser) {
-        loadActivities()
+    // Watch for dialog opening and user selection
+    watch([() => props.modelValue, () => props.selectedUser], ([newModelValue, newSelectedUser]) => {
+      if (newModelValue && newSelectedUser) {
+        // Use nextTick to ensure DOM is updated
+        nextTick(() => {
+          loadActivities()
+        })
       }
-    })
+    }, { immediate: true })
 
     const loadActivities = async () => {
       loading.value = true
@@ -111,12 +116,39 @@ export default {
       console.log('Loading activities for user:', {
         userId: props.selectedUser?.id,
         logDate: props.selectedUser?.log_date,
+        userType: props.selectedUser?.user_type,
+        barangay: props.selectedUser?.barangay,
+        adminRole: props.selectedUser?.admin_role,
         fullUser: props.selectedUser
       })
       
-      try {
-        const apiUrl = `/api/admin/logs/${props.selectedUser.id}/${props.selectedUser.log_date}`
-        console.log('Making API call to:', apiUrl)
+             try {
+         // More explicit user type detection
+         const userType = props.selectedUser.user_type
+         const barangay = props.selectedUser.barangay
+         const adminRole = props.selectedUser.admin_role
+         
+         // Determine if this is an admin user
+         const isAdminUser = userType === 'admin' || barangay === 'Admin'
+         
+         console.log('User type check:', {
+           userType: userType,
+           barangay: barangay,
+           adminRole: adminRole,
+           isAdminUser: isAdminUser,
+           userId: props.selectedUser.id
+         })
+         
+         let apiUrl
+         if (isAdminUser) {
+           // For admin users (super admin, COA officers), use the user logs endpoint with user_type parameter
+           apiUrl = `/api/admin/logs/${props.selectedUser.id}/${props.selectedUser.log_date}?user_type=admin`
+           console.log('Loading admin logs from:', apiUrl)
+         } else {
+           // For regular barangay users, use the user logs endpoint with user_type parameter
+           apiUrl = `/api/admin/logs/${props.selectedUser.id}/${props.selectedUser.log_date}?user_type=user`
+           console.log('Loading user logs from:', apiUrl)
+         }
         
         const response = await api.get(apiUrl, {
           headers: {

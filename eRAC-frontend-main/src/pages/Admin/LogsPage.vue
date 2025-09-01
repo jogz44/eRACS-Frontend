@@ -8,6 +8,7 @@
       v-if="selectedLog"
       v-model="showAdminLogsActivity"
       :selected-user="selectedLog"
+      @update:model-value="onDialogClose"
     />
 
     <div class="q-mb-sm">
@@ -99,6 +100,22 @@
         <template v-slot:body-cell-date="props">
           <q-td :props="props">
             {{ formatDate(props.row.log_date) }}
+          </q-td>
+        </template>
+
+        <template v-slot:body-cell-name="props">
+          <q-td :props="props">
+            <div class="text-weight-medium">
+              {{ props.row.fullname || 'Admin User' }}
+            </div>
+          </q-td>
+        </template>
+
+        <template v-slot:body-cell-barangay="props">
+          <q-td :props="props">
+            <div class="text-weight-medium">
+              {{ props.row.barangay || 'Admin' }}
+            </div>
           </q-td>
         </template>
 
@@ -257,8 +274,15 @@ export default {
   },
   methods: {
     openAdminLogsActivity(row) {
+      console.log('Opening admin logs activity for row:', row);
       this.selectedLog = row;
       this.showAdminLogsActivity = true;
+    },
+    onDialogClose(value) {
+      if (!value) {
+        // Dialog is closing, clear the selected log
+        this.selectedLog = null;
+      }
     },
     formatDate(dateString) {
       if (!dateString) return 'N/A'
