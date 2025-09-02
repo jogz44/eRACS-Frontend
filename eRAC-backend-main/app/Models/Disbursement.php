@@ -22,6 +22,8 @@ class Disbursement extends Model
         'status',
         'liquidated_amount',
         'liquidated_at',
+        'remarks',
+        'rejection_remarks',
     ];
 
     public function barangay()

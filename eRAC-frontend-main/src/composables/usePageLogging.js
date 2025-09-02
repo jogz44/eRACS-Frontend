@@ -1,5 +1,5 @@
-import { api } from 'boot/axios'
-import { useAuthStore } from 'stores/auth'
+import { api } from 'src/boot/axios'
+import { useAuthStore } from 'src/stores/auth'
 
 export function usePageLogging() {
   const authStore = useAuthStore()

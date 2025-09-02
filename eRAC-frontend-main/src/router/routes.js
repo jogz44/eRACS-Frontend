@@ -2,55 +2,55 @@ const routes = [
   {
     // Landing Page
     path: '/',
-    component: () => import('layouts/LoginLayout.vue'),
+    component: () => import('../layouts/LoginLayout.vue'),
     children: [
       {
         name: 'Login',
         path: '',
-        component: () => import('src/pages/Accounts/LoginPage.vue'),
+        component: () => import('../pages/Accounts/LoginPage.vue'),
       },
 
       {
         path: 'signup',
         name: 'Signup',
-        component: () => import('src/pages/Accounts/SignupPage.vue'),
+        component: () => import('../pages/Accounts/SignupPage.vue'),
       },
 
       {
         path: 'admin/login',
         name: 'Admin',
-        component: () => import('pages/Admin/LoginPage.vue'),
+        component: () => import('../pages/Admin/LoginPage.vue'),
       },
 
       {
         path: 'forgotpage',
         name: 'forgotpage',
-        component: () => import('src/pages/Accounts/ForgotPage.vue'),
+                  component: () => import('../pages/Accounts/ForgotPage.vue'),
       },
     ],
   },
 
   {
     path: '/reset-password',
-    component: () => import('layouts/LoginLayout.vue'),
+    component: () => import('../layouts/LoginLayout.vue'),
     children: [
       {
         name: 'ResetPassword',
         path: '',
-        component: () => import('src/pages/Accounts/ResetPasswordPage.vue'),
+        component: () => import('../pages/Accounts/ResetPasswordPage.vue'),
       },
     ],
   },
 
   {
     path: '/home',
-    component: () => import('layouts/MainLayout.vue'),
+    component: () => import('../layouts/MainLayout.vue'),
     children: [
       // Dashboard
       {
         path: 'dashboard',
         name: 'UserDashboard',
-        component: () => import('src/pages/User/DashBoard.vue'),
+        component: () => import('../pages/User/DashBoard.vue'),
         meta: { title: 'Dashboard' },
       },
       // Transactions
@@ -62,17 +62,17 @@ const routes = [
           {
             path: 'appropriation',
             name: 'Appropriation',
-            component: () => import('src/pages/User/Transaction/AppropriationTran.vue'),
+            component: () => import('../pages/User/Transaction/AppropriationTran.vue'),
           },
           {
             path: 'disbursement',
             name: 'Disbursement',
-            component: () => import('src/pages/User/Transaction/DisbursementTran.vue'),
+            component: () => import('../pages/User/Transaction/DisbursementTran.vue'),
           },
           {
             path: 'augmentation',
             name: 'Augmentation',
-            component: () => import('src/pages/User/Transaction/AugmentationTran.vue'),
+            component: () => import('../pages/User/Transaction/AugmentationTran.vue'),
           },
         ],
       },
@@ -86,17 +86,17 @@ const routes = [
           {
             path: 'appropriation',
             name: 'ContAppropriation',
-            component: () => import('src/pages/User/Continuing/ContAppr.vue'),
+            component: () => import('../pages/User/Continuing/ContAppr.vue'),
           },
           {
             path: 'disbursement',
             name: 'ContDisbursement',
-            component: () => import('src/pages/User/Continuing/ContDis.vue'),
+            component: () => import('../pages/User/Continuing/ContDis.vue'),
           },
           {
             path: 'augmentation',
             name: 'ContAugmentation',
-            component: () => import('src/pages/User/Continuing/ContAug.vue'),
+            component: () => import('../pages/User/Continuing/ContAug.vue'),
           },
         ],
       },
@@ -110,12 +110,12 @@ const routes = [
           {
             path: 'accounts',
             name: 'AccountsLib',
-            component: () => import('src/pages/User/Libraries/AccountsLib.vue'),
+            component: () => import('../pages/User/Libraries/AccountsLib.vue'),
           },
           {
             path: 'bank',
             name: 'BankLib',
-            component: () => import('src/pages/User/Libraries/BankLib.vue'),
+            component: () => import('../pages/User/Libraries/BankLib.vue'),
           },
         ],
       },
@@ -123,21 +123,21 @@ const routes = [
       {
         path: 'reports',
         name: 'Reports',
-        component: () => import('pages/ReportPage.vue'),
+        component: () => import('../pages/ReportPage.vue'),
         meta: { title: 'Reports' },
       },
       // User Access
       {
         path: 'useraccess',
         name: 'userAccess',
-        component: () => import ('src/pages/User/UserAccess.vue'),
+        component: () => import('../pages/User/UserAccess.vue'),
         meta: {title: 'UserAccess'}
       },
       // Logs
       {
         path: 'logsview',
         name: 'Logsview',
-        component: () => import ('src/pages/User/UserLogs.vue'),
+        component: () => import('../pages/User/UserLogs.vue'),
         meta: {title: 'Logs' }
 
       }
@@ -146,19 +146,19 @@ const routes = [
 
   {
     path: '/admin',
-    component: () => import('layouts/AdMainLayout.vue'),
+    component: () => import('../layouts/AdMainLayout.vue'),
     children: [
       // Dashboard
       {
         path: 'dashboard',
         name: 'AdminDashboard',
-        component: () => import('pages/Admin/DashBoard.vue'),
+        component: () => import('../pages/Admin/DashBoard.vue'),
         meta: { title: 'Dashboard' },
       },
        {
         path: 'reportPage',
         name: 'aDminReportPage',
-        component: () => import('pages/Admin/AdminReportpage.vue'),
+        component: () => import('../pages/Admin/AdminReportpage.vue'),
         meta: { title: 'Report page' },
       },
 
@@ -171,12 +171,12 @@ const routes = [
           {
             path: 'pending',
             name: 'Pending',
-            component: () => import('pages/Admin/UserControl/PendingPage.vue'),
+            component: () => import('../pages/Admin/UserControl/PendingPage.vue'),
           },
           {
             path: 'accepted',
             name: 'Accepted',
-            component: () => import('pages/Admin/UserControl/AcceptedPage.vue'),
+            component: () => import('../pages/Admin/UserControl/AcceptedPage.vue'),
           },
         ],
       },
@@ -184,47 +184,43 @@ const routes = [
       {
         path: 'userAccess',
         name: 'UserAccess',
-        component: () => import('pages/Admin/UserAccessPage.vue'),
+        component: () => import('../pages/Admin/UserAccessPage.vue'),
         meta: { title: 'UserAccess' },
       },
 
       {
         path: 'logs',
         name: 'Logs',
-        component: () => import('pages/Admin/LogsPage.vue'),
+        component: () => import('../pages/Admin/LogsPage.vue'),
         meta: { title: 'Logs' },
       },
       // Current Transactions
       {
         path: 'disbursement',
         name: 'adminDisbursement',
-        component: () => import('pages/Admin/Transaction/DisbursementTran.vue'),
+                    component: () => import('../pages/Admin/Transaction/DisbursementTran.vue'),
       },
       {
         path: 'appropriation',
         name: 'adminAppropriation',
-        component: () => import('pages/Admin/Transaction/AppropriationTran.vue'),
+                    component: () => import('../pages/Admin/Transaction/AppropriationTran.vue'),
       },
       {
         path: 'augmentation',
         name: 'adminAugmentation',
-        component: () => import('pages/Admin/Transaction/AugmentationTran.vue'),
+                    component: () => import('../pages/Admin/Transaction/AugmentationTran.vue'),
       },
       // Continuing Transactions
-      {
-        path: 'contAugmentation',
-        name: 'AdminAugmentation',
-        component: () => import('pages/Admin/Continuing/ContAug.vue'),
-      },
+
       {
         path: 'contAppropriation',
         name: 'AdminAppropriation',
-        component: () => import('pages/Admin/Continuing/ContAppr.vue'),
+                    component: () => import('../pages/Admin/Continuing/ContAppr.vue'),
       },
       {
         path: 'contDisbursement',
         name: 'AdminDisbursement',
-        component: () => import('pages/Admin/Continuing/ContDis.vue'),
+                    component: () => import('../pages/Admin/Continuing/ContDis.vue'),
       },
 
 
@@ -235,7 +231,7 @@ const routes = [
   {
     path: '/:catchAll(.*)*',
     name: 'ErrorNotFound',
-    component: () => import('pages/ErrorNotFound.vue'),
+    component: () => import('../pages/ErrorNotFound.vue'),
     meta: { title: 'Page Not Found' },
   },
 ]

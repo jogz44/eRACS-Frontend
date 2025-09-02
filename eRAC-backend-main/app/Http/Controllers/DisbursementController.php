@@ -79,6 +79,8 @@ class DisbursementController extends Controller
                 'payee' => $d->payee,
                 'dv_amount' => $d->dv_amount,
                 'status' => $d->status,
+                'remarks' => $d->remarks,
+                'rejection_remarks' => $d->rejection_remarks,
                 'created_at' => $d->created_at,
                 'updated_at' => $d->updated_at,
             ];
@@ -858,6 +860,183 @@ class DisbursementController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to delete disbursement',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // POST /api/barangay/disbursements/{id}/void-request
+    public function requestVoid(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+
+            // Validate remarks
+            $request->validate([
+                'remarks' => 'required|string|max:500'
+            ]);
+
+            // Allow any authenticated barangay user to request void
+
+            // Find the disbursement and ensure it belongs to the user's barangay
+            $disbursement = Disbursement::where('id', $id)
+                ->where('barangay_id', $user->barangay_id)
+                ->firstOrFail();
+
+            // Can only request void for Pending or Partial
+            if (!in_array($disbursement->status, ['Pending', 'Partial'])) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Only pending or partial disbursements can be void requested'
+                ], 400);
+            }
+
+            // Update status to Void Requested and save remarks
+            $disbursement->status = 'Void Requested';
+            $disbursement->remarks = $request->remarks;
+            $disbursement->save();
+
+            // Log action
+            AdminAuthController::logUserAction(
+                $user,
+                'Requested Void',
+                sprintf('#%s requested void', $disbursement->dv_number)
+            );
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Void request submitted',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error requesting void: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to submit void request',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // POST /api/barangay/disbursements/{id}/void-approve
+    public function approveVoid(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+
+            // Only Captain/Chairperson can approve
+            $positionName = $user->position ? $user->position->name : '';
+            $position = strtolower($positionName);
+            \Log::info('User position for void approval: ' . $positionName . ' (lowercase: ' . $position . ')');
+            
+            // Check if user has approval role (Captain or Chairperson)
+            $canApprove = strpos($position, 'captain') !== false || 
+                         strpos($position, 'chairperson') !== false ||
+                         strpos($position, 'barangay captain') !== false ||
+                         strpos($position, 'sk chairperson') !== false;
+                         
+            if (!$canApprove) {
+                \Log::warning('User not authorized for void approval. Position: ' . $positionName);
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Only Captain/Chairperson can approve void requests'
+                ], 403);
+            }
+
+            $disbursement = Disbursement::where('id', $id)
+                ->where('barangay_id', $user->barangay_id)
+                ->firstOrFail();
+
+            if ($disbursement->status !== 'Void Requested') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Only disbursements with status "Void Requested" can be approved'
+                ], 400);
+            }
+
+            $disbursement->status = 'Voided';
+            $disbursement->save();
+
+            AdminAuthController::logUserAction(
+                $user,
+                'Approved Void',
+                sprintf('#%s approved void', $disbursement->dv_number)
+            );
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Void request approved',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error approving void: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to approve void request',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // POST /api/barangay/disbursements/{id}/void-reject
+    public function rejectVoid(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+
+            // Validate rejection remarks
+            $request->validate([
+                'remarks' => 'required|string|max:500'
+            ]);
+
+            // Only Captain/Chairperson can reject
+            $positionName = $user->position ? $user->position->name : '';
+            $position = strtolower($positionName);
+            \Log::info('User position for void rejection: ' . $positionName . ' (lowercase: ' . $position . ')');
+            
+            // Check if user has approval role (Captain or Chairperson)
+            $canReject = strpos($position, 'captain') !== false || 
+                        strpos($position, 'chairperson') !== false ||
+                        strpos($position, 'barangay captain') !== false ||
+                        strpos($position, 'sk chairperson') !== false;
+                        
+            if (!$canReject) {
+                \Log::warning('User not authorized for void rejection. Position: ' . $positionName);
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Only Captain/Chairperson can reject void requests'
+                ], 403);
+            }
+
+            $disbursement = Disbursement::where('id', $id)
+                ->where('barangay_id', $user->barangay_id)
+                ->firstOrFail();
+
+            if ($disbursement->status !== 'Void Requested') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Only disbursements with status "Void Requested" can be rejected'
+                ], 400);
+            }
+
+            // On reject, return to Pending and save rejection remarks
+            $disbursement->status = 'Pending';
+            $disbursement->rejection_remarks = $request->remarks;
+            $disbursement->save();
+
+            AdminAuthController::logUserAction(
+                $user,
+                'Rejected Void',
+                sprintf('#%s rejected void', $disbursement->dv_number)
+            );
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Void request rejected',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error rejecting void: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to reject void request',
                 'error' => $e->getMessage()
             ], 500);
         }

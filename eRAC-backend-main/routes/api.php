@@ -143,6 +143,10 @@ Route::prefix('barangay')->group(function () {
         Route::patch('disbursements/{id}/liquidate', [DisbursementController::class, 'liquidate']);
         // Delete a disbursement
         Route::delete('disbursements/{id}', [DisbursementController::class, 'destroy']);
+        // Void workflow
+        Route::post('disbursements/{id}/void-request', [DisbursementController::class, 'requestVoid']);
+        Route::post('disbursements/{id}/void-approve', [DisbursementController::class, 'approveVoid']);
+        Route::post('disbursements/{id}/void-reject', [DisbursementController::class, 'rejectVoid']);
         // Fetch OR Details for a disbursement
         Route::get('disbursements/{id}/or-details', [DisbursementController::class, 'getOrDetails']);
         // Save OR Details for a disbursement
@@ -178,6 +182,8 @@ Route::prefix('barangay')->group(function () {
         Route::post('/continuing-appropriations', [ContinuingAppropriationController::class, 'store']);
         Route::get('/continuing-appropriations/list', [ContinuingAppropriationController::class, 'getContinuingAppropriations']);
         Route::patch('/continuing-appropriations/{id}/status', [ContinuingAppropriationController::class, 'updateStatus']);
+        Route::get('/continuing-appropriations/{id}/history', [ContinuingAppropriationController::class, 'getAllocationHistory']);
+        Route::post('/continuing-appropriations/{id}/allocate', [ContinuingAppropriationController::class, 'commitAllocation']);
 
 
     });
