@@ -1,8 +1,8 @@
 <template>
   <q-card>
     <q-table
-      :rows="filteredRows"
-      :columns="store.augmentationColumns"
+      :rows="store.filteredAugmentations" 
+      :columns="columns"
       row-key="id"
       :pagination="store.pagination"
       :loading="store.loadingAugmentations"
@@ -75,13 +75,6 @@ import { computed, ref } from 'vue'
 import { useActivityLogging } from 'src/composables/useActivityLogging'
 import { useQuasar } from 'quasar'
 
-const props = defineProps({
-  filteredData: {
-    type: Array,
-    default: () => []
-  }
-})
-
 const store = useAugmentationStore()
 const $q = useQuasar()
 const authStore = useAuthStore()
@@ -113,10 +106,6 @@ const columns = computed(() => {
   ]
 })
 
-// Use filtered data if provided, otherwise fall back to store data
-const filteredRows = computed(() => {
-  return props.filteredData.length > 0 ? props.filteredData : store.augmentation
-})
 
 // Helper function to get budget source label
 const getBudgetSourceLabel = (budgetSource) => {
