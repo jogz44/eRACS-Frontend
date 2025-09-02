@@ -15,7 +15,6 @@ class DatabaseSeeder extends Seeder
             BarangayUserSeeder::class,
             LibFiscalYearSeeder::class,
             LibExpenseClassAndTypeSeeder::class,
-            LibExpenseItemSeeder::class,
             BudgetSeeder::class,
 
             TranAppropriationSeeder::class,
