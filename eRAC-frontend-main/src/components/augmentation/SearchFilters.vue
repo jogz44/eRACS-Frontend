@@ -109,11 +109,16 @@ const onDateRangeClear = () => {
   store.dateTo = ''
 }
 
-const clearAllFilters = () => {
+const clearAllFilters = async () => {
   store.searchQuery = ''
   store.dateFrom = ''
   store.dateTo = ''
   dateRange.value = null
+  try {
+    await store.fetchAugmentations()
+  } catch (error) {
+    console.error('Error clearing all filters:', error)
+  }
 }
 </script>
 

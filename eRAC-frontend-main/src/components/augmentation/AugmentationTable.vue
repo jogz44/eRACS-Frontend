@@ -47,6 +47,23 @@
         </q-td>
       </template>
 
+      <!-- Admin-only Remarks column with Review button -->
+      <template v-if="isAdminUser" #body-cell-remarks="props">
+        <q-td :props="props">
+          <q-btn
+            dense
+            :icon="isReviewed(props.row.id) ? 'check' : 'rate_review'"
+            :label="isReviewed(props.row.id) ? 'Reviewed' : 'Review'"
+            :color="isReviewed(props.row.id) ? 'positive' : 'primary'"
+            :outline="!isReviewed(props.row.id)"
+            :disable="isReviewed(props.row.id)"
+            :unelevated="!isReviewed(props.row.id)"
+            rounded
+            @click="!isReviewed(props.row.id) && handleReviewClick(props.row)"
+          />
+        </q-td>
+      </template>
+
     </q-table>
   </q-card>
 </template>
@@ -54,9 +71,9 @@
 <script setup>
 import { useAugmentationStore } from 'stores/augmentation'
 import { useAuthStore } from 'stores/auth'
+import { computed, ref } from 'vue'
+import { useActivityLogging } from 'src/composables/useActivityLogging'
 import { useQuasar } from 'quasar'
-
-import { computed } from 'vue'
 
 const props = defineProps({
   filteredData: {
@@ -71,6 +88,30 @@ const authStore = useAuthStore()
 
 // Check if current user is admin
 const isAdminUser = computed(() => authStore.admin)
+const reviewedSet = ref(new Set())
+const isReviewed = (id) => reviewedSet.value.has(id)
+const { logAdminActivity } = useActivityLogging()
+
+const handleReviewClick = (row) => {
+  reviewedSet.value.add(row.id)
+  logAdminActivity('Reviewed Item', `Admin reviewed Augmentation Ref ${row.ref_number || row.refNo || ''} (Barangay: ${row.barangay_name || 'Unknown Barangay'})`)
+}
+
+// Build columns dynamically to include admin-only remarks column
+const columns = computed(() => {
+  const base = store.augmentationColumns
+  if (!isAdminUser.value) return base
+  return [
+    ...base,
+    {
+      name: 'remarks',
+      label: 'Remarks',
+      field: '',
+      align: 'center',
+      sortable: false,
+    },
+  ]
+})
 
 // Use filtered data if provided, otherwise fall back to store data
 const filteredRows = computed(() => {

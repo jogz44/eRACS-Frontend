@@ -157,12 +157,32 @@ class AdminAuthController extends Controller  // <-- This is crucial
     // Delete a user
     public function deleteUser(BarangayUser $user)
     {
-        $userName = $user->first_name . ' ' . $user->last_name;
-        $user->delete();
+        try {
+            $userName = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?: ($user->username ?? (string)$user->id);
 
-        return response()->json([
-            'message' => "User {$userName} deleted successfully"
-        ]);
+            // Clean up dependent records that may have FKs
+            // Remove user activity logs (if any)
+            DB::table('logs')->where('user_id', $user->id)->delete();
+
+            // Revoke tokens for this user if any
+            try {
+                $user->tokens()->delete();
+            } catch (\Throwable $t) {
+                // ignore if tokens relation not configured
+            }
+
+            // Finally delete the user
+            $user->delete();
+
+            return response()->json([
+                'message' => "User {$userName} deleted successfully"
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Failed to delete user',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     // Get all users with permissions

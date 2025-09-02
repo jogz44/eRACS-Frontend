@@ -183,8 +183,11 @@ export function useAugmentationActions(state) {
 
 
       // Add barangay_id for admin users if selected
-      if (authStore.admin && state.selectedBarangayId.value) {
-        payload.barangay_id = state.selectedBarangayId.value
+      if (authStore.admin) {
+        const selectedBarangay = authStore.getSelectedBarangay()
+        if (selectedBarangay) {
+          payload.barangay_id = selectedBarangay
+        }
       }
 
       // Admin users cannot create augmentations - only view
@@ -497,10 +500,7 @@ export function useAugmentationActions(state) {
     resetForm('augmentation')
   }
 
-  // Set selected barangay for admin filtering
-  const setSelectedBarangay = (barangayId) => {
-    state.selectedBarangayId.value = barangayId
-  }
+
 
   // Fetch available budgets for augmentation
   const fetchAvailableBudgets = async () => {
@@ -554,7 +554,6 @@ export function useAugmentationActions(state) {
     resetForm,
     generateNewAugmentationDefaults,
     refreshAugmentationDialog,
-    setSelectedBarangay,
     fetchAvailableBudgets,
     setBudgetSourceFilter,
   }

@@ -524,8 +524,6 @@ const clearAllFilters = () => {
   appropriationStore.dateFrom = ''
   appropriationStore.dateTo = ''
   dateRange.value = null
-  // Ensure user only sees their barangay data
-  appropriationStore.setSelectedBarangay(null)
 }
 
 const showEditAllocationDialog = ref(false)

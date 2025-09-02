@@ -24,6 +24,7 @@ export const useAppropriationStore = defineStore("appropriation", {
     fiscalYears: [],
     currentFiscalYearId: null,
     currentYear: new Date().getFullYear().toString(),
+    selectedFiscalYear: new Date().getFullYear().toString(),
     selectedBarangayId: null, // For admin barangay filtering
     selectedBudgetType: 'all', // For budget type filtering
 
@@ -107,8 +108,31 @@ export const useAppropriationStore = defineStore("appropriation", {
     },
 
     filteredAppropriations(state) {
+      // Helper to parse either 'YYYY-MM-DD' or 'DD/MM/YYYY'
+      const parseFlexibleDate = (value) => {
+        if (!value) return null
+        if (value instanceof Date) return value
+        if (typeof value === 'string') {
+          if (value.includes('/')) {
+            const [dd, mm, yyyy] = value.split('/')
+            const d = new Date(`${yyyy}-${mm}-${dd}`)
+            return isNaN(d.getTime()) ? null : d
+          }
+          const d = new Date(value)
+          return isNaN(d.getTime()) ? null : d
+        }
+        return null
+      }
+
       let results = state.appropriations
 
+      // Date filtering (inclusive)
+      const from = parseFlexibleDate(state.dateFrom)
+      const to = parseFlexibleDate(state.dateTo)
+      if (from || to) {
+        // Normalize range bounds to full-day
+        const fromStart = from ? new Date(from.setHours(0, 0, 0, 0)) : null
+        const toEnd = to ? new Date(to.setHours(23, 59, 59, 999)) : null
       // Budget type filtering
       if (state.selectedBudgetType && state.selectedBudgetType !== 'all') {
         results = results.filter((item) => {
@@ -122,28 +146,25 @@ export const useAppropriationStore = defineStore("appropriation", {
         })
       }
 
-      // Date filtering
-      if (state.dateFrom || state.dateTo) {
-        const fromDate = state.dateFrom ? new Date(state.dateFrom) : null
-        const toDate = state.dateTo ? new Date(state.dateTo) : null
+      // Date filtering (merge edit)
+      //if (state.dateFrom || state.dateTo) {
+       // const fromDate = state.dateFrom ? new Date(state.dateFrom) : null
+        //const toDate = state.dateTo ? new Date(state.dateTo) : null
 
         results = results.filter((item) => {
-          const itemDate = new Date(item.date)
-          const normalizedItemDate = new Date(itemDate.toDateString())
-          const normalizedFromDate = fromDate ? new Date(fromDate.toDateString()) : null
-          const normalizedToDate = toDate ? new Date(toDate.toDateString()) : null
-
-          return (
-            (!normalizedFromDate || normalizedItemDate >= normalizedFromDate) &&
-            (!normalizedToDate || normalizedItemDate <= normalizedToDate)
-          )
+          const d = parseFlexibleDate(item.date)
+          if (!d) return false
+          const dt = d.getTime()
+          return (!fromStart || dt >= fromStart.getTime()) && (!toEnd || dt <= toEnd.getTime())
         })
       }
 
       // Search filtering
-      if (state.searchQuery.trim()) {
-        const query = state.searchQuery.toLowerCase()
-        results = results.filter((item) => Object.values(item).some((val) => String(val).toLowerCase().includes(query)))
+      const query = (state.searchQuery || '').toLowerCase().trim()
+      if (query) {
+        results = results.filter((item) =>
+          Object.values(item || {}).some((val) => String(val ?? '').toLowerCase().includes(query)),
+        )
       }
 
       return results
@@ -254,8 +275,11 @@ export const useAppropriationStore = defineStore("appropriation", {
     async addBudget(newBudget) {
       try {
         // Add barangay_id for admin users if selected
-        if (this.authStore.admin && this.selectedBarangayId) {
-          newBudget.barangay_id = this.selectedBarangayId
+        if (this.authStore.admin) {
+          const selectedBarangay = this.authStore.getSelectedBarangay()
+          if (selectedBarangay) {
+            newBudget.barangay_id = selectedBarangay
+          }
         }
         
         // Admin users cannot create budgets - only view
@@ -349,6 +373,7 @@ export const useAppropriationStore = defineStore("appropriation", {
 
     async initialize() {
       await this.fetchAppropriations()
+      await this.fetchFiscalYears()
     },
 
     // Backwards-compat: some components call fetchAppropriations; route to fetchBudgets
@@ -741,6 +766,46 @@ export const useAppropriationStore = defineStore("appropriation", {
           }
         })
         .filter((cat) => cat.total > 0)
+    },
+
+    // Set selected fiscal year for filtering
+    setSelectedFiscalYear(year) {
+      this.selectedFiscalYear = year
+    },
+
+    // Fetch available fiscal years
+    async fetchFiscalYears() {
+      try {
+        const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
+        
+        if (this.authStore.admin) {
+          // For admin users, provide current year and "All Years" option
+          const currentYear = new Date().getFullYear()
+          this.fiscalYears = [
+            { year: 'all', label: 'All Years' },
+            { year: currentYear.toString(), label: currentYear.toString() }
+          ]
+          return
+        }
+        
+        // For barangay users, fetch from barangay endpoint
+        const response = await api.get("/api/barangay/fiscal-years", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+        })
+        
+        const fiscalYears = Array.isArray(response.data) ? response.data : response.data.data || []
+        this.fiscalYears = fiscalYears.map(fy => ({
+          year: fy.year.toString(),
+          label: fy.year.toString()
+        }))
+      } catch (error) {
+        console.error("Failed to fetch fiscal years:", error)
+        this.fiscalYears = []
+      }
     },
   },
 })

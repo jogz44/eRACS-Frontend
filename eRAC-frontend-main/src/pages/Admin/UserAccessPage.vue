@@ -156,6 +156,7 @@ import { api } from 'boot/axios'
 import { useUserControlStore } from 'stores/userControlStore'
 import { useAuthStore } from 'stores/auth'
 import { usePageLogging } from '../../composables/usePageLogging'
+import { useActivityLogging } from '../../composables/useActivityLogging'
 
 export default {
   name: 'UserControlAcceptedPage',
@@ -359,6 +360,15 @@ export default {
           delete: Boolean(this.accessModal.permissions.delete.value),
           print: Boolean(this.accessModal.permissions.print.value),
         }
+
+        // Capture previous permissions to compute changes (match barangay logic)
+        const previous = (this.accessModal.selectedUser && this.accessModal.selectedUser.permissions) || {
+          view: true,
+          add: true,
+          edit: true,
+          delete: false,
+          print: true,
+        }
         
         // Validate permissions structure
         console.log('Permissions structure validation:', {
@@ -401,6 +411,29 @@ export default {
           const userIndex = this.users.findIndex(u => u.id === this.accessModal.selectedUser.id)
           if (userIndex !== -1) {
             this.users[userIndex].permissions = permissions
+          }
+
+          // Log admin activity matching barangay useraccess format (only changed flags)
+          try {
+            const { logAdminActivity } = useActivityLogging()
+            const u = this.accessModal.selectedUser || {}
+            const fullName = u.name || [u.first_name, u.middle_name, u.last_name].filter(Boolean).join(' ').trim()
+            const position = (u.position && u.position.name) || u.position || u.position_name || 'Unknown Position'
+            const barangay = u.barangay || u.barangay_name || 'Unknown Barangay'
+            const labels = { view: 'View', add: 'Add', edit: 'Edit', delete: 'Delete', print: 'Print' }
+            const changes = []
+            Object.keys(labels).forEach((key) => {
+              const oldVal = Boolean(previous[key])
+              const newVal = Boolean(permissions[key])
+              if (oldVal !== newVal) {
+                changes.push(`${newVal ? 'Enabled' : 'Disabled'} ${labels[key]}`)
+              }
+            })
+            const changeDescription = changes.length ? `${changes.join(', ')}` : 'No changes detected'
+            const details = `${changeDescription} for user "${fullName}" (${position} in ${barangay}) `
+            await logAdminActivity('Updated User Permissions', details)
+          } catch (e) {
+            console.warn('Failed to log access update activity:', e)
           }
 
           this.closeAccessModal()
