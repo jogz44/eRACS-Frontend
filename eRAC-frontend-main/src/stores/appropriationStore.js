@@ -25,7 +25,8 @@ export const useAppropriationStore = defineStore("appropriation", {
     currentFiscalYearId: null,
     currentYear: new Date().getFullYear().toString(),
     selectedFiscalYear: new Date().getFullYear().toString(),
-
+    selectedBarangayId: null, // For admin barangay filtering
+    selectedBudgetType: 'all', // For budget type filtering
 
     allocations: [],
     authStore: useAuthStore(), // Moved hook call inside state
@@ -132,6 +133,23 @@ export const useAppropriationStore = defineStore("appropriation", {
         // Normalize range bounds to full-day
         const fromStart = from ? new Date(from.setHours(0, 0, 0, 0)) : null
         const toEnd = to ? new Date(to.setHours(23, 59, 59, 999)) : null
+      // Budget type filtering
+      if (state.selectedBudgetType && state.selectedBudgetType !== 'all') {
+        results = results.filter((item) => {
+          const description = item.description?.toLowerCase() || ''
+          if (state.selectedBudgetType === 'annual') {
+            return description.includes('annual')
+          } else if (state.selectedBudgetType === 'supplemental') {
+            return description.includes('supplemental')
+          }
+          return true
+        })
+      }
+
+      // Date filtering (merge edit)
+      //if (state.dateFrom || state.dateTo) {
+       // const fromDate = state.dateFrom ? new Date(state.dateFrom) : null
+        //const toDate = state.dateTo ? new Date(state.dateTo) : null
 
         results = results.filter((item) => {
           const d = parseFlexibleDate(item.date)
@@ -348,6 +366,11 @@ export const useAppropriationStore = defineStore("appropriation", {
 
 
 
+    // Method to set selected budget type for filtering
+    setSelectedBudgetType(budgetType) {
+      this.selectedBudgetType = budgetType
+    },
+
     async initialize() {
       await this.fetchAppropriations()
       await this.fetchFiscalYears()
@@ -390,22 +413,26 @@ export const useAppropriationStore = defineStore("appropriation", {
           }
         }
 
-        // Only proceed for barangay users
-        if (!this.authStore.admin) {
-          const endpoint = "/api/barangay/expense-hierarchy"
-          const params = { fiscal_year_id: fiscalYear.id }
 
-          const response = await api.get(endpoint, {
-            params: params,
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-          })
+        // Use different endpoints for admin vs regular users
+        const endpoint = this.authStore.admin ? "/api/admin/expense-hierarchy" : "/api/barangay/expense-hierarchy"
 
-          this.allocations = response.data.data || []
-        }
+        // Admin sends year (not fiscal_year_id) because validation expects a real fiscal_years.id for that rule
+        const currentYear = new Date().getFullYear()
+        const params = this.authStore.admin
+          ? { year: currentYear, ...(this.selectedBarangayId ? { barangay_id: this.selectedBarangayId } : {}), ...(this.selectedBudgetType !== 'all' ? { budget_type: this.selectedBudgetType } : {}) }
+          : { fiscal_year_id: fiscalYear.id, ...(this.selectedBudgetType !== 'all' ? { budget_type: this.selectedBudgetType } : {}) }
+
+        const response = await api.get(endpoint, {
+          params: params,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+        })
+
+        this.allocations = response.data.data || []
       } catch (error) {
         console.error("[ERROR] fetchExpenseHierarchy:", error)
         throw error

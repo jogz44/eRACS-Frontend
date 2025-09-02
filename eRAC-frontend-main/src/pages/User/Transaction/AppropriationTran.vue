@@ -14,80 +14,136 @@
       </div>
     </div>
 
-    <!-- Simplified the search and filter section structure -->
-    <div class="q-mb-sm search-filter-container">
-      <div class="row items-center q-gutter-sm">
-        <q-input
-          outlined
-          dense
-          placeholder="Search Description..."
-          v-model="appropriationStore.searchQuery"
-          class="search-input"
-        >
-          <template v-slot:append>
-            <q-icon name="search" />
-          </template>
-        </q-input>
+    <!-- Budget Type Filter Tabs -->
+    <div class="budget-type-filter q-mb-md">
+      <q-tabs
+        v-model="selectedBudgetType"
+        class="text-grey-8"
+        active-color="primary"
+        indicator-color="primary"
+        align="justify"
+        narrow-indicator
+      >
+        <q-tab name="all" label="All Budgets" icon="list" />
+        <q-tab name="annual" label="Annual Budget" icon="calendar_today" />
+        <q-tab name="supplemental" label="Supplemental Budget" icon="add_circle" />
+      </q-tabs>
+    </div>
 
-        <q-input
-          outlined
-          dense
-          :model-value="dateRangeDisplay"
-          label="Date Range"
-          class="date-input"
-          clearable
-          @clear="onDateRangeClear"
-          readonly
-        >
-          <template v-slot:append>
-            <q-icon name="event">
-              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                <q-date
-                  v-model="dateRange"
-                  range
-                  @update:model-value="onDateRangeChange"
-                />
-              </q-popup-proxy>
-            </q-icon>
-          </template>
-        </q-input>
-
-        <q-btn
-          dense
-          outlined
-          color="red-10"
-          icon="clear_all"
-          label="Clear All"
-          @click="clearAllFilters"
-          class="desktop-clear-btn"
-        />
-
-        <q-space />
-
-        <q-btn
-          label="Add"
-          icon="add"
-          color="primary"
-          @click="addBudget"
-          :loading="addLoading"
-          :disable="addLoading"
-          v-permission="'add'"
-          class="desktop-add-btn"
-        />
-      </div>
-      
-      <!-- Mobile Clear All button positioned below search inputs -->
-      <div class="mobile-clear-btn-container">
-        <q-btn
-          round
-          dense
-          color="red-10"
-          icon="delete"
-          class="mobile-clear-btn"
-          @click="clearAllFilters"
-        />
+    <!-- Budget Summary Cards -->
+    <div class="budget-summary q-mb-md" v-if="selectedBudgetType === 'all'">
+      <div class="row q-col-gutter-md">
+        <div class="col-md-6 col-sm-12">
+          <q-card class="summary-card annual-budget">
+            <q-card-section class="text-center">
+              <div class="text-h6 text-primary">Annual Budget</div>
+              <div class="text-h5 text-weight-bold">
+                {{ appropriationStore.formatCurrency(annualBudgetTotal) }}
+              </div>
+              <div class="text-caption text-grey-6">
+                {{ annualBudgetCount }} budget{{ annualBudgetCount !== 1 ? 's' : '' }}
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-md-6 col-sm-12">
+          <q-card class="summary-card supplemental-budget">
+            <q-card-section class="text-center">
+              <div class="text-h6 text-secondary">Supplemental Budget</div>
+              <div class="text-h5 text-weight-bold">
+                {{ appropriationStore.formatCurrency(supplementalBudgetTotal) }}
+              </div>
+              <div class="text-caption text-grey-6">
+                {{ supplementalBudgetCount }} budget{{ supplementalBudgetCount !== 1 ? 's' : '' }}
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
       </div>
     </div>
+
+    <!-- Filters Section -->
+    <q-card flat bordered class="q-mb-md filters-section">
+      <q-card-section>
+        <div class="row q-col-gutter-md items-end">
+          <!-- Search Input -->
+          <div class="col-md-2 col-sm-6 col-xs-12">
+            <q-item-label class="q-mb-xs text-weight-medium">Search:</q-item-label>
+            <q-input
+              outlined
+              dense
+              v-model="appropriationStore.searchQuery"
+              placeholder="Search description..."
+              clearable
+            >
+              <template v-slot:append>
+                <q-icon name="search" />
+              </template>
+            </q-input>
+          </div>
+          
+          <!-- Date Range Filter -->
+          <div class="col-md-2 col-sm-6 col-xs-12">
+            <q-item-label class="q-mb-xs text-weight-medium">Date Range:</q-item-label>
+            <q-input
+              outlined
+              dense
+              v-model="dateRangeDisplay"
+              placeholder="Select date range..."
+              readonly
+              clearable
+              @clear="onDateRangeClear"
+            >
+              <template v-slot:append>
+                <q-icon name="event" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date
+                      v-model="dateRange"
+                      range
+                      @update:model-value="onDateRangeChange"
+                    >
+                      <div class="row items-center justify-end">
+                        <q-btn v-close-popup label="Close" color="primary" flat />
+                      </div>
+                    </q-date>
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
+          
+          <!-- Clear Button -->
+          <div class="col-md-1 col-sm-6 col-xs-12">
+            <q-btn
+              dense
+              outlined
+              color="red-10"
+              icon="clear_all"
+              label="Clear"
+              @click="clearAllFilters"
+              class="full-width"
+            />
+          </div>
+          
+          <!-- Spacer to push Add button to the right -->
+          <div class="col-md-2 col-sm-0 col-xs-0"></div>
+          
+          <!-- Add Button -->
+          <div class="col-md-1 col-sm-6 col-xs-12">
+            <q-btn
+              label="Add"
+              color="primary"
+              icon="add"
+              @click="addBudget"
+              :loading="addLoading"
+              :disable="addLoading"
+              class="full-width"
+              v-permission="'add'"
+            />
+          </div>
+        </div>
+      </q-card-section>
+    </q-card>
 
     <!-- Add Budget Dialog -->
     <q-dialog v-model="showDialog" @keydown.enter="handleEnterKey">
@@ -126,6 +182,19 @@
               </q-icon>
             </template>
           </q-input>
+
+          <q-select
+            outlined
+            v-model="budgetType"
+            :options="budgetTypeOptions"
+            option-label="label"
+            option-value="value"
+            emit-value
+            map-options
+            label="Budget Type"
+            :rules="[(val) => !!val || 'Required']"
+            @keydown.enter="handleEnterKey"
+          />
 
           <q-input
             outlined
@@ -177,6 +246,19 @@
         <template v-slot:body-cell-unappropriated="props">
           <q-td :props="props">
             {{ appropriationStore.formatCurrency(props.row.unappropriated) }}
+          </q-td>
+        </template>
+
+        <template v-slot:body-cell-description="props">
+          <q-td :props="props">
+            <div class="row items-center q-gutter-xs">
+              <q-badge
+                :color="getBudgetTypeColor(props.row.description)"
+                :label="getBudgetTypeLabel(props.row.description)"
+                class="budget-type-badge"
+              />
+              <span>{{ props.row.description }}</span>
+            </div>
           </q-td>
         </template>
 
@@ -351,6 +433,13 @@ const amount = ref(null)
 const loading = ref(false)
 const addLoading = ref(false)
 const dateRange = ref(null)
+const selectedBudgetType = ref('all')
+const budgetType = ref('annual')
+
+const budgetTypeOptions = [
+  { label: 'Annual Budget', value: 'annual' },
+  { label: 'Supplemental Budget', value: 'supplemental' }
+]
 
 const loadAppropriation = async () => {
   loading.value = true
@@ -385,6 +474,31 @@ const dateRangeDisplay = computed(() => {
     month: 'short', day: 'numeric', year: 'numeric'
   })
   return `${fromDate} - ${toDate}`
+})
+
+// Budget summary computed properties
+const annualBudgetTotal = computed(() => {
+  return appropriationStore.appropriations
+    .filter(budget => budget.description?.toLowerCase().includes('annual'))
+    .reduce((total, budget) => total + (parseFloat(budget.amount) || 0), 0)
+})
+
+const supplementalBudgetTotal = computed(() => {
+  return appropriationStore.appropriations
+    .filter(budget => budget.description?.toLowerCase().includes('supplemental'))
+    .reduce((total, budget) => total + (parseFloat(budget.amount) || 0), 0)
+})
+
+const annualBudgetCount = computed(() => {
+  return appropriationStore.appropriations
+    .filter(budget => budget.description?.toLowerCase().includes('annual'))
+    .length
+})
+
+const supplementalBudgetCount = computed(() => {
+  return appropriationStore.appropriations
+    .filter(budget => budget.description?.toLowerCase().includes('supplemental'))
+    .length
 })
 
 const onDateRangeChange = (newRange) => {
@@ -564,6 +678,11 @@ watch(selectedFiscalYear, (newYearId) => {
   }
 })
 
+// Watch for budget type changes and sync with store
+watch(selectedBudgetType, (newBudgetType) => {
+  appropriationStore.setSelectedBudgetType(newBudgetType)
+})
+
 const openEditAllocationDialog = async (row) => {
   editLoading.value[row.id] = true
   try {
@@ -623,10 +742,14 @@ const closeEditAllocationDialog = () => {
 const saveBudget = async () => {
   addLoading.value = true
   try {
+    // Set description based on budget type
+    const budgetTypeDescription = budgetType.value === 'annual' ? 'Annual Budget' : 'Supplemental Budget'
+    const finalDescription = description.value ? `${budgetTypeDescription} - ${description.value}` : budgetTypeDescription
+
     const payload = {
       fiscal_year_id: selectedFiscalYear.value,
       original_amount: parseFloat(amount.value),
-      description: description.value,
+      description: finalDescription,
       start_date: startDate.value.replace(/\//g, '-'),
       end_date: endDate.value.replace(/\//g, '-'),
     }
@@ -925,10 +1048,32 @@ const openDialog = async () => {
       (y) => y.yearValue === currentYear,
     )
     selectedFiscalYear.value = currentYearOption?.value || accountLibraryStore.yearOptions[0]?.value
+    budgetType.value = 'annual' // Reset to annual by default
+    description.value = '' // Reset description
+    amount.value = null // Reset amount
     showDialog.value = true
   } catch (error) {
     console.error('Error loading fiscal years:', error)
   }
+}
+
+// Budget type helper functions
+const getBudgetTypeColor = (description) => {
+  if (description?.toLowerCase().includes('annual')) {
+    return 'primary'
+  } else if (description?.toLowerCase().includes('supplemental')) {
+    return 'secondary'
+  }
+  return 'grey'
+}
+
+const getBudgetTypeLabel = (description) => {
+  if (description?.toLowerCase().includes('annual')) {
+    return 'Annual'
+  } else if (description?.toLowerCase().includes('supplemental')) {
+    return 'Supplemental'
+  }
+  return 'Other'
 }
 </script>
 
@@ -941,6 +1086,40 @@ const openDialog = async () => {
 .page-header {
   border-bottom: 1px solid #e0e0e0;
   padding-bottom: 8px;
+}
+
+.budget-type-filter {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 8px;
+}
+
+.budget-type-badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.filters-section {
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.budget-summary .summary-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.budget-summary .summary-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.budget-summary .annual-budget {
+  border-left: 4px solid #1976d2;
+}
+
+.budget-summary .supplemental-budget {
+  border-left: 4px solid #9c27b0;
 }
 
 .hierarchical-table {

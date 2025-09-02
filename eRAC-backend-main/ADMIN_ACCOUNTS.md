@@ -6,7 +6,7 @@ The eRAC system now supports multiple types of admin accounts with different per
 ## Admin Account Types
 
 ### 1. Super Administrator
-- **Email**: admin@gmail.com
+- **Username**: admin
 - **Password**: admin123
 - **Role**: super_admin
 - **Permissions**: 
@@ -14,17 +14,8 @@ The eRAC system now supports multiple types of admin accounts with different per
   - Full user management access (User Access, Pending Users, Accepted Users, Logs)
   - Complete system control
 
-### 2. Accounting Officer
-- **Email**: accounting@gmail.com
-- **Password**: accounting123
-- **Role**: accounting
-- **Permissions**:
-  - Access to all main functions (Dashboard, Transactions)
-  - NO access to user management functions
-  - Focused on financial transactions and reporting
-
-### 3. COA Officer
-- **Email**: coa@gmail.com
+### 2. COA Officer
+- **Username**: coa
 - **Password**: coa123
 - **Role**: coa
 - **Permissions**:

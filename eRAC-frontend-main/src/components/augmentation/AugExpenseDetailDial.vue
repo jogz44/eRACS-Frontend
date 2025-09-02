@@ -9,6 +9,11 @@
         <!-- Display FROM expense info -->
         <div class="text-subtitle1 q-mb-sm">
           <strong>From Expense:</strong> {{ store.forms.augExpense?.value?.from_expense }}
+          <q-badge
+            :color="getBudgetSourceColor(store.forms.augExpense?.value?.from_budget_source)"
+            :label="getBudgetSourceLabel(store.forms.augExpense?.value?.from_budget_source)"
+            class="q-ml-sm budget-source-badge"
+          />
         </div>
         <div class="text-subtitle1 q-mb-sm">
           <strong>Balance:</strong> ₱{{ store.forms.augExpense?.value?.balance?.toLocaleString() }}
@@ -18,6 +23,12 @@
         <div class="q-mb-md">
           <div class="text-subtitle2 q-mb-sm">
             <strong>To Expense:</strong>
+            <q-badge
+              v-if="store.forms.augExpense?.value?.to_budget_source"
+              :color="getBudgetSourceColor(store.forms.augExpense?.value?.to_budget_source)"
+              :label="getBudgetSourceLabel(store.forms.augExpense?.value?.to_budget_source)"
+              class="q-ml-sm budget-source-badge"
+            />
           </div>
           <div class="row q-gutter-sm">
             <q-input
@@ -38,6 +49,19 @@
               @click="openToExpenseSelection"
             />
           </div>
+        </div>
+
+        <!-- Cross-Budget Transfer Warning -->
+        <div v-if="isCrossBudgetTransfer" class="q-mb-md">
+          <q-banner class="bg-orange-1 text-orange-8">
+            <template v-slot:avatar>
+              <q-icon name="warning" color="orange" />
+            </template>
+            <strong>Cross-Budget Transfer:</strong> You are transferring funds between different budget types 
+            ({{ getBudgetSourceLabel(store.forms.augExpense?.value?.from_budget_source) }} → 
+            {{ getBudgetSourceLabel(store.forms.augExpense?.value?.to_budget_source) }}). 
+            This requires Sanggunian authorization.
+          </q-banner>
         </div>
 
         <!-- Particulars Field -->
@@ -82,10 +106,37 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useAugmentationStore } from 'stores/augmentation'
 import { useQuasar } from 'quasar'
 const store = useAugmentationStore()
 const $q = useQuasar()
+
+// Budget source helper functions
+const getBudgetSourceColor = (budgetSource) => {
+  if (budgetSource?.toLowerCase().includes('annual')) {
+    return 'primary'
+  } else if (budgetSource?.toLowerCase().includes('supplemental')) {
+    return 'secondary'
+  }
+  return 'grey'
+}
+
+const getBudgetSourceLabel = (budgetSource) => {
+  if (budgetSource?.toLowerCase().includes('annual')) {
+    return 'Annual'
+  } else if (budgetSource?.toLowerCase().includes('supplemental')) {
+    return 'Supplemental'
+  }
+  return 'Mixed'
+}
+
+// Check if this is a cross-budget transfer
+const isCrossBudgetTransfer = computed(() => {
+  const fromBudget = store.forms.augExpense?.value?.from_budget_source
+  const toBudget = store.forms.augExpense?.value?.to_budget_source
+  return fromBudget && toBudget && fromBudget !== toBudget
+})
 
 function openToExpenseSelection() {
   // Set the flag to indicate we're selecting a TO expense
@@ -100,7 +151,41 @@ function openToExpenseSelection() {
 
 function handleSave() {
   try {
-    store.saveExpense()
+    // Check if this is a cross-budget transfer
+    if (isCrossBudgetTransfer.value) {
+      $q.dialog({
+        title: 'Confirm Cross-Budget Transfer',
+        message: `You are transferring ₱${store.forms.augExpense?.value?.amount?.toLocaleString()} from ${getBudgetSourceLabel(store.forms.augExpense?.value?.from_budget_source)} Budget to ${getBudgetSourceLabel(store.forms.augExpense?.value?.to_budget_source)} Budget. This requires Sanggunian authorization. Do you want to proceed?`,
+        cancel: true,
+        persistent: true,
+        ok: {
+          label: 'Proceed',
+          color: 'orange'
+        }
+      }).onOk(() => {
+        // User confirmed, proceed with save
+        store.saveExpense()
+        // Show success notification for cross-budget transfer
+        $q.notify({
+          type: 'positive',
+          message: `Cross-budget transfer added successfully! ₱${store.forms.augExpense?.value?.amount?.toLocaleString()} transferred from ${getBudgetSourceLabel(store.forms.augExpense?.value?.from_budget_source)} to ${getBudgetSourceLabel(store.forms.augExpense?.value?.to_budget_source)} Budget.`,
+          position: 'top',
+          icon: 'check_circle',
+        })
+      }).onCancel(() => {
+        // User cancelled, do nothing
+      })
+    } else {
+      // Regular transfer, proceed normally
+      store.saveExpense()
+      // Show success notification for regular transfer
+      $q.notify({
+        type: 'positive',
+        message: `Expense transfer added successfully! ₱${store.forms.augExpense?.value?.amount?.toLocaleString()} transferred.`,
+        position: 'top',
+        icon: 'check_circle',
+      })
+    }
   } catch (error) {
     $q.notify({
       type: 'negative',
@@ -189,6 +274,11 @@ const handlePasteNumeric = (event) => {
 </script>
 
 <style scoped>
+.budget-source-badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
 /* Responsive Dialog - Only sizing adjustments for mobile and tablet */
 @media (max-width: 600px) {
   /* Mobile View - Only size adjustments */

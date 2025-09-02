@@ -14,41 +14,86 @@
       </div>
     </div>
 
-    <!-- Simplified the search and filter section structure -->
-    <div class="q-mb-sm">
-      <div class="row items-center q-gutter-sm">
-        <q-input
-          outlined
-          dense
-          placeholder="Search Description..."
-          v-model="searchQuery"
-          class="search-input"
-        >
-          <template v-slot:append>
-            <q-icon name="search" />
-          </template>
-        </q-input>
+    <!-- Filters Section -->
+    <q-card flat bordered class="q-mb-md filters-section">
+      <q-card-section>
+        <div class="row q-col-gutter-md items-end">
+          <!-- Search Input -->
+          <div class="col-md-2 col-sm-6 col-xs-12">
+            <q-item-label class="q-mb-xs text-weight-medium">Search:</q-item-label>
+            <q-input
+              outlined
+              dense
+              v-model="searchQuery"
+              placeholder="Search description..."
+              clearable
+            >
+              <template v-slot:append>
+                <q-icon name="search" />
+              </template>
+            </q-input>
+          </div>
 
-        <q-btn
-          dense
-          outlined
-          color="red-10"
-          icon="clear_all"
-          label="Clear All"
-          @click="clearAllFilters"
-        />
+          <!-- Date Range Filter -->
+          <div class="col-md-2 col-sm-6 col-xs-12">
+            <q-item-label class="q-mb-xs text-weight-medium">Date Range:</q-item-label>
+            <q-input
+              outlined
+              dense
+              v-model="dateRangeDisplay"
+              placeholder="Select date range..."
+              readonly
+              clearable
+              @clear="onDateRangeClear"
+            >
+              <template v-slot:append>
+                <q-icon name="event" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date
+                      v-model="dateRange"
+                      range
+                      @update:model-value="onDateRangeChange"
+                    >
+                      <div class="row items-center justify-end">
+                        <q-btn v-close-popup label="Close" color="primary" flat />
+                      </div>
+                    </q-date>
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
 
-        <q-space />
+          <!-- Clear Button -->
+          <div class="col-md-1 col-sm-6 col-xs-12">
+            <q-btn
+              dense
+              outlined
+              color="red-10"
+              icon="clear_all"
+              label="Clear"
+              @click="clearAllFilters"
+              class="full-width"
+            />
+          </div>
 
-        <q-btn
-          label="Continue Accounts"
-          @click="showContinueDialog = true"
-          color="secondary"
-          v-permission="'add'"
-          :loading="generalLoading"
-        />
-      </div>
-    </div>
+          <!-- Spacer to push Add button to the right -->
+          <div class="col-md-2 col-sm-0 col-xs-0"></div>
+
+          <!-- Add Button -->
+          <div class="col-md-1 col-sm-6 col-xs-12">
+            <q-btn
+              label="Continue Accounts"
+              @click="showContinueDialog = true"
+              color="secondary"
+              v-permission="'add'"
+              :loading="generalLoading"
+              class="full-width"
+            />
+          </div>
+        </div>
+      </q-card-section>
+    </q-card>
 
     <!-- Dialog for Selecting Accounts -->
     <q-dialog v-model="showContinueDialog" @keydown.enter="handleEnterKey">
@@ -114,7 +159,6 @@
 
     <!-- Main Data Table -->
     <q-card flat bordered>
-
       <q-table
         :rows="filteredAppropriations"
         :columns="columns"
@@ -146,23 +190,23 @@
           </q-td>
         </template>
 
-                 <template v-slot:body-cell-amount="props">
-           <q-td :props="props">
-             {{ formatCurrency(props.row.appropriation || props.row.amount) }}
-           </q-td>
-         </template>
+        <template v-slot:body-cell-amount="props">
+          <q-td :props="props">
+            {{ formatCurrency(props.row.appropriation || props.row.amount) }}
+          </q-td>
+        </template>
 
-         <template v-slot:body-cell-total_appropriated="props">
-           <q-td :props="props">
-             {{ formatCurrency(props.row.total_appropriated || 0) }}
-           </q-td>
-         </template>
+        <template v-slot:body-cell-total_appropriated="props">
+          <q-td :props="props">
+            {{ formatCurrency(props.row.total_appropriated || 0) }}
+          </q-td>
+        </template>
 
-         <template v-slot:body-cell-unappropriated="props">
-           <q-td :props="props">
-             {{ formatCurrency(props.row.unappropriated) }}
-           </q-td>
-         </template>
+        <template v-slot:body-cell-unappropriated="props">
+          <q-td :props="props">
+            {{ formatCurrency(props.row.unappropriated) }}
+          </q-td>
+        </template>
 
         <template v-slot:body-cell-action="props">
           <q-td :props="props">
@@ -172,7 +216,11 @@
                 icon="edit"
                 color="orange"
                 @click="openEditAllocationDialog(props.row)"
-                :disable="!props.row.total_appropriated || props.row.total_appropriated <= 0 || editLoading[props.row.id]"
+                :disable="
+                  !props.row.total_appropriated ||
+                  props.row.total_appropriated <= 0 ||
+                  editLoading[props.row.id]
+                "
                 :loading="editLoading[props.row.id]"
                 v-permission="'edit'"
               />
@@ -208,13 +256,7 @@
         <q-card-section class="q-pb-none">
           <div class="row items-center justify-between">
             <div class="text-h6">Allocate Amounts</div>
-            <q-btn
-              icon="close"
-              flat
-              round
-              dense
-              @click="showAllocationDialog = false"
-            />
+            <q-btn icon="close" flat round dense @click="showAllocationDialog = false" />
           </div>
         </q-card-section>
 
@@ -248,14 +290,30 @@
                   <div class="col-12">{{ expenseClass.name }}</div>
                 </div>
 
-                <template v-for="expenseType in expenseClass.children" :key="'type-' + expenseType.id">
+                <template
+                  v-for="expenseType in expenseClass.children"
+                  :key="'type-' + expenseType.id"
+                >
                   <div class="row q-pa-xs" style="border-bottom: 1px solid #f0f0f0">
-                    <div class="col-6" style="padding-left: 16px; display: flex; align-items: center">
+                    <div
+                      class="col-6"
+                      style="padding-left: 16px; display: flex; align-items: center"
+                    >
                       <q-btn
                         dense
                         flat
-                        :icon="(expenseType.children && expenseType.children.length > 0 && expandedTypes[expenseType.id]) ? 'expand_more' : 'chevron_right'"
-                        @click="(expenseType.children && expenseType.children.length > 0) ? toggleType(expenseType.id) : null"
+                        :icon="
+                          expenseType.children &&
+                          expenseType.children.length > 0 &&
+                          expandedTypes[expenseType.id]
+                            ? 'expand_more'
+                            : 'chevron_right'
+                        "
+                        @click="
+                          expenseType.children && expenseType.children.length > 0
+                            ? toggleType(expenseType.id)
+                            : null
+                        "
                         size="sm"
                       />
                       <span>{{ expenseType.name }}</span>
@@ -279,10 +337,22 @@
                     </div>
                   </div>
 
-                  <template v-if="expandedTypes[expenseType.id] && expenseType.children && expenseType.children.length > 0">
-                    <template v-for="expenseItem in expenseType.children" :key="'item-' + expenseItem.id">
+                  <template
+                    v-if="
+                      expandedTypes[expenseType.id] &&
+                      expenseType.children &&
+                      expenseType.children.length > 0
+                    "
+                  >
+                    <template
+                      v-for="expenseItem in expenseType.children"
+                      :key="'item-' + expenseItem.id"
+                    >
                       <div class="row q-pa-xs" style="border-bottom: 1px solid #f0f0f0">
-                        <div class="col-6" style="padding-left: 32px; display: flex; align-items: center">
+                        <div
+                          class="col-6"
+                          style="padding-left: 32px; display: flex; align-items: center"
+                        >
                           <q-icon name="arrow_right" size="xs" class="q-mr-xs" />
                           <span>{{ expenseItem.name }}</span>
                         </div>
@@ -319,282 +389,313 @@
           />
         </q-card-actions>
       </q-card>
-         </q-dialog>
+    </q-dialog>
 
-           <!-- View Dialog -->
-      <q-dialog v-model="showViewDialog">
-        <q-card style="min-width: 900px; max-width: 90vw">
-          <q-card-section class="q-pb-none">
-            <div class="row items-center justify-between">
-              <div class="text-h6">View Appropriation Details</div>
-              <q-btn
-                icon="close"
-                flat
-                round
-                dense
-                @click="showViewDialog = false"
-              />
-            </div>
-          </q-card-section>
+    <!-- View Dialog -->
+    <q-dialog v-model="showViewDialog">
+      <q-card style="min-width: 900px; max-width: 90vw">
+        <q-card-section class="q-pb-none">
+          <div class="row items-center justify-between">
+            <div class="text-h6">View Appropriation Details</div>
+            <q-btn icon="close" flat round dense @click="showViewDialog = false" />
+          </div>
+        </q-card-section>
 
-          <q-card-section>
-            <!-- Summary section -->
-            <div class="row q-mb-md q-col-gutter-md">
-              <div class="col-12 col-sm-6">
-                <div class="text-caption">Description:</div>
-                <strong>{{ selectedRow.value.description || '-' }}</strong>
-              </div>
-              <div class="col-12 col-sm-6">
-                <div class="text-caption">Continued Date:</div>
-                <strong>{{ selectedRow.value.continued_date || '-' }}</strong>
-              </div>
-              <div class="col-12 col-sm-6">
-                <div class="text-caption">Total Budget:</div>
-                <strong>{{ formatCurrency(selectedRow.amount) }}</strong>
-              </div>
-              <div class="col-12 col-sm-6">
-                <div class="text-caption">Unappropriated:</div>
-                <strong>{{ formatCurrency(selectedRow.value.unappropriated) }}</strong>
-              </div>
+        <q-card-section>
+          <!-- Summary section -->
+          <div class="row q-mb-md q-col-gutter-md">
+            <div class="col-12 col-sm-6">
+              <div class="text-caption">Description:</div>
+              <strong>{{ selectedRow.description || '-' }}</strong>
             </div>
 
-            <!-- Loading state -->
-            <div v-if="viewLoading" class="text-center q-pa-md">
-              <q-spinner size="2em" />
-              <div class="q-mt-sm">Loading allocation history...</div>
-            </div>
+            <div class="col-12 col-sm-6">
+              <div class="text-caption">Continued Date:</div>
+              <strong>{{ selectedRow.continued_date || '-' }}</strong>
 
-            <!-- Allocation History by Year -->
-            <div v-else>
-              <!-- Original appropriation from previous year -->
-              <div class="q-mb-md">
-                <div class="text-h6 text-weight-medium q-mb-sm">
-                  Year {{ selectedRow.year || 'Previous Year' }}
+            </div>
+            <div class="col-12 col-sm-6">
+              <div class="text-caption">Total Budget:</div>
+              <strong>{{ formatCurrency(selectedRow.amount) }}</strong>
+            </div>
+            <div class="col-12 col-sm-6">
+              <div class="text-caption">Unappropriated:</div>
+              <strong>{{ formatCurrency(selectedRow.unappropriated) }}</strong>
+            </div>
+          </div>
+
+          <!-- Loading state -->
+          <div v-if="viewLoading" class="text-center q-pa-md">
+            <q-spinner size="2em" />
+            <div class="q-mt-sm">Loading allocation history...</div>
+          </div>
+
+          <!-- Allocation History by Year -->
+          <div v-else>
+            <!-- Original appropriation from previous year -->
+            <div class="q-mb-md">
+              <div class="text-h6 text-weight-medium q-mb-sm">
+                Year {{ selectedRow.year || 'Previous Year' }}
+              </div>
+              <div class="text-caption q-mb-sm">
+                Original appropriation continued from previous year
+              </div>
+              <div class="hierarchical-table" style="border: 1px solid #e0e0e0">
+                <div class="row q-pa-sm bg-grey-2 text-weight-medium">
+                  <div class="col-6">Account</div>
+                  <div class="col-6 text-right">Amount (₱)</div>
                 </div>
-                <div class="text-caption q-mb-sm">Original appropriation continued from previous year</div>
-                <div class="hierarchical-table" style="border: 1px solid #e0e0e0">
-                  <div class="row q-pa-sm bg-grey-2 text-weight-medium">
-                    <div class="col-6">Account</div>
-                    <div class="col-6 text-right">Amount (₱)</div>
-                  </div>
-                  <div class="hierarchical-body">
-                    <div class="row q-pa-sm" style="border-bottom: 1px solid #f0f0f0">
-                      <div class="col-6">
-                        <div class="text-weight-medium">{{ selectedRow.value.expense_class || 'Unknown' }}</div>
+
+                <div class="hierarchical-body">
+                  <div class="row q-pa-sm" style="border-bottom: 1px solid #f0f0f0">
+                    <div class="col-6">
+                      <div class="text-weight-medium">
+                        {{ selectedRow.expense_class || 'Unknown' }}
+
                       </div>
-                      <div class="col-6 text-right">
-                        <div class="text-weight-medium">{{ formatCurrency(selectedRow.value.amount) }}</div>
-                      </div>
+                    </div>
+                    <div class="col-6 text-right">
+                      <div class="text-weight-medium">{{ formatCurrency(selectedRow.amount) }}</div>
                     </div>
                   </div>
                 </div>
               </div>
+            </div>
 
-              <!-- Current year allocations -->
-              <div v-if="viewAllocationHistory.length > 0" class="q-mb-md">
-                <div class="text-h6 text-weight-medium q-mb-sm">
-                  Year {{ contApprStore.selectedYear }}
-                </div>
-                <div class="text-caption q-mb-sm">Allocations made in current year</div>
 
-                <template v-for="(session, sessionIndex) in viewAllocationHistory" :key="'session-' + sessionIndex">
-                  <div class="q-mb-sm">
-                    <div class="text-subtitle2 text-weight-medium q-mb-xs">
-                      Session {{ sessionIndex + 1 }} - {{ session.created_at ? new Date(session.created_at).toLocaleDateString() : 'Unknown Date' }}
+            <!-- Current year allocations -->
+            <div v-if="viewAllocationHistory.length > 0" class="q-mb-md">
+              <div class="text-h6 text-weight-medium q-mb-sm">
+                Year {{ contApprStore.selectedYear }}
+              </div>
+              <div class="text-caption q-mb-sm">Allocations made in current year</div>
+
+              <template
+                v-for="(session, sessionIndex) in viewAllocationHistory"
+                :key="'session-' + sessionIndex"
+              >
+                <div class="q-mb-sm">
+                  <div class="text-subtitle2 text-weight-medium q-mb-xs">
+                    Session {{ sessionIndex + 1 }} -
+                    {{
+                      session.created_at
+                        ? new Date(session.created_at).toLocaleDateString()
+                        : 'Unknown Date'
+                    }}
+                  </div>
+                  <div class="hierarchical-table" style="border: 1px solid #e0e0e0">
+                    <div class="row q-pa-sm bg-grey-2 text-weight-medium">
+                      <div class="col-6">Account</div>
+                      <div class="col-6 text-right">Amount (₱)</div>
+
                     </div>
-                    <div class="hierarchical-table" style="border: 1px solid #e0e0e0">
-                      <div class="row q-pa-sm bg-grey-2 text-weight-medium">
-                        <div class="col-6">Account</div>
-                        <div class="col-6 text-right">Amount (₱)</div>
-                      </div>
-                      <div class="hierarchical-body">
-                        <template v-for="allocation in session.allocations || []" :key="'alloc-' + allocation.id">
-                          <div class="row q-pa-sm" style="border-bottom: 1px solid #f0f0f0">
-                            <div class="col-6">
-                              <div class="text-weight-medium">
-                                {{ getExpenseName(allocation) }}
-                              </div>
-                            </div>
-                            <div class="col-6 text-right">
-                              <div class="text-weight-medium">{{ formatCurrency(allocation.amount) }}</div>
+                    <div class="hierarchical-body">
+                      <template
+                        v-for="allocation in session.allocations || []"
+                        :key="'alloc-' + allocation.id"
+                      >
+                        <div class="row q-pa-sm" style="border-bottom: 1px solid #f0f0f0">
+                          <div class="col-6">
+                            <div class="text-weight-medium">
+                              {{ getExpenseName(allocation) }}
                             </div>
                           </div>
-                        </template>
-                      </div>
-                    </div>
-                  </div>
-                </template>
-              </div>
-
-              <!-- No allocations message -->
-              <div v-else class="text-center q-pa-md text-grey-6">
-                <q-icon name="info" size="2em" class="q-mb-sm" />
-                <div>No allocations have been made yet for this appropriation.</div>
-              </div>
-            </div>
-          </q-card-section>
-
-          <q-card-actions align="right" class="q-pa-md">
-            <q-btn flat label="Close" v-close-popup />
-          </q-card-actions>
-        </q-card>
-      </q-dialog>
-
-      <!-- Commit Dialog -->
-      <q-dialog v-model="showCommitDialog" persistent>
-        <q-card class="allocation-card" style="min-width: 1050px; height: 800px; font-size: medium;">
-          <!-- Header with reduced padding -->
-          <q-card-section class="q-pb-sm q-pt-sm">
-            <div class="row items-center justify-between">
-              <div class="text-h6">Allocate Amounts</div>
-              <q-icon
-                name="close"
-                class="cursor-pointer"
-                size="sm"
-                @click="showCommitDialog = false"
-              />
-            </div>
-          </q-card-section>
-
-          <q-card-section class="q-py-lg">
-            <div class="row q-mb-sm">
-              <div class="col-md-6 col-12 q-mb-md text-weight-regular">
-                Total Budget:
-                <strong>{{ formatCurrency(commitSelectedRow?.amount || 0) }}</strong>
-              </div>
-              <div class="col-md-6 col-12 text-weight-regular">
-                Available for allocation:
-                <strong>{{ formatCurrency(commitAvailableBudget) }}</strong>
-              </div>
-
-              <div class="col-md-6 col-12 q-mb-md text-weight-regular">
-                New Allocations:
-                <strong>{{ formatCurrency(commitNewAllocationsTotal) }}</strong>
-              </div>
-
-              <div class="col-md-6 col-12 q-mb-md text-weight-regular">
-                Net Change:
-                <strong
-                  :class="commitNetChange < 0 ? 'text-positive' : commitNetChange > commitAvailableBudget ? 'text-negative' : 'text-primary'"
-                >
-                  {{ formatCurrency(commitNetChange) }}
-                </strong>
-              </div>
-
-              <div class="col-md-6 col-12 q-mb-md text-weight-regular">
-                Remaining after changes:
-                <strong
-                  :class="commitRemainingAfterChanges < 0 ? 'text-negative' : 'text-positive'"
-                >
-                  {{ formatCurrency(commitRemainingAfterChanges) }}
-                </strong>
-              </div>
-            </div>
-
-            <q-input
-              outlined
-              dense
-              placeholder="Search accounts..."
-              class="q-mb-sm"
-              v-model="commitSearchQuery"
-              style="max-width: 500px"
-              clearable
-            >
-              <template v-slot:append>
-                <q-icon name="search" />
-              </template>
-            </q-input>
-
-            <!-- Compact Hierarchical Table -->
-            <div class="hierarchical-table" style="border: 1px solid #e0e0e0; border-radius: 4px">
-              <!-- Table Header -->
-              <div
-                class="row q-table__top bg-grey-3 text-weight-bold"
-                style="padding: 8px 12px; min-height: 40px"
-              >
-                <div class="col-6" style="display: flex; align-items: center">Account</div>
-                <div
-                  class="col-6 text-right"
-                  style="display: flex; align-items: center; justify-content: flex-end"
-                >
-                  Amount (₱)
-                </div>
-              </div>
-
-              <!-- Table Body -->
-              <div class="hierarchical-body" style="max-height: 300px; overflow-y: auto">
-                <template v-for="expenseClass in commitDisplayAccounts" :key="'class-' + expenseClass.id">
-                  <!-- Expense Class Row -->
-                  <div
-                    class="row bg-grey-3 text-weight-bold"
-                    style="padding: 12px 12px; min-height: 32px"
-                  >
-                    <div class="col-6" style="display: flex; align-items: center">
-                      {{ expenseClass.name }}
-                    </div>
-                    <div
-                      class="col-6 text-right"
-                      style="display: flex; align-items: center; justify-content: flex-end"
-                    >
-                      {{ formatCurrency(calculateCommitClassTotal(expenseClass)) }}
-                    </div>
-                  </div>
-
-                  <!-- Expense Type Rows -->
-                  <template
-                    v-for="expenseType in expenseClass.children"
-                    :key="'type-' + expenseType.id"
-                  >
-                    <div
-                      class="row"
-                      :class="getCommitTypeClass(expenseType)"
-                      style="padding: 6px 12px; min-height: 32px; border-bottom: 1px solid #f0f0f0"
-                    >
-                      <div class="col-6" style="padding-left: 24px; display: flex; align-items: center">
-                        <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
-                        {{ expenseType.name }}
-                      </div>
-                      <div class="col-6 text-right">
-                                                 <q-input
-                           v-if="!expenseType.children || expenseType.children.length === 0"
-                           dense
-                           :model-value="commitInputCache[`type-${expenseType.id}`] || ''"
-                           @update:model-value="
-                             (val) => {
-                               const cleanValue = handleCommitAmountInput(val)
-                               updateCommitAllocationAmount(`type-${expenseType.id}`, cleanValue)
-                               updateCommitUnappropriated()
-                             }
-                           "
-                           @blur="
-                             (event) => {
-                               const formatted = formatToTwoDecimals(event.target.value)
-                               const formattedDisplay = formatNumberWithCommas(formatted)
-                               updateCommitAllocationAmount(`type-${expenseType.id}`, formattedDisplay)
-                               updateCommitUnappropriated()
-                             }
-                           "
-                           prefix="₱"
-                           placeholder="0.00"
-                           style="max-width: 230px; width: 100%; display: inline-block"
-                           class="q-pa-none"
-                           input-class="q-py-xs"
-                         />
-                        <div v-else class="text-weight-medium">
-                          {{ formatCurrency(calculateCommitTypeTotal(expenseType)) }}
+                          <div class="col-6 text-right">
+                            <div class="text-weight-medium">
+                              {{ formatCurrency(allocation.amount) }}
+                            </div>
+                          </div>
                         </div>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <!-- No allocations message -->
+            <div v-else class="text-center q-pa-md text-grey-6">
+              <q-icon name="info" size="2em" class="q-mb-sm" />
+              <div>No allocations have been made yet for this appropriation.</div>
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Close" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Commit Dialog -->
+    <q-dialog v-model="showCommitDialog" persistent>
+      <q-card class="allocation-card" style="min-width: 1050px; height: 800px; font-size: medium">
+        <!-- Header with reduced padding -->
+        <q-card-section class="q-pb-sm q-pt-sm">
+          <div class="row items-center justify-between">
+            <div class="text-h6">Allocate Amounts</div>
+            <q-icon
+              name="close"
+              class="cursor-pointer"
+              size="sm"
+              @click="showCommitDialog = false"
+            />
+          </div>
+        </q-card-section>
+
+        <q-card-section class="q-py-lg">
+          <div class="row q-mb-sm">
+            <div class="col-md-6 col-12 q-mb-md text-weight-regular">
+              Total Budget:
+              <strong>{{ formatCurrency(commitSelectedRow?.amount || 0) }}</strong>
+            </div>
+            <div class="col-md-6 col-12 text-weight-regular">
+              Available for allocation:
+              <strong>{{ formatCurrency(commitAvailableBudget) }}</strong>
+            </div>
+
+            <div class="col-md-6 col-12 q-mb-md text-weight-regular">
+              New Allocations:
+              <strong>{{ formatCurrency(commitNewAllocationsTotal) }}</strong>
+            </div>
+
+            <div class="col-md-6 col-12 q-mb-md text-weight-regular">
+              Net Change:
+              <strong
+                :class="
+                  commitNetChange < 0
+                    ? 'text-positive'
+                    : commitNetChange > commitAvailableBudget
+                      ? 'text-negative'
+                      : 'text-primary'
+                "
+              >
+                {{ formatCurrency(commitNetChange) }}
+              </strong>
+            </div>
+
+            <div class="col-md-6 col-12 q-mb-md text-weight-regular">
+              Remaining after changes:
+              <strong :class="commitRemainingAfterChanges < 0 ? 'text-negative' : 'text-positive'">
+                {{ formatCurrency(commitRemainingAfterChanges) }}
+              </strong>
+            </div>
+          </div>
+
+          <q-input
+            outlined
+            dense
+            placeholder="Search accounts..."
+            class="q-mb-sm"
+            v-model="commitSearchQuery"
+            style="max-width: 500px"
+            clearable
+          >
+            <template v-slot:append>
+              <q-icon name="search" />
+            </template>
+          </q-input>
+
+          <!-- Compact Hierarchical Table -->
+          <div class="hierarchical-table" style="border: 1px solid #e0e0e0; border-radius: 4px">
+            <!-- Table Header -->
+            <div
+              class="row q-table__top bg-grey-3 text-weight-bold"
+              style="padding: 8px 12px; min-height: 40px"
+            >
+              <div class="col-6" style="display: flex; align-items: center">Account</div>
+              <div
+                class="col-6 text-right"
+                style="display: flex; align-items: center; justify-content: flex-end"
+              >
+                Amount (₱)
+              </div>
+            </div>
+
+            <!-- Table Body -->
+            <div class="hierarchical-body" style="max-height: 300px; overflow-y: auto">
+              <template
+                v-for="expenseClass in commitDisplayAccounts"
+                :key="'class-' + expenseClass.id"
+              >
+                <!-- Expense Class Row -->
+                <div
+                  class="row bg-grey-3 text-weight-bold"
+                  style="padding: 12px 12px; min-height: 32px"
+                >
+                  <div class="col-6" style="display: flex; align-items: center">
+                    {{ expenseClass.name }}
+                  </div>
+                  <div
+                    class="col-6 text-right"
+                    style="display: flex; align-items: center; justify-content: flex-end"
+                  >
+                    {{ formatCurrency(calculateCommitClassTotal(expenseClass)) }}
+                  </div>
+                </div>
+
+                <!-- Expense Type Rows -->
+                <template
+                  v-for="expenseType in expenseClass.children"
+                  :key="'type-' + expenseType.id"
+                >
+                  <div
+                    class="row"
+                    :class="getCommitTypeClass(expenseType)"
+                    style="padding: 6px 12px; min-height: 32px; border-bottom: 1px solid #f0f0f0"
+                  >
+                    <div
+                      class="col-6"
+                      style="padding-left: 24px; display: flex; align-items: center"
+                    >
+                      <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
+                      {{ expenseType.name }}
+                    </div>
+                    <div class="col-6 text-right">
+                      <q-input
+                        v-if="!expenseType.children || expenseType.children.length === 0"
+                        dense
+                        :model-value="commitInputCache[`type-${expenseType.id}`] || ''"
+                        @update:model-value="
+                          (val) => {
+                            const cleanValue = handleCommitAmountInput(val)
+                            updateCommitAllocationAmount(`type-${expenseType.id}`, cleanValue)
+                            updateCommitUnappropriated()
+                          }
+                        "
+                        @blur="
+                          (event) => {
+                            const formatted = formatToTwoDecimals(event.target.value)
+                            const formattedDisplay = formatNumberWithCommas(formatted)
+                            updateCommitAllocationAmount(`type-${expenseType.id}`, formattedDisplay)
+                            updateCommitUnappropriated()
+                          }
+                        "
+                        prefix="₱"
+                        placeholder="0.00"
+                        style="max-width: 230px; width: 100%; display: inline-block"
+                        class="q-pa-none"
+                        input-class="q-py-xs"
+                      />
+                      <div v-else class="text-weight-medium">
+                        {{ formatCurrency(calculateCommitTypeTotal(expenseType)) }}
                       </div>
                     </div>
+                  </div>
 
-                                         <!-- Expense Item Rows -->
-                     <template v-if="expenseType.children && expenseType.children.length > 0">
-                       <template
-                         v-for="expenseItem in expenseType.children"
-                         :key="'item-' + expenseItem.id"
-                       >
+                  <!-- Expense Item Rows -->
+                  <template v-if="expenseType.children && expenseType.children.length > 0">
+                    <template
+                      v-for="expenseItem in expenseType.children"
+                      :key="'item-' + expenseItem.id"
+                    >
                       <div
                         class="row"
-                        style="padding: 6px 12px; min-height: 32px; border-bottom: 1px solid #f0f0f0"
+                        style="
+                          padding: 6px 12px;
+                          min-height: 32px;
+                          border-bottom: 1px solid #f0f0f0;
+                        "
                       >
                         <div
                           class="col-6"
@@ -604,140 +705,174 @@
                           <span class="text-weight-regular">{{ expenseItem.name }}</span>
                         </div>
                         <div class="col-6 text-right">
-                                                     <q-input
-                             dense
-                             :model-value="commitInputCache[`item-${expenseItem.id}`] || ''"
-                             @update:model-value="
-                               (val) => {
-                                 const cleanValue = handleCommitAmountInput(val)
-                                 updateCommitAllocationAmount(`item-${expenseItem.id}`, cleanValue)
-                                 updateCommitUnappropriated()
-                               }
-                             "
-                             @blur="
-                               (event) => {
-                                 const formatted = formatToTwoDecimals(event.target.value)
-                                 const formattedDisplay = formatNumberWithCommas(formatted)
-                                 updateCommitAllocationAmount(`item-${expenseItem.id}`, formattedDisplay)
-                                 updateCommitUnappropriated()
-                               }
-                             "
-                             prefix="₱"
-                             placeholder="0.00"
-                             style="max-width: 230px; width: 100%; display: inline-block"
-                             class="q-pa-none"
-                             input-class="q-py-xs"
-                           />
-                                                 </div>
-                       </div>
-                       </template>
-                     </template>
-                   </template>
-                 </template>
-               </div>
-             </div>
-          </q-card-section>
-
-          <q-card-actions align="right" class="q-pa-sm">
-            <q-btn flat label="Cancel" color="secondary" v-close-popup />
-            <q-btn
-              label="Allocate"
-              class="modal-save-btn"
-              @click="submitCommitAllocation"
-              :loading="commitLoading"
-              :disable="commitLoading || !canCommitSave"
-            />
-          </q-card-actions>
-        </q-card>
-      </q-dialog>
-
-      <!-- Edit Allocation Dialog -->
-      <q-dialog v-model="showEditAllocationDialog">
-        <q-card style="min-width: 900px">
-          <q-card-section class="q-pb-none">
-            <div class="text-h6">Edit Allocation</div>
-          </q-card-section>
-
-          <q-card-section>
-            <div class="hierarchical-table" style="border: 1px solid #e0e0e0">
-              <div class="row q-pa-sm bg-grey-2 text-weight-medium">
-                <div class="col-6">Type</div>
-                <div class="col-6 text-right">Amount (₱)</div>
-              </div>
-
-              <div class="hierarchical-body" style="max-height: 400px; overflow-y: auto">
-                <template v-for="expenseClass in editDisplayAccounts" :key="'class-' + expenseClass.id">
-                  <div class="row q-pa-sm bg-grey-1 text-weight-medium">
-                    <div class="col-12">{{ expenseClass.name }}</div>
-                  </div>
-
-                  <template v-for="expenseType in expenseClass.children" :key="'type-' + expenseType.id">
-                    <div class="row q-pa-xs" style="border-bottom: 1px solid #f0f0f0">
-                      <div class="col-6" style="padding-left: 16px; display: flex; align-items: center">
-                        <q-btn
-                          dense
-                          flat
-                          :icon="(expenseType.children && expenseType.children.length > 0 && expandedEditTypes[expenseType.id]) ? 'expand_more' : 'chevron_right'"
-                          @click="(expenseType.children && expenseType.children.length > 0) ? toggleEditType(expenseType.id) : null"
-                          size="sm"
-                        />
-                        <span>{{ expenseType.name }}</span>
-                      </div>
-                      <div class="col-6 text-right">
-                        <q-input
-                          v-if="canEditType(expenseType)"
-                          :model-value="formatInputValue(expenseType.amount)"
-                          @update:model-value="(val) => handleEditAmountInput(expenseType, val)"
-                          @blur="(event) => handleEditAmountBlur(expenseType, event.target.value)"
-                          dense
-                          outlined
-                          class="edit-allocation-input"
-                          :class="{ 'text-negative': typeErrorMap[expenseType.id] }"
-                          prefix="₱"
-                          placeholder="0.00"
-                        />
-                        <div v-else class="text-weight-medium">
-                          {{ formatCurrency(calculateTypeTotal(expenseType)) }}
+                          <q-input
+                            dense
+                            :model-value="commitInputCache[`item-${expenseItem.id}`] || ''"
+                            @update:model-value="
+                              (val) => {
+                                const cleanValue = handleCommitAmountInput(val)
+                                updateCommitAllocationAmount(`item-${expenseItem.id}`, cleanValue)
+                                updateCommitUnappropriated()
+                              }
+                            "
+                            @blur="
+                              (event) => {
+                                const formatted = formatToTwoDecimals(event.target.value)
+                                const formattedDisplay = formatNumberWithCommas(formatted)
+                                updateCommitAllocationAmount(
+                                  `item-${expenseItem.id}`,
+                                  formattedDisplay,
+                                )
+                                updateCommitUnappropriated()
+                              }
+                            "
+                            prefix="₱"
+                            placeholder="0.00"
+                            style="max-width: 230px; width: 100%; display: inline-block"
+                            class="q-pa-none"
+                            input-class="q-py-xs"
+                          />
                         </div>
                       </div>
-                    </div>
-
-                    <template v-if="expandedEditTypes[expenseType.id] && expenseType.children && expenseType.children.length > 0">
-                      <template v-for="expenseItem in expenseType.children" :key="'item-' + expenseItem.id">
-                        <div class="row q-pa-xs" style="border-bottom: 1px solid #f0f0f0">
-                          <div class="col-6" style="padding-left: 32px; display: flex; align-items: center">
-                            <q-icon name="arrow_right" size="xs" class="q-mr-xs" />
-                            <span>{{ expenseItem.name }}</span>
-                          </div>
-                          <div class="col-6 text-right">
-                            <q-input
-                              :model-value="formatInputValue(expenseItem.amount)"
-                              @update:model-value="(val) => handleEditAmountInput(expenseItem, val)"
-                              @blur="(event) => handleEditAmountBlur(expenseItem, event.target.value)"
-                              dense
-                              outlined
-                              class="edit-allocation-input"
-                              prefix="₱"
-                              placeholder="0.00"
-                            />
-                          </div>
-                        </div>
-                      </template>
                     </template>
                   </template>
                 </template>
-              </div>
+              </template>
             </div>
-          </q-card-section>
+          </div>
+        </q-card-section>
 
-          <q-card-actions align="right" class="q-pa-md">
-            <q-btn flat label="Cancel" v-close-popup @click="closeEditAllocationDialog" />
-            <q-btn label="Save Changes" color="primary" @click="saveEditedAllocation" />
-          </q-card-actions>
-        </q-card>
-      </q-dialog>
-    </q-page>
-  </template>
+        <q-card-actions align="right" class="q-pa-sm">
+          <q-btn flat label="Cancel" color="secondary" v-close-popup />
+          <q-btn
+            label="Allocate"
+            class="modal-save-btn"
+            @click="submitCommitAllocation"
+            :loading="commitLoading"
+            :disable="commitLoading || !canCommitSave"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Edit Allocation Dialog -->
+    <q-dialog v-model="showEditAllocationDialog">
+      <q-card style="min-width: 900px">
+        <q-card-section class="q-pb-none">
+          <div class="text-h6">Edit Allocation</div>
+        </q-card-section>
+
+        <q-card-section>
+          <div class="hierarchical-table" style="border: 1px solid #e0e0e0">
+            <div class="row q-pa-sm bg-grey-2 text-weight-medium">
+              <div class="col-6">Type</div>
+              <div class="col-6 text-right">Amount (₱)</div>
+            </div>
+
+            <div class="hierarchical-body" style="max-height: 400px; overflow-y: auto">
+              <template
+                v-for="expenseClass in editDisplayAccounts"
+                :key="'class-' + expenseClass.id"
+              >
+                <div class="row q-pa-sm bg-grey-1 text-weight-medium">
+                  <div class="col-12">{{ expenseClass.name }}</div>
+                </div>
+
+                <template
+                  v-for="expenseType in expenseClass.children"
+                  :key="'type-' + expenseType.id"
+                >
+                  <div class="row q-pa-xs" style="border-bottom: 1px solid #f0f0f0">
+                    <div
+                      class="col-6"
+                      style="padding-left: 16px; display: flex; align-items: center"
+                    >
+                      <q-btn
+                        dense
+                        flat
+                        :icon="
+                          expenseType.children &&
+                          expenseType.children.length > 0 &&
+                          expandedEditTypes[expenseType.id]
+                            ? 'expand_more'
+                            : 'chevron_right'
+                        "
+                        @click="
+                          expenseType.children && expenseType.children.length > 0
+                            ? toggleEditType(expenseType.id)
+                            : null
+                        "
+                        size="sm"
+                      />
+                      <span>{{ expenseType.name }}</span>
+                    </div>
+                    <div class="col-6 text-right">
+                      <q-input
+                        v-if="canEditType(expenseType)"
+                        :model-value="formatInputValue(expenseType.amount)"
+                        @update:model-value="(val) => handleEditAmountInput(expenseType, val)"
+                        @blur="(event) => handleEditAmountBlur(expenseType, event.target.value)"
+                        dense
+                        outlined
+                        class="edit-allocation-input"
+                        :class="{ 'text-negative': typeErrorMap[expenseType.id] }"
+                        prefix="₱"
+                        placeholder="0.00"
+                      />
+                      <div v-else class="text-weight-medium">
+                        {{ formatCurrency(calculateTypeTotal(expenseType)) }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <template
+                    v-if="
+                      expandedEditTypes[expenseType.id] &&
+                      expenseType.children &&
+                      expenseType.children.length > 0
+                    "
+                  >
+                    <template
+                      v-for="expenseItem in expenseType.children"
+                      :key="'item-' + expenseItem.id"
+                    >
+                      <div class="row q-pa-xs" style="border-bottom: 1px solid #f0f0f0">
+                        <div
+                          class="col-6"
+                          style="padding-left: 32px; display: flex; align-items: center"
+                        >
+                          <q-icon name="arrow_right" size="xs" class="q-mr-xs" />
+                          <span>{{ expenseItem.name }}</span>
+                        </div>
+                        <div class="col-6 text-right">
+                          <q-input
+                            :model-value="formatInputValue(expenseItem.amount)"
+                            @update:model-value="(val) => handleEditAmountInput(expenseItem, val)"
+                            @blur="(event) => handleEditAmountBlur(expenseItem, event.target.value)"
+                            dense
+                            outlined
+                            class="edit-allocation-input"
+                            prefix="₱"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </div>
+                    </template>
+                  </template>
+                </template>
+              </template>
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" v-close-popup @click="closeEditAllocationDialog" />
+          <q-btn label="Save Changes" color="primary" @click="saveEditedAllocation" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+  </q-page>
+</template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
@@ -745,10 +880,10 @@ import { useQuasar } from 'quasar'
 import { storeToRefs } from 'pinia'
 import { useContApprStore } from 'src/stores/contApprStore'
 import { usePageLogging } from '../../../composables/usePageLogging'
-// import { api } from 'src/boot/axios' // Unused import removed
+import { api } from 'src/boot/axios'
 
 const $q = useQuasar()
-const contApprStore = useContApprStore();
+const contApprStore = useContApprStore()
 const { continueAccounts, continuingAppropriations } = storeToRefs(contApprStore)
 
 const loading = ref(false)
@@ -763,6 +898,7 @@ const dialogSearchQuery = ref('')
 const returnAmount = ref(0)
 const augmentationAmount = ref(0)
 const generalLoading = ref(true)
+const dateRange = ref(null)
 
 // Commit dialog state variables
 const commitLoading = ref(false)
@@ -774,7 +910,7 @@ const commitExistingAllocationsTotal = ref(0)
 
 // Edit allocation dialog state variables
 const showEditAllocationDialog = ref(false)
-// const editAllocations = ref([]) // Unused variable removed
+const editAllocations = ref([])
 const expandedEditTypes = ref({})
 const typeErrorMap = ref({})
 const editDisplayAccounts = ref([])
@@ -795,7 +931,10 @@ const selectedRow = ref({
 })
 
 const continueColumns = [
+  {name: 'year', label: 'Year',field: 'year', align: 'right' },
   { name: 'accountName', label: 'Accounts Name', field: 'accountName', align: 'left' },
+
+
   {
     name: 'balance',
     label: 'Remaining Balance',
@@ -803,6 +942,7 @@ const continueColumns = [
     align: 'right',
     format: (val) => `₱ ${val.toLocaleString()}`,
   },
+
 ]
 
 // Use store data instead of local state
@@ -851,21 +991,21 @@ const columns = [
     label: 'Total Budget',
     field: 'amount',
     align: 'right',
-    sortable: true
+    sortable: true,
   },
   {
     name: 'total_appropriated',
     label: 'Total Appropriated',
     field: 'total_appropriated',
     align: 'right',
-    sortable: true
+    sortable: true,
   },
   {
     name: 'unappropriated',
     label: 'Unappropriated',
     field: 'unappropriated',
     align: 'right',
-    sortable: true
+    sortable: true,
   },
   {
     name: 'action',
@@ -904,7 +1044,10 @@ const commitNewAllocationsTotal = computed(() => {
       if (expenseType.children?.length) {
         expenseType.children.forEach((item) => {
           const currentAmount = commitInputCache.value[`item-${item.id}`] || 0
-          if (currentAmount > 0 || (typeof currentAmount === 'string' && currentAmount.trim() !== '')) {
+          if (
+            currentAmount > 0 ||
+            (typeof currentAmount === 'string' && currentAmount.trim() !== '')
+          ) {
             // Always parse as currency to handle both numeric and formatted string values
             const amount = parseCurrency(currentAmount)
             total += amount
@@ -912,7 +1055,10 @@ const commitNewAllocationsTotal = computed(() => {
         })
       } else {
         const currentAmount = commitInputCache.value[`type-${expenseType.id}`] || 0
-        if (currentAmount > 0 || (typeof currentAmount === 'string' && currentAmount.trim() !== '')) {
+        if (
+          currentAmount > 0 ||
+          (typeof currentAmount === 'string' && currentAmount.trim() !== '')
+        ) {
           // Always parse as currency to handle both numeric and formatted string values
           const amount = parseCurrency(currentAmount)
           total += amount
@@ -938,7 +1084,7 @@ const commitRemainingAfterChanges = computed(() => {
 
 const canCommitSave = computed(() => {
   const hasValidAllocation = commitNewAllocationsTotal.value > 0
-  const withinBudget = commitNetChange.value <= (commitAvailableBudget.value + 0.01)
+  const withinBudget = commitNetChange.value <= commitAvailableBudget.value + 0.01
   const hasValidAmounts = commitNewAllocationsTotal.value >= 0
 
   return hasValidAllocation && withinBudget && hasValidAmounts
@@ -956,9 +1102,11 @@ const filteredAppropriations = computed(() => {
   const query = searchQuery.value.toLowerCase()
 
   return mergedAppropriations.value.filter((row) => {
-    return row.description.toLowerCase().includes(query) ||
-           row.expense_class?.toLowerCase().includes(query) ||
-           row.year?.toString().includes(query)
+    return (
+      row.description.toLowerCase().includes(query) ||
+      row.expense_class?.toLowerCase().includes(query) ||
+      row.year?.toString().includes(query)
+    )
   })
 })
 
@@ -980,7 +1128,7 @@ const sampleAccounts = [
 const loadPendingUsers = async () => {
   loading.value = true
   try {
-    await new Promise(resolve => setTimeout(resolve, 500))
+    await new Promise((resolve) => setTimeout(resolve, 500))
     $q.notify({
       type: 'positive',
       message: 'Appropriation refreshed!',
@@ -999,9 +1147,36 @@ const loadPendingUsers = async () => {
   }
 }
 
+const dateRangeDisplay = computed(() => {
+  if (!dateRange.value || !dateRange.value.from || !dateRange.value.to) {
+    return ''
+  }
+  const fromDate = new Date(dateRange.value.from).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  })
+  const toDate = new Date(dateRange.value.to).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  })
+  return `${fromDate} - ${toDate}`
+})
+
+const onDateRangeChange = (newRange) => {
+  if (newRange && newRange.from && newRange.to) {
+    // const fromDate = new Date(newRange.from)
+    // const toDate = new Date(newRange.to)
+    // Store date range in appropriate format for the store
+    // You may need to adjust this based on your store's date handling
+  }
+}
+
+const onDateRangeClear = () => {
+  dateRange.value = null
+}
+
 const clearAllFilters = () => {
   searchQuery.value = ''
   dialogSearchQuery.value = ''
+  dateRange.value = null
 }
 
 const validateAndContinue = () => {
@@ -1059,10 +1234,10 @@ const continueSelected = async () => {
       appropriation_amount: totalAmount,
       unappropriated_amount: totalAmount,
       continued_date: currentDate,
-      accounts: selectedAccounts.value.map(acc => ({
+      accounts: selectedAccounts.value.map((acc) => ({
         id: acc.id,
-        balance: acc.balance
-      }))
+        balance: acc.balance,
+      })),
     }
 
     const result = await contApprStore.createContinuingAppropriation(data)
@@ -1076,9 +1251,9 @@ const continueSelected = async () => {
       })
 
       // Remove the used accounts from the local continueAccounts array
-      const selectedAccountIds = selectedAccounts.value.map(acc => acc.id)
+      const selectedAccountIds = selectedAccounts.value.map((acc) => acc.id)
       contApprStore.continueAccounts = contApprStore.continueAccounts.filter(
-        account => !selectedAccountIds.includes(account.id)
+        (account) => !selectedAccountIds.includes(account.id),
       )
 
       selectedAccounts.value = []
@@ -1183,8 +1358,8 @@ const canEditType = (expenseType) => {
 
 const toggleType = (typeId) => {
   let hasChildren = false
-  displayAccounts.value.forEach(expenseClass => {
-    const expenseType = expenseClass.children?.find(type => type.id === typeId)
+  displayAccounts.value.forEach((expenseClass) => {
+    const expenseType = expenseClass.children?.find((type) => type.id === typeId)
     if (expenseType && expenseType.children && expenseType.children.length > 0) {
       hasChildren = true
     }
@@ -1226,8 +1401,6 @@ const handleAmountBlur = (item, value) => {
   }
 }
 
-
-
 const canSaveAllocation = computed(() => {
   return totalAllocated.value > 0 && totalAllocated.value <= availableBudget.value
 })
@@ -1237,7 +1410,8 @@ const validateAndSaveAllocation = async () => {
     if (!canSaveAllocation.value) {
       $q.notify({
         type: 'negative',
-        message: 'Please ensure total allocated amount is greater than 0 and within available budget',
+        message:
+          'Please ensure total allocated amount is greater than 0 and within available budget',
         icon: 'warning',
         position: 'top',
       })
@@ -1309,98 +1483,57 @@ const openViewDialog = (row) => {
   loadViewAllocationHistory(row.id)
 }
 
-const loadViewAllocationHistory = async () => {
+const loadViewAllocationHistory = async (id) => {
   try {
-    // This would typically fetch from an API
-    // For now, we'll simulate with empty data
+    viewLoading.value = true
+    const config = contApprStore.getAuthConfig()
+    const response = await api.get(`/api/barangay/continuing-appropriations/${id}/history`, config)
+
+    const allHistory = response.data.data?.history || []
+    viewAllocationHistory.value = allHistory
+  } catch (error) {
+    console.error('Error fetching view allocation history:', error)
+    // If no history, that's fine - just show empty
     viewAllocationHistory.value = []
+  } finally {
     viewLoading.value = false
-  } catch {
-    viewLoading.value = false
+  }
+}
+
+// Function to get expense name from allocation data
+const getExpenseName = (allocation) => {
+  if (allocation.expense_item_name) {
+    return allocation.expense_item_name
+  } else if (allocation.expense_type_name) {
+    return allocation.expense_type_name
+  } else if (allocation.expense_class_name) {
+    return allocation.expense_class_name
+  } else {
+    return 'Unknown Expense'
+  }
+}
+
+// Commit dialog functions
+const openCommitDialog = async (row) => {
+  try {
+    commitLoading.value = true
+    commitSelectedRow.value = {
+      id: row.id,
+      amount: parseCurrency(row.appropriation || row.amount || 0),
+      unappropriated: parseCurrency(row.unappropriated || row.balance || 0),
+      description: row.description || '',
+    }
+
+    // Fetch expense hierarchy and existing allocations
+    await Promise.all([fetchCommitExpenseHierarchy(), fetchCommitExistingAllocations(row.id)])
+
+    showCommitDialog.value = true
+  } catch (error) {
+    console.error('Error opening commit dialog:', error)
+
     $q.notify({
       type: 'negative',
       message: 'Failed to load allocation history',
-      icon: 'error',
-      position: 'top',
-    })
-  }
-}
-
-const getExpenseName = (allocation) => {
-  return allocation.expense_class || allocation.expense_type || allocation.expense_item || 'Unknown'
-}
-
-const openCommitDialog = (row) => {
-  commitSelectedRow.value = row
-  commitDisplayAccounts.value = JSON.parse(JSON.stringify(sampleAccounts))
-  commitInputCache.value = {}
-  commitExistingAllocationsTotal.value = 0
-  showCommitDialog.value = true
-}
-
-const handleCommitAmountInput = (value) => {
-  return String(value).replace(/[^\d.]/g, '')
-}
-
-const updateCommitAllocationAmount = (key, value) => {
-  commitInputCache.value[key] = value
-}
-
-const updateCommitUnappropriated = () => {
-  // This function would update the unappropriated amount display
-  // Implementation depends on business logic
-}
-
-const formatToTwoDecimals = (value) => {
-  const num = parseFloat(value)
-  return isNaN(num) ? '0.00' : num.toFixed(2)
-}
-
-const formatNumberWithCommas = (value) => {
-  const num = parseFloat(value)
-  return isNaN(num) ? '0' : num.toLocaleString('en-US')
-}
-
-const calculateCommitClassTotal = (expenseClass) => {
-  if (!expenseClass.children) return 0
-  return expenseClass.children.reduce((total, type) => {
-    return total + calculateCommitTypeTotal(type)
-  }, 0)
-}
-
-const calculateCommitTypeTotal = (expenseType) => {
-  if (expenseType.children && expenseType.children.length > 0) {
-    return expenseType.children.reduce((total, item) => {
-      const amount = commitInputCache.value[`item-${item.id}`] || 0
-      return total + parseCurrency(amount)
-    }, 0)
-  } else {
-    const amount = commitInputCache.value[`type-${expenseType.id}`] || 0
-    return parseCurrency(amount)
-  }
-}
-
-const getCommitTypeClass = (expenseType) => {
-  return expenseType.children && expenseType.children.length > 0
-    ? 'bg-grey-2'
-    : 'bg-white'
-}
-
-const submitCommitAllocation = async () => {
-  commitLoading.value = true
-  try {
-    // Implementation for submitting commit allocation
-    $q.notify({
-      type: 'positive',
-      message: 'Allocation committed successfully!',
-      icon: 'check_circle',
-      position: 'top',
-    })
-    showCommitDialog.value = false
-  } catch {
-    $q.notify({
-      type: 'negative',
-      message: 'Failed to commit allocation',
       icon: 'error',
       position: 'top',
     })
@@ -1409,29 +1542,399 @@ const submitCommitAllocation = async () => {
   }
 }
 
-const openEditAllocationDialog = (row) => {
+
+const fetchCommitExpenseHierarchy = async () => {
+  try {
+    const config = contApprStore.getAuthConfig()
+    const response = await api.get('/api/barangay/expense-hierarchy', {
+      ...config,
+      params: { fiscal_year_id: contApprStore.selectedYear },
+    })
+
+    if (response.data.status) {
+      commitDisplayAccounts.value = response.data.data
+    } else {
+      throw new Error(response.data.message || 'Failed to fetch expense hierarchy')
+    }
+  } catch (error) {
+    console.error('Error fetching expense hierarchy:', error)
+    throw error
+  }
+}
+
+const fetchCommitExistingAllocations = async (id) => {
+  try {
+    const config = contApprStore.getAuthConfig()
+    const response = await api.get(`/api/barangay/continuing-appropriations/${id}/history`, config)
+
+    const allHistory = response.data.data?.history || []
+    const allAllocations = allHistory.flatMap((session) => session.allocations || [])
+
+    // Calculate existing allocations total
+    commitExistingAllocationsTotal.value = allAllocations.reduce(
+      (sum, alloc) => sum + (alloc.amount || 0),
+      0,
+    )
+
+    // Initialize input cache with existing allocations
+    allAllocations.forEach((allocation) => {
+      const key = allocation.expense_item_id
+        ? `item-${allocation.expense_item_id}`
+        : `type-${allocation.expense_type_id}`
+      commitInputCache.value[key] = allocation.amount || 0
+    })
+  } catch (error) {
+    console.error('Error fetching existing allocations:', error)
+    // If no existing allocations, that's fine
+    commitExistingAllocationsTotal.value = 0
+  }
+}
+
+const updateCommitAllocationAmount = (key, value) => {
+  if (!value || value === '') {
+    commitInputCache.value[key] = ''
+    return
+  }
+
+  // If the value contains commas, it's a formatted display value
+  if (typeof value === 'string' && value.includes(',')) {
+    commitInputCache.value[key] = value
+    return
+  }
+
+  const parsed = parseCurrency(value)
+  // Ensure the value is stored with exactly 2 decimal places
+  commitInputCache.value[key] = Number(parsed.toFixed(2))
+
+}
+
+const updateCommitUnappropriated = () => {
+  // This function would update the unappropriated amount display
+  // Implementation depends on business logic
+}
+
+
+const calculateCommitClassTotal = (expenseClass) => {
+  let total = 0
+  expenseClass.children?.forEach((expenseType) => {
+    if (!expenseType.children || expenseType.children.length === 0) {
+      const amount = commitInputCache.value[`type-${expenseType.id}`] || 0
+      total += parseCurrency(amount)
+    }
+    expenseType.children?.forEach((item) => {
+      const amount = commitInputCache.value[`item-${item.id}`] || 0
+      total += parseCurrency(amount)
+    })
+  })
+  return Math.round(total * 100) / 100
+}
+
+const getCommitTypeClass = (expenseType) => {
+  // Return appropriate CSS class based on expense type properties
+  if (expenseType.children && expenseType.children.length > 0) {
+    return 'bg-grey-1'
+  }
+  return 'bg-white'
+}
+
+const calculateCommitTypeTotal = (expenseType) => {
+  if (!expenseType.children || expenseType.children.length === 0) {
+    const amount = commitInputCache.value[`type-${expenseType.id}`] || 0
+    return parseCurrency(amount)
+  }
+  
+  let total = 0
+  expenseType.children.forEach((item) => {
+    const amount = commitInputCache.value[`item-${item.id}`] || 0
+    total += parseCurrency(amount)
+  })
+  return Math.round(total * 100) / 100
+}
+
+const formatNumberWithCommas = (value) => {
+  const num = parseFloat(value)
+  return isNaN(num) ? '0' : num.toLocaleString('en-US')
+}
+
+
+
+
+const handleCommitAmountInput = (value) => {
+  // Remove all non-numeric characters except decimal point
+  let cleanValue = String(value).replace(/[^\d.]/g, '')
+
+  // Handle multiple decimal points - keep only the first one
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    cleanValue = parts[0] + '.' + parts.slice(1).join('')
+  }
+
+  // Limit decimal places to 2
+  if (parts.length === 2 && parts[1].length > 2) {
+    cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
+  }
+
+  // Don't allow leading zeros unless it's a decimal number
+  if (cleanValue.length > 1 && cleanValue[0] === '0' && cleanValue[1] !== '.') {
+    cleanValue = cleanValue.substring(1)
+  }
+
+  // Format with commas for display
+  if (cleanValue) {
+    const numParts = cleanValue.split('.')
+    const wholePart = numParts[0]
+    const decimalPart = numParts[1] || ''
+
+    // Add commas to whole number part
+    const formattedWhole = wholePart.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+
+    // Combine with decimal part
+    cleanValue = decimalPart ? `${formattedWhole}.${decimalPart}` : formattedWhole
+  }
+
+  return cleanValue
+}
+
+const formatToTwoDecimals = (value) => {
+  const cleanValue = String(value).replace(/[₱,\s]/g, '')
+  if (cleanValue === '') return 0
+  const num = parseFloat(cleanValue)
+  if (isNaN(num)) return 0
+  // Ensure exactly 2 decimal places
+  return Number(num.toFixed(2))
+}
+
+
+
+const submitCommitAllocation = async () => {
+  commitLoading.value = true
+  try {
+
+    const allocations = []
+    let hasValidAllocation = false
+
+    // Build allocations array
+    commitDisplayAccounts.value.forEach((expenseClass) => {
+      expenseClass.children?.forEach((expenseType) => {
+        if (expenseType.children?.length) {
+          expenseType.children.forEach((item) => {
+            const amount = commitInputCache.value[`item-${item.id}`] || 0
+            const parsedAmount = parseCurrency(amount)
+            if (parsedAmount > 0) {
+              allocations.push({
+                id: item.id,
+                type: 'item',
+                amount: parsedAmount,
+                expense_class_id: expenseClass.id,
+                expense_type_id: expenseType.id,
+                expense_item_id: item.id,
+              })
+              hasValidAllocation = true
+            }
+          })
+        } else {
+          const amount = commitInputCache.value[`type-${expenseType.id}`] || 0
+          const parsedAmount = parseCurrency(amount)
+          if (parsedAmount > 0) {
+            allocations.push({
+              id: expenseType.id,
+              type: 'type',
+              amount: parsedAmount,
+              expense_class_id: expenseClass.id,
+              expense_type_id: expenseType.id,
+              expense_item_id: null,
+            })
+            hasValidAllocation = true
+          }
+        }
+      })
+    })
+
+    if (!hasValidAllocation) {
+      throw new Error('Please enter at least one valid amount')
+    }
+
+    // Calculate total new allocation amount
+    const totalNewAllocation = allocations.reduce((sum, allocation) => sum + allocation.amount, 0)
+    const existingTotal = commitExistingAllocationsTotal.value || 0
+    const actualAllocationAmount = totalNewAllocation - existingTotal
+
+    // Validate budget
+    const tolerance = 0.01
+    if (actualAllocationAmount > commitAvailableBudget.value + tolerance) {
+      const errorMsg = `Allocation amount exceeds available budget!
+        Available Budget: ₱${commitAvailableBudget.value.toFixed(2)}
+        New Allocation Total: ₱${totalNewAllocation.toFixed(2)}
+        Existing Allocations: ₱${existingTotal.toFixed(2)}
+        Net Allocation Amount: ₱${actualAllocationAmount.toFixed(2)}
+        Excess Amount: ₱${(actualAllocationAmount - commitAvailableBudget.value).toFixed(2)}`
+      throw new Error(errorMsg)
+    }
+
+    // Submit allocation
+    await contApprStore.commitAllocation(commitSelectedRow.value.id, allocations)
+
+    showCommitDialog.value = false
+    commitInputCache.value = {}
+    commitDisplayAccounts.value = []
+
+    $q.notify({
+      type: 'positive',
+      message: 'Allocation committed successfully!',
+      icon: 'check_circle',
+      position: 'top',
+    })
+  } catch (error) {
+    console.error('Error committing allocation:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to commit allocation',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    commitLoading.value = false
+  }
+}
+
+
+// Edit allocation dialog functions
+
+
+const toggleEditType = (typeId) => {
+  let hasChildren = false
+  editDisplayAccounts.value.forEach((expenseClass) => {
+    const expenseType = expenseClass.children?.find((type) => type.id === typeId)
+    if (expenseType && expenseType.children && expenseType.children.length > 0) {
+      hasChildren = true
+    }
+  })
+
+  if (hasChildren) {
+    expandedEditTypes.value[typeId] = !expandedEditTypes.value[typeId]
+  }
+}
+
+const loadEditAllocationData = async (id) => {
+  try {
+    // Fetch expense hierarchy and existing allocations
+    const [expenseHierarchy, allocationHistory] = await Promise.all([
+      fetchEditExpenseHierarchy(),
+      fetchEditExistingAllocations(id)
+    ])
+    
+    // Set the display accounts for editing
+    editDisplayAccounts.value = expenseHierarchy
+    
+    // Load existing allocations into the edit form
+    if (allocationHistory.length > 0) {
+      const allAllocations = allocationHistory.flatMap((session) => session.allocations || [])
+      editAllocations.value = allAllocations
+      
+      // Populate the form with existing allocation amounts
+      allAllocations.forEach((allocation) => {
+        const key = allocation.expense_item_id
+          ? `item-${allocation.expense_item_id}`
+          : `type-${allocation.expense_type_id}`
+        // Find the corresponding item in the hierarchy and set its amount
+        updateEditDisplayAmount(key, allocation.amount)
+      })
+    }
+  } catch (error) {
+    console.error('Error loading edit allocation data:', error)
+    throw error
+  }
+}
+
+const fetchEditExpenseHierarchy = async () => {
+  try {
+    const config = contApprStore.getAuthConfig()
+    const response = await api.get('/api/barangay/expense-hierarchy', {
+      ...config,
+      params: { fiscal_year_id: contApprStore.selectedYear },
+    })
+
+    if (response.data.status) {
+      return response.data.data
+    } else {
+      throw new Error(response.data.message || 'Failed to fetch expense hierarchy')
+    }
+  } catch (error) {
+    console.error('Error fetching expense hierarchy for edit:', error)
+    throw error
+  }
+}
+
+const fetchEditExistingAllocations = async (id) => {
+  try {
+    const config = contApprStore.getAuthConfig()
+    const response = await api.get(`/api/barangay/continuing-appropriations/${id}/history`, config)
+
+    const allHistory = response.data.data?.history || []
+    return allHistory
+  } catch (error) {
+    console.error('Error fetching existing allocations for edit:', error)
+    // Return empty array if no history exists
+    return []
+  }
+}
+
+const updateEditDisplayAmount = (key, amount) => {
+  // This function updates the display accounts with existing allocation amounts
+  // Implementation depends on how you want to structure the data
+  // For now, we'll store it in a way that the template can access
+  if (!editDisplayAccounts.value) return
+  
+  editDisplayAccounts.value.forEach((expenseClass) => {
+    expenseClass.children?.forEach((expenseType) => {
+      if (expenseType.children?.length) {
+        expenseType.children.forEach((item) => {
+          if (key === `item-${item.id}`) {
+            item.amount = amount
+          }
+        })
+      } else {
+        if (key === `type-${expenseType.id}`) {
+          expenseType.amount = amount
+        }
+      }
+    })
+  })
+}
+
+const openEditAllocationDialog = async (row) => {
   editLoading.value[row.id] = true
   try {
+    // Set the selected row for editing
     selectedRow.value = {
       ...row,
       amount: row.appropriation || row.amount,
       unappropriated: row.unappropriated,
+      year: row.year,
+      value: row
     }
 
     // Load existing allocations for editing
-    editDisplayAccounts.value = JSON.parse(JSON.stringify(sampleAccounts))
+    await loadEditAllocationData(row.id)
+    
     expandedEditTypes.value = {}
     typeErrorMap.value = {}
 
     showEditAllocationDialog.value = true
+  } catch (error) {
+    console.error('Error opening edit allocation dialog:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to load allocation data for editing',
+      icon: 'error',
+      position: 'top',
+    })
   } finally {
     editLoading.value[row.id] = false
   }
 }
 
-const toggleEditType = (typeId) => {
-  expandedEditTypes.value[typeId] = !expandedEditTypes.value[typeId]
-}
+
 
 const handleEditAmountInput = (item, value) => {
   let cleanValue = String(value).replace(/[^\d.]/g, '')
@@ -1460,7 +1963,75 @@ const closeEditAllocationDialog = () => {
 
 const saveEditedAllocation = async () => {
   try {
-    // Implementation for saving edited allocation
+
+    const allocations = []
+    let totalAllocated = 0
+
+    editDisplayAccounts.value.forEach((expenseClass) => {
+      if (!expenseClass || !Array.isArray(expenseClass.children)) return
+
+      expenseClass.children.forEach((expenseType) => {
+        if (canEditType(expenseType)) {
+          const typeAmount = parseCurrency(expenseType.amount)
+          if (typeAmount > 0) {
+            totalAllocated += typeAmount
+          }
+          allocations.push({
+            id: expenseType.id,
+            type: 'type',
+            amount: typeAmount,
+            expense_class_id: expenseClass.id,
+            expense_type_id: expenseType.id,
+            expense_item_id: null,
+          })
+        }
+
+        if (!canEditType(expenseType) && parseCurrency(expenseType.amount) > 0) {
+          throw new Error(
+            `Cannot set amount for type "${expenseType.name}" because it has items. Type amount should be the sum of its items.`,
+          )
+        }
+
+        if (expenseType.children && Array.isArray(expenseType.children)) {
+          expenseType.children.forEach((item) => {
+            if (!item) return
+
+            const itemAmount = parseCurrency(item.amount)
+            if (itemAmount > 0) {
+              totalAllocated += itemAmount
+            }
+            allocations.push({
+              id: item.id,
+              type: 'item',
+              amount: itemAmount,
+              expense_class_id: expenseClass.id,
+              expense_type_id: expenseType.id,
+              expense_item_id: item.id,
+            })
+          })
+        }
+      })
+    })
+
+    const currentUnappropriated = selectedRow.value?.unappropriated || 0
+
+    const originalAllocationsTotal = editAllocations.value.reduce((sum, allocation) => {
+      return sum + (allocation.amount || 0)
+    }, 0)
+
+    // Calculate available budget by adding back the original allocations
+    const availableBudgetForEdit = currentUnappropriated + originalAllocationsTotal
+
+    if (totalAllocated > availableBudgetForEdit) {
+      throw new Error(
+        `Total allocation (₱${totalAllocated.toFixed(2)}) exceeds available budget (₱${availableBudgetForEdit.toFixed(2)})`,
+      )
+    }
+
+    // Use the appropriation store's commitAllocation method instead of calling API directly
+    await contApprStore.commitAllocation(selectedRow.value.id, allocations)
+
+
     $q.notify({
       type: 'positive',
       message: 'Allocation updated successfully!',
@@ -1468,10 +2039,35 @@ const saveEditedAllocation = async () => {
       position: 'top',
     })
     showEditAllocationDialog.value = false
-  } catch {
+
+    typeErrorMap.value = {}
+    await contApprStore.fetchContinuingAppropriations()
+  } catch (error) {
+    let message = error.message || 'Failed to update allocations'
+    if (
+      error.response &&
+      error.response.status === 422 &&
+      error.response.data &&
+      error.response.data.message
+    ) {
+      message = error.response.data.message
+      const errorMap = {}
+      editDisplayAccounts.value.forEach((expenseClass) => {
+        if (!expenseClass || !Array.isArray(expenseClass.children)) return
+        expenseClass.children.forEach((expenseType) => {
+          if (expenseType && expenseType.id) {
+            errorMap[expenseType.id] = true
+          }
+        })
+      })
+      typeErrorMap.value = errorMap
+    } else {
+      typeErrorMap.value = {}
+    }
+
     $q.notify({
       type: 'negative',
-      message: 'Failed to update allocation',
+      message: message,
       icon: 'error',
       position: 'top',
     })
@@ -1550,6 +2146,11 @@ defineExpose({
   padding-bottom: 8px;
 }
 
+.filters-section {
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
 .hierarchical-table {
   border-radius: 4px;
   overflow: hidden;
@@ -1583,6 +2184,13 @@ defineExpose({
     min-width: 150px;
     width: 150px;
   }
+
+
+  .edit-allocation-input {
+    min-width: 150px;
+    width: 150px;
+  }
+
 }
 
 @media (max-width: 900px) {
@@ -1590,6 +2198,13 @@ defineExpose({
     min-width: 120px;
     width: 120px;
   }
+
+
+  .edit-allocation-input {
+    min-width: 120px;
+    width: 120px;
+  }
+
 }
 
 @media (max-width: 768px) {
