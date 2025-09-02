@@ -318,10 +318,68 @@
                   icon="delete"
                   :color="canDelete(props.row) ? 'red' : 'grey'"
                   :disable="!canDelete(props.row)"
-                  @click.stop="() => canDelete(props.row) && handleDeleteDisbursement(props.row)"
+                  v-if="isTreasurer && (props.row.status === 'Pending' || props.row.status === 'Partial')"
+                  @click.stop="() => handleVoidDisbursement(props.row)"
                   v-permission="'delete'"
                 />
+                <div v-else-if="isApprover">
+                  <q-btn
+                    dense
+                    icon="check_circle"
+                    color="green"
+                    class="q-mr-xs"
+                    v-if="props.row.status === 'Void Requested'"
+                    @click="handleApproveVoid(props.row)"
+                  />
+                  <q-btn
+                    dense
+                    icon="cancel"
+                    color="grey"
+                    v-if="props.row.status === 'Void Requested'"
+                    @click="handleRejectVoid(props.row)"
+                  />
+                  <q-btn
+                    dense
+                    icon="delete"
+                    :color="canDelete(props.row) ? 'red' : 'grey'"
+                    :disable="!canDelete(props.row)"
+                    v-if="(props.row.status === 'Pending' || props.row.status === 'Partial') && canDelete(props.row)"
+                    @click.stop="() => handleDeleteDisbursement(props.row)"
+                  />
+                </div>
               </div>
+            </q-td>
+          </template>
+
+          <template v-slot:body-cell-status="props">
+            <q-td :props="props">
+              <q-chip
+                :color="getStatusColor(props.row.status)"
+                :text-color="getStatusTextColor(props.row.status)"
+                dense
+                :label="props.row.status"
+              />
+            </q-td>
+          </template>
+
+          <template v-slot:body-cell-remarks="props">
+            <q-td :props="props">
+              <div v-if="props.row.status === 'Void Requested' && props.row.remarks">
+                <q-chip color="orange" text-color="white" dense>
+                  Void Request: {{ props.row.remarks }}
+                </q-chip>
+              </div>
+              <div v-else-if="props.row.status === 'Voided' && props.row.remarks">
+                <q-chip color="red" text-color="white" dense>
+                  Voided: {{ props.row.remarks }}
+                </q-chip>
+              </div>
+              <div v-else-if="props.row.rejection_remarks">
+                <q-chip color="grey" text-color="white" dense>
+                  Void Rejected: {{ props.row.rejection_remarks }}
+                </q-chip>
+              </div>
+              <div v-else>-</div>
             </q-td>
           </template>
 
@@ -348,22 +406,62 @@
       <OrDetailsDialog v-model="store.dialogs.orDetails" />
       <ViewOrDetails v-model="store.dialogs.viewOrDetails" />
       <EditDisbursement />
+
+      <!-- Void Dialog -->
+      <q-dialog v-model="store.dialogs.void" persistent>
+        <q-card style="min-width: 500px; max-width: 90vw">
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">Request Void</div>
+          </q-card-section>
+
+          <q-card-section>
+            <div class="text-body1 q-mb-md">
+              Please provide remarks for this void request.
+            </div>
+
+            <q-input
+              outlined
+              v-model="store.forms.void.remarks"
+              label="Remarks (Required)"
+              type="textarea"
+              rows="3"
+              :rules="[val => !!val && val.trim() !== '' || 'Remarks are required']"
+              hint="Reason for voiding this disbursement"
+            />
+          </q-card-section>
+
+          <q-card-actions align="right" class="q-pa-md">
+            <q-btn flat label="Cancel" @click="store.closeVoidDialog()" />
+            <q-btn
+              label="Submit Void Request"
+              color="red"
+              :loading="store.voidingDisbursement"
+              :disable="!store.forms.void.remarks || store.forms.void.remarks.trim() === ''"
+              @click="handleSubmitVoidRequest"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
     </div>
   </q-page>
 </template>
 
 <script setup>
-import { watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import SearchFilters from 'components/disbursement/SearchFilters.vue'
 import OrDetailsDialog from 'components/disbursement/OrDetailsDialog.vue'
 import ViewOrDetails from 'components/disbursement/ViewOrDetails.vue'
 import EditDisbursement from 'components/disbursement/EditDisbursement.vue'
 import { useDisbursementStore } from 'stores/disbursementStore'
+import { useAuthStore } from 'stores/auth'
 import { useBankStore } from 'stores/bankStore'
 import { usePageLogging } from '../../../composables/usePageLogging'
 
 const store = useDisbursementStore()
 const bankStore = useBankStore()
+const authStore = useAuthStore()
+
+
 
 const filteredParticulars = ref(store.particulars)
 function filterFn (val, update) {
@@ -381,16 +479,97 @@ function filterFn (val, update) {
     )
   })
 }
-function canDelete(row) {
-  const aging = Number(getAgingDays(row.aging))
-  if (Number.isNaN(aging)) return false
+// Helper function to extract numeric days from aging string
+const getAgingDays = (agingString) => {
+  if (!agingString) return 0
+  const match = agingString.match(/(\d+)\s*days?/)
+  return match ? parseInt(match[1]) : 0
+}
 
+function canDelete(row) {
   // Cannot delete if liquidated (regardless of return amount)
   if (row.status === 'Liquidated') return false
-
-  // Can only delete if pending or partial and aging <= 1 day
-  return (row.status === 'Pending' || row.status === 'Partial') && aging <= 1
+  
+  // Can only delete if pending or partial
+  if (!(row.status === 'Pending' || row.status === 'Partial')) return false
+  
+  // For Treasurers and Approvers: Check aging restriction (≤ 1 day can be deleted)
+  if (isTreasurer.value || isApprover.value) {
+    const aging = Number(getAgingDays(row.aging))
+    if (Number.isNaN(aging) || aging > 1) return false
+  }
+  
+  return true
 }
+
+// Handle delete disbursement (for Captains/Chairpersons to delete after void approval)
+const handleDeleteDisbursement = async (row) => {
+  try {
+    const result = await store.deleteDisbursement(row.id)
+    if (result.success) {
+      $q.notify({
+        type: 'positive',
+        message: 'Disbursement deleted successfully!',
+        icon: 'check_circle',
+        position: 'top',
+        timeout: 3000
+      })
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: result.message || 'Failed to delete disbursement',
+        icon: 'error',
+        position: 'top',
+        timeout: 5000
+      })
+    }
+  } catch (error) {
+    console.error('Error deleting disbursement:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'An error occurred while deleting the disbursement',
+      icon: 'error',
+      position: 'top',
+      timeout: 5000
+    })
+  }
+}
+
+// Status color helpers
+const getStatusColor = (status) => {
+  switch (status) {
+    case 'Pending':
+      return 'orange'
+    case 'Partial':
+      return 'amber'
+    case 'Liquidated':
+      return 'green'
+    case 'Void Requested':
+      return 'deep-orange'
+    case 'Voided':
+      return 'red'
+    default:
+      return 'grey'
+  }
+}
+
+const getStatusTextColor = (status) => {
+  switch (status) {
+    case 'Pending':
+    case 'Partial':
+    case 'Liquidated':
+    case 'Void Requested':
+    case 'Voided':
+      return 'white'
+    default:
+      return 'black'
+  }
+}
+
+// Role helpers
+const userPosition = computed(() => authStore.user?.position_name || '')
+const isTreasurer = computed(() => /treasurer/i.test(userPosition.value))
+const isApprover = computed(() => /(captain|chairperson)/i.test(userPosition.value))
 
 // Function to load all data with optimized loading strategy
 const loadAllData = async () => {
@@ -462,7 +641,6 @@ watch(
   }
 )
 
-import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
 
 const $q = useQuasar()
@@ -639,57 +817,84 @@ const loadPendingUsers = async () => {
   }
 }
 
-// Helper function to extract numeric days from aging string
-const getAgingDays = (agingString) => {
-  if (!agingString) return 0
-  const match = agingString.match(/(\d+)\s*days?/)
-  return match ? parseInt(match[1]) : 0
+
+
+
+
+
+// Open void dialog for treasurer
+const handleVoidDisbursement = (row) => {
+  store.openVoidDialog(row)
 }
 
-// Handle delete disbursement
-const handleDeleteDisbursement = (row) => {
-  // Show confirmation dialog
-  $q.dialog({
-    title: 'Confirm Delete',
-    message: `Are you sure you want to delete disbursement ${row.dvNumber}?`,
-    persistent: true,
-    ok: {
-      label: 'Delete',
-      color: 'negative',
-      flat: false
-    },
-    cancel: {
-      label: 'Cancel',
-      color: 'grey',
-      flat: true
-    }
-  }).onOk(async () => {
-    // This will only execute when user clicks OK
-    try {
-      const result = await store.deleteDisbursement(row.id)
+// Submit void request from dialog
+const handleSubmitVoidRequest = async () => {
+  try {
+    await store.submitVoidRequest()
+    $q.notify({
+      type: 'positive',
+      message: 'Void request submitted successfully!',
+      icon: 'check_circle',
+      position: 'top',
+      timeout: 3000
+    })
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to submit void request',
+      icon: 'error',
+      position: 'top',
+      timeout: 5000
+    })
+  }
+}
 
-      if (result.success) {
-        $q.notify({
-          type: 'positive',
-          message: result.message || 'Disbursement deleted successfully!',
-          icon: 'check_circle',
-          position: 'top',
-          timeout: 3000
-        })
-      } else {
-        $q.notify({
-          type: 'negative',
-          message: result.message || 'Failed to delete disbursement',
-          icon: 'error',
-          position: 'top',
-          timeout: 5000
-        })
-      }
+// Approver actions
+const handleApproveVoid = async (row) => {
+  try {
+    await store.approveVoidRequest(row.id)
+    $q.notify({
+      type: 'positive',
+      message: 'Void approved.',
+      icon: 'check_circle',
+      position: 'top',
+      timeout: 2500
+    })
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to approve void',
+      icon: 'error',
+      position: 'top',
+      timeout: 5000
+    })
+  }
+}
+
+const handleRejectVoid = async (row) => {
+  $q.dialog({
+    title: 'Reject Void Request',
+    message: 'Please provide rejection remarks:',
+    prompt: {
+      model: '',
+      type: 'textarea'
+    },
+    cancel: true,
+    persistent: true
+  }).onOk(async (remarks) => {
+    try {
+      await store.rejectVoidRequest(row.id, remarks?.trim?.() || '')
+      $q.notify({
+        type: 'positive',
+        message: 'Void request rejected.',
+        icon: 'check_circle',
+        position: 'top',
+        timeout: 2500
+      })
     } catch (error) {
-      console.error('Error deleting disbursement:', error)
       $q.notify({
         type: 'negative',
-        message: 'An error occurred while deleting the disbursement',
+        message: error.message || 'Failed to reject void request',
         icon: 'error',
         position: 'top',
         timeout: 5000

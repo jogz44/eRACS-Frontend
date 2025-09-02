@@ -271,15 +271,7 @@
             <span>Disbursement</span>
             <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
           </div>
-          <div
-            class="panel-item"
-            :class="{ 'disabled': !isBarangaySelected }"
-            @click="navigateTo('/admin/contAugmentation')"
-          >
-            <div class="colored-dot dot-green"></div>
-            <span>Augmentation</span>
-            <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
-          </div>
+
         </div>
       </div>
     </div>

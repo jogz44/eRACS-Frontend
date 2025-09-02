@@ -373,6 +373,9 @@ const isYearChanging = ref(false)
 // Page visibility handler for refreshing years
 let visibilityChangeHandler = null
 
+// Debug key handler for keyboard shortcuts
+// let debugKeyHandler = null
+
 // Debug panel toggle (set to true to show debug info)
 const showDebugPanel = ref(false)
 
@@ -463,7 +466,7 @@ const filteredDisbursementRows = computed(() => {
       (row) => row.status === selectedDisbursementFilter.value
     )
   }
-  
+
   // Sort by aging (non-liquidated) or by date (liquidated)
   if (selectedDisbursementFilter.value === 'Liquidated') {
     return rows.sort((a, b) => new Date(b.date) - new Date(a.date))
@@ -599,12 +602,12 @@ const testBackend = async () => {
         'Content-Type': 'application/json'
       }
     })
-    
+
     if (response.ok) {
       const data = await response.json()
       backendDebugData.value = data.data
       console.log('Backend debug data:', data.data)
-      
+
       $q.notify({
         type: 'positive',
         message: 'Backend data retrieved successfully',
@@ -618,7 +621,7 @@ const testBackend = async () => {
   } catch (error) {
     console.error('Error testing backend:', error)
     backendDebugData.value = { error: error.message }
-    
+
     $q.notify({
       type: 'negative',
       message: 'Failed to test backend: ' + error.message,
@@ -766,12 +769,12 @@ const loadDashboardData = async () => {
     console.log('Loading dashboard data for year:', chartStore.selectedYear)
     await chartStore.loadDashboardData()
     console.log('Dashboard data loaded successfully')
-    
+
     // Also fetch disbursement overview data
     console.log('Fetching disbursement overview...')
     await chartStore.fetchDisbursementOverview()
     console.log('Disbursement overview loaded successfully')
-    
+
     // Log final data state
     console.log('Final pie chart data:', chartStore.pieChartData)
     console.log('Final disbursement rows:', chartStore.disbursementOverviewRows.length)
@@ -788,7 +791,7 @@ watch(
     console.log('Updated pie chart data:', newVal)
     console.log('Pie chart labels:', newVal.labels)
     console.log('Pie chart data:', newVal.datasets?.[0]?.data)
-    
+
     // Validate chart data structure
     if (!newVal || !newVal.labels || !newVal.datasets || !newVal.datasets[0] || !newVal.datasets[0].data) {
       console.warn('Invalid pie chart data structure:', newVal)
@@ -1007,7 +1010,34 @@ onMounted(async () => {
 }
 
 // Responsive adjustments
-@media (max-width: 900px) {
+// Large tablets and small desktops (1024px and below)
+@media (max-width: 1024px) {
+  .year-filter-section {
+    .filter-main-section {
+      .filter-desktop-layout {
+        .filter-controls-section {
+          .filter-input-section .year-select {
+            min-width: 140px;
+            max-width: 180px;
+          }
+        }
+
+        .filter-actions-section {
+          .reset-year-btn {
+            .q-btn__content {
+              .q-btn__label {
+                display: none;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Tablets (768px and below)
+@media (max-width: 768px) {
   .summary-card {
     min-width: unset !important;
     width: 100% !important;
@@ -1031,6 +1061,8 @@ onMounted(async () => {
     }
   }
 }
+
+// Small tablets and large phones (600px and below)
 @media (max-width: 600px) {
   .summary-card {
     padding: 10px;
@@ -1063,6 +1095,21 @@ onMounted(async () => {
 
       .row {
         gap: 12px;
+
+        .mobile-actions {
+          gap: 8px;
+
+          .q-btn {
+            min-height: 36px;
+            font-size: 12px;
+
+            .q-btn__content {
+              .q-btn__label {
+                font-size: 12px;
+              }
+            }
+          }
+        }
       }
 
       .q-select {
@@ -1076,6 +1123,26 @@ onMounted(async () => {
     }
   }
 }
+
+// Extra small phones (360px and below)
+@media (max-width: 360px) {
+  .year-filter-section {
+    .filter-main-section {
+      .filter-mobile-layout {
+        .mobile-actions {
+          .q-btn {
+            .q-btn__content {
+              .q-btn__label {
+                font-size: 11px;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 
 /* Legend adjustments */
 :deep(.chartjs-legend) {

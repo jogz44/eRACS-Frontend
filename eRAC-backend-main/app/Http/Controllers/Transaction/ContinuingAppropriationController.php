@@ -5,6 +5,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\AdminAuthController;
 use App\Models\Budget;
 use App\Models\TranAppropriation;
+use App\Models\ContAppropriation;
+use App\Models\ContApproAccounts;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -82,6 +84,331 @@ class ContinuingAppropriationController extends Controller
         return response()->json([
             'rows' => $rows,
         ]);
+    }
+
+    /**
+     * Store a new continuing appropriation
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'description' => 'required|string|max:255',
+            'fiscal_year_id' => 'required|exists:lib_fiscal_years,id',
+            'expense_class' => 'required|string|max:255',
+            'appropriation_amount' => 'required|numeric|min:0',
+            'unappropriated_amount' => 'required|numeric|min:0',
+            'continued_date' => 'required|date',
+            'accounts' => 'required|array|min:1',
+            'accounts.*.id' => 'required|exists:tran_appropriations,id',
+            'accounts.*.balance' => 'required|numeric|min:0',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Create the continuing appropriation
+            $continuingAppropriation = ContAppropriation::create([
+                'barangay_id' => $request->user()->barangay_id,
+                'fiscal_year_id' => $validated['fiscal_year_id'],
+                'description' => $validated['description'],
+                'expense_class' => $validated['expense_class'],
+                'appropriation_amount' => $validated['appropriation_amount'],
+                'unappropriated_amount' => $validated['unappropriated_amount'],
+                'continued_date' => $validated['continued_date'],
+                'status' => 'draft',
+                'user_id' => $request->user()->id,
+            ]);
+
+            // Create the continuing account records
+            foreach ($validated['accounts'] as $account) {
+                ContApproAccounts::create([
+                    'contAppropriation_id' => $continuingAppropriation->id,
+                    'tranAppropriation_id' => $account['id'],
+                    'remainingBalance' => $account['balance'],
+                    'continuingYear' => now()->year,
+                    'status' => 'active',
+                    'user_id' => $request->user()->id,
+                ]);
+            }
+
+            DB::commit();
+
+            // Log the action
+            AdminAuthController::logUserAction(
+                $request->user(),
+                'Created Continuing Appropriation',
+                "Created continuing appropriation: {$validated['description']} with amount ₱" . number_format($validated['appropriation_amount'], 2)
+            );
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Continuing appropriation created successfully',
+                'data' => $continuingAppropriation->load('continuingAccounts')
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to create continuing appropriation: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all continuing appropriations for the current barangay
+     */
+    public function getContinuingAppropriations(Request $request)
+    {
+        try {
+            $continuingAppropriations = ContAppropriation::with(['continuingAccounts.transactionAppropriation', 'fiscalYear'])
+                ->where('barangay_id', $request->user()->barangay_id)
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($item) {
+                    // Calculate total appropriated amount for this continuing appropriation
+                    $totalAppropriated = TranAppropriation::where('barangay_id', $item->barangay_id)
+                        ->where('cont_appropriation_id', $item->id)
+                        ->where('status', 'committed')
+                        ->sum('amount');
+
+                    return [
+                        'id' => $item->id,
+                        'continued_date' => $item->continued_date->format('m/d/Y'),
+                        'year' => $item->fiscalYear->year,
+                        'expense_class' => $item->expense_class,
+                        'description' => $item->description,
+                        'appropriation' => (float) $item->appropriation_amount,
+                        'total_appropriated' => (float) $totalAppropriated,
+                        'unappropriated' => (float) $item->unappropriated_amount,
+                        'status' => $item->status,
+                        'accounts' => $item->continuingAccounts->map(function ($account) {
+                            return [
+                                'id' => $account->id,
+                                'balance' => (float) $account->remainingBalance,
+                                'accountName' => $account->transactionAppropriation->expenseClass?->name . ' > ' . 
+                                               $account->transactionAppropriation->expenseType?->name . ' > ' . 
+                                               $account->transactionAppropriation->expenseItem?->name
+                            ];
+                        })
+                    ];
+                });
+
+            return response()->json([
+                'status' => true,
+                'data' => $continuingAppropriations
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to fetch continuing appropriations: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update the status of a continuing appropriation
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:draft,committed,reverted'
+        ]);
+
+        try {
+            $continuingAppropriation = ContAppropriation::where('barangay_id', $request->user()->barangay_id)
+                ->findOrFail($id);
+
+            $continuingAppropriation->update(['status' => $validated['status']]);
+
+            // Log the action
+            AdminAuthController::logUserAction(
+                $request->user(),
+                'Updated Continuing Appropriation Status',
+                "Updated continuing appropriation status to {$validated['status']}: {$continuingAppropriation->description}"
+            );
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Status updated successfully',
+                'data' => $continuingAppropriation
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to update status: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get allocation history for a continuing appropriation
+     */
+    public function getAllocationHistory(Request $request, $id)
+    {
+        try {
+            $continuingAppropriation = ContAppropriation::where('barangay_id', $request->user()->barangay_id)
+                ->findOrFail($id);
+
+            // Get allocations made for this continuing appropriation
+            $allocations = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem'])
+                ->where('barangay_id', $request->user()->barangay_id)
+                ->where('cont_appropriation_id', $continuingAppropriation->id) // Get allocations for this specific continuing appropriation
+                ->where('status', 'committed')
+                ->orderBy('transaction_date', 'desc')
+                ->get()
+                ->groupBy(function($allocation) {
+                    // Group by date to create sessions
+                    return $allocation->transaction_date->format('Y-m-d');
+                })
+                ->map(function($dayAllocations, $date) {
+                    return [
+                        'session_id' => $date,
+                        'created_at' => $dayAllocations->first()->transaction_date,
+                        'allocations' => $dayAllocations->map(function($allocation) {
+                            return [
+                                'id' => $allocation->id,
+                                'amount' => (float) $allocation->amount,
+                                'expense_class_id' => $allocation->expense_class_id,
+                                'expense_type_id' => $allocation->expense_type_id,
+                                'expense_item_id' => $allocation->expense_item_id,
+                                'expense_class_name' => $allocation->expenseClass?->name,
+                                'expense_type_name' => $allocation->expenseType?->name,
+                                'expense_item_name' => $allocation->expenseItem?->name,
+                                'transaction_date' => $allocation->transaction_date
+                            ];
+                        })->toArray()
+                    ];
+                })
+                ->values()
+                ->toArray();
+
+            $history = [
+                'history' => $allocations
+            ];
+
+            return response()->json([
+                'status' => true,
+                'data' => $history
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to fetch allocation history: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Commit allocations for a continuing appropriation
+     */
+    public function commitAllocation(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'allocations' => 'required|array',
+            'allocations.*.id' => 'required',
+            'allocations.*.type' => 'required|in:type,item',
+            'allocations.*.amount' => 'required|numeric|min:0',
+            'allocations.*.expense_class_id' => 'nullable|integer|exists:lib_expense_classes,id',
+            'allocations.*.expense_type_id' => 'nullable|integer|exists:lib_expense_types,id',
+            'allocations.*.expense_item_id' => 'nullable|integer|exists:lib_expense_items,id'
+        ]);
+
+        try {
+            $continuingAppropriation = ContAppropriation::where('barangay_id', $request->user()->barangay_id)
+                ->findOrFail($id);
+
+            // Calculate existing allocations total for this continuing appropriation
+            $existingAllocationsTotal = TranAppropriation::where('barangay_id', $request->user()->barangay_id)
+                ->where('cont_appropriation_id', $continuingAppropriation->id)
+                ->where('status', 'committed')
+                ->sum('amount');
+
+            // Calculate new total allocation amount
+            $newTotalAllocation = array_sum(array_column($validated['allocations'], 'amount'));
+
+            // Calculate net change (new total - existing total)
+            $netChange = $newTotalAllocation - $existingAllocationsTotal;
+
+            // Validate against unappropriated amount
+            if ($netChange > $continuingAppropriation->unappropriated_amount) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Net allocation change exceeds unappropriated amount. Net change: ₱' . number_format($netChange, 2) . ', Available: ₱' . number_format($continuingAppropriation->unappropriated_amount, 2)
+                ], 422);
+            }
+
+            DB::beginTransaction();
+
+            // Update or create appropriation records for the allocations
+            foreach ($validated['allocations'] as $allocation) {
+                // Check if there's already an allocation for this expense item/type
+                $existingAllocation = TranAppropriation::where('barangay_id', $request->user()->barangay_id)
+                    ->where('cont_appropriation_id', $continuingAppropriation->id)
+                    ->where('expense_class_id', $allocation['expense_class_id'] ?? null)
+                    ->where('expense_type_id', $allocation['expense_type_id'] ?? null)
+                    ->where('expense_item_id', $allocation['expense_item_id'] ?? null)
+                    ->where('status', 'committed')
+                    ->first();
+
+                if ($existingAllocation) {
+                    // Update existing allocation
+                    $existingAllocation->update([
+                        'amount' => $allocation['amount'],
+                        'transaction_date' => now(),
+                        'user_id' => $request->user()->id,
+                    ]);
+                } else {
+                    // Create new allocation
+                    TranAppropriation::create([
+                        'barangay_id' => $request->user()->barangay_id,
+                        'budget_id' => null, // Continuing appropriations don't have a budget_id
+                        'cont_appropriation_id' => $continuingAppropriation->id, // Link to specific continuing appropriation
+                        'expense_class_id' => $allocation['expense_class_id'] ?? null,
+                        'expense_type_id' => $allocation['expense_type_id'] ?? null,
+                        'expense_item_id' => $allocation['expense_item_id'] ?? null,
+                        'amount' => $allocation['amount'],
+                        'transaction_date' => now(),
+                        'status' => 'committed',
+                        'user_id' => $request->user()->id,
+                    ]);
+                }
+            }
+
+            // Update the unappropriated amount based on net change
+            $continuingAppropriation->update([
+                'unappropriated_amount' => $continuingAppropriation->unappropriated_amount - $netChange
+            ]);
+
+            DB::commit();
+
+            // Log the action
+            AdminAuthController::logUserAction(
+                $request->user(),
+                'Committed Continuing Appropriation Allocations',
+                "Committed allocations with net change of ₱" . number_format($netChange, 2) . 
+                " for continuing appropriation: {$continuingAppropriation->description}"
+            );
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Allocations committed successfully',
+                'data' => [
+                    'id' => $continuingAppropriation->id,
+                    'unappropriated_amount' => $continuingAppropriation->unappropriated_amount - $netChange
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to commit allocations: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

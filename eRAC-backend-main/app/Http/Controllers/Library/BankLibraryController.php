@@ -70,10 +70,27 @@ public function createBank(Request $request)
                 // No booklets at all
                 $bank->status = 'unavailable';
             } else {
+                $booklets=LibBooklet::where('bank_id',$bank->id)->get();
+
+                foreach($booklets as $booklet){
+                    $totalCheques = $booklet->cheques()->count();
+                    $usedCheques = $booklet->cheques()->where('status', '!=', 'unused')->count();
+                    if ($totalCheques == 0) {
+                        $booklet->status = 'unused';
+                    } elseif ($usedCheques==$totalCheques) {
+                        $booklet->status = 'consumed';
+                    }
+                    else {
+                        $booklet->status = 'not all consumed';
+                    }
+                    $booklet->save();
+                }
+
                 // Check if any booklet is NOT consumed
                 $hasAvailable = $bank->booklets()->where('status', '!=', 'consumed')->exists();
 
                 $bank->status = $hasAvailable ? 'available' : 'consumed';
+
             }
 
             $bank->save();

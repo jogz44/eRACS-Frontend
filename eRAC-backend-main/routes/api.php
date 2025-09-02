@@ -5,7 +5,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\DisbursementController;
-use App\Http\Controllers\Library\LibParticularController;
 use App\Http\Controllers\Library\AccountsLibController;
 use App\Http\Controllers\Library\BankLibraryController;
 use App\Http\Controllers\Transaction\AppropriationController;
@@ -61,10 +60,6 @@ Route::prefix('barangay')->group(function () {
         Route::post('/users/{userId}/permissions', [AuthController::class, 'updateUserPermissions']);
 
         //Accounts Library
-
-        // Particulars CRUD (simplified)
-        Route::apiResource('particulars', LibParticularController::class)
-            ->only(['index', 'store', 'show', 'update', 'destroy']);
 
         //Fiscal Years
         Route::get('fiscal-years', [AccountsLibController::class, 'getFiscalYears']);
@@ -143,6 +138,10 @@ Route::prefix('barangay')->group(function () {
         Route::patch('disbursements/{id}/liquidate', [DisbursementController::class, 'liquidate']);
         // Delete a disbursement
         Route::delete('disbursements/{id}', [DisbursementController::class, 'destroy']);
+        // Void workflow
+        Route::post('disbursements/{id}/void-request', [DisbursementController::class, 'requestVoid']);
+        Route::post('disbursements/{id}/void-approve', [DisbursementController::class, 'approveVoid']);
+        Route::post('disbursements/{id}/void-reject', [DisbursementController::class, 'rejectVoid']);
         // Fetch OR Details for a disbursement
         Route::get('disbursements/{id}/or-details', [DisbursementController::class, 'getOrDetails']);
         // Save OR Details for a disbursement
@@ -175,6 +174,11 @@ Route::prefix('barangay')->group(function () {
 
         // Continuing Appropriation
         Route::get('/continuing-appropriations', [ContinuingAppropriationController::class, 'index']);
+        Route::post('/continuing-appropriations', [ContinuingAppropriationController::class, 'store']);
+        Route::get('/continuing-appropriations/list', [ContinuingAppropriationController::class, 'getContinuingAppropriations']);
+        Route::patch('/continuing-appropriations/{id}/status', [ContinuingAppropriationController::class, 'updateStatus']);
+        Route::get('/continuing-appropriations/{id}/history', [ContinuingAppropriationController::class, 'getAllocationHistory']);
+        Route::post('/continuing-appropriations/{id}/allocate', [ContinuingAppropriationController::class, 'commitAllocation']);
 
 
     });

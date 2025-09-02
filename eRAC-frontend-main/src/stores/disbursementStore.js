@@ -65,6 +65,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       liquidationTable: false,
       orDetails: false,
       viewOrDetails: false,
+      void: false, // Added for void dialog
     },
 
     // Loading states
@@ -75,6 +76,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     savingDisbursement: false, // New loading state for save button
     loadingEditDisbursement: null, // Loading state for edit disbursement (stores the ID of the disbursement being loaded)
     loadingDisbursements: false, // Loading state for fetching disbursements
+    voidingDisbursement: false, // Loading state for voiding disbursement
 
     // Form data
     forms: {
@@ -99,10 +101,72 @@ export const useDisbursementStore = defineStore('disbursement', {
         paymentFor: '',
         receivedBy: '',
       },
+      void: { // Added for void form
+        disbursementId: null,
+        remarks: '',
+        requestedBy: null,
+        requestedAt: null,
+      },
     },
 
     // Pagination
     pagination: { rowsPerPage: 10 },
+
+    // Test data for development - remove in production
+    testDisbursements: [
+      {
+        id: 1,
+        date: '2023-01-01',
+        dvNumber: 'DV001',
+        chequeNumber: 'CHQ000001',
+        bank: 'Bank A',
+        payee: 'John Doe',
+        dvAmount: 1000.00,
+        status: 'Pending',
+        aging: '30 days',
+        expenses: [
+          { id: 1, accountId: 1, accountName: 'Expense Class A > Expense Type A > Expense Item A', amount: 100.00, particular: 'Particular 1' },
+          { id: 2, accountId: 2, accountName: 'Expense Class B > Expense Type B', amount: 200.00, particular: 'Particular 2' },
+        ],
+        orDetails: [
+          { id: 1, orNumber: 'OR001', orAmount: 100.00, orDate: '2023-01-10', orImage: null, orPhotoUrl: null, serverPhotoPath: null, remarks: 'Remarks 1' },
+          { id: 2, orNumber: 'OR002', orAmount: 200.00, orDate: '2023-01-15', orImage: null, orPhotoUrl: null, serverPhotoPath: null, remarks: 'Remarks 2' },
+        ],
+        actualExpense: 300.00,
+        returnAmount: 700.00,
+        remarks: null,
+        void_requested_at: null,
+        void_approved_at: null,
+        rejection_remarks: null,
+        void_rejected_at: null,
+      },
+      {
+        id: 2,
+        date: '2023-02-01',
+        dvNumber: 'DV002',
+        chequeNumber: 'CHQ000002',
+        bank: 'Bank B',
+        payee: 'Jane Smith',
+        dvAmount: 2000.00,
+        status: 'Liquidated',
+        aging: '0 days',
+        expenses: [
+          { id: 3, accountId: 1, accountName: 'Expense Class A > Expense Type A > Expense Item A', amount: 50.00, particular: 'Particular 3' },
+          { id: 4, accountId: 2, accountName: 'Expense Class B > Expense Type B', amount: 100.00, particular: 'Particular 4' },
+        ],
+        orDetails: [
+          { id: 3, orNumber: 'OR003', orAmount: 50.00, orDate: '2023-02-05', orImage: null, orPhotoUrl: null, serverPhotoPath: null, remarks: 'Remarks 3' },
+          { id: 4, orNumber: 'OR004', orAmount: 100.00, orDate: '2023-02-10', orImage: null, orPhotoUrl: null, serverPhotoPath: null, remarks: 'Remarks 4' },
+        ],
+        actualExpense: 150.00,
+        returnAmount: 1850.00,
+        remarks: null,
+        void_requested_at: null,
+        void_approved_at: null,
+        rejection_remarks: null,
+        void_rejected_at: null,
+      },
+    ],
   }),
 
   getters: {
@@ -233,6 +297,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       },
       { name: 'status', label: 'Status', field: 'status', align: 'center', sortable: true },
       { name: 'action', label: 'Action', field: '', align: 'center' },
+      { name: 'liquidate', label: 'Liquidate', field: '', align: 'center' },
        { name: 'remarks', label: 'Remarks', field: '', align: 'center' },
     ],
 
@@ -382,6 +447,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             if (!matchesLevel) return false
 
             // When editing a disbursement, exclude its own existing expense details
+            // This allows us to show the balance that would be available after saving
             if (currentDisbursementId && String(ed.disbursement_id) === currentDisbursementId) {
               return false
             }
@@ -695,6 +761,8 @@ export const useDisbursementStore = defineStore('disbursement', {
           payee: d.payee,
           dvAmount: d.dv_amount,
           status: d.status,
+          remarks: d.remarks,
+          rejection_remarks: d.rejection_remarks,
           aging: calculateAging(d.date),
           expenses: d.expenses || [],
         }))
@@ -724,7 +792,8 @@ export const useDisbursementStore = defineStore('disbursement', {
     async fetchDisbursementById(id) {
       try {
         const authStore = useAuthStore();
-        const token = authStore.admin ? authStore.adminToken : authStore.token;
+        // Use barangay user token for barangay endpoints
+        const token = authStore.token;
         const response = await api.get(`/api/barangay/disbursements/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -1997,6 +2066,134 @@ export const useDisbursementStore = defineStore('disbursement', {
           success: false,
           message: error.response?.data?.message || 'Failed to delete disbursement'
         };
+      }
+    },
+
+    // Load test data for development - remove in production
+    loadTestData() {
+      this.disbursements = [...this.testDisbursements];
+    },
+
+    // Void-related methods
+    openVoidDialog(disbursement) {
+      this.forms.void.disbursementId = disbursement.id;
+      this.forms.void.remarks = '';
+      this.forms.void.requestedBy = null;
+      this.forms.void.requestedAt = null;
+      this.dialogs.void = true;
+    },
+
+    closeVoidDialog() {
+      this.dialogs.void = false;
+      this.forms.void.disbursementId = null;
+      this.forms.void.remarks = '';
+      this.forms.void.requestedBy = null;
+      this.forms.void.requestedAt = null;
+    },
+
+    async submitVoidRequest() {
+      if (!this.forms.void.remarks || this.forms.void.remarks.trim() === '') {
+        throw new Error('Remarks are required for void requests');
+      }
+
+      this.voidingDisbursement = true;
+      try {
+        const authStore = useAuthStore();
+        const token = authStore.admin ? authStore.adminToken : authStore.token;
+
+        const response = await api.post(`/api/barangay/disbursements/${this.forms.void.disbursementId}/void-request`, {
+          remarks: this.forms.void.remarks.trim(),
+        }, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+
+        if (response.data.status) {
+          // Update the disbursement status in the local array
+          const disbursementIndex = this.disbursements.findIndex(d => d.id === this.forms.void.disbursementId);
+          if (disbursementIndex !== -1) {
+            this.disbursements[disbursementIndex].status = 'Void Requested';
+            this.disbursements[disbursementIndex].remarks = this.forms.void.remarks.trim();
+            this.disbursements[disbursementIndex].void_requested_at = new Date().toISOString();
+          }
+
+          this.closeVoidDialog();
+          return { success: true, message: response.data.message };
+        } else {
+          return { success: false, message: response.data.message };
+        }
+      } catch (error) {
+        console.error('Failed to submit void request:', error);
+        throw new Error(error.response?.data?.message || 'Failed to submit void request');
+      } finally {
+        this.voidingDisbursement = false;
+      }
+    },
+
+    async approveVoidRequest(disbursementId) {
+      try {
+        const authStore = useAuthStore();
+        // Use barangay user token for barangay endpoints
+        const token = authStore.token;
+
+        const response = await api.post(`/api/barangay/disbursements/${disbursementId}/void-approve`, {}, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+
+        if (response.data.status) {
+          // Update the disbursement status in the local array
+          const disbursementIndex = this.disbursements.findIndex(d => d.id === disbursementId);
+          if (disbursementIndex !== -1) {
+            this.disbursements[disbursementIndex].status = 'Voided';
+            this.disbursements[disbursementIndex].void_approved_at = new Date().toISOString();
+          }
+
+          return { success: true, message: response.data.message };
+        } else {
+          return { success: false, message: response.data.message };
+        }
+      } catch (error) {
+        console.error('Failed to approve void request:', error);
+        throw new Error(error.response?.data?.message || 'Failed to approve void request');
+      }
+    },
+
+    async rejectVoidRequest(disbursementId, rejectionRemarks) {
+      try {
+        const authStore = useAuthStore();
+        // Use barangay user token for barangay endpoints
+        const token = authStore.token;
+
+        const response = await api.post(`/api/barangay/disbursements/${disbursementId}/void-reject`, {
+          remarks: rejectionRemarks,
+        }, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+
+        if (response.data.status) {
+          // Update the disbursement status in the local array
+          const disbursementIndex = this.disbursements.findIndex(d => d.id === disbursementId);
+          if (disbursementIndex !== -1) {
+            this.disbursements[disbursementIndex].status = 'Pending';
+            this.disbursements[disbursementIndex].rejection_remarks = rejectionRemarks;
+            this.disbursements[disbursementIndex].void_rejected_at = new Date().toISOString();
+          }
+
+          return { success: true, message: response.data.message };
+        } else {
+          return { success: false, message: response.data.message };
+        }
+      } catch (error) {
+        console.error('Failed to reject void request:', error);
+        throw new Error(error.response?.data?.message || 'Failed to reject void request');
       }
     },
   },
