@@ -11,6 +11,7 @@ class TranAppropriation extends Model
     protected $fillable = [
         'barangay_id',
         'budget_id',
+        'cont_appropriation_id',
         'expense_class_id',
         'expense_type_id',
         'expense_item_id',
@@ -27,7 +28,12 @@ class TranAppropriation extends Model
 
     public function budget(): BelongsTo
     {
-        return $this->belongsTo(Budget::class,'budget_id');
+        return $this->belongsTo(Budget::class,'budget_id')->withDefault();
+    }
+
+    public function contAppropriation(): BelongsTo
+    {
+        return $this->belongsTo(ContAppropriation::class, 'cont_appropriation_id');
     }
 
     public function expenseClass(): BelongsTo

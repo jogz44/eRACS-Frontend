@@ -11,9 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('disbursements', function (Blueprint $table) {
-            $table->text('remarks')->nullable()->after('status');
-            $table->text('rejection_remarks')->nullable()->after('remarks');
+        Schema::table('tran_appropriations', function (Blueprint $table) {
+            //
         });
     }
 
@@ -22,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('disbursements', function (Blueprint $table) {
-            $table->dropColumn(['remarks', 'rejection_remarks']);
+        Schema::table('tran_appropriations', function (Blueprint $table) {
+            //
         });
     }
 };

@@ -37,12 +37,11 @@ class BudgetSeeder extends Seeder
                     'start_date'      => now()->copy()->setYear($year)->startOfYear(),
                     'end_date'        => now()->copy()->setYear($year)->endOfYear(),
                     'original_amount' => 2000000,
-                    'current_amount'  => 0,
+                    'current_amount'  => 2000000,
                     'augmentation'    => 0,
                     'return_amount'   => 0,
                     'user_id'         => $user->id,
                 ]);
-
                 // Supplemental Budget
                 Budget::updateOrCreate([
                     'barangay_id'    => $barangay->id,
@@ -51,10 +50,10 @@ class BudgetSeeder extends Seeder
                 ], [
                     'start_date'      => now()->copy()->setYear($year)->addMonths(6)->startOfMonth(),
                     'end_date'        => now()->copy()->setYear($year)->addMonths(11)->endOfMonth(),
-                    'original_amount' => $faker->numberBetween(200000, 1000000),
-                    'current_amount'  => $faker->numberBetween(200000, 1000000),
-                    'augmentation'    => $faker->numberBetween(0, 100000),
-                    'return_amount'   => $faker->numberBetween(0, 50000),
+                    'original_amount' => 1000000,
+                    'current_amount'  => 1000000,
+                    'augmentation'    => 0,
+                    'return_amount'   => 0,
                     'user_id'         => $user->id,
                 ]);
             }
