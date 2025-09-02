@@ -25,7 +25,7 @@ const routes = [
       {
         path: 'forgotpage',
         name: 'forgotpage',
-                  component: () => import('../pages/Accounts/ForgotPage.vue'),
+        component: () => import('../pages/Accounts/ForgotPage.vue'),
       },
     ],
   },
@@ -139,7 +139,6 @@ const routes = [
         name: 'Logsview',
         component: () => import('../pages/User/UserLogs.vue'),
         meta: {title: 'Logs' }
-
       }
     ],
   },
@@ -233,7 +232,7 @@ const routes = [
     name: 'ErrorNotFound',
     component: () => import('../pages/ErrorNotFound.vue'),
     meta: { title: 'Page Not Found' },
-  },
+  }
 ]
 
 export default routes

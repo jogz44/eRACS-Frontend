@@ -611,6 +611,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
+import { useQuasar } from 'quasar'
 
 import OrDetailsDialog from 'components/disbursement/OrDetailsDialog.vue'
 import ViewOrDetails from 'components/disbursement/ViewOrDetails.vue'
@@ -876,8 +877,6 @@ watch(selectedBudgetSource, async (newBudgetSource) => {
     await store.refreshExpenseAccountsWithBalances()
   }
 })
-
-import { useQuasar } from 'quasar'
 
 const $q = useQuasar()
 const loading = ref(false)
