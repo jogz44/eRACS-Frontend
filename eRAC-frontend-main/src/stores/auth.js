@@ -48,6 +48,12 @@ export const useAuthStore = defineStore('auth', {
       }
       return null
     },
+    getSelectedBarangayName() {
+      if (this.admin) {
+        return localStorage.getItem('admin_selected_barangay_name') || null
+      }
+      return null
+    },
     
     isBarangaySelected() {
       return this.getSelectedBarangay() !== null

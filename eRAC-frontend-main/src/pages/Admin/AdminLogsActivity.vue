@@ -112,42 +112,21 @@ export default {
         return
       }
       
-      // Debug: Log the selectedUser data
-      console.log('Loading activities for user:', {
-        userId: props.selectedUser?.id,
-        logDate: props.selectedUser?.log_date,
-        userType: props.selectedUser?.user_type,
-        barangay: props.selectedUser?.barangay,
-        adminRole: props.selectedUser?.admin_role,
-        fullUser: props.selectedUser
-      })
-      
              try {
          // More explicit user type detection
          const userType = props.selectedUser.user_type
          const barangay = props.selectedUser.barangay
-         const adminRole = props.selectedUser.admin_role
          
          // Determine if this is an admin user
          const isAdminUser = userType === 'admin' || barangay === 'Admin'
-         
-         console.log('User type check:', {
-           userType: userType,
-           barangay: barangay,
-           adminRole: adminRole,
-           isAdminUser: isAdminUser,
-           userId: props.selectedUser.id
-         })
          
          let apiUrl
          if (isAdminUser) {
            // For admin users (super admin, COA officers), use the user logs endpoint with user_type parameter
            apiUrl = `/api/admin/logs/${props.selectedUser.id}/${props.selectedUser.log_date}?user_type=admin`
-           console.log('Loading admin logs from:', apiUrl)
          } else {
            // For regular barangay users, use the user logs endpoint with user_type parameter
            apiUrl = `/api/admin/logs/${props.selectedUser.id}/${props.selectedUser.log_date}?user_type=user`
-           console.log('Loading user logs from:', apiUrl)
          }
         
         const response = await api.get(apiUrl, {
@@ -157,8 +136,6 @@ export default {
             'Accept': 'application/json'
           }
         })
-        
-        console.log('API response:', response.data)
         
         if (response.data && Array.isArray(response.data)) {
           activities.value = response.data

@@ -323,6 +323,7 @@ import { useQuasar } from 'quasar'
 import { useContAugmentationStore } from 'stores/contAugmentation'
 import { useAppropriationStore } from 'stores/appropriationStore'
 import { usePageLogging } from '../../../composables/usePageLogging'
+import { useActivityLogging } from '../../../composables/useActivityLogging'
 
 // Local reviewed state for augmentation rows
 const augmentationReviewedSet = ref(new Set())
@@ -339,6 +340,9 @@ const handleAugmentationReviewClick = (row) => {
     icon: 'check_circle',
     position: 'top',
   })
+
+  // Log admin review activity
+  logAdminActivity('Reviewed Item', `Admin reviewed Augmentation Ref ${row.ref_number || row.refNo || ''} (Barangay: ${row.barangay_name || 'Unknown Barangay'})`)
 }
 
 const $q = useQuasar()
@@ -346,6 +350,7 @@ const store = useContAugmentationStore()
 const loading = ref(false)
 const appropriationStore = useAppropriationStore()
 const { logPageVisit } = usePageLogging()
+const { logAdminActivity } = useActivityLogging()
 
 const selectedFiscalYear = computed({
   get: () => appropriationStore.selectedFiscalYear,

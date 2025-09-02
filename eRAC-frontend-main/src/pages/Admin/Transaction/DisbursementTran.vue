@@ -337,10 +337,12 @@ import EditDisbursement from 'components/disbursement/EditDisbursement.vue'
 import { useDisbursementStore } from 'stores/disbursementStore'
 import { useBankStore } from 'stores/bankStore'
 import { usePageLogging } from '../../../composables/usePageLogging'
+import { useActivityLogging } from '../../../composables/useActivityLogging'
 
 const store = useDisbursementStore()
 const bankStore = useBankStore()
 const { logPageVisit } = usePageLogging()
+const { logAdminActivity } = useActivityLogging()
 
 onMounted(async () => {
   try {
@@ -418,6 +420,11 @@ const handleReviewClick = (row) => {
     persistent: true
   }).onOk(() => {
     reviewedSet.value.add(row.id)
+    // Log admin review activity
+    // Fallback to selected barangay name from auth store if row lacks it
+    const selectedBarangayName = (store.authStore?.getSelectedBarangayName && store.authStore.getSelectedBarangayName()) || null
+    const barangayName = row.barangay_name || row.barangayName || (typeof row.barangay === 'string' ? row.barangay : (row.barangay?.name)) || selectedBarangayName || 'Unknown Barangay'
+    logAdminActivity('Reviewed Item', `Admin reviewed Disbursement ${row.dvNumber} (Barangay: ${barangayName})`)
   })
 }
 

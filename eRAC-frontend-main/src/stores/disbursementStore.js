@@ -826,6 +826,9 @@ export const useDisbursementStore = defineStore('disbursement', {
         this.particulars = pData.map(item => ({ label: item.particulars }))
 
         // Map backend fields to frontend fields if needed
+        // Derive selected barangay name for admin context as fallback
+        const selectedBarangayName = authStore.admin ? (authStore.getSelectedBarangayName && authStore.getSelectedBarangayName()) : null
+
         this.disbursements = (disbursementsResponse.data.data || []).map(d => ({
           id: d.id,
           date: d.date,
@@ -837,6 +840,8 @@ export const useDisbursementStore = defineStore('disbursement', {
           status: d.status,
           remarks: d.remarks,
           rejection_remarks: d.rejection_remarks,
+          // Normalize barangay name across possible backend shapes; fallback to selected name for admin context
+          barangay_name: d.barangay_name || d.barangayName || (typeof d.barangay === 'string' ? d.barangay : (d.barangay?.name)) || selectedBarangayName || '',
           aging: calculateAging(d.date),
           expenses: d.expenses || [],
         }))

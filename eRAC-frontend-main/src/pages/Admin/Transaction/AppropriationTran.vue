@@ -336,6 +336,7 @@ import ViewCommitDialog from 'components/appropriation/ViewCommitDialog.vue'
 import { useAppropriationStore } from 'stores/appropriationStore'
 import { useAccountsLibraryStore } from 'stores/accountsLibstore'
 import { usePageLogging } from '../../../composables/usePageLogging'
+import { useActivityLogging } from '../../../composables/useActivityLogging'
 import { api } from 'boot/axios'
 import { useAuthStore } from 'stores/auth'
 // import SearchFilters from 'src/components/appropriation/SearchFilters.vue'
@@ -344,6 +345,7 @@ const $q = useQuasar()
 const accountLibraryStore = useAccountsLibraryStore()
 const appropriationStore = useAppropriationStore()
 const { logPageVisit } = usePageLogging()
+const { logAdminActivity } = useActivityLogging()
 const authStore = useAuthStore()
 
 const showDialog = ref(false)
@@ -850,6 +852,8 @@ const handleAppropriationReviewClick = (row) => {
     persistent: true
   }).onOk(() => {
     appropriationReviewedSet.value.add(row.id)
+    // Log admin review activity
+    logAdminActivity('Reviewed Item', `Admin reviewed Appropriation: ${row.description} (Barangay: ${row.barangay_name || 'Unknown Barangay'})`)
   })
 }
 
