@@ -155,6 +155,7 @@
 import { api } from 'boot/axios'
 import { useUserControlStore } from 'stores/userControlStore'
 import { useAuthStore } from 'stores/auth'
+import { usePageLogging } from '../../composables/usePageLogging'
 
 export default {
   name: 'UserControlAcceptedPage',
@@ -228,9 +229,9 @@ export default {
     },
   },
   async mounted() {
-    // Restore admin auth state and set headers
-    const authStore = useAuthStore()
-    authStore.restoreAdminAuth()
+    // Log page visit
+    const { logPageVisit } = usePageLogging()
+    await logPageVisit('User Control')
     
     // Test API connectivity
     try {

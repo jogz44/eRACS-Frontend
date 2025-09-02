@@ -17,6 +17,8 @@ return new class extends Migration
             $table->unsignedBigInteger('tranAppropriation_id');
             $table->decimal('remainingBalance', 15, 2);
             $table->string('continuingYear', 4);
+            $table->enum('status', ['active', 'inactive'])->default('active');
+            $table->foreignId('user_id')->constrained('barangay_users');
             $table->timestamps();
 
             $table->foreign('contAppropriation_id')->references('id')->on('cont_appropriations')->onDelete('cascade');

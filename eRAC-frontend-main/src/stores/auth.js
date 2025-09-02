@@ -32,10 +32,25 @@ export const useAuthStore = defineStore('auth', {
 
   actions: {
     // Helper methods
-    restoreAdminAuth() {
-      if (this.adminToken) {
-        api.defaults.headers.common['Authorization'] = `Bearer ${this.adminToken}`
+    
+    setAdminToken(token) {
+      this.adminToken = token
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+        localStorage.setItem('admin_token', token)
       }
+    },
+    
+    getSelectedBarangay() {
+      if (this.admin) {
+        const savedBarangayId = localStorage.getItem('admin_selected_barangay')
+        return savedBarangayId ? parseInt(savedBarangayId) : null
+      }
+      return null
+    },
+    
+    isBarangaySelected() {
+      return this.getSelectedBarangay() !== null
     },
     
     setToken(token) {
@@ -320,11 +335,8 @@ export const useAuthStore = defineStore('auth', {
           .then((response) => {
             if (response.data.token) {
               this.admin = response.data.admin
-              this.adminToken = response.data.token
+              this.setAdminToken(response.data.token)
               localStorage.setItem('admin_data', JSON.stringify(this.admin))
-              localStorage.setItem('admin_token', this.adminToken)
-              // Set defaults for subsequent requests
-              api.defaults.headers.common['Authorization'] = `Bearer ${this.adminToken}`
               if (router) {
                 router.replace('/admin/dashboard')
               }

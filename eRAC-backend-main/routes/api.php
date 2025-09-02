@@ -5,7 +5,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\DisbursementController;
-use App\Http\Controllers\Library\LibParticularController;
 use App\Http\Controllers\Library\AccountsLibController;
 use App\Http\Controllers\Library\BankLibraryController;
 use App\Http\Controllers\Transaction\AppropriationController;
@@ -61,10 +60,6 @@ Route::prefix('barangay')->group(function () {
         Route::post('/users/{userId}/permissions', [AuthController::class, 'updateUserPermissions']);
 
         //Accounts Library
-
-        // Particulars CRUD (simplified)
-        Route::apiResource('particulars', LibParticularController::class)
-            ->only(['index', 'store', 'show', 'update', 'destroy']);
 
         //Fiscal Years
         Route::get('fiscal-years', [AccountsLibController::class, 'getFiscalYears']);
@@ -207,18 +202,14 @@ Route::prefix('admin')->group(function () {
         Route::patch('/users/{user}/approve', [AdminAuthController::class, 'approveUser']);
         Route::delete('/users/{user}', [AdminAuthController::class, 'deleteUser']);
 
-        // Admin appropriation endpoints - can access all barangay data
+        // Admin appropriation endpoints - view only
         Route::get('/budgets', [AppropriationController::class, 'adminIndex']);
-        Route::post('/budgets/create', [AppropriationController::class, 'storeBudget']);
         Route::get('/budgets/{budget}/allocations', [AppropriationController::class, 'getBudgetAllocations']);
-        Route::post('/budgets/{budget}/allocate', [AppropriationController::class, 'saveAllocation']);
         Route::get('/budgets/{id}/history', [AppropriationController::class, 'getAllocationHistory']);
-        Route::patch('/budgets/{budget}/allocations', [AppropriationController::class, 'updateAllocations']);
         Route::get('/expense-hierarchy', [AppropriationController::class, 'getExpenseHierarchy']);
 
-        // Admin disbursement endpoints - can access all barangay data
+        // Admin disbursement endpoints - view only
         Route::get('/disbursements', [DisbursementController::class, 'adminIndex']);
-        Route::post('/disbursements/create', [DisbursementController::class, 'store']);
         // Admin can fetch expense details for a selected barangay
         Route::get('/expense-details', [DisbursementController::class, 'getExpenseDetails']);
         // Admin can view OR details for any disbursement
@@ -227,9 +218,8 @@ Route::prefix('admin')->group(function () {
         // Admin banks endpoint (list all banks for selection in admin UI)
         Route::get('/banks', [\App\Http\Controllers\Library\BankLibraryController::class, 'getBanks']);
 
-        // Admin augmentation endpoints - can access all barangay data
+        // Admin augmentation endpoints - view only
         Route::get('/augmentations', [BudgetAugmentationController::class, 'adminIndex']);
-        Route::post('/augmentations/create', [BudgetAugmentationController::class, 'store']);
         // Admin can view individual augmentation
         Route::get('/augmentations/{id}', [BudgetAugmentationController::class, 'show']);
     });

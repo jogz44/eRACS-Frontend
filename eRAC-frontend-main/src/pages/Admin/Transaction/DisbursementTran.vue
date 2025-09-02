@@ -8,14 +8,14 @@
           color="primary"
           flat
           dense
-          @click="loadPendingUsers"
+          @click="refreshData"
           :loading="store.loadingDisbursements"
         />
       </div>
     </div>
 
     <div class="q-mb-sm">
-      <SearchFilters @add="store.openDialog('disbursement')" />
+      <SearchFilters />
 
       <!-- Disbursement Dialog -->
       <q-dialog v-model="store.dialogs.disbursement" persistent @keydown.enter="handleEnterKey">
@@ -66,27 +66,11 @@
               <!-- Check Number Field -->
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Cheque Number:</q-item-label>
-                <!-- <q-input
-                  outlined
-                  dense
-                  v-model="store.selectedBooklet"
-                  @update:model-value="handleBookletSelection"
-                  :options="store.chequeBooklets"
-                  option-label="label"
-                  option-value="value"
-                  emit-value
-                  map-options
-                  :label="store.chequeBooklets.length === 0 ? 'No booklets available' : 'Choose Booklet'"
-                  class="q-mb-sm"
-                  :loading="store.bookletLoading"
-                  :disable="true"
-                  @keydown.enter="handleEnterKey"
-                /> -->
 
                 <q-input
                   outlined
                   dense
-                  v-model="store.availableChequeNumbers[0]"
+                  v-model="store.autoCheque"
                   :disable="true"
                   @keydown.enter="handleEnterKey"
                 ></q-input>
@@ -139,22 +123,7 @@
             >
               <template v-slot:body-cell-action="props">
                 <q-td :props="props">
-                  <div class="q-gutter-xs">
-                    <q-btn
-                      size="sm"
-                      dense
-                      icon="edit"
-                      color="orange"
-                      @click="store.editItem(props.row)"
-                    />
-                    <q-btn
-                      size="sm"
-                      dense
-                      icon="delete"
-                      color="red"
-                      @click="store.deleteItem(props.row)"
-                    />
-                  </div>
+                  <!-- Admin can only view, not edit/delete -->
                 </q-td>
               </template>
             </q-table>
@@ -175,10 +144,9 @@
           <q-card-actions align="right" class="q-pa-md">
             <q-btn
               flat
-              label="Cancel"
+              label="Close"
               @click="store.closeDialog('disbursement')"
             />
-            <q-btn label="Save" color="primary" @click="handleSaveClick" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -360,15 +328,32 @@ const { logPageVisit } = usePageLogging()
 
 onMounted(async () => {
   try {
-    await store.fetchExpenseAccounts()
-    await store.fetchDisbursements()
+    // Load essential data in parallel for faster loading
+    const [disbursementsPromise, banksPromise] = await Promise.allSettled([
+      store.fetchDisbursements(),
+      bankStore.banks.length ? Promise.resolve() : bankStore.fetchBanks()
+    ])
 
-    if (!bankStore.banks.length) {
-      await bankStore.fetchBanks()
+    // Only fetch expense accounts if needed (for admin users, this is not essential)
+    if (!store.expenseData.length) {
+      store.fetchExpenseAccounts().catch(error => {
+        console.warn('Failed to fetch expense accounts:', error)
+      })
     }
 
-    // Log page visit
-    await logPageVisit('Current Disbursement')
+    // Log page visit in background
+    logPageVisit('Current Disbursement').catch(error => {
+      console.warn('Failed to log page visit:', error)
+    })
+
+    // Check for errors in critical operations
+    if (disbursementsPromise.status === 'rejected') {
+      throw disbursementsPromise.reason
+    }
+    if (banksPromise.status === 'rejected') {
+      console.warn('Failed to fetch banks:', banksPromise.reason)
+    }
+
   } catch (error) {
     console.error('Error during component initialization:', error)
     $q.notify({
@@ -402,7 +387,6 @@ import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
 
 const $q = useQuasar()
-const loading = ref(false)
 
 // Local reviewed state per disbursement row (non-persistent)
 const reviewedSet = ref(new Set())
@@ -444,6 +428,20 @@ const handleBankSelection = async (bankId) => {
   }
 }
 
+const refreshData = async () => {
+  try {
+    // Only refresh essential data for faster response
+    await store.fetchDisbursements()
+  } catch (error) {
+    console.error('Failed to refresh data:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to refresh data: ' + error.message,
+      position: 'top',
+    })
+  }
+}
+
 // const handleBookletSelection = async (bookletRange) => {
 //   if (bookletRange) {
 //     try {
@@ -459,63 +457,15 @@ const handleBankSelection = async (bankId) => {
 //   }
 // }
 
-const validateAndSave = () => {
-  if (store.dialogs.disbursement) {
-    const form = store.forms.disbursement
-    const hasRequiredFields = form.date &&
-                             form.bank_id &&
-                             form.chequeNumber &&
-                             form.dvNumber &&
-                             form.payee
-    // console.log('Validating form:', form, 'Has required fields:', hasRequiredFields)
-    console.log('Here dshkfdkjs :',form.chequeNumber )
-    if (hasRequiredFields && !store.loading) {
-      store.saveDisbursement()
-    } else {
-      $q.notify({
-        type: 'negative',
-        message: 'Please fill in all required fields before saving',
-        icon: 'warning',
-        position: 'top',
-      })
-    }
-  }
-}
 
 const handleEnterKey = (event) => {
   if (event) {
     event.preventDefault()
   }
-  validateAndSave()
+  // Admin users cannot save - only view
 }
 
-const handleSaveClick = async () => {
-  await validateAndSave()
-  // Refresh the disbursement list after saving
-  await store.fetchDisbursements()
-}
 
-const loadPendingUsers = async () => {
-  loading.value = true
-  try {
-    await store.fetchDisbursements()
-    $q.notify({
-      type: 'positive',
-      message: 'Disbursements refreshed!',
-      icon: 'refresh',
-      position: 'top',
-    })
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: error.response?.data?.message || 'Failed to refresh disbursements',
-      icon: 'error',
-      position: 'top',
-    })
-  } finally {
-    loading.value = false
-  }
-}
 </script>
 
 <style scoped>

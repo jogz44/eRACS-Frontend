@@ -265,15 +265,15 @@
           <div class="row q-mb-sm q-col-gutter-md">
             <div class="col-12 col-sm-4">
               <div class="text-caption">Total Budget:</div>
-              <strong>{{ formatCurrency(selectedRow.amount) }}</strong>
+              <strong>{{ formatCurrency(selectedRow.value.amount) }}</strong>
             </div>
             <div class="col-12 col-sm-4">
               <div class="text-caption">Return Amount:</div>
-              <strong>{{ formatCurrency(selectedRow.returnAmount || 0) }}</strong>
+              <strong>{{ formatCurrency(selectedRow.value.returnAmount || 0) }}</strong>
             </div>
             <div class="col-12 col-sm-4">
               <div class="text-caption">Available Budget:</div>
-              <strong>{{ formatCurrency(availableBudget) }}</strong>
+              <strong>{{ formatCurrency(availableBudget.value) }}</strong>
             </div>
           </div>
 
@@ -408,9 +408,11 @@
               <div class="text-caption">Description:</div>
               <strong>{{ selectedRow.description || '-' }}</strong>
             </div>
+
             <div class="col-12 col-sm-6">
               <div class="text-caption">Continued Date:</div>
               <strong>{{ selectedRow.continued_date || '-' }}</strong>
+
             </div>
             <div class="col-12 col-sm-6">
               <div class="text-caption">Total Budget:</div>
@@ -443,11 +445,13 @@
                   <div class="col-6">Account</div>
                   <div class="col-6 text-right">Amount (₱)</div>
                 </div>
+
                 <div class="hierarchical-body">
                   <div class="row q-pa-sm" style="border-bottom: 1px solid #f0f0f0">
                     <div class="col-6">
                       <div class="text-weight-medium">
                         {{ selectedRow.expense_class || 'Unknown' }}
+
                       </div>
                     </div>
                     <div class="col-6 text-right">
@@ -457,6 +461,7 @@
                 </div>
               </div>
             </div>
+
 
             <!-- Current year allocations -->
             <div v-if="viewAllocationHistory.length > 0" class="q-mb-md">
@@ -482,6 +487,7 @@
                     <div class="row q-pa-sm bg-grey-2 text-weight-medium">
                       <div class="col-6">Account</div>
                       <div class="col-6 text-right">Amount (₱)</div>
+
                     </div>
                     <div class="hierarchical-body">
                       <template
@@ -874,7 +880,7 @@ import { useQuasar } from 'quasar'
 import { storeToRefs } from 'pinia'
 import { useContApprStore } from 'src/stores/contApprStore'
 import { usePageLogging } from '../../../composables/usePageLogging'
-import { api } from 'src/boot/axios'
+// import { api } from 'src/boot/axios' // Unused import removed
 
 const $q = useQuasar()
 const contApprStore = useContApprStore()
@@ -904,11 +910,15 @@ const commitExistingAllocationsTotal = ref(0)
 
 // Edit allocation dialog state variables
 const showEditAllocationDialog = ref(false)
-const editAllocations = ref([])
+// const editAllocations = ref([]) // Unused variable removed
 const expandedEditTypes = ref({})
 const typeErrorMap = ref({})
 const editDisplayAccounts = ref([])
 const editLoading = ref({})
+
+// View dialog state variables
+const viewLoading = ref(false)
+const viewAllocationHistory = ref([])
 
 // New state variables for enhanced functionality
 const expandedTypes = ref({})
@@ -1450,44 +1460,32 @@ const saveAllocation = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: error.message || 'An error occurred while saving allocation',
+      message: error.message || 'Failed to save allocation',
       icon: 'error',
       position: 'top',
     })
   }
 }
 
-const openViewDialog = async (row) => {
-  try {
-    selectedRow.value = {
-      ...row,
-      amount: row.appropriation,
-      unappropriated: row.unappropriated,
-      returnAmount: row.returnAmount || 0,
-      augmentationAmount: row.augmentationAmount || 0,
-    }
-
-    // Fetch allocation history to show what was originally continued and what was allocated
-    await fetchViewAllocationHistory(row.id)
-
-    showViewDialog.value = true
-  } catch (error) {
-    console.error('Error opening view dialog:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Failed to load allocation history',
-      icon: 'error',
-      position: 'top',
-    })
+const openViewDialog = (row) => {
+  selectedRow.value = {
+    ...row,
+    amount: row.appropriation || row.amount,
+    unappropriated: row.unappropriated,
+    year: row.year,
+    value: row
   }
+  showViewDialog.value = true
+  viewLoading.value = true
+  viewAllocationHistory.value = []
+
+  // Load allocation history
+  loadViewAllocationHistory(row.id)
 }
 
-// New state for view dialog
-const viewAllocationHistory = ref([])
-const viewLoading = ref(false)
-
-const fetchViewAllocationHistory = async (id) => {
+const loadViewAllocationHistory = async () => {
   try {
+
     viewLoading.value = true
     const config = contApprStore.getAuthConfig()
     const response = await api.get(`/api/barangay/continuing-appropriations/${id}/history`, config)
@@ -1497,9 +1495,10 @@ const fetchViewAllocationHistory = async (id) => {
   } catch (error) {
     console.error('Error fetching view allocation history:', error)
     // If no history, that's fine - just show empty
+
     viewAllocationHistory.value = []
-  } finally {
     viewLoading.value = false
+
   }
 }
 
@@ -1533,16 +1532,16 @@ const openCommitDialog = async (row) => {
     showCommitDialog.value = true
   } catch (error) {
     console.error('Error opening commit dialog:', error)
+
     $q.notify({
       type: 'negative',
-      message: 'Failed to open commit dialog',
+      message: 'Failed to load allocation history',
       icon: 'error',
       position: 'top',
     })
-  } finally {
-    commitLoading.value = false
   }
 }
+
 
 const fetchCommitExpenseHierarchy = async () => {
   try {
@@ -1606,11 +1605,14 @@ const updateCommitAllocationAmount = (key, value) => {
   const parsed = parseCurrency(value)
   // Ensure the value is stored with exactly 2 decimal places
   commitInputCache.value[key] = Number(parsed.toFixed(2))
+
 }
 
 const updateCommitUnappropriated = () => {
-  // This function can be used to update any real-time calculations
+  // This function would update the unappropriated amount display
+  // Implementation depends on business logic
 }
+
 
 const calculateCommitClassTotal = (expenseClass) => {
   let total = 0
@@ -1625,19 +1627,21 @@ const calculateCommitClassTotal = (expenseClass) => {
     })
   })
   return Math.round(total * 100) / 100
+
 }
 
-const calculateCommitTypeTotal = (type) => {
-  if (!type || !type.children) return 0
-  return type.children.reduce((sum, item) => {
-    const amount = commitInputCache.value[`item-${item.id}`] || 0
-    return sum + parseCurrency(amount)
+const formatNumberWithCommas = (value) => {
+  const num = parseFloat(value)
+  return isNaN(num) ? '0' : num.toLocaleString('en-US')
+}
+
+const calculateCommitClassTotal = (expenseClass) => {
+  if (!expenseClass.children) return 0
+  return expenseClass.children.reduce((total, type) => {
+    return total + calculateCommitTypeTotal(type)
   }, 0)
 }
 
-const getCommitTypeClass = (expenseType) => {
-  return expenseType.children?.length > 0 ? 'text-weight-bold' : 'text-weight-regular'
-}
 
 const handleCommitAmountInput = (value) => {
   // Remove all non-numeric characters except decimal point
@@ -1693,10 +1697,13 @@ const formatNumberWithCommas = (value) => {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })
+
 }
 
 const submitCommitAllocation = async () => {
+  commitLoading.value = true
   try {
+
     const allocations = []
     let hasValidAllocation = false
 
@@ -1765,32 +1772,26 @@ const submitCommitAllocation = async () => {
     commitInputCache.value = {}
     commitDisplayAccounts.value = []
 
+
     $q.notify({
       type: 'positive',
-      message: 'Allocation saved successfully',
+      message: 'Allocation committed successfully!',
       icon: 'check_circle',
       position: 'top',
     })
-
-    // Refresh the appropriations list
-    await contApprStore.fetchContinuingAppropriations()
-  } catch (error) {
-    console.error('[ERROR] submitCommitAllocation:', error)
-    let message = error.message || 'Failed to save allocation'
-
-    if (error.response && error.response.status === 422) {
-      const backendMessage = error.response.data.message || error.response.data.error
-      message = `Backend Error: ${backendMessage}`
-    }
-
+    showCommitDialog.value = false
+  } catch {
     $q.notify({
       type: 'negative',
-      message: message,
+      message: 'Failed to commit allocation',
       icon: 'error',
       position: 'top',
     })
+  } finally {
+    commitLoading.value = false
   }
 }
+
 
 // Edit allocation dialog functions
 const initializeEditDisplayAccounts = () => {
@@ -1897,36 +1898,19 @@ const openEditAllocationDialog = async (row) => {
     allAllocations.forEach((allocation) => {
       const key = `${allocation.expense_class_id}-${allocation.expense_type_id}-${allocation.expense_item_id || 'null'}`
 
-      if (allocationMap.has(key)) {
-        // Add amounts for the same expense
-        allocationMap.get(key).amount += allocation.amount
-      } else {
-        // Create new entry
-        allocationMap.set(key, { ...allocation })
-      }
-    })
+    // Load existing allocations for editing
+    editDisplayAccounts.value = JSON.parse(JSON.stringify(sampleAccounts))
+    expandedEditTypes.value = {}
+    typeErrorMap.value = {}
 
-    editAllocations.value = Array.from(allocationMap.values())
-    initializeEditDisplayAccounts()
-    selectedRow.value = row
     showEditAllocationDialog.value = true
-  } catch (error) {
-    console.error('Failed to load allocation details for editing:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Failed to load allocation details for editing',
-      icon: 'error',
-      position: 'top',
-    })
   } finally {
     editLoading.value[row.id] = false
   }
 }
 
-const closeEditAllocationDialog = () => {
-  showEditAllocationDialog.value = false
-  typeErrorMap.value = {}
-  editDisplayAccounts.value = []
+const toggleEditType = (typeId) => {
+  expandedEditTypes.value[typeId] = !expandedEditTypes.value[typeId]
 }
 
 const handleEditAmountInput = (item, value) => {
@@ -1948,8 +1932,15 @@ const handleEditAmountBlur = (item, value) => {
   }
 }
 
+const closeEditAllocationDialog = () => {
+  showEditAllocationDialog.value = false
+  expandedEditTypes.value = {}
+  typeErrorMap.value = {}
+}
+
 const saveEditedAllocation = async () => {
   try {
+
     const allocations = []
     let totalAllocated = 0
 
@@ -2017,13 +2008,15 @@ const saveEditedAllocation = async () => {
     // Use the appropriation store's commitAllocation method instead of calling API directly
     await contApprStore.commitAllocation(selectedRow.value.id, allocations)
 
+
     $q.notify({
       type: 'positive',
-      message: 'Allocations updated',
+      message: 'Allocation updated successfully!',
       icon: 'check_circle',
       position: 'top',
     })
     showEditAllocationDialog.value = false
+
     typeErrorMap.value = {}
     await contApprStore.fetchContinuingAppropriations()
   } catch (error) {
@@ -2048,15 +2041,51 @@ const saveEditedAllocation = async () => {
     } else {
       typeErrorMap.value = {}
     }
+
     $q.notify({
       type: 'negative',
-      message,
+      message: 'Failed to update allocation',
       icon: 'error',
       position: 'top',
     })
-    console.error(error)
   }
 }
+
+// const commitRow = async (row) => {
+//   $q.dialog({
+//     title: 'Confirm Commit',
+//     message: `Are you sure you want to commit this appropriation: "${row.description}"?`,
+//     cancel: true,
+//     persistent: true
+//   }).onOk(async () => {
+//     try {
+//       const result = await contApprStore.updateContinuingAppropriationStatus(row.id, 'committed')
+
+//       if (result.success) {
+//         $q.notify({
+//           type: 'positive',
+//           message: 'Appropriation committed successfully!',
+//           icon: 'check_circle',
+//           position: 'top',
+//         })
+//       } else {
+//         $q.notify({
+//           type: 'negative',
+//           message: result.message || 'Failed to commit appropriation',
+//           icon: 'error',
+//           position: 'top',
+//         })
+//       }
+//     } catch (error) {
+//       $q.notify({
+//         type: 'negative',
+//         message: error.message || 'An error occurred while committing appropriation',
+//         icon: 'error',
+//         position: 'top',
+//       })
+//     }
+//   })
+// } // Unused function commented out
 
 onMounted(async () => {
   try {
@@ -2133,10 +2162,12 @@ defineExpose({
     width: 150px;
   }
 
+
   .edit-allocation-input {
     min-width: 150px;
     width: 150px;
   }
+
 }
 
 @media (max-width: 900px) {
@@ -2145,10 +2176,12 @@ defineExpose({
     width: 120px;
   }
 
+
   .edit-allocation-input {
     min-width: 120px;
     width: 120px;
   }
+
 }
 
 @media (max-width: 768px) {

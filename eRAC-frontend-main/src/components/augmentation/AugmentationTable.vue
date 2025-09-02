@@ -33,7 +33,9 @@
               @click="viewAugmentation(props.row)"
               title="View Details"
             />
+            <!-- Only show delete button for barangay users, not admin users -->
             <q-btn
+              v-if="!isAdminUser"
               dense
               icon="delete"
               color="negative"
@@ -52,6 +54,7 @@
 <script setup>
 import { useAugmentationStore } from 'stores/augmentation'
 import { useQuasar } from 'quasar'
+
 import { computed } from 'vue'
 
 const props = defineProps({
@@ -63,6 +66,10 @@ const props = defineProps({
 
 const store = useAugmentationStore()
 const $q = useQuasar()
+const authStore = useAuthStore()
+
+// Check if current user is admin
+const isAdminUser = computed(() => authStore.admin)
 
 // Use filtered data if provided, otherwise fall back to store data
 const filteredRows = computed(() => {

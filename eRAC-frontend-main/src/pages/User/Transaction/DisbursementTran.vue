@@ -221,7 +221,7 @@
                   outlined
                   dense
                   v-model="store.forms.disbursement.bank_id"
-                  :options="bankStore.banks"
+                  :options="bankStore.availableBanks"
                   option-label="name"
                   option-value="id"
                   emit-value
