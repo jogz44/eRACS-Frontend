@@ -419,14 +419,14 @@ const clearAllFilters = () => {
   appropriationStore.dateTo = ''
   dateRange.value = null
   selectedBarangay.value = null
-  appropriationStore.setSelectedBarangay(null)
   // Reset fiscal year to current year if available, otherwise first available year
   const currentYear = new Date().getFullYear().toString()
-  const defaultYear = appropriationStore.fiscalYears.includes(currentYear)
-    ? currentYear
-    : appropriationStore.fiscalYears[0]
+  const defaultYear = appropriationStore.fiscalYears && appropriationStore.fiscalYears.length > 0
+    ? (appropriationStore.fiscalYears.includes(currentYear) ? currentYear : appropriationStore.fiscalYears[0])
+    : currentYear
   appropriationStore.setSelectedFiscalYear(defaultYear)
 }
+
 
 const showEditAllocationDialog = ref(false)
 // const editAllocations = ref([])

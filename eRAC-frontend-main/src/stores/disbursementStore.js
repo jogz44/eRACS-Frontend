@@ -33,7 +33,6 @@ export const useDisbursementStore = defineStore('disbursement', {
     expenses: [], // Initialize expenses array
     expenseSearch: '',
     currentItem: null,
-    selectedBarangayId: null, // Added for admin barangay filtering
 
     // Track expense details from tran_expense_details table for balance calculations
     expenseDetailsData: [], // Array to store all expense details from the database
@@ -491,13 +490,16 @@ export const useDisbursementStore = defineStore('disbursement', {
     async fetchExpenseDetails() {
       try {
         const authStore = useAuthStore()
-        const token = authStore.admin ? authStore.adminToken : authStore.token
-
-        const endpoint = authStore.admin ? '/api/admin/expense-details' : '/api/barangay/expense-details'
-        const params = {}
-        if (authStore.admin && this.selectedBarangayId) {
-          params.barangay_id = this.selectedBarangayId
+        
+        // For admin users, we don't need expense details since they only view disbursements
+        if (authStore.admin) {
+          this.expenseDetailsData = []
+          return
         }
+        
+        const token = authStore.token
+        const endpoint = '/api/barangay/expense-details'
+        const params = {}
 
         const response = await api.get(endpoint, {
           headers: {
@@ -524,6 +526,13 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Refresh expense accounts with updated balances after disbursement changes
     refreshExpenseAccountsWithBalances() {
       try {
+        const authStore = useAuthStore()
+        
+        // For admin users, we don't need to refresh expense accounts since they only view disbursements
+        if (authStore.admin) {
+          return
+        }
+        
         // Force a refresh of the expense accounts to recalculate balances
         // This will trigger the getter to recalculate with current frontend expenses
         this.expenseData = [...this.expenseData]
@@ -541,7 +550,15 @@ export const useDisbursementStore = defineStore('disbursement', {
           return
         }
 
-        // Fetch from appropriation store for budget allocations
+        const authStore = useAuthStore()
+
+        // For admin users, we don't need expense hierarchy data since they only view disbursements
+        if (authStore.admin) {
+          this.expenseData = []
+          return
+        }
+
+        // Fetch from appropriation store for budget allocations (only for barangay users)
         const appropriationStore = useAppropriationStore()
         await appropriationStore.fetchExpenseHierarchy()
         this.expenseData = appropriationStore.allocations || []
@@ -560,6 +577,13 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Force refresh expense details when appropriations are updated
     async forceRefreshExpenseDetails() {
       try {
+        const authStore = useAuthStore()
+        
+        // For admin users, we don't need to refresh expense details since they only view disbursements
+        if (authStore.admin) {
+          return
+        }
+        
         await this.fetchExpenseDetails()
       } catch (error) {
         console.error('Failed to force refresh expense details:', error)
@@ -569,6 +593,13 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Background refresh method for expense accounts
     async refreshExpenseAccountsInBackground() {
       try {
+        const authStore = useAuthStore()
+        
+        // For admin users, we don't need to refresh expense accounts since they only view disbursements
+        if (authStore.admin) {
+          return
+        }
+        
         // Fetch from appropriation store for budget allocations
         const appropriationStore = useAppropriationStore()
         await appropriationStore.fetchExpenseHierarchy()
@@ -642,6 +673,12 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Integrate expense types from accounts library into expenseData
     integrateExpenseTypesFromAccountsLib(accountsStore) {
       try {
+        const authStore = useAuthStore()
+        
+        // For admin users, we don't need to integrate expense types since they only view disbursements
+        if (authStore.admin) {
+          return
+        }
 
         // If no expense types are available, return early
         if (!accountsStore.expenseTypes || accountsStore.expenseTypes.length === 0) {
@@ -727,32 +764,38 @@ export const useDisbursementStore = defineStore('disbursement', {
         const endpoint = authStore.admin ? "/api/admin/disbursements" : "/api/barangay/disbursements"
         const token = authStore.admin ? authStore.adminToken : authStore.token
 
-        const particularEndpoint = authStore.admin ? '/api/admin/particulars' : '/api/barangay/particulars'
-        const particular= await api.get(particularEndpoint, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-          },
-        })
-
         // Add barangay_id parameter for admin users if selected
         const params = {}
-        if (authStore.admin && this.selectedBarangayId) {
-          params.barangay_id = this.selectedBarangayId
+        if (authStore.admin) {
+          const selectedBarangay = authStore.getSelectedBarangay()
+          if (selectedBarangay) {
+            params.barangay_id = selectedBarangay
+          }
         }
 
-        const response = await api.get(endpoint, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-          },
-          params: params
-        })
-        const pData = Array.isArray(particular.data?.data) ? particular.data.data : (Array.isArray(particular.data) ? particular.data : [])
+        // Fetch disbursements and particulars in parallel for faster loading
+        const [disbursementsResponse, particularsResponse] = await Promise.all([
+          api.get(endpoint, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
+            params: params
+          }),
+          api.get(authStore.admin ? '/api/admin/particulars' : '/api/barangay/particulars', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
+          })
+        ])
+
+        // Process particulars data
+        const pData = Array.isArray(particularsResponse.data?.data) ? particularsResponse.data.data : (Array.isArray(particularsResponse.data) ? particularsResponse.data : [])
         this.particulars = pData.map(item => ({ label: item.particulars }))
 
         // Map backend fields to frontend fields if needed
-        this.disbursements = (response.data.data || []).map(d => ({
+        this.disbursements = (disbursementsResponse.data.data || []).map(d => ({
           id: d.id,
           date: d.date,
           dvNumber: d.dv_number,
@@ -767,8 +810,12 @@ export const useDisbursementStore = defineStore('disbursement', {
           expenses: d.expenses || [],
         }))
 
-        // Fetch expense details for balance calculations
-        await this.fetchExpenseDetails()
+        // Only fetch expense details if we don't have any (for admin users, this is not essential)
+        if (!this.expenseDetailsData.length && !authStore.admin) {
+          this.fetchExpenseDetails().catch(error => {
+            console.warn('Failed to fetch expense details:', error)
+          })
+        }
 
       } catch (error) {
         console.error('Failed to fetch disbursements:', error)
@@ -776,11 +823,6 @@ export const useDisbursementStore = defineStore('disbursement', {
       } finally {
         this.loadingDisbursements = false
       }
-    },
-
-    // Set selected barangay for admin filtering
-    setSelectedBarangay(barangayId) {
-      this.selectedBarangayId = barangayId
     },
 
 
@@ -1318,8 +1360,11 @@ export const useDisbursementStore = defineStore('disbursement', {
         }
 
         // Add barangay_id for admin users if selected
-        if (authStore.admin && this.selectedBarangayId) {
-          payload.barangay_id = this.selectedBarangayId
+        if (authStore.admin) {
+          const selectedBarangay = authStore.getSelectedBarangay()
+          if (selectedBarangay) {
+            payload.barangay_id = selectedBarangay
+          }
         }
 
         // Use different endpoints for admin vs regular users
@@ -1383,19 +1428,23 @@ export const useDisbursementStore = defineStore('disbursement', {
     // New method to refresh data in background without blocking UI
     async refreshDataInBackground() {
       try {
+        const authStore = useAuthStore()
 
         // Refresh disbursements list first (most important)
         await this.fetchDisbursements()
 
-        // Refresh expense details for balance calculations
-        await this.fetchExpenseDetails()
+        // Only refresh expense-related data for barangay users (admin users don't need this)
+        if (!authStore.admin) {
+          // Refresh expense details for balance calculations
+          await this.fetchExpenseDetails()
 
-        // Refresh expense accounts with updated balances
-        this.refreshExpenseAccountsWithBalances()
+          // Refresh expense accounts with updated balances
+          this.refreshExpenseAccountsWithBalances()
 
-        // Force a refresh of the expense accounts to update the selection table
-        this.expenseData = [] // Clear to force refresh
-        await this.fetchExpenseAccounts()
+          // Force a refresh of the expense accounts to update the selection table
+          this.expenseData = [] // Clear to force refresh
+          await this.fetchExpenseAccounts()
+        }
 
       } catch (error) {
         console.error('Background refresh failed:', error)

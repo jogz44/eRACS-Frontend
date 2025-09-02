@@ -24,7 +24,8 @@ export const useAppropriationStore = defineStore("appropriation", {
     fiscalYears: [],
     currentFiscalYearId: null,
     currentYear: new Date().getFullYear().toString(),
-    selectedBarangayId: null, // For admin barangay filtering
+    selectedFiscalYear: new Date().getFullYear().toString(),
+
 
     allocations: [],
     authStore: useAuthStore(), // Moved hook call inside state
@@ -240,8 +241,11 @@ export const useAppropriationStore = defineStore("appropriation", {
     async addBudget(newBudget) {
       try {
         // Add barangay_id for admin users if selected
-        if (this.authStore.admin && this.selectedBarangayId) {
-          newBudget.barangay_id = this.selectedBarangayId
+        if (this.authStore.admin) {
+          const selectedBarangay = this.authStore.getSelectedBarangay()
+          if (selectedBarangay) {
+            newBudget.barangay_id = selectedBarangay
+          }
         }
         
         // Admin users cannot create budgets - only view
@@ -330,6 +334,7 @@ export const useAppropriationStore = defineStore("appropriation", {
 
     async initialize() {
       await this.fetchAppropriations()
+      await this.fetchFiscalYears()
     },
 
     // Backwards-compat: some components call fetchAppropriations; route to fetchBudgets
@@ -718,6 +723,46 @@ export const useAppropriationStore = defineStore("appropriation", {
           }
         })
         .filter((cat) => cat.total > 0)
+    },
+
+    // Set selected fiscal year for filtering
+    setSelectedFiscalYear(year) {
+      this.selectedFiscalYear = year
+    },
+
+    // Fetch available fiscal years
+    async fetchFiscalYears() {
+      try {
+        const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
+        
+        if (this.authStore.admin) {
+          // For admin users, provide current year and "All Years" option
+          const currentYear = new Date().getFullYear()
+          this.fiscalYears = [
+            { year: 'all', label: 'All Years' },
+            { year: currentYear.toString(), label: currentYear.toString() }
+          ]
+          return
+        }
+        
+        // For barangay users, fetch from barangay endpoint
+        const response = await api.get("/api/barangay/fiscal-years", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+        })
+        
+        const fiscalYears = Array.isArray(response.data) ? response.data : response.data.data || []
+        this.fiscalYears = fiscalYears.map(fy => ({
+          year: fy.year.toString(),
+          label: fy.year.toString()
+        }))
+      } catch (error) {
+        console.error("Failed to fetch fiscal years:", error)
+        this.fiscalYears = []
+      }
     },
   },
 })
