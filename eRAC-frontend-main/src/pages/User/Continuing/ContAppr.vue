@@ -880,7 +880,7 @@ import { useQuasar } from 'quasar'
 import { storeToRefs } from 'pinia'
 import { useContApprStore } from 'src/stores/contApprStore'
 import { usePageLogging } from '../../../composables/usePageLogging'
-// import { api } from 'src/boot/axios' // Unused import removed
+import { api } from 'src/boot/axios'
 
 const $q = useQuasar()
 const contApprStore = useContApprStore()
@@ -910,7 +910,7 @@ const commitExistingAllocationsTotal = ref(0)
 
 // Edit allocation dialog state variables
 const showEditAllocationDialog = ref(false)
-// const editAllocations = ref([]) // Unused variable removed
+const editAllocations = ref([])
 const expandedEditTypes = ref({})
 const typeErrorMap = ref({})
 const editDisplayAccounts = ref([])
@@ -1483,9 +1483,8 @@ const openViewDialog = (row) => {
   loadViewAllocationHistory(row.id)
 }
 
-const loadViewAllocationHistory = async () => {
+const loadViewAllocationHistory = async (id) => {
   try {
-
     viewLoading.value = true
     const config = contApprStore.getAuthConfig()
     const response = await api.get(`/api/barangay/continuing-appropriations/${id}/history`, config)
@@ -1495,10 +1494,9 @@ const loadViewAllocationHistory = async () => {
   } catch (error) {
     console.error('Error fetching view allocation history:', error)
     // If no history, that's fine - just show empty
-
     viewAllocationHistory.value = []
+  } finally {
     viewLoading.value = false
-
   }
 }
 
@@ -1539,6 +1537,8 @@ const openCommitDialog = async (row) => {
       icon: 'error',
       position: 'top',
     })
+  } finally {
+    commitLoading.value = false
   }
 }
 
@@ -1627,7 +1627,28 @@ const calculateCommitClassTotal = (expenseClass) => {
     })
   })
   return Math.round(total * 100) / 100
+}
 
+const getCommitTypeClass = (expenseType) => {
+  // Return appropriate CSS class based on expense type properties
+  if (expenseType.children && expenseType.children.length > 0) {
+    return 'bg-grey-1'
+  }
+  return 'bg-white'
+}
+
+const calculateCommitTypeTotal = (expenseType) => {
+  if (!expenseType.children || expenseType.children.length === 0) {
+    const amount = commitInputCache.value[`type-${expenseType.id}`] || 0
+    return parseCurrency(amount)
+  }
+  
+  let total = 0
+  expenseType.children.forEach((item) => {
+    const amount = commitInputCache.value[`item-${item.id}`] || 0
+    total += parseCurrency(amount)
+  })
+  return Math.round(total * 100) / 100
 }
 
 const formatNumberWithCommas = (value) => {
@@ -1635,12 +1656,7 @@ const formatNumberWithCommas = (value) => {
   return isNaN(num) ? '0' : num.toLocaleString('en-US')
 }
 
-const calculateCommitClassTotal = (expenseClass) => {
-  if (!expenseClass.children) return 0
-  return expenseClass.children.reduce((total, type) => {
-    return total + calculateCommitTypeTotal(type)
-  }, 0)
-}
+
 
 
 const handleCommitAmountInput = (value) => {
@@ -1688,17 +1704,7 @@ const formatToTwoDecimals = (value) => {
   return Number(num.toFixed(2))
 }
 
-// Function to format number with commas for display
-const formatNumberWithCommas = (value) => {
-  if (!value && value !== 0) return ''
-  const num = parseFloat(value)
-  if (isNaN(num)) return ''
-  return num.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
 
-}
 
 const submitCommitAllocation = async () => {
   commitLoading.value = true
@@ -1772,18 +1778,17 @@ const submitCommitAllocation = async () => {
     commitInputCache.value = {}
     commitDisplayAccounts.value = []
 
-
     $q.notify({
       type: 'positive',
       message: 'Allocation committed successfully!',
       icon: 'check_circle',
       position: 'top',
     })
-    showCommitDialog.value = false
-  } catch {
+  } catch (error) {
+    console.error('Error committing allocation:', error)
     $q.notify({
       type: 'negative',
-      message: 'Failed to commit allocation',
+      message: error.message || 'Failed to commit allocation',
       icon: 'error',
       position: 'top',
     })
@@ -1794,76 +1799,7 @@ const submitCommitAllocation = async () => {
 
 
 // Edit allocation dialog functions
-const initializeEditDisplayAccounts = () => {
-  if (!editAllocations.value || editAllocations.value.length === 0) {
-    editDisplayAccounts.value = []
-    return
-  }
 
-  const classMap = {}
-  editAllocations.value.forEach((alloc) => {
-    const classId = alloc.expense_class_id || 'unclassified'
-    const className = alloc.expense_class_name || 'Unclassified'
-    const typeId = alloc.expense_type_id
-    const typeName = alloc.expense_type_name || `Type ${typeId}`
-    const itemId = alloc.expense_item_id
-    const itemName = alloc.expense_item_name || `Item ${itemId}`
-
-    if (!classMap[classId]) {
-      classMap[classId] = {
-        id: classId,
-        name: className,
-        children: [],
-      }
-    }
-
-    if (typeId && !itemId) {
-      const existingType = classMap[classId].children.find((t) => t.id === typeId)
-      if (existingType) {
-        existingType.amount += alloc.amount
-      } else {
-        classMap[classId].children.push({
-          id: typeId,
-          name: typeName,
-          amount: alloc.amount,
-          children: [],
-        })
-      }
-    }
-
-    if (itemId) {
-      let type = classMap[classId].children.find((t) => t.id === typeId)
-      if (!type) {
-        type = {
-          id: typeId,
-          name: typeName,
-          amount: 0,
-          children: [],
-        }
-        classMap[classId].children.push(type)
-      } else {
-        type.amount = 0
-      }
-      type.children.push({
-        id: itemId,
-        name: itemName,
-        amount: alloc.amount,
-      })
-    }
-  })
-
-  const classArr = Object.values(classMap)
-  classArr.forEach((cls) => {
-    cls.children.sort((a, b) => a.id - b.id)
-    cls.children.forEach((type) => {
-      if (type.children) {
-        type.children.sort((a, b) => a.id - b.id)
-      }
-    })
-  })
-
-  editDisplayAccounts.value = classArr
-}
 
 const toggleEditType = (typeId) => {
   let hasChildren = false
@@ -1879,39 +1815,126 @@ const toggleEditType = (typeId) => {
   }
 }
 
+const loadEditAllocationData = async (id) => {
+  try {
+    // Fetch expense hierarchy and existing allocations
+    const [expenseHierarchy, allocationHistory] = await Promise.all([
+      fetchEditExpenseHierarchy(),
+      fetchEditExistingAllocations(id)
+    ])
+    
+    // Set the display accounts for editing
+    editDisplayAccounts.value = expenseHierarchy
+    
+    // Load existing allocations into the edit form
+    if (allocationHistory.length > 0) {
+      const allAllocations = allocationHistory.flatMap((session) => session.allocations || [])
+      editAllocations.value = allAllocations
+      
+      // Populate the form with existing allocation amounts
+      allAllocations.forEach((allocation) => {
+        const key = allocation.expense_item_id
+          ? `item-${allocation.expense_item_id}`
+          : `type-${allocation.expense_type_id}`
+        // Find the corresponding item in the hierarchy and set its amount
+        updateEditDisplayAmount(key, allocation.amount)
+      })
+    }
+  } catch (error) {
+    console.error('Error loading edit allocation data:', error)
+    throw error
+  }
+}
+
+const fetchEditExpenseHierarchy = async () => {
+  try {
+    const config = contApprStore.getAuthConfig()
+    const response = await api.get('/api/barangay/expense-hierarchy', {
+      ...config,
+      params: { fiscal_year_id: contApprStore.selectedYear },
+    })
+
+    if (response.data.status) {
+      return response.data.data
+    } else {
+      throw new Error(response.data.message || 'Failed to fetch expense hierarchy')
+    }
+  } catch (error) {
+    console.error('Error fetching expense hierarchy for edit:', error)
+    throw error
+  }
+}
+
+const fetchEditExistingAllocations = async (id) => {
+  try {
+    const config = contApprStore.getAuthConfig()
+    const response = await api.get(`/api/barangay/continuing-appropriations/${id}/history`, config)
+
+    const allHistory = response.data.data?.history || []
+    return allHistory
+  } catch (error) {
+    console.error('Error fetching existing allocations for edit:', error)
+    // Return empty array if no history exists
+    return []
+  }
+}
+
+const updateEditDisplayAmount = (key, amount) => {
+  // This function updates the display accounts with existing allocation amounts
+  // Implementation depends on how you want to structure the data
+  // For now, we'll store it in a way that the template can access
+  if (!editDisplayAccounts.value) return
+  
+  editDisplayAccounts.value.forEach((expenseClass) => {
+    expenseClass.children?.forEach((expenseType) => {
+      if (expenseType.children?.length) {
+        expenseType.children.forEach((item) => {
+          if (key === `item-${item.id}`) {
+            item.amount = amount
+          }
+        })
+      } else {
+        if (key === `type-${expenseType.id}`) {
+          expenseType.amount = amount
+        }
+      }
+    })
+  })
+}
+
 const openEditAllocationDialog = async (row) => {
   editLoading.value[row.id] = true
   try {
-    const config = contApprStore.getAuthConfig()
-    const response = await api.get(
-      `/api/barangay/continuing-appropriations/${row.id}/history`,
-      config,
-    )
-    const allHistory = response.data.data?.history || []
-
-    // Combine ALL allocations from all history sessions, not just the latest
-    const allAllocations = allHistory.flatMap((session) => session.allocations || [])
-
-    // Group by expense hierarchy to combine amounts for the same expense items/types
-    const allocationMap = new Map()
-
-    allAllocations.forEach((allocation) => {
-      const key = `${allocation.expense_class_id}-${allocation.expense_type_id}-${allocation.expense_item_id || 'null'}`
+    // Set the selected row for editing
+    selectedRow.value = {
+      ...row,
+      amount: row.appropriation || row.amount,
+      unappropriated: row.unappropriated,
+      year: row.year,
+      value: row
+    }
 
     // Load existing allocations for editing
-    editDisplayAccounts.value = JSON.parse(JSON.stringify(sampleAccounts))
+    await loadEditAllocationData(row.id)
+    
     expandedEditTypes.value = {}
     typeErrorMap.value = {}
 
     showEditAllocationDialog.value = true
+  } catch (error) {
+    console.error('Error opening edit allocation dialog:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to load allocation data for editing',
+      icon: 'error',
+      position: 'top',
+    })
   } finally {
     editLoading.value[row.id] = false
   }
 }
 
-const toggleEditType = (typeId) => {
-  expandedEditTypes.value[typeId] = !expandedEditTypes.value[typeId]
-}
+
 
 const handleEditAmountInput = (item, value) => {
   let cleanValue = String(value).replace(/[^\d.]/g, '')
@@ -2044,7 +2067,7 @@ const saveEditedAllocation = async () => {
 
     $q.notify({
       type: 'negative',
-      message: 'Failed to update allocation',
+      message: message,
       icon: 'error',
       position: 'top',
     })

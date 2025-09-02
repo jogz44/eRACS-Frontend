@@ -53,6 +53,7 @@
 
 <script setup>
 import { useAugmentationStore } from 'stores/augmentation'
+import { useAuthStore } from 'stores/auth'
 import { useQuasar } from 'quasar'
 
 import { computed } from 'vue'

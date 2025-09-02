@@ -397,24 +397,17 @@ export const useAppropriationStore = defineStore("appropriation", {
         const params = this.authStore.admin
           ? { year: currentYear, ...(this.selectedBarangayId ? { barangay_id: this.selectedBarangayId } : {}), ...(this.selectedBudgetType !== 'all' ? { budget_type: this.selectedBudgetType } : {}) }
           : { fiscal_year_id: fiscalYear.id, ...(this.selectedBudgetType !== 'all' ? { budget_type: this.selectedBudgetType } : {}) }
-// =======
-//         // Only proceed for barangay users
-//         if (!this.authStore.admin) {
-//           const endpoint = "/api/barangay/expense-hierarchy"
-//           const params = { fiscal_year_id: fiscalYear.id }
-// >>>>>>> main
 
-          const response = await api.get(endpoint, {
-            params: params,
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-          })
+        const response = await api.get(endpoint, {
+          params: params,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+        })
 
-          this.allocations = response.data.data || []
-        }
+        this.allocations = response.data.data || []
       } catch (error) {
         console.error("[ERROR] fetchExpenseHierarchy:", error)
         throw error
