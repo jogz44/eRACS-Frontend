@@ -33,7 +33,7 @@
               </template>
             </q-input>
           </div>
-          
+
           <!-- Date Range Filter -->
           <div class="col-md-2 col-sm-6 col-xs-12">
             <q-item-label class="q-mb-xs text-weight-medium">Date Range:</q-item-label>
@@ -63,7 +63,7 @@
               </template>
             </q-input>
           </div>
-          
+
           <!-- Clear Button -->
           <div class="col-md-1 col-sm-6 col-xs-12">
             <q-btn
@@ -76,12 +76,12 @@
               class="full-width"
             />
           </div>
-          
-          <!-- Spacer to push Add button to the right -->
-          <div class="col-md-2 col-sm-0 col-xs-0"></div>
-          
+
+          <!-- Flexible spacer to push Add button to the right -->
+          <div class="col"></div>
+
           <!-- Add Button -->
-          <div class="col-md-1 col-sm-6 col-xs-12">
+          <div class="col-auto">
             <q-btn
               label="Add"
               color="primary"

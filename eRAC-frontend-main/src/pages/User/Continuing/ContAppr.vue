@@ -77,18 +77,18 @@
             />
           </div>
 
-          <!-- Spacer to push Add button to the right -->
-          <div class="col-md-2 col-sm-0 col-xs-0"></div>
+          <!-- Flexible spacer to push Continue button to the right -->
+          <div class="col"></div>
 
-          <!-- Add Button -->
-          <div class="col-md-1 col-sm-6 col-xs-12">
+          <!-- Continue Button -->
+          <div class="col-auto">
             <q-btn
               label="Continue Accounts"
               @click="showContinueDialog = true"
               color="secondary"
               v-permission="'add'"
               :loading="generalLoading"
-              class="full-width"
+              class="full-width btn-match-input"
             />
           </div>
         </div>
@@ -1642,7 +1642,7 @@ const calculateCommitTypeTotal = (expenseType) => {
     const amount = commitInputCache.value[`type-${expenseType.id}`] || 0
     return parseCurrency(amount)
   }
-  
+
   let total = 0
   expenseType.children.forEach((item) => {
     const amount = commitInputCache.value[`item-${item.id}`] || 0
@@ -1822,15 +1822,15 @@ const loadEditAllocationData = async (id) => {
       fetchEditExpenseHierarchy(),
       fetchEditExistingAllocations(id)
     ])
-    
+
     // Set the display accounts for editing
     editDisplayAccounts.value = expenseHierarchy
-    
+
     // Load existing allocations into the edit form
     if (allocationHistory.length > 0) {
       const allAllocations = allocationHistory.flatMap((session) => session.allocations || [])
       editAllocations.value = allAllocations
-      
+
       // Populate the form with existing allocation amounts
       allAllocations.forEach((allocation) => {
         const key = allocation.expense_item_id
@@ -1884,7 +1884,7 @@ const updateEditDisplayAmount = (key, amount) => {
   // Implementation depends on how you want to structure the data
   // For now, we'll store it in a way that the template can access
   if (!editDisplayAccounts.value) return
-  
+
   editDisplayAccounts.value.forEach((expenseClass) => {
     expenseClass.children?.forEach((expenseType) => {
       if (expenseType.children?.length) {
@@ -1916,7 +1916,7 @@ const openEditAllocationDialog = async (row) => {
 
     // Load existing allocations for editing
     await loadEditAllocationData(row.id)
-    
+
     expandedEditTypes.value = {}
     typeErrorMap.value = {}
 
@@ -2244,5 +2244,21 @@ defineExpose({
     max-width: 95vw !important;
     width: 95vw !important;
   }
+}
+
+/* Make action buttons match dense input height and improve label styling */
+.btn-match-input {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 4px;
+}
+
+.btn-match-input :deep(.q-btn__content) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
 }
 </style>

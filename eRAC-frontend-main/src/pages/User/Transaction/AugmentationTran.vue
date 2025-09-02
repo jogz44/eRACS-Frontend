@@ -131,11 +131,11 @@
             />
           </div>
 
-          <!-- Spacer to push Add button to the right -->
-          <div class="col-md-2 col-sm-0 col-xs-0"></div>
+          <!-- Flexible spacer to push Add button to the right -->
+          <div class="col"></div>
 
           <!-- Add Button -->
-          <div class="col-md-1 col-sm-6 col-xs-12">
+          <div class="col-auto">
             <q-btn
               label="Add"
               color="primary"
@@ -297,17 +297,17 @@ watch(searchQuery, (newQuery) => {
 // Computed property for filtered augmentations
 const filteredAugmentations = computed(() => {
   let filtered = store.augmentation || []
-  
+
   // Filter by search query
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(augmentation => 
+    filtered = filtered.filter(augmentation =>
       augmentation.description?.toLowerCase().includes(query) ||
       augmentation.reference_number?.toLowerCase().includes(query) ||
       augmentation.total_amount?.toString().includes(query)
     )
   }
-  
+
   // Filter by date range
   if (store.dateFrom && store.dateTo) {
     filtered = filtered.filter(augmentation => {
@@ -316,7 +316,7 @@ const filteredAugmentations = computed(() => {
       return augmentationDate >= store.dateFrom && augmentationDate <= store.dateTo
     })
   }
-  
+
   // Filter by budget source
   if (selectedBudgetSource.value !== 'all') {
     filtered = filtered.filter(augmentation => {
@@ -328,7 +328,7 @@ const filteredAugmentations = computed(() => {
       })
     })
   }
-  
+
   return filtered
 })
 
