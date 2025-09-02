@@ -25,7 +25,7 @@ return new class extends Migration
 
     // Insert super admin account
     DB::table('admins')->insert([
-        'email' => 'admin@gmail.com',
+        'email' => 'admin',
         'password' => Hash::make('admin123'),
         'name' => 'Super Administrator',
         'role' => 'super_admin',
@@ -35,7 +35,7 @@ return new class extends Migration
 
     // Insert COA account
     DB::table('admins')->insert([
-        'email' => 'coa@gmail.com',
+        'email' => 'coa',
         'password' => Hash::make('coa123'),
         'name' => 'COA Officer',
         'role' => 'coa',
