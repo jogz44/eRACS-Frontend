@@ -20,6 +20,7 @@ export function initialState() {
     dateTo: ref(''),
     expenseSearch: ref(''),
     selectedBarangayId: ref(null), // Added for admin barangay filtering
+    selectedBudgetSource: ref('all'), // For budget source filtering (annual/supplemental)
 
     // Pagination
     pagination: ref({

@@ -22,26 +22,34 @@
         <!-- Expense Account Selection Table -->
         <div class="table-container">
           <q-table
-            :rows="store.AugexpenseAccounts"
+            :rows="store.filteredExpenseAccounts"
             :columns="store.AugexpenseAccountColumns"
             row-key="id"
-            :filter="store.expenseSearch"
             class="expense-accounts-table"
             :pagination="{ rowsPerPage: 5 }"
             flat
             bordered
           >
-          <template v-slot:body-cell-action="props">
-            <q-td :props="props">
-              <q-btn
-                flat
-                label="Select"
-                color="primary"
-                @click="store.openExpenseDetail(props.row)"
-              />
-            </q-td>
-          </template>
-        </q-table>
+            <template v-slot:body-cell-budget_source="props">
+              <q-td :props="props">
+                <q-badge
+                  :color="getBudgetSourceColor(props.row.budget_source)"
+                  :label="getBudgetSourceLabel(props.row.budget_source)"
+                  class="budget-source-badge"
+                />
+              </q-td>
+            </template>
+            <template v-slot:body-cell-action="props">
+              <q-td :props="props">
+                <q-btn
+                  flat
+                  label="Select"
+                  color="primary"
+                  @click="store.openExpenseDetail(props.row)"
+                />
+              </q-td>
+            </template>
+          </q-table>
         </div>
       </q-card-section>
 
@@ -57,13 +65,33 @@ import { useAugmentationStore } from 'stores/augmentation'
 import { computed } from 'vue'
 const store = useAugmentationStore()
 
+// Budget source helper functions
+const getBudgetSourceColor = (budgetSource) => {
+  if (budgetSource?.toLowerCase().includes('annual')) {
+    return 'primary'
+  } else if (budgetSource?.toLowerCase().includes('supplemental')) {
+    return 'secondary'
+  }
+  return 'grey'
+}
+
+const getBudgetSourceLabel = (budgetSource) => {
+  if (budgetSource?.toLowerCase().includes('annual')) {
+    return 'Annual'
+  } else if (budgetSource?.toLowerCase().includes('supplemental')) {
+    return 'Supplemental'
+  }
+  return 'Mixed'
+}
+
 const cardWidthStyle = computed(() => {
   // Calculate appropriate width based on content
   // Account column needs more space for long names, balance and action are fixed
-  const accountColumnWidth = 400 // Account names can be long
+  const accountColumnWidth = 500 // Increased from 400 for better visibility
+  const budgetSourceColumnWidth = 150 // Budget source column
   const balanceColumnWidth = 150  // Balance column
   const actionColumnWidth = 120   // Action button
-  const totalWidth = accountColumnWidth + balanceColumnWidth + actionColumnWidth + 100 // Add padding
+  const totalWidth = accountColumnWidth + budgetSourceColumnWidth + balanceColumnWidth + actionColumnWidth + 150 // Add more padding
   
   // Responsive width calculation
   if (window.innerWidth < 768) {
@@ -72,11 +100,11 @@ const cardWidthStyle = computed(() => {
   } else if (window.innerWidth < 1200) {
     // Small desktop: use calculated width or 90vw, whichever is smaller
     const width = Math.min(totalWidth, window.innerWidth * 0.9)
-    return `min-width: 700px; max-width: 90vw; width: ${width}px;`
+    return `min-width: 800px; max-width: 90vw; width: ${width}px;`
   } else {
     // Large desktop: use calculated width or 80vw, whichever is smaller
     const width = Math.min(totalWidth, window.innerWidth * 0.8)
-    return `min-width: 700px; max-width: 80vw; width: ${width}px;`
+    return `min-width: 800px; max-width: 80vw; width: ${width}px;`
   }
 })
 </script>
@@ -94,8 +122,13 @@ const cardWidthStyle = computed(() => {
 
 .expense-accounts-table .q-table th:nth-child(1),
 .expense-accounts-table .q-table td:nth-child(1) {
-  width: 50%;
-  min-width: 300px;
+  width: 40%;
+  min-width: 250px;
+}
+
+.budget-source-badge {
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .expense-accounts-table .q-table th:nth-child(2),

@@ -2,8 +2,10 @@
 # GET http://localhost:8000/api/barangay/barangays
 # Accept: application/json
 
-GET http://localhost:8000/api/barangay/generate-dvnumber
-Authorization: Bearer 3|s11JS5Zygd5SHZmedJj5PWGhzVadUjnuDBGP3H8Jd1c608e7
+
+GET http://localhost:8000/api/barangay/continuing-appropriations
+Authorization: Bearer 59|HNTbWvYwHuJQhS171GuHLw8Pyh6jV5Ud6TzKkpal9dc03096
+
 Accept: application/json
 
 # GET http://localhost:8000/api/user

@@ -25,7 +25,7 @@ const routes = [
       {
         path: 'forgotpage',
         name: 'forgotpage',
-                  component: () => import('../pages/Accounts/ForgotPage.vue'),
+        component: () => import('../pages/Accounts/ForgotPage.vue'),
       },
     ],
   },
@@ -139,7 +139,6 @@ const routes = [
         name: 'Logsview',
         component: () => import('../pages/User/UserLogs.vue'),
         meta: {title: 'Logs' }
-
       }
     ],
   },
@@ -198,29 +197,29 @@ const routes = [
       {
         path: 'disbursement',
         name: 'adminDisbursement',
-                    component: () => import('../pages/Admin/Transaction/DisbursementTran.vue'),
+        component: () => import('../pages/Admin/Transaction/DisbursementTran.vue'),
       },
       {
         path: 'appropriation',
         name: 'adminAppropriation',
-                    component: () => import('../pages/Admin/Transaction/AppropriationTran.vue'),
+        component: () => import('../pages/Admin/Transaction/AppropriationTran.vue'),
       },
       {
         path: 'augmentation',
         name: 'adminAugmentation',
-                    component: () => import('../pages/Admin/Transaction/AugmentationTran.vue'),
+        component: () => import('../pages/Admin/Transaction/AugmentationTran.vue'),
       },
       // Continuing Transactions
 
       {
         path: 'contAppropriation',
         name: 'AdminAppropriation',
-                    component: () => import('../pages/Admin/Continuing/ContAppr.vue'),
+        component: () => import('../pages/Admin/Continuing/ContAppr.vue'),
       },
       {
         path: 'contDisbursement',
         name: 'AdminDisbursement',
-                    component: () => import('../pages/Admin/Continuing/ContDis.vue'),
+        component: () => import('../pages/Admin/Continuing/ContDis.vue'),
       },
 
 
@@ -233,7 +232,7 @@ const routes = [
     name: 'ErrorNotFound',
     component: () => import('../pages/ErrorNotFound.vue'),
     meta: { title: 'Page Not Found' },
-  },
+  }
 ]
 
 export default routes

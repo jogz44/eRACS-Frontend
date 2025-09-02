@@ -5,6 +5,7 @@ import { useAuthStore } from './auth'
 export const useBankStore = defineStore('bank', {
   state: () => ({
     banks: [],
+    availableBanks: [],
     booklets: [],
     loading: false,
     error: null,
@@ -162,6 +163,7 @@ export const useBankStore = defineStore('bank', {
           booklets_count: bank.booklets_count || 0, // Changed from cheques_count
           booklets: bank.booklets || [], // Changed from cheques
         }))
+        this.availableBanks = this.banks.filter(bank => bank.status === 'Available');
 
         return this.banks
       } catch (error) {

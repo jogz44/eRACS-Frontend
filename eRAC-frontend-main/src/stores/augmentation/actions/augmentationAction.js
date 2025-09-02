@@ -19,8 +19,11 @@ export function useAugmentationActions(state) {
       if (state.dateTo.value) params.date_to = state.dateTo.value
 
       // Add barangay_id parameter for admin users if selected
-      if (authStore.admin && state.selectedBarangayId.value) {
-        params.barangay_id = state.selectedBarangayId.value
+      if (authStore.admin) {
+        const selectedBarangayId = authStore.getSelectedBarangay()
+        if (selectedBarangayId) {
+          params.barangay_id = selectedBarangayId
+        }
       }
 
       const response = await api.get(endpoint, {
@@ -61,7 +64,10 @@ export function useAugmentationActions(state) {
       }
 
       const currentFiscalYear = fiscalYearResponse.data.data[0]
-      const params = { fiscal_year_id: currentFiscalYear.id }
+      const params = { 
+        fiscal_year_id: currentFiscalYear.id,
+        ...(state.selectedBudgetSource.value !== 'all' ? { budget_type: state.selectedBudgetSource.value } : {})
+      }
       const response = await api.get('/api/barangay/expense-hierarchy', {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -79,25 +85,46 @@ export function useAugmentationActions(state) {
           Authorization: `Bearer ${token}`,
           Accept: 'application/json',
         },
-        params: { status: 'committed' }
+        params: { 
+          status: 'committed',
+          fiscal_year_id: currentFiscalYear.id,
+          ...(state.selectedBudgetSource.value !== 'all' ? { budget_type: state.selectedBudgetSource.value } : {})
+        }
       })
 
       const appropriations = appropriationResponse.data.data || []
-      console.log('Raw appropriations from API:', appropriations)
 
-      const flattened = appropriations.map(appropriation => ({
-        id: appropriation.id,
-        account: appropriation.account_name || 'Unknown Account',
-        balance: appropriation.amount || 0,
-        appropriation_id: appropriation.id, // This is now the representative ID
-        // Store additional info for debugging
-        expense_class_id: appropriation.expense_class_id,
-        expense_type_id: appropriation.expense_type_id,
-        expense_item_id: appropriation.expense_item_id,
-        appropriation_ids: appropriation.appropriation_ids || [appropriation.id] // All IDs in the group
-      }))
-
-      console.log('Flattened appropriations:', flattened)
+      const flattened = appropriations.map(appropriation => {
+        // Extract budget source from budget_description
+        let budgetSource = 'Annual Budget' // Default
+        if (appropriation.budget_description) {
+          const description = appropriation.budget_description.toLowerCase()
+          if (description.includes('supplemental')) {
+            budgetSource = 'Supplemental Budget'
+          } else if (description.includes('annual')) {
+            budgetSource = 'Annual Budget'
+          }
+        }
+        
+        return {
+          id: appropriation.id,
+          account: appropriation.account_name || 'Unknown Account',
+          balance: appropriation.amount || 0,
+          appropriation_id: appropriation.id, // This is now the representative ID
+          // Store additional info for debugging
+          expense_class_id: appropriation.expense_class_id,
+          expense_type_id: appropriation.expense_type_id,
+          expense_item_id: appropriation.expense_item_id,
+          appropriation_ids: appropriation.appropriation_ids || [appropriation.id], // All IDs in the group
+          budget_source: budgetSource, // Properly extracted budget source
+          fiscal_year_id: appropriation.fiscal_year_id || currentFiscalYear.id, // Add fiscal year for validation
+          // Additional validation fields
+          allocated: appropriation.amount || 0,
+          obligated: appropriation.obligated || 0,
+          reserved: appropriation.reserved || 0,
+          available: (appropriation.amount || 0) - (appropriation.obligated || 0) - (appropriation.reserved || 0)
+        }
+      })
 
       // If we're selecting TO expense, filter out the FROM expense
       if (state.isSelectingToExpense.value && state.forms.value.augExpense?.value) {
@@ -153,17 +180,20 @@ export function useAugmentationActions(state) {
         }))
       }
 
-      console.log('Augexpenses array:', state.Augexpenses.value)
-      console.log('Sending payload:', payload)
+
 
       // Add barangay_id for admin users if selected
       if (authStore.admin && state.selectedBarangayId.value) {
         payload.barangay_id = state.selectedBarangayId.value
       }
 
-      // Use different endpoints for admin vs regular users
-      const endpoint = authStore.admin ? "/api/admin/augmentations/create" : "/api/barangay/budget-augmentations"
-      const token = authStore.admin ? authStore.adminToken : authStore.token
+      // Admin users cannot create augmentations - only view
+      if (authStore.admin) {
+        throw new Error('Admin users cannot create augmentations')
+      }
+      
+      const endpoint = "/api/barangay/budget-augmentations"
+      const token = authStore.token
 
       let response
       if (state.currentItem.value?.id) {
@@ -174,6 +204,8 @@ export function useAugmentationActions(state) {
             Accept: 'application/json',
           }
         })
+        // Admin activity log
+
       } else {
         // Create new augmentation
         response = await api.post(endpoint, payload, {
@@ -182,6 +214,8 @@ export function useAugmentationActions(state) {
             Accept: 'application/json',
           }
         })
+        // Admin activity log
+
       }
 
       // Refresh the list
@@ -271,8 +305,12 @@ export function useAugmentationActions(state) {
 
   const deleteAugmentation = async (id) => {
     try {
-      // Use different tokens for admin vs regular users
-      const token = authStore.admin ? authStore.adminToken : authStore.token
+      // Admin users cannot delete augmentations - only view
+      if (authStore.admin) {
+        throw new Error('Admin users cannot delete augmentations')
+      }
+      
+      const token = authStore.token
       await api.delete(`/api/barangay/budget-augmentations/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -282,6 +320,8 @@ export function useAugmentationActions(state) {
 
       // Refresh the list
       await fetchAugmentations()
+
+
 
       return { success: true }
     } catch (error) {
@@ -295,6 +335,7 @@ export function useAugmentationActions(state) {
 
   const fetchAugmentationById = async (id) => {
     try {
+      
       // Use different endpoints and tokens for admin vs regular users
       const endpoint = authStore.admin ? `/api/admin/augmentations/${id}` : `/api/barangay/budget-augmentations/${id}`
       const token = authStore.admin ? authStore.adminToken : authStore.token
@@ -473,8 +514,11 @@ export function useAugmentationActions(state) {
       const params = { year: new Date().getFullYear() }
 
       // Add barangay filter for admin users
-      if (authStore.admin && state.selectedBarangayId.value) {
-        params.barangay_id = state.selectedBarangayId.value
+      if (authStore.admin) {
+        const selectedBarangayId = authStore.getSelectedBarangay()
+        if (selectedBarangayId) {
+          params.barangay_id = selectedBarangayId
+        }
       }
 
       const response = await api.get(endpoint, {
@@ -494,6 +538,10 @@ export function useAugmentationActions(state) {
     }
   }
 
+  const setBudgetSourceFilter = (budgetSource) => {
+    state.selectedBudgetSource.value = budgetSource
+  }
+
   return {
     fetchAugmentations,
     fetchExpenseAccounts,
@@ -508,5 +556,6 @@ export function useAugmentationActions(state) {
     refreshAugmentationDialog,
     setSelectedBarangay,
     fetchAvailableBudgets,
+    setBudgetSourceFilter,
   }
 }

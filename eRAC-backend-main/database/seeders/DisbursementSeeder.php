@@ -23,7 +23,7 @@ class DisbursementSeeder extends Seeder
         $now = Carbon::now();
         $yy = $now->format('y');
         $mm = $now->format('m');
-        $dvCounter = 1; // global counter
+        $dvCounter = 1;
         // inside run()
         foreach ($barangays as $barangay) {
             $banks = LibBank::where('barangay_id', $barangay->id)->get();
@@ -39,10 +39,10 @@ class DisbursementSeeder extends Seeder
                 if ($appropriations->isEmpty()) continue;
 
                 // exactly 6 disbursements per year
-                for ($d = 0; $d < 6; $d++) {
-                    $status = $faker->randomElement(['Pending', 'Partial', 'Liquidated']);
+                for ($d = 0; $d < 18; $d++) {
+                    $status = ($d%3 == 0) ? 'Liquidated' : (($d%3 == 1) ? 'Partial' : 'Pending');
+                    //$status = $faker->randomElement(['Pending', 'Partial', 'Liquidated']);
                     $bank = $banks->random();
-                    $date = $faker->dateTimeBetween("$year-01-01", "$year-12-31");
 
                     // cheque selection same as before...
                     $chequeNumber = null;
@@ -59,12 +59,12 @@ class DisbursementSeeder extends Seeder
                     }
                     if (!$chequeNumber) continue;
 
-                    $base = Carbon::create($year, rand(1, 8), rand(1, 28));
-                    $startDate = $base->copy()->subMonths(1)->subDays(15);
-                    $endDate   = $base->copy()->addMonths(1)->addDays(15);
+                    $base = Carbon::create($year, $now->month, $now->day);
+                    $startDate = $base->copy()->subMonths(1)->subDays(5);
+                    $createdAt = $faker->dateTimeBetween($startDate, $base);
 
                     $dvAmount = $faker->numberBetween(5, 50) * 1000;
-                    $dvNumber = "DV-".substr($startDate->year, -2)."-".str_pad($startDate->month, 2, '0', STR_PAD_LEFT)."-" . str_pad($dvCounter, 3, '0', STR_PAD_LEFT);
+                    $dvNumber = "DV-".substr($year, -2)."-".str_pad($now->month, 2, '0', STR_PAD_LEFT)."-" . str_pad($dvCounter, 3, '0', STR_PAD_LEFT);
 
                     $liquidatedAmount = null;
                     if ($status === 'Liquidated') {
@@ -74,7 +74,7 @@ class DisbursementSeeder extends Seeder
                     }
                     $disb = Disbursement::create([
                         'barangay_id'       => $barangay->id,
-                        'date'              => $date->format('Y-m-d'),
+                        'date'              => $createdAt->format('Y-m-d'),
                         'dv_number'         => $dvNumber,
                         'cheque_number'     => $chequeNumber,
                         'bank_id'           => $bank->id,
@@ -82,9 +82,9 @@ class DisbursementSeeder extends Seeder
                         'dv_amount'         => $dvAmount,
                         'status'            => $status,
                         'liquidated_amount' => $liquidatedAmount,
-                        'liquidated_at'     => $liquidatedAmount ? $endDate: null,
-                        'created_at'        => $startDate,
-                        'updated_at'        => $startDate,
+                        'liquidated_at'     => $liquidatedAmount ? $base: null,
+                        'created_at'        => $createdAt,
+                        'updated_at'        => $createdAt,
                     ]);
 
                     $this->seedExpenseDetails($faker, $disb->id, $appropriations, $dvAmount, Carbon::parse($startDate));
@@ -99,7 +99,6 @@ class DisbursementSeeder extends Seeder
                 }
             }
         }
-
     }
 
     private function seedExpenseDetails($faker, int $disbursementId, $appropriations, int $totalAmount, Carbon $baseDate): void

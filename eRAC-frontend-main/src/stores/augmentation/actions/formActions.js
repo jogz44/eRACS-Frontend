@@ -1,4 +1,14 @@
 export function useFormActions(state) {
+  // Helper function to get budget source label
+  const getBudgetSourceLabel = (budgetSource) => {
+    if (budgetSource?.toLowerCase().includes('annual')) {
+      return 'Annual'
+    } else if (budgetSource?.toLowerCase().includes('supplemental')) {
+      return 'Supplemental'
+    }
+    return 'Annual' // Default
+  }
+
   const resetForm = (formName) => {
     if (!state?.forms?.value) return
 
@@ -69,12 +79,20 @@ export function useFormActions(state) {
       ? Math.max(...state.Augexpenses.value.map(e => e.id)) + 1 
       : 1
       
+    // Calculate transfer type indicator
+    const fromBudget = augExpense.from_budget_source || 'Annual Budget'
+    const toBudget = augExpense.to_budget_source || 'Annual Budget'
+    const transferType = `${getBudgetSourceLabel(fromBudget)} → ${getBudgetSourceLabel(toBudget)}`
+
     const expenseData = {
       id: newId,
       from_appropriation_id: augExpense.from_appropriation_id,
       to_appropriation_id: augExpense.to_appropriation_id,
       from_expense: augExpense.from_expense,
       to_expense: augExpense.to_expense,
+      from_budget_source: fromBudget,
+      to_budget_source: toBudget,
+      transfer_type: transferType,
       amount: amount,
       particulars: particulars,
     }
@@ -99,12 +117,20 @@ export function useFormActions(state) {
     
     const index = state.Augexpenses.value.findIndex((e) => e.id === row.id)
     if (index !== -1) {
+      // Calculate transfer type indicator
+      const fromBudget = row.from_budget_source || 'Annual Budget'
+      const toBudget = row.to_budget_source || 'Annual Budget'
+      const transferType = `${getBudgetSourceLabel(fromBudget)} → ${getBudgetSourceLabel(toBudget)}`
+
       state.Augexpenses.value[index] = {
         ...row,
         from_expense: row.from_expense,
         to_expense: row.to_expense,
         from_appropriation_id: row.from_appropriation_id,
         to_appropriation_id: row.to_appropriation_id,
+        from_budget_source: fromBudget,
+        to_budget_source: toBudget,
+        transfer_type: transferType,
       }
       state.Augexpenses.value = [...state.Augexpenses.value]
     }

@@ -249,7 +249,7 @@ export const useChartDataStore = defineStore('chartData', {
         throw new Error('Authentication required')
       }
       
-      console.log('Auth token available:', token ? 'Yes' : 'No')
+
       return {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -791,14 +791,26 @@ export const useChartDataStore = defineStore('chartData', {
     async fetchAvailableYears() {
       try {
         this.isYearFilterLoading = true
-        console.log('Fetching available years...')
         
+        const authStore = useAuthStore()
+        
+        // For admin users, use a different approach since they don't have barangay-specific fiscal years
+        if (authStore.admin) {
+          // Admin users can see data from multiple barangays, so use current year
+          const currentYear = new Date().getFullYear()
+          this.availableYears = [
+            { value: 'all', label: 'All Years' },
+            { value: currentYear, label: currentYear.toString() }
+          ]
+          this.selectedYear = currentYear
+          return
+        }
+        
+        // For barangay users, fetch from barangay endpoint
         const response = await api.get('/api/barangay/fiscal-years', this.getAuthConfig())
-        console.log('Fiscal years API response:', response.data)
         
         // Fix: Access the nested data property correctly
         const fiscalYears = response.data?.data || []
-        console.log('Extracted fiscal years:', fiscalYears)
         
         // Extract years and add "All Years" option
         this.availableYears = [
@@ -809,14 +821,10 @@ export const useChartDataStore = defineStore('chartData', {
           }))
         ]
         
-        console.log('Final available years array:', this.availableYears)
-        
         // Set default to current year if not already set
         if (!this.selectedYear || this.selectedYear === 'all') {
           this.selectedYear = new Date().getFullYear()
         }
-        
-        console.log('Selected year set to:', this.selectedYear)
       } catch (error) {
         console.error('Error fetching available years:', error)
         this.availableYears = []
@@ -842,7 +850,7 @@ export const useChartDataStore = defineStore('chartData', {
         this.dateTo = new Date(yearValue, 11, 31)
       }
       
-      console.log('Year filter changed to:', yearValue, 'Date range:', this.dateFrom, 'to', this.dateTo)
+
     },
 
     resetToCurrentYear() {
