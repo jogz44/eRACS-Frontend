@@ -373,11 +373,42 @@ export const useDisbursementStore = defineStore('disbursement', {
     ],
 
     filteredDisbursements: (state) => {
-      return state.disbursements.filter((disbursement) => {
-        const matchesSearch =
-          disbursement.payee.toLowerCase().includes(state.searchQuery.toLowerCase()) ||
-          disbursement.dvNumber.toLowerCase().includes(state.searchQuery.toLowerCase())
-        const matchesDate = true // Add date filtering logic here
+      const parseFlexibleDate = (value) => {
+        if (!value) return null
+        if (value instanceof Date) return value
+        if (typeof value === 'string') {
+          if (value.includes('/')) {
+            const parts = value.split('/')
+            if (parts[0].length === 2) {
+              const [dd, mm, yyyy] = parts
+              const d = new Date(`${yyyy}-${mm}-${dd}`)
+              return isNaN(d.getTime()) ? null : d
+            }
+          }
+          const d = new Date(value)
+          return isNaN(d.getTime()) ? null : d
+        }
+        return null
+      }
+
+      const from = parseFlexibleDate(state.dateFrom)
+      const to = parseFlexibleDate(state.dateTo)
+      const fromStart = from ? new Date(from.setHours(0, 0, 0, 0)) : null
+      const toEnd = to ? new Date(to.setHours(23, 59, 59, 999)) : null
+
+      const query = (state.searchQuery || '').toLowerCase().trim()
+
+      return state.disbursements.filter((d) => {
+        // Search across key fields
+        const haystacks = [d.payee, d.dvNumber, d.chequeNumber, d.bank, d.status]
+        const matchesSearch = !query || haystacks.some((h) => String(h || '').toLowerCase().includes(query))
+
+        // Inclusive date range
+        const dt = parseFlexibleDate(d.date)
+        const matchesDate = !fromStart && !toEnd
+          ? true
+          : (dt && (!fromStart || dt >= fromStart) && (!toEnd || dt <= toEnd))
+
         return matchesSearch && matchesDate
       })
     },

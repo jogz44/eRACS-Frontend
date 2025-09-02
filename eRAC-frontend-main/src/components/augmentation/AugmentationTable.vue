@@ -1,7 +1,7 @@
 <template>
   <q-card>
     <q-table
-      :rows="store.augmentation"
+      :rows="store.filteredAugmentations"
       :columns="store.augmentationColumns"
       row-key="id"
       :pagination="store.pagination"

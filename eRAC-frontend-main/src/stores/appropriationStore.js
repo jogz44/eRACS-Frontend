@@ -107,30 +107,46 @@ export const useAppropriationStore = defineStore("appropriation", {
     },
 
     filteredAppropriations(state) {
+      // Helper to parse either 'YYYY-MM-DD' or 'DD/MM/YYYY'
+      const parseFlexibleDate = (value) => {
+        if (!value) return null
+        if (value instanceof Date) return value
+        if (typeof value === 'string') {
+          if (value.includes('/')) {
+            const [dd, mm, yyyy] = value.split('/')
+            const d = new Date(`${yyyy}-${mm}-${dd}`)
+            return isNaN(d.getTime()) ? null : d
+          }
+          const d = new Date(value)
+          return isNaN(d.getTime()) ? null : d
+        }
+        return null
+      }
+
       let results = state.appropriations
 
-      // Date filtering
-      if (state.dateFrom || state.dateTo) {
-        const fromDate = state.dateFrom ? new Date(state.dateFrom) : null
-        const toDate = state.dateTo ? new Date(state.dateTo) : null
+      // Date filtering (inclusive)
+      const from = parseFlexibleDate(state.dateFrom)
+      const to = parseFlexibleDate(state.dateTo)
+      if (from || to) {
+        // Normalize range bounds to full-day
+        const fromStart = from ? new Date(from.setHours(0, 0, 0, 0)) : null
+        const toEnd = to ? new Date(to.setHours(23, 59, 59, 999)) : null
 
         results = results.filter((item) => {
-          const itemDate = new Date(item.date)
-          const normalizedItemDate = new Date(itemDate.toDateString())
-          const normalizedFromDate = fromDate ? new Date(fromDate.toDateString()) : null
-          const normalizedToDate = toDate ? new Date(toDate.toDateString()) : null
-
-          return (
-            (!normalizedFromDate || normalizedItemDate >= normalizedFromDate) &&
-            (!normalizedToDate || normalizedItemDate <= normalizedToDate)
-          )
+          const d = parseFlexibleDate(item.date)
+          if (!d) return false
+          const dt = d.getTime()
+          return (!fromStart || dt >= fromStart.getTime()) && (!toEnd || dt <= toEnd.getTime())
         })
       }
 
       // Search filtering
-      if (state.searchQuery.trim()) {
-        const query = state.searchQuery.toLowerCase()
-        results = results.filter((item) => Object.values(item).some((val) => String(val).toLowerCase().includes(query)))
+      const query = (state.searchQuery || '').toLowerCase().trim()
+      if (query) {
+        results = results.filter((item) =>
+          Object.values(item || {}).some((val) => String(val ?? '').toLowerCase().includes(query)),
+        )
       }
 
       return results

@@ -270,7 +270,7 @@
       <!-- Main Data Table -->
       <q-card flat bordered>
         <q-table
-          :rows="store.disbursements"
+          :rows="store.filteredDisbursements"
           :columns="store.disbursementColumns"
           row-key="id"
           :pagination="store.pagination"
