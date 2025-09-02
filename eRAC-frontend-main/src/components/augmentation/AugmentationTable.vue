@@ -1,7 +1,7 @@
 <template>
   <q-card>
     <q-table
-      :rows="store.augmentation"
+      :rows="filteredRows"
       :columns="store.augmentationColumns"
       row-key="id"
       :pagination="store.pagination"
@@ -52,10 +52,22 @@
 <script setup>
 import { useAugmentationStore } from 'stores/augmentation'
 import { useQuasar } from 'quasar'
+import { computed } from 'vue'
 
+const props = defineProps({
+  filteredData: {
+    type: Array,
+    default: () => []
+  }
+})
 
 const store = useAugmentationStore()
 const $q = useQuasar()
+
+// Use filtered data if provided, otherwise fall back to store data
+const filteredRows = computed(() => {
+  return props.filteredData.length > 0 ? props.filteredData : store.augmentation
+})
 
 // Helper function to get budget source label
 const getBudgetSourceLabel = (budgetSource) => {

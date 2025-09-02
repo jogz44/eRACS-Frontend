@@ -14,41 +14,86 @@
       </div>
     </div>
 
-    <!-- Simplified the search and filter section structure -->
-    <div class="q-mb-sm">
-      <div class="row items-center q-gutter-sm">
-        <q-input
-          outlined
-          dense
-          placeholder="Search Description..."
-          v-model="searchQuery"
-          class="search-input"
-        >
-          <template v-slot:append>
-            <q-icon name="search" />
-          </template>
-        </q-input>
+    <!-- Filters Section -->
+    <q-card flat bordered class="q-mb-md filters-section">
+      <q-card-section>
+        <div class="row q-col-gutter-md items-end">
+          <!-- Search Input -->
+          <div class="col-md-2 col-sm-6 col-xs-12">
+            <q-item-label class="q-mb-xs text-weight-medium">Search:</q-item-label>
+            <q-input
+              outlined
+              dense
+              v-model="searchQuery"
+              placeholder="Search description..."
+              clearable
+            >
+              <template v-slot:append>
+                <q-icon name="search" />
+              </template>
+            </q-input>
+          </div>
 
-        <q-btn
-          dense
-          outlined
-          color="red-10"
-          icon="clear_all"
-          label="Clear All"
-          @click="clearAllFilters"
-        />
+          <!-- Date Range Filter -->
+          <div class="col-md-2 col-sm-6 col-xs-12">
+            <q-item-label class="q-mb-xs text-weight-medium">Date Range:</q-item-label>
+            <q-input
+              outlined
+              dense
+              v-model="dateRangeDisplay"
+              placeholder="Select date range..."
+              readonly
+              clearable
+              @clear="onDateRangeClear"
+            >
+              <template v-slot:append>
+                <q-icon name="event" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date
+                      v-model="dateRange"
+                      range
+                      @update:model-value="onDateRangeChange"
+                    >
+                      <div class="row items-center justify-end">
+                        <q-btn v-close-popup label="Close" color="primary" flat />
+                      </div>
+                    </q-date>
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
 
-        <q-space />
+          <!-- Clear Button -->
+          <div class="col-md-1 col-sm-6 col-xs-12">
+            <q-btn
+              dense
+              outlined
+              color="red-10"
+              icon="clear_all"
+              label="Clear"
+              @click="clearAllFilters"
+              class="full-width"
+            />
+          </div>
 
-        <q-btn
-          label="Continue Accounts"
-          @click="showContinueDialog = true"
-          color="secondary"
-          v-permission="'add'"
-          :loading="generalLoading"
-        />
-      </div>
-    </div>
+          <!-- Spacer to push Add button to the right -->
+          <div class="col-md-2 col-sm-0 col-xs-0"></div>
+
+          <!-- Add Button -->
+          <div class="col-md-1 col-sm-6 col-xs-12">
+            <q-btn
+              label="Continue Accounts"
+              @click="showContinueDialog = true"
+              color="secondary"
+              v-permission="'add'"
+              :loading="generalLoading"
+              class="full-width"
+            />
+          </div>
+        </div>
+      </q-card-section>
+    </q-card>
 
     <!-- Dialog for Selecting Accounts -->
     <q-dialog v-model="showContinueDialog" @keydown.enter="handleEnterKey">
@@ -847,6 +892,7 @@ const dialogSearchQuery = ref('')
 const returnAmount = ref(0)
 const augmentationAmount = ref(0)
 const generalLoading = ref(true)
+const dateRange = ref(null)
 
 // Commit dialog state variables
 const commitLoading = ref(false)
@@ -1091,9 +1137,36 @@ const loadPendingUsers = async () => {
   }
 }
 
+const dateRangeDisplay = computed(() => {
+  if (!dateRange.value || !dateRange.value.from || !dateRange.value.to) {
+    return ''
+  }
+  const fromDate = new Date(dateRange.value.from).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  })
+  const toDate = new Date(dateRange.value.to).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  })
+  return `${fromDate} - ${toDate}`
+})
+
+const onDateRangeChange = (newRange) => {
+  if (newRange && newRange.from && newRange.to) {
+    // const fromDate = new Date(newRange.from)
+    // const toDate = new Date(newRange.to)
+    // Store date range in appropriate format for the store
+    // You may need to adjust this based on your store's date handling
+  }
+}
+
+const onDateRangeClear = () => {
+  dateRange.value = null
+}
+
 const clearAllFilters = () => {
   searchQuery.value = ''
   dialogSearchQuery.value = ''
+  dateRange.value = null
 }
 
 const validateAndContinue = () => {
@@ -2019,6 +2092,11 @@ defineExpose({
 .page-header {
   border-bottom: 1px solid #e0e0e0;
   padding-bottom: 8px;
+}
+
+.filters-section {
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .hierarchical-table {

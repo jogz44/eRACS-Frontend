@@ -62,80 +62,88 @@
       </div>
     </div>
 
-    <!-- Simplified the search and filter section structure -->
-    <div class="q-mb-sm search-filter-container">
-      <div class="row items-center q-gutter-sm">
-        <q-input
-          outlined
-          dense
-          placeholder="Search Description..."
-          v-model="appropriationStore.searchQuery"
-          class="search-input"
-        >
-          <template v-slot:append>
-            <q-icon name="search" />
-          </template>
-        </q-input>
-
-        <q-input
-          outlined
-          dense
-          :model-value="dateRangeDisplay"
-          label="Date Range"
-          class="date-input"
-          clearable
-          @clear="onDateRangeClear"
-          readonly
-        >
-          <template v-slot:append>
-            <q-icon name="event">
-              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                <q-date
-                  v-model="dateRange"
-                  range
-                  @update:model-value="onDateRangeChange"
-                />
-              </q-popup-proxy>
-            </q-icon>
-          </template>
-        </q-input>
-
-        <q-btn
-          dense
-          outlined
-          color="red-10"
-          icon="clear_all"
-          label="Clear All"
-          @click="clearAllFilters"
-          class="desktop-clear-btn"
-        />
-
-        <q-space />
-
-        <q-btn
-          label="Add"
-          icon="add"
-          color="primary"
-          @click="addBudget"
-          :loading="addLoading"
-          :disable="addLoading"
-          v-permission="'add'"
-          class="desktop-add-btn"
-        />
-      </div>
-      
-      <!-- Mobile Clear All button positioned below search inputs -->
-      <div class="mobile-clear-btn-container">
-        <q-btn
-          round
-          dense
-          color="red-10"
-          icon="delete"
-          class="mobile-clear-btn"
-          @click="clearAllFilters"
-        />
-      </div>
-    </div>
+    <!-- Filters Section -->
+    <q-card flat bordered class="q-mb-md filters-section">
+      <q-card-section>
+        <div class="row q-col-gutter-md items-end">
+          <!-- Search Input -->
+          <div class="col-md-2 col-sm-6 col-xs-12">
+            <q-item-label class="q-mb-xs text-weight-medium">Search:</q-item-label>
+            <q-input
+              outlined
+              dense
+              v-model="appropriationStore.searchQuery"
+              placeholder="Search description..."
+              clearable
+            >
+              <template v-slot:append>
+                <q-icon name="search" />
+              </template>
+            </q-input>
+          </div>
+          
+          <!-- Date Range Filter -->
+          <div class="col-md-2 col-sm-6 col-xs-12">
+            <q-item-label class="q-mb-xs text-weight-medium">Date Range:</q-item-label>
+            <q-input
+              outlined
+              dense
+              v-model="dateRangeDisplay"
+              placeholder="Select date range..."
+              readonly
+              clearable
+              @clear="onDateRangeClear"
+            >
+              <template v-slot:append>
+                <q-icon name="event" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date
+                      v-model="dateRange"
+                      range
+                      @update:model-value="onDateRangeChange"
+                    >
+                      <div class="row items-center justify-end">
+                        <q-btn v-close-popup label="Close" color="primary" flat />
+                      </div>
+                    </q-date>
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
+          
+          <!-- Clear Button -->
+          <div class="col-md-1 col-sm-6 col-xs-12">
+            <q-btn
+              dense
+              outlined
+              color="red-10"
+              icon="clear_all"
+              label="Clear"
+              @click="clearAllFilters"
+              class="full-width"
+            />
+          </div>
+          
+          <!-- Spacer to push Add button to the right -->
+          <div class="col-md-2 col-sm-0 col-xs-0"></div>
+          
+          <!-- Add Button -->
+          <div class="col-md-1 col-sm-6 col-xs-12">
+            <q-btn
+              label="Add"
+              color="primary"
+              icon="add"
+              @click="addBudget"
+              :loading="addLoading"
+              :disable="addLoading"
+              class="full-width"
+              v-permission="'add'"
+            />
+          </div>
+        </div>
+      </q-card-section>
+    </q-card>
 
     <!-- Add Budget Dialog -->
     <q-dialog v-model="showDialog" @keydown.enter="handleEnterKey">
@@ -1090,6 +1098,11 @@ const getBudgetTypeLabel = (description) => {
 .budget-type-badge {
   font-size: 0.75rem;
   font-weight: 500;
+}
+
+.filters-section {
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .budget-summary .summary-card {
