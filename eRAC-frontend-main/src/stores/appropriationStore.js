@@ -244,9 +244,13 @@ export const useAppropriationStore = defineStore("appropriation", {
           newBudget.barangay_id = this.selectedBarangayId
         }
         
-        // Use different endpoints for admin vs regular users
-        const endpoint = this.authStore.admin ? "/api/admin/budgets/create" : "/api/barangay/budgets/create"
-        const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
+        // Admin users cannot create budgets - only view
+        if (this.authStore.admin) {
+          throw new Error('Admin users cannot create budgets')
+        }
+        
+        const endpoint = "/api/barangay/budgets/create"
+        const token = this.authStore.token
         
         const response = await api.post(endpoint, newBudget, {
           headers: {
@@ -266,6 +270,7 @@ export const useAppropriationStore = defineStore("appropriation", {
         }
 
         this.appropriations.push(newApprop)
+
         return newApprop
       } catch (error) {
         console.error("Failed to add budget:", error)
@@ -281,8 +286,11 @@ export const useAppropriationStore = defineStore("appropriation", {
         const params = { year: currentYear }
         
         // Add barangay filter for admin users
-        if (this.authStore.admin && this.selectedBarangayId) {
-          params.barangay_id = this.selectedBarangayId
+        if (this.authStore.admin) {
+          const selectedBarangayId = this.authStore.getSelectedBarangay()
+          if (selectedBarangayId) {
+            params.barangay_id = selectedBarangayId
+          }
         }
         
         // Use different endpoints for admin vs regular users
@@ -318,10 +326,7 @@ export const useAppropriationStore = defineStore("appropriation", {
       }
     },
 
-    // Method to set selected barangay for admin filtering
-    setSelectedBarangay(barangayId) {
-      this.selectedBarangayId = barangayId
-    },
+
 
     async initialize() {
       await this.fetchAppropriations()
@@ -340,17 +345,10 @@ export const useAppropriationStore = defineStore("appropriation", {
         let fiscalYear = null
         
         if (this.authStore.admin) {
-          // For admins, we need to find fiscal years from any barangay for the current year
-          // Since admins can see all barangays, we'll fetch from the first barangay
-          // that has fiscal years or use a different approach
-          const currentYear = new Date().getFullYear()
-          
-          // Try to get fiscal year directly using a raw query approach for admins
-          // We'll assume there's a fiscal year for the current year
-          fiscalYear = { id: currentYear, year: currentYear }
-          
-          // For now, let's skip the fiscal year API call for admins and use the current year
-          // This is a temporary solution - ideally we'd need an admin fiscal years endpoint
+          // For admin users, we don't need to fetch expense hierarchy since they only view data
+          // Set empty allocations to prevent errors
+          this.allocations = []
+          return
         } else {
           // Regular barangay users can use their fiscal years endpoint
           const yearsResponse = await api.get("/api/barangay/fiscal-years", {
@@ -371,25 +369,22 @@ export const useAppropriationStore = defineStore("appropriation", {
           }
         }
 
-        // Use different endpoints for admin vs regular users
-        const endpoint = this.authStore.admin ? "/api/admin/expense-hierarchy" : "/api/barangay/expense-hierarchy"
+        // Only proceed for barangay users
+        if (!this.authStore.admin) {
+          const endpoint = "/api/barangay/expense-hierarchy"
+          const params = { fiscal_year_id: fiscalYear.id }
 
-        // Admin sends year (not fiscal_year_id) because validation expects a real fiscal_years.id for that rule
-        const currentYear = new Date().getFullYear()
-        const params = this.authStore.admin
-          ? { year: currentYear, ...(this.selectedBarangayId ? { barangay_id: this.selectedBarangayId } : {}) }
-          : { fiscal_year_id: fiscalYear.id }
+          const response = await api.get(endpoint, {
+            params: params,
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+          })
 
-        const response = await api.get(endpoint, {
-          params: params,
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-        })
-
-        this.allocations = response.data.data || []
+          this.allocations = response.data.data || []
+        }
       } catch (error) {
         console.error("[ERROR] fetchExpenseHierarchy:", error)
         throw error
@@ -464,9 +459,13 @@ export const useAppropriationStore = defineStore("appropriation", {
           amount: parseCurrency(allocation.amount),
         }))
 
-        // Use different endpoints for admin vs regular users
-        const endpoint = this.authStore.admin ? `/api/admin/budgets/${budgetId}/allocate` : `/api/barangay/budgets/${budgetId}/allocate`
-        const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
+        // Admin users cannot commit allocations - only view
+        if (this.authStore.admin) {
+          throw new Error('Admin users cannot commit allocations')
+        }
+        
+        const endpoint = `/api/barangay/budgets/${budgetId}/allocate`
+        const token = this.authStore.token
 
         const response = await api.post(
           endpoint,
@@ -516,6 +515,9 @@ export const useAppropriationStore = defineStore("appropriation", {
             console.warn('Failed to refresh disbursement store after appropriation update:', error)
           }
         }
+
+        // Admin activity log
+
 
         return response.data
       } catch (error) {

@@ -301,7 +301,7 @@ export default {
     
     // Log page visit
     const { logPageVisit } = usePageLogging()
-    await logPageVisit('User Control')
+    await logPageVisit('Pending Users')
     await this.loadPendingUsers();
   },
   activated() {

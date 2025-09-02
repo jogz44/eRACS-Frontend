@@ -268,7 +268,7 @@ export default {
     
     // Log page visit
     const { logPageVisit } = usePageLogging()
-    await logPageVisit('User Control')
+    await logPageVisit('Accepted Users')
     await this.loadAcceptedUsers();
   },
   activated() {

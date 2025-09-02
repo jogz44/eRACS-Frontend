@@ -198,29 +198,29 @@ const routes = [
       {
         path: 'disbursement',
         name: 'adminDisbursement',
-                    component: () => import('../pages/Admin/Transaction/DisbursementTran.vue'),
+        component: () => import('../pages/Admin/Transaction/DisbursementTran.vue'),
       },
       {
         path: 'appropriation',
         name: 'adminAppropriation',
-                    component: () => import('../pages/Admin/Transaction/AppropriationTran.vue'),
+        component: () => import('../pages/Admin/Transaction/AppropriationTran.vue'),
       },
       {
         path: 'augmentation',
         name: 'adminAugmentation',
-                    component: () => import('../pages/Admin/Transaction/AugmentationTran.vue'),
+        component: () => import('../pages/Admin/Transaction/AugmentationTran.vue'),
       },
       // Continuing Transactions
 
       {
         path: 'contAppropriation',
         name: 'AdminAppropriation',
-                    component: () => import('../pages/Admin/Continuing/ContAppr.vue'),
+        component: () => import('../pages/Admin/Continuing/ContAppr.vue'),
       },
       {
         path: 'contDisbursement',
         name: 'AdminDisbursement',
-                    component: () => import('../pages/Admin/Continuing/ContDis.vue'),
+        component: () => import('../pages/Admin/Continuing/ContDis.vue'),
       },
 
 
