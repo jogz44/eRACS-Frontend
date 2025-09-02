@@ -400,18 +400,29 @@ const columns = [
     sortable: true,
   },
   {
-    name: 'appropriation',
-    label: 'Appropriation',
-    field: 'appropriation',
+
+    name: 'amount',
+    label: 'Total Amount',
+    field: 'amount',
     align: 'right',
-    sortable: true,
+    sortable: true
+  },
+  {
+    name: 'balance',
+    label: 'Balance',
+    field: 'balance',
+    align: 'right',
+    sortable: true
+
   },
   {
     name: 'unappropriated',
     label: 'Unappropriated',
     field: 'unappropriated',
     align: 'right',
-    sortable: true,
+
+    sortable: true
+
   },
   {
     name: 'action',

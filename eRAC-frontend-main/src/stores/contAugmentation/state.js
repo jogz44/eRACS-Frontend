@@ -8,14 +8,12 @@ export function initialState() {
         refNo: 'AUG-25-43-011',
         date: '22/01/2025',
         totalAmount: '4,000.00',
-        remarks: 'Remarks for Augmentation 1',
       },
       {
         id: 2,
         refNo: 'AUG-25-43-011',
         date: '22/01/2025',
         totalAmount: '4,000.00',
-        remarks: 'Remarks for Augmentation 1',
       },
       {
         id: 3,
