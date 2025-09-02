@@ -14,35 +14,41 @@
       </div>
     </div>
 
-    <div class="q-mb-sm">
-      <SearchFilters />
-      <AugmentationTable />
+          <div class="q-mb-sm">
+        <SearchFilters />
+        <AugmentationTable />
+      </div>
+      
+      <!-- Augmentation Dialog for viewing details -->
       <AugmentationDialog />
-      <AugExpenseSelecDial />
-      <AugExpenseDetailDial />
-    </div>
-  </q-page>
-</template>
+    </q-page>
+  </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAugmentationStore } from 'stores/augmentation'
+import { useAuthStore } from 'stores/auth'
 import AugmentationTable from 'components/augmentation/AugmentationTable.vue'
 import SearchFilters from 'pages/Admin/SearchFilters.vue'
 import AugmentationDialog from 'components/augmentation/AugmentationDialog.vue'
-import AugExpenseSelecDial from 'components/augmentation/AugExpenseSelecDial.vue'
-import AugExpenseDetailDial from 'components/augmentation/AugExpenseDetailDial.vue'
 import { usePageLogging } from '../../../composables/usePageLogging'
 
 const $q = useQuasar()
 const store = useAugmentationStore()
+const authStore = useAuthStore()
 const loading = ref(false)
 const { logPageVisit } = usePageLogging()
 
 const loadPendingUsers = async () => {
   loading.value = true
   try {
+    console.log('Refreshing augmentations for admin user')
+    console.log('Current admin state:', {
+      isAdmin: authStore.admin,
+      hasAdminToken: !!authStore.adminToken
+    })
+    
     await store.fetchAugmentations()
     $q.notify({
       type: 'positive',
@@ -51,6 +57,7 @@ const loadPendingUsers = async () => {
       position: 'top',
     })
   } catch (error) {
+    console.error('Error refreshing augmentations:', error)
     $q.notify({
       type: 'negative',
       message: error.response?.data?.message || 'Failed to refresh augmentations',
@@ -63,12 +70,16 @@ const loadPendingUsers = async () => {
 }
 
 onMounted(async () => {
-  await Promise.all([
-    store.fetchAugmentations(),
-    store.fetchAvailableBudgets()
-  ])
-  // Log page visit
-  await logPageVisit('Current Augmentation')
+  try {
+    
+    // For admin users, only fetch augmentations (view-only)
+    // fetchAvailableBudgets is only needed for creating augmentations, which admins don't do
+    await store.fetchAugmentations()
+    // Log page visit
+    await logPageVisit('Current Augmentation')
+  } catch (error) {
+    console.error('Error in admin augmentation page onMounted:', error)
+  }
 })
 
 

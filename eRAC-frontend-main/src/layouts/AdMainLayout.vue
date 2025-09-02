@@ -335,18 +335,7 @@ onMounted(async () => {
       if (savedBarangayId) {
         barangay.value = parseInt(savedBarangayId)
 
-        // Also update stores with saved selection
-        const { useAppropriationStore } = await import('stores/appropriationStore')
-        const appropriationStore = useAppropriationStore()
-        appropriationStore.setSelectedBarangay(parseInt(savedBarangayId))
-
-        const { useDisbursementStore } = await import('stores/disbursementStore')
-        const disbursementStore = useDisbursementStore()
-        disbursementStore.setSelectedBarangay(parseInt(savedBarangayId))
-
-        const { useAugmentationStore } = await import('stores/augmentation')
-        const augmentationStore = useAugmentationStore()
-        augmentationStore.setSelectedBarangay(parseInt(savedBarangayId))
+        // Stores now get barangay ID directly from auth store
       }
     }
   } catch (error) {
@@ -501,17 +490,7 @@ const handleLogout = async () => {
 
     // Clear barangay selection from stores
     try {
-      const { useAppropriationStore } = await import('stores/appropriationStore')
-      const appropriationStore = useAppropriationStore()
-      appropriationStore.setSelectedBarangay(null)
-
-      const { useDisbursementStore } = await import('stores/disbursementStore')
-      const disbursementStore = useDisbursementStore()
-      disbursementStore.setSelectedBarangay(null)
-
-      const { useAugmentationStore } = await import('stores/augmentation')
-      const augmentationStore = useAugmentationStore()
-      augmentationStore.setSelectedBarangay(null)
+      // Stores now get barangay ID directly from auth store
     } catch (error) {
       console.error('Error clearing store barangay selections:', error)
     }
@@ -528,62 +507,59 @@ const handleLogout = async () => {
                           localStorage.setItem('admin_selected_barangay', barangayId.toString())
                         } else {
                           localStorage.removeItem('admin_selected_barangay')
+                          // Show warning notification
+                          $q.notify({
+                            type: 'warning',
+                            message: 'No barangay selected - all data will be shown',
+                            icon: 'warning',
+                            position: 'top',
+                          })
                         }
 
-                        // Update appropriation store if we're on appropriation pages
-                        const { useAppropriationStore } = await import('stores/appropriationStore')
-                        const appropriationStore = useAppropriationStore()
-                        appropriationStore.setSelectedBarangay(barangayId)
-                        await appropriationStore.fetchBudgets()
-
-                        // Update disbursement store if we're on disbursement pages
-                        const { useDisbursementStore } = await import('stores/disbursementStore')
-                        const disbursementStore = useDisbursementStore()
-                        disbursementStore.setSelectedBarangay(barangayId)
-                        await disbursementStore.fetchDisbursements()
-
-                        // Update augmentation store if we're on augmentation pages
-                        const { useAugmentationStore } = await import('stores/augmentation')
-                        const augmentationStore = useAugmentationStore()
-                        augmentationStore.setSelectedBarangay(barangayId)
-                        await augmentationStore.fetchAugmentations()
+                        // Refresh only the current page's store with new barangay filter
+                        try {
+                          const currentRoute = router.currentRoute.value.path
+                          
+                          if (currentRoute.includes('/admin/transaction/appropriation')) {
+                            // On appropriation page - only refresh appropriation store
+                            const { useAppropriationStore } = await import('stores/appropriationStore')
+                            const appropriationStore = useAppropriationStore()
+                            await appropriationStore.fetchBudgets()
+                          } else if (currentRoute.includes('/admin/transaction/disbursement')) {
+                            // On disbursement page - only refresh disbursement store
+                            const { useDisbursementStore } = await import('stores/disbursementStore')
+                            const disbursementStore = useDisbursementStore()
+                            await disbursementStore.fetchDisbursements()
+                          } else if (currentRoute.includes('/admin/transaction/augmentation')) {
+                            // On augmentation page - only refresh augmentation store
+                            const { useAugmentationStore } = await import('stores/augmentation')
+                            const augmentationStore = useAugmentationStore()
+                            await augmentationStore.fetchAugmentations()
+                          } else {
+                            // On other admin pages - refresh all stores (dashboard, etc.)
+                            const { useAppropriationStore } = await import('stores/appropriationStore')
+                            const { useDisbursementStore } = await import('stores/disbursementStore')
+                            const { useAugmentationStore } = await import('stores/augmentation')
+                            
+                            const appropriationStore = useAppropriationStore()
+                            const disbursementStore = useDisbursementStore()
+                            const augmentationStore = useAugmentationStore()
+                            
+                            await Promise.all([
+                              appropriationStore.fetchBudgets(),
+                              disbursementStore.fetchDisbursements(),
+                              augmentationStore.fetchAugmentations()
+                            ])
+                          }
+                        } catch (error) {
+                          console.error('Error refreshing stores with new barangay filter:', error)
+                        }
                       } catch (error) {
                         console.error('Error updating barangay filter:', error)
                       }
                     }
 
-// Watch for changes in appropriation store's selectedBarangayId
-watch(async () => {
-  const { useAppropriationStore } = await import('stores/appropriationStore')
-  const appropriationStore = useAppropriationStore()
-  return appropriationStore.selectedBarangayId
-}, (newBarangayId) => {
-  if (newBarangayId !== barangay.value) {
-    barangay.value = newBarangayId
-  }
-}, { immediate: false })
-
-                    // Watch for changes in disbursement store's selectedBarangayId
-                    watch(async () => {
-                      const { useDisbursementStore } = await import('stores/disbursementStore')
-                      const disbursementStore = useDisbursementStore()
-                      return disbursementStore.selectedBarangayId
-                    }, (newBarangayId) => {
-                      if (newBarangayId !== barangay.value) {
-                        barangay.value = newBarangayId
-                      }
-                    }, { immediate: false })
-
-                    // Watch for changes in augmentation store's selectedBarangayId
-                    watch(async () => {
-                      const { useAugmentationStore } = await import('stores/augmentation')
-                      const augmentationStore = useAugmentationStore()
-                      return augmentationStore.selectedBarangayId
-                    }, (newBarangayId) => {
-                      if (newBarangayId !== barangay.value) {
-                        barangay.value = newBarangayId
-                      }
-                    }, { immediate: false })
+// Note: Stores now get barangay ID directly from auth store, so no need to watch store changes
 
 const handleKeydown = (event) => {
   if (event.key === 'Escape' && activePanel.value) {

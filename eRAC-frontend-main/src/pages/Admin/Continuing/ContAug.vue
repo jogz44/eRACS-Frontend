@@ -188,15 +188,7 @@
             >
               <template v-slot:body-cell-action="props">
                 <q-td :props="props">
-                  <div class="q-gutter-xs">
-                    <q-btn
-                      size="sm"
-                      dense
-                      icon="edit"
-                      color="orange"
-                      @click="store.editItem(props.row)"
-                    />
-                  </div>
+                  <!-- Admin can only view, not edit -->
                 </q-td>
               </template>
             </q-table>
@@ -217,10 +209,9 @@
           <q-card-actions align="right" class="q-pa-md">
             <q-btn
               flat
-              label="Cancel"
+              label="Close"
               @click="store.closeDialog('augmentation')"
             />
-            <q-btn label="Save" color="primary" @click="handleSaveClick" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -316,10 +307,9 @@
           <q-card-actions align="right" class="q-pa-md">
             <q-btn
               flat
-              label="Cancel"
+              label="Close"
               @click="store.closeDialog('AugexpenseDetail')"
             />
-            <q-btn label="Save" color="primary" @click="store.saveExpense" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -379,45 +369,12 @@ onMounted(async () => {
   }
 })
 
-const validateAndSave = () => {
-  if (store.dialogs.augmentation) {
-    const form = store.forms.augmentation
-    const hasRequiredFields = form.date && form.refNo && form.remarks
-
-    const hasExpenses = store.Augexpenses && store.Augexpenses.length > 0
-
-    if (!hasRequiredFields) {
-      $q.notify({
-        type: 'negative',
-        message: 'Please fill in all required fields before saving',
-        icon: 'warning',
-        position: 'top',
-      })
-      return
-    }
-
-    if (!hasExpenses) {
-      $q.notify({
-        type: 'negative',
-        message: 'Please add at least one expense before saving',
-        icon: 'warning',
-        position: 'top',
-      })
-      return
-    }
-
-    store.saveDisbursement()
-  }
-}
-
 const handleEnterKey = (event) => {
   event.preventDefault()
-  validateAndSave()
+  // Admin users cannot save - only view
 }
 
-const handleSaveClick = () => {
-  validateAndSave()
-}
+// Admin users cannot save - only view
 
 const loadPendingUsers = async () => {
   loading.value = true
