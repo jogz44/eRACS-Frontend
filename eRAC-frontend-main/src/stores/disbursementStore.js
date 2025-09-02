@@ -34,6 +34,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     expenseSearch: '',
     currentItem: null,
     selectedBarangayId: null, // Added for admin barangay filtering
+    selectedBudgetSource: 'all', // For budget source filtering (annual/supplemental)
 
     // Track expense details from tran_expense_details table for balance calculations
     expenseDetailsData: [], // Array to store all expense details from the database
@@ -218,6 +219,7 @@ export const useDisbursementStore = defineStore('disbursement', {
                     expense_class_id: expenseClass.id,
                     expense_type_id: expenseType.id,
                     expense_item_id: expenseItem.id,
+                    budget_source: expenseItem.budget_source || expenseType.budget_source || expenseClass.budget_source || 'Annual Budget', // Add budget source information
                   }
                   acc.push(expenseItemEntry)
                 }
@@ -244,6 +246,7 @@ export const useDisbursementStore = defineStore('disbursement', {
                   expense_class_id: expenseClass.id,
                   expense_type_id: expenseType.id,
                   expense_item_id: null, // This identifies it as an expense type
+                  budget_source: expenseType.budget_source || expenseClass.budget_source || 'Annual Budget', // Add budget source information
                 }
                 acc.push(expenseTypeEntry)
               }
@@ -354,6 +357,13 @@ export const useDisbursementStore = defineStore('disbursement', {
         sortable: true,
       },
       {
+        name: 'budget_source',
+        label: 'Budget Source',
+        field: 'budget_source',
+        align: 'center',
+        sortable: true,
+      },
+      {
         name: 'balance',
         label: 'Balance',
         field: 'balance',
@@ -398,7 +408,23 @@ export const useDisbursementStore = defineStore('disbursement', {
       // Build a set of accountIds already added to prevent duplicates
       const addedIds = new Set((state.expenses || []).map(e => String(e.accountId)))
 
-      const base = this.expenseAccounts.filter(item => !addedIds.has(String(item.id)))
+      let base = this.expenseAccounts.filter(item => !addedIds.has(String(item.id)))
+
+      // Filter by budget source if selected - use description-based filtering like other stores
+      if (state.selectedBudgetSource && state.selectedBudgetSource !== 'all') {
+        base = base.filter(account => {
+          // Check if account has budget_source field first, then fall back to description
+          const budgetSource = account.budget_source || account.description || ''
+          const budgetSourceLower = budgetSource.toLowerCase()
+          
+          if (state.selectedBudgetSource === 'annual') {
+            return budgetSourceLower.includes('annual')
+          } else if (state.selectedBudgetSource === 'supplemental') {
+            return budgetSourceLower.includes('supplemental')
+          }
+          return true
+        })
+      }
 
       if (!state.expenseSearch.trim()) {
         return base
@@ -533,16 +559,26 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
+    // Set budget source filter
+    setBudgetSourceFilter(budgetSource) {
+      this.selectedBudgetSource = budgetSource
+    },
+
     // Fetch expense hierarchy from appropriation store and accounts library store
     async fetchExpenseAccounts() {
       try {
-        // Only fetch if not already loaded to avoid unnecessary API calls
-        if (this.expenseData.length > 0 && !this.expenseTypeLoading) {
-          return
-        }
+        // Always fetch to ensure we get the latest data with current filters
+        this.expenseTypeLoading = true
 
         // Fetch from appropriation store for budget allocations
         const appropriationStore = useAppropriationStore()
+        
+        // Pass budget source filter to appropriation store
+        if (this.selectedBudgetSource && this.selectedBudgetSource !== 'all') {
+          // Set the budget type filter in appropriation store
+          appropriationStore.setSelectedBudgetType(this.selectedBudgetSource)
+        }
+        
         await appropriationStore.fetchExpenseHierarchy()
         this.expenseData = appropriationStore.allocations || []
 
@@ -554,6 +590,8 @@ export const useDisbursementStore = defineStore('disbursement', {
       } catch (error) {
         console.error('Error fetching expense accounts:', error)
         this.expenseData = []
+      } finally {
+        this.expenseTypeLoading = false
       }
     },
 

@@ -25,6 +25,7 @@ export const useAppropriationStore = defineStore("appropriation", {
     currentFiscalYearId: null,
     currentYear: new Date().getFullYear().toString(),
     selectedBarangayId: null, // For admin barangay filtering
+    selectedBudgetType: 'all', // For budget type filtering
 
     allocations: [],
     authStore: useAuthStore(), // Moved hook call inside state
@@ -107,6 +108,19 @@ export const useAppropriationStore = defineStore("appropriation", {
 
     filteredAppropriations(state) {
       let results = state.appropriations
+
+      // Budget type filtering
+      if (state.selectedBudgetType && state.selectedBudgetType !== 'all') {
+        results = results.filter((item) => {
+          const description = item.description?.toLowerCase() || ''
+          if (state.selectedBudgetType === 'annual') {
+            return description.includes('annual')
+          } else if (state.selectedBudgetType === 'supplemental') {
+            return description.includes('supplemental')
+          }
+          return true
+        })
+      }
 
       // Date filtering
       if (state.dateFrom || state.dateTo) {
@@ -323,6 +337,11 @@ export const useAppropriationStore = defineStore("appropriation", {
       this.selectedBarangayId = barangayId
     },
 
+    // Method to set selected budget type for filtering
+    setSelectedBudgetType(budgetType) {
+      this.selectedBudgetType = budgetType
+    },
+
     async initialize() {
       await this.fetchAppropriations()
     },
@@ -377,8 +396,8 @@ export const useAppropriationStore = defineStore("appropriation", {
         // Admin sends year (not fiscal_year_id) because validation expects a real fiscal_years.id for that rule
         const currentYear = new Date().getFullYear()
         const params = this.authStore.admin
-          ? { year: currentYear, ...(this.selectedBarangayId ? { barangay_id: this.selectedBarangayId } : {}) }
-          : { fiscal_year_id: fiscalYear.id }
+          ? { year: currentYear, ...(this.selectedBarangayId ? { barangay_id: this.selectedBarangayId } : {}), ...(this.selectedBudgetType !== 'all' ? { budget_type: this.selectedBudgetType } : {}) }
+          : { fiscal_year_id: fiscalYear.id, ...(this.selectedBudgetType !== 'all' ? { budget_type: this.selectedBudgetType } : {}) }
 
         const response = await api.get(endpoint, {
           params: params,

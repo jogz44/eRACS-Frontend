@@ -28,6 +28,24 @@
 
           <q-card-section>
             <div class="row q-col-gutter-md">
+              <!-- Budget Source Selection -->
+              <div class="col-md-4 col-sm-12">
+                <q-item-label class="q-mb-xs">Budget Source:</q-item-label>
+                <q-select
+                  outlined
+                  dense
+                  v-model="selectedBudgetSource"
+                  :options="budgetSourceOptions"
+                  option-label="label"
+                  option-value="value"
+                  emit-value
+                  map-options
+                  :label="currentBudgetSourceLabel"
+                  @update:model-value="handleBudgetSourceChange"
+                  @keydown.enter="handleEnterKey"
+                />
+              </div>
+
               <!-- Date Field -->
               <div class="col-md-4 col-sm-6">
                 <q-item-label class="q-mb-xs">Date:</q-item-label>
@@ -210,6 +228,15 @@
               flat
               bordered
             >
+              <template v-slot:body-cell-budget_source="props">
+                <q-td :props="props">
+                  <q-badge
+                    :color="getBudgetSourceColor(props.row.budget_source)"
+                    :label="getBudgetSourceLabel(props.row.budget_source)"
+                    class="budget-source-badge"
+                  />
+                </q-td>
+              </template>
               <template v-slot:body-cell-action="props">
                 <q-td :props="props">
                   <q-btn
@@ -365,19 +392,13 @@
           <template v-slot:body-cell-remarks="props">
             <q-td :props="props">
               <div v-if="props.row.status === 'Void Requested' && props.row.remarks">
-                <q-chip color="orange" text-color="white" dense>
-                  Void Request: {{ props.row.remarks }}
-                </q-chip>
+                {{ props.row.remarks }}
               </div>
               <div v-else-if="props.row.status === 'Voided' && props.row.remarks">
-                <q-chip color="red" text-color="white" dense>
-                  Voided: {{ props.row.remarks }}
-                </q-chip>
+                {{ props.row.remarks }}
               </div>
               <div v-else-if="props.row.rejection_remarks">
-                <q-chip color="grey" text-color="white" dense>
-                  Void Rejected: {{ props.row.rejection_remarks }}
-                </q-chip>
+                {{ props.row.rejection_remarks }}
               </div>
               <div v-else>-</div>
             </q-td>
@@ -460,6 +481,14 @@ import { usePageLogging } from '../../../composables/usePageLogging'
 const store = useDisbursementStore()
 const bankStore = useBankStore()
 const authStore = useAuthStore()
+
+// Budget source selection
+const selectedBudgetSource = ref('all')
+const budgetSourceOptions = [
+  { label: 'All Budgets', value: 'all' },
+  { label: 'Annual Budget Only', value: 'annual' },
+  { label: 'Supplemental Budget Only', value: 'supplemental' }
+]
 
 
 
@@ -585,7 +614,7 @@ const loadAllData = async () => {
     await Promise.all(criticalPromises)
 
     // Load expense accounts in background (non-blocking)
-    store.fetchExpenseAccounts().catch(error => {
+    store.refreshExpenseAccountsWithBalances().catch(error => {
       console.warn('Failed to load expense accounts in background:', error)
     })
 
@@ -635,11 +664,20 @@ onMounted(async () => {
 watch(
   () => store.dialogs.expense,
   async (isOpen) => {
-    if (isOpen && store.expenseData.length === 0) {
-      store.refreshExpenseAccountsInBackground()
+    if (isOpen && store.expenseAccounts.length === 0) {
+      store.refreshExpenseAccountsWithBalances()
     }
   }
 )
+
+// Sync selected budget source with store and refresh expense accounts
+watch(selectedBudgetSource, async (newBudgetSource) => {
+  store.setBudgetSourceFilter(newBudgetSource)
+  // Refresh expense accounts when budget source changes
+  if (store.dialogs.expense) {
+    await store.refreshExpenseAccountsWithBalances()
+  }
+})
 
 import { useQuasar } from 'quasar'
 
@@ -658,6 +696,11 @@ const currentBankLabel = computed(() => {
   return 'Select Bank'
 })
 
+const currentBudgetSourceLabel = computed(() => {
+  const option = budgetSourceOptions.find(opt => opt.value === selectedBudgetSource.value)
+  return option ? option.label : 'Select Budget Source'
+})
+
 const handleBankSelection = async (bankId) => {
   if (bankId) {
     try {
@@ -666,6 +709,24 @@ const handleBankSelection = async (bankId) => {
       $q.notify({
         type: 'negative',
         message: `Failed to load booklets for selected bank: ${error.message}`,
+        icon: 'error',
+        position: 'top',
+      })
+    }
+  }
+}
+
+const handleBudgetSourceChange = async (budgetSource) => {
+  if (budgetSource) {
+    try {
+      // Update the store to filter expense accounts based on budget source
+      await store.setBudgetSourceFilter(budgetSource)
+      // Refresh expense accounts with the new filter
+      await store.refreshExpenseAccountsWithBalances()
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: `Failed to update budget source filter: ${error.message}`,
         icon: 'error',
         position: 'top',
       })
@@ -717,12 +778,12 @@ const handleSaveClick = async () => {
 }
 
 const preloadExpenseAccounts = () => {
-  // Preload expense accounts when user hovers over Add button
-  if (store.expenseData.length === 0 && !store.expenseTypeLoading) {
-    store.fetchExpenseAccounts().catch(error => {
-      console.warn('Failed to preload expense accounts:', error)
-    })
-  }
+      // Preload expense accounts when user hovers over Add button
+    if (store.expenseAccounts.length === 0 && !store.expenseAccountsLoading) {
+      store.refreshExpenseAccountsWithBalances().catch(error => {
+        console.warn('Failed to preload expense accounts:', error)
+      })
+    }
 }
 
 const handleAddExpense = async () => {
@@ -955,6 +1016,25 @@ const handleLiquidateDisbursement = async (row) => {
   } finally {
     liquidateLoading.value[row.id] = false
   }
+}
+
+// Budget source helper functions
+const getBudgetSourceColor = (budgetSource) => {
+  if (budgetSource?.toLowerCase().includes('annual')) {
+    return 'primary'
+  } else if (budgetSource?.toLowerCase().includes('supplemental')) {
+    return 'secondary'
+  }
+  return 'grey'
+}
+
+const getBudgetSourceLabel = (budgetSource) => {
+  if (budgetSource?.toLowerCase().includes('annual')) {
+    return 'Annual'
+  } else if (budgetSource?.toLowerCase().includes('supplemental')) {
+    return 'Supplemental'
+  }
+  return 'Mixed'
 }
 </script>
 

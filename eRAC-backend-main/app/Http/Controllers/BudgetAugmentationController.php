@@ -30,6 +30,27 @@ class BudgetAugmentationController extends Controller
      */
     private function mapDetailToResponse($detail)
     {
+        // Get budget source information
+        $fromBudgetSource = 'Annual Budget'; // Default
+        if ($detail->fromAppropriation && $detail->fromAppropriation->budget) {
+            $budgetDescription = $detail->fromAppropriation->budget->description;
+            if (str_contains(strtolower($budgetDescription), 'supplemental')) {
+                $fromBudgetSource = 'Supplemental Budget';
+            } elseif (str_contains(strtolower($budgetDescription), 'annual')) {
+                $fromBudgetSource = 'Annual Budget';
+            }
+        }
+
+        $toBudgetSource = 'Annual Budget'; // Default
+        if ($detail->toAppropriation && $detail->toAppropriation->budget) {
+            $budgetDescription = $detail->toAppropriation->budget->description;
+            if (str_contains(strtolower($budgetDescription), 'supplemental')) {
+                $toBudgetSource = 'Supplemental Budget';
+            } elseif (str_contains(strtolower($budgetDescription), 'annual')) {
+                $toBudgetSource = 'Annual Budget';
+            }
+        }
+
         return [
             'id' => $detail->id,
             'from_appropriation_id' => $detail->from_appropriation_id,
@@ -44,6 +65,8 @@ class BudgetAugmentationController extends Controller
                 $detail->toAppropriation->expenseType,
                 $detail->toAppropriation->expenseItem
             ),
+            'from_budget_source' => $fromBudgetSource,
+            'to_budget_source' => $toBudgetSource,
             'amount' => (float)$detail->amount,
             'particulars' => $detail->particulars
         ];

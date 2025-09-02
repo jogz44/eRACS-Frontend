@@ -62,23 +62,7 @@
       <q-card-section>
         <div class="row justify-end q-mb-md">
           <div class="row align-left q-mt-sm justify-start items-start">
-            <q-select
-              label="Select Budget"
-              v-model="store.selectedBudget"
-              :options="store.budgetOptions"
-              outlined
-              dense
-              style="width: 200px; margin-right: 16px"
-            >
-              <template v-slot:no-option>
-                <q-item>
-                  <q-item-section class="text-left">
-                    Annual Budget
-                    <span> Supplemental Budget </span>
-                  </q-item-section>
-                </q-item>
-              </template>
-            </q-select>
+
           </div>
           <q-btn
             label="Add"
@@ -99,6 +83,33 @@
           row-key="id"
           :pagination="{ rowsPerPage: 5 }"
         >
+          <template v-slot:body-cell-from_budget_source="props">
+            <q-td :props="props">
+              <q-badge
+                :color="getBudgetSourceColor(props.row.from_budget_source)"
+                :label="getBudgetSourceLabel(props.row.from_budget_source)"
+                class="budget-source-badge"
+              />
+            </q-td>
+          </template>
+          <template v-slot:body-cell-to_budget_source="props">
+            <q-td :props="props">
+              <q-badge
+                :color="getBudgetSourceColor(props.row.to_budget_source)"
+                :label="getBudgetSourceLabel(props.row.to_budget_source)"
+                class="budget-source-badge"
+              />
+            </q-td>
+          </template>
+          <template v-slot:body-cell-transfer_type="props">
+            <q-td :props="props">
+              <q-badge
+                :color="getTransferTypeColor(props.row.transfer_type)"
+                :label="props.row.transfer_type"
+                class="transfer-type-badge"
+              />
+            </q-td>
+          </template>
           <template v-slot:body-cell-action="props">
             <q-td :props="props">
               <div class="button-group">
@@ -159,6 +170,38 @@ import { useQuasar } from 'quasar'
 
 const store = useAugmentationStore()
 const $q = useQuasar()
+
+// Budget source helper functions
+const getBudgetSourceColor = (budgetSource) => {
+  if (budgetSource?.toLowerCase().includes('annual')) {
+    return 'primary'
+  } else if (budgetSource?.toLowerCase().includes('supplemental')) {
+    return 'secondary'
+  }
+  return 'grey'
+}
+
+const getBudgetSourceLabel = (budgetSource) => {
+  if (budgetSource?.toLowerCase().includes('annual')) {
+    return 'Annual'
+  } else if (budgetSource?.toLowerCase().includes('supplemental')) {
+    return 'Supplemental'
+  }
+  return 'Mixed'
+}
+
+const getTransferTypeColor = (transferType) => {
+  if (!transferType) return 'grey'
+
+  if (transferType.includes('Annual → Annual')) {
+    return 'primary'
+  } else if (transferType.includes('Supplemental → Supplemental')) {
+    return 'secondary'
+  } else if (transferType.includes('Annual → Supplemental') || transferType.includes('Supplemental → Annual')) {
+    return 'orange' // Cross-budget transfer
+  }
+  return 'grey'
+}
 
 // Computed property for total amount to ensure reactivity
 const totalAmount = computed(() => {
@@ -265,6 +308,17 @@ const handleSave = async () => {
 </script>
 
 <style scoped>
+.budget-source-badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.transfer-type-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  min-width: 120px;
+}
+
 /* Responsive Dialog - Only sizing adjustments for mobile and tablet */
 @media (max-width: 600px) {
   /* Mobile View - Only size adjustments */
