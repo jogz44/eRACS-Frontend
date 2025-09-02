@@ -66,27 +66,11 @@
               <!-- Check Number Field -->
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Cheque Number:</q-item-label>
-                <!-- <q-input
-                  outlined
-                  dense
-                  v-model="store.selectedBooklet"
-                  @update:model-value="handleBookletSelection"
-                  :options="store.chequeBooklets"
-                  option-label="label"
-                  option-value="value"
-                  emit-value
-                  map-options
-                  :label="store.chequeBooklets.length === 0 ? 'No booklets available' : 'Choose Booklet'"
-                  class="q-mb-sm"
-                  :loading="store.bookletLoading"
-                  :disable="true"
-                  @keydown.enter="handleEnterKey"
-                /> -->
 
                 <q-input
                   outlined
                   dense
-                  v-model="store.availableChequeNumbers[0]"
+                  v-model="store.autoCheque"
                   :disable="true"
                   @keydown.enter="handleEnterKey"
                 ></q-input>

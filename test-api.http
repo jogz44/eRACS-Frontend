@@ -2,8 +2,8 @@
 # GET http://localhost:8000/api/barangay/barangays
 # Accept: application/json
 
-GET http://localhost:8000/api/barangay/generate-dvnumber
-Authorization: Bearer 3|s11JS5Zygd5SHZmedJj5PWGhzVadUjnuDBGP3H8Jd1c608e7
+GET http://localhost:8000/api/barangay/banks/10/available-cheques
+Authorization: Bearer 9|d3l8D9I7RaaFsbupexPdOBvPaea3uoonmPO2ckKRb5e1be11
 Accept: application/json
 
 # GET http://localhost:8000/api/user

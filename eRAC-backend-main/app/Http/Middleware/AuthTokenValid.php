@@ -45,7 +45,7 @@ class AuthTokenValid
         if (!$request->is('*/heartbeat')) {
             if ($accessToken->last_used_at) {
                 $inactiveMinutes = now()->diffInMinutes($accessToken->last_used_at);
-                if ($inactiveMinutes >= 5) {
+                if ($inactiveMinutes >= 50) {
                     $accessToken->delete();
                     return response()->json([
                         'status' => false,
