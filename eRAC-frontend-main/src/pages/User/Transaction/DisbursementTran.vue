@@ -2,9 +2,7 @@
   <q-page class="q-pa-md disbursement-page">
     <div class="page-header q-mb-md">
       <div class="row items-center justify-between">
-        <div class="text-h6 text-weight-medium">
-          Disbursement Transaction
-        </div>
+        <div class="text-h6 text-weight-medium">Disbursement Transaction</div>
         <q-btn
           icon="refresh"
           color="primary"
@@ -15,6 +13,158 @@
         />
       </div>
     </div>
+
+    <!-- Status Summary Cards -->
+    <div class="row q-col-gutter-md q-mb-md">
+      <div class="col-md-3 col-sm-6 col-xs-12">
+        <q-card class="summary-card pending-card">
+          <q-card-section class="text-center">
+            <div class="text-h4 text-weight-bold text-orange">{{ statusCounts.pending }}</div>
+            <div class="text-subtitle2 text-grey-7">Pending</div>
+          </q-card-section>
+        </q-card>
+      </div>
+      <div class="col-md-3 col-sm-6 col-xs-12">
+        <q-card class="summary-card partial-card">
+          <q-card-section class="text-center">
+            <div class="text-h4 text-weight-bold text-amber">{{ statusCounts.partial }}</div>
+            <div class="text-subtitle2 text-grey-7">Partial</div>
+          </q-card-section>
+        </q-card>
+      </div>
+      <div class="col-md-3 col-sm-6 col-xs-12">
+        <q-card class="summary-card liquidated-card">
+          <q-card-section class="text-center">
+            <div class="text-h4 text-weight-bold text-green">{{ statusCounts.liquidated }}</div>
+            <div class="text-subtitle2 text-grey-7">Liquidated</div>
+          </q-card-section>
+        </q-card>
+      </div>
+      <div class="col-md-3 col-sm-6 col-xs-12">
+        <q-card class="summary-card voided-card">
+          <q-card-section class="text-center">
+            <div class="text-h4 text-weight-bold text-red">{{ statusCounts.voided }}</div>
+            <div class="text-subtitle2 text-grey-7">Voided</div>
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
+
+    <!-- Filters Section -->
+    <q-card flat bordered class="q-mb-md filters-section">
+      <q-card-section>
+        <div class="row q-col-gutter-md items-end">
+          <!-- Status Filter -->
+          <div class="col-md-2 col-sm-6 col-xs-12">
+            <q-item-label class="q-mb-xs text-weight-medium">Status:</q-item-label>
+            <q-select
+              outlined
+              dense
+              v-model="selectedStatus"
+              :options="statusOptions"
+              option-label="label"
+              option-value="value"
+              emit-value
+              map-options
+              :label="currentStatusLabel"
+              clearable
+              @update:model-value="handleStatusChange"
+            />
+          </div>
+          
+          <!-- Budget Source Filter -->
+          <div class="col-md-2 col-sm-6 col-xs-12">
+            <q-item-label class="q-mb-xs text-weight-medium">Budget Source:</q-item-label>
+            <q-select
+              outlined
+              dense
+              v-model="selectedBudgetSource"
+              :options="budgetSourceOptions"
+              option-label="label"
+              option-value="value"
+              emit-value
+              map-options
+              :label="currentBudgetSourceLabel"
+              @update:model-value="handleBudgetSourceChange"
+            />
+          </div>
+          
+          <!-- Search Input -->
+          <div class="col-md-2 col-sm-6 col-xs-12">
+            <q-item-label class="q-mb-xs text-weight-medium">Search:</q-item-label>
+            <q-input
+              outlined
+              dense
+              v-model="searchQuery"
+              placeholder="Search payee, DV number..."
+              clearable
+            >
+              <template v-slot:append>
+                <q-icon name="search" />
+              </template>
+            </q-input>
+          </div>
+          
+          <!-- Date Range Filter -->
+          <div class="col-md-2 col-sm-6 col-xs-12">
+            <q-item-label class="q-mb-xs text-weight-medium">Date Range:</q-item-label>
+            <q-input
+              outlined
+              dense
+              v-model="dateRangeDisplay"
+              placeholder="Select date range..."
+              readonly
+              clearable
+              @clear="onDateRangeClear"
+            >
+              <template v-slot:append>
+                <q-icon name="event" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date
+                      v-model="dateRange"
+                      range
+                      @update:model-value="onDateRangeChange"
+                    >
+                      <div class="row items-center justify-end">
+                        <q-btn v-close-popup label="Close" color="primary" flat />
+                      </div>
+                    </q-date>
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
+          
+          <!-- Clear Button -->
+          <div class="col-md-1 col-sm-6 col-xs-12">
+            <q-btn
+              dense
+              outlined
+              color="red-10"
+              icon="clear_all"
+              label="Clear"
+              @click="clearAllFilters"
+              class="full-width"
+            />
+          </div>
+          
+          <!-- Spacer to push Add button to the right -->
+          <div class="col-md-2 col-sm-0 col-xs-0"></div>
+          
+          <!-- Add Button -->
+          <div class="col-md-1 col-sm-6 col-xs-12">
+            <q-btn
+              label="Add"
+              color="primary"
+              icon="add"
+              @click="store.openDialog('disbursement')"
+              class="full-width"
+              v-permission="'add'"
+            />
+          </div>
+        </div>
+      </q-card-section>
+    </q-card>
 
     <div class="q-mb-sm">
       <SearchFilters @add="store.openDialog('disbursement')" />
@@ -28,6 +178,24 @@
 
           <q-card-section>
             <div class="row q-col-gutter-md">
+              <!-- Budget Source Selection -->
+              <div class="col-md-4 col-sm-12">
+                <q-item-label class="q-mb-xs">Budget Source:</q-item-label>
+                <q-select
+                  outlined
+                  dense
+                  v-model="selectedBudgetSource"
+                  :options="budgetSourceOptions"
+                  option-label="label"
+                  option-value="value"
+                  emit-value
+                  map-options
+                  :label="currentBudgetSourceLabel"
+                  @update:model-value="handleBudgetSourceChange"
+                  @keydown.enter="handleEnterKey"
+                />
+              </div>
+
               <!-- Date Field -->
               <div class="col-md-4 col-sm-6">
                 <q-item-label class="q-mb-xs">Date:</q-item-label>
@@ -162,11 +330,7 @@
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md">
-            <q-btn
-              flat
-              label="Cancel"
-              @click="store.closeDialog('disbursement')"
-            />
+            <q-btn flat label="Cancel" @click="store.closeDialog('disbursement')" />
             <q-btn
               label="Disburse"
               color="primary"
@@ -174,7 +338,6 @@
               v-permission="'add'"
               :loading="store.savingDisbursement"
               :disable="store.savingDisbursement"
-
             />
           </q-card-actions>
         </q-card>
@@ -210,6 +373,15 @@
               flat
               bordered
             >
+              <template v-slot:body-cell-budget_source="props">
+                <q-td :props="props">
+                  <q-badge
+                    :color="getBudgetSourceColor(props.row.budget_source)"
+                    :label="getBudgetSourceLabel(props.row.budget_source)"
+                    class="budget-source-badge"
+                  />
+                </q-td>
+              </template>
               <template v-slot:body-cell-action="props">
                 <q-td :props="props">
                   <q-btn
@@ -224,11 +396,7 @@
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md">
-            <q-btn
-              flat
-              label="Cancel"
-              @click="store.closeDialog('expense')"
-            />
+            <q-btn flat label="Cancel" @click="store.closeDialog('expense')" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -248,17 +416,17 @@
               <strong>Balance:</strong> ₱{{ store.forms.expense.balance.toLocaleString() }}
             </div>
             <q-select
-  outlined
-  dense
-  v-model="store.forms.expense.particulars"
-  :options="filteredParticulars"
-  label="Particulars"
-  use-input
-  fill-input
-  hide-selected
-  new-value-mode="add-unique"
-  @filter="filterFn"
-/>
+              outlined
+              dense
+              v-model="store.forms.expense.particulars"
+              :options="filteredParticulars"
+              label="Particulars"
+              use-input
+              fill-input
+              hide-selected
+              new-value-mode="add-unique"
+              @filter="filterFn"
+            />
             <q-input
               outlined
               dense
@@ -271,12 +439,8 @@
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md">
-            <q-btn
-              flat
-              label="Cancel"
-              @click="store.closeDialog('expenseDetail')"
-            />
-              <q-btn label="Save" @click="handleSaveExpense" color="primary" />
+            <q-btn flat label="Cancel" @click="store.closeDialog('expenseDetail')" />
+            <q-btn label="Save" @click="handleSaveExpense" color="primary" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -284,7 +448,7 @@
       <!-- Main Data Table -->
       <q-card flat bordered>
         <q-table
-          :rows="store.disbursements"
+          :rows="filteredDisbursements"
           :columns="store.disbursementColumns"
           row-key="id"
           :pagination="store.pagination"
@@ -297,7 +461,11 @@
                 <q-btn
                   dense
                   icon="edit"
-                  :color="props.row.status === 'Pending' || props.row.status === 'Partial' ? 'orange' : 'grey'"
+                  :color="
+                    props.row.status === 'Pending' || props.row.status === 'Partial'
+                      ? 'orange'
+                      : 'grey'
+                  "
                   :disable="props.row.status !== 'Pending' && props.row.status !== 'Partial'"
                   :loading="store.loadingEditDisbursement === props.row.id"
                   @click="handleEditDisbursement(props.row)"
@@ -318,7 +486,10 @@
                   icon="delete"
                   :color="canDelete(props.row) ? 'red' : 'grey'"
                   :disable="!canDelete(props.row)"
-                  v-if="isTreasurer && (props.row.status === 'Pending' || props.row.status === 'Partial')"
+                  v-if="
+                    isTreasurer &&
+                    (props.row.status === 'Pending' || props.row.status === 'Partial')
+                  "
                   @click.stop="() => handleVoidDisbursement(props.row)"
                   v-permission="'delete'"
                 />
@@ -343,7 +514,10 @@
                     icon="delete"
                     :color="canDelete(props.row) ? 'red' : 'grey'"
                     :disable="!canDelete(props.row)"
-                    v-if="(props.row.status === 'Pending' || props.row.status === 'Partial') && canDelete(props.row)"
+                    v-if="
+                      (props.row.status === 'Pending' || props.row.status === 'Partial') &&
+                      canDelete(props.row)
+                    "
                     @click.stop="() => handleDeleteDisbursement(props.row)"
                   />
                 </div>
@@ -365,42 +539,33 @@
           <template v-slot:body-cell-remarks="props">
             <q-td :props="props">
               <div v-if="props.row.status === 'Void Requested' && props.row.remarks">
-                <q-chip color="orange" text-color="white" dense>
-                  Void Request: {{ props.row.remarks }}
-                </q-chip>
+                {{ props.row.remarks }}
               </div>
               <div v-else-if="props.row.status === 'Voided' && props.row.remarks">
-                <q-chip color="red" text-color="white" dense>
-                  Voided: {{ props.row.remarks }}
-                </q-chip>
+                {{ props.row.remarks }}
               </div>
               <div v-else-if="props.row.rejection_remarks">
-                <q-chip color="grey" text-color="white" dense>
-                  Void Rejected: {{ props.row.rejection_remarks }}
-                </q-chip>
+                {{ props.row.rejection_remarks }}
               </div>
               <div v-else>-</div>
             </q-td>
           </template>
 
-                     <template v-slot:body-cell-liquidate="props">
-             <q-td :props="props">
-                 <q-btn
-                   dense
-                   label="Liquidate"
-                   color="primary"
-                   v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
-                   @click="handleLiquidateDisbursement(props.row)"
-                   :loading="liquidateLoading[props.row.id]"
-                   :disable="liquidateLoading[props.row.id]"
-                   v-permission="'add'"
-                 />
-             </q-td>
-           </template>
-
+          <template v-slot:body-cell-liquidate="props">
+            <q-td :props="props">
+              <q-btn
+                dense
+                label="Liquidate"
+                color="primary"
+                v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
+                @click="handleLiquidateDisbursement(props.row)"
+                :loading="liquidateLoading[props.row.id]"
+                :disable="liquidateLoading[props.row.id]"
+                v-permission="'add'"
+              />
+            </q-td>
+          </template>
         </q-table>
-
-
       </q-card>
 
       <OrDetailsDialog v-model="store.dialogs.orDetails" />
@@ -415,9 +580,7 @@
           </q-card-section>
 
           <q-card-section>
-            <div class="text-body1 q-mb-md">
-              Please provide remarks for this void request.
-            </div>
+            <div class="text-body1 q-mb-md">Please provide remarks for this void request.</div>
 
             <q-input
               outlined
@@ -425,7 +588,7 @@
               label="Remarks (Required)"
               type="textarea"
               rows="3"
-              :rules="[val => !!val && val.trim() !== '' || 'Remarks are required']"
+              :rules="[(val) => (!!val && val.trim() !== '') || 'Remarks are required']"
               hint="Reason for voiding this disbursement"
             />
           </q-card-section>
@@ -448,7 +611,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import SearchFilters from 'components/disbursement/SearchFilters.vue'
+
 import OrDetailsDialog from 'components/disbursement/OrDetailsDialog.vue'
 import ViewOrDetails from 'components/disbursement/ViewOrDetails.vue'
 import EditDisbursement from 'components/disbursement/EditDisbursement.vue'
@@ -461,10 +624,30 @@ const store = useDisbursementStore()
 const bankStore = useBankStore()
 const authStore = useAuthStore()
 
+// Budget source selection
+const selectedBudgetSource = ref('all')
+const budgetSourceOptions = [
+  { label: 'All Budgets', value: 'all' },
+  { label: 'Annual Budget Only', value: 'annual' },
+  { label: 'Supplemental Budget Only', value: 'supplemental' },
+]
 
+// Status filtering
+const selectedStatus = ref(null)
+const statusOptions = [
+  { label: 'All Status', value: null },
+  { label: 'Pending', value: 'Pending' },
+  { label: 'Partial', value: 'Partial' },
+  { label: 'Liquidated', value: 'Liquidated' },
+  { label: 'Void Requested', value: 'Void Requested' },
+  { label: 'Voided', value: 'Voided' },
+]
+
+// Search query
+const searchQuery = ref('')
 
 const filteredParticulars = ref(store.particulars)
-function filterFn (val, update) {
+function filterFn(val, update) {
   if (val === '') {
     update(() => {
       filteredParticulars.value = store.particulars
@@ -474,8 +657,8 @@ function filterFn (val, update) {
 
   update(() => {
     const needle = val.toLowerCase()
-    filteredParticulars.value = store.particulars.filter(
-      opt => opt.label.toLowerCase().includes(needle)
+    filteredParticulars.value = store.particulars.filter((opt) =>
+      opt.label.toLowerCase().includes(needle),
     )
   })
 }
@@ -489,17 +672,65 @@ const getAgingDays = (agingString) => {
 function canDelete(row) {
   // Cannot delete if liquidated (regardless of return amount)
   if (row.status === 'Liquidated') return false
-  
+
   // Can only delete if pending or partial
   if (!(row.status === 'Pending' || row.status === 'Partial')) return false
-  
+
   // For Treasurers and Approvers: Check aging restriction (≤ 1 day can be deleted)
   if (isTreasurer.value || isApprover.value) {
     const aging = Number(getAgingDays(row.aging))
     if (Number.isNaN(aging) || aging > 1) return false
   }
-  
+
   return true
+}
+// Clear all filters
+const clearAllFilters = () => {
+  selectedStatus.value = null
+  selectedBudgetSource.value = 'all'
+  searchQuery.value = ''
+  dateRange.value = null
+  store.searchQuery = ''
+  store.dateFrom = ''
+  store.dateTo = ''
+}
+const dateRange = ref(null)
+
+const dateRangeDisplay = computed(() => {
+  if (!dateRange.value || !dateRange.value.from || !dateRange.value.to) {
+    return ''
+  }
+  const fromDate = new Date(dateRange.value.from).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+  const toDate = new Date(dateRange.value.to).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+  return `${fromDate} - ${toDate}`
+})
+
+const onDateRangeChange = (newRange) => {
+  if (newRange && newRange.from && newRange.to) {
+    // Convert date format from YYYY/MM/DD to DD/MM/YYYY
+    const fromDate = new Date(newRange.from)
+    const toDate = new Date(newRange.to)
+
+    store.dateFrom = fromDate.toLocaleDateString('en-GB') // DD/MM/YYYY format
+    store.dateTo = toDate.toLocaleDateString('en-GB') // DD/MM/YYYY format
+  } else {
+    store.dateFrom = ''
+    store.dateTo = ''
+  }
+}
+
+const onDateRangeClear = () => {
+  dateRange.value = null
+  store.dateFrom = ''
+  store.dateTo = ''
 }
 
 // Handle delete disbursement (for Captains/Chairpersons to delete after void approval)
@@ -512,7 +743,7 @@ const handleDeleteDisbursement = async (row) => {
         message: 'Disbursement deleted successfully!',
         icon: 'check_circle',
         position: 'top',
-        timeout: 3000
+        timeout: 3000,
       })
     } else {
       $q.notify({
@@ -520,7 +751,7 @@ const handleDeleteDisbursement = async (row) => {
         message: result.message || 'Failed to delete disbursement',
         icon: 'error',
         position: 'top',
-        timeout: 5000
+        timeout: 5000,
       })
     }
   } catch (error) {
@@ -530,7 +761,7 @@ const handleDeleteDisbursement = async (row) => {
       message: 'An error occurred while deleting the disbursement',
       icon: 'error',
       position: 'top',
-      timeout: 5000
+      timeout: 5000,
     })
   }
 }
@@ -577,15 +808,12 @@ const loadAllData = async () => {
 
   try {
     // Load critical data first (disbursements and banks) in parallel
-    const criticalPromises = [
-      store.fetchDisbursements(),
-      bankStore.fetchBanks()
-    ]
+    const criticalPromises = [store.fetchDisbursements(), bankStore.fetchBanks()]
 
     await Promise.all(criticalPromises)
 
     // Load expense accounts in background (non-blocking)
-    store.fetchExpenseAccounts().catch(error => {
+    store.refreshExpenseAccountsWithBalances().catch((error) => {
       console.warn('Failed to load expense accounts in background:', error)
     })
 
@@ -596,10 +824,9 @@ const loadAllData = async () => {
         message: 'Disbursement data loaded successfully!',
         icon: 'check_circle',
         position: 'top',
-        timeout: 2000
+        timeout: 2000,
       })
     }
-
   } catch (error) {
     console.error('Error during data loading:', error)
     if (!initialLoading.value) {
@@ -608,7 +835,7 @@ const loadAllData = async () => {
         message: 'Failed to load disbursement data: ' + (error.message || 'Unknown error'),
         icon: 'error',
         position: 'top',
-        timeout: 5000
+        timeout: 5000,
       })
     }
   } finally {
@@ -635,11 +862,20 @@ onMounted(async () => {
 watch(
   () => store.dialogs.expense,
   async (isOpen) => {
-    if (isOpen && store.expenseData.length === 0) {
-      store.refreshExpenseAccountsInBackground()
+    if (isOpen && store.expenseAccounts.length === 0) {
+      store.refreshExpenseAccountsWithBalances()
     }
-  }
+  },
 )
+
+// Sync selected budget source with store and refresh expense accounts
+watch(selectedBudgetSource, async (newBudgetSource) => {
+  store.setBudgetSourceFilter(newBudgetSource)
+  // Refresh expense accounts when budget source changes
+  if (store.dialogs.expense) {
+    await store.refreshExpenseAccountsWithBalances()
+  }
+})
 
 import { useQuasar } from 'quasar'
 
@@ -652,10 +888,89 @@ const liquidateLoading = ref({})
 
 const currentBankLabel = computed(() => {
   if (store.forms.disbursement.bank_id) {
-    const selectedBank = bankStore.banks.find(bank => bank.id === store.forms.disbursement.bank_id)
+    const selectedBank = bankStore.banks.find(
+      (bank) => bank.id === store.forms.disbursement.bank_id,
+    )
     return selectedBank ? selectedBank.name : 'Select Bank'
   }
   return 'Select Bank'
+})
+
+const currentBudgetSourceLabel = computed(() => {
+  const option = budgetSourceOptions.find((opt) => opt.value === selectedBudgetSource.value)
+  return option ? option.label : 'Select Budget Source'
+})
+
+const currentStatusLabel = computed(() => {
+  const option = statusOptions.find((opt) => opt.value === selectedStatus.value)
+  return option ? option.label : 'All Status'
+})
+
+// Status counts for summary cards
+const statusCounts = computed(() => {
+  const counts = {
+    pending: 0,
+    partial: 0,
+    liquidated: 0,
+    voided: 0,
+  }
+
+  store.disbursements.forEach((disbursement) => {
+    switch (disbursement.status) {
+      case 'Pending':
+        counts.pending++
+        break
+      case 'Partial':
+        counts.partial++
+        break
+      case 'Liquidated':
+        counts.liquidated++
+        break
+      case 'Void Requested':
+      case 'Voided':
+        counts.voided++
+        break
+    }
+  })
+
+  return counts
+})
+
+// Filtered disbursements based on status, search, and date range
+const filteredDisbursements = computed(() => {
+  let filtered = store.disbursements
+
+  // Filter by status
+  if (selectedStatus.value) {
+    filtered = filtered.filter((disbursement) => disbursement.status === selectedStatus.value)
+  }
+
+  // Filter by search query
+  if (searchQuery.value && searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase().trim()
+    filtered = filtered.filter(
+      (disbursement) =>
+        disbursement.payee?.toLowerCase().includes(query) ||
+        disbursement.dvNumber?.toLowerCase().includes(query) ||
+        disbursement.chequeNumber?.toLowerCase().includes(query),
+    )
+  }
+
+  // Filter by date range
+  if (store.dateFrom && store.dateTo) {
+    filtered = filtered.filter((disbursement) => {
+      if (!disbursement.date) return false
+      
+      // Convert disbursement date to DD/MM/YYYY format for comparison
+      const disbursementDate = disbursement.date.includes('/') 
+        ? disbursement.date 
+        : new Date(disbursement.date).toLocaleDateString('en-GB')
+      
+      return disbursementDate >= store.dateFrom && disbursementDate <= store.dateTo
+    })
+  }
+
+  return filtered
 })
 
 const handleBankSelection = async (bankId) => {
@@ -673,22 +988,42 @@ const handleBankSelection = async (bankId) => {
   }
 }
 
+const handleBudgetSourceChange = async (budgetSource) => {
+  if (budgetSource) {
+    try {
+      // Update the store to filter expense accounts based on budget source
+      await store.setBudgetSourceFilter(budgetSource)
+      // Refresh expense accounts with the new filter
+      await store.refreshExpenseAccountsWithBalances()
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: `Failed to update budget source filter: ${error.message}`,
+        icon: 'error',
+        position: 'top',
+      })
+    }
+  }
+}
+
+const handleStatusChange = () => {
+  // Status filtering is handled by the computed property
+  // No additional logic needed as it's reactive
+}
+
 const validateAndSave = () => {
   if (store.dialogs.disbursement) {
     const form = store.forms.disbursement
-    const hasRequiredFields = form.date &&
-                             form.bank_id &&
-                             form.dvNumber &&
-                             form.payee
+    const hasRequiredFields = form.date && form.bank_id && form.dvNumber && form.payee
     if (hasRequiredFields && !store.loading) {
-      store.saveDisbursement().then(result => {
+      store.saveDisbursement().then((result) => {
         if (!result.success) {
           $q.notify({
             type: 'negative',
             message: result.error || 'Failed to save disbursement',
             icon: 'error',
             position: 'top',
-            timeout: 5000
+            timeout: 5000,
           })
         }
       })
@@ -718,8 +1053,8 @@ const handleSaveClick = async () => {
 
 const preloadExpenseAccounts = () => {
   // Preload expense accounts when user hovers over Add button
-  if (store.expenseData.length === 0 && !store.expenseTypeLoading) {
-    store.fetchExpenseAccounts().catch(error => {
+  if (store.expenseAccounts.length === 0 && !store.expenseAccountsLoading) {
+    store.refreshExpenseAccountsWithBalances().catch((error) => {
       console.warn('Failed to preload expense accounts:', error)
     })
   }
@@ -736,7 +1071,7 @@ const handleAddExpense = async () => {
       message: 'Failed to open expense dialog',
       icon: 'error',
       position: 'top',
-      timeout: 3000
+      timeout: 3000,
     })
   } finally {
     addingExpense.value = false
@@ -751,7 +1086,7 @@ const handleSaveExpense = async () => {
       message: 'Expense added successfully!',
       icon: 'check_circle',
       position: 'top',
-      timeout: 3000
+      timeout: 3000,
     })
   } catch (error) {
     console.error('Error saving expense:', error)
@@ -760,7 +1095,7 @@ const handleSaveExpense = async () => {
       message: error.message || 'Failed to save expense',
       icon: 'error',
       position: 'top',
-      timeout: 5000
+      timeout: 5000,
     })
   }
 }
@@ -773,7 +1108,7 @@ const handleDeleteExpense = async (row) => {
       message: 'Expense deleted successfully!',
       icon: 'check_circle',
       position: 'top',
-      timeout: 3000
+      timeout: 3000,
     })
   } catch (error) {
     console.error('Error deleting expense:', error)
@@ -782,7 +1117,7 @@ const handleDeleteExpense = async (row) => {
       message: error.message || 'Failed to delete expense',
       icon: 'error',
       position: 'top',
-      timeout: 5000
+      timeout: 5000,
     })
   }
 }
@@ -791,10 +1126,7 @@ const loadPendingUsers = async () => {
   loading.value = true
   try {
     // Only refresh disbursements and banks, skip expense accounts for faster refresh
-    const refreshPromises = [
-      store.fetchDisbursements(),
-      bankStore.fetchBanks()
-    ]
+    const refreshPromises = [store.fetchDisbursements(), bankStore.fetchBanks()]
 
     await Promise.all(refreshPromises)
 
@@ -803,7 +1135,7 @@ const loadPendingUsers = async () => {
       message: 'Disbursements refreshed!',
       icon: 'refresh',
       position: 'top',
-      timeout: 3000
+      timeout: 3000,
     })
   } catch (error) {
     $q.notify({
@@ -816,11 +1148,6 @@ const loadPendingUsers = async () => {
     loading.value = false
   }
 }
-
-
-
-
-
 
 // Open void dialog for treasurer
 const handleVoidDisbursement = (row) => {
@@ -836,7 +1163,7 @@ const handleSubmitVoidRequest = async () => {
       message: 'Void request submitted successfully!',
       icon: 'check_circle',
       position: 'top',
-      timeout: 3000
+      timeout: 3000,
     })
   } catch (error) {
     $q.notify({
@@ -844,7 +1171,7 @@ const handleSubmitVoidRequest = async () => {
       message: error.message || 'Failed to submit void request',
       icon: 'error',
       position: 'top',
-      timeout: 5000
+      timeout: 5000,
     })
   }
 }
@@ -858,7 +1185,7 @@ const handleApproveVoid = async (row) => {
       message: 'Void approved.',
       icon: 'check_circle',
       position: 'top',
-      timeout: 2500
+      timeout: 2500,
     })
   } catch (error) {
     $q.notify({
@@ -866,7 +1193,7 @@ const handleApproveVoid = async (row) => {
       message: error.message || 'Failed to approve void',
       icon: 'error',
       position: 'top',
-      timeout: 5000
+      timeout: 5000,
     })
   }
 }
@@ -877,10 +1204,10 @@ const handleRejectVoid = async (row) => {
     message: 'Please provide rejection remarks:',
     prompt: {
       model: '',
-      type: 'textarea'
+      type: 'textarea',
     },
     cancel: true,
-    persistent: true
+    persistent: true,
   }).onOk(async (remarks) => {
     try {
       await store.rejectVoidRequest(row.id, remarks?.trim?.() || '')
@@ -889,7 +1216,7 @@ const handleRejectVoid = async (row) => {
         message: 'Void request rejected.',
         icon: 'check_circle',
         position: 'top',
-        timeout: 2500
+        timeout: 2500,
       })
     } catch (error) {
       $q.notify({
@@ -897,7 +1224,7 @@ const handleRejectVoid = async (row) => {
         message: error.message || 'Failed to reject void request',
         icon: 'error',
         position: 'top',
-        timeout: 5000
+        timeout: 5000,
       })
     }
   })
@@ -914,7 +1241,7 @@ const handleEditDisbursement = async (row) => {
       message: 'Failed to open edit disbursement',
       icon: 'error',
       position: 'top',
-      timeout: 3000
+      timeout: 3000,
     })
   }
 }
@@ -931,7 +1258,7 @@ const handleViewDisbursement = async (row) => {
       message: 'Failed to open view disbursement',
       icon: 'error',
       position: 'top',
-      timeout: 3000
+      timeout: 3000,
     })
   } finally {
     viewLoading.value[row.id] = false
@@ -950,11 +1277,30 @@ const handleLiquidateDisbursement = async (row) => {
       message: 'Failed to open liquidate disbursement',
       icon: 'error',
       position: 'top',
-      timeout: 3000
+      timeout: 3000,
     })
   } finally {
     liquidateLoading.value[row.id] = false
   }
+}
+
+// Budget source helper functions
+const getBudgetSourceColor = (budgetSource) => {
+  if (budgetSource?.toLowerCase().includes('annual')) {
+    return 'primary'
+  } else if (budgetSource?.toLowerCase().includes('supplemental')) {
+    return 'secondary'
+  }
+  return 'grey'
+}
+
+const getBudgetSourceLabel = (budgetSource) => {
+  if (budgetSource?.toLowerCase().includes('annual')) {
+    return 'Annual'
+  } else if (budgetSource?.toLowerCase().includes('supplemental')) {
+    return 'Supplemental'
+  }
+  return 'Mixed'
 }
 </script>
 
@@ -979,6 +1325,74 @@ const handleLiquidateDisbursement = async (row) => {
   margin: 2px;
 }
 
+/* Summary Cards Styling */
+.summary-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.pending-card {
+  border-left: 4px solid #ff9800;
+}
+
+.partial-card {
+  border-left: 4px solid #ffc107;
+}
+
+.liquidated-card {
+  border-left: 4px solid #4caf50;
+}
+
+.voided-card {
+  border-left: 4px solid #f44336;
+}
+
+/* Filter Section Styling */
+.q-card .q-card-section {
+  padding: 16px;
+}
+
+.q-item-label {
+  font-weight: 500;
+  color: #424242;
+}
+
+/* Filter Layout Improvements */
+.filters-section .row {
+  align-items: end;
+}
+
+.filters-section .q-item-label {
+  margin-bottom: 4px;
+  font-size: 0.875rem;
+}
+
+.filters-section .q-select,
+.filters-section .q-input {
+  min-height: 40px;
+}
+
+.filters-section .q-btn {
+  min-height: 40px;
+}
+
+/* Clear All Button Styling */
+.clear-all-btn {
+  border: 1px solid #f44336;
+}
+
+.clear-all-btn:hover {
+  background-color: #ffebee;
+}
+
 @media (max-width: 768px) {
   .q-pa-md {
     padding: 8px;
@@ -993,6 +1407,14 @@ const handleLiquidateDisbursement = async (row) => {
   .col-sm-12 {
     width: 100%;
     margin-bottom: 8px;
+  }
+
+  .summary-card .q-card-section {
+    padding: 12px;
+  }
+
+  .text-h4 {
+    font-size: 1.5rem;
   }
 }
 </style>

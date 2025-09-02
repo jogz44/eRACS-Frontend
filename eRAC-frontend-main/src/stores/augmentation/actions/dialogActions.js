@@ -69,6 +69,7 @@ export function useDialogActions(state, fetchExpenseAccounts, resetForm ) {
       // Update the TO expense fields
       state.forms.value.augExpense.value.to_expense = accountName
       state.forms.value.augExpense.value.to_appropriation_id = expenseItem.appropriation_id
+      state.forms.value.augExpense.value.to_budget_source = expenseItem.budget_source || 'Annual Budget'
 
       // Reset the flag and loading state
       state.isSelectingToExpense.value = false
@@ -87,6 +88,8 @@ export function useDialogActions(state, fetchExpenseAccounts, resetForm ) {
           to_appropriation_id: null,
           from_expense: '',
           to_expense: '',
+          from_budget_source: '',
+          to_budget_source: '',
           account: '',
           balance: 0,
           particulars: '',
@@ -106,6 +109,8 @@ export function useDialogActions(state, fetchExpenseAccounts, resetForm ) {
       to_appropriation_id: null,
       from_expense: accountName, // Set the FROM expense
       to_expense: '', // TO expense will be selected later
+      from_budget_source: expenseItem.budget_source || 'Annual Budget',
+      to_budget_source: '',
       account: accountName,
       balance: expenseItem.balance || 0,
       particulars: '',

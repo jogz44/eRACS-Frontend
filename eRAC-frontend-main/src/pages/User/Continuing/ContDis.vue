@@ -14,38 +14,88 @@
       </div>
     </div>
 
+    <!-- Filters Section -->
+    <q-card flat bordered class="q-mb-md filters-section">
+      <q-card-section>
+        <div class="row q-col-gutter-md items-end">
+          <!-- Search Input -->
+          <div class="col-md-2 col-sm-6 col-xs-12">
+            <q-item-label class="q-mb-xs text-weight-medium">Search:</q-item-label>
+            <q-input
+              outlined
+              dense
+              v-model="store.searchQuery"
+              placeholder="Search description..."
+              clearable
+            >
+              <template v-slot:append>
+                <q-icon name="search" />
+              </template>
+            </q-input>
+          </div>
+          
+          <!-- Date Range Filter -->
+          <div class="col-md-2 col-sm-6 col-xs-12">
+            <q-item-label class="q-mb-xs text-weight-medium">Date Range:</q-item-label>
+            <q-input
+              outlined
+              dense
+              v-model="dateRangeDisplay"
+              placeholder="Select date range..."
+              readonly
+              clearable
+              @clear="onDateRangeClear"
+            >
+              <template v-slot:append>
+                <q-icon name="event" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date
+                      v-model="dateRange"
+                      range
+                      @update:model-value="onDateRangeChange"
+                    >
+                      <div class="row items-center justify-end">
+                        <q-btn v-close-popup label="Close" color="primary" flat />
+                      </div>
+                    </q-date>
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
+          
+          <!-- Clear Button -->
+          <div class="col-md-1 col-sm-6 col-xs-12">
+            <q-btn
+              dense
+              outlined
+              color="red-10"
+              icon="clear_all"
+              label="Clear"
+              @click="clearAllFilters"
+              class="full-width"
+            />
+          </div>
+          
+          <!-- Spacer to push Add button to the right -->
+          <div class="col-md-2 col-sm-0 col-xs-0"></div>
+          
+          <!-- Add Button -->
+          <div class="col-md-1 col-sm-6 col-xs-12">
+            <q-btn
+              label="Add"
+              color="primary"
+              icon="add"
+              @click="store.openDialog('disbursement')"
+              class="full-width"
+              v-permission="'add'"
+            />
+          </div>
+        </div>
+      </q-card-section>
+    </q-card>
+
     <div class="q-mb-sm">
-      <div class="row items-center q-gutter-sm">
-        <q-input
-          outlined
-          dense
-          placeholder="Search Description..."
-          v-model="store.searchQuery"
-          style="min-width: 300px"
-        >
-          <template v-slot:append>
-            <q-icon name="search" />
-          </template>
-        </q-input>
-
-        <q-btn
-          dense
-          outlined
-          color="negative"
-          icon="clear"
-          @click="clearAllFilters"
-        />
-
-        <q-space />
-
-        <q-btn
-          label="Add"
-          icon="add"
-          color="primary"
-          @click="store.openDialog('disbursement')"
-          v-permission="'add'"
-        />
-      </div>
 
       <!-- Disbursement Dialog -->
       <q-dialog v-model="store.dialogs.disbursement" persistent @keydown.enter="handleEnterKey">
@@ -240,7 +290,7 @@
 
 <script setup>
 import { useQuasar } from 'quasar'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useContDisbursementStore } from 'stores/contDisburseStore'
 import ContLiquidateDialog from 'components/contDisburse/ContOrDetails.vue'
 import ContViewOr from 'components/contDisburse/ContViewOr.vue'
@@ -249,6 +299,7 @@ import { usePageLogging } from '../../../composables/usePageLogging'
 const $q = useQuasar()
 const loading = ref(false)
 const store = useContDisbursementStore()
+const dateRange = ref(null)
 
 const validateAndSave = () => {
   if (store.dialogs.disbursement) {
@@ -316,10 +367,42 @@ const loadPendingUsers = async () => {
   }
 }
 
+const dateRangeDisplay = computed(() => {
+  if (!dateRange.value || !dateRange.value.from || !dateRange.value.to) {
+    return ''
+  }
+  const fromDate = new Date(dateRange.value.from).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  })
+  const toDate = new Date(dateRange.value.to).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  })
+  return `${fromDate} - ${toDate}`
+})
+
+const onDateRangeChange = (newRange) => {
+  if (newRange && newRange.from && newRange.to) {
+    const fromDate = new Date(newRange.from)
+    const toDate = new Date(newRange.to)
+    store.dateFrom = fromDate.toLocaleDateString('en-GB')
+    store.dateTo = toDate.toLocaleDateString('en-GB')
+  } else {
+    store.dateFrom = ''
+    store.dateTo = ''
+  }
+}
+
+const onDateRangeClear = () => {
+  dateRange.value = null
+  store.dateFrom = ''
+  store.dateTo = ''
+}
+
 const clearAllFilters = () => {
   store.searchQuery = ''
   store.dateFrom = ''
   store.dateTo = ''
+  dateRange.value = null
 }
 
 onMounted(async () => {
@@ -338,6 +421,11 @@ onMounted(async () => {
 .page-header {
   border-bottom: 1px solid #e0e0e0;
   padding-bottom: 8px;
+}
+
+.filters-section {
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 @media (max-width: 768px) {

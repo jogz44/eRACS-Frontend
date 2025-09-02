@@ -270,7 +270,8 @@ class AppropriationController extends Controller
             'fiscal_year_id' => 'nullable|exists:lib_fiscal_years,id',
             'year' => 'nullable|integer|min:2000|max:2100',
             'budget_id' => 'nullable|exists:budgets,id',
-            'barangay_id' => 'nullable|exists:barangays,id'
+            'barangay_id' => 'nullable|exists:barangays,id',
+            'budget_type' => 'nullable|in:annual,supplemental,all'
         ]);
 
         // Allow admin to specify barangay_id; fallback to authenticated user's barangay
@@ -278,6 +279,7 @@ class AppropriationController extends Controller
         $budgetId = $request->budget_id;
         $year = $request->input('year');
         $fiscalYearId = $request->input('fiscal_year_id');
+        $budgetType = $request->input('budget_type', 'all');
 
         // Determine fiscal year ID from year if not provided
         if (!$fiscalYearId && $year) {
@@ -307,10 +309,27 @@ class AppropriationController extends Controller
             ], 400);
         }
 
+        // First, get the budget IDs that match the budget type filter
+        $budgetIds = [];
+        if ($budgetType !== 'all') {
+            $budgetQuery = Budget::where('barangay_id', $barangayId);
+            if ($fiscalYearId) {
+                $budgetQuery->where('fiscal_year_id', $fiscalYearId);
+            }
+            
+            if ($budgetType === 'annual') {
+                $budgetQuery->where('description', 'like', '%annual%');
+            } elseif ($budgetType === 'supplemental') {
+                $budgetQuery->where('description', 'like', '%supplemental%');
+            }
+            
+            $budgetIds = $budgetQuery->pluck('id')->toArray();
+        }
+
         $classes = LibExpenseClass::with(['types.items'])
             ->where('fiscal_year_id', $fiscalYearId)
             ->get()
-            ->map(function($class) use ($barangayId, $budgetId) {
+            ->map(function($class) use ($barangayId, $budgetId, $budgetIds, $budgetType) {
                 // Calculate allocated amount for this expense class
                 $classQuery = TranAppropriation::where('barangay_id', $barangayId)
                     ->where('expense_class_id', $class->id)
@@ -318,16 +337,65 @@ class AppropriationController extends Controller
 
                 if ($budgetId) {
                     $classQuery->where('budget_id', $budgetId);
+                } elseif ($budgetType !== 'all' && !empty($budgetIds)) {
+                    $classQuery->whereIn('budget_id', $budgetIds);
                 }
 
                 $classAllocatedAmount = $classQuery->sum('amount');
+
+                // Get budget source information for expense class
+                $classBudgetSource = 'Annual Budget'; // Default
+                if ($budgetType === 'annual') {
+                    $classBudgetSource = 'Annual Budget';
+                } elseif ($budgetType === 'supplemental') {
+                    $classBudgetSource = 'Supplemental Budget';
+                } else {
+                    // For 'all', determine based on the budgets that have allocations
+                    if ($budgetId) {
+                        $budget = Budget::find($budgetId);
+                        if ($budget && $budget->description) {
+                            $description = strtolower($budget->description);
+                            if (strpos($description, 'supplemental') !== false) {
+                                $classBudgetSource = 'Supplemental Budget';
+                            } elseif (strpos($description, 'annual') !== false) {
+                                $classBudgetSource = 'Annual Budget';
+                            }
+                        }
+                    } else {
+                        // Check if there are multiple budgets with different sources
+                        $budgets = Budget::whereHas('tranAppropriations', function($q) use ($barangayId, $class) {
+                            $q->where('barangay_id', $barangayId)
+                              ->where('expense_class_id', $class->id)
+                              ->where('status', 'committed');
+                        })->get();
+                        
+                        if ($budgets->count() > 0) {
+                            $hasSupplemental = $budgets->filter(function($budget) {
+                                return strpos(strtolower($budget->description), 'supplemental') !== false;
+                            })->count() > 0;
+                            
+                            $hasAnnual = $budgets->filter(function($budget) {
+                                return strpos(strtolower($budget->description), 'annual') !== false;
+                            })->count() > 0;
+                            
+                            if ($hasSupplemental && $hasAnnual) {
+                                $classBudgetSource = 'Mixed';
+                            } elseif ($hasSupplemental) {
+                                $classBudgetSource = 'Supplemental Budget';
+                            } elseif ($hasAnnual) {
+                                $classBudgetSource = 'Annual Budget';
+                            }
+                        }
+                    }
+                }
 
                 return [
                     'id' => $class->id,
                     'name' => $class->name,
                     'isMainCategory' => true,
                     'amount' => (float) $classAllocatedAmount,
-                    'children' => $class->types->map(function($type) use ($barangayId, $budgetId) {
+                    'budget_source' => $classBudgetSource,
+                    'children' => $class->types->map(function($type) use ($barangayId, $budgetId, $budgetIds, $budgetType) {
                         // Calculate allocated amount for this expense type
                         $typeQuery = TranAppropriation::where('barangay_id', $barangayId)
                             ->where('expense_type_id', $type->id)
@@ -335,16 +403,65 @@ class AppropriationController extends Controller
 
                         if ($budgetId) {
                             $typeQuery->where('budget_id', $budgetId);
+                        } elseif ($budgetType !== 'all' && !empty($budgetIds)) {
+                            $typeQuery->whereIn('budget_id', $budgetIds);
                         }
 
                         $typeAllocatedAmount = $typeQuery->sum('amount');
+
+                        // Get budget source information for expense type
+                        $typeBudgetSource = 'Annual Budget'; // Default
+                        if ($budgetType === 'annual') {
+                            $typeBudgetSource = 'Annual Budget';
+                        } elseif ($budgetType === 'supplemental') {
+                            $typeBudgetSource = 'Supplemental Budget';
+                        } else {
+                            // For 'all', determine based on the budgets that have allocations
+                            if ($budgetId) {
+                                $budget = Budget::find($budgetId);
+                                if ($budget && $budget->description) {
+                                    $description = strtolower($budget->description);
+                                    if (strpos($description, 'supplemental') !== false) {
+                                        $typeBudgetSource = 'Supplemental Budget';
+                                    } elseif (strpos($description, 'annual') !== false) {
+                                        $typeBudgetSource = 'Annual Budget';
+                                    }
+                                }
+                            } else {
+                                // Check if there are multiple budgets with different sources
+                                $budgets = Budget::whereHas('tranAppropriations', function($q) use ($barangayId, $type) {
+                                    $q->where('barangay_id', $barangayId)
+                                      ->where('expense_type_id', $type->id)
+                                      ->where('status', 'committed');
+                                })->get();
+                                
+                                if ($budgets->count() > 0) {
+                                    $hasSupplemental = $budgets->filter(function($budget) {
+                                        return strpos(strtolower($budget->description), 'supplemental') !== false;
+                                    })->count() > 0;
+                                    
+                                    $hasAnnual = $budgets->filter(function($budget) {
+                                        return strpos(strtolower($budget->description), 'annual') !== false;
+                                    })->count() > 0;
+                                    
+                                    if ($hasSupplemental && $hasAnnual) {
+                                        $typeBudgetSource = 'Mixed';
+                                    } elseif ($hasSupplemental) {
+                                        $typeBudgetSource = 'Supplemental Budget';
+                                    } elseif ($hasAnnual) {
+                                        $typeBudgetSource = 'Annual Budget';
+                                    }
+                                }
+                            }
+                        }
 
                         return [
                             'id' => $type->id,
                             'name' => $type->name,
                             'isMainCategory' => false,
                             'amount' => (float) $typeAllocatedAmount,
-                            'children' => $type->items->map(function($item) use ($barangayId, $budgetId) {
+                            'budget_source' => $typeBudgetSource,
+                            'children' => $type->items->map(function($item) use ($barangayId, $budgetId, $budgetIds, $budgetType) {
                                 // Get the allocated amount for this expense item
                                 $query = TranAppropriation::where('barangay_id', $barangayId)
                                     ->where('expense_item_id', $item->id)
@@ -353,15 +470,64 @@ class AppropriationController extends Controller
                                 // If budget_id is provided, filter by that specific budget
                                 if ($budgetId) {
                                     $query->where('budget_id', $budgetId);
+                                } elseif ($budgetType !== 'all' && !empty($budgetIds)) {
+                                    $query->whereIn('budget_id', $budgetIds);
                                 }
 
                                 $allocatedAmount = $query->sum('amount');
+
+                                // Get budget source information from the budget description
+                                $budgetSource = 'Annual Budget'; // Default
+                                if ($budgetType === 'annual') {
+                                    $budgetSource = 'Annual Budget';
+                                } elseif ($budgetType === 'supplemental') {
+                                    $budgetSource = 'Supplemental Budget';
+                                } else {
+                                    // For 'all', determine based on the budgets that have allocations
+                                    if ($budgetId) {
+                                        $budget = Budget::find($budgetId);
+                                        if ($budget && $budget->description) {
+                                            $description = strtolower($budget->description);
+                                            if (strpos($description, 'supplemental') !== false) {
+                                                $budgetSource = 'Supplemental Budget';
+                                            } elseif (strpos($description, 'annual') !== false) {
+                                                $budgetSource = 'Annual Budget';
+                                            }
+                                        }
+                                    } else {
+                                        // Check if there are multiple budgets with different sources
+                                        $budgets = Budget::whereHas('tranAppropriations', function($q) use ($barangayId, $item) {
+                                            $q->where('barangay_id', $barangayId)
+                                              ->where('expense_item_id', $item->id)
+                                              ->where('status', 'committed');
+                                        })->get();
+                                        
+                                        if ($budgets->count() > 0) {
+                                            $hasSupplemental = $budgets->filter(function($budget) {
+                                                return strpos(strtolower($budget->description), 'supplemental') !== false;
+                                            })->count() > 0;
+                                            
+                                            $hasAnnual = $budgets->filter(function($budget) {
+                                                return strpos(strtolower($budget->description), 'annual') !== false;
+                                            })->count() > 0;
+                                            
+                                            if ($hasSupplemental && $hasAnnual) {
+                                                $budgetSource = 'Mixed';
+                                            } elseif ($hasSupplemental) {
+                                                $budgetSource = 'Supplemental Budget';
+                                            } elseif ($hasAnnual) {
+                                                $budgetSource = 'Annual Budget';
+                                            }
+                                        }
+                                    }
+                                }
 
                                 return [
                                     'id' => $item->id,
                                     'name' => $item->name,
                                     'isMainCategory' => false,
-                                    'amount' => (float) $allocatedAmount
+                                    'amount' => (float) $allocatedAmount,
+                                    'budget_source' => $budgetSource
                                 ];
                             })
                         ];
@@ -1201,13 +1367,15 @@ class AppropriationController extends Controller
     {
         $request->validate([
             'status' => 'nullable|in:draft,committed,reverted',
-            'fiscal_year_id' => 'nullable|exists:lib_fiscal_years,id'
+            'fiscal_year_id' => 'nullable|exists:lib_fiscal_years,id',
+            'budget_type' => 'nullable|in:annual,supplemental,all'
         ]);
 
         $barangayId = $request->user()->barangay_id;
         $status = $request->status ?? 'committed';
+        $budgetType = $request->input('budget_type', 'all');
 
-        $query = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem'])
+        $query = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem', 'budget'])
             ->where('barangay_id', $barangayId)
             ->where('status', $status);
 
@@ -1217,7 +1385,30 @@ class AppropriationController extends Controller
             });
         }
 
+        // Add budget type filtering
+        if ($budgetType !== 'all') {
+            $query->whereHas('budget', function($q) use ($budgetType) {
+                if ($budgetType === 'annual') {
+                    $q->where('description', 'like', '%annual%');
+                } elseif ($budgetType === 'supplemental') {
+                    $q->where('description', 'like', '%supplemental%');
+                }
+            });
+        }
+
         $appropriations = $query->get();
+        
+        // Debug logging
+        \Log::info('Budget type filter: ' . $budgetType);
+        \Log::info('Total appropriations found: ' . $appropriations->count());
+        \Log::info('Appropriations with budget info:', $appropriations->map(function($app) {
+            return [
+                'id' => $app->id,
+                'budget_id' => $app->budget_id,
+                'budget_description' => $app->budget ? $app->budget->description : 'No budget',
+                'amount' => $app->amount
+            ];
+        })->toArray());
 
         // Group appropriations by expense hierarchy (class, type, item)
         $groupedAppropriations = [];
@@ -1262,6 +1453,7 @@ class AppropriationController extends Controller
                     'expense_type_id' => $appropriation->expense_type_id,
                     'expense_item_id' => $appropriation->expense_item_id,
                     'budget_id' => $firstAppropriation->budget_id,
+                    'budget_description' => $firstAppropriation->budget ? $firstAppropriation->budget->description : 'Unknown Budget',
                     'status' => $appropriation->status,
                     'created_at' => $firstAppropriation->created_at->format('Y-m-d'),
                     'appropriation_ids' => $matchingAppropriations->pluck('id')->toArray() // Store all IDs for reference

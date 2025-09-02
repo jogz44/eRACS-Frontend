@@ -64,7 +64,10 @@ export function useAugmentationActions(state) {
       }
 
       const currentFiscalYear = fiscalYearResponse.data.data[0]
-      const params = { fiscal_year_id: currentFiscalYear.id }
+      const params = { 
+        fiscal_year_id: currentFiscalYear.id,
+        ...(state.selectedBudgetSource.value !== 'all' ? { budget_type: state.selectedBudgetSource.value } : {})
+      }
       const response = await api.get('/api/barangay/expense-hierarchy', {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -82,22 +85,46 @@ export function useAugmentationActions(state) {
           Authorization: `Bearer ${token}`,
           Accept: 'application/json',
         },
-        params: { status: 'committed' }
+        params: { 
+          status: 'committed',
+          fiscal_year_id: currentFiscalYear.id,
+          ...(state.selectedBudgetSource.value !== 'all' ? { budget_type: state.selectedBudgetSource.value } : {})
+        }
       })
 
       const appropriations = appropriationResponse.data.data || []
 
-      const flattened = appropriations.map(appropriation => ({
-        id: appropriation.id,
-        account: appropriation.account_name || 'Unknown Account',
-        balance: appropriation.amount || 0,
-        appropriation_id: appropriation.id, // This is now the representative ID
-        // Store additional info for debugging
-        expense_class_id: appropriation.expense_class_id,
-        expense_type_id: appropriation.expense_type_id,
-        expense_item_id: appropriation.expense_item_id,
-        appropriation_ids: appropriation.appropriation_ids || [appropriation.id] // All IDs in the group
-      }))
+      const flattened = appropriations.map(appropriation => {
+        // Extract budget source from budget_description
+        let budgetSource = 'Annual Budget' // Default
+        if (appropriation.budget_description) {
+          const description = appropriation.budget_description.toLowerCase()
+          if (description.includes('supplemental')) {
+            budgetSource = 'Supplemental Budget'
+          } else if (description.includes('annual')) {
+            budgetSource = 'Annual Budget'
+          }
+        }
+        
+        return {
+          id: appropriation.id,
+          account: appropriation.account_name || 'Unknown Account',
+          balance: appropriation.amount || 0,
+          appropriation_id: appropriation.id, // This is now the representative ID
+          // Store additional info for debugging
+          expense_class_id: appropriation.expense_class_id,
+          expense_type_id: appropriation.expense_type_id,
+          expense_item_id: appropriation.expense_item_id,
+          appropriation_ids: appropriation.appropriation_ids || [appropriation.id], // All IDs in the group
+          budget_source: budgetSource, // Properly extracted budget source
+          fiscal_year_id: appropriation.fiscal_year_id || currentFiscalYear.id, // Add fiscal year for validation
+          // Additional validation fields
+          allocated: appropriation.amount || 0,
+          obligated: appropriation.obligated || 0,
+          reserved: appropriation.reserved || 0,
+          available: (appropriation.amount || 0) - (appropriation.obligated || 0) - (appropriation.reserved || 0)
+        }
+      })
 
       // If we're selecting TO expense, filter out the FROM expense
       if (state.isSelectingToExpense.value && state.forms.value.augExpense?.value) {
@@ -511,6 +538,10 @@ export function useAugmentationActions(state) {
     }
   }
 
+  const setBudgetSourceFilter = (budgetSource) => {
+    state.selectedBudgetSource.value = budgetSource
+  }
+
   return {
     fetchAugmentations,
     fetchExpenseAccounts,
@@ -525,5 +556,6 @@ export function useAugmentationActions(state) {
     refreshAugmentationDialog,
     setSelectedBarangay,
     fetchAvailableBudgets,
+    setBudgetSourceFilter,
   }
 }
