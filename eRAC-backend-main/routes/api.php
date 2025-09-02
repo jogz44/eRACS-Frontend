@@ -5,7 +5,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\DisbursementController;
-use App\Http\Controllers\Library\LibParticularController;
 use App\Http\Controllers\Library\AccountsLibController;
 use App\Http\Controllers\Library\BankLibraryController;
 use App\Http\Controllers\Transaction\AppropriationController;
@@ -61,10 +60,6 @@ Route::prefix('barangay')->group(function () {
         Route::post('/users/{userId}/permissions', [AuthController::class, 'updateUserPermissions']);
 
         //Accounts Library
-
-        // Particulars CRUD (simplified)
-        Route::apiResource('particulars', LibParticularController::class)
-            ->only(['index', 'store', 'show', 'update', 'destroy']);
 
         //Fiscal Years
         Route::get('fiscal-years', [AccountsLibController::class, 'getFiscalYears']);
