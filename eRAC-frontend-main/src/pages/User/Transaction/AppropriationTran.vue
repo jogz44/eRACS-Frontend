@@ -81,7 +81,7 @@
               </template>
             </q-input>
           </div>
-          
+
           <!-- Date Range Filter -->
           <div class="col-md-2 col-sm-6 col-xs-12">
             <q-item-label class="q-mb-xs text-weight-medium">Date Range:</q-item-label>
@@ -111,25 +111,24 @@
               </template>
             </q-input>
           </div>
-          
+
           <!-- Clear Button -->
           <div class="col-md-1 col-sm-6 col-xs-12">
             <q-btn
-              dense
               outlined
               color="red-10"
               icon="clear_all"
               label="Clear"
               @click="clearAllFilters"
-              class="full-width"
+              class="full-width btn-match-input"
             />
           </div>
-          
-          <!-- Spacer to push Add button to the right -->
-          <div class="col-md-2 col-sm-0 col-xs-0"></div>
-          
+
+          <!-- Flexible spacer to push Add button to the right -->
+          <div class="col"></div>
+
           <!-- Add Button -->
-          <div class="col-md-1 col-sm-6 col-xs-12">
+          <div class="col-auto">
             <q-btn
               label="Add"
               color="primary"
@@ -137,7 +136,7 @@
               @click="addBudget"
               :loading="addLoading"
               :disable="addLoading"
-              class="full-width"
+              class="full-width btn-match-input"
               v-permission="'add'"
             />
           </div>
@@ -691,7 +690,7 @@ const openEditAllocationDialog = async (row) => {
         // Use different endpoints for admin vs regular users
     const endpoint = authStore.admin ? `/api/admin/budgets/${row.id}/history` : `/api/barangay/budgets/${row.id}/history`
     const token = authStore.admin ? authStore.adminToken : authStore.token
-    
+
     const response = await api.get(endpoint, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -910,7 +909,7 @@ const saveEditedAllocation = async () => {
 onMounted(async () => {
   try {
     await appropriationStore.fetchBudgets()
-    
+
     // Log page visit
     const { logPageVisit } = usePageLogging()
     await logPageVisit('Current Appropriation')
@@ -1148,6 +1147,26 @@ const getBudgetTypeLabel = (description) => {
 .edit-allocation-input {
   min-width: 180px;
   width: 180px;
+}
+
+/* Make action buttons match the height of dense text fields */
+.btn-match-input {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 4px;
+}
+
+.btn-match-input :deep(.q-btn__content) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1; /* let align-items center do the vertical alignment */
+}
+
+.btn-match-input :deep(.q-icon) {
+  font-size: 18px;
 }
 
 /* Responsive text box sizing for Edit Allocation dialog */
