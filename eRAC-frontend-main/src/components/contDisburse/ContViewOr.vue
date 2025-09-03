@@ -32,7 +32,7 @@
               <q-input
               color="green"
                 outlined
-                :model-value="store.currentLiquidation.dvAmount.toFixed(2)"
+                :model-value="formatAmount(store.currentLiquidation.dvAmount)"
                 prefix="₱"
                 disable and readonly
                 bg-color="grey-3"
@@ -131,8 +131,16 @@ const totalActualExpense = computed(() => {
 
 const totalReturnAmount = computed(() => {
   if (!store.currentLiquidation?.dvAmount) return '0.00'
-  return (store.currentLiquidation.dvAmount - parseFloat(totalActualExpense.value)).toFixed(2)
+  const dvAmount = typeof store.currentLiquidation.dvAmount === 'string' ? parseFloat(store.currentLiquidation.dvAmount) : store.currentLiquidation.dvAmount
+  const actualExpense = parseFloat(totalActualExpense.value) || 0
+  return (dvAmount - actualExpense).toFixed(2)
 })
+
+const formatAmount = (amount) => {
+  if (!amount && amount !== 0) return '0.00'
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+  return isNaN(numAmount) ? '0.00' : numAmount.toFixed(2)
+}
 </script>
 
 <style scoped>

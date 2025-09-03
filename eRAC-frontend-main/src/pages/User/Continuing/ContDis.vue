@@ -19,13 +19,13 @@
       <q-card-section>
         <div class="row q-col-gutter-md items-end">
           <!-- Search Input -->
-          <div class="col-md-2 col-sm-6 col-xs-12">
+          <div class="col-md-3 col-sm-6 col-xs-12">
             <q-item-label class="q-mb-xs text-weight-medium">Search:</q-item-label>
             <q-input
               outlined
               dense
               v-model="store.searchQuery"
-              placeholder="Search description..."
+              placeholder="Search payee, DV number..."
               clearable
             >
               <template v-slot:append>
@@ -35,7 +35,7 @@
           </div>
 
           <!-- Date Range Filter -->
-          <div class="col-md-2 col-sm-6 col-xs-12">
+          <div class="col-md-3 col-sm-6 col-xs-12">
             <q-item-label class="q-mb-xs text-weight-medium">Date Range:</q-item-label>
             <q-input
               outlined
@@ -99,9 +99,9 @@
 
       <!-- Disbursement Dialog -->
       <q-dialog v-model="store.dialogs.disbursement" persistent @keydown.enter="handleEnterKey">
-        <q-card style="min-width: 700px; max-width: 90vw">
+        <q-card style="min-width: 900px; max-width: 95vw">
           <q-card-section class="q-pb-none">
-            <div class="text-h6">Disbursement</div>
+            <div class="text-h6">Continuing Disbursement</div>
           </q-card-section>
 
           <q-card-section>
@@ -114,14 +114,12 @@
                   dense
                   v-model="store.forms.disbursement.date"
                   mask="##/##/####"
+                  :readonly="true"
+                  :disable="true"
                   @keydown.enter="handleEnterKey"
                 >
                   <template v-slot:append>
-                    <q-icon name="event" class="cursor-pointer">
-                      <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                        <q-date v-model="store.forms.disbursement.date" mask="DD/MM/YYYY" />
-                      </q-popup-proxy>
-                    </q-icon>
+                    <q-icon name="event" class="cursor-not-allowed" />
                   </template>
                 </q-input>
               </div>
@@ -132,8 +130,15 @@
                 <q-select
                   outlined
                   dense
-                  v-model="store.forms.disbursement.bank"
-                  :options="['BDO', 'Metro Bank', 'BPI', 'PNB']"
+                  v-model="store.forms.disbursement.bank_id"
+                  :options="bankStore.availableBanks"
+                  option-label="name"
+                  option-value="id"
+                  emit-value
+                  map-options
+                  :label="currentBankLabel"
+                  :loading="store.bankLoading"
+                  @update:model-value="handleBankSelection"
                   @keydown.enter="handleEnterKey"
                 />
               </div>
@@ -144,8 +149,8 @@
                 <q-input
                   outlined
                   dense
-                  v-model="store.forms.disbursement.checkNumber"
-                  :rules="[(val) => !!val || 'Field is required']"
+                  v-model="store.autoCheque"
+                  :disable="true"
                   @keydown.enter="handleEnterKey"
                 />
               </div>
@@ -156,6 +161,7 @@
                 <q-input
                   outlined
                   dense
+                  :disable="true"
                   v-model="store.forms.disbursement.dvNumber"
                   @keydown.enter="handleEnterKey"
                 />
@@ -181,7 +187,9 @@
                 label="Add"
                 color="primary"
                 icon="add"
-                @click="store.openDialog('expense')"
+                @click="handleAddExpense"
+                @mouseenter="preloadExpenseAccounts"
+                :loading="addingExpense || store.expenseTypeLoading"
                 v-permission="'add'"
               />
             </div>
@@ -204,15 +212,13 @@
                       icon="edit"
                       color="orange"
                       @click="store.editItem(props.row)"
-                      v-permission="'edit'"
                     />
                     <q-btn
                       size="sm"
                       dense
                       icon="delete"
                       color="red"
-                      @click="store.deleteItem(props.row)"
-                      v-permission="'delete'"
+                      @click="handleDeleteExpense(props.row)"
                     />
                   </div>
                 </q-td>
@@ -233,12 +239,117 @@
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md">
+            <q-btn flat label="Cancel" @click="store.closeDialog('disbursement')" />
             <q-btn
-              flat
-              label="Cancel"
-              @click="store.closeDialog('disbursement')"
+              label="Disburse"
+              color="primary"
+              @click="handleSaveClick"
+              v-permission="'add'"
+              :loading="store.savingDisbursement"
+              :disable="store.savingDisbursement"
             />
-            <q-btn label="Save" color="primary" @click="handleSaveClick" v-permission="'add'" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <!-- Expense Selection Dialog -->
+      <q-dialog v-model="store.dialogs.expense" persistent>
+        <q-card style="min-width: 800px; max-width: 90vw">
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">Select Expense Account</div>
+          </q-card-section>
+
+          <q-card-section>
+            <q-input
+              outlined
+              dense
+              placeholder="Search expense account..."
+              v-model="store.expenseSearch"
+              class="q-mb-sm"
+              style="width: 300px"
+            >
+              <template v-slot:append>
+                <q-icon name="search" />
+              </template>
+            </q-input>
+
+            <q-table
+              :rows="store.filteredExpenseAccounts"
+              :columns="store.expenseAccountColumns"
+              row-key="id"
+              :loading="store.loading || store.expenseTypeLoading"
+              :filter="store.expenseSearch"
+              flat
+              bordered
+            >
+              <template v-slot:body-cell-action="props">
+                <q-td :props="props">
+                  <q-btn
+                    dense
+                    label="Select"
+                    color="primary"
+                    @click="store.openExpenseDetail(props.row)"
+                  />
+                </q-td>
+              </template>
+              
+              <template v-slot:no-data>
+                <div class="full-width row flex-center text-grey q-gutter-sm">
+                  <q-icon size="2em" name="info" />
+                  <span v-if="store.loading || store.expenseTypeLoading">
+                    Loading expense accounts...
+                  </span>
+                  <span v-else>
+                    No continuing appropriation accounts available. 
+                    <br>
+                    Please create continuing appropriations first in the Continuing Appropriation module.
+                  </span>
+                </div>
+              </template>
+            </q-table>
+          </q-card-section>
+
+          <q-card-actions align="right" class="q-pa-md">
+            <q-btn flat label="Cancel" @click="store.closeDialog('expense')" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <!-- Add Expense Dialog -->
+      <q-dialog v-model="store.dialogs.expenseDetail">
+        <q-card style="min-width: 500px">
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">Add Expense</div>
+          </q-card-section>
+
+          <q-card-section>
+            <div class="text-subtitle1 q-mb-sm">
+              <strong>Account:</strong> {{ store.forms.expense.account }}
+            </div>
+            <div class="text-subtitle1 q-mb-md">
+              <strong>Balance:</strong> ₱{{ store.forms.expense.balance.toLocaleString() }}
+            </div>
+            <q-input
+              outlined
+              dense
+              v-model="store.forms.expense.particulars"
+              label="Particulars"
+              placeholder="Enter particulars..."
+            />
+            <q-input
+              outlined
+              dense
+              v-model="store.forms.expense.amount"
+              label="Amount"
+              class="q-mb-md"
+              prefix="₱"
+              type="number"
+            />
+          </q-card-section>
+
+          <q-card-actions align="right" class="q-pa-md">
+            <q-btn flat label="Cancel" @click="store.closeDialog('expenseDetail')" />
+            <q-btn label="Save" @click="handleSaveExpense" color="primary" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -246,35 +357,47 @@
       <!-- Main Data Table -->
       <q-card flat bordered>
         <q-table
-          :rows="store.disbursements"
+          :rows="filteredDisbursements"
           :columns="store.disbursementColumns"
           row-key="id"
           :pagination="store.pagination"
+          :loading="store.loadingDisbursements"
           flat
         >
           <template v-slot:body-cell-action="props">
             <q-td :props="props">
-              <div class="q-gutter-xs">
+              <div class="row q-gutter-xs items-center justify-center">
                 <q-btn
                   dense
                   icon="edit"
-                  color="orange"
-                  @click="store.openEditDisbursement(props.row)"
+                  :color="
+                    props.row.status === 'Pending' || props.row.status === 'Partial'
+                      ? 'orange'
+                      : 'grey'
+                  "
+                  :disable="props.row.status !== 'Pending' && props.row.status !== 'Partial'"
+                  :loading="store.loadingEditDisbursement === props.row.id"
+                  @click="handleEditDisbursement(props.row)"
                   v-permission="'edit'"
                 />
                 <q-btn
                   dense
                   icon="visibility"
                   color="blue"
-                  @click="store.openViewOrDetails(props.row)"
+                  @click="handleViewDisbursement(props.row)"
+                  :loading="viewLoading[props.row.id]"
+                  :disable="viewLoading[props.row.id]"
                   v-permission="'view'"
                 />
                 <q-btn
                   dense
                   label="Liquidate"
                   color="primary"
-                  @click="store.openOrDetailsDialog(props.row)"
-                  v-permission="'edit'"
+                  v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
+                  @click="handleLiquidateDisbursement(props.row)"
+                  :loading="liquidateLoading[props.row.id]"
+                  :disable="liquidateLoading[props.row.id]"
+                  v-permission="'add'"
                 />
               </div>
             </q-td>
@@ -282,8 +405,9 @@
         </q-table>
       </q-card>
 
-      <ContLiquidateDialog v-model="store.dialogs.orDetails" />
+      <ContLiquidateDialog v-model="store.dialogs.orDetails" @save="handleLiquidateSave" />
       <ContViewOr v-model="store.dialogs.viewOrDetails" />
+      <ContEditDisburse v-model="store.dialogs.editDisbursement" @save="handleEditSave" />
     </div>
   </q-page>
 </template>
@@ -291,25 +415,75 @@
 <script setup>
 import { useQuasar } from 'quasar'
 import { ref, onMounted, computed } from 'vue'
-import { useContDisbursementStore } from 'stores/contDisburseStore'
-import ContLiquidateDialog from 'components/contDisburse/ContOrDetails.vue'
-import ContViewOr from 'components/contDisburse/ContViewOr.vue'
-import { usePageLogging } from '../../../composables/usePageLogging'
+import { useContDisbursementStore } from 'src/stores/contDisburseStore'
+import { useBankStore } from 'src/stores/bankStore'
+import ContLiquidateDialog from 'src/components/contDisburse/ContOrDetails.vue'
+import ContViewOr from 'src/components/contDisburse/ContViewOr.vue'
+import ContEditDisburse from 'src/components/contDisburse/ContEditDisburse.vue'
+import { usePageLogging } from 'src/composables/usePageLogging'
 
 const $q = useQuasar()
 const loading = ref(false)
+const addingExpense = ref(false)
 const store = useContDisbursementStore()
+const bankStore = useBankStore()
 const dateRange = ref(null)
+const viewLoading = ref({})
+const liquidateLoading = ref({})
+
+
+
+// Removed particulars filtering logic since particulars is now a simple text input
+
+// Computed properties
+const currentBankLabel = computed(() => {
+  if (store.forms.disbursement.bank_id) {
+    const selectedBank = bankStore.banks.find(
+      (bank) => bank.id === store.forms.disbursement.bank_id,
+    )
+    return selectedBank ? selectedBank.name : 'Select Bank'
+  }
+  return 'Select Bank'
+})
+
+
+
+// Filtered disbursements based on search and date range
+const filteredDisbursements = computed(() => {
+  let filtered = store.disbursements
+
+  // Filter by search query
+  if (store.searchQuery && store.searchQuery.trim()) {
+    const query = store.searchQuery.toLowerCase().trim()
+    filtered = filtered.filter(
+      (disbursement) =>
+        disbursement.payee?.toLowerCase().includes(query) ||
+        disbursement.dvNumber?.toLowerCase().includes(query) ||
+        disbursement.chequeNumber?.toLowerCase().includes(query),
+    )
+  }
+
+  // Filter by date range
+  if (store.dateFrom && store.dateTo) {
+    filtered = filtered.filter((disbursement) => {
+      if (!disbursement.date) return false
+
+      // Convert disbursement date to DD/MM/YYYY format for comparison
+      const disbursementDate = disbursement.date.includes('/')
+        ? disbursement.date
+        : new Date(disbursement.date).toLocaleDateString('en-GB')
+
+      return disbursementDate >= store.dateFrom && disbursementDate <= store.dateTo
+    })
+  }
+
+  return filtered
+})
 
 const validateAndSave = () => {
   if (store.dialogs.disbursement) {
     const form = store.forms.disbursement
-    const hasRequiredFields = form.date &&
-                             form.bank &&
-                             form.checkNumber &&
-                             form.dvNumber &&
-                             form.payee
-
+    const hasRequiredFields = form.date && form.bank_id && form.dvNumber && form.payee
     const hasExpenses = store.expenses && store.expenses.length > 0
 
     if (!hasRequiredFields) {
@@ -332,26 +506,144 @@ const validateAndSave = () => {
       return
     }
 
-    store.saveDisbursement()
+    store.saveDisbursement().then((result) => {
+      if (!result.success) {
+        $q.notify({
+          type: 'negative',
+          message: result.error || 'Failed to save disbursement',
+          icon: 'error',
+          position: 'top',
+          timeout: 5000,
+        })
+      }
+    })
   }
 }
 
 const handleEnterKey = (event) => {
+  if (event) {
   event.preventDefault()
+  }
   validateAndSave()
 }
 
-const handleSaveClick = () => {
-  validateAndSave()
+const handleSaveClick = async () => {
+  await validateAndSave()
+  // Refresh the disbursement list after saving
+  await store.fetchDisbursements()
+}
+
+const handleBankSelection = async (bankId) => {
+  if (bankId) {
+    try {
+      await store.selectBank(bankId)
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: `Failed to load booklets for selected bank: ${error.message}`,
+        icon: 'error',
+        position: 'top',
+      })
+    }
+  }
+}
+
+
+
+const handleAddExpense = async () => {
+  addingExpense.value = true
+  console.log('Add button clicked, starting to open expense dialog...')
+  
+  try {
+    // Add a timeout to prevent infinite loading
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Dialog opening timed out after 15 seconds')), 15000)
+    })
+    
+    await Promise.race([
+      store.openDialog('expense'),
+      timeoutPromise
+    ])
+    
+    console.log('Expense dialog opened successfully')
+  } catch (error) {
+    console.error('Error opening expense dialog:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to open expense dialog: ' + (error.message || 'Unknown error'),
+      icon: 'error',
+      position: 'top',
+      timeout: 5000,
+    })
+  } finally {
+    addingExpense.value = false
+    console.log('Add button loading state reset')
+  }
+}
+
+const handleSaveExpense = async () => {
+  try {
+    await store.saveExpense()
+    $q.notify({
+      type: 'positive',
+      message: 'Expense added successfully!',
+      icon: 'check_circle',
+      position: 'top',
+      timeout: 3000,
+    })
+  } catch (error) {
+    console.error('Error saving expense:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to save expense',
+      icon: 'error',
+      position: 'top',
+      timeout: 5000,
+    })
+  }
+}
+
+const handleDeleteExpense = async (row) => {
+  try {
+    await store.deleteItem(row)
+    $q.notify({
+      type: 'positive',
+      message: 'Expense deleted successfully!',
+      icon: 'check_circle',
+      position: 'top',
+      timeout: 3000,
+    })
+  } catch (error) {
+    console.error('Error deleting expense:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to delete expense',
+      icon: 'error',
+      position: 'top',
+      timeout: 5000,
+    })
+  }
+}
+
+const preloadExpenseAccounts = () => {
+  // Preload expense accounts when user hovers over Add button
+  if (store.expenseAccounts.length === 0 && !store.expenseAccountsLoading) {
+    store.refreshExpenseAccountsWithBalances().catch((error) => {
+      console.warn('Failed to preload expense accounts:', error)
+    })
+  }
 }
 
 const loadPendingUsers = async () => {
   loading.value = true
   try {
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // Refresh both disbursements and banks
+    const refreshPromises = [store.fetchDisbursements(), bankStore.fetchBanks()]
+    await Promise.all(refreshPromises)
+
     $q.notify({
       type: 'positive',
-      message: 'Disbursement refreshed!',
+      message: 'Continuing disbursements refreshed!',
       icon: 'refresh',
       position: 'top',
     })
@@ -405,7 +697,145 @@ const clearAllFilters = () => {
   dateRange.value = null
 }
 
+// Handle edit disbursement with loading state
+const handleEditDisbursement = async (row) => {
+  try {
+    await store.openEditDisbursement(row)
+  } catch (error) {
+    console.error('Error opening edit disbursement:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to open edit disbursement',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000,
+    })
+  }
+}
+
+// Handle edit save result
+const handleEditSave = async (result) => {
+  if (result.success) {
+    $q.notify({
+      type: 'positive',
+      message: 'Disbursement updated successfully!',
+      icon: 'check_circle',
+      position: 'top',
+      timeout: 3000,
+    })
+  } else {
+    $q.notify({
+      type: 'negative',
+      message: result.error || 'Failed to update disbursement',
+      icon: 'error',
+      position: 'top',
+      timeout: 5000,
+    })
+  }
+}
+
+// Handle liquidate save result
+const handleLiquidateSave = async (result) => {
+  if (result.success) {
+    $q.notify({
+      type: 'positive',
+      message: 'Disbursement liquidated successfully!',
+      icon: 'check_circle',
+      position: 'top',
+      timeout: 3000,
+    })
+  } else {
+    $q.notify({
+      type: 'negative',
+      message: result.error || 'Failed to liquidate disbursement',
+      icon: 'error',
+      position: 'top',
+      timeout: 5000,
+    })
+  }
+}
+
+// Handle view disbursement with loading state
+const handleViewDisbursement = async (row) => {
+  viewLoading.value[row.id] = true
+  try {
+    await store.openViewOrDetails(row)
+  } catch (error) {
+    console.error('Error opening view disbursement:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to open view disbursement',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000,
+    })
+  } finally {
+    viewLoading.value[row.id] = false
+  }
+}
+
+// Handle liquidate disbursement with loading state
+const handleLiquidateDisbursement = async (row) => {
+  liquidateLoading.value[row.id] = true
+  try {
+    await store.openOrDetailsDialog(row)
+  } catch (error) {
+    console.error('Error opening liquidate disbursement:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to open liquidate disbursement',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000,
+    })
+  } finally {
+    liquidateLoading.value[row.id] = false
+  }
+}
+
+
+
+// Function to load all data with optimized loading strategy
+const loadAllData = async () => {
+  loading.value = true
+
+  try {
+    // Load critical data first (disbursements and banks) in parallel
+    const criticalPromises = [store.fetchDisbursements(), bankStore.fetchBanks()]
+
+    await Promise.all(criticalPromises)
+
+    // Load expense accounts in background (non-blocking)
+    store.refreshExpenseAccountsWithBalances().catch((error) => {
+      console.warn('Failed to load expense accounts in background:', error)
+    })
+
+    $q.notify({
+      type: 'positive',
+      message: 'Continuing disbursement data loaded successfully!',
+      icon: 'check_circle',
+      position: 'top',
+      timeout: 2000,
+    })
+  } catch (error) {
+    console.error('Error during data loading:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to load continuing disbursement data: ' + (error.message || 'Unknown error'),
+      icon: 'error',
+      position: 'top',
+      timeout: 5000,
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+
+
 onMounted(async () => {
+  await loadAllData()
+
   // Log page visit
   const { logPageVisit } = usePageLogging()
   await logPageVisit('Continuing Disbursement')

@@ -583,21 +583,24 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     // Refresh expense accounts with updated balances after disbursement changes
-    refreshExpenseAccountsWithBalances() {
+    async refreshExpenseAccountsWithBalances() {
       try {
         const authStore = useAuthStore()
         
         // For admin users, we don't need to refresh expense accounts since they only view disbursements
         if (authStore.admin) {
-          return
+          return Promise.resolve()
         }
         
         // Force a refresh of the expense accounts to recalculate balances
         // This will trigger the getter to recalculate with current frontend expenses
         this.expenseData = [...this.expenseData]
+        
+        return Promise.resolve()
 
       } catch (error) {
         console.error('Failed to refresh expense accounts with balances:', error)
+        return Promise.reject(error)
       }
     },
 
@@ -605,6 +608,8 @@ export const useDisbursementStore = defineStore('disbursement', {
     setBudgetSourceFilter(budgetSource) {
       this.selectedBudgetSource = budgetSource
     },
+
+
 
     // Fetch expense hierarchy from appropriation store and accounts library store
     async fetchExpenseAccounts() {
@@ -652,12 +657,14 @@ export const useDisbursementStore = defineStore('disbursement', {
         
         // For admin users, we don't need to refresh expense details since they only view disbursements
         if (authStore.admin) {
-          return
+          return Promise.resolve()
         }
         
         await this.fetchExpenseDetails()
+        return Promise.resolve()
       } catch (error) {
         console.error('Failed to force refresh expense details:', error)
+        return Promise.reject(error)
       }
     },
 
@@ -668,7 +675,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         
         // For admin users, we don't need to refresh expense accounts since they only view disbursements
         if (authStore.admin) {
-          return
+          return Promise.resolve()
         }
         
         // Fetch from appropriation store for budget allocations
@@ -687,8 +694,11 @@ export const useDisbursementStore = defineStore('disbursement', {
           console.warn('Failed to fetch expense types in background:', error)
         })
 
+        return Promise.resolve()
+
       } catch (error) {
         console.warn('Failed to refresh expense accounts in background:', error)
+        return Promise.reject(error)
       }
     },
 
@@ -843,6 +853,10 @@ export const useDisbursementStore = defineStore('disbursement', {
             params.barangay_id = selectedBarangay
           }
         }
+        
+        // Add current fiscal year filter to only show current year transactions
+        const currentYear = new Date().getFullYear()
+        params.year = currentYear
 
         // Fetch disbursements and particulars in parallel for faster loading
         const [disbursementsResponse, particularsResponse] = await Promise.all([
@@ -2207,6 +2221,16 @@ export const useDisbursementStore = defineStore('disbursement', {
             this.disbursements[disbursementIndex].void_approved_at = new Date().toISOString();
           }
 
+          // Refresh bank library data to reflect voided cheque status
+          try {
+            const { useBankStore } = await import('./bankStore');
+            const bankStore = useBankStore();
+            await bankStore.fetchBanks();
+          } catch (bankError) {
+            console.warn('Failed to refresh bank data after void approval:', bankError);
+            // Don't throw error here as the main operation succeeded
+          }
+
           return { success: true, message: response.data.message };
         } else {
           return { success: false, message: response.data.message };
@@ -2248,6 +2272,57 @@ export const useDisbursementStore = defineStore('disbursement', {
       } catch (error) {
         console.error('Failed to reject void request:', error);
         throw new Error(error.response?.data?.message || 'Failed to reject void request');
+      }
+    },
+
+    // Direct void method for captains and SK chairpersons (no request needed)
+    async voidDisbursementDirectly(disbursementId, remarks) {
+      if (!remarks || remarks.trim() === '') {
+        throw new Error('Remarks are required for voiding disbursements');
+      }
+
+      this.voidingDisbursement = true;
+      try {
+        const authStore = useAuthStore();
+        const token = authStore.admin ? authStore.adminToken : authStore.token;
+
+        const response = await api.post(`/api/barangay/disbursements/${disbursementId}/void-direct`, {
+          remarks: remarks.trim(),
+        }, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+
+        if (response.data.status) {
+          // Update the disbursement status in the local array
+          const disbursementIndex = this.disbursements.findIndex(d => d.id === disbursementId);
+          if (disbursementIndex !== -1) {
+            this.disbursements[disbursementIndex].status = 'Voided';
+            this.disbursements[disbursementIndex].remarks = remarks.trim();
+            this.disbursements[disbursementIndex].voided_at = new Date().toISOString();
+          }
+
+          // Refresh bank library data to reflect voided cheque status
+          try {
+            const { useBankStore } = await import('./bankStore');
+            const bankStore = useBankStore();
+            await bankStore.fetchBanks();
+          } catch (bankError) {
+            console.warn('Failed to refresh bank data after direct void:', bankError);
+            // Don't throw error here as the main operation succeeded
+          }
+
+          return { success: true, message: response.data.message };
+        } else {
+          return { success: false, message: response.data.message };
+        }
+      } catch (error) {
+        console.error('Failed to void disbursement directly:', error);
+        throw new Error(error.response?.data?.message || 'Failed to void disbursement');
+      } finally {
+        this.voidingDisbursement = false;
       }
     },
   },

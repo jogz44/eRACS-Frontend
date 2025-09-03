@@ -9,6 +9,7 @@ use App\Http\Controllers\Library\AccountsLibController;
 use App\Http\Controllers\Library\BankLibraryController;
 use App\Http\Controllers\Transaction\AppropriationController;
 use App\Http\Controllers\Transaction\ContinuingAppropriationController;
+use App\Http\Controllers\ContinuingDisbursementController;
 use App\Http\Controllers\BudgetAugmentationController;
 use App\Http\Middleware\AuthTokenValid;
 use App\Models\Barangay;
@@ -142,6 +143,7 @@ Route::prefix('barangay')->group(function () {
         Route::post('disbursements/{id}/void-request', [DisbursementController::class, 'requestVoid']);
         Route::post('disbursements/{id}/void-approve', [DisbursementController::class, 'approveVoid']);
         Route::post('disbursements/{id}/void-reject', [DisbursementController::class, 'rejectVoid']);
+        Route::post('disbursements/{id}/void-direct', [DisbursementController::class, 'voidDirect']);
         // Fetch OR Details for a disbursement
         Route::get('disbursements/{id}/or-details', [DisbursementController::class, 'getOrDetails']);
         // Save OR Details for a disbursement
@@ -176,9 +178,17 @@ Route::prefix('barangay')->group(function () {
         Route::get('/continuing-appropriations', [ContinuingAppropriationController::class, 'index']);
         Route::post('/continuing-appropriations', [ContinuingAppropriationController::class, 'store']);
         Route::get('/continuing-appropriations/list', [ContinuingAppropriationController::class, 'getContinuingAppropriations']);
+        Route::get('/continuing-appropriations/disbursement-accounts', [ContinuingAppropriationController::class, 'getContinuedAccountsForDisbursement']);
         Route::patch('/continuing-appropriations/{id}/status', [ContinuingAppropriationController::class, 'updateStatus']);
         Route::get('/continuing-appropriations/{id}/history', [ContinuingAppropriationController::class, 'getAllocationHistory']);
         Route::post('/continuing-appropriations/{id}/allocate', [ContinuingAppropriationController::class, 'commitAllocation']);
+
+        // Continuing Disbursement
+        Route::get('/continuing-disbursements', [ContinuingDisbursementController::class, 'index']);
+        Route::post('/continuing-disbursements', [ContinuingDisbursementController::class, 'store']);
+        Route::get('/continuing-disbursements/{id}', [ContinuingDisbursementController::class, 'show']);
+        Route::put('/continuing-disbursements/{id}', [ContinuingDisbursementController::class, 'update']);
+        Route::delete('/continuing-disbursements/{id}', [ContinuingDisbursementController::class, 'destroy']);
 
 
     });

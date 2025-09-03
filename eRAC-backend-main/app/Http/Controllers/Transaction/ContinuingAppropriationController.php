@@ -29,6 +29,12 @@ class ContinuingAppropriationController extends Controller
                     ->with(['expenseClass.fiscalYear', 'expenseType', 'expenseItem'])
                     ->where('tran_appropriations.barangay_id', $request->user()->barangay_id)
                     ->whereRelation('expenseClass.fiscalYear', 'year', '!=', now()->year)
+                    ->whereNotExists(function ($query) {
+                        $query->select(DB::raw(1))
+                              ->from('cont_appro_accounts')
+                              ->whereColumn('cont_appro_accounts.tranAppropriation_id', 'tran_appropriations.id')
+                              ->where('cont_appro_accounts.status', 'active');
+                    })
                     ->groupBy(
                         'tran_appropriations.expense_class_id',
                         'tran_appropriations.expense_type_id',
@@ -37,7 +43,7 @@ class ContinuingAppropriationController extends Controller
 
 
         $detail = TranAppropriation::select(
-                        DB::raw('MIN(tran_appropriations.id) as id'), 
+                        DB::raw('MIN(tran_appropriations.id) as id'),
                         'tran_appropriations.expense_class_id',
                         'tran_appropriations.expense_type_id',
                         'tran_appropriations.expense_item_id',
@@ -47,6 +53,12 @@ class ContinuingAppropriationController extends Controller
                     ->with(['expenseClass.fiscalYear', 'expenseType', 'expenseItem'])
                     ->where('tran_appropriations.barangay_id', $request->user()->barangay_id)
                     ->whereRelation('expenseClass.fiscalYear', 'year', '=', now()->year)
+                    ->whereNotExists(function ($query) {
+                        $query->select(DB::raw(1))
+                              ->from('cont_appro_accounts')
+                              ->whereColumn('cont_appro_accounts.tranAppropriation_id', 'tran_appropriations.id')
+                              ->where('cont_appro_accounts.status', 'active');
+                    })
                     ->groupBy(
                         'tran_appropriations.expense_class_id',
                         'tran_appropriations.expense_type_id',
@@ -67,7 +79,7 @@ class ContinuingAppropriationController extends Controller
             $details_amount = $d->details_amount ?? 0;
 
             return [
-                'id' => $o->id, 
+                'id' => $o->id,
                 'year' => $o->expenseClass?->fiscalYear?->year,
                 'expenseClass' => $o->expenseClass?->name,
                 'expenseType' => $o->expenseType?->name,
@@ -156,6 +168,59 @@ class ContinuingAppropriationController extends Controller
     }
 
     /**
+     * Get continued accounts available for disbursement
+     */
+    public function getContinuedAccountsForDisbursement(Request $request)
+    {
+        try {
+            // Get all continuing appropriation accounts that are active and have remaining balance
+            $continuedAccounts = ContApproAccounts::with([
+                'transactionAppropriation.expenseClass.fiscalYear',
+                'transactionAppropriation.expenseType',
+                'transactionAppropriation.expenseItem'
+            ])
+            ->whereHas('continuingAppropriation', function($query) use ($request) {
+                $query->where('barangay_id', $request->user()->barangay_id)
+                      ->where('status', 'committed');
+            })
+            ->where('status', 'active')
+            ->where('remainingBalance', '>', 0)
+            ->get()
+            ->map(function ($account) {
+                $tranApp = $account->transactionAppropriation;
+                
+                return [
+                    'id' => $account->id,
+                    'tranAppropriationId' => $tranApp->id,
+                    'year' => $tranApp->expenseClass?->fiscalYear?->year,
+                    'expenseClass' => $tranApp->expenseClass?->name,
+                    'expenseType' => $tranApp->expenseType?->name,
+                    'expenseItem' => $tranApp->expenseItem?->name,
+                    'remaining_amount' => (float) $account->remainingBalance,
+                    'continuingAppropriationId' => $account->contAppropriation_id,
+                    'description' => $account->continuingAppropriation?->description || 'Continued from previous year'
+                ];
+            })
+            ->filter(function($account) {
+                return $account['expenseClass'] && $account['expenseType'] && $account['expenseItem'];
+            })
+            ->values()
+            ->toArray();
+
+            return response()->json([
+                'status' => true,
+                'data' => $continuedAccounts
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to fetch continued accounts: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Get all continuing appropriations for the current barangay
      */
     public function getContinuingAppropriations(Request $request)
@@ -166,11 +231,20 @@ class ContinuingAppropriationController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($item) {
-                    // Calculate total appropriated amount for this continuing appropriation
-                    $totalAppropriated = TranAppropriation::where('barangay_id', $item->barangay_id)
-                        ->where('cont_appropriation_id', $item->id)
-                        ->where('status', 'committed')
-                        ->sum('amount');
+                    // Calculate total disbursed amount from continuing appropriation accounts
+                    $totalDisbursed = 0;
+                    foreach ($item->continuingAccounts as $account) {
+                        // Get all expense details that used this continuing appropriation account
+                        $disbursedAmount = \App\Models\TranExpenseDetail::where('appropriation_id', $account->tranAppropriation_id)
+                            ->whereHas('disbursement', function($query) {
+                                $query->where('is_continuing', true);
+                            })
+                            ->sum('amount');
+                        $totalDisbursed += $disbursedAmount;
+                    }
+
+                    // Calculate available amount (original appropriation - total disbursed)
+                    $availableAmount = (float) $item->appropriation_amount - (float) $totalDisbursed;
 
                     return [
                         'id' => $item->id,
@@ -179,15 +253,15 @@ class ContinuingAppropriationController extends Controller
                         'expense_class' => $item->expense_class,
                         'description' => $item->description,
                         'appropriation' => (float) $item->appropriation_amount,
-                        'total_appropriated' => (float) $totalAppropriated,
-                        'unappropriated' => (float) $item->unappropriated_amount,
+                        'total_appropriated' => (float) $totalDisbursed, // This now shows actual disbursed amount
+                        'unappropriated' => (float) $availableAmount, // This now shows actual available amount
                         'status' => $item->status,
                         'accounts' => $item->continuingAccounts->map(function ($account) {
                             return [
                                 'id' => $account->id,
                                 'balance' => (float) $account->remainingBalance,
-                                'accountName' => $account->transactionAppropriation->expenseClass?->name . ' > ' . 
-                                               $account->transactionAppropriation->expenseType?->name . ' > ' . 
+                                'accountName' => $account->transactionAppropriation->expenseClass?->name . ' > ' .
+                                               $account->transactionAppropriation->expenseType?->name . ' > ' .
                                                $account->transactionAppropriation->expenseItem?->name
                             ];
                         })
@@ -389,7 +463,7 @@ class ContinuingAppropriationController extends Controller
             AdminAuthController::logUserAction(
                 $request->user(),
                 'Committed Continuing Appropriation Allocations',
-                "Committed allocations with net change of ₱" . number_format($netChange, 2) . 
+                "Committed allocations with net change of ₱" . number_format($netChange, 2) .
                 " for continuing appropriation: {$continuingAppropriation->description}"
             );
 

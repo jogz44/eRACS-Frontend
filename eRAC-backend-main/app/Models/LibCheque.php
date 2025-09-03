@@ -17,7 +17,8 @@ class LibCheque extends Model
         'bank_id',
         'booklet_id',
         'cheque_number',
-        'status'
+        'status',
+        'disbursement_id'
     ];
 
     public function bank(): BelongsTo
@@ -31,6 +32,6 @@ class LibCheque extends Model
     }
     public function disbursement()
     {
-        return $this->hasOne(Disbursement::class, 'cheque_number', 'cheque_number');
+        return $this->belongsTo(Disbursement::class, 'disbursement_id');
     }
 }

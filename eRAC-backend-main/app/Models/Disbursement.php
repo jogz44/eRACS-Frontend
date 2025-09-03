@@ -24,6 +24,8 @@ class Disbursement extends Model
         'liquidated_at',
         'remarks',
         'rejection_remarks',
+        'is_continuing',
+        'user_id',
     ];
 
     public function barangay()
@@ -44,5 +46,10 @@ class Disbursement extends Model
     public function expenseDetails()
     {
         return $this->hasMany(TranExpenseDetail::class, 'disbursement_id');
+    }
+
+    public function cheque()
+    {
+        return $this->hasOne(LibCheque::class, 'disbursement_id');
     }
 }
