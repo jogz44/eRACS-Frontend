@@ -875,8 +875,8 @@ const saveEditedAllocation = async () => {
       throw new Error(`Total allocation (₱${totalAllocated.toFixed(2)}) exceeds available budget (₱${availableBudgetForEdit.toFixed(2)})`)
     }
 
-    // Use the appropriation store's commitAllocation method instead of calling API directly
-    await appropriationStore.commitAllocation(appropriationStore.selectedRow.id, allocations)
+    // Use the appropriation store's commitAllocation method with background refresh for better performance
+    await appropriationStore.commitAllocation(appropriationStore.selectedRow.id, allocations, { backgroundRefresh: true })
 
     // Update the local state instead of refetching all budgets
     if (appropriationStore.selectedRow) {
@@ -903,7 +903,7 @@ const saveEditedAllocation = async () => {
       
       // If it's a disbursement validation error, show it clearly
       if (message.includes('disbursed amount')) {
-        message = `⚠️ ${message}\n\nThis means some of this appropriation has already been used for disbursements and cannot be reduced below that amount.`
+        message = `${message}`
       }
       
       const errorMap = {}
