@@ -168,6 +168,59 @@ class ContinuingAppropriationController extends Controller
     }
 
     /**
+     * Get continued accounts available for disbursement
+     */
+    public function getContinuedAccountsForDisbursement(Request $request)
+    {
+        try {
+            // Get all continuing appropriation accounts that are active and have remaining balance
+            $continuedAccounts = ContApproAccounts::with([
+                'transactionAppropriation.expenseClass.fiscalYear',
+                'transactionAppropriation.expenseType',
+                'transactionAppropriation.expenseItem'
+            ])
+            ->whereHas('continuingAppropriation', function($query) use ($request) {
+                $query->where('barangay_id', $request->user()->barangay_id)
+                      ->where('status', 'committed');
+            })
+            ->where('status', 'active')
+            ->where('remainingBalance', '>', 0)
+            ->get()
+            ->map(function ($account) {
+                $tranApp = $account->transactionAppropriation;
+                
+                return [
+                    'id' => $account->id,
+                    'tranAppropriationId' => $tranApp->id,
+                    'year' => $tranApp->expenseClass?->fiscalYear?->year,
+                    'expenseClass' => $tranApp->expenseClass?->name,
+                    'expenseType' => $tranApp->expenseType?->name,
+                    'expenseItem' => $tranApp->expenseItem?->name,
+                    'remaining_amount' => (float) $account->remainingBalance,
+                    'continuingAppropriationId' => $account->contAppropriation_id,
+                    'description' => $account->continuingAppropriation?->description || 'Continued from previous year'
+                ];
+            })
+            ->filter(function($account) {
+                return $account['expenseClass'] && $account['expenseType'] && $account['expenseItem'];
+            })
+            ->values()
+            ->toArray();
+
+            return response()->json([
+                'status' => true,
+                'data' => $continuedAccounts
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to fetch continued accounts: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Get all continuing appropriations for the current barangay
      */
     public function getContinuingAppropriations(Request $request)
