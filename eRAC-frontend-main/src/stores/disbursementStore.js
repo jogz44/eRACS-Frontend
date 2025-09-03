@@ -3,6 +3,9 @@ import { defineStore } from 'pinia'
 import { useAppropriationStore } from './appropriationStore'
 import { api } from 'src/boot/axios'
 import { useAuthStore } from './auth'
+import { useBankStore } from './bankStore'
+
+const bankStore = useBankStore()
 
 const getAuthConfig = () => {
   const authStore = useAuthStore()
@@ -1409,6 +1412,8 @@ export const useDisbursementStore = defineStore('disbursement', {
         this.refreshDataInBackground().catch(error => {
           console.warn('Background refresh failed:', error)
         })
+        
+        await bankStore.fetchBanks()
 
         return { success: true, data: response.data.data }
       } catch (error) {

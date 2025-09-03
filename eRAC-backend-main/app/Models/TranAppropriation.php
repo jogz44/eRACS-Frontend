@@ -38,7 +38,7 @@ class TranAppropriation extends Model
 
     public function expenseClass(): BelongsTo
     {
-        return $this->belongsTo(LibExpenseClass::class);
+        return $this->belongsTo(LibExpenseClass::class, 'expense_class_id');
     }
 
     public function expenseType(): BelongsTo
