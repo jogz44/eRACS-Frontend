@@ -60,7 +60,7 @@ class DisbursementSeeder extends Seeder
                     if (!$chequeNumber) continue;
 
                     $base = Carbon::create($year, $now->month, $now->day);
-                    $startDate = $base->copy()->subMonths(1)->subDays(5);
+                    $startDate = $base->copy()->subMonths(1);
                     $createdAt = $faker->dateTimeBetween($startDate, $base);
 
                     $dvAmount = $faker->numberBetween(5, 50) * 1000;

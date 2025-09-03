@@ -53,21 +53,17 @@ class DisbursementController extends Controller
         // If user is authenticated and has barangay_id, filter by it
         if ($user && isset($user->barangay_id)) {
             $query->where('barangay_id', $user->barangay_id);
-            \Log::info('Filtering disbursements for barangay_id: ' . $user->barangay_id);
         } else {
-            \Log::warning('No barangay_id found for user: ' . $user->id);
         }
         
         // Apply year filter if provided
-        if ($request->filled('year') && $request->year !== 'all') {
-            $query->whereYear('date', $request->year);
-            \Log::info('Applied year filter: ' . $request->year);
+        if ($request->filled('year')) {
+            $query->whereRelation('expenseDetails.appropriation.expenseClass.fiscalYear', 'year', $request->year);
         } else {
-            \Log::info('No year filter applied, showing all years');
+            $query->whereRelation('expenseDetails.appropriation.expenseClass.fiscalYear', 'year', now()->year);
         }
         
         $disbursements = $query->orderByDesc('date')->get();
-        \Log::info('Found ' . $disbursements->count() . ' disbursements for barangay ' . $user->barangay_id);
         
         $result = $disbursements->map(function($d) {
             return [
