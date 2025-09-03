@@ -20,18 +20,19 @@
         v-model="selectedBudgetSource"
         class="text-grey-8"
         active-color="primary"
-        indicator-color="primary"
+        :indicator-color="selectedBudgetSource === 'all' ? 'primary' : 'transparent'"
         align="justify"
         narrow-indicator
       >
-        <q-tab name="all" label="All Budgets" icon="list" />
-        <q-tab name="annual" label="Annual Budget" icon="calendar_today" />
-        <q-tab name="supplemental" label="Supplemental Budget" icon="add_circle" />
+        <q-tab name="all" label="All Augmentations" icon="list" />
+        <q-tab name="cross" label="Cross Budget Augmentations" icon="swap_horiz" />
+        <q-tab name="annual" label="Annual > Annual" icon="calendar_today" />
+        <q-tab name="supplemental" label="Supplemental > Supplemental" icon="add_circle" />
       </q-tabs>
     </div>
 
     <!-- Augmentation Summary -->
-    <div class="augmentation-summary q-mb-md">
+    <div class="augmentation-summary q-mb-md" v-if="selectedBudgetSource === 'all'">
       <div class="row q-col-gutter-md">
         <div class="col-md-3 col-sm-6">
           <q-card class="summary-card">
@@ -323,8 +324,18 @@ const filteredAugmentations = computed(() => {
       return augmentation.details?.some(detail => {
         const fromBudget = detail.from_budget_source || 'Annual Budget'
         const toBudget = detail.to_budget_source || 'Annual Budget'
-        return fromBudget.toLowerCase().includes(selectedBudgetSource.value) ||
-               toBudget.toLowerCase().includes(selectedBudgetSource.value)
+        
+        if (selectedBudgetSource.value === 'cross') {
+          // Cross budget: show only augmentations that have cross-budget transfers
+          return fromBudget !== toBudget
+        } else if (selectedBudgetSource.value === 'annual') {
+          // Annual > Annual: show only augmentations within annual budget
+          return fromBudget.toLowerCase().includes('annual') && toBudget.toLowerCase().includes('annual')
+        } else if (selectedBudgetSource.value === 'supplemental') {
+          // Supplemental > Supplemental: show only augmentations within supplemental budget
+          return fromBudget.toLowerCase().includes('supplemental') && toBudget.toLowerCase().includes('supplemental')
+        }
+        return true
       })
     })
   }
