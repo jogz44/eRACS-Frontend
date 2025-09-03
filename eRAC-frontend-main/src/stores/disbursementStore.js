@@ -840,6 +840,10 @@ export const useDisbursementStore = defineStore('disbursement', {
             params.barangay_id = selectedBarangay
           }
         }
+        
+        // Add current fiscal year filter to only show current year transactions
+        const currentYear = new Date().getFullYear()
+        params.year = currentYear
 
         // Fetch disbursements and particulars in parallel for faster loading
         const [disbursementsResponse, particularsResponse] = await Promise.all([
