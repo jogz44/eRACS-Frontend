@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Disbursement;
+use App\Models\LibBooklet;
 use App\Models\LibCheque;
 use App\Models\DisbursementOrDetail;
 use App\Models\TranExpenseDetail;
@@ -955,6 +956,19 @@ class DisbursementController extends Controller
 
             $disbursement->status = 'Voided';
             $disbursement->save();
+
+            // change status of cheque number in LibCheque to 'voided'
+            $booklets = LibBooklet::where('bank_id', $disbursement->bank_id)->get();
+
+            $cheque = LibCheque::where('cheque_number', $disbursement->cheque_number)
+                ->whereIn('booklet_id', $booklets->pluck('id'))
+                ->first();
+
+            if ($cheque) {
+                $cheque->status = 'void';
+                $cheque->save();
+            }
+
 
             AdminAuthController::logUserAction(
                 $user,
