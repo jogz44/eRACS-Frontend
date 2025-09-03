@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('tran_appropriations', function (Blueprint $table) {
             $table->id();
            $table->foreignId('barangay_id')->constrained();
-           $table->foreignId('budget_id')->constrained();
+           $table->foreignId('budget_id')->nullable()->constrained();
 
              // Expense hierarchy (class->type->item)
             $table->foreignId('expense_class_id')->nullable()->constrained('lib_expense_classes');
