@@ -165,6 +165,10 @@ export const useBankStore = defineStore('bank', {
         }))
         this.availableBanks = this.banks.filter(bank => bank.status === 'Available');
 
+        if(this.availableBanks.length == 0){
+          this.availableBanks[0] = {id:0, name:'No Available Bank'}
+        }
+
         return this.banks
       } catch (error) {
         console.error('Error:', error)
