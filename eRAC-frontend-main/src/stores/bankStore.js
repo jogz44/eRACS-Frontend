@@ -58,7 +58,16 @@ export const useBankStore = defineStore('bank', {
         align: 'center',
         format: (val) => {
           const status = (val || '').toLowerCase()
-          return status === 'unused' ? 'Issued' : 'Used'
+          switch (status) {
+            case 'unused':
+              return 'Unused'
+            case 'issued':
+              return 'Issued'
+            case 'void':
+              return 'Voided'
+            default:
+              return 'Unknown'
+          }
         },
       },
       {

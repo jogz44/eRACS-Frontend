@@ -358,8 +358,8 @@
             <template v-slot:body-cell-status="props">
               <q-td :props="props">
                 <q-badge
-                  :color="(props.row.status || '').toLowerCase() === 'unused' ? 'green' : 'orange'"
-                  :label="(props.row.status || '').toLowerCase() === 'unused' ? 'Unused' : 'Issued'"
+                  :color="getChequeStatusColor(props.row.status)"
+                  :label="getChequeStatusLabel(props.row.status)"
                 />
               </q-td>
             </template>
@@ -1006,6 +1006,35 @@ const handleAddChequeEnterKey = () => {
 const handleAddChequeSaveClick = () => {
   if (validateAddCheque()) {
     addCheque()
+  }
+}
+
+// Helper functions for cheque status display
+const getChequeStatusColor = (status) => {
+  const statusLower = (status || '').toLowerCase()
+  switch (statusLower) {
+    case 'unused':
+      return 'green'
+    case 'issued':
+      return 'orange'
+    case 'void':
+      return 'red'
+    default:
+      return 'grey'
+  }
+}
+
+const getChequeStatusLabel = (status) => {
+  const statusLower = (status || '').toLowerCase()
+  switch (statusLower) {
+    case 'unused':
+      return 'Unused'
+    case 'issued':
+      return 'Issued'
+    case 'void':
+      return 'Voided'
+    default:
+      return 'Unknown'
   }
 }
 </script>

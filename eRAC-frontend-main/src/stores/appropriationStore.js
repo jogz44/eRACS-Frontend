@@ -126,13 +126,6 @@ export const useAppropriationStore = defineStore("appropriation", {
 
       let results = state.appropriations
 
-      // Date filtering (inclusive)
-      const from = parseFlexibleDate(state.dateFrom)
-      const to = parseFlexibleDate(state.dateTo)
-      if (from || to) {
-        // Normalize range bounds to full-day
-        const fromStart = from ? new Date(from.setHours(0, 0, 0, 0)) : null
-        const toEnd = to ? new Date(to.setHours(23, 59, 59, 999)) : null
       // Budget type filtering
       if (state.selectedBudgetType && state.selectedBudgetType !== 'all') {
         results = results.filter((item) => {
@@ -146,10 +139,13 @@ export const useAppropriationStore = defineStore("appropriation", {
         })
       }
 
-      // Date filtering (merge edit)
-      //if (state.dateFrom || state.dateTo) {
-       // const fromDate = state.dateFrom ? new Date(state.dateFrom) : null
-        //const toDate = state.dateTo ? new Date(state.dateTo) : null
+      // Date filtering (inclusive)
+      const from = parseFlexibleDate(state.dateFrom)
+      const to = parseFlexibleDate(state.dateTo)
+      if (from || to) {
+        // Normalize range bounds to full-day
+        const fromStart = from ? new Date(from.setHours(0, 0, 0, 0)) : null
+        const toEnd = to ? new Date(to.setHours(23, 59, 59, 999)) : null
 
         results = results.filter((item) => {
           const d = parseFlexibleDate(item.date)

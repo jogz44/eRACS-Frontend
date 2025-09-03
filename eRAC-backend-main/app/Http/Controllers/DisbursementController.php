@@ -967,6 +967,10 @@ class DisbursementController extends Controller
             if ($cheque) {
                 $cheque->status = 'void';
                 $cheque->save();
+                
+                // Update bank and booklet statuses after voiding cheque
+                $bankLibraryController = new \App\Http\Controllers\Library\BankLibraryController();
+                $bankLibraryController->updateBanksStatus();
             }
 
 

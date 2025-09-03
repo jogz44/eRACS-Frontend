@@ -580,21 +580,24 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     // Refresh expense accounts with updated balances after disbursement changes
-    refreshExpenseAccountsWithBalances() {
+    async refreshExpenseAccountsWithBalances() {
       try {
         const authStore = useAuthStore()
         
         // For admin users, we don't need to refresh expense accounts since they only view disbursements
         if (authStore.admin) {
-          return
+          return Promise.resolve()
         }
         
         // Force a refresh of the expense accounts to recalculate balances
         // This will trigger the getter to recalculate with current frontend expenses
         this.expenseData = [...this.expenseData]
+        
+        return Promise.resolve()
 
       } catch (error) {
         console.error('Failed to refresh expense accounts with balances:', error)
+        return Promise.reject(error)
       }
     },
 
@@ -602,6 +605,8 @@ export const useDisbursementStore = defineStore('disbursement', {
     setBudgetSourceFilter(budgetSource) {
       this.selectedBudgetSource = budgetSource
     },
+
+
 
     // Fetch expense hierarchy from appropriation store and accounts library store
     async fetchExpenseAccounts() {
@@ -649,12 +654,14 @@ export const useDisbursementStore = defineStore('disbursement', {
         
         // For admin users, we don't need to refresh expense details since they only view disbursements
         if (authStore.admin) {
-          return
+          return Promise.resolve()
         }
         
         await this.fetchExpenseDetails()
+        return Promise.resolve()
       } catch (error) {
         console.error('Failed to force refresh expense details:', error)
+        return Promise.reject(error)
       }
     },
 
@@ -665,7 +672,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         
         // For admin users, we don't need to refresh expense accounts since they only view disbursements
         if (authStore.admin) {
-          return
+          return Promise.resolve()
         }
         
         // Fetch from appropriation store for budget allocations
@@ -684,8 +691,11 @@ export const useDisbursementStore = defineStore('disbursement', {
           console.warn('Failed to fetch expense types in background:', error)
         })
 
+        return Promise.resolve()
+
       } catch (error) {
         console.warn('Failed to refresh expense accounts in background:', error)
+        return Promise.reject(error)
       }
     },
 
@@ -2204,6 +2214,16 @@ export const useDisbursementStore = defineStore('disbursement', {
           if (disbursementIndex !== -1) {
             this.disbursements[disbursementIndex].status = 'Voided';
             this.disbursements[disbursementIndex].void_approved_at = new Date().toISOString();
+          }
+
+          // Refresh bank library data to reflect voided cheque status
+          try {
+            const { useBankStore } = await import('./bankStore');
+            const bankStore = useBankStore();
+            await bankStore.fetchBanks();
+          } catch (bankError) {
+            console.warn('Failed to refresh bank data after void approval:', bankError);
+            // Don't throw error here as the main operation succeeded
           }
 
           return { success: true, message: response.data.message };
