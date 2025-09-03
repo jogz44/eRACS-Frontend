@@ -4,74 +4,71 @@
       <div class="text-h6 text-weight-medium">User Log Activities</div>
     </div>
 
-    <LogsActivity
-      v-model="showLogsActivity"
-      :selected-user="selectedLog"
-    />
+    <LogsActivity v-model="showLogsActivity" :selected-user="selectedLog" />
+    <q-card flat bordered class="q-mb-md filters-section">
+      <q-card-section>
+        <div class="row q-col-gutter-md items-end">
+          <div class="q-mb-sm">
+            <div class="row items-center q-gutter-sm">
+              <q-input
+                outlined
+                dense
+                v-model="searchQuery"
+                placeholder="Search by ID, Name, or Date..."
+                style="min-width: 300px"
+                clearable
+                @clear="onSearchClear"
+              >
+                <template v-slot:append>
+                  <q-icon name="search" />
+                </template>
+              </q-input>
 
-    <div class="q-mb-sm">
-      <div class="row items-center q-gutter-sm">
-        <q-input
-          outlined
-          dense
-          v-model="searchQuery"
-          placeholder="Search by ID, Name, or Date..."
-          style="min-width: 300px"
-          clearable
-          @clear="onSearchClear"
-        >
-          <template v-slot:append>
-            <q-icon name="search" />
-          </template>
-        </q-input>
+              <q-select
+                outlined
+                dense
+                v-model="selectedPosition"
+                :options="positionOptions"
+                label="Filter by Position"
+                style="min-width: 200px"
+                clearable
+                @clear="onPositionClear"
+                emit-value
+                map-options
+              />
 
-        <q-select
-          outlined
-          dense
-          v-model="selectedPosition"
-          :options="positionOptions"
-          label="Filter by Position"
-          style="min-width: 200px"
-          clearable
-          @clear="onPositionClear"
-          emit-value
-          map-options
-        />
+              <q-input
+                outlined
+                dense
+                :model-value="dateRangeDisplay"
+                label="Date Range"
+                style="min-width: 200px"
+                clearable
+                @clear="onDateRangeClear"
+                readonly
+              >
+                <template v-slot:append>
+                  <q-icon name="event" class="cursor-pointer">
+                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                      <q-date v-model="dateRange" range @update:model-value="onDateRangeChange" />
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+              </q-input>
 
-        <q-input
-          outlined
-          dense
-          :model-value="dateRangeDisplay"
-          label="Date Range"
-          style="min-width: 200px"
-          clearable
-          @clear="onDateRangeClear"
-          readonly
-        >
-          <template v-slot:append>
-            <q-icon name="event" class="cursor-pointer">
-              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                <q-date
-                  v-model="dateRange"
-                  range
-                  @update:model-value="onDateRangeChange"
-                />
-              </q-popup-proxy>
-            </q-icon>
-          </template>
-        </q-input>
-
-        <q-btn
-          dense
-          outlined
-          color="red-10"
-          icon="clear_all"
-          label="Clear All"
-          style="width: 9%;"
-          @click="clearAllFilters"
-        />
-      </div>
-    </div>
+              <q-btn
+                dense
+                outlined
+                color="red-10"
+                icon="clear_all"
+                label="Clear All"
+                @click="clearAllFilters"
+              />
+            </div>
+          </div>
+        </div>
+      </q-card-section>
+    </q-card>
 
     <q-card flat bordered>
       <q-table
@@ -129,7 +126,7 @@ const getAuthConfig = () => {
 export default {
   name: 'LogsPage',
   components: {
-    LogsActivity
+    LogsActivity,
   },
   data() {
     return {
@@ -150,11 +147,13 @@ export default {
   },
   computed: {
     positionOptions() {
-      const uniquePositions = [...new Set(this.logs.map(log => log.position).filter(Boolean))]
-      return uniquePositions.map(position => ({
-        label: position,
-        value: position
-      })).sort((a, b) => a.label.localeCompare(b.label))
+      const uniquePositions = [...new Set(this.logs.map((log) => log.position).filter(Boolean))]
+      return uniquePositions
+        .map((position) => ({
+          label: position,
+          value: position,
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label))
     },
 
     dateRangeDisplay() {
@@ -165,12 +164,12 @@ export default {
       const fromDate = new Date(this.dateRange.from).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
-        year: 'numeric'
+        year: 'numeric',
       })
       const toDate = new Date(this.dateRange.to).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
-        year: 'numeric'
+        year: 'numeric',
       })
       return `${fromDate} - ${toDate}`
     },
@@ -180,14 +179,14 @@ export default {
 
       const query = this.searchQuery.toLowerCase().trim()
       if (query) {
-        filtered = filtered.filter(log => {
+        filtered = filtered.filter((log) => {
           const idMatch = String(log.id).includes(query)
           const nameMatch = log.fullname.toLowerCase().includes(query)
           const date = new Date(log.log_date)
           const dateString = date.toLocaleDateString('en-US', {
             month: 'long',
             day: 'numeric',
-            year: 'numeric'
+            year: 'numeric',
           })
           const dateMatch = dateString.toLowerCase().includes(query)
           return idMatch || nameMatch || dateMatch
@@ -195,11 +194,11 @@ export default {
       }
 
       if (this.selectedPosition) {
-        filtered = filtered.filter(log => log.position === this.selectedPosition)
+        filtered = filtered.filter((log) => log.position === this.selectedPosition)
       }
 
       if (this.dateRange && this.dateRange.from && this.dateRange.to) {
-        filtered = filtered.filter(log => {
+        filtered = filtered.filter((log) => {
           const logDate = new Date(log.log_date)
           const fromDate = new Date(this.dateRange.from)
           const toDate = new Date(this.dateRange.to)
@@ -216,15 +215,15 @@ export default {
   },
   async mounted() {
     await this.loadLogs()
-    
+
     // Log page visit
     const { logPageVisit } = usePageLogging()
     await logPageVisit('Log Activities')
   },
   methods: {
     openLogsActivity(row) {
-      this.selectedLog = row;
-      this.showLogsActivity = true;
+      this.selectedLog = row
+      this.showLogsActivity = true
     },
     formatDate(dateString) {
       const date = new Date(dateString)
@@ -239,7 +238,7 @@ export default {
       try {
         const response = await api.get(`/api/barangay/getlogs`, getAuthConfig())
         // Backend returns an array directly
-        this.logs = Array.isArray(response.data) ? response.data : (response.data?.data || [])
+        this.logs = Array.isArray(response.data) ? response.data : response.data?.data || []
         console.log('Loaded logs:', this.logs)
       } catch (error) {
         console.error('Error loading logs:', error)
@@ -282,6 +281,23 @@ export default {
 .page-header {
   border-bottom: 1px solid #e0e0e0;
   padding-bottom: 8px;
+}
+.btn-match-input {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 4px;
+}
+.btn-match-input :deep(.q-btn__content) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1; /* let align-items center do the vertical alignment */
+}
+
+.btn-match-input :deep(.q-icon) {
+  font-size: 18px;
 }
 
 @media (max-width: 768px) {
