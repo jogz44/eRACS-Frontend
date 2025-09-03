@@ -1091,17 +1091,36 @@ const canCommitSave = computed(() => {
 })
 
 const filteredDialogAccounts = computed(() => {
-  if (!dialogSearchQuery.value) return continueAccounts.value
+  const currentYear = new Date().getFullYear()
+  const lastYear = currentYear - 1
+  
+  // First filter by year (2024 or last year)
+  const yearFilteredAccounts = continueAccounts.value.filter((account) => {
+    const accountYear = parseInt(account.year)
+    return accountYear === 2024 || accountYear === lastYear
+  })
 
-  return continueAccounts.value.filter((account) =>
+  if (!dialogSearchQuery.value) return yearFilteredAccounts
+
+  return yearFilteredAccounts.filter((account) =>
     Object.values(account).join(' ').toLowerCase().includes(dialogSearchQuery.value.toLowerCase()),
   )
 })
 
 const filteredAppropriations = computed(() => {
   const query = searchQuery.value.toLowerCase()
+  const currentYear = new Date().getFullYear()
+  const lastYear = currentYear - 1
 
   return mergedAppropriations.value.filter((row) => {
+    // Only show data from 2024 or last year
+    const rowYear = parseInt(row.year)
+    const isCurrentOrLastYear = rowYear === 2024 || rowYear === lastYear
+    
+    if (!isCurrentOrLastYear) {
+      return false
+    }
+
     return (
       row.description.toLowerCase().includes(query) ||
       row.expense_class?.toLowerCase().includes(query) ||
