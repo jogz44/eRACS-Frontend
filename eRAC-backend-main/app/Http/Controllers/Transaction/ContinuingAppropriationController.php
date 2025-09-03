@@ -231,11 +231,20 @@ class ContinuingAppropriationController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($item) {
-                    // Calculate total appropriated amount for this continuing appropriation
-                    $totalAppropriated = TranAppropriation::where('barangay_id', $item->barangay_id)
-                        ->where('cont_appropriation_id', $item->id)
-                        ->where('status', 'committed')
-                        ->sum('amount');
+                    // Calculate total disbursed amount from continuing appropriation accounts
+                    $totalDisbursed = 0;
+                    foreach ($item->continuingAccounts as $account) {
+                        // Get all expense details that used this continuing appropriation account
+                        $disbursedAmount = \App\Models\TranExpenseDetail::where('appropriation_id', $account->tranAppropriation_id)
+                            ->whereHas('disbursement', function($query) {
+                                $query->where('is_continuing', true);
+                            })
+                            ->sum('amount');
+                        $totalDisbursed += $disbursedAmount;
+                    }
+
+                    // Calculate available amount (original appropriation - total disbursed)
+                    $availableAmount = (float) $item->appropriation_amount - (float) $totalDisbursed;
 
                     return [
                         'id' => $item->id,
@@ -244,8 +253,8 @@ class ContinuingAppropriationController extends Controller
                         'expense_class' => $item->expense_class,
                         'description' => $item->description,
                         'appropriation' => (float) $item->appropriation_amount,
-                        'total_appropriated' => (float) $totalAppropriated,
-                        'unappropriated' => (float) $item->unappropriated_amount,
+                        'total_appropriated' => (float) $totalDisbursed, // This now shows actual disbursed amount
+                        'unappropriated' => (float) $availableAmount, // This now shows actual available amount
                         'status' => $item->status,
                         'accounts' => $item->continuingAccounts->map(function ($account) {
                             return [

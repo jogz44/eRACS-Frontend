@@ -892,6 +892,18 @@ class DisbursementController extends Controller
                 ], 400);
             }
 
+            // Check aging restriction (≤ 1 day can be voided)
+            $disbursementDate = new \DateTime($disbursement->date);
+            $today = new \DateTime();
+            $aging = $today->diff($disbursementDate)->days;
+            
+            if ($aging > 1) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Only disbursements aged 1 day or less can be voided'
+                ], 400);
+            }
+
             // Update status to Void Requested and save remarks
             $disbursement->status = 'Void Requested';
             $disbursement->remarks = $request->remarks;
@@ -1055,6 +1067,103 @@ class DisbursementController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to reject void request',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // POST /api/barangay/disbursements/{id}/void-direct
+    public function voidDirect(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+
+            // Validate remarks
+            $request->validate([
+                'remarks' => 'required|string|max:500'
+            ]);
+
+            // Only Captain/Chairperson can void directly
+            $positionName = $user->position ? $user->position->name : '';
+            $position = strtolower($positionName);
+            \Log::info('User position for direct void: ' . $positionName . ' (lowercase: ' . $position . ')');
+            
+            // Check if user has approval role (Captain or Chairperson)
+            $canVoidDirectly = strpos($position, 'captain') !== false || 
+                              strpos($position, 'chairperson') !== false ||
+                              strpos($position, 'barangay captain') !== false ||
+                              strpos($position, 'sk chairperson') !== false;
+                              
+            if (!$canVoidDirectly) {
+                \Log::warning('User not authorized for direct void. Position: ' . $positionName);
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Only Captain/Chairperson can void disbursements directly'
+                ], 403);
+            }
+
+            // Find the disbursement and ensure it belongs to the user's barangay
+            $disbursement = Disbursement::where('id', $id)
+                ->where('barangay_id', $user->barangay_id)
+                ->firstOrFail();
+
+            // Can only void Pending or Partial disbursements
+            if (!in_array($disbursement->status, ['Pending', 'Partial'])) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Only pending or partial disbursements can be voided'
+                ], 400);
+            }
+
+            // Check aging restriction (≤ 1 day can be voided)
+            $disbursementDate = new \DateTime($disbursement->date);
+            $today = new \DateTime();
+            $aging = $today->diff($disbursementDate)->days;
+            
+            if ($aging > 1) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Only disbursements aged 1 day or less can be voided'
+                ], 400);
+            }
+
+            // Update status to Voided and save remarks
+            $disbursement->status = 'Voided';
+            $disbursement->remarks = $request->remarks;
+            $disbursement->save();
+
+            // Change status of cheque number in LibCheque to 'voided'
+            $booklets = LibBooklet::where('bank_id', $disbursement->bank_id)->get();
+
+            $cheque = LibCheque::where('cheque_number', $disbursement->cheque_number)
+                ->whereIn('booklet_id', $booklets->pluck('id'))
+                ->first();
+
+            if ($cheque) {
+                $cheque->status = 'void';
+                $cheque->save();
+                
+                // Update bank and booklet statuses after voiding cheque
+                $bankLibraryController = new \App\Http\Controllers\Library\BankLibraryController();
+                $bankLibraryController->updateBanksStatus();
+            }
+
+            // Log action
+            AdminAuthController::logUserAction(
+                $user,
+                'Voided Disbursement Directly',
+                sprintf('#%s voided directly by %s', $disbursement->dv_number, $positionName)
+            );
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Disbursement voided successfully',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error voiding disbursement directly: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to void disbursement',
                 'error' => $e->getMessage()
             ], 500);
         }
