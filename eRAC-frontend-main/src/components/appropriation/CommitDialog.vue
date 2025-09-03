@@ -220,9 +220,55 @@
         <q-btn
           label="Allocate"
           class="modal-save-btn"
-          @click="submitAllocation"
+          @click="checkAndSubmitAllocation"
           :loading="appropriationStore.loading"
           :disable="appropriationStore.loading || !canSave"
+        />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+
+  <!-- Confirmation Dialog for Type-Level Allocations -->
+  <q-dialog v-model="showConfirmationDialog" persistent>
+    <q-card style="min-width: 500px; max-width: 600px;">
+      <q-card-section class="q-pb-sm q-pt-sm">
+        <div class="text-h6 text-warning">Confirm Allocation Changes</div>
+      </q-card-section>
+
+      <q-card-section class="q-py-lg">
+        <div class="text-body1 q-mb-md">
+          The following expense types have amounts allocated at the type level, but you've also allocated amounts to items within these types:
+        </div>
+        
+        <div class="confirmation-list q-mb-md">
+          <div 
+            v-for="conflict in typeAllocationConflicts" 
+            :key="conflict.typeId"
+            class="conflict-item q-pa-sm q-mb-sm"
+            style="border: 1px solid #e0e0e0; border-radius: 4px; background-color: #f8f9fa;"
+          >
+            <div class="text-weight-medium text-primary">{{ conflict.typeName }}</div>
+            <div class="text-caption text-grey-7">
+              Type-level allocation: <strong>{{ appropriationStore.formatCurrency(conflict.typeAmount) }}</strong>
+            </div>
+            <div class="text-caption text-grey-7">
+              Total in items: <strong>{{ appropriationStore.formatCurrency(conflict.itemsTotal) }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-body2 text-grey-8">
+          <strong>Note:</strong> When you confirm, the type-level allocations will be cleared and only the item-level allocations will be saved.
+        </div>
+      </q-card-section>
+
+      <q-card-actions align="right" class="q-pa-md">
+        <q-btn flat label="Cancel" color="secondary" @click="showConfirmationDialog = false" />
+        <q-btn 
+          label="Confirm & Save" 
+          color="primary" 
+          @click="confirmAndSubmitAllocation"
+          :loading="appropriationStore.loading"
         />
       </q-card-actions>
     </q-card>
@@ -658,6 +704,78 @@ const updateUnappropriated = () => {
 // Currency formatting functions
 // Expected format: 1,000.00, 10,000.00, 100,000.00, 1,000,000.00
 // All values will display with comma separators and exactly two decimal places
+
+const typeAllocationConflicts = ref([])
+const showConfirmationDialog = ref(false)
+
+const checkAndSubmitAllocation = () => {
+  // Check for conflicts where type-level allocations exist but items also have allocations
+  const conflicts = []
+  
+  displayAccounts.value.forEach(expenseClass => {
+    console.log('Checking expense class:', expenseClass.name)
+    expenseClass.children?.forEach(expenseType => {
+      // Read directly from input cache for current values
+      const typeAmount = parseCurrency(appropriationStore.inputCache[`type-${expenseType.id}`] || '')
+      const typeId = expenseType.id
+      
+      if (typeAmount > 0 && expenseType.children && expenseType.children.length > 0) {
+        let totalItemsAmount = 0
+        expenseType.children.forEach(item => {
+          // Read directly from input cache for current values
+          const itemAmount = parseCurrency(appropriationStore.inputCache[`item-${item.id}`] || '')
+          console.log(`    Item: ${item.name}, Amount: ${itemAmount}, Raw: ${appropriationStore.inputCache[`item-${item.id}`]}`)
+          if (itemAmount > 0) {
+            totalItemsAmount += itemAmount
+          }
+        })
+
+        if (totalItemsAmount > 0) {
+          console.log(`    CONFLICT DETECTED! Type: ${typeAmount}, Items: ${totalItemsAmount}`)
+          conflicts.push({
+            typeId: typeId,
+            typeName: expenseType.name,
+            typeAmount: typeAmount,
+            itemsTotal: totalItemsAmount
+          })
+        }
+      }
+    })
+  })
+
+  if (conflicts.length > 0) {
+    typeAllocationConflicts.value = conflicts
+    showConfirmationDialog.value = true
+    console.log('Showing confirmation dialog')
+  } else {
+    console.log('No conflicts, proceeding with submitAllocation')
+    submitAllocation()
+  }
+}
+
+const confirmAndSubmitAllocation = async () => {
+  try {
+    // Close confirmation dialog first
+    showConfirmationDialog.value = false
+    
+    // Clear type-level allocations from input cache to ensure they're not sent
+    typeAllocationConflicts.value.forEach(conflict => {
+      appropriationStore.updateAllocationAmount(`type-${conflict.typeId}`, '')
+    })
+    
+    // Now submit the allocation (this will only include item-level allocations)
+    await submitAllocation()
+  } catch (error) {
+    console.error('[ERROR] confirmAndSubmitAllocation:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to save allocation',
+      icon: 'error',
+      position: 'top',
+    })
+  }
+}
+
 </script>
 
 <style scoped>
@@ -699,6 +817,34 @@ const updateUnappropriated = () => {
 @media (max-width: 900px) {
   .q-input[style*="max-width: 230px"] {
     min-width: 120px;
+  }
+}
+
+/* Confirmation dialog styles */
+.confirmation-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.conflict-item {
+  transition: all 0.2s ease;
+}
+
+.conflict-item:hover {
+  background-color: #e3f2fd !important;
+  border-color: #2196f3 !important;
+}
+
+.text-warning {
+  color: #ff9800;
+}
+
+/* Responsive confirmation dialog */
+@media (max-width: 768px) {
+  .q-dialog .q-card {
+    min-width: 95vw !important;
+    max-width: 95vw !important;
+    width: 95vw !important;
   }
 }
 </style>
