@@ -384,8 +384,14 @@
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup @click="closeEditAllocationDialog" />
-          <q-btn label="Save Changes" color="primary" @click="saveEditedAllocation" />
+          <q-btn flat label="Cancel" v-close-popup @click="closeEditAllocationDialog" :disable="editSaveLoading" />
+          <q-btn 
+            label="Save Changes" 
+            color="primary" 
+            @click="saveEditedAllocation" 
+            :loading="editSaveLoading"
+            :disable="editSaveLoading"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -431,6 +437,7 @@ const description = ref('')
 const amount = ref(null)
 const loading = ref(false)
 const addLoading = ref(false)
+const editSaveLoading = ref(false)
 const dateRange = ref(null)
 const selectedBudgetType = ref('all')
 const budgetType = ref('annual')
@@ -798,6 +805,7 @@ const canEditType = (expenseType) => {
 }
 
 const saveEditedAllocation = async () => {
+  editSaveLoading.value = true
   try {
     const allocations = []
     let totalAllocated = 0
@@ -855,6 +863,8 @@ const saveEditedAllocation = async () => {
     console.log("[v0] Debug - currentUnappropriated:", currentUnappropriated)
     console.log("[v0] Debug - originalAllocationsTotal:", originalAllocationsTotal)
     console.log("[v0] Debug - totalAllocated:", totalAllocated)
+    console.log("[v0] Debug - allocations count:", allocations.length)
+    console.log("[v0] Debug - allocations:", allocations)
 
     // Calculate available budget by adding back the original allocations
     const availableBudgetForEdit = currentUnappropriated + originalAllocationsTotal
@@ -865,8 +875,14 @@ const saveEditedAllocation = async () => {
       throw new Error(`Total allocation (₱${totalAllocated.toFixed(2)}) exceeds available budget (₱${availableBudgetForEdit.toFixed(2)})`)
     }
 
-    // Use the appropriation store's commitAllocation method instead of calling API directly
-    await appropriationStore.commitAllocation(appropriationStore.selectedRow.id, allocations)
+    // Use the appropriation store's commitAllocation method with background refresh for better performance
+    await appropriationStore.commitAllocation(appropriationStore.selectedRow.id, allocations, { backgroundRefresh: true })
+
+    // Update the local state instead of refetching all budgets
+    if (appropriationStore.selectedRow) {
+      // Update the selected row's allocations locally
+      appropriationStore.selectedRow.allocations = allocations
+    }
 
     $q.notify({
       type: 'positive',
@@ -876,11 +892,20 @@ const saveEditedAllocation = async () => {
     })
     showEditAllocationDialog.value = false
     typeErrorMap.value = {}
-    await appropriationStore.fetchBudgets()
   } catch (error) {
+    console.error('Save error:', error)
     let message = error.message || 'Failed to update allocations'
+    
+    // Handle backend validation errors specifically
     if (error.response && error.response.status === 422 && error.response.data && error.response.data.message) {
       message = error.response.data.message
+      console.log('Backend validation error:', error.response.data)
+      
+      // If it's a disbursement validation error, show it clearly
+      if (message.includes('disbursed amount')) {
+        message = `${message}`
+      }
+      
       const errorMap = {}
       editDisplayAccounts.value.forEach(expenseClass => {
         if (!expenseClass || !Array.isArray(expenseClass.children)) return
@@ -894,13 +919,15 @@ const saveEditedAllocation = async () => {
     } else {
       typeErrorMap.value = {}
     }
+    
     $q.notify({
       type: 'negative',
-      message,
+      message: message,
       icon: 'error',
       position: 'top',
     })
-    console.error(error)
+  } finally {
+    editSaveLoading.value = false
   }
 }
 
@@ -1013,6 +1040,38 @@ const handleEditAmountInput = (item, value) => {
     cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
   }
   item.amount = cleanValue
+}
+
+// Handle edit allocation input on blur: format to two decimals
+const handleEditAmountBlur = (item, value) => {
+  const formatted = formatToTwoDecimals(value)
+  item.amount = formatted
+}
+
+// Format input value to exactly two decimal places
+const formatToTwoDecimals = (value) => {
+  // Remove peso sign, commas, and spaces
+  const cleanValue = String(value).replace(/[₱,\s]/g, '')
+
+  if (cleanValue === '') return 0
+
+  // Handle multiple decimal points
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    const collapsed = parts[0] + '.' + parts.slice(1).join('')
+    return formatToTwoDecimals(collapsed)
+  }
+
+  // Limit decimal places to 2
+  if (parts.length === 2 && parts[1].length > 2) {
+    parts[1] = parts[1].substring(0, 2)
+  }
+
+  const num = parseFloat(parts.join('.'))
+  if (isNaN(num)) return 0
+
+  // Return numeric value with two decimals
+  return Math.round(num * 100) / 100
 }
 
 const handleEnterKey = (event) => {
