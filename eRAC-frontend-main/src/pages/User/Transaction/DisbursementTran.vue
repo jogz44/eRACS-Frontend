@@ -76,7 +76,7 @@
               @update:model-value="handleStatusChange"
             />
           </div>
-          
+
           <!-- Budget Source Filter -->
           <div class="col-md-2 col-sm-6 col-xs-12">
             <q-item-label class="q-mb-xs text-weight-medium">Budget Source:</q-item-label>
@@ -93,7 +93,7 @@
               @update:model-value="handleBudgetSourceChange"
             />
           </div>
-          
+
           <!-- Search Input -->
           <div class="col-md-2 col-sm-6 col-xs-12">
             <q-item-label class="q-mb-xs text-weight-medium">Search:</q-item-label>
@@ -109,7 +109,7 @@
               </template>
             </q-input>
           </div>
-          
+
           <!-- Date Range Filter -->
           <div class="col-md-2 col-sm-6 col-xs-12">
             <q-item-label class="q-mb-xs text-weight-medium">Date Range:</q-item-label>
@@ -139,7 +139,7 @@
               </template>
             </q-input>
           </div>
-          
+
           <!-- Clear Button -->
           <div class="col-md-1 col-sm-6 col-xs-12">
             <q-btn
@@ -152,10 +152,10 @@
               class="full-width"
             />
           </div>
-          
+
           <!-- Spacer to push Add button to the right -->
           <div class="col-md-2 col-sm-0 col-xs-0"></div>
-          
+
           <!-- Add Button -->
           <div class="col-md-1 col-sm-6 col-xs-12">
             <q-btn
@@ -517,7 +517,7 @@
                   <q-btn
                     dense
                     icon="delete"
-                    :color="canDelete(props.row) ? 'red' : 'grey'"
+                    :color="canDelete(props.row) ? 'blue' : 'grey'"
                     :disable="!canDelete(props.row)"
                     v-if="
                       (props.row.status === 'Pending' || props.row.status === 'Partial') &&
@@ -967,12 +967,12 @@ const filteredDisbursements = computed(() => {
   if (store.dateFrom && store.dateTo) {
     filtered = filtered.filter((disbursement) => {
       if (!disbursement.date) return false
-      
+
       // Convert disbursement date to DD/MM/YYYY format for comparison
-      const disbursementDate = disbursement.date.includes('/') 
-        ? disbursement.date 
+      const disbursementDate = disbursement.date.includes('/')
+        ? disbursement.date
         : new Date(disbursement.date).toLocaleDateString('en-GB')
-      
+
       return disbursementDate >= store.dateFrom && disbursementDate <= store.dateTo
     })
   }
