@@ -16,7 +16,7 @@ return new class extends Migration
             $table->bigIncrements('id');
             $table->unsignedBigInteger('barangay_id');
             $table->date('date');
-            $table->string('dv_number')->unique();
+            $table->string('dv_number');
             $table->string('cheque_number');
             $table->unsignedBigInteger('bank_id');
             $table->string('payee');
