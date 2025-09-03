@@ -409,8 +409,20 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
     filteredExpenseAccounts(state) {
       // Build a set of accountIds already added to prevent duplicates
       const addedIds = new Set((state.expenses || []).map(e => String(e.accountId)))
+      console.log('Added expense accountIds:', Array.from(addedIds))
+      console.log('Total expense accounts available:', this.expenseAccounts.length)
 
-      let base = this.expenseAccounts.filter(item => !addedIds.has(String(item.id)))
+      let base = this.expenseAccounts.filter(item => {
+        // Use the same logic as in openExpenseDetail to get the correct accountId
+        const itemAccountId = item.continuingAccountId || item.id
+        const isAlreadyAdded = addedIds.has(String(itemAccountId))
+        if (isAlreadyAdded) {
+          console.log(`Filtering out account: ${item.account} > ${item.expenseType} > ${item.expenseItem} (ID: ${itemAccountId})`)
+        }
+        return !isAlreadyAdded
+      })
+      
+      console.log('Filtered expense accounts remaining:', base.length)
 
       if (!state.expenseSearch.trim()) {
         return base
@@ -612,6 +624,22 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       }
     },
 
+    // Fetch single disbursement by ID
+    async fetchDisbursementById(id) {
+      try {
+        const config = getAuthConfig()
+        const response = await api.get(`/api/barangay/continuing-disbursements/${id}`, config)
+        
+        if (response.data?.status) {
+          return response.data.data
+        }
+        return null
+      } catch (error) {
+        console.error('Error fetching disbursement by ID:', error)
+        return null
+      }
+    },
+
 
 
     // Refresh expense accounts with balances
@@ -624,6 +652,19 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         console.error('Error refreshing expense accounts:', error)
       } finally {
         this.expenseTypeLoading = false
+      }
+    },
+
+    // Refresh continuing appropriations in the contApprStore
+    async refreshContinuingAppropriations() {
+      try {
+        // Import and use the contApprStore to refresh its data
+        const { useContApprStore } = await import('./contApprStore')
+        const contApprStore = useContApprStore()
+        await contApprStore.fetchContinuingAppropriations()
+        await contApprStore.fetchContinueAccounts()
+      } catch (error) {
+        console.warn('Failed to refresh continuing appropriations:', error)
       }
     },
 
@@ -667,6 +708,8 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
               // Set empty data to prevent infinite loading
               this.expenseData = []
               this.loading = false
+              // Don't re-throw the error - just log it and continue
+              console.warn('Continuing with empty expense data due to fetch error')
             }
           } else {
             console.log('Using existing expense data')
@@ -678,7 +721,8 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         console.error('Error in openDialog:', error)
         // Still open the dialog even if there's an error
         this.dialogs[dialogName] = true
-        throw error // Re-throw so the calling function can handle it
+        // Don't re-throw the error to prevent button loading state issues
+        console.warn('Dialog opened despite error:', error.message)
       }
     },
     
@@ -686,26 +730,89 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       this.dialogs[dialogName] = false
     },
 
-    openOrDetailsDialog(item) {
-      this.currentLiquidation = {
-        ...JSON.parse(JSON.stringify(item)),
-        orNumber: '',
-        orAmount: '',
-        orImage: null,
+    async openOrDetailsDialog(item) {
+      console.log('Opening OR details dialog for item:', item);
+      this.currentLiquidation = JSON.parse(JSON.stringify(item));
+
+      // Fetch existing OR Details from backend if this is a partial liquidation
+      if (item.id && item.status === 'Partial') {
+        try {
+          const config = getAuthConfig()
+          const res = await api.get(`/api/barangay/disbursements/${item.id}/or-details`, config);
+          console.log('Fetched existing OR details:', res.data.data);
+          const backendUrl = 'http://localhost:8000';
+          this.currentLiquidation.orDetails = res.data.data.map(or => {
+            // Convert YYYY-MM-DD to DD/MM/YYYY format
+            let formattedDate = '';
+            if (or.or_date) {
+              const dateParts = or.or_date.split('-');
+              if (dateParts.length === 3) {
+                formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+              }
+            }
+
+            return {
+              id: or.id, // Keep the original ID for updating
+              orDate: formattedDate,
+              orNumber: or.or_number,
+              orAmount: or.or_amount,
+              orImage: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
+              orPhotoUrl: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
+              serverPhotoPath: or.or_photo,
+              remarks: or.remarks || '',
+            };
+          });
+
+          // Set single remarks from the latest OR detail (most recent one)
+          if (res.data.data.length > 0) {
+            // Get the latest OR detail (last in the array) for remarks
+            const latestOrDetail = res.data.data[res.data.data.length - 1];
+            this.currentLiquidation.remarks = latestOrDetail.remarks || '';
+          }
+        } catch (error) {
+          console.error('Error fetching existing OR details:', error);
+          this.currentLiquidation.orDetails = [];
+        }
+      } else {
+        // For new liquidations, initialize empty - component will add initial row
+        this.currentLiquidation.orDetails = [];
       }
-      this.dialogs.orDetails = true
+
+      this.dialogs.orDetails = true;
     },
 
-    // In your disbursementStore.js actions
-    // In your actions
     // For viewing only (read-only)
-    openViewOrDetails(row) {
-      this.currentLiquidation = JSON.parse(JSON.stringify(row))
-      // Ensure orDetails exists
-      if (!this.currentLiquidation.orDetails) {
-        this.currentLiquidation.orDetails = []
+    async openViewOrDetails(row) {
+      this.currentLiquidation = JSON.parse(JSON.stringify(row));
+      // Fetch OR Details from backend
+      if (row.id) {
+        try {
+          const config = getAuthConfig()
+          const res = await api.get(`/api/barangay/disbursements/${row.id}/or-details`, config);
+          
+          const backendUrl = 'http://localhost:8000'; // Change if your backend runs elsewhere
+          this.currentLiquidation.orDetails = res.data.data.map(or => ({
+            orDate: or.or_date,
+            orNumber: or.or_number,
+            orAmount: or.or_amount,
+            orImage: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
+            orPhotoUrl: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
+          }));
+
+          // Set single remarks from the latest OR detail (most recent one)
+          if (res.data.data.length > 0) {
+            // Get the latest OR detail (last in the array) for remarks
+            const latestOrDetail = res.data.data[res.data.data.length - 1];
+            this.currentLiquidation.remarks = latestOrDetail.remarks || '';
+          }
+        } catch (error) {
+          console.error('Error fetching OR details:', error);
+          this.currentLiquidation.orDetails = [];
+        }
+      } else {
+        this.currentLiquidation.orDetails = [];
       }
-      this.dialogs.viewOrDetails = true
+      this.dialogs.viewOrDetails = true;
     },
 
     // Update openExpenseDetail to match your current structure
@@ -767,6 +874,12 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
           
           // Refresh disbursements list
           await this.fetchDisbursements()
+          
+          // Refresh expense accounts to reflect updated balances
+          await this.refreshExpenseAccountsWithBalances()
+          
+          // Refresh continuing appropriations to reflect updated balances
+          await this.refreshContinuingAppropriations()
           
           return { success: true, data: response.data.data }
         } else {
@@ -919,8 +1032,29 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       }
     },
 
-    openEditDisbursement(row) {
-      const disbursement = this.disbursements.find((d) => d.id === row.id)
+    async openEditDisbursement(row) {
+      // Set loading state for this specific disbursement
+      this.loadingEditDisbursement = row.id;
+
+      // Set a timeout to clear loading state if something goes wrong
+      const loadingTimeout = setTimeout(() => {
+        if (this.loadingEditDisbursement === row.id) {
+          this.loadingEditDisbursement = null;
+        }
+      }, 30000); // 30 second timeout
+
+      try {
+        // Ensure expense details are loaded for correct balance calculations
+        if (this.expenseDetailsData.length === 0) {
+          await this.fetchExpenseDetails()
+        }
+
+        // First fetch expense accounts to ensure we have the data for account names
+        await this.fetchContinuingAppropriations();
+
+        // Then fetch the disbursement with its expenses
+        const disbursement = await this.fetchDisbursementById(row.id);
+        
       if (disbursement) {
         this.forms.disbursement = {
           date: disbursement.date,
@@ -932,12 +1066,45 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         this.expenses = disbursement.expenses || []
         this.currentItem = { ...disbursement }
         this.dialogs.editDisbursement = true
+        }
+      } catch (error) {
+        console.error('Error in openEditDisbursement:', error);
+        throw error;
+      } finally {
+        clearTimeout(loadingTimeout);
+        this.loadingEditDisbursement = null;
       }
     },
 
-    saveEditedDisbursement() {
+    async saveEditedDisbursement() {
       if (!this.currentItem) return
 
+      this.savingDisbursement = true
+      try {
+        const config = getAuthConfig()
+        
+        // Convert date from DD/MM/YYYY to YYYY-MM-DD format for backend
+        const dateParts = this.forms.disbursement.date.split('/')
+        const formattedDate = dateParts.length === 3 ? `${dateParts[2]}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}` : this.forms.disbursement.date
+
+        const disbursementData = {
+          date: formattedDate,
+          dvNumber: this.forms.disbursement.dvNumber,
+          chequeNumber: this.forms.disbursement.chequeNumber,
+          bank_id: this.forms.disbursement.bank_id,
+          payee: this.forms.disbursement.payee,
+          amount: this.totalExpensesAmount,
+          expenses: this.expenses.map(expense => ({
+            accountId: expense.accountId,
+            particulars: expense.particular,
+            amount: expense.amount
+          }))
+        }
+
+        const response = await api.put(`/api/barangay/continuing-disbursements/${this.currentItem.id}`, disbursementData, config)
+        
+        if (response.data?.status) {
+          // Update the local disbursement
       const index = this.disbursements.findIndex((d) => d.id === this.currentItem.id)
       if (index !== -1) {
         this.disbursements[index] = {
@@ -946,7 +1113,31 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
           expenses: [...this.expenses],
           dvAmount: this.totalExpensesAmount,
         }
+          }
+          
         this.closeDialog('editDisbursement')
+          
+          // Refresh disbursements list
+          await this.fetchDisbursements()
+          
+          // Refresh expense accounts to reflect updated balances
+          await this.refreshExpenseAccountsWithBalances()
+          
+          // Refresh continuing appropriations to reflect updated balances
+          await this.refreshContinuingAppropriations()
+          
+          return { success: true, data: response.data.data }
+        } else {
+          return { success: false, error: response.data?.message || 'Failed to update disbursement' }
+        }
+      } catch (error) {
+        console.error('Error updating disbursement:', error)
+        return { 
+          success: false, 
+          error: error.response?.data?.message || error.message || 'Failed to update disbursement' 
+        }
+      } finally {
+        this.savingDisbursement = false
       }
     },
 
@@ -963,21 +1154,208 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       reader.readAsDataURL(file)
     },
 
+    async uploadOrPhoto(file) {
+      try {
+        const config = getAuthConfig()
+        const formData = new FormData();
+        formData.append('photo', file, file.name);
+        
+        const response = await api.post('/api/barangay/disbursements/or-photo/upload', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            ...config.headers,
+          },
+        });
+        
+        return { success: true, path: response.data.path };
+      } catch (error) {
+        console.error('Upload error:', error.response?.data || error.message);
+        return { success: false, error: error.response?.data?.message || error.message };
+      }
+    },
+
     // Liquidation Actions
-    saveOrDetails() {
-      const index = this.liquidationData.findIndex((d) => d.id === this.currentLiquidation.id)
+    async saveOrDetails() {
+      if (!this.currentLiquidation) {
+        console.warn('currentLiquidation is not available')
+        return { success: false, error: 'No liquidation data available' }
+      }
 
+      // Check if all OR details are complete (photos are optional)
+      const allOrDetailsComplete = this.currentLiquidation.orDetails?.every(or =>
+        or.orNumber && or.orAmount && or.orDate
+      )
+
+      if (!allOrDetailsComplete) {
+        console.warn('Not all OR details are complete')
+        return { success: false, error: 'Not all OR details are complete' }
+      }
+
+      try {
+        const config = getAuthConfig()
+        
+        // Skip photo upload for now - use placeholder for all photos
+        for (let i = 0; i < this.currentLiquidation.orDetails.length; i++) {
+          const orDetail = this.currentLiquidation.orDetails[i]
+          
+          if (orDetail.orImageFile && !orDetail.serverPhotoPath) {
+            console.log(`Skipping photo upload for OR ${orDetail.orNumber || i + 1} - using placeholder`);
+            this.currentLiquidation.orDetails[i].serverPhotoPath = 'no-photo'
+          }
+        }
+        
+        // Calculate total actual expense from OR details
+        const totalActualExpense = this.currentLiquidation.orDetails?.reduce(
+          (sum, or) => sum + (parseFloat(or.orAmount) || 0), 0
+        ) || 0
+
+        // Prepare the payload for complete liquidation
+        const payload = {
+          orDetails: this.currentLiquidation.orDetails.map(or => ({
+            id: or.id || null, // Include ID for existing OR details
+            orNumber: or.orNumber,
+            orAmount: or.orAmount,
+            orDate: or.orDate || '',
+            remarks: this.currentLiquidation.remarks || '', // Use single remarks for all OR details
+            orPhotoUrl: or.serverPhotoPath || 'no-photo', // Use server path or placeholder
+          })),
+          liquidatedAmount: totalActualExpense,
+          isPartial: false, // Flag to indicate complete liquidation
+        }
+
+        console.log('Sending liquidation payload:', JSON.stringify(payload, null, 2))
+        console.log('OR Details being sent:', this.currentLiquidation.orDetails)
+        const response = await api.post(`/api/barangay/disbursements/${this.currentLiquidation.id}/or-details`, payload, config)
+        
+        if (response.data?.status) {
+          // Update the local disbursement
+          const index = this.disbursements.findIndex((d) => d.id === this.currentLiquidation.id)
       if (index !== -1) {
-        const hasOrDetails =
-          this.currentLiquidation.orNumber &&
-          this.currentLiquidation.orAmount &&
-          this.currentLiquidation.orImage
+            this.disbursements[index].status = response.data.data.status
+            this.disbursements[index].liquidated_amount = response.data.data.liquidated_amount
+          }
+          
+          this.closeDialog('orDetails')
+          
+          // Refresh disbursements list
+          await this.fetchDisbursements()
+          
+          // Refresh expense accounts to reflect updated balances
+          await this.refreshExpenseAccountsWithBalances()
+          
+          // Refresh continuing appropriations to reflect updated balances
+          await this.refreshContinuingAppropriations()
+          
+          return { success: true, data: response.data.data }
+        } else {
+          return { success: false, error: response.data?.message || 'Failed to liquidate disbursement' }
+        }
+      } catch (error) {
+        console.error('Error liquidating disbursement:', error)
+        return { 
+          success: false, 
+          error: error.response?.data?.message || error.message || 'Failed to liquidate disbursement' 
+        }
+      }
+    },
 
-        this.liquidationData[index] = {
-          ...this.currentLiquidation,
-          liquidated: hasOrDetails ? 'Yes' : 'No',
-          actualExpense: this.currentLiquidation.orAmount,
-          returnAmount: this.currentLiquidation.dvAmount - this.currentLiquidation.orAmount,
+    async savePartialOrDetails() {
+      if (!this.currentLiquidation) {
+        console.warn('currentLiquidation is not available')
+        return { success: false, error: 'No liquidation data available' }
+      }
+
+      // Check if all OR details are complete (photos are optional)
+      const allOrDetailsComplete = this.currentLiquidation.orDetails?.every(or =>
+        or.orNumber && or.orAmount && or.orDate
+      )
+
+      if (!allOrDetailsComplete) {
+        console.warn('Not all OR details are complete')
+        return { success: false, error: 'Not all OR details are complete' }
+      }
+
+      try {
+        const config = getAuthConfig()
+        
+        // Skip photo upload for now - use placeholder for all photos
+        for (let i = 0; i < this.currentLiquidation.orDetails.length; i++) {
+          const orDetail = this.currentLiquidation.orDetails[i]
+          
+          if (orDetail.orImageFile && !orDetail.serverPhotoPath) {
+            console.log(`Skipping photo upload for OR ${orDetail.orNumber || i + 1} - using placeholder`);
+            this.currentLiquidation.orDetails[i].serverPhotoPath = 'no-photo'
+          }
+        }
+        
+        // Calculate total actual expense from OR details
+        const totalActualExpense = this.currentLiquidation.orDetails?.reduce(
+          (sum, or) => sum + (parseFloat(or.orAmount) || 0), 0
+        ) || 0
+
+        // Get today's date in DD/MM/YYYY format for fallback
+        const today = new Date()
+        const dd = String(today.getDate()).padStart(2, '0')
+        const mm = String(today.getMonth() + 1).padStart(2, '0')
+        const yyyy = today.getFullYear()
+        const todayFormatted = `${dd}/${mm}/${yyyy}`
+
+        // Prepare the payload for partial liquidation
+        const payload = {
+          orDetails: this.currentLiquidation.orDetails.map(or => {
+            // Ensure orDate is in DD/MM/YYYY format
+            let formattedDate = or.orDate || todayFormatted
+            if (formattedDate && !formattedDate.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+              // If date is not in DD/MM/YYYY format, use today's date
+              formattedDate = todayFormatted
+            }
+            
+            return {
+              id: or.id || null, // Include ID for existing OR details
+              orNumber: or.orNumber,
+              orAmount: or.orAmount,
+              orDate: formattedDate, // Ensure proper DD/MM/YYYY format
+              remarks: this.currentLiquidation.remarks || '', // Use single remarks for all OR details
+              orPhotoUrl: or.serverPhotoPath || 'no-photo', // Use server path or placeholder
+            }
+          }),
+          liquidatedAmount: totalActualExpense,
+          isPartial: true, // Flag to indicate partial liquidation
+        }
+
+        console.log('Sending liquidation payload:', JSON.stringify(payload, null, 2))
+        console.log('OR Details being sent:', this.currentLiquidation.orDetails)
+        const response = await api.post(`/api/barangay/disbursements/${this.currentLiquidation.id}/or-details`, payload, config)
+        
+        if (response.data?.status) {
+          // Update the local disbursement
+          const index = this.disbursements.findIndex((d) => d.id === this.currentLiquidation.id)
+          if (index !== -1) {
+            this.disbursements[index].status = response.data.data.status
+            this.disbursements[index].liquidated_amount = response.data.data.liquidated_amount
+          }
+          
+          this.closeDialog('orDetails')
+          
+          // Refresh disbursements list
+          await this.fetchDisbursements()
+          
+          // Refresh expense accounts to reflect updated balances
+          await this.refreshExpenseAccountsWithBalances()
+          
+          // Refresh continuing appropriations to reflect updated balances
+          await this.refreshContinuingAppropriations()
+          
+          return { success: true, data: response.data.data }
+        } else {
+          return { success: false, error: response.data?.message || 'Failed to save partial liquidation' }
+        }
+      } catch (error) {
+        console.error('Error saving partial liquidation:', error)
+        console.error('Error response:', error.response?.data)
+        return { 
+          success: false, 
+          error: error.response?.data?.message || error.response?.data?.errors || error.message || 'Failed to save partial liquidation' 
         }
       }
     },
@@ -987,10 +1365,22 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         this.currentLiquidation.orDetails = []
       }
 
+      // Get today's date in DD/MM/YYYY format
+      const today = new Date()
+      const dd = String(today.getDate()).padStart(2, '0')
+      const mm = String(today.getMonth() + 1).padStart(2, '0')
+      const yyyy = today.getFullYear()
+      const todayFormatted = `${dd}/${mm}/${yyyy}`
+
       this.currentLiquidation.orDetails.push({
         orNumber: '',
         orAmount: '',
+        orDate: todayFormatted, // Preload with today's date
         orImage: null,
+        orImageFile: null,
+        orPhotoUrl: null,
+        serverPhotoPath: null,
+        remarks: '',
       })
 
       this.calculateTotals()
@@ -1008,12 +1398,39 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       this.currentLiquidation.returnAmount = this.currentLiquidation.dvAmount - totalOrAmount
     },
 
+    async deleteOrDetail(disbursementId, orDetailId) {
+      try {
+        const config = getAuthConfig()
+
+        const response = await api.delete(`/api/barangay/disbursements/${disbursementId}/or-details/${orDetailId}`, config)
+
+        if (response.data.status) {
+          // Remove the OR detail from the local array
+          if (this.currentLiquidation?.orDetails) {
+            this.currentLiquidation.orDetails = this.currentLiquidation.orDetails.filter(
+              or => or.id !== orDetailId
+            )
+          }
+
+          return { success: true, message: response.data.message }
+        } else {
+          return { success: false, message: response.data.message }
+        }
+      } catch (error) {
+        console.error('Failed to delete OR detail:', error)
+        return {
+          success: false,
+          message: error.response?.data?.message || 'Failed to delete OR detail'
+        }
+      }
+    },
+
     uploadOrImageForLiquidation(files, index) {
       const reader = new FileReader()
       reader.onload = (e) => {
         this.currentLiquidation.orDetails[index].orImage = e.target.result
       }
       reader.readAsDataURL(files[0])
-    },
+    }
   },
 })

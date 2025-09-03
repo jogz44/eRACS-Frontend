@@ -486,19 +486,34 @@
                   v-permission="'view'"
                 />
 
+                <!-- Treasurer: Request void -->
                 <q-btn
                   dense
-                  icon="delete"
-                  :color="canDelete(props.row) ? 'red' : 'grey'"
-                  :disable="!canDelete(props.row)"
+                  icon="block"
+                  color="red"
                   v-if="
                     isTreasurer &&
-                    (props.row.status === 'Pending' || props.row.status === 'Partial')
+                    (props.row.status === 'Pending' || props.row.status === 'Partial') &&
+                    canVoid(props.row)
                   "
                   @click.stop="() => handleVoidDisbursement(props.row)"
                   v-permission="'delete'"
                 />
-                <div v-else-if="isApprover">
+                <!-- Captain/SK Chairperson: Direct void -->
+                <q-btn
+                  dense
+                  icon="block"
+                  color="red"
+                  v-if="
+                    isApprover &&
+                    (props.row.status === 'Pending' || props.row.status === 'Partial') &&
+                    canVoid(props.row)
+                  "
+                  @click.stop="() => handleDirectVoidDisbursement(props.row)"
+                  v-permission="'delete'"
+                />
+                <!-- Approver: Handle void requests -->
+                <div v-if="isApprover">
                   <q-btn
                     dense
                     icon="check_circle"
@@ -513,17 +528,6 @@
                     color="grey"
                     v-if="props.row.status === 'Void Requested'"
                     @click="handleRejectVoid(props.row)"
-                  />
-                  <q-btn
-                    dense
-                    icon="delete"
-                    :color="canDelete(props.row) ? 'blue' : 'grey'"
-                    :disable="!canDelete(props.row)"
-                    v-if="
-                      (props.row.status === 'Pending' || props.row.status === 'Partial') &&
-                      canDelete(props.row)
-                    "
-                    @click.stop="() => handleDeleteDisbursement(props.row)"
                   />
                 </div>
               </div>
@@ -577,7 +581,7 @@
       <ViewOrDetails v-model="store.dialogs.viewOrDetails" />
       <EditDisbursement />
 
-      <!-- Void Dialog -->
+      <!-- Void Request Dialog (for Treasurers) -->
       <q-dialog v-model="store.dialogs.void" persistent>
         <q-card style="min-width: 500px; max-width: 90vw">
           <q-card-section class="q-pb-none">
@@ -585,7 +589,7 @@
           </q-card-section>
 
           <q-card-section>
-            <div class="text-body1 q-mb-md">Please provide remarks for this void request.</div>
+            <div class="text-body1 q-mb-md">Please provide remarks for this void request. The request will be sent to the Barangay Captain or SK Chairperson for approval.</div>
 
             <q-input
               outlined
@@ -594,7 +598,7 @@
               type="textarea"
               rows="3"
               :rules="[(val) => (!!val && val.trim() !== '') || 'Remarks are required']"
-              hint="Reason for voiding this disbursement"
+              hint="Reason for requesting to void this disbursement"
             />
           </q-card-section>
 
@@ -675,18 +679,13 @@ const getAgingDays = (agingString) => {
   return match ? parseInt(match[1]) : 0
 }
 
-function canDelete(row) {
-  // Cannot delete if liquidated (regardless of return amount)
-  if (row.status === 'Liquidated') return false
-
-  // Can only delete if pending or partial
+function canVoid(row) {
+  // Can only void if pending or partial
   if (!(row.status === 'Pending' || row.status === 'Partial')) return false
 
-  // For Treasurers and Approvers: Check aging restriction (≤ 1 day can be deleted)
-  if (isTreasurer.value || isApprover.value) {
-    const aging = Number(getAgingDays(row.aging))
-    if (Number.isNaN(aging) || aging > 1) return false
-  }
+  // Check aging restriction (≤ 1 day can be voided)
+  const aging = Number(getAgingDays(row.aging))
+  if (Number.isNaN(aging) || aging > 1) return false
 
   return true
 }
@@ -739,37 +738,49 @@ const onDateRangeClear = () => {
   store.dateTo = ''
 }
 
-// Handle delete disbursement (for Captains/Chairpersons to delete after void approval)
-const handleDeleteDisbursement = async (row) => {
-  try {
-    const result = await store.deleteDisbursement(row.id)
-    if (result.success) {
-      $q.notify({
-        type: 'positive',
-        message: 'Disbursement deleted successfully!',
-        icon: 'check_circle',
-        position: 'top',
-        timeout: 3000,
-      })
-    } else {
+// Handle direct void disbursement (for Captains/SK Chairpersons)
+const handleDirectVoidDisbursement = (row) => {
+  $q.dialog({
+    title: 'Void Disbursement',
+    message: 'Please provide remarks for voiding this disbursement:',
+    prompt: {
+      model: '',
+      type: 'textarea',
+      isValid: (val) => val && val.trim() !== '',
+    },
+    cancel: true,
+    persistent: true,
+  }).onOk(async (remarks) => {
+    try {
+      const result = await store.voidDisbursementDirectly(row.id, remarks?.trim?.() || '')
+      if (result.success) {
+        $q.notify({
+          type: 'positive',
+          message: 'Disbursement voided successfully!',
+          icon: 'block',
+          position: 'top',
+          timeout: 3000,
+        })
+      } else {
+        $q.notify({
+          type: 'negative',
+          message: result.message || 'Failed to void disbursement',
+          icon: 'error',
+          position: 'top',
+          timeout: 5000,
+        })
+      }
+    } catch (error) {
+      console.error('Error voiding disbursement:', error)
       $q.notify({
         type: 'negative',
-        message: result.message || 'Failed to delete disbursement',
+        message: error.message || 'An error occurred while voiding the disbursement',
         icon: 'error',
         position: 'top',
         timeout: 5000,
       })
     }
-  } catch (error) {
-    console.error('Error deleting disbursement:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'An error occurred while deleting the disbursement',
-      icon: 'error',
-      position: 'top',
-      timeout: 5000,
-    })
-  }
+  })
 }
 
 // Status color helpers

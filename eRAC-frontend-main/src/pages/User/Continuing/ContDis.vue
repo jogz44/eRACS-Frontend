@@ -366,27 +366,38 @@
         >
           <template v-slot:body-cell-action="props">
             <q-td :props="props">
-              <div class="q-gutter-xs">
+              <div class="row q-gutter-xs items-center justify-center">
                 <q-btn
                   dense
                   icon="edit"
-                  color="orange"
-                  @click="store.openEditDisbursement(props.row)"
+                  :color="
+                    props.row.status === 'Pending' || props.row.status === 'Partial'
+                      ? 'orange'
+                      : 'grey'
+                  "
+                  :disable="props.row.status !== 'Pending' && props.row.status !== 'Partial'"
+                  :loading="store.loadingEditDisbursement === props.row.id"
+                  @click="handleEditDisbursement(props.row)"
                   v-permission="'edit'"
                 />
                 <q-btn
                   dense
                   icon="visibility"
                   color="blue"
-                  @click="store.openViewOrDetails(props.row)"
+                  @click="handleViewDisbursement(props.row)"
+                  :loading="viewLoading[props.row.id]"
+                  :disable="viewLoading[props.row.id]"
                   v-permission="'view'"
                 />
                 <q-btn
                   dense
                   label="Liquidate"
                   color="primary"
-                  @click="store.openOrDetailsDialog(props.row)"
-                  v-permission="'edit'"
+                  v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
+                  @click="handleLiquidateDisbursement(props.row)"
+                  :loading="liquidateLoading[props.row.id]"
+                  :disable="liquidateLoading[props.row.id]"
+                  v-permission="'add'"
                 />
               </div>
             </q-td>
@@ -394,8 +405,9 @@
         </q-table>
       </q-card>
 
-      <ContLiquidateDialog v-model="store.dialogs.orDetails" />
+      <ContLiquidateDialog v-model="store.dialogs.orDetails" @save="handleLiquidateSave" />
       <ContViewOr v-model="store.dialogs.viewOrDetails" />
+      <ContEditDisburse v-model="store.dialogs.editDisbursement" @save="handleEditSave" />
     </div>
   </q-page>
 </template>
@@ -407,6 +419,7 @@ import { useContDisbursementStore } from 'src/stores/contDisburseStore'
 import { useBankStore } from 'src/stores/bankStore'
 import ContLiquidateDialog from 'src/components/contDisburse/ContOrDetails.vue'
 import ContViewOr from 'src/components/contDisburse/ContViewOr.vue'
+import ContEditDisburse from 'src/components/contDisburse/ContEditDisburse.vue'
 import { usePageLogging } from 'src/composables/usePageLogging'
 
 const $q = useQuasar()
@@ -415,6 +428,8 @@ const addingExpense = ref(false)
 const store = useContDisbursementStore()
 const bankStore = useBankStore()
 const dateRange = ref(null)
+const viewLoading = ref({})
+const liquidateLoading = ref({})
 
 
 
@@ -537,19 +552,32 @@ const handleBankSelection = async (bankId) => {
 
 const handleAddExpense = async () => {
   addingExpense.value = true
+  console.log('Add button clicked, starting to open expense dialog...')
+  
   try {
-    await store.openDialog('expense')
+    // Add a timeout to prevent infinite loading
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Dialog opening timed out after 15 seconds')), 15000)
+    })
+    
+    await Promise.race([
+      store.openDialog('expense'),
+      timeoutPromise
+    ])
+    
+    console.log('Expense dialog opened successfully')
   } catch (error) {
     console.error('Error opening expense dialog:', error)
     $q.notify({
       type: 'negative',
-      message: 'Failed to open expense dialog',
+      message: 'Failed to open expense dialog: ' + (error.message || 'Unknown error'),
       icon: 'error',
       position: 'top',
-      timeout: 3000,
+      timeout: 5000,
     })
   } finally {
     addingExpense.value = false
+    console.log('Add button loading state reset')
   }
 }
 
@@ -667,6 +695,102 @@ const clearAllFilters = () => {
   store.dateFrom = ''
   store.dateTo = ''
   dateRange.value = null
+}
+
+// Handle edit disbursement with loading state
+const handleEditDisbursement = async (row) => {
+  try {
+    await store.openEditDisbursement(row)
+  } catch (error) {
+    console.error('Error opening edit disbursement:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to open edit disbursement',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000,
+    })
+  }
+}
+
+// Handle edit save result
+const handleEditSave = async (result) => {
+  if (result.success) {
+    $q.notify({
+      type: 'positive',
+      message: 'Disbursement updated successfully!',
+      icon: 'check_circle',
+      position: 'top',
+      timeout: 3000,
+    })
+  } else {
+    $q.notify({
+      type: 'negative',
+      message: result.error || 'Failed to update disbursement',
+      icon: 'error',
+      position: 'top',
+      timeout: 5000,
+    })
+  }
+}
+
+// Handle liquidate save result
+const handleLiquidateSave = async (result) => {
+  if (result.success) {
+    $q.notify({
+      type: 'positive',
+      message: 'Disbursement liquidated successfully!',
+      icon: 'check_circle',
+      position: 'top',
+      timeout: 3000,
+    })
+  } else {
+    $q.notify({
+      type: 'negative',
+      message: result.error || 'Failed to liquidate disbursement',
+      icon: 'error',
+      position: 'top',
+      timeout: 5000,
+    })
+  }
+}
+
+// Handle view disbursement with loading state
+const handleViewDisbursement = async (row) => {
+  viewLoading.value[row.id] = true
+  try {
+    await store.openViewOrDetails(row)
+  } catch (error) {
+    console.error('Error opening view disbursement:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to open view disbursement',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000,
+    })
+  } finally {
+    viewLoading.value[row.id] = false
+  }
+}
+
+// Handle liquidate disbursement with loading state
+const handleLiquidateDisbursement = async (row) => {
+  liquidateLoading.value[row.id] = true
+  try {
+    await store.openOrDetailsDialog(row)
+  } catch (error) {
+    console.error('Error opening liquidate disbursement:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to open liquidate disbursement',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000,
+    })
+  } finally {
+    liquidateLoading.value[row.id] = false
+  }
 }
 
 
