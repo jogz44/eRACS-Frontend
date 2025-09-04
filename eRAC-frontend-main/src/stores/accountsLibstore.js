@@ -28,12 +28,14 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
     years: [],
     expenseClasses: [],
     expenseTypes: [],
-    expenseItems: [], // Add this line
+    expenseItems: [],
+    expenseSubItems: [], // Add sub-items state
     selectedYear: null,
     loading: false,
     error: null,
     fetchedTypes: reactive(new Set()), // classId-year combo
     fetchedItems: reactive(new Set()),
+    fetchedSubItems: reactive(new Set()), // Add sub-items tracking
   }),
 
   getters: {
@@ -636,6 +638,165 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
         throw new Error(error.response?.data?.message || error.message || 'Failed to copy classes')
       } finally {
         this.loading = false
+      }
+    },
+
+    // Expense Sub-Items Methods
+    async fetchExpenseSubItems(expenseClassId, expenseTypeId, expenseItemId, forceRefresh = false) {
+      const year = this.years.find((y) => y.id == this.selectedYear)?.year
+      const key = `${expenseClassId}-${expenseTypeId}-${expenseItemId}-${year}`
+
+      if (this.fetchedSubItems.has(key) && !forceRefresh) return
+
+      this.loading = true
+      try {
+        const response = await api.get(
+          `/api/barangay/expense-classes/${expenseClassId}/types/${expenseTypeId}/items/${expenseItemId}/sub-items`,
+          getAuthConfig(),
+        )
+
+        const apiData = response.data?.data
+        const subItemsData = apiData?.data || apiData
+
+        if (!Array.isArray(subItemsData)) {
+          console.error('Expected array but got:', subItemsData)
+          throw new Error('API did not return an array of expense sub-items')
+        }
+
+        // Filter out existing sub-items for this item
+        this.expenseSubItems = this.expenseSubItems.filter(
+          (subItem) =>
+            !(subItem.expense_class_id == expenseClassId &&
+              subItem.expense_type_id == expenseTypeId &&
+              subItem.expense_item_id == expenseItemId),
+        )
+
+        // Add new sub-items
+        this.expenseSubItems.push(
+          ...subItemsData.map((subItem) => ({
+            id: subItem.id,
+            name: subItem.name,
+            expense_class_id: subItem.expense_class_id || expenseClassId,
+            expense_type_id: subItem.expense_type_id || expenseTypeId,
+            expense_item_id: subItem.expense_item_id || expenseItemId,
+            order: subItem.order || 0,
+            year: this.years.find((y) => y.id == this.selectedYear)?.year?.toString() || null,
+          })),
+        )
+
+        this.fetchedSubItems.add(key)
+        return subItemsData
+      } catch (error) {
+        console.error('Error fetching expense sub-items:', error)
+        this.error =
+          error.response?.data?.message || error.message || 'Failed to load expense sub-items'
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async createExpenseSubItem(subItemData) {
+      this.loading = true
+      try {
+        const authStore = useAuthStore()
+        const response = await api.post(
+          `/api/barangay/expense-classes/${subItemData.expenseClassId}/types/${subItemData.expenseTypeId}/items/${subItemData.expenseItemId}/sub-items`,
+          {
+            name: subItemData.name,
+            barangay_id: authStore.user.barangay_id,
+          },
+          getAuthConfig(),
+        )
+
+        const newSubItem = response.data?.data || response.data
+
+        if (!newSubItem) {
+          throw new Error('No data returned from API')
+        }
+
+        this.expenseSubItems.push({
+          id: newSubItem.id,
+          name: newSubItem.name,
+          expense_class_id: newSubItem.expense_class_id || subItemData.expenseClassId,
+          expense_type_id: newSubItem.expense_type_id || subItemData.expenseTypeId,
+          expense_item_id: newSubItem.expense_item_id || subItemData.expenseItemId,
+          order: newSubItem.order || this.expenseSubItems.length,
+          year: this.years.find((y) => y.id == this.selectedYear)?.year?.toString() || null,
+        })
+
+        return newSubItem
+      } catch (error) {
+        console.error('Error creating expense sub-item:', error)
+
+        if (error.response?.status === 422) {
+          const errors = error.response.data.errors
+          const firstError = Object.values(errors)[0][0]
+          throw new Error(firstError)
+        }
+
+        throw new Error(error.response?.data?.message || 'Failed to create expense sub-item')
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async updateExpenseSubItem(subItemData) {
+      this.loading = true
+      try {
+        const response = await api.put(
+          `/api/barangay/expense-classes/${subItemData.expenseClassId}/types/${subItemData.expenseTypeId}/items/${subItemData.expenseItemId}/sub-items/${subItemData.id}`,
+          {
+            name: subItemData.name,
+            order: subItemData.order || 0,
+          },
+          getAuthConfig(),
+        )
+
+        const updatedSubItem = response.data?.data || response.data
+
+        const index = this.expenseSubItems.findIndex((i) => i.id === subItemData.id)
+        if (index !== -1) {
+          this.expenseSubItems[index] = {
+            ...this.expenseSubItems[index],
+            ...updatedSubItem,
+          }
+        }
+
+        return updatedSubItem
+      } catch (error) {
+        console.error('Error updating expense sub-item:', error)
+        this.error = error.response?.data?.message || error.message
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async deleteExpenseSubItem(subItemData) {
+      this.loading = true
+      try {
+        await api.delete(
+          `/api/barangay/expense-classes/${subItemData.expenseClassId}/types/${subItemData.expenseTypeId}/items/${subItemData.expenseItemId}/sub-items/${subItemData.id}`,
+          getAuthConfig(),
+        )
+
+        this.expenseSubItems = this.expenseSubItems.filter((i) => i.id !== subItemData.id)
+      } catch (error) {
+        console.error('Error deleting expense sub-item:', error)
+        this.error = error.response?.data?.message || error.message
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async updateSubItemOrder(subItemData) {
+      try {
+        await this.updateExpenseSubItem(subItemData)
+      } catch (error) {
+        console.error('Error updating sub-item order:', error)
+        throw error
       }
     },
 
