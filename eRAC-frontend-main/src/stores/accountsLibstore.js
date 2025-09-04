@@ -715,15 +715,25 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
           throw new Error('No data returned from API')
         }
 
-        this.expenseSubItems.push({
+        const yearValue = this.years.find((y) => y.id == this.selectedYear)?.year?.toString()
+
+        const subItemToAdd = {
           id: newSubItem.id,
           name: newSubItem.name,
           expense_class_id: newSubItem.expense_class_id || subItemData.expenseClassId,
           expense_type_id: newSubItem.expense_type_id || subItemData.expenseTypeId,
           expense_item_id: newSubItem.expense_item_id || subItemData.expenseItemId,
           order: newSubItem.order || this.expenseSubItems.length,
-          year: this.years.find((y) => y.id == this.selectedYear)?.year?.toString() || null,
-        })
+          year: yearValue,
+        }
+
+        console.log('Adding sub-item to store:', subItemToAdd)
+        console.log('Current year:', this.selectedYear, 'Year value:', yearValue)
+
+        this.expenseSubItems.push(subItemToAdd)
+
+        // Force reactivity update
+        this.expenseSubItems = [...this.expenseSubItems]
 
         return newSubItem
       } catch (error) {

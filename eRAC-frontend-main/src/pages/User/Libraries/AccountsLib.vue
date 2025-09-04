@@ -1232,6 +1232,17 @@ const saveExpenseSubItem = async () => {
       expenseItemId: currentParentItem.value.id,
     })
 
+    // Ensure the parent item is expanded to show the new sub-item
+    expandedItems.value[currentParentItem.value.id] = true
+
+    // Re-fetch sub-items to ensure the new one is displayed
+    await accountsStore.fetchExpenseSubItems(
+      currentParentItem.value.expense_class_id,
+      currentParentItem.value.expense_type_id,
+      currentParentItem.value.id,
+      true // force refresh
+    )
+
     $q.notify({
       type: 'positive',
       message: 'Sub-item added successfully',
@@ -1338,10 +1349,15 @@ const getExpenseSubItemsForItem = (itemId) => {
   const yearValue = fiscalYear?.year?.toString()
 
   console.log(`Filtering sub-items for item ${itemId} and year ${yearValue}`)
+  console.log('All sub-items in store:', accountsStore.expenseSubItems)
+  console.log('Selected year:', selectedYear.value, 'Year value:', yearValue)
 
-  return accountsStore.expenseSubItems
+  const filteredSubItems = accountsStore.expenseSubItems
     .filter((subItem) => subItem.expense_item_id == itemId && subItem.year == yearValue)
     .sort((a, b) => (a.order || 0) - (b.order || 0))
+
+  console.log('Filtered sub-items:', filteredSubItems)
+  return filteredSubItems
 }
 
 const classExistsInYear = (className, year) => {
