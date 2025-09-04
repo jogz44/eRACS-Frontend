@@ -38,6 +38,26 @@ class DisbursementSeeder extends Seeder
 
                 if ($appropriations->isEmpty()) continue;
 
+                
+                $likePattern = 'DV-%'.substr($year, -2).'-'.$now->month.'-%';
+
+                $lastDisbursement = Disbursement::where('barangay_id', $barangay->id)
+                    ->where('dv_number', 'like', $likePattern)
+                    ->orderByDesc('dv_number')
+                    ->first();
+
+                if ($lastDisbursement) {
+                    $dv = $lastDisbursement->dv_number;
+                    $segments = explode('-', $dv);
+                    if (count($segments) === 4) {
+                        $lastSegment = $segments[3];
+                        $dvCounter = (int)$lastSegment;
+                    }
+                    $dvCounter++;
+                }else{
+                    $dvCounter = 1;
+                }
+
                 // exactly 6 disbursements per year
                 for ($d = 0; $d < 18; $d++) {
                     $status = ($d%3 == 0) ? 'Liquidated' : (($d%3 == 1) ? 'Partial' : 'Pending');
@@ -60,7 +80,7 @@ class DisbursementSeeder extends Seeder
                     if (!$chequeNumber) continue;
 
                     $base = Carbon::create($year, $now->month, $now->day);
-                    $startDate = $base->copy()->subMonths(1)->subDays(5);
+                    $startDate = $base->copy()->subMonths(1);
                     $createdAt = $faker->dateTimeBetween($startDate, $base);
 
                     $dvAmount = $faker->numberBetween(5, 50) * 1000;

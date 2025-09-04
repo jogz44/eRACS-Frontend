@@ -13,37 +13,23 @@
           <div class="text-caption">{{ selectedUser?.position }} - {{ selectedUser?.barangay }}</div>
         </div>
 
-        <!-- Filter Section -->
+        <!-- Search Filter -->
         <div class="filter-section q-mb-md">
           <div class="row items-center q-gutter-md">
             <div class="col-auto">
-              <q-select
-                v-model="selectedCategory"
-                :options="categoryOptions"
-                label="Filter by Category"
+              <q-input
+                v-model="searchQuery"
+                label="Search activities"
                 outlined
                 dense
                 clearable
-                emit-value
-                map-options
-                style="min-width: 200px;"
+                debounce="300"
+                style="min-width: 260px;"
               >
                 <template v-slot:prepend>
-                  <q-icon name="filter_list" />
+                  <q-icon name="search" />
                 </template>
-              </q-select>
-            </div>
-            <div class="col-auto">
-              <q-btn
-                v-if="selectedCategory"
-                flat
-                dense
-                color="red-10"
-                icon="clear"
-                label="Clear Filter"
-                @click="clearCategoryFilter"
-                size="sm"
-              />
+              </q-input>
             </div>
           </div>
         </div>
@@ -115,18 +101,14 @@ export default {
   setup(props, { emit }) {
     const loading = ref(false)
     const activities = ref([])
-    const selectedCategory = ref(null)
+    const searchQuery = ref('')
 
     const columns = [
       { name: 'created_at', label: 'Time', field: 'created_at', sortable: false, align: 'left' },
       { name: 'description', label: 'Activity Description', field: 'description', sortable: false, align: 'left' }
     ]
 
-    const categoryOptions = [
-      { label: 'Transactions', value: 'transactions' },
-      { label: 'Libraries', value: 'libraries' },
-      { label: 'Reports', value: 'reports' }
-    ]
+
 
     const dialogModel = computed({
       get: () => props.modelValue,
@@ -153,45 +135,24 @@ export default {
     }
 
     const VISITED_PREFIX = 'Visited '
-    
-    // Function to determine if an activity belongs to a specific category
-    const getActivityCategory = (activity) => {
-      // Use the combined activity and details for description
-      const desc = `${activity.activity} ${activity.details}`.toLowerCase();
 
-      // Transactions: Appropriation, Disbursement, Augmentation, Continuation (Appropriation/Disbursement)
-      if (
-        desc.includes('appropriation') ||
-        desc.includes('disbursement') ||
-        desc.includes('augmentation') ||
-        desc.includes('continuation (appropriation') ||
-        desc.includes('continuation (disbursement')
-      ) {
-        return 'transactions';
-      }
-      // Libraries: Library
-      if (desc.includes('library')) {
-        return 'libraries';
-      }
-      // Reports: Report
-      if (desc.includes('report')) {
-        return 'reports';
-      }
-      // Not in any filter category
-      return null;
-    }
-    
+
+
     const groupedRows = computed(() => {
-      let filteredActivities = activities.value;
-      if (selectedCategory.value) {
-        filteredActivities = activities.value.filter(activity => getActivityCategory(activity) === selectedCategory.value);
+      let filteredActivities = activities.value
+      if (searchQuery.value && searchQuery.value.trim() !== '') {
+        const q = searchQuery.value.toLowerCase().trim()
+        filteredActivities = activities.value.filter(activity => {
+          const combined = `${activity.activity} ${activity.details}`.toLowerCase()
+          return combined.includes(q)
+        })
       }
-      
+
       // First, find all page visits and create groups (keep original chronological order for grouping)
       const chronologicalActivities = [...filteredActivities].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
       const pageGroups = []
       const allActivities = []
-      
+
       chronologicalActivities.forEach((act, idx) => {
         if (typeof act.details === 'string' && act.details.startsWith(VISITED_PREFIX)) {
           pageGroups.push({
@@ -204,7 +165,7 @@ export default {
           })
         }
       })
-      
+
       // If no page visits found, create a default group
       if (pageGroups.length === 0) {
         const firstActivity = chronologicalActivities[0]
@@ -219,12 +180,12 @@ export default {
           })
         }
       }
-      
+
       // Now assign each activity to the appropriate page group (using chronological order)
       chronologicalActivities.forEach((act) => {
         const isVisited = typeof act.details === 'string' && act.details.startsWith(VISITED_PREFIX)
         const isAuth = act.activity === 'Login' || act.activity === 'Logout'
-        
+
         if (!isVisited && !isAuth) {
           // Find the most recent page visit that happened before this activity
           let targetGroup = null
@@ -234,23 +195,23 @@ export default {
               break
             }
           }
-          
+
           // If no suitable group found, add to the first group
           if (!targetGroup && pageGroups.length > 0) {
             targetGroup = pageGroups[0]
           }
-          
+
           if (targetGroup) {
             targetGroup.children.push(act)
           }
         }
       })
-      
+
       // Create a flat list of all activities (page visits and login/logout) in chronological order
       chronologicalActivities.forEach((act) => {
         const isVisited = typeof act.details === 'string' && act.details.startsWith(VISITED_PREFIX)
         const isAuth = act.activity === 'Login' || act.activity === 'Logout'
-        
+
         if (isVisited) {
           // Find the page group for this visit
           const pageGroup = pageGroups.find(group => group.header.id === act.id)
@@ -274,7 +235,7 @@ export default {
           })
         }
       })
-      
+
       // Sort all activities by timestamp (newest first)
       return allActivities.sort((a, b) => new Date(b.header.created_at) - new Date(a.header.created_at))
     })
@@ -283,23 +244,19 @@ export default {
     const formatDate = (dateString) => date.formatDate(dateString, 'MMMM D, YYYY')
 
     const closeDialog = () => { dialogModel.value = false }
-    
-    const clearCategoryFilter = () => {
-      selectedCategory.value = null
-    }
 
-    return { 
-      loading, 
-      activities, 
-      columns, 
-      formatTime, 
-      formatDate, 
-      closeDialog, 
-      dialogModel, 
+
+
+    return {
+      loading,
+      activities,
+      columns,
+      formatTime,
+      formatDate,
+      closeDialog,
+      dialogModel,
       groupedRows,
-      selectedCategory,
-      categoryOptions,
-      clearCategoryFilter
+      searchQuery
     }
   }
 }
@@ -308,11 +265,11 @@ export default {
 <style scoped>
 .card-table { background-color: white; }
 .user-info { border-bottom: 1px solid #e0e0e0; padding-bottom: 1rem; }
-.filter-section { 
-  background-color: #f8f9fa; 
-  border-radius: 8px; 
-  padding: 16px; 
-  border: 1px solid #e9ecef; 
+.filter-section {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #e9ecef;
 }
 .activity-description { white-space: normal; line-height: 1.4; }
 .children-list { border-left: 3px solid #e0e0e0; margin-left: 4px; padding-left: 10px; }

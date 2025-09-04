@@ -274,7 +274,6 @@ export default {
   },
   methods: {
     openAdminLogsActivity(row) {
-      console.log('Opening admin logs activity for row:', row);
       this.selectedLog = row;
       this.showAdminLogsActivity = true;
     },

@@ -2,7 +2,12 @@
   <q-page class="q-pa-md disbursement-page">
     <div class="page-header q-mb-md">
       <div class="row items-center justify-between">
-        <div class="text-h6 text-weight-medium">Disbursement Transaction</div>
+        <div>
+          <div class="text-h6 text-weight-medium">Disbursement Transaction</div>
+          <div class="text-caption text-grey-6">
+            Showing transactions for fiscal year {{ currentFiscalYear }}
+          </div>
+        </div>
         <q-btn
           icon="refresh"
           color="primary"
@@ -71,7 +76,7 @@
               @update:model-value="handleStatusChange"
             />
           </div>
-          
+
           <!-- Budget Source Filter -->
           <div class="col-md-2 col-sm-6 col-xs-12">
             <q-item-label class="q-mb-xs text-weight-medium">Budget Source:</q-item-label>
@@ -88,7 +93,7 @@
               @update:model-value="handleBudgetSourceChange"
             />
           </div>
-          
+
           <!-- Search Input -->
           <div class="col-md-2 col-sm-6 col-xs-12">
             <q-item-label class="q-mb-xs text-weight-medium">Search:</q-item-label>
@@ -104,7 +109,7 @@
               </template>
             </q-input>
           </div>
-          
+
           <!-- Date Range Filter -->
           <div class="col-md-2 col-sm-6 col-xs-12">
             <q-item-label class="q-mb-xs text-weight-medium">Date Range:</q-item-label>
@@ -134,7 +139,7 @@
               </template>
             </q-input>
           </div>
-          
+
           <!-- Clear Button -->
           <div class="col-md-1 col-sm-6 col-xs-12">
             <q-btn
@@ -147,10 +152,10 @@
               class="full-width"
             />
           </div>
-          
+
           <!-- Spacer to push Add button to the right -->
           <div class="col-md-2 col-sm-0 col-xs-0"></div>
-          
+
           <!-- Add Button -->
           <div class="col-md-1 col-sm-6 col-xs-12">
             <q-btn
@@ -481,19 +486,34 @@
                   v-permission="'view'"
                 />
 
+                <!-- Treasurer: Request void -->
                 <q-btn
                   dense
-                  icon="delete"
-                  :color="canDelete(props.row) ? 'red' : 'grey'"
-                  :disable="!canDelete(props.row)"
+                  icon="block"
+                  color="red"
                   v-if="
                     isTreasurer &&
-                    (props.row.status === 'Pending' || props.row.status === 'Partial')
+                    (props.row.status === 'Pending' || props.row.status === 'Partial') &&
+                    canVoid(props.row)
                   "
                   @click.stop="() => handleVoidDisbursement(props.row)"
                   v-permission="'delete'"
                 />
-                <div v-else-if="isApprover">
+                <!-- Captain/SK Chairperson: Direct void -->
+                <q-btn
+                  dense
+                  icon="block"
+                  color="red"
+                  v-if="
+                    isApprover &&
+                    (props.row.status === 'Pending' || props.row.status === 'Partial') &&
+                    canVoid(props.row)
+                  "
+                  @click.stop="() => handleDirectVoidDisbursement(props.row)"
+                  v-permission="'delete'"
+                />
+                <!-- Approver: Handle void requests -->
+                <div v-if="isApprover">
                   <q-btn
                     dense
                     icon="check_circle"
@@ -508,17 +528,6 @@
                     color="grey"
                     v-if="props.row.status === 'Void Requested'"
                     @click="handleRejectVoid(props.row)"
-                  />
-                  <q-btn
-                    dense
-                    icon="delete"
-                    :color="canDelete(props.row) ? 'red' : 'grey'"
-                    :disable="!canDelete(props.row)"
-                    v-if="
-                      (props.row.status === 'Pending' || props.row.status === 'Partial') &&
-                      canDelete(props.row)
-                    "
-                    @click.stop="() => handleDeleteDisbursement(props.row)"
                   />
                 </div>
               </div>
@@ -572,7 +581,7 @@
       <ViewOrDetails v-model="store.dialogs.viewOrDetails" />
       <EditDisbursement />
 
-      <!-- Void Dialog -->
+      <!-- Void Request Dialog (for Treasurers) -->
       <q-dialog v-model="store.dialogs.void" persistent>
         <q-card style="min-width: 500px; max-width: 90vw">
           <q-card-section class="q-pb-none">
@@ -580,7 +589,7 @@
           </q-card-section>
 
           <q-card-section>
-            <div class="text-body1 q-mb-md">Please provide remarks for this void request.</div>
+            <div class="text-body1 q-mb-md">Please provide remarks for this void request. The request will be sent to the Barangay Captain or SK Chairperson for approval.</div>
 
             <q-input
               outlined
@@ -589,7 +598,7 @@
               type="textarea"
               rows="3"
               :rules="[(val) => (!!val && val.trim() !== '') || 'Remarks are required']"
-              hint="Reason for voiding this disbursement"
+              hint="Reason for requesting to void this disbursement"
             />
           </q-card-section>
 
@@ -670,18 +679,13 @@ const getAgingDays = (agingString) => {
   return match ? parseInt(match[1]) : 0
 }
 
-function canDelete(row) {
-  // Cannot delete if liquidated (regardless of return amount)
-  if (row.status === 'Liquidated') return false
-
-  // Can only delete if pending or partial
+function canVoid(row) {
+  // Can only void if pending or partial
   if (!(row.status === 'Pending' || row.status === 'Partial')) return false
 
-  // For Treasurers and Approvers: Check aging restriction (≤ 1 day can be deleted)
-  if (isTreasurer.value || isApprover.value) {
-    const aging = Number(getAgingDays(row.aging))
-    if (Number.isNaN(aging) || aging > 1) return false
-  }
+  // Check aging restriction (≤ 1 day can be voided)
+  const aging = Number(getAgingDays(row.aging))
+  if (Number.isNaN(aging) || aging > 1) return false
 
   return true
 }
@@ -734,37 +738,49 @@ const onDateRangeClear = () => {
   store.dateTo = ''
 }
 
-// Handle delete disbursement (for Captains/Chairpersons to delete after void approval)
-const handleDeleteDisbursement = async (row) => {
-  try {
-    const result = await store.deleteDisbursement(row.id)
-    if (result.success) {
-      $q.notify({
-        type: 'positive',
-        message: 'Disbursement deleted successfully!',
-        icon: 'check_circle',
-        position: 'top',
-        timeout: 3000,
-      })
-    } else {
+// Handle direct void disbursement (for Captains/SK Chairpersons)
+const handleDirectVoidDisbursement = (row) => {
+  $q.dialog({
+    title: 'Void Disbursement',
+    message: 'Please provide remarks for voiding this disbursement:',
+    prompt: {
+      model: '',
+      type: 'textarea',
+      isValid: (val) => val && val.trim() !== '',
+    },
+    cancel: true,
+    persistent: true,
+  }).onOk(async (remarks) => {
+    try {
+      const result = await store.voidDisbursementDirectly(row.id, remarks?.trim?.() || '')
+      if (result.success) {
+        $q.notify({
+          type: 'positive',
+          message: 'Disbursement voided successfully!',
+          icon: 'block',
+          position: 'top',
+          timeout: 3000,
+        })
+      } else {
+        $q.notify({
+          type: 'negative',
+          message: result.message || 'Failed to void disbursement',
+          icon: 'error',
+          position: 'top',
+          timeout: 5000,
+        })
+      }
+    } catch (error) {
+      console.error('Error voiding disbursement:', error)
       $q.notify({
         type: 'negative',
-        message: result.message || 'Failed to delete disbursement',
+        message: error.message || 'An error occurred while voiding the disbursement',
         icon: 'error',
         position: 'top',
         timeout: 5000,
       })
     }
-  } catch (error) {
-    console.error('Error deleting disbursement:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'An error occurred while deleting the disbursement',
-      icon: 'error',
-      position: 'top',
-      timeout: 5000,
-    })
-  }
+  })
 }
 
 // Status color helpers
@@ -803,6 +819,9 @@ const userPosition = computed(() => authStore.user?.position_name || '')
 const isTreasurer = computed(() => /treasurer/i.test(userPosition.value))
 const isApprover = computed(() => /(captain|chairperson)/i.test(userPosition.value))
 
+// Current fiscal year
+const currentFiscalYear = computed(() => new Date().getFullYear())
+
 // Function to load all data with optimized loading strategy
 const loadAllData = async () => {
   loading.value = true
@@ -822,7 +841,7 @@ const loadAllData = async () => {
     if (!initialLoading.value) {
       $q.notify({
         type: 'positive',
-        message: 'Disbursement data loaded successfully!',
+        message: `Disbursement data for fiscal year ${currentFiscalYear.value} loaded successfully!`,
         icon: 'check_circle',
         position: 'top',
         timeout: 2000,
@@ -959,12 +978,12 @@ const filteredDisbursements = computed(() => {
   if (store.dateFrom && store.dateTo) {
     filtered = filtered.filter((disbursement) => {
       if (!disbursement.date) return false
-      
+
       // Convert disbursement date to DD/MM/YYYY format for comparison
-      const disbursementDate = disbursement.date.includes('/') 
-        ? disbursement.date 
+      const disbursementDate = disbursement.date.includes('/')
+        ? disbursement.date
         : new Date(disbursement.date).toLocaleDateString('en-GB')
-      
+
       return disbursementDate >= store.dateFrom && disbursementDate <= store.dateTo
     })
   }
@@ -1125,13 +1144,14 @@ const loadPendingUsers = async () => {
   loading.value = true
   try {
     // Only refresh disbursements and banks, skip expense accounts for faster refresh
+    // The fetchDisbursements method now automatically filters by current fiscal year
     const refreshPromises = [store.fetchDisbursements(), bankStore.fetchBanks()]
 
     await Promise.all(refreshPromises)
 
     $q.notify({
       type: 'positive',
-      message: 'Disbursements refreshed!',
+      message: `Disbursements for fiscal year ${currentFiscalYear.value} refreshed!`,
       icon: 'refresh',
       position: 'top',
       timeout: 3000,

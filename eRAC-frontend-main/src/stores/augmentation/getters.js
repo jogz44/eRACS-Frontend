@@ -122,11 +122,39 @@ export function useGetters(state) {
   ])
 
   const filteredAugmentations = computed(() => {
-    return state.augmentation.value.filter((augmentation) => {
-      const matchesSearch =
-        augmentation.remarks.toLowerCase().includes(state.searchQuery.value.toLowerCase()) ||
-        augmentation.totalAmount.toLowerCase().includes(state.searchQuery.value.toLowerCase())
-      const matchesDate = true // Add date filtering logic here
+    const parseFlexibleDate = (value) => {
+      if (!value) return null
+      if (value instanceof Date) return value
+      if (typeof value === 'string') {
+        if (value.includes('/')) {
+          const [dd, mm, yyyy] = value.split('/')
+          const d = new Date(`${yyyy}-${mm}-${dd}`)
+          return isNaN(d.getTime()) ? null : d
+        }
+        const d = new Date(value)
+        return isNaN(d.getTime()) ? null : d
+      }
+      return null
+    }
+
+    const from = parseFlexibleDate(state.dateFrom.value)
+    const to = parseFlexibleDate(state.dateTo.value)
+    const fromStart = from ? new Date(from.setHours(0, 0, 0, 0)) : null
+    const toEnd = to ? new Date(to.setHours(23, 59, 59, 999)) : null
+
+    const query = (state.searchQuery.value || '').toLowerCase().trim()
+
+    return (state.augmentation.value || []).filter((a) => {
+      // Search across remarks, ref number
+      const haystacks = [a.remarks, a.ref_number]
+      const matchesSearch = !query || haystacks.some((h) => String(h || '').toLowerCase().includes(query))
+
+      // Inclusive date range using augmentation_date
+      const dt = parseFlexibleDate(a.augmentation_date)
+      const matchesDate = !fromStart && !toEnd
+        ? true
+        : (dt && (!fromStart || dt >= fromStart) && (!toEnd || dt <= toEnd))
+
       return matchesSearch && matchesDate
     })
   })

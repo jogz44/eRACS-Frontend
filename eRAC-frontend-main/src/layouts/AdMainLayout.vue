@@ -497,8 +497,18 @@ const handleLogout = async () => {
                         // Save to localStorage for persistence across page refreshes
                         if (barangayId) {
                           localStorage.setItem('admin_selected_barangay', barangayId.toString())
+                          // Save barangay name for later display/logging
+                          try {
+                            const selected = (barangayOptions.value || []).find(b => b.id === barangayId)
+                            if (selected?.name) {
+                              localStorage.setItem('admin_selected_barangay_name', selected.name)
+                            }
+                          } catch (error) {
+                            console.error('Error saving barangay selection:', error)
+                          }
                         } else {
                           localStorage.removeItem('admin_selected_barangay')
+                          localStorage.removeItem('admin_selected_barangay_name')
                           // Show warning notification
                           $q.notify({
                             type: 'warning',

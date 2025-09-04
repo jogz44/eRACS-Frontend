@@ -65,18 +65,18 @@
 
         <div class="login-form">
 
-          <!-- Email input -->
+          <!-- Username input -->
           <q-input
             color="green"
             v-model="email"
-            label="Email"
-            type="email"
+            label="Username"
+            type="text"
             outlined
             dense
             bg-color="white"
             :prepend-icon="'user'"
             :error="showValidation && !email"
-            error-message="Email is required"
+            error-message="Username is required"
             @keydown.enter="handleEnterKey"
             class="q-mb-md"
           />
@@ -159,9 +159,9 @@
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn 
-            label="OK" 
-            color="primary" 
+          <q-btn
+            label="OK"
+            color="primary"
             @click="closeInactivityDialog"
           />
         </q-card-actions>
@@ -193,11 +193,11 @@ const goToUser = () => {
   router.push('/') // Make sure this matches your signup route
 }
 
-// Get signin title based on email
+// Get signin title based on username
 const getSigninTitle = () => {
-  if (email.value === 'coa@gmail.com') {
+  if (email.value === 'coa') {
     return 'COA Officer'
-  } else if (email.value === 'admin@gmail.com') {
+  } else if (email.value === 'admin') {
     return 'Super Administrator'
   }
   return 'Admin'
@@ -222,7 +222,7 @@ const handleLogin = async () => {
   loading.value = true
   try {
     await authStore.adminLogin({
-      email: email.value,
+      email: email.value, // Backend still expects 'email' field
       password: password.value,
     })
 
@@ -275,14 +275,14 @@ const handleGlobalKeydown = (event) => {
 onMounted(() => {
   const role = route.query.role
   if (role === 'coa') {
-    email.value = 'coa@gmail.com'
+    email.value = 'coa'
   } else if (role === 'superadmin') {
-    email.value = 'admin@gmail.com'
+    email.value = 'admin'
   }
 
   document.addEventListener('keydown', handleGlobalKeydown)
   console.log('Global keyboard listener added for admin login')
-  
+
   // Check if user was logged out due to inactivity
   if (localStorage.getItem('inactivity_logout')) {
     localStorage.removeItem('inactivity_logout')

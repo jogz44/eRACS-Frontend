@@ -181,6 +181,7 @@
 import { api } from 'boot/axios'
 import { useUserControlStore } from 'stores/userControlStore'
 import { usePageLogging } from '../../../composables/usePageLogging'
+import { useActivityLogging } from '../../../composables/useActivityLogging'
 
 export default {
   name: 'UserControlAcceptedPage',
@@ -310,6 +311,18 @@ export default {
       this.deleteModal.loading = true
       try {
         await api.delete(`/api/admin/users/${this.deleteModal.selectedRow.id}`)
+        // Log admin activity after successful deletion
+        try {
+          const { logAdminActivity } = useActivityLogging()
+          const u = this.deleteModal.selectedRow || {}
+          const fullName = u.name || [u.first_name, u.middle_name, u.last_name].filter(Boolean).join(' ').trim()
+          const position = (u.position && u.position.name) || u.position || u.position_name || 'Unknown Position'
+          const barangay = u.barangay || u.barangay_name || 'Unknown Barangay'
+          const details = `Admin deleted User "${fullName}" (${position} in ${barangay})`
+          await logAdminActivity('Deleted User', details)
+        } catch (e) {
+          console.warn('Failed to log delete activity:', e)
+        }
         this.users = this.users.filter(
           (user) => user.id !== this.deleteModal.selectedRow.id,
         )

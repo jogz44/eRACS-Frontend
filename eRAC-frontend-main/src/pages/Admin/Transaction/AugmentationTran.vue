@@ -30,7 +30,7 @@ import { useQuasar } from 'quasar'
 import { useAugmentationStore } from 'stores/augmentation'
 import { useAuthStore } from 'stores/auth'
 import AugmentationTable from 'components/augmentation/AugmentationTable.vue'
-import SearchFilters from 'pages/Admin/SearchFilters.vue'
+import SearchFilters from 'components/augmentation/SearchFilters.vue'
 import AugmentationDialog from 'components/augmentation/AugmentationDialog.vue'
 import { usePageLogging } from '../../../composables/usePageLogging'
 

@@ -13,6 +13,27 @@
           <div class="text-caption">{{ selectedUser?.position }} - {{ selectedUser?.barangay }}</div>
         </div>
 
+        <!-- Search Filter -->
+        <div class="filter-section q-mb-md">
+          <div class="row items-center q-gutter-md">
+            <div class="col-auto">
+              <q-input
+                v-model="searchQuery"
+                label="Search activities"
+                outlined
+                dense
+                clearable
+                debounce="300"
+                style="min-width: 260px;"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="search" />
+                </template>
+              </q-input>
+            </div>
+          </div>
+        </div>
+
 
         <q-table
           flat
@@ -80,6 +101,7 @@ export default {
   setup(props, { emit }) {
     const loading = ref(false)
     const activities = ref([])
+    const searchQuery = ref('')
 
     const columns = [
       { name: 'created_at', label: 'Time', field: 'created_at', sortable: false, align: 'left' },
@@ -103,7 +125,7 @@ export default {
 
     const loadActivities = async () => {
       loading.value = true
-      
+
       // Validate selectedUser data
       if (!props.selectedUser || !props.selectedUser.id || !props.selectedUser.log_date) {
         console.error('Invalid selectedUser data:', props.selectedUser)
@@ -111,45 +133,24 @@ export default {
         loading.value = false
         return
       }
-      
-      // Debug: Log the selectedUser data
-      console.log('Loading activities for user:', {
-        userId: props.selectedUser?.id,
-        logDate: props.selectedUser?.log_date,
-        userType: props.selectedUser?.user_type,
-        barangay: props.selectedUser?.barangay,
-        adminRole: props.selectedUser?.admin_role,
-        fullUser: props.selectedUser
-      })
-      
+
              try {
          // More explicit user type detection
          const userType = props.selectedUser.user_type
          const barangay = props.selectedUser.barangay
-         const adminRole = props.selectedUser.admin_role
-         
+
          // Determine if this is an admin user
          const isAdminUser = userType === 'admin' || barangay === 'Admin'
-         
-         console.log('User type check:', {
-           userType: userType,
-           barangay: barangay,
-           adminRole: adminRole,
-           isAdminUser: isAdminUser,
-           userId: props.selectedUser.id
-         })
-         
+
          let apiUrl
          if (isAdminUser) {
            // For admin users (super admin, COA officers), use the user logs endpoint with user_type parameter
            apiUrl = `/api/admin/logs/${props.selectedUser.id}/${props.selectedUser.log_date}?user_type=admin`
-           console.log('Loading admin logs from:', apiUrl)
          } else {
            // For regular barangay users, use the user logs endpoint with user_type parameter
            apiUrl = `/api/admin/logs/${props.selectedUser.id}/${props.selectedUser.log_date}?user_type=user`
-           console.log('Loading user logs from:', apiUrl)
          }
-        
+
         const response = await api.get(apiUrl, {
           headers: {
             'Authorization': `Bearer ${useAuthStore().adminToken}`,
@@ -157,9 +158,7 @@ export default {
             'Accept': 'application/json'
           }
         })
-        
-        console.log('API response:', response.data)
-        
+
         if (response.data && Array.isArray(response.data)) {
           activities.value = response.data
         } else {
@@ -170,7 +169,7 @@ export default {
         console.error('Error loading activities:', error)
         // Clear activities on error and show empty state
         activities.value = []
-        
+
         // Show user-friendly error message
         if (error.response?.status === 404) {
           console.warn('No logs found for this user and date')
@@ -193,11 +192,21 @@ export default {
 
     const VISITED_PREFIX = 'Visited '
     const groupedRows = computed(() => {
+      // Filter by search query first (case-insensitive search over activity and details)
+      let filteredActivities = activities.value
+      if (searchQuery.value && searchQuery.value.trim() !== '') {
+        const q = searchQuery.value.toLowerCase().trim()
+        filteredActivities = activities.value.filter(activity => {
+          const combined = `${activity.activity} ${activity.details}`.toLowerCase()
+          return combined.includes(q)
+        })
+      }
+
       // First, find all page visits and create groups (keep original chronological order for grouping)
-      const chronologicalActivities = [...activities.value].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      const chronologicalActivities = [...filteredActivities].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
       const pageGroups = []
       const allActivities = []
-      
+
       chronologicalActivities.forEach((act, idx) => {
         if (typeof act.details === 'string' && act.details.startsWith(VISITED_PREFIX)) {
           pageGroups.push({
@@ -210,7 +219,7 @@ export default {
           })
         }
       })
-      
+
       // If no page visits found, create a default group
       if (pageGroups.length === 0) {
         const firstActivity = chronologicalActivities[0]
@@ -225,12 +234,12 @@ export default {
           })
         }
       }
-      
+
       // Now assign each activity to the appropriate page group (using chronological order)
       chronologicalActivities.forEach((act) => {
         const isVisited = typeof act.details === 'string' && act.details.startsWith(VISITED_PREFIX)
         const isAuth = act.activity === 'Login' || act.activity === 'Logout'
-        
+
         if (!isVisited && !isAuth) {
           // Find the most recent page visit that happened before this activity
           let targetGroup = null
@@ -240,23 +249,23 @@ export default {
               break
             }
           }
-          
+
           // If no suitable group found, add to the first group
           if (!targetGroup && pageGroups.length > 0) {
             targetGroup = pageGroups[0]
           }
-          
+
           if (targetGroup) {
             targetGroup.children.push(act)
           }
         }
       })
-      
+
       // Create a flat list of all activities (page visits and login/logout) in chronological order
       chronologicalActivities.forEach((act) => {
         const isVisited = typeof act.details === 'string' && act.details.startsWith(VISITED_PREFIX)
         const isAuth = act.activity === 'Login' || act.activity === 'Logout'
-        
+
         if (isVisited) {
           // Find the page group for this visit
           const pageGroup = pageGroups.find(group => group.header.id === act.id)
@@ -280,7 +289,7 @@ export default {
           })
         }
       })
-      
+
       // Sort all activities by timestamp (newest first)
       return allActivities.sort((a, b) => new Date(b.header.created_at) - new Date(a.header.created_at))
     })
@@ -290,7 +299,7 @@ export default {
 
     const closeDialog = () => { dialogModel.value = false }
 
-    return { loading, activities, columns, formatTime, formatDate, closeDialog, dialogModel, groupedRows }
+    return { loading, activities, columns, formatTime, formatDate, closeDialog, dialogModel, groupedRows, searchQuery }
   }
 }
 </script>

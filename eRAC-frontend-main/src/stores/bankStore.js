@@ -58,7 +58,16 @@ export const useBankStore = defineStore('bank', {
         align: 'center',
         format: (val) => {
           const status = (val || '').toLowerCase()
-          return status === 'unused' ? 'Issued' : 'Used'
+          switch (status) {
+            case 'unused':
+              return 'Unused'
+            case 'issued':
+              return 'Issued'
+            case 'void':
+              return 'Voided'
+            default:
+              return 'Unknown'
+          }
         },
       },
       {
@@ -164,6 +173,10 @@ export const useBankStore = defineStore('bank', {
           booklets: bank.booklets || [], // Changed from cheques
         }))
         this.availableBanks = this.banks.filter(bank => bank.status === 'Available');
+
+        if(this.availableBanks.length == 0){
+          this.availableBanks[0] = {id:0, name:'No Available Bank'}
+        }
 
         return this.banks
       } catch (error) {

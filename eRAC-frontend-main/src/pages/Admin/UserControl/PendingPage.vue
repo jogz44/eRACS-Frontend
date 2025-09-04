@@ -208,7 +208,9 @@
 
 <script>
 import { api } from 'boot/axios'
+import { useAuthStore } from 'stores/auth'
 import { usePageLogging } from '../../../composables/usePageLogging'
+import { useActivityLogging } from '../../../composables/useActivityLogging'
 
 export default {
   data() {
@@ -352,7 +354,26 @@ export default {
     async confirmCancel() {
       this.cancelModal.loading = true
       try {
-        await api.delete(`/api/admin/users/${this.cancelModal.selectedRow.id}`)
+        if (!this.cancelModal.selectedRow?.id) throw new Error('No user selected')
+        const authStore = useAuthStore()
+        await api.delete(`/api/admin/users/${this.cancelModal.selectedRow.id}` , {
+          headers: {
+            Authorization: `Bearer ${authStore.adminToken}`,
+            Accept: 'application/json',
+          },
+        })
+        // Log admin activity for rejected user
+        try {
+          const { logAdminActivity } = useActivityLogging()
+          const u = this.cancelModal.selectedRow || {}
+          const fullName = u.name || [u.first_name, u.middle_name, u.last_name].filter(Boolean).join(' ').trim()
+          const position = (u.position && u.position.name) || u.position || u.position_name || 'Unknown Position'
+          const barangay = u.barangay || u.barangay_name || 'Unknown Barangay'
+          const details = `Rejected user "${fullName}" (${position} in ${barangay})`
+          await logAdminActivity('Rejected User', details)
+        } catch (e) {
+          console.warn('Failed to log reject activity:', e)
+        }
         this.users = this.users.filter(
           (user) => user.id !== this.cancelModal.selectedRow.id,
         )
@@ -378,7 +399,26 @@ export default {
     async confirmAccept() {
       this.acceptModal.loading = true
       try {
-        await api.patch(`/api/admin/users/${this.acceptModal.selectedRow.id}/approve`)
+        if (!this.acceptModal.selectedRow?.id) throw new Error('No user selected')
+        const authStore = useAuthStore()
+        await api.patch(`/api/admin/users/${this.acceptModal.selectedRow.id}/approve`, {}, {
+          headers: {
+            Authorization: `Bearer ${authStore.adminToken}`,
+            Accept: 'application/json',
+          },
+        })
+        // Log admin activity for accepted user
+        try {
+          const { logAdminActivity } = useActivityLogging()
+          const u = this.acceptModal.selectedRow || {}
+          const fullName = u.name || [u.first_name, u.middle_name, u.last_name].filter(Boolean).join(' ').trim()
+          const position = (u.position && u.position.name) || u.position || u.position_name || 'Unknown Position'
+          const barangay = u.barangay || u.barangay_name || 'Unknown Barangay'
+          const details = `Accepted user "${fullName}" (${position} in ${barangay})`
+          await logAdminActivity('Accepted User', details)
+        } catch (e) {
+          console.warn('Failed to log accept activity:', e)
+        }
         this.users = this.users.filter(
           (user) => user.id !== this.acceptModal.selectedRow.id,
         )

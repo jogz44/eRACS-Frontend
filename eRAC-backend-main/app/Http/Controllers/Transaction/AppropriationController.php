@@ -571,10 +571,8 @@ class AppropriationController extends Controller
         });
 
         if ($existingAllocation) {
-            // Calculate how much has been disbursed from this appropriation
-            $disbursedAmount = $existingAllocations->where('expense_class_id', $existingAllocation->expense_class_id)
-                ->where('expense_type_id', $existingAllocation->expense_type_id)
-                ->where('expense_item_id', $existingAllocation->expense_item_id)
+            // Calculate how much has been disbursed from this appropriation using TranExpenseDetail
+            $disbursedAmount = \App\Models\TranExpenseDetail::where('appropriation_id', $existingAllocation->id)
                 ->sum('amount');
 
             // Check if the new amount is less than what has been disbursed

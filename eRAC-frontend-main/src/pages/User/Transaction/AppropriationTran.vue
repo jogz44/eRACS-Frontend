@@ -81,7 +81,7 @@
               </template>
             </q-input>
           </div>
-          
+
           <!-- Date Range Filter -->
           <div class="col-md-2 col-sm-6 col-xs-12">
             <q-item-label class="q-mb-xs text-weight-medium">Date Range:</q-item-label>
@@ -111,25 +111,24 @@
               </template>
             </q-input>
           </div>
-          
+
           <!-- Clear Button -->
           <div class="col-md-1 col-sm-6 col-xs-12">
             <q-btn
-              dense
               outlined
               color="red-10"
               icon="clear_all"
               label="Clear"
               @click="clearAllFilters"
-              class="full-width"
+              class="full-width btn-match-input"
             />
           </div>
-          
-          <!-- Spacer to push Add button to the right -->
-          <div class="col-md-2 col-sm-0 col-xs-0"></div>
-          
+
+          <!-- Flexible spacer to push Add button to the right -->
+          <div class="col"></div>
+
           <!-- Add Button -->
-          <div class="col-md-1 col-sm-6 col-xs-12">
+          <div class="col-auto">
             <q-btn
               label="Add"
               color="primary"
@@ -137,7 +136,7 @@
               @click="addBudget"
               :loading="addLoading"
               :disable="addLoading"
-              class="full-width"
+              class="full-width btn-match-input"
               v-permission="'add'"
             />
           </div>
@@ -385,8 +384,14 @@
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup @click="closeEditAllocationDialog" />
-          <q-btn label="Save Changes" color="primary" @click="saveEditedAllocation" />
+          <q-btn flat label="Cancel" v-close-popup @click="closeEditAllocationDialog" :disable="editSaveLoading" />
+          <q-btn 
+            label="Save Changes" 
+            color="primary" 
+            @click="saveEditedAllocation" 
+            :loading="editSaveLoading"
+            :disable="editSaveLoading"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -432,6 +437,7 @@ const description = ref('')
 const amount = ref(null)
 const loading = ref(false)
 const addLoading = ref(false)
+const editSaveLoading = ref(false)
 const dateRange = ref(null)
 const selectedBudgetType = ref('all')
 const budgetType = ref('annual')
@@ -524,8 +530,6 @@ const clearAllFilters = () => {
   appropriationStore.dateFrom = ''
   appropriationStore.dateTo = ''
   dateRange.value = null
-  // Ensure user only sees their barangay data
-  appropriationStore.setSelectedBarangay(null)
 }
 
 const showEditAllocationDialog = ref(false)
@@ -691,7 +695,7 @@ const openEditAllocationDialog = async (row) => {
         // Use different endpoints for admin vs regular users
     const endpoint = authStore.admin ? `/api/admin/budgets/${row.id}/history` : `/api/barangay/budgets/${row.id}/history`
     const token = authStore.admin ? authStore.adminToken : authStore.token
-    
+
     const response = await api.get(endpoint, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -801,6 +805,7 @@ const canEditType = (expenseType) => {
 }
 
 const saveEditedAllocation = async () => {
+  editSaveLoading.value = true
   try {
     const allocations = []
     let totalAllocated = 0
@@ -858,6 +863,8 @@ const saveEditedAllocation = async () => {
     console.log("[v0] Debug - currentUnappropriated:", currentUnappropriated)
     console.log("[v0] Debug - originalAllocationsTotal:", originalAllocationsTotal)
     console.log("[v0] Debug - totalAllocated:", totalAllocated)
+    console.log("[v0] Debug - allocations count:", allocations.length)
+    console.log("[v0] Debug - allocations:", allocations)
 
     // Calculate available budget by adding back the original allocations
     const availableBudgetForEdit = currentUnappropriated + originalAllocationsTotal
@@ -868,8 +875,14 @@ const saveEditedAllocation = async () => {
       throw new Error(`Total allocation (₱${totalAllocated.toFixed(2)}) exceeds available budget (₱${availableBudgetForEdit.toFixed(2)})`)
     }
 
-    // Use the appropriation store's commitAllocation method instead of calling API directly
-    await appropriationStore.commitAllocation(appropriationStore.selectedRow.id, allocations)
+    // Use the appropriation store's commitAllocation method with background refresh for better performance
+    await appropriationStore.commitAllocation(appropriationStore.selectedRow.id, allocations, { backgroundRefresh: true })
+
+    // Update the local state instead of refetching all budgets
+    if (appropriationStore.selectedRow) {
+      // Update the selected row's allocations locally
+      appropriationStore.selectedRow.allocations = allocations
+    }
 
     $q.notify({
       type: 'positive',
@@ -879,11 +892,20 @@ const saveEditedAllocation = async () => {
     })
     showEditAllocationDialog.value = false
     typeErrorMap.value = {}
-    await appropriationStore.fetchBudgets()
   } catch (error) {
+    console.error('Save error:', error)
     let message = error.message || 'Failed to update allocations'
+    
+    // Handle backend validation errors specifically
     if (error.response && error.response.status === 422 && error.response.data && error.response.data.message) {
       message = error.response.data.message
+      console.log('Backend validation error:', error.response.data)
+      
+      // If it's a disbursement validation error, show it clearly
+      if (message.includes('disbursed amount')) {
+        message = `${message}`
+      }
+      
       const errorMap = {}
       editDisplayAccounts.value.forEach(expenseClass => {
         if (!expenseClass || !Array.isArray(expenseClass.children)) return
@@ -897,20 +919,22 @@ const saveEditedAllocation = async () => {
     } else {
       typeErrorMap.value = {}
     }
+    
     $q.notify({
       type: 'negative',
-      message,
+      message: message,
       icon: 'error',
       position: 'top',
     })
-    console.error(error)
+  } finally {
+    editSaveLoading.value = false
   }
 }
 
 onMounted(async () => {
   try {
     await appropriationStore.fetchBudgets()
-    
+
     // Log page visit
     const { logPageVisit } = usePageLogging()
     await logPageVisit('Current Appropriation')
@@ -1016,6 +1040,38 @@ const handleEditAmountInput = (item, value) => {
     cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
   }
   item.amount = cleanValue
+}
+
+// Handle edit allocation input on blur: format to two decimals
+const handleEditAmountBlur = (item, value) => {
+  const formatted = formatToTwoDecimals(value)
+  item.amount = formatted
+}
+
+// Format input value to exactly two decimal places
+const formatToTwoDecimals = (value) => {
+  // Remove peso sign, commas, and spaces
+  const cleanValue = String(value).replace(/[₱,\s]/g, '')
+
+  if (cleanValue === '') return 0
+
+  // Handle multiple decimal points
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    const collapsed = parts[0] + '.' + parts.slice(1).join('')
+    return formatToTwoDecimals(collapsed)
+  }
+
+  // Limit decimal places to 2
+  if (parts.length === 2 && parts[1].length > 2) {
+    parts[1] = parts[1].substring(0, 2)
+  }
+
+  const num = parseFloat(parts.join('.'))
+  if (isNaN(num)) return 0
+
+  // Return numeric value with two decimals
+  return Math.round(num * 100) / 100
 }
 
 const handleEnterKey = (event) => {
@@ -1148,6 +1204,26 @@ const getBudgetTypeLabel = (description) => {
 .edit-allocation-input {
   min-width: 180px;
   width: 180px;
+}
+
+/* Make action buttons match the height of dense text fields */
+.btn-match-input {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 4px;
+}
+
+.btn-match-input :deep(.q-btn__content) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1; /* let align-items center do the vertical alignment */
+}
+
+.btn-match-input :deep(.q-icon) {
+  font-size: 18px;
 }
 
 /* Responsive text box sizing for Edit Allocation dialog */
