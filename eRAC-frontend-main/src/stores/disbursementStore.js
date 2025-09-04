@@ -262,7 +262,9 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     disbursementColumns: () => [
+
       { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
+        { name: 'status', label: 'Status', field: 'status', align: 'center', sortable: true },
       { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
       { name: 'dvNumber', label: 'DV Number', field: 'dvNumber', align: 'left', sortable: true },
       {
@@ -299,7 +301,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           return val
         }
       },
-      { name: 'status', label: 'Status', field: 'status', align: 'center', sortable: true },
+
       { name: 'action', label: 'Action', field: '', align: 'center' },
       { name: 'liquidate', label: 'Liquidate', field: '', align: 'center' },
        { name: 'remarks', label: 'Remarks', field: '', align: 'center' },
@@ -448,7 +450,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           // Check if account has budget_source field first, then fall back to description
           const budgetSource = account.budget_source || account.description || ''
           const budgetSourceLower = budgetSource.toLowerCase()
-          
+
           if (state.selectedBudgetSource === 'annual') {
             return budgetSourceLower.includes('annual')
           } else if (state.selectedBudgetSource === 'supplemental') {
@@ -549,13 +551,13 @@ export const useDisbursementStore = defineStore('disbursement', {
     async fetchExpenseDetails() {
       try {
         const authStore = useAuthStore()
-        
+
         // For admin users, we don't need expense details since they only view disbursements
         if (authStore.admin) {
           this.expenseDetailsData = []
           return
         }
-        
+
         const token = authStore.token
         const endpoint = '/api/barangay/expense-details'
         const params = {}
@@ -586,16 +588,16 @@ export const useDisbursementStore = defineStore('disbursement', {
     async refreshExpenseAccountsWithBalances() {
       try {
         const authStore = useAuthStore()
-        
+
         // For admin users, we don't need to refresh expense accounts since they only view disbursements
         if (authStore.admin) {
           return Promise.resolve()
         }
-        
+
         // Force a refresh of the expense accounts to recalculate balances
         // This will trigger the getter to recalculate with current frontend expenses
         this.expenseData = [...this.expenseData]
-        
+
         return Promise.resolve()
 
       } catch (error) {
@@ -627,13 +629,13 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Fetch from appropriation store for budget allocations (only for barangay users)
         const appropriationStore = useAppropriationStore()
-        
+
         // Pass budget source filter to appropriation store
         if (this.selectedBudgetSource && this.selectedBudgetSource !== 'all') {
           // Set the budget type filter in appropriation store
           appropriationStore.setSelectedBudgetType(this.selectedBudgetSource)
         }
-        
+
         await appropriationStore.fetchExpenseHierarchy()
         this.expenseData = appropriationStore.allocations || []
 
@@ -654,12 +656,12 @@ export const useDisbursementStore = defineStore('disbursement', {
     async forceRefreshExpenseDetails() {
       try {
         const authStore = useAuthStore()
-        
+
         // For admin users, we don't need to refresh expense details since they only view disbursements
         if (authStore.admin) {
           return Promise.resolve()
         }
-        
+
         await this.fetchExpenseDetails()
         return Promise.resolve()
       } catch (error) {
@@ -672,12 +674,12 @@ export const useDisbursementStore = defineStore('disbursement', {
     async refreshExpenseAccountsInBackground() {
       try {
         const authStore = useAuthStore()
-        
+
         // For admin users, we don't need to refresh expense accounts since they only view disbursements
         if (authStore.admin) {
           return Promise.resolve()
         }
-        
+
         // Fetch from appropriation store for budget allocations
         const appropriationStore = useAppropriationStore()
         await appropriationStore.fetchExpenseHierarchy()
@@ -755,7 +757,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     integrateExpenseTypesFromAccountsLib(accountsStore) {
       try {
         const authStore = useAuthStore()
-        
+
         // For admin users, we don't need to integrate expense types since they only view disbursements
         if (authStore.admin) {
           return
@@ -853,7 +855,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             params.barangay_id = selectedBarangay
           }
         }
-        
+
         // Add current fiscal year filter to only show current year transactions
         const currentYear = new Date().getFullYear()
         params.year = currentYear
@@ -997,12 +999,12 @@ export const useDisbursementStore = defineStore('disbursement', {
             Accept: 'application/json',
           },
         });
-        
+
         // Get the disbursement data
         const disbursement = response.data.data;
         console.log('Raw disbursement data from API:', disbursement);
         console.log('Raw expenses from API:', disbursement?.expenses);
-        
+
         if (disbursement) {
           // Map expenses to ensure proper field names
           const mappedExpenses = (disbursement.expenses || []).map(expense => ({
@@ -1015,9 +1017,9 @@ export const useDisbursementStore = defineStore('disbursement', {
             expense_type_id: expense.expense_type_id,
             expense_item_id: expense.expense_item_id,
           }));
-          
+
           console.log('Mapped expenses for view:', mappedExpenses);
-          
+
           return {
             id: disbursement.id,
             date: disbursement.date,
@@ -1096,7 +1098,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           console.error('Fetched booklets data:', data);
           console.error('Fetched booklets data:', data.booklet_numb);
           console.error('Fetched booklets data:', data.cheque[0].cheque_number);
-        
+
           this.autoBookletID = data.id || null
           this.autoCheque = data.cheque[0].cheque_number || null
           this.forms.disbursement.chequeNumber = 0
@@ -1237,14 +1239,14 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.dialogs.editDisbursement = false;
       this.dialogs.orDetails = false;
       this.dialogs.disbursement = false;
-      
+
       this.currentLiquidation = JSON.parse(JSON.stringify(row));
       console.log('Opening view OR details for:', row);
       console.log('Row expenses:', row.expenses);
-      
+
       // Initialize orDetails as empty array
       this.currentLiquidation.orDetails = [];
-      
+
       // Ensure expenses are available
       if (!this.currentLiquidation.expenses || this.currentLiquidation.expenses.length === 0) {
         console.log('No expenses found in row, attempting to fetch disbursement details');
@@ -1258,31 +1260,31 @@ export const useDisbursementStore = defineStore('disbursement', {
           console.error('Error fetching disbursement details:', error);
         }
       }
-      
+
       // Fetch OR Details from backend
       if (row.id) {
         try {
           // Get auth store instance
           const authStore = useAuthStore();
-          
+
           // Validate auth store
           if (!authStore) {
             throw new Error('Auth store not available');
           }
-          
+
           console.log('Auth store:', authStore);
           console.log('Is admin:', authStore.admin);
           console.log('Admin token:', authStore.adminToken);
           console.log('Regular token:', authStore.token);
-          
+
           // Use different endpoints for admin vs regular users
           const endpoint = authStore.admin ? `/api/admin/disbursements/${row.id}/or-details` : `/api/barangay/disbursements/${row.id}/or-details`
           const token = authStore.admin ? authStore.adminToken : authStore.token
-          
+
           if (!token) {
             throw new Error('No authentication token available');
           }
-          
+
           console.log('Fetching OR details from:', endpoint);
           const res = await api.get(endpoint, {
             headers: {
@@ -1290,17 +1292,17 @@ export const useDisbursementStore = defineStore('disbursement', {
               Accept: 'application/json',
             }
           });
-          
+
           console.log('OR Details response:', res.data);
           console.log('Response data structure:', res.data);
           console.log('Data array:', res.data.data);
-          
+
           // Check if we have data and it's an array
           if (res.data && res.data.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
             const backendUrl = 'http://localhost:8000'; // Change if your backend runs elsewhere
             this.currentLiquidation.orDetails = res.data.data.map((or, index) => {
               console.log(`Processing OR detail ${index}:`, or);
-              
+
               // Convert YYYY-MM-DD to DD/MM/YYYY format
               let formattedDate = '';
               if (or.or_date) {
@@ -1322,7 +1324,7 @@ export const useDisbursementStore = defineStore('disbursement', {
                 remarks: or.remarks || '',
                 isExisting: true // Flag to identify existing OR details
               };
-              
+
               console.log(`Mapped OR detail ${index}:`, mappedOr);
               return mappedOr;
             });
@@ -1348,7 +1350,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         console.log('No row ID provided, initializing empty orDetails');
         this.currentLiquidation.orDetails = [];
       }
-      
+
       console.log('Final currentLiquidation.orDetails:', this.currentLiquidation.orDetails);
       this.dialogs.viewOrDetails = true;
     },
@@ -1558,7 +1560,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         this.refreshDataInBackground().catch(error => {
           console.warn('Background refresh failed:', error)
         })
-        
+
         await bankStore.fetchBanks()
 
         return { success: true, data: response.data.data }
