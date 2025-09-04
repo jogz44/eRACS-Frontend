@@ -342,6 +342,7 @@
                         :model-value="formatInputValue(expenseType.amount)"
                         @update:model-value="(val) => handleEditAmountInput(expenseType, val)"
                         @blur="(event) => handleEditAmountBlur(expenseType, event.target.value)"
+                        @keypress="blockNonNumeric"
                         dense
                         outlined
                         class="edit-allocation-input"
@@ -367,6 +368,7 @@
                             :model-value="formatInputValue(expenseItem.amount)"
                             @update:model-value="(val) => handleEditAmountInput(expenseItem, val)"
                             @blur="(event) => handleEditAmountBlur(expenseItem, event.target.value)"
+                            @keypress="blockNonNumeric"
                             dense
                             outlined
                             class="edit-allocation-input"
@@ -1072,6 +1074,25 @@ const formatToTwoDecimals = (value) => {
 
   // Return numeric value with two decimals
   return Math.round(num * 100) / 100
+}
+
+const blockNonNumeric = (event) => {
+  const key = event.key
+  const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
+  
+  if (allowedKeys.includes(key)) {
+    return
+  }
+  
+  // Allow decimal point only if there isn't one already
+  if (key === '.' && !event.target.value.includes('.')) {
+    return
+  }
+  
+  // Block all other characters except digits
+  if (!/^\d$/.test(key)) {
+    event.preventDefault()
+  }
 }
 
 const handleEnterKey = (event) => {
