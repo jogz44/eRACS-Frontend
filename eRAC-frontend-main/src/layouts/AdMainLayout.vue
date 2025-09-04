@@ -75,7 +75,7 @@
               class="q-mb-sm"
             />
             <q-item-label class="eracs-title text-center" style="font-size: small;color: black; font-style: normal;">
-              Electronic Registry of Appropriation and Commitment (eRAC)
+              Electronic Registry of Appropriation and Commitment System (eRACs)
             </q-item-label>
           </q-item>
         </div>
@@ -521,7 +521,7 @@ const handleLogout = async () => {
                         // Refresh only the current page's store with new barangay filter
                         try {
                           const currentRoute = router.currentRoute.value.path
-                          
+
                           if (currentRoute.includes('/admin/transaction/appropriation')) {
                             // On appropriation page - only refresh appropriation store
                             const { useAppropriationStore } = await import('stores/appropriationStore')
@@ -542,11 +542,11 @@ const handleLogout = async () => {
                             const { useAppropriationStore } = await import('stores/appropriationStore')
                             const { useDisbursementStore } = await import('stores/disbursementStore')
                             const { useAugmentationStore } = await import('stores/augmentation')
-                            
+
                             const appropriationStore = useAppropriationStore()
                             const disbursementStore = useDisbursementStore()
                             const augmentationStore = useAugmentationStore()
-                            
+
                             await Promise.all([
                               appropriationStore.fetchBudgets(),
                               disbursementStore.fetchDisbursements(),

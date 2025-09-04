@@ -8,7 +8,7 @@
             <div class="welcome-text">
                 <h6 class="welcome-title q-pb-md">Welcome </h6>
               <h6 class="to-text q-pb-md">to</h6>
-              <h6 class="erac-title">eRAC</h6>
+              <h6 class="erac-title">eRACs</h6>
             </div>
             <div class="description-text">
 
@@ -39,7 +39,7 @@
           </div>
           <div class="office-name">City Accounting Office</div>
 
-            <div class="system-name">Electronic Registry of Appropriation and Commitment (eRAC)</div>
+            <div class="system-name">Electronic Registry of Appropriation and Commitment System (eRACs)</div>
 
           </div>
 
@@ -153,9 +153,9 @@
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn 
-            label="OK" 
-            color="primary" 
+          <q-btn
+            label="OK"
+            color="primary"
             @click="closeInactivityDialog"
           />
         </q-card-actions>
@@ -235,7 +235,7 @@ const handleGlobalKeydown = (event) => {
 onMounted(() => {
   document.addEventListener('keydown', handleGlobalKeydown)
   console.log('Global keyboard listener added')
-  
+
   // Check if user was logged out due to inactivity
   if (localStorage.getItem('inactivity_logout')) {
     localStorage.removeItem('inactivity_logout')

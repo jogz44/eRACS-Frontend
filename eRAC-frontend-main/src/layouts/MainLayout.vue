@@ -47,7 +47,7 @@
               class="q-mb-sm"
             />
             <q-item-label class="eracs-title text-center" style="font-size: small;color: black; font-style: normal;">
-              Electronic Registry of Appropriation and Commitment (eRAC)
+              Electronic Registry of Appropriation and Commitment System (eRACs)
             </q-item-label>
           </q-item>
         </div>
@@ -275,16 +275,16 @@ const voidRequestCount = computed(() => {
   // Try to get position from the relationship first, fallback to position_name
   const userPosition = authStore.user?.position?.name?.toLowerCase().trim() ||
                       authStore.user?.position_name?.toLowerCase().trim()
- 
+
   const canApproveVoid = userPosition && (
     userPosition.includes('captain') ||
     userPosition.includes('chairperson') ||
     userPosition.includes('barangay captain') ||
     userPosition.includes('sk chairperson')
   )
- 
+
   if (!canApproveVoid) return 0
- 
+
   // Count disbursements with 'Void Requested' status
   const voidCount = disbursementStore.disbursements.filter(d => d.status === 'Void Requested').length
   return voidCount
