@@ -51,7 +51,7 @@ export function initialState() {
         account: '',
         balance: 0,
         particulars: '',
-        amount: 0,
+        amount: '',
       }),
     }),
 
