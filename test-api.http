@@ -3,7 +3,7 @@
 # Accept: application/json
 
 
-GET http://localhost:8000/api/admin/per-barangay-budgets
+GET http://localhost:8000/api/admin/particulars
 Authorization: Bearer 26|1p7YrFAt6Y5IFPw8HAiv9pvNRyJtwcKun9i9iW5F0483cf00
 Accept: application/json
 

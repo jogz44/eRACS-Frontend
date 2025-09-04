@@ -51,6 +51,28 @@ class TranAppropriationSeeder extends Seeder
                         ->take(6)
                         ->get();
                     foreach ($expenseTypes as $expenseType) {
+                        
+                        if($remaining <= 0) {
+                            \Log::info("Budget {$budget->id} fully allocated.");
+                            continue 2; // exit both loops
+                        }elseif($remaining < 200000) {
+                            $allocationAmount=$remaining;
+                        }else{
+                            $allocationAmount = min(
+                                $faker->numberBetween(
+                                    (int) ($remaining * 0.05),
+                                    (int) ($remaining * 0.07)
+                                ),
+                                $faker->numberBetween(
+                                    (int) ($remaining * 0.05),
+                                    (int) ($remaining * 0.07)
+                                )
+                            );
+                            if($remaining < 200000) {
+                                $allocationAmount+=$remaining;
+                            }
+                        }
+                        
                         if (!$expenseType) {
                             \Log::warning("Skipping ExpenseClass {$expenseClass->id} (no expense type found)");
                             continue;
@@ -67,17 +89,6 @@ class TranAppropriationSeeder extends Seeder
 
                         $year = (int) $fiscalYear->year; // ✅ ensure integer
 
-                        // Random allocation between 7.4%–7.6% of remaining
-                        $allocationAmount = min(
-                            $faker->numberBetween(
-                                (int) ($remaining * 0.05),
-                                (int) ($remaining * 0.06)
-                            ),
-                            $faker->numberBetween(
-                                (int) ($remaining * 0.05),
-                                (int) ($remaining * 0.06)
-                            )
-                        );
 
                         TranAppropriation::create([
                             'barangay_id'      => $barangay->id,
