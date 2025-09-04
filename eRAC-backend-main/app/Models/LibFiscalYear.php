@@ -19,10 +19,15 @@ class LibFiscalYear extends Model
 
     public function barangay()
     {
-        return $this->belongsTo(Barangay::class);
+        return $this->belongsTo(Barangay::class,'barangay_id');
     }
 
     // Will add these relationships later
+    public function budget()
+    {
+        return $this->hasMany(Budget::class);
+    }
+
     public function expenseClasses()
     {
         return $this->hasMany(ExpenseClass::class);

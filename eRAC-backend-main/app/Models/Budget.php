@@ -39,10 +39,10 @@ class Budget extends Model
 
     public function barangay(): BelongsTo
     {
-        return $this->belongsTo(Barangay::class);
+        return $this->belongsTo(Barangay::class,'barangay_id');
     }
 
     public function fiscalYear() {
-        return $this->belongsTo(LibFiscalYear::class, 'fiscal_year_id');
+        return $this->belongsTo(LibFiscalYear::class,'fiscal_year_id');
     }
 }

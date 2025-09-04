@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\DB;
 use App\Models\Admin;
+use App\Models\Barangay;
 use App\Models\BarangayUser;
 
 //use Symfony\Component\HttpFoundation\Cookie;
@@ -438,18 +439,48 @@ class AdminAuthController extends Controller  // <-- This is crucial
     }
     public static function getPerBarangaysBudgets()
     {
-        $data = DB::table('barangays')
-            ->leftJoin('budgets', 'barangays.id', '=', 'budgets.barangay_id')
-            ->select(
-                'barangays.id',
-                'barangays.name as barangay_name',
-                DB::raw('COALESCE(SUM(budgets.original_amount), 0) as total_original_amount'),
-                DB::raw('COALESCE(SUM(budgets.current_amount), 0) as total_current_amount'),
-                DB::raw('COUNT(budgets.id) as total_budget_entries')
-            )
-            ->groupBy('barangays.id', 'barangays.name')
-            ->orderBy('barangay_name', 'asc')
-            ->get();
+        // $data = DB::table('barangays')
+        //     ->leftJoin('budgets', 'barangays.id', '=', 'budgets.barangay_id')
+        //     ->select(
+        //         'barangays.id',
+        //         'barangays.name as barangay_name',
+        //         DB::raw('COALESCE(SUM(budgets.original_amount), 0) as total_original_amount'),
+        //         DB::raw('COALESCE(SUM(budgets.current_amount), 0) as total_current_amount'),
+        //         DB::raw('COUNT(budgets.id) as total_budget_entries')
+        //     )
+        //     ->groupBy('barangays.id', 'barangays.name')
+        //     ->orderBy('barangay_name', 'asc')
+        //     ->get();
+        
+        // {
+        //     "id": "1",
+        //     "barangay_name": "Apokon",
+        //     "total_original_amount": "9000000.00",
+        //     "total_current_amount": "8505984.00",
+        //     "total_budget_entries": "6"
+        // },
+        $data = Barangay::with(['budget' => function ($q) {
+                $q->whereHas('fiscalYear', function ($q2) {
+                    $q2->where('year', now()->year);
+                });
+            }])
+            ->get()
+            ->map(function ($barangay) {
+                $totalOriginal = $barangay->budget->sum('original_amount');
+                $totalCurrent = $barangay->budget->sum('current_amount');
+                $totalEntries = $barangay->budget->count();
+                
+                return [
+                    'id' => $barangay->id,
+                    'barangay_name' => $barangay->name,
+                    'total_original_amount' => number_format($totalOriginal, 2, '.', ''),
+                    'total_current_amount' => number_format($totalCurrent, 2, '.', ''),
+                    'total_budget_entries' => $totalEntries,
+                    $barangay->budget
+                ];
+            })
+            ->sortBy('barangay_name')
+            ->values();
 
         return response()->json($data);
     }
