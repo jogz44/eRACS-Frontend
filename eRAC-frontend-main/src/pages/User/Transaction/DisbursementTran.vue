@@ -13,7 +13,7 @@
           color="primary"
           flat
           dense
-          @click="loadPendingUsers"
+          @click="loadDisbursements"
           :loading="store.loadingDisbursements"
           title="Refresh disbursements"
         />
@@ -21,50 +21,7 @@
     </div>
 
     <!-- Status Summary Cards -->
-    <div class="status-indicators-container q-mb-md">
-      <div class="row q-col-gutter-md justify-center">
-        <div class="col-md-2 col-sm-4 col-xs-6">
-          <q-card class="summary-card">
-            <q-card-section class="text-center">
-              <div class="text-h4 text-weight-bold text-orange">{{ statusCounts.pending }}</div>
-              <div class="text-subtitle2 text-grey-7">Pending</div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-md-2 col-sm-4 col-xs-6">
-          <q-card class="summary-card">
-            <q-card-section class="text-center">
-              <div class="text-h4 text-weight-bold text-amber">{{ statusCounts.partial }}</div>
-              <div class="text-subtitle2 text-grey-7">Partial</div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-md-2 col-sm-4 col-xs-6">
-          <q-card class="summary-card">
-            <q-card-section class="text-center">
-              <div class="text-h4 text-weight-bold text-green">{{ statusCounts.liquidated }}</div>
-              <div class="text-subtitle2 text-grey-7">Liquidated</div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-md-2 col-sm-4 col-xs-6">
-          <q-card class="summary-card">
-            <q-card-section class="text-center">
-              <div class="text-h4 text-weight-bold text-red">{{ statusCounts.voided }}</div>
-              <div class="text-subtitle2 text-grey-7">Voided</div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-md-2 col-sm-4 col-xs-6">
-          <q-card class="summary-card">
-            <q-card-section class="text-center">
-              <div class="text-h4 text-weight-bold text-purple">{{ statusCounts.stale }}</div>
-              <div class="text-subtitle2 text-grey-7">Stale</div>
-            </q-card-section>
-          </q-card>
-        </div>
-      </div>
-    </div>
+
 
     <!-- Filters Section -->
     <q-card flat bordered class="q-mb-md filters-section">
@@ -484,11 +441,11 @@
                   dense
                   icon="edit"
                   :color="
-                    props.row.status === 'Pending' || props.row.status === 'Partial'
+                    props.row.status === 'Unliquidated' || props.row.status === 'Partial'
                       ? 'orange'
                       : 'grey'
                   "
-                  :disable="props.row.status !== 'Pending' && props.row.status !== 'Partial'"
+                  :disable="props.row.status !== 'Unliquidated' && props.row.status !== 'Partial'"
                   :loading="store.loadingEditDisbursement === props.row.id"
                   @click="handleEditDisbursement(props.row)"
                   v-permission="'edit'"
@@ -510,7 +467,7 @@
                   color="red"
                   v-if="
                     isTreasurer &&
-                    (props.row.status === 'Pending' || props.row.status === 'Partial') &&
+                    (props.row.status === 'Unliquidated' || props.row.status === 'Partial') &&
                     canVoid(props.row) &&
                     props.row.status !== 'Stale'
                   "
@@ -524,7 +481,7 @@
                   color="red"
                   v-if="
                     isApprover &&
-                    (props.row.status === 'Pending' || props.row.status === 'Partial') &&
+                    (props.row.status === 'Unliquidated' || props.row.status === 'Partial') &&
                     canVoid(props.row) &&
                     props.row.status !== 'Stale'
                   "
@@ -566,16 +523,17 @@
 
           <template v-slot:body-cell-remarks="props">
             <q-td :props="props">
-              <div v-if="props.row.status === 'Void Requested' && props.row.remarks">
-                {{ props.row.remarks }}
+              <div v-if="hasRemarks(props.row)" class="row items-center justify-center">
+                <q-icon
+                  name="visibility"
+                  color="blue"
+                  size="md"
+                  class="cursor-pointer"
+                  @click="openRemarksDialog(props.row)"
+                  title="View remarks"
+                />
               </div>
-              <div v-else-if="props.row.status === 'Voided' && props.row.remarks">
-                {{ props.row.remarks }}
-              </div>
-              <div v-else-if="props.row.rejection_remarks">
-                {{ props.row.rejection_remarks }}
-              </div>
-              <div v-else>-</div>
+              <div v-else class="text-grey-6 text-center">-</div>
             </q-td>
           </template>
 
@@ -585,7 +543,7 @@
                 dense
                 label="Liquidate"
                 color="primary"
-                v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
+                v-if="props.row.status === 'Unliquidated' || props.row.status === 'Partial'"
                 @click="handleLiquidateDisbursement(props.row)"
                 :loading="liquidateLoading[props.row.id]"
                 :disable="liquidateLoading[props.row.id] || props.row.status === 'Stale'"
@@ -633,6 +591,53 @@
           </q-card-actions>
         </q-card>
       </q-dialog>
+
+      <!-- Remarks Dialog -->
+      <q-dialog v-model="remarksDialog" persistent>
+        <q-card style="min-width: 500px; max-width: 90vw">
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">Remarks</div>
+          </q-card-section>
+
+          <q-card-section>
+            <div class="text-body1 q-mb-sm">
+              <strong>Disbursement:</strong> {{ selectedRemarksData?.dvNumber || 'N/A' }}
+            </div>
+            <div class="text-body1 q-mb-sm">
+              <strong>Payee:</strong> {{ selectedRemarksData?.payee || 'N/A' }}
+            </div>
+            <div class="text-body1 q-mb-md">
+              <strong>Status:</strong>
+              <q-chip
+                :color="getStatusColor(selectedRemarksData?.status)"
+                :text-color="getStatusTextColor(selectedRemarksData?.status)"
+                dense
+                :label="selectedRemarksData?.status"
+                class="q-ml-sm"
+              />
+            </div>
+
+            <q-separator class="q-mb-md" />
+
+            <div class="text-subtitle1 q-mb-sm text-weight-medium">Remarks:</div>
+            <div class="remarks-content q-pa-md" style="background-color: #f5f5f5; border-radius: 8px; min-height: 100px;">
+              <div v-if="selectedRemarksData?.remarks" class="text-body1">
+                {{ selectedRemarksData.remarks }}
+              </div>
+              <div v-else-if="selectedRemarksData?.rejection_remarks" class="text-body1">
+                {{ selectedRemarksData.rejection_remarks }}
+              </div>
+              <div v-else class="text-grey-6 text-italic">
+                No remarks available
+              </div>
+            </div>
+          </q-card-section>
+
+          <q-card-actions align="right" class="q-pa-md">
+            <q-btn flat label="Close" @click="closeRemarksDialog" color="primary" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
     </div>
   </q-page>
 </template>
@@ -665,7 +670,7 @@ const budgetSourceOptions = [
 const selectedStatus = ref(null)
 const statusOptions = [
   { label: 'All Status', value: null },
-  { label: 'Pending', value: 'Pending' },
+  { label: 'Unliquidated', value: 'Unliquidated' },
   { label: 'Partial', value: 'Partial' },
   { label: 'Liquidated', value: 'Liquidated' },
   { label: 'Void Requested', value: 'Void Requested' },
@@ -761,8 +766,8 @@ const handlePasteNumeric = (event) => {
 }
 
 function canVoid(row) {
-  // Can only void if pending or partial
-  if (!(row.status === 'Pending' || row.status === 'Partial')) return false
+  // Can only void if unliquidated or partial
+  if (!(row.status === 'Unliquidated' || row.status === 'Partial')) return false
 
   // Check aging restriction (≤ 1 day can be voided)
   const aging = Number(getAgingDays(row.aging))
@@ -867,8 +872,8 @@ const handleDirectVoidDisbursement = (row) => {
 // Status color helpers
 const getStatusColor = (status) => {
   switch (status) {
-    case 'Pending':
-      return 'orange'
+    case 'Unliquidated':
+      return 'blue'
     case 'Partial':
       return 'amber'
     case 'Liquidated':
@@ -886,7 +891,7 @@ const getStatusColor = (status) => {
 
 const getStatusTextColor = (status) => {
   switch (status) {
-    case 'Pending':
+    case 'Unliquidated':
     case 'Partial':
     case 'Liquidated':
     case 'Void Requested':
@@ -989,6 +994,10 @@ const viewLoading = ref({})
 const liquidateLoading = ref({})
 // const checkingStaleStatus = ref(false)
 
+// Remarks dialog
+const remarksDialog = ref(false)
+const selectedRemarksData = ref(null)
+
 const currentBankLabel = computed(() => {
   if (store.forms.disbursement.bank_id) {
     const selectedBank = bankStore.banks.find(
@@ -1010,38 +1019,7 @@ const currentStatusLabel = computed(() => {
 })
 
 // Status counts for summary cards
-const statusCounts = computed(() => {
-  const counts = {
-    pending: 0,
-    partial: 0,
-    liquidated: 0,
-    voided: 0,
-    stale: 0,
-  }
 
-  store.disbursements.forEach((disbursement) => {
-    switch (disbursement.status) {
-      case 'Pending':
-        counts.pending++
-        break
-      case 'Partial':
-        counts.partial++
-        break
-      case 'Liquidated':
-        counts.liquidated++
-        break
-      case 'Void Requested':
-      case 'Voided':
-        counts.voided++
-        break
-      case 'Stale':
-        counts.stale++
-        break
-    }
-  })
-
-  return counts
-})
 
 // Filtered disbursements based on status, search, and date range
 const filteredDisbursements = computed(() => {
@@ -1229,7 +1207,7 @@ const handleDeleteExpense = async (row) => {
   }
 }
 
-const loadPendingUsers = async () => {
+const loadDisbursements = async () => {
   loading.value = true
   try {
     // Only refresh disbursements and banks, skip expense accounts for faster refresh
@@ -1445,6 +1423,24 @@ const getBudgetSourceLabel = (budgetSource) => {
 //     checkingStaleStatus.value = false
 //   }
 // }
+
+// Remarks dialog methods
+const hasRemarks = (row) => {
+  return (row.status === 'Void Requested' && row.remarks) ||
+         (row.status === 'Voided' && row.remarks) ||
+         row.rejection_remarks
+}
+
+
+const openRemarksDialog = (row) => {
+  selectedRemarksData.value = row
+  remarksDialog.value = true
+}
+
+const closeRemarksDialog = () => {
+  remarksDialog.value = false
+  selectedRemarksData.value = null
+}
 </script>
 
 <style scoped>
@@ -1557,5 +1553,16 @@ const getBudgetSourceLabel = (budgetSource) => {
   .text-h4 {
     font-size: 1.5rem;
   }
+}
+
+/* Remarks dialog styling */
+.remarks-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.5;
+}
+
+.remarks-content .text-body1 {
+  margin: 0;
 }
 </style>

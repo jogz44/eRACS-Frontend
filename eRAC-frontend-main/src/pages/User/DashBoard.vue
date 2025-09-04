@@ -16,7 +16,7 @@
     <div class="year-filter-section q-mb-lg" style="width: 320px;">
       <q-card class="filter-card">
         <q-card-section class="row items-center justify-between q-pa-md">
-          <div class="row items-center q-gutter-md">
+          <div class="row items-center q-gutter-md q-mt-sm">
             <div class="text-subtitle2 text-weight-medium">Year Filter:</div>
             <q-select
               v-model="chartStore.selectedYear"
@@ -158,7 +158,7 @@
               <div class="text-h6 text-weight-medium">Disbursement Overview</div>
               <div class="row q-gutter-sm">
                 <div
-                  v-for="status in ['unliquidated', 'Pending', 'Partial', 'Liquidated']"
+                  v-for="status in ['unliquidated', 'Partial', 'Liquidated']"
                   :key="status"
                   class="status-count-chip"
                   :class="{ active: selectedDisbursementFilter === status }"
@@ -388,7 +388,7 @@ const selectedDisbursementFilter = ref('unliquidated')
 
 const disbursementFilters = ref([
   { label: 'Unliquidated', value: 'unliquidated' },
-  { label: 'Pending', value: 'Pending' },
+
   { label: 'Partial', value: 'Partial' },
   { label: 'Liquidated', value: 'Liquidated' },
 ])

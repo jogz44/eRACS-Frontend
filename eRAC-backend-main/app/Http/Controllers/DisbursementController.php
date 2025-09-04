@@ -176,7 +176,7 @@ class DisbursementController extends Controller
                 'bank_id' => $request->bank_id,
                 'payee' => $request->payee,
                 'dv_amount' => $request->dv_amount,
-                'status' => 'Pending',
+                'status' => 'Unliquidated',
             ]);
 
             // update the selected lib_cheque_numbers status to 'Used'
