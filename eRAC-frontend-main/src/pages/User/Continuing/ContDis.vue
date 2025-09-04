@@ -227,6 +227,7 @@
             </div>
           </q-card-section>
 
+
           <!-- Add Expense Button -->
           <q-card-section>
             <div class="row justify-end q-mb-md">
@@ -412,7 +413,16 @@
           :pagination="store.pagination"
           :loading="store.loadingDisbursements"
           flat
-        >
+        >  <template v-slot:body-cell-status="props">
+            <q-td :props="props">
+              <q-chip
+                :color="getStatusColor(props.row.status)"
+                :text-color="getStatusTextColor(props.row.status)"
+                dense
+                :label="props.row.status"
+              />
+            </q-td>
+          </template>
           <template v-slot:body-cell-action="props">
             <q-td :props="props">
               <div class="row q-gutter-xs items-center justify-center">
@@ -614,6 +624,37 @@ const handleEnterKey = (event) => {
     event.preventDefault()
   }
   validateAndSave()
+}
+const getStatusColor = (status) => {
+  switch (status) {
+    case 'Pending':
+      return 'orange'
+    case 'Partial':
+      return 'amber'
+    case 'Liquidated':
+      return 'green'
+    case 'Void Requested':
+      return 'deep-orange'
+    case 'Voided':
+      return 'red'
+    case 'Stale':
+      return 'purple'
+    default:
+      return 'grey'
+  }
+}
+const getStatusTextColor = (status) => {
+  switch (status) {
+    case 'Pending':
+    case 'Partial':
+    case 'Liquidated':
+    case 'Void Requested':
+    case 'Voided':
+    case 'Stale':
+      return 'white'
+    default:
+      return 'black'
+  }
 }
 
 const handleSaveClick = async () => {

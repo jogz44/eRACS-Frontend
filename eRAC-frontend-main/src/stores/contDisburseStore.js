@@ -293,6 +293,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
 
     disbursementColumns: () => [
       { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
+          { name: 'status', label: 'Status', field: 'status', align: 'left', sortable: true },
       { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
       { name: 'dvNumber', label: 'DV Number', field: 'dvNumber', align: 'left', sortable: true },
       {
@@ -313,7 +314,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         align: 'left',
         sortable: true,
       },
-      { name: 'status', label: 'Status', field: 'status', align: 'left', sortable: true },
+
       { name: 'action', label: 'Action', field: '', align: 'center' },
       { name: 'liquidate', label: 'Liquidate', field: '', align: 'center' },
     ],

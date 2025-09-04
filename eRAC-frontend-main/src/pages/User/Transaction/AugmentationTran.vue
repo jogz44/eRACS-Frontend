@@ -177,11 +177,29 @@ const selectedBudgetSource = ref('all')
 const searchQuery = ref('')
 const dateRange = ref(null)
 
+// Hooks must be called at the top level
+const { logPageVisit } = usePageLogging()
+
 // Watch for budget source changes and sync with store
 watch(selectedBudgetSource, async (newBudgetSource) => {
   store.setBudgetSourceFilter(newBudgetSource)
   // Refresh expense accounts when budget source filter changes
-  await store.fetchExpenseAccounts()
+  if (newBudgetSource === 'annual' || newBudgetSource === 'supplemental') {
+    await store.fetchExpenseAccounts()
+  } else if (newBudgetSource === 'cross') {
+    // For cross-budget augmentations, fetch all expense accounts
+    // First try to fetch without any budget filter, or fetch both types
+    try {
+      // Try to fetch all accounts by setting to 'all' or not setting a filter
+      store.setBudgetSourceFilter('all')
+      await store.fetchExpenseAccounts()
+    } catch (error) {
+      console.log('Could not fetch all accounts, trying annual accounts:', error)
+      // Fallback to annual accounts if 'all' doesn't work
+      store.setBudgetSourceFilter('annual')
+      await store.fetchExpenseAccounts()
+    }
+  }
 })
 
 // Computed properties for summary statistics (using filtered data)
@@ -318,25 +336,68 @@ const filteredAugmentations = computed(() => {
     })
   }
 
-  // Filter by budget source
+  // Filter by transfer type
   if (selectedBudgetSource.value !== 'all') {
     filtered = filtered.filter(augmentation => {
-      return augmentation.details?.some(detail => {
+      if (!augmentation.details || !Array.isArray(augmentation.details)) {
+        return false
+      }
+
+      // Helper function to determine budget type
+      const getBudgetType = (budgetSource) => {
+        const lower = budgetSource.toLowerCase().trim()
+
+        // More specific supplemental detection
+        if (lower.includes('supplemental') ||
+            lower.includes('supplement') ||
+            lower.includes('additional') ||
+            lower.includes('extra') ||
+            lower.includes('special')) {
+          return 'supplemental'
+        }
+
+        // More specific annual detection
+        if (lower.includes('annual') ||
+            lower.includes('regular') ||
+            lower.includes('main') ||
+            lower.includes('base') ||
+            lower.includes('primary') ||
+            lower === 'annual budget') {
+          return 'annual'
+        }
+
+        return null
+      }
+
+      // Check if this augmentation has ANY details that match the selected filter
+      const hasMatchingDetail = augmentation.details.some(detail => {
         const fromBudget = detail.from_budget_source || 'Annual Budget'
         const toBudget = detail.to_budget_source || 'Annual Budget'
-        
+
+        const fromType = getBudgetType(fromBudget)
+        const toType = getBudgetType(toBudget)
+
+        // If we can't determine the budget types, exclude this detail
+        if (fromType === null || toType === null) {
+          return false
+        }
+
         if (selectedBudgetSource.value === 'cross') {
-          // Cross budget: show only augmentations that have cross-budget transfers
-          return fromBudget !== toBudget
+          // Cross Budget Augmentations: show only augmentations that have cross-budget transfers
+          return (fromType === 'annual' && toType === 'supplemental') ||
+                 (fromType === 'supplemental' && toType === 'annual')
         } else if (selectedBudgetSource.value === 'annual') {
           // Annual > Annual: show only augmentations within annual budget
-          return fromBudget.toLowerCase().includes('annual') && toBudget.toLowerCase().includes('annual')
+          return fromType === 'annual' && toType === 'annual'
         } else if (selectedBudgetSource.value === 'supplemental') {
           // Supplemental > Supplemental: show only augmentations within supplemental budget
-          return fromBudget.toLowerCase().includes('supplemental') && toBudget.toLowerCase().includes('supplemental')
+          return fromType === 'supplemental' && toType === 'supplemental'
         }
-        return true
+        return false
       })
+
+      // Only include the augmentation if it has at least one matching detail
+      return hasMatchingDetail
     })
   }
 
@@ -348,11 +409,8 @@ onMounted(async () => {
   await store.fetchExpenseAccounts()
 
   // Log page visit
-  const { logPageVisit } = usePageLogging()
   await logPageVisit('Current Augmentation')
 })
-
-
 </script>
 
 <style scoped>
