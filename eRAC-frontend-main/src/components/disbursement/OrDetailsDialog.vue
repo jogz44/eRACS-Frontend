@@ -1,99 +1,122 @@
 <template>
   <q-dialog v-model="store.dialogs.orDetails" persistent>
-    <q-card style="min-width: 900px; max-width: 98vw;">
+    <q-card style="min-width: 1100px">
       <q-card-section>
-        <div class="row justify-between items-center">
-          <div class="text-h6">{{ store.currentLiquidation.dvNumber }}</div>
-          <q-btn flat icon="close" color="black" @click="store.closeDialog('orDetails')" />
+        <div class="text-h6">
+          Liquidation Details for Disbursement #{{ store.currentLiquidation.dvNumber }}
+        </div>
+        <div class="text-caption text-grey-6 q-mt-sm">
+          Add official receipt details for liquidation
         </div>
       </q-card-section>
 
       <q-card-section>
-        <!-- Single column layout matching the image -->
         <div class="row q-col-gutter-md">
-          <!-- Left column - Financial details -->
-          <div class="col-12 col-md-6" style="max-width: 400px; min-width: 0; flex: 1 1 300px;">
-            <!-- Actual Expense -->
-            <div class="q-mb-md">
-              <div class="text-bold q-mb-xs">Actual Expense:</div>
-              <q-input
-                filled
-                unelaveted
-                outlined
-                :model-value="formatCurrency(totalActualExpense)"
-                placeholder="0.00"
-                prefix="₱"
-                readonly
-              />
-            </div>
-
-            <!-- DV Amount -->
-            <div class="q-mb-md">
-              <div class="text-bold q-mb-xs">DV Amount:</div>
-              <q-input
-                filled
-                unelaveted
-                outlined
-                :model-value="formatCurrency(store.currentLiquidation.dvAmount || 0)"
-                prefix="₱"
-                readonly
-              />
-            </div>
-
-            <!-- Amount to Return to Appropriation -->
-            <div class="q-mb-md">
-              <div class="text-bold q-mb-xs">Amount to Return to Appropriation:</div>
-              <q-input
-                filled
-                unelaveted
-                outlined
-                :model-value="formatCurrency(totalReturnAmount)"
-                prefix="₱"
-                readonly
-                :color="actualReturnAmount < 0 ? 'negative' : undefined"
-              />
-
-            </div>
+          <!-- Date Field -->
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">Date:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              v-model="store.currentLiquidation.date"
+              mask="##/##/####"
+            >
+              <template v-slot:append>
+                <q-icon name="event" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date v-model="store.currentLiquidation.date" mask="DD/MM/YYYY" />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
           </div>
 
-          <!-- Right column - Date and Remarks -->
-          <div class="col-12 col-md-6" style="max-width: 400px; min-width: 0; flex: 1 1 300px;">
-            <!-- Date -->
-            <div class="q-mb-md">
-              <div class="text-bold q-mb-xs">Date:</div>
-              <q-input filled unelaveted outlined v-model="store.currentLiquidation.date">
-                <template v-slot:append>
-                  <q-icon name="event" class="cursor-pointer">
-                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                      <q-date v-model="store.currentLiquidation.date" mask="DD/MM/YYYY" />
-                    </q-popup-proxy>
-                  </q-icon>
-                </template>
-              </q-input>
-            </div>
+          <!-- DV Number Field -->
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">DV Number:</q-item-label>
+            <q-input 
+              filled 
+              outlined 
+              dense 
+              :model-value="store.currentLiquidation.dvNumber"
+              :disable="true"
+            />
+          </div>
 
-            <!-- Remarks -->
-            <div class="q-mb-md">
-              <div class="text-bold q-mb-xs">Remarks:</div>
-              <q-input
-                filled
-                unelaveted
-                outlined
-                v-model="store.currentLiquidation.remarks"
-                placeholder="Enter remarks"
-                @update:model-value="handleRemarksChange"
-              />
-            </div>
+          <!-- DV Amount Field -->
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">DV Amount:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="formatCurrency(store.currentLiquidation.dvAmount || 0)"
+              prefix="₱"
+              :disable="true"
+            />
+          </div>
+
+          <!-- Actual Expense Field -->
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">Actual Expense:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="formatCurrency(totalActualExpense)"
+              prefix="₱"
+              :disable="true"
+            />
+          </div>
+
+          <!-- Amount to Return Field -->
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">Amount to Return to Appropriation:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="formatCurrency(totalReturnAmount)"
+              prefix="₱"
+              :disable="true"
+              :color="actualReturnAmount < 0 ? 'negative' : undefined"
+            />
+          </div>
+
+          <!-- Remarks Field -->
+          <div class="col-md-4 col-sm-12">
+            <q-item-label class="q-mb-xs">Remarks:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              v-model="store.currentLiquidation.remarks"
+              placeholder="Enter remarks"
+              @update:model-value="handleRemarksChange"
+            />
           </div>
         </div>
+      </q-card-section>
 
-        <!-- Liquidation Section -->
-        <div class="q-mt-lg">
-          <div class="row items-center q-mb-md">
-            <div class="text-bold q-mb-xs">Liquidation:</div>
-            <q-space />
-            <q-btn color="green" icon="add" label="Add" flat @click="addOrDetail" />
+      <!-- Liquidation Details Section -->
+      <q-card-section>
+        <div class="row items-center q-mb-md">
+          <div class="text-subtitle1">
+            <strong>Liquidation Details:</strong>
+            <span class="text-caption text-grey-6 q-ml-sm">
+              ({{ orDetailsCount }} record{{ orDetailsCount !== 1 ? 's' : '' }})
+            </span>
           </div>
+          <q-space />
+          <q-btn
+            color="green"
+            icon="add"
+            label="Add OR"
+            flat
+            @click="addOrDetail"
+          />
+        </div>
 
           <!-- OR Details (All Editable) -->
           <div v-if="store.currentLiquidation?.orDetails?.length > 0" class="q-mb-lg">
@@ -220,12 +243,15 @@
               </div>
             </div>
           </div>
-        </div>
       </q-card-section>
 
-
-
-      <q-card-actions align="right" class="q-pa-md">
+      <q-card-actions align="right" class="custom-actions">
+        <q-btn
+          flat
+          label="Cancel"
+          class="modal-cancel-btn"
+          @click="store.closeDialog('orDetails')"
+        />
         <q-btn
           flat
           label="Partial"
@@ -345,6 +371,10 @@ const totalReturnAmount = computed(() => {
 const actualReturnAmount = computed(() => {
   if (!store.currentLiquidation?.dvAmount) return 0
   return store.currentLiquidation.dvAmount - parseFloat(totalActualExpense.value)
+})
+
+const orDetailsCount = computed(() => {
+  return store.currentLiquidation?.orDetails?.length || 0
 })
 
 
@@ -775,3 +805,26 @@ const handlePasteNumeric = (event) => {
   input.dispatchEvent(e)
 }
 </script>
+
+<style scoped>
+/* Style for readonly inputs */
+.q-input[readonly] {
+  background-color: #f5f5f5;
+}
+
+/* Custom actions styling */
+.custom-actions {
+  padding: 16px;
+}
+
+.modal-cancel-btn {
+  color: #666;
+}
+
+/* Responsive design for mobile */
+@media (max-width: 768px) {
+  .q-card {
+    min-width: 95vw !important;
+  }
+}
+</style>
