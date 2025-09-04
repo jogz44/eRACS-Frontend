@@ -114,7 +114,7 @@ export function useDialogActions(state, fetchExpenseAccounts, resetForm ) {
       account: accountName,
       balance: expenseItem.balance || 0,
       particulars: '',
-      amount: 0,
+      amount: '',
     }
 
     state.dialogs.value.augExpense = false

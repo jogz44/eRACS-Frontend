@@ -75,7 +75,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         accountId: null,
         balance: 0,
         particulars: '',
-        amount: 0,
+        amount: '',
         disbursementId: null,
       },
       orDetails: {
@@ -827,7 +827,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         accountId: item.continuingAccountId || item.id, // Use continuingAccountId if available
         balance: item.balance,
         particulars: '',
-        amount: 0,
+        amount: '',
         disbursementId: this.currentItem?.id || null,
       }
       console.log('Set forms.expense.accountId to:', this.forms.expense.accountId)

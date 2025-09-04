@@ -10,6 +10,7 @@ class LibExpenseItem extends Model
 
       protected $fillable = [
         'expense_type_id',
+        'parent_item_id',
         'name',
         'order',
     ];
@@ -18,6 +19,16 @@ class LibExpenseItem extends Model
     public function expenseType()
     {
         return $this->belongsTo(LibExpenseType::class, 'expense_type_id');
+    }
+
+    public function parentItem()
+    {
+        return $this->belongsTo(LibExpenseItem::class, 'parent_item_id');
+    }
+
+    public function childItems()
+    {
+        return $this->hasMany(LibExpenseItem::class, 'parent_item_id');
     }
 
     // Scopes
@@ -34,5 +45,15 @@ class LibExpenseItem extends Model
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeRootItems(Builder $query): Builder
+    {
+        return $query->whereNull('parent_item_id');
+    }
+
+    public function scopeChildItems(Builder $query): Builder
+    {
+        return $query->whereNotNull('parent_item_id');
     }
 }

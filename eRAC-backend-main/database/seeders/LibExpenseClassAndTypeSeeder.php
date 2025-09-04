@@ -7,9 +7,11 @@ use App\Models\Barangay;
 use App\Models\LibFiscalYear;
 use App\Models\LibExpenseClass;
 use App\Models\LibExpenseType;
+use App\Models\LibExpenseItem;
 
 class LibExpenseClassAndTypeSeeder extends Seeder
 {
+
     public function run()
     {
         $barangays = Barangay::all();
@@ -105,6 +107,128 @@ class LibExpenseClassAndTypeSeeder extends Seeder
             ],
         ];
 
+        // Define items per Class > Type similar to typesMap
+        $itemsMap = [
+            'SANGUNIANG KABATAAN (SK) - 10%' => [
+                'MOOE' => [
+                    ['name' => 'Training & Seminars', 'order' => 0],
+                    ['name' => 'Traveling Expenses', 'order' => 1],
+                    ['name' => 'Office Supplies', 'order' => 2],
+                    ['name' => 'Other MOOE', 'order' => 3],
+                    ['name' => 'Other Supplies', 'order' => 4],
+                    ['name' => 'Subsidy to Comelec', 'order' => 5],
+                    ['name' => 'Water Expense', 'order' => 6],
+                    ['name' => 'Electricity Expense', 'order' => 7],
+                    ['name' => 'Repair and Maintenance of Government Vehicle', 'order' => 8],
+                    ['name' => 'Repair and Maintenance of Government Facilities', 'order' => 9],
+                ],
+                'LOCALLY FUNDED PROGRAM' => [
+                    ['name' => 'Nutrition Program', 'order' => 0],
+                    ['name' => 'Childrens Congress', 'order' => 1],
+                    ['name' => 'Araw ng Barangay Activities', 'order' => 2],
+                    ['name' => 'Scholarship Program', 'order' => 3],
+                    ['name' => 'Poverty Reduction Project', 'order' => 4],
+                    ['name' => 'Cultural Assistance', 'order' => 5],
+                    ['name' => 'Cultural Program', 'order' => 6],
+                    ['name' => 'Sports Festival', 'order' => 7],
+                    ['name' => 'Protection of Children R.A 9344', 'order' => 8],
+                    ['name' => 'Health Program', 'order' => 9],
+                ],
+                'CAPITAL OUTLAY' => [
+                    ['name' => 'IT Equipment', 'order' => 0],
+                ],
+            ],
+            'MOOE' => [
+                'Utility Expenses' => [
+                    ['name' => 'Water Expenses', 'order' => 0],
+                    ['name' => 'Electricity Expenses', 'order' => 1],
+                ],
+            ],
+            'LOCALLY FUNDED PROJECTS' => [
+                'Maint. of Peace & Order' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                ],
+                'Environmental Sanitary Program' => [
+                    ['name' => 'OTHER MOE', 'order' => 0],
+                    ['name' => 'Office Supplies', 'order' => 1],
+                ],
+                'Health Program' => [
+                    ['name' => 'Office Supplies', 'order' => 0],
+                    ['name' => 'Medicines', 'order' => 1],
+                    ['name' => 'Other MOE', 'order' => 2],
+                ],
+                'Nutrition Program' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                    ['name' => 'Office Supplies', 'order' => 1],
+                    ['name' => 'Training Expense', 'order' => 2],
+                    ['name' => 'Other Supplies', 'order' => 3],
+                ],
+                'Anti-Rabies Program' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                ],
+                'Lupong Tagapamayapa Program' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                ],
+                'Purok Affairs Program' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                    ['name' => 'Training Expense', 'order' => 1],
+                ],
+                'Welfare for Disabled Person' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                ],
+                'HIV/AIDS Awareness' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                ],
+                'Daycare Program' => [
+                    ['name' => 'Office Supplies', 'order' => 0],
+                    ['name' => 'Other MOE', 'order' => 1],
+                    ['name' => 'Training Expense', 'order' => 2],
+                    ['name' => 'Other Supplies', 'order' => 3],
+                ],
+                'Bloodletting Program' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                ],
+                'Livelihood Program (GAD)' => [
+                    ['name' => 'Training Expense(GAD)', 'order' => 0],
+                ],
+                'Electrification Maintenance Program (GAD)' => [
+                    ['name' => 'Other Supplies Expense', 'order' => 0],
+                ],
+                'VAW Program and Human Rights Program (GAD)' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                ],
+                'Job Fair Program (GAD)' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                ],
+                'Gender and Development Program (GAD)' => [
+                    ['name' => 'Training Expense', 'order' => 0],
+                ],
+            ],
+            'BRGY. DISASTER RISK REDUCTION AND MANAGEMENT FUND (BDRRMF) - 5%' => [
+                'Pre & Post Disaster Fund' => [
+                    ['name' => 'MOOE', 'order' => 0], //has items
+                    ['name' => 'CAPITAL OUTLAY', 'order' => 1], //has items
+                ],
+            ],
+        ];
+
+        $subItemsMap = [
+            'BRGY. DISASTER RISK REDUCTION AND MANAGEMENT FUND (BDRRMF) - 5%' => [
+                'Pre & Post Disaster Fund' => [
+                    'MOOE' => [
+                        ['name' => 'Desilting of Drainage Canal', 'order' => 0],
+                        ['name' => 'Food Supplies (Relief Goods)', 'order' => 1],
+                        ['name' => 'Other Supplies', 'order' => 2],
+                        ['name' => 'Training & Seminar', 'order' => 3],
+                    ],
+                    'CAPITAL OUTLAY' => [
+                        ['name' => 'Const. of Drainage', 'order' => 0],
+                        ['name' => 'Generator Set', 'order' => 1],
+                    ],
+                ],
+            ],
+        ];
+
         foreach ($barangays as $barangay) {
             foreach ($years as $year) {
                 // Ensure fiscal years exist
@@ -135,7 +259,7 @@ class LibExpenseClassAndTypeSeeder extends Seeder
 
                     $types = $typesMap[$class['name']] ?? [];
                     foreach ($types as $type) {
-                        LibExpenseType::firstOrCreate(
+                        $typeModel = LibExpenseType::firstOrCreate(
                             [
                                 'expense_class_id' => $classModel->id,
                                 'name'             => $type['name'],
@@ -146,6 +270,39 @@ class LibExpenseClassAndTypeSeeder extends Seeder
                                 'updated_at' => $now,
                             ]
                         );
+
+                        // Seed items via itemsMap if defined for this Class > Type
+                        $itemDefs = $itemsMap[$class['name']][$type['name']] ?? [];
+                        foreach ($itemDefs as $item) {
+                            $itemModel = LibExpenseItem::firstOrCreate(
+                                [
+                                    'expense_type_id' => $typeModel->id,
+                                    'name'            => $item['name'],
+                                    'parent_item_id'  => null,
+                                ],
+                                [
+                                    'order'      => $item['order'] ?? 0,
+                                    'created_at' => $now,
+                                    'updated_at' => $now,
+                                ]
+                            );
+                            
+                            $subItemDefs = $subItemsMap[$class['name']][$type['name']][$item['name']] ?? [];
+                            foreach ($subItemDefs as $subItem) {
+                                LibExpenseItem::firstOrCreate(
+                                    [
+                                        'expense_type_id' => $typeModel->id,
+                                        'name'            => $subItem['name'],
+                                        'parent_item_id'  => $itemModel->id,
+                                    ],
+                                    [
+                                        'order'      => $subItem['order'] ?? 0,
+                                        'created_at' => $now,
+                                        'updated_at' => $now,
+                                    ]
+                                );
+                            }
+                        }
                     }
                 }
             }

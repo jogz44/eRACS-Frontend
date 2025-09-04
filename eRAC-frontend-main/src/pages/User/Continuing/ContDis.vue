@@ -389,11 +389,17 @@
             <q-input
               outlined
               dense
-              v-model="store.forms.expense.amount"
+              :model-value="formatInputValue(store.forms.expense.amount)"
+              @update:model-value="(val) => store.forms.expense.amount = handleAmountInput(val)"
+              @blur="(e) => (store.forms.expense.amount = formatToTwoDecimals(e.target.value))"
               label="Amount"
               class="q-mb-md"
               prefix="₱"
-              type="number"
+              inputmode="decimal"
+              pattern="\\d*\\.?\\d{0,2}"
+              @keypress="blockNonNumeric"
+              @paste.prevent="handlePasteNumeric"
+              placeholder="0.00"
             />
           </q-card-section>
 
@@ -912,6 +918,81 @@ const handleLiquidateDisbursement = async (row) => {
     liquidateLoading.value[row.id] = false
   }
 }
+
+// Formatting helpers for amount input
+const formatInputValue = (value) => {
+  if (value === '' || value === null || value === undefined) return ''
+  const isNumber = typeof value === 'number'
+  const cleanValue = String(value).replace(/[₱,\s]/g, '').replace(/,/g, '')
+  const num = parseFloat(cleanValue)
+  if (isNaN(num)) return ''
+  return isNumber
+    ? num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : num.toLocaleString('en-US')
+}
+
+const handleAmountInput = (value) => {
+  let cleanValue = String(value).replace(/[₱,\s]/g, '')
+  cleanValue = cleanValue.replace(/[^\d.]/g, '')
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    cleanValue = parts[0] + '.' + parts.slice(1).join('')
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
+  }
+  return cleanValue
+}
+
+const formatToTwoDecimals = (value) => {
+  const cleanValue = String(value).replace(/[₱,\s]/g, '')
+  if (cleanValue === '') return ''
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    const collapsed = parts[0] + '.' + parts.slice(1).join('')
+    return formatToTwoDecimals(collapsed)
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    parts[1] = parts[1].substring(0, 2)
+  }
+  const num = parseFloat(parts.join('.'))
+  if (isNaN(num)) return ''
+  return Math.round(num * 100) / 100
+}
+
+const blockNonNumeric = (event) => {
+  const key = event.key
+  const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
+  
+  if (allowedKeys.includes(key)) {
+    return
+  }
+  
+  // Allow decimal point only if there isn't one already
+  if (key === '.' && !event.target.value.includes('.')) {
+    return
+  }
+  
+  // Block all other characters except digits
+  if (!/^\d$/.test(key)) {
+    event.preventDefault()
+  }
+}
+
+const handlePasteNumeric = (event) => {
+  event.preventDefault()
+  const paste = (event.clipboardData || window.clipboardData).getData('text')
+  const cleanValue = paste.replace(/[^\d.]/g, '')
+  const parts = cleanValue.split('.')
+  let finalValue = parts[0]
+  if (parts.length > 1) {
+    finalValue += '.' + parts.slice(1).join('').substring(0, 2)
+  }
+  store.forms.expense.amount = finalValue
+}
+
+
+
 
 // Function to load all data with optimized loading strategy
 const loadAllData = async () => {

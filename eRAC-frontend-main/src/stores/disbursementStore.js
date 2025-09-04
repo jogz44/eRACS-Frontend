@@ -94,7 +94,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         account: '',
         balance: 0,
         particulars: '',
-        amount: 0,
+        amount: '',
         disbursementId: null,
       },
       orDetails: {
@@ -1376,7 +1376,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         balance: availableBalance, // Use the pre-calculated balance from selection table
         originalBalance: item.originalBalance || item.balance || 0, // Keep original balance for reference
         particulars: '',
-        amount: 0,
+        amount: '',
         disbursementId: this.currentItem?.id || null,
         // Store additional information for backend
         expense_class_id: item.expense_class_id,
