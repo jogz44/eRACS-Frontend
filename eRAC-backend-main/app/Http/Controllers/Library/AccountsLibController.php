@@ -149,39 +149,192 @@ public function createFiscalYear(Request $request)
         ],
     ];
 
+    $itemsMap = [
+            'SANGUNIANG KABATAAN (SK) - 10%' => [
+                'MOOE' => [
+                    ['name' => 'Training & Seminars', 'order' => 0],
+                    ['name' => 'Traveling Expenses', 'order' => 1],
+                    ['name' => 'Office Supplies', 'order' => 2],
+                    ['name' => 'Other MOOE', 'order' => 3],
+                    ['name' => 'Other Supplies', 'order' => 4],
+                    ['name' => 'Subsidy to Comelec', 'order' => 5],
+                    ['name' => 'Water Expense', 'order' => 6],
+                    ['name' => 'Electricity Expense', 'order' => 7],
+                    ['name' => 'Repair and Maintenance of Government Vehicle', 'order' => 8],
+                    ['name' => 'Repair and Maintenance of Government Facilities', 'order' => 9],
+                ],
+                'LOCALLY FUNDED PROGRAM' => [
+                    ['name' => 'Nutrition Program', 'order' => 0],
+                    ['name' => 'Childrens Congress', 'order' => 1],
+                    ['name' => 'Araw ng Barangay Activities', 'order' => 2],
+                    ['name' => 'Scholarship Program', 'order' => 3],
+                    ['name' => 'Poverty Reduction Project', 'order' => 4],
+                    ['name' => 'Cultural Assistance', 'order' => 5],
+                    ['name' => 'Cultural Program', 'order' => 6],
+                    ['name' => 'Sports Festival', 'order' => 7],
+                    ['name' => 'Protection of Children R.A 9344', 'order' => 8],
+                    ['name' => 'Health Program', 'order' => 9],
+                ],
+                'CAPITAL OUTLAY' => [
+                    ['name' => 'IT Equipment', 'order' => 0],
+                ],
+            ],
+            'MOOE' => [
+                'Utility Expenses' => [
+                    ['name' => 'Water Expenses', 'order' => 0],
+                    ['name' => 'Electricity Expenses', 'order' => 1],
+                ],
+            ],
+            'LOCALLY FUNDED PROJECTS' => [
+                'Maint. of Peace & Order' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                ],
+                'Environmental Sanitary Program' => [
+                    ['name' => 'OTHER MOE', 'order' => 0],
+                    ['name' => 'Office Supplies', 'order' => 1],
+                ],
+                'Health Program' => [
+                    ['name' => 'Office Supplies', 'order' => 0],
+                    ['name' => 'Medicines', 'order' => 1],
+                    ['name' => 'Other MOE', 'order' => 2],
+                ],
+                'Nutrition Program' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                    ['name' => 'Office Supplies', 'order' => 1],
+                    ['name' => 'Training Expense', 'order' => 2],
+                    ['name' => 'Other Supplies', 'order' => 3],
+                ],
+                'Anti-Rabies Program' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                ],
+                'Lupong Tagapamayapa Program' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                ],
+                'Purok Affairs Program' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                    ['name' => 'Training Expense', 'order' => 1],
+                ],
+                'Welfare for Disabled Person' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                ],
+                'HIV/AIDS Awareness' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                ],
+                'Daycare Program' => [
+                    ['name' => 'Office Supplies', 'order' => 0],
+                    ['name' => 'Other MOE', 'order' => 1],
+                    ['name' => 'Training Expense', 'order' => 2],
+                    ['name' => 'Other Supplies', 'order' => 3],
+                ],
+                'Bloodletting Program' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                ],
+                'Livelihood Program (GAD)' => [
+                    ['name' => 'Training Expense(GAD)', 'order' => 0],
+                ],
+                'Electrification Maintenance Program (GAD)' => [
+                    ['name' => 'Other Supplies Expense', 'order' => 0],
+                ],
+                'VAW Program and Human Rights Program (GAD)' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                ],
+                'Job Fair Program (GAD)' => [
+                    ['name' => 'Other MOE', 'order' => 0],
+                ],
+                'Gender and Development Program (GAD)' => [
+                    ['name' => 'Training Expense', 'order' => 0],
+                ],
+            ],
+            'BRGY. DISASTER RISK REDUCTION AND MANAGEMENT FUND (BDRRMF) - 5%' => [
+                'Pre & Post Disaster Fund' => [
+                    ['name' => 'MOOE', 'order' => 0], //has items
+                    ['name' => 'CAPITAL OUTLAY', 'order' => 1], //has items
+                ],
+            ],
+        ];
+
+        $subItemsMap = [
+            'BRGY. DISASTER RISK REDUCTION AND MANAGEMENT FUND (BDRRMF) - 5%' => [
+                'Pre & Post Disaster Fund' => [
+                    'MOOE' => [
+                        ['name' => 'Desilting of Drainage Canal', 'order' => 0],
+                        ['name' => 'Food Supplies (Relief Goods)', 'order' => 1],
+                        ['name' => 'Other Supplies', 'order' => 2],
+                        ['name' => 'Training & Seminar', 'order' => 3],
+                    ],
+                    'CAPITAL OUTLAY' => [
+                        ['name' => 'Const. of Drainage', 'order' => 0],
+                        ['name' => 'Generator Set', 'order' => 1],
+                    ],
+                ],
+            ],
+        ];
+
     $now = now();
     
 
     foreach ($classes as $class) {
-        $classModel = LibExpenseClass::firstOrCreate(
+    $classModel = LibExpenseClass::firstOrCreate(
+        [
+            'barangay_id'    => $barangayId,
+            'fiscal_year_id' => $year->id,
+            'name'           => $class['name'],
+        ],
+        [
+            'order'      => $class['order'],
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]
+    );
+
+    $types = $typesMap[$class['name']] ?? [];
+    foreach ($types as $type) {
+        $typeModel = LibExpenseType::firstOrCreate(
             [
-                'barangay_id'    => $barangayId,
-                'fiscal_year_id' => $year->id,
-                'name'           => $class['name'],
+                'expense_class_id' => $classModel->id,
+                'name'             => $type['name'],
             ],
             [
-                'order'      => $class['order'],
+                'order'      => $type['order'],
                 'created_at' => $now,
                 'updated_at' => $now,
             ]
         );
 
-        $types = $typesMap[$class['name']] ?? [];
-        foreach ($types as $type) {
-            LibExpenseType::firstOrCreate(
+        // Seed items via itemsMap if defined for this Class > Type
+        $itemDefs = $itemsMap[$class['name']][$type['name']] ?? [];
+        foreach ($itemDefs as $item) {
+            $itemModel = LibExpenseItem::firstOrCreate(
                 [
-                    'expense_class_id' => $classModel->id,
-                    'name'             => $type['name'],
+                    'expense_type_id' => $typeModel->id,
+                    'name'            => $item['name'],
+                    'parent_item_id'  => null,
                 ],
                 [
-                    'order'      => $type['order'],
+                    'order'      => $item['order'] ?? 0,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]
             );
+            
+            $subItemDefs = $subItemsMap[$class['name']][$type['name']][$item['name']] ?? [];
+            foreach ($subItemDefs as $subItem) {
+                LibExpenseItem::firstOrCreate(
+                    [
+                        'expense_type_id' => $typeModel->id,
+                        'name'            => $subItem['name'],
+                        'parent_item_id'  => $itemModel->id,
+                    ],
+                    [
+                        'order'      => $subItem['order'] ?? 0,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ]
+                );
+            }
         }
     }
-
+}
 
     return response()->json($year, 201);
 }
@@ -633,20 +786,23 @@ public function updateOrder(Request $request, $classId)
     // =============================================
 
     public function getExpenseItems($classId, $typeId)
-
-    // Get all expense items for a specific type
+    // Get all expense items for a specific type with hierarchical structure
     {
         $this->verifyBarangayAccess();
         $barangayId = Auth::user()->barangay_id;
 
-        return response()->json(
-            LibExpenseItem::where('expense_type_id', $typeId)
-                ->whereHas('expenseType.expenseClass', function($query) use ($barangayId) {
-                    $query->where('barangay_id', $barangayId);
-                })
-                ->orderBy('order')
-                ->get()
-        );
+        $items = LibExpenseItem::where('expense_type_id', $typeId)
+            ->whereHas('expenseType.expenseClass', function($query) use ($barangayId) {
+                $query->where('barangay_id', $barangayId);
+            })
+            ->with(['childItems' => function($query) {
+                $query->orderBy('order');
+            }])
+            ->whereNull('parent_item_id') // Only get root items
+            ->orderBy('order')
+            ->get();
+
+        return response()->json($items);
     }
 
     // Create a new expense item
@@ -777,7 +933,174 @@ public function updateOrder(Request $request, $classId)
     return response()->json(['message' => 'Item deleted successfully']);
 }
 
+    // =============================================
+    // Sub-Item Methods
+    // =============================================
 
+    // Get sub-items for a specific parent item
+    public function getSubItems($classId, $typeId, $itemId)
+    {
+        $this->verifyBarangayAccess();
+        $barangayId = Auth::user()->barangay_id;
+
+        // Verify the parent item exists and belongs to the correct type and barangay
+        $parentItem = LibExpenseItem::where('id', $itemId)
+            ->where('expense_type_id', $typeId)
+            ->whereHas('expenseType.expenseClass', function($query) use ($barangayId) {
+                $query->where('barangay_id', $barangayId);
+            })
+            ->findOrFail($itemId);
+
+        $subItems = LibExpenseItem::where('parent_item_id', $itemId)
+            ->orderBy('order')
+            ->get();
+
+        return response()->json($subItems);
+    }
+
+    // Create a new sub-item
+    public function createSubItem(Request $request, $classId, $typeId, $itemId)
+    {
+        $this->verifyBarangayAccess();
+        $barangayId = Auth::user()->barangay_id;
+
+        // Verify the parent item exists and belongs to the correct type and barangay
+        $parentItem = LibExpenseItem::where('id', $itemId)
+            ->where('expense_type_id', $typeId)
+            ->whereHas('expenseType.expenseClass', function($query) use ($barangayId) {
+                $query->where('barangay_id', $barangayId);
+            })
+            ->with('expenseType.expenseClass')
+            ->findOrFail($itemId);
+
+        $validated = $request->validate([
+            'name' => [
+                'required',
+                'max:255',
+                Rule::unique('lib_expense_items')->where(function ($query) use ($typeId, $itemId) {
+                    return $query->where('expense_type_id', $typeId)
+                                ->where('parent_item_id', $itemId);
+                })
+            ],
+            'order' => 'sometimes|integer'
+        ]);
+
+        $subItem = LibExpenseItem::create([
+            'expense_type_id' => $typeId,
+            'parent_item_id' => $itemId,
+            'name' => $validated['name'],
+            'order' => $validated['order'] ?? 0
+        ]);
+
+        // Log user action
+        $expenseClass = $parentItem->expenseType->expenseClass;
+        $fyYear = \App\Models\LibFiscalYear::whereKey($expenseClass->fiscal_year_id)->value('year');
+
+        AdminAuthController::logUserAction(
+            Auth::guard('barangay')->user(),
+            'Accounts -> Sub-Items',
+            'Created sub-item "'.$subItem->name
+            .'" under item "'.$parentItem->name
+            .'" in type "'.$parentItem->expenseType->name
+            .'" in class "'.$expenseClass->name
+            .'" for fiscal year '.$fyYear
+        );
+
+        return response()->json($subItem, 201);
+    }
+
+    // Update a sub-item
+    public function updateSubItem(Request $request, $classId, $typeId, $itemId, $subItemId)
+    {
+        $this->verifyBarangayAccess();
+        $barangayId = Auth::user()->barangay_id;
+
+        // Verify the parent item exists and belongs to the correct type and barangay
+        $parentItem = LibExpenseItem::where('id', $itemId)
+            ->where('expense_type_id', $typeId)
+            ->whereHas('expenseType.expenseClass', function($query) use ($barangayId) {
+                $query->where('barangay_id', $barangayId);
+            })
+            ->findOrFail($itemId);
+
+        $validated = $request->validate([
+            'name' => [
+                'required',
+                'max:255',
+                Rule::unique('lib_expense_items')
+                    ->ignore($subItemId)
+                    ->where(function ($query) use ($typeId, $itemId) {
+                        return $query->where('expense_type_id', $typeId)
+                                    ->where('parent_item_id', $itemId);
+                    })
+            ],
+            'order' => 'sometimes|integer'
+        ]);
+
+        $subItem = LibExpenseItem::where('id', $subItemId)
+            ->where('parent_item_id', $itemId)
+            ->where('expense_type_id', $typeId)
+            ->findOrFail($subItemId);
+
+        $oldName = $subItem->name;
+        $subItem->update($validated);
+
+        // Log user action
+        $expenseClass = $parentItem->expenseType->expenseClass;
+        $fyYear = \App\Models\LibFiscalYear::whereKey($expenseClass->fiscal_year_id)->value('year');
+
+        AdminAuthController::logUserAction(
+            Auth::guard('barangay')->user(),
+            'Accounts -> Sub-Items',
+            'Updated sub-item "'.$oldName.'" to "'.$subItem->name
+            .'" under item "'.$parentItem->name
+            .'" in type "'.$parentItem->expenseType->name
+            .'" in class "'.$expenseClass->name
+            .'" for fiscal year '.$fyYear
+        );
+
+        return response()->json($subItem);
+    }
+
+    // Delete a sub-item
+    public function deleteSubItem($classId, $typeId, $itemId, $subItemId)
+    {
+        $this->verifyBarangayAccess();
+        $barangayId = Auth::user()->barangay_id;
+
+        // Verify the parent item exists and belongs to the correct type and barangay
+        $parentItem = LibExpenseItem::where('id', $itemId)
+            ->where('expense_type_id', $typeId)
+            ->whereHas('expenseType.expenseClass', function($query) use ($barangayId) {
+                $query->where('barangay_id', $barangayId);
+            })
+            ->with('expenseType.expenseClass')
+            ->findOrFail($itemId);
+
+        $subItem = LibExpenseItem::where('id', $subItemId)
+            ->where('parent_item_id', $itemId)
+            ->where('expense_type_id', $typeId)
+            ->findOrFail($subItemId);
+
+        $subItemName = $subItem->name;
+        $subItem->delete();
+
+        // Log user action
+        $expenseClass = $parentItem->expenseType->expenseClass;
+        $fyYear = \App\Models\LibFiscalYear::whereKey($expenseClass->fiscal_year_id)->value('year');
+
+        AdminAuthController::logUserAction(
+            Auth::guard('barangay')->user(),
+            'Accounts -> Sub-Items',
+            'Deleted sub-item "'.$subItemName
+            .'" under item "'.$parentItem->name
+            .'" in type "'.$parentItem->expenseType->name
+            .'" in class "'.$expenseClass->name
+            .'" for fiscal year '.$fyYear
+        );
+
+        return response()->json(['message' => 'Sub-item deleted successfully']);
+    }
 
 
 }
