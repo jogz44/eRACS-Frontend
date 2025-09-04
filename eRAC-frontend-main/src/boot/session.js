@@ -45,7 +45,6 @@ export default defineBoot(({ app }) => {
     // Only mark activity if user is authenticated
     if (authStore.token || authStore.adminToken) {
       lastActivityAt = Date.now()
-      console.log('👆 Activity detected, resetting timer')
     }
   }
 
