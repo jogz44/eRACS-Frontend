@@ -218,33 +218,109 @@
                                     >
                                       <div class="draggable-item" :data-id="item.id">
                                         <q-card flat bordered>
-                                          <div class="q-pa-xs row items-center justify-between">
-                                            <div class="row items-center">
-                                              <q-icon
-                                                name="drag_indicator"
-                                                class="drag-handle q-mr-sm text-grey-6"
-                                              />
-                                              <div class="text-body2">{{ item.name }}</div>
+                                          <q-expansion-item
+                                            v-model="expandedItems[item.id]"
+                                            class="item-expansion"
+                                            header-class="q-pa-none"
+                                            expand-icon-class="hidden"
+                                            @update:model-value="toggleItemExpansion(item)"
+                                          >
+                                            <template #header>
+                                              <div class="q-pa-xs full-width row items-center justify-between">
+                                                <div class="row items-center">
+                                                  <q-icon
+                                                    name="drag_indicator"
+                                                    class="drag-handle q-mr-sm text-grey-6"
+                                                  />
+                                                  <div class="text-body2">{{ item.name }}</div>
+                                                </div>
+                                                <div class="row no-wrap items-center q-gutter-xs">
+                                                  <q-btn
+                                                    dense
+                                                    flat
+                                                    round
+                                                    icon="edit"
+                                                    color="orange"
+                                                    @click.stop="editExpenseItem(item)"
+                                                  />
+                                                  <q-btn
+                                                    dense
+                                                    flat
+                                                    round
+                                                    icon="delete"
+                                                    color="red"
+                                                    @click.stop="confirmDeleteExpenseItem(item)"
+                                                  />
+                                                  <q-btn
+                                                    dense
+                                                    flat
+                                                    round
+                                                    icon="add"
+                                                    color="primary"
+                                                    @click.stop="showAddSubItemDialogForItem(item)"
+                                                  />
+                                                  <q-icon
+                                                    :name="expandedItems[item.id] ? 'expand_less' : 'expand_more'"
+                                                    color="grey"
+                                                  />
+                                                </div>
+                                              </div>
+                                            </template>
+
+                                            <!-- Sub-Items Content -->
+                                            <div class="q-ml-md">
+                                              <div class="text-caption text-grey-7 q-mb-sm q-ml-sm">
+                                                Sub-items under {{ item.name }}
+                                              </div>
+                                              <div class="q-pa-xs sub-item-container">
+                                                <div
+                                                  :ref="
+                                                    (el) => {
+                                                      if (el) initSubItemContainer(el, item.id)
+                                                    }
+                                                  "
+                                                  class="sub-item-container"
+                                                >
+                                                  <template
+                                                    v-for="subItem in getExpenseSubItemsForItem(item.id)"
+                                                    :key="subItem.id"
+                                                  >
+                                                    <div class="draggable-sub-item" :data-id="subItem.id">
+                                                      <q-card flat bordered>
+                                                        <div class="q-pa-xs row items-center justify-between">
+                                                          <div class="row items-center">
+                                                            <q-icon
+                                                              name="drag_indicator"
+                                                              class="drag-handle q-mr-sm text-grey-6"
+                                                            />
+                                                            <div class="text-body2">{{ subItem.name }}</div>
+                                                          </div>
+                                                          <div class="row no-wrap items-center q-gutter-xs">
+                                                            <q-btn
+                                                              dense
+                                                              flat
+                                                              round
+                                                              icon="edit"
+                                                              color="orange"
+                                                              @click="editExpenseSubItem(subItem)"
+                                                            />
+                                                            <q-btn
+                                                              dense
+                                                              flat
+                                                              round
+                                                              icon="delete"
+                                                              color="red"
+                                                              @click.stop="confirmDeleteExpenseSubItem(subItem)"
+                                                            />
+                                                          </div>
+                                                        </div>
+                                                      </q-card>
+                                                    </div>
+                                                  </template>
+                                                </div>
+                                              </div>
                                             </div>
-                                            <div class="row no-wrap items-center q-gutter-xs">
-                                              <q-btn
-                                                dense
-                                                flat
-                                                round
-                                                icon="edit"
-                                                color="orange"
-                                                @click="editExpenseItem(item)"
-                                              />
-                                              <q-btn
-                                                dense
-                                                flat
-                                                round
-                                                icon="delete"
-                                                color="red"
-                                                @click.stop="confirmDeleteExpenseItem(item)"
-                                              />
-                                            </div>
-                                          </div>
+                                          </q-expansion-item>
                                         </q-card>
                                       </div>
                                     </template>
@@ -543,6 +619,50 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <!-- Add Sub-Item Dialog -->
+    <q-dialog v-model="showAddSubItemDialog">
+      <q-card style="min-width: 400px">
+        <q-card-section class="q-pb-none">
+          <div class="text-h6">Add New Sub-Item in {{ getSelectedItemName() }}</div>
+        </q-card-section>
+        <q-card-section>
+          <q-input
+            v-model="newExpenseSubItem.name"
+            label="Sub-Item Name"
+            outlined
+            :rules="[(val) => !!val || 'Name is required']"
+            @keyup.enter="saveExpenseSubItem"
+            @keydown.enter.prevent
+          />
+        </q-card-section>
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" v-close-popup @click="resetSubItemForm" />
+          <q-btn label="Save" color="primary" @click="saveExpenseSubItem" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Edit Sub-Item Dialog -->
+    <q-dialog v-model="showEditSubItemDialog">
+      <q-card style="min-width: 300px">
+        <q-card-section class="q-pb-none">
+          <div class="text-h6">Edit Sub-Item</div>
+        </q-card-section>
+        <q-card-section>
+          <q-input
+            v-model="editingExpenseSubItem.name"
+            label="Sub-Item Name"
+            outlined
+            :rules="[(val) => !!val || 'Name is required']"
+          />
+        </q-card-section>
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn label="Save" color="primary" @click="updateExpenseSubItem" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -616,6 +736,12 @@ const expandedTypes = ref({})
 const currentParentType = ref(null)
 const newExpenseItem = ref({ name: '', typeId: null })
 const editingExpenseItem = ref(null)
+const expandedItems = ref({})
+
+// Expense Sub-Items
+const currentParentItem = ref(null)
+const newExpenseSubItem = ref({ name: '', itemId: null })
+const editingExpenseSubItem = ref(null)
 
 // Dialog controls
 const showAddYearDialog = ref(false)
@@ -623,9 +749,11 @@ const showCopyDialog = ref(false)
 const showAddClassDialog = ref(false)
 const showAddTypeDialog = ref(false)
 const showAddItemDialog = ref(false)
+const showAddSubItemDialog = ref(false)
 const showEditClassDialog = ref(false)
 const showEditTypeDialog = ref(false)
 const showEditItemDialog = ref(false)
+const showEditSubItemDialog = ref(false)
 const showDeleteConfirm = ref(false)
 
 // Copy related
@@ -637,6 +765,7 @@ const allSelected = ref(false)
 // Sortable
 const sortableContainer = ref(null)
 const typeSortables = ref({})
+const subItemSortables = ref({})
 const itemToDelete = ref(null)
 const deleteType = ref('')
 
@@ -1051,6 +1180,120 @@ const confirmDeleteExpenseItem = (item) => {
   showDeleteConfirm.value = true
 }
 
+// Expense Sub-Item related functions
+const resetSubItemForm = () => {
+  newExpenseSubItem.value = { name: '', itemId: null }
+  currentParentItem.value = null
+  showAddSubItemDialog.value = false
+}
+
+const showAddSubItemDialogForItem = (expenseItem) => {
+  console.log('Setting parent item for new sub-item:', {
+    itemId: expenseItem.id,
+    itemName: expenseItem.name,
+    typeId: expenseItem.expense_type_id,
+    classId: expenseItem.expense_class_id,
+  })
+
+  currentParentItem.value = expenseItem
+  newExpenseSubItem.value = {
+    name: '',
+    itemId: expenseItem.id,
+    expense_type_id: expenseItem.expense_type_id,
+    expense_class_id: expenseItem.expense_class_id,
+  }
+  showAddSubItemDialog.value = true
+}
+
+const getSelectedItemName = () => {
+  return currentParentItem.value?.name || 'Selected Item'
+}
+
+const saveExpenseSubItem = async () => {
+  try {
+    if (!newExpenseSubItem.value.name) {
+      throw new Error('Sub-item name is required')
+    }
+
+    if (!currentParentItem.value) {
+      console.error('No parent item selected:', currentParentItem.value)
+      throw new Error('Parent item not selected')
+    }
+
+    const capitalizedName = newExpenseSubItem.value.name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+
+    await accountsStore.createExpenseSubItem({
+      name: capitalizedName,
+      expenseClassId: currentParentItem.value.expense_class_id,
+      expenseTypeId: currentParentItem.value.expense_type_id,
+      expenseItemId: currentParentItem.value.id,
+    })
+
+    $q.notify({
+      type: 'positive',
+      message: 'Sub-item added successfully',
+      position: 'top',
+    })
+    resetSubItemForm()
+  } catch (error) {
+    console.error('Error saving expense sub-item:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to add expense sub-item',
+      position: 'top',
+    })
+  }
+}
+
+const editExpenseSubItem = (subItem) => {
+  editingExpenseSubItem.value = { ...subItem }
+  showEditSubItemDialog.value = true
+}
+
+const updateExpenseSubItem = async () => {
+  try {
+    const parentItem = accountsStore.expenseItems.find(
+      (item) => item.id === editingExpenseSubItem.value.expense_item_id,
+    )
+
+    if (!parentItem) {
+      throw new Error('Parent item not found')
+    }
+
+    await accountsStore.updateExpenseSubItem({
+      id: editingExpenseSubItem.value.id,
+      expenseClassId: parentItem.expense_class_id,
+      expenseTypeId: parentItem.expense_type_id,
+      expenseItemId: parentItem.id,
+      name: editingExpenseSubItem.value.name,
+      order: editingExpenseSubItem.value.order || 0,
+    })
+
+    $q.notify({
+      type: 'positive',
+      message: 'Sub-item updated successfully',
+      position: 'top',
+    })
+    showEditSubItemDialog.value = false
+  } catch (error) {
+    console.error('Error updating sub-item:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to update sub-item',
+      position: 'top',
+    })
+  }
+}
+
+const confirmDeleteExpenseSubItem = (subItem) => {
+  itemToDelete.value = subItem
+  deleteType.value = 'subitem'
+  showDeleteConfirm.value = true
+}
+
 // Helper functions
 const getExpenseTypesForClass = computed(() => (classId) => {
   if (!selectedYear.value || !classId) {
@@ -1082,6 +1325,22 @@ const getExpenseItemsForType = (typeId) => {
 
   return accountsStore.expenseItems
     .filter((item) => item.expense_type_id == typeId && item.year == yearValue)
+    .sort((a, b) => (a.order || 0) - (b.order || 0))
+}
+
+const getExpenseSubItemsForItem = (itemId) => {
+  if (!selectedYear.value) {
+    console.log('No year selected - returning empty sub-items list')
+    return []
+  }
+
+  const fiscalYear = accountsStore.years.find((y) => y.id == selectedYear.value)
+  const yearValue = fiscalYear?.year?.toString()
+
+  console.log(`Filtering sub-items for item ${itemId} and year ${yearValue}`)
+
+  return accountsStore.expenseSubItems
+    .filter((subItem) => subItem.expense_item_id == itemId && subItem.year == yearValue)
     .sort((a, b) => (a.order || 0) - (b.order || 0))
 }
 
@@ -1178,9 +1437,11 @@ const resetAllDialogs = () => {
   showAddClassDialog.value = false
   showAddTypeDialog.value = false
   showAddItemDialog.value = false
+  showAddSubItemDialog.value = false
   showEditClassDialog.value = false
   showEditTypeDialog.value = false
   showEditItemDialog.value = false
+  showEditSubItemDialog.value = false
   showCopyDialog.value = false
 
   itemToDelete.value = null
@@ -1228,6 +1489,20 @@ const confirmDelete = async () => {
       $q.notify({
         type: 'positive',
         message: 'Item deleted successfully',
+        position: 'top'
+      })
+    }
+    else if (deleteType.value === 'subitem') {
+      const subItemData = {
+        id: id,
+        expenseClassId: itemToDelete.value.expense_class_id,
+        expenseTypeId: itemToDelete.value.expense_type_id,
+        expenseItemId: itemToDelete.value.expense_item_id
+      }
+      await accountsStore.deleteExpenseSubItem(subItemData)
+      $q.notify({
+        type: 'positive',
+        message: 'Sub-item deleted successfully',
         position: 'top'
       })
     }
@@ -1343,6 +1618,57 @@ const initItemContainer = (el, typeId) => {
   }
 }
 
+const initSubItemContainer = (el, itemId) => {
+  if (el && !subItemSortables.value[itemId]) {
+    subItemSortables.value[itemId] = new Sortable(el, {
+      animation: 150,
+      handle: '.drag-handle',
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      onEnd: async (evt) => {
+        const subItems = [...getExpenseSubItemsForItem(itemId)]
+        const [movedSubItem] = subItems.splice(evt.oldIndex, 1)
+        subItems.splice(evt.newIndex, 0, movedSubItem)
+
+        const parentItem = accountsStore.expenseItems.find((item) => item.id === itemId)
+        if (!parentItem) {
+          console.error('Parent item not found for itemId:', itemId)
+          return
+        }
+
+        try {
+          await Promise.all(
+            subItems.map((subItem, index) =>
+              accountsStore.updateSubItemOrder({
+                id: subItem.id,
+                expenseClassId: parentItem.expense_class_id,
+                expenseTypeId: parentItem.expense_type_id,
+                expenseItemId: itemId,
+                name: subItem.name,
+                order: index,
+              }),
+            ),
+          )
+
+          $q.notify({
+            type: 'positive',
+            message: 'Sub-item order updated successfully',
+            timeout: 1000,
+            position: 'top',
+          })
+        } catch (error) {
+          console.error('Failed to save sub-item order:', error)
+          $q.notify({
+            type: 'negative',
+            message: 'Failed to save sub-item order: ' + error.message,
+            position: 'top',
+          })
+        }
+      },
+    })
+  }
+}
+
 const toggleExpansion = async (classId) => {
   console.log('Toggling expansion for class:', classId)
   console.log('Current selected year:', selectedYear.value)
@@ -1404,6 +1730,46 @@ const toggleExpansion = async (classId) => {
   expandedClasses.value = newExpanded
 }
 
+const toggleItemExpansion = async (item) => {
+  console.log('Toggling expansion for item:', item.id)
+
+  const newExpanded = { ...expandedItems.value }
+
+  if (!newExpanded[item.id]) {
+    // Close other expanded items
+    Object.keys(newExpanded).forEach((id) => {
+      newExpanded[id] = false
+    })
+    newExpanded[item.id] = true
+
+    try {
+      if (selectedYear.value) {
+        console.log('Fetching sub-items for item:', item.id)
+        await accountsStore.fetchExpenseSubItems(
+          item.expense_class_id,
+          item.expense_type_id,
+          item.id
+        )
+      } else {
+        console.warn('Cannot fetch sub-items - no year selected')
+      }
+    } catch (error) {
+      console.error('Error loading sub-items:', error)
+    }
+
+    nextTick(() => {
+      const container = document.querySelector(`[data-sub-item-container="${item.id}"]`)
+      if (container && !subItemSortables.value[item.id]) {
+        initSubItemContainer(container, item.id)
+      }
+    })
+  } else {
+    newExpanded[item.id] = false
+  }
+
+  expandedItems.value = newExpanded
+}
+
 // Lifecycle hooks
 onMounted(async () => {
   try {
@@ -1413,7 +1779,7 @@ onMounted(async () => {
         accountsStore.yearOptions.find((y) => y.value === accountsStore.selectedYear)?.yearValue ||
         null
     }
-    
+
     // Log page visit
     await logPageVisit('Accounts Library')
   } catch (error) {
@@ -1504,7 +1870,8 @@ watch(
 }
 
 .draggable-item,
-.draggable-type {
+.draggable-type,
+.draggable-sub-item {
   cursor: grab;
 }
 
@@ -1525,6 +1892,16 @@ watch(
 
 .sortable-chosen {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sub-item-container {
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.item-expansion {
+  border-left: 3px solid #e3f2fd;
 }
 
 @media (max-width: 768px) {
