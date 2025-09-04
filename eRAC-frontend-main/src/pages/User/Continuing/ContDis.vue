@@ -2,7 +2,12 @@
   <q-page class="q-pa-md contdis-page">
     <div class="page-header q-mb-md">
       <div class="row items-center justify-between">
-        <div class="text-h6 text-weight-medium">Continuing Disbursement</div>
+        <div>
+          <div class="text-h6 text-weight-medium">Continuing Disbursement</div>
+          <div class="text-caption text-grey-6">
+            Showing transactions for fiscal year {{ currentFiscalYear }}
+          </div>
+        </div>
         <q-btn
           icon="refresh"
           color="primary"
@@ -10,7 +15,54 @@
           dense
           @click="loadPendingUsers"
           :loading="loading"
+          title="Refresh disbursements"
         />
+      </div>
+    </div>
+
+    <!-- Status Summary Cards -->
+    <div class="status-indicators-container q-mb-md">
+      <div class="row q-col-gutter-md justify-center">
+        <div class="col-md-2 col-sm-4 col-xs-6">
+          <q-card class="summary-card">
+            <q-card-section class="text-center">
+              <div class="text-h4 text-weight-bold text-orange">{{ statusCounts.pending }}</div>
+              <div class="text-subtitle2 text-grey-7">Pending</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-md-2 col-sm-4 col-xs-6">
+          <q-card class="summary-card">
+            <q-card-section class="text-center">
+              <div class="text-h4 text-weight-bold text-amber">{{ statusCounts.partial }}</div>
+              <div class="text-subtitle2 text-grey-7">Partial</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-md-2 col-sm-4 col-xs-6">
+          <q-card class="summary-card">
+            <q-card-section class="text-center">
+              <div class="text-h4 text-weight-bold text-green">{{ statusCounts.liquidated }}</div>
+              <div class="text-subtitle2 text-grey-7">Liquidated</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-md-2 col-sm-4 col-xs-6">
+          <q-card class="summary-card">
+            <q-card-section class="text-center">
+              <div class="text-h4 text-weight-bold text-red">{{ statusCounts.voided }}</div>
+              <div class="text-subtitle2 text-grey-7">Voided</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-md-2 col-sm-4 col-xs-6">
+          <q-card class="summary-card">
+            <q-card-section class="text-center">
+              <div class="text-h4 text-weight-bold text-purple">{{ statusCounts.stale }}</div>
+              <div class="text-subtitle2 text-grey-7">Stale</div>
+            </q-card-section>
+          </q-card>
+        </div>
       </div>
     </div>
 
@@ -189,7 +241,7 @@
                 icon="add"
                 @click="handleAddExpense"
                 @mouseenter="preloadExpenseAccounts"
-                :loading="addingExpense || store.expenseTypeLoading"
+                :loading="store.loading || store.expenseTypeLoading"
                 v-permission="'add'"
               />
             </div>
@@ -424,12 +476,48 @@ import { usePageLogging } from 'src/composables/usePageLogging'
 
 const $q = useQuasar()
 const loading = ref(false)
-const addingExpense = ref(false)
 const store = useContDisbursementStore()
 const bankStore = useBankStore()
 const dateRange = ref(null)
 const viewLoading = ref({})
 const liquidateLoading = ref({})
+
+// Current fiscal year
+const currentFiscalYear = computed(() => new Date().getFullYear())
+
+// Status counts for summary cards
+const statusCounts = computed(() => {
+  const counts = {
+    pending: 0,
+    partial: 0,
+    liquidated: 0,
+    voided: 0,
+    stale: 0,
+  }
+
+  store.disbursements.forEach((disbursement) => {
+    switch (disbursement.status) {
+      case 'Pending':
+        counts.pending++
+        break
+      case 'Partial':
+        counts.partial++
+        break
+      case 'Liquidated':
+        counts.liquidated++
+        break
+      case 'Void Requested':
+      case 'Voided':
+        counts.voided++
+        break
+      case 'Stale':
+        counts.stale++
+        break
+    }
+  })
+
+  return counts
+})
 
 
 
@@ -551,20 +639,10 @@ const handleBankSelection = async (bankId) => {
 
 
 const handleAddExpense = async () => {
-  addingExpense.value = true
   console.log('Add button clicked, starting to open expense dialog...')
   
   try {
-    // Add a timeout to prevent infinite loading
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Dialog opening timed out after 15 seconds')), 15000)
-    })
-    
-    await Promise.race([
-      store.openDialog('expense'),
-      timeoutPromise
-    ])
-    
+    await store.openDialog('expense')
     console.log('Expense dialog opened successfully')
   } catch (error) {
     console.error('Error opening expense dialog:', error)
@@ -575,9 +653,6 @@ const handleAddExpense = async () => {
       position: 'top',
       timeout: 5000,
     })
-  } finally {
-    addingExpense.value = false
-    console.log('Add button loading state reset')
   }
 }
 
@@ -627,7 +702,8 @@ const handleDeleteExpense = async (row) => {
 
 const preloadExpenseAccounts = () => {
   // Preload expense accounts when user hovers over Add button
-  if (store.expenseAccounts.length === 0 && !store.expenseAccountsLoading) {
+  // Only preload if not already loading and no data exists
+  if (store.expenseData.length === 0 && !store.loading && !store.expenseTypeLoading) {
     store.refreshExpenseAccountsWithBalances().catch((error) => {
       console.warn('Failed to preload expense accounts:', error)
     })
@@ -853,6 +929,30 @@ onMounted(async () => {
   padding-bottom: 8px;
 }
 
+/* Status Indicators Container */
+.status-indicators-container {
+  background: #f8f9fa;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #e9ecef;
+}
+
+/* Summary Cards Styling */
+.summary-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  background: white;
+  border: 2px solid transparent;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
 .filters-section {
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -861,6 +961,10 @@ onMounted(async () => {
 @media (max-width: 768px) {
   .q-pa-md {
     padding: 8px;
+  }
+
+  .status-indicators-container {
+    padding: 12px;
   }
 
   .row.items-center.q-gutter-sm {
@@ -877,11 +981,25 @@ onMounted(async () => {
     flex-direction: column;
   }
 
+  .col-md-2,
+  .col-sm-4,
+  .col-xs-6 {
+    margin-bottom: 8px;
+  }
+
   .col-md-4,
   .col-sm-6,
   .col-sm-12 {
     width: 100%;
     margin-bottom: 8px;
+  }
+
+  .summary-card .q-card-section {
+    padding: 12px;
+  }
+
+  .text-h4 {
+    font-size: 1.5rem;
   }
 }
 </style>

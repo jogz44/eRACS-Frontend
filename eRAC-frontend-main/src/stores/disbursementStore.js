@@ -985,6 +985,57 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
+    // Fetch disbursement data for viewing only (doesn't modify form data or open dialogs)
+    async fetchDisbursementForView(id) {
+      try {
+        const authStore = useAuthStore();
+        // Use barangay user token for barangay endpoints
+        const token = authStore.token;
+        const response = await api.get(`/api/barangay/disbursements/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+        
+        // Get the disbursement data
+        const disbursement = response.data.data;
+        console.log('Raw disbursement data from API:', disbursement);
+        console.log('Raw expenses from API:', disbursement?.expenses);
+        
+        if (disbursement) {
+          // Map expenses to ensure proper field names
+          const mappedExpenses = (disbursement.expenses || []).map(expense => ({
+            id: expense.id,
+            accountName: expense.account_name || expense.particular || 'Unknown Account',
+            amount: expense.amount,
+            particular: expense.particular,
+            accountId: expense.accountId,
+            expense_class_id: expense.expense_class_id,
+            expense_type_id: expense.expense_type_id,
+            expense_item_id: expense.expense_item_id,
+          }));
+          
+          console.log('Mapped expenses for view:', mappedExpenses);
+          
+          return {
+            id: disbursement.id,
+            date: disbursement.date,
+            dvNumber: disbursement.dv_number,
+            chequeNumber: disbursement.cheque_number,
+            bank_id: disbursement.bank_id,
+            payee: disbursement.payee,
+            dvAmount: disbursement.dv_amount,
+            expenses: mappedExpenses,
+          };
+        }
+        return null;
+      } catch (error) {
+        console.error('Error fetching disbursement for view:', error);
+        return null;
+      }
+    },
+
     async liquidateDisbursement(id, liquidatedAmount) {
       try {
         const authStore = useAuthStore();
@@ -1182,14 +1233,57 @@ export const useDisbursementStore = defineStore('disbursement', {
     // In your actions
     // For viewing only (read-only)
     async openViewOrDetails(row) {
+      // Close any other dialogs that might be open
+      this.dialogs.editDisbursement = false;
+      this.dialogs.orDetails = false;
+      this.dialogs.disbursement = false;
+      
       this.currentLiquidation = JSON.parse(JSON.stringify(row));
+      console.log('Opening view OR details for:', row);
+      console.log('Row expenses:', row.expenses);
+      
+      // Initialize orDetails as empty array
+      this.currentLiquidation.orDetails = [];
+      
+      // Ensure expenses are available
+      if (!this.currentLiquidation.expenses || this.currentLiquidation.expenses.length === 0) {
+        console.log('No expenses found in row, attempting to fetch disbursement details');
+        try {
+          const disbursement = await this.fetchDisbursementForView(row.id);
+          if (disbursement && disbursement.expenses) {
+            this.currentLiquidation.expenses = disbursement.expenses;
+            console.log('Loaded expenses from fetchDisbursementForView:', disbursement.expenses);
+          }
+        } catch (error) {
+          console.error('Error fetching disbursement details:', error);
+        }
+      }
+      
       // Fetch OR Details from backend
       if (row.id) {
         try {
-          // Use different endpoints for admin vs regular users
-          const endpoint = this.authStore.admin ? `/api/admin/disbursements/${row.id}/or-details` : `/api/barangay/disbursements/${row.id}/or-details`
-          const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
+          // Get auth store instance
+          const authStore = useAuthStore();
           
+          // Validate auth store
+          if (!authStore) {
+            throw new Error('Auth store not available');
+          }
+          
+          console.log('Auth store:', authStore);
+          console.log('Is admin:', authStore.admin);
+          console.log('Admin token:', authStore.adminToken);
+          console.log('Regular token:', authStore.token);
+          
+          // Use different endpoints for admin vs regular users
+          const endpoint = authStore.admin ? `/api/admin/disbursements/${row.id}/or-details` : `/api/barangay/disbursements/${row.id}/or-details`
+          const token = authStore.admin ? authStore.adminToken : authStore.token
+          
+          if (!token) {
+            throw new Error('No authentication token available');
+          }
+          
+          console.log('Fetching OR details from:', endpoint);
           const res = await api.get(endpoint, {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -1197,27 +1291,65 @@ export const useDisbursementStore = defineStore('disbursement', {
             }
           });
           
-          const backendUrl = 'http://localhost:8000'; // Change if your backend runs elsewhere
-          this.currentLiquidation.orDetails = res.data.data.map(or => ({
-            orDate: or.or_date,
-            orNumber: or.or_number,
-            orAmount: or.or_amount,
-            orImage: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
-            orPhotoUrl: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
-          }));
+          console.log('OR Details response:', res.data);
+          console.log('Response data structure:', res.data);
+          console.log('Data array:', res.data.data);
+          
+          // Check if we have data and it's an array
+          if (res.data && res.data.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
+            const backendUrl = 'http://localhost:8000'; // Change if your backend runs elsewhere
+            this.currentLiquidation.orDetails = res.data.data.map((or, index) => {
+              console.log(`Processing OR detail ${index}:`, or);
+              
+              // Convert YYYY-MM-DD to DD/MM/YYYY format
+              let formattedDate = '';
+              if (or.or_date) {
+                const dateParts = or.or_date.split('-');
+                if (dateParts.length === 3) {
+                  formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+                }
+              }
 
-          // Set single remarks from the latest OR detail (most recent one)
-          if (res.data.data.length > 0) {
-            // Get the latest OR detail (last in the array) for remarks
-            const latestOrDetail = res.data.data[res.data.data.length - 1];
-            this.currentLiquidation.remarks = latestOrDetail.remarks || '';
+              const mappedOr = {
+                id: or.id,
+                index: index,
+                orDate: formattedDate || or.or_date,
+                orNumber: or.or_number,
+                orAmount: or.or_amount,
+                orImage: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
+                orPhotoUrl: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
+                serverPhotoPath: or.or_photo,
+                remarks: or.remarks || '',
+                isExisting: true // Flag to identify existing OR details
+              };
+              
+              console.log(`Mapped OR detail ${index}:`, mappedOr);
+              return mappedOr;
+            });
+
+            console.log('Final mapped OR Details:', this.currentLiquidation.orDetails);
+
+            // Set single remarks from the latest OR detail (most recent one)
+            if (res.data.data.length > 0) {
+              // Get the latest OR detail (last in the array) for remarks
+              const latestOrDetail = res.data.data[res.data.data.length - 1];
+              this.currentLiquidation.remarks = latestOrDetail.remarks || '';
+            }
+          } else {
+            console.log('No OR details found in response or empty array');
+            this.currentLiquidation.orDetails = [];
           }
-        } catch {
+        } catch (error) {
+          console.error('Error fetching OR details:', error);
+          console.error('Error details:', error.response?.data);
           this.currentLiquidation.orDetails = [];
         }
       } else {
+        console.log('No row ID provided, initializing empty orDetails');
         this.currentLiquidation.orDetails = [];
       }
+      
+      console.log('Final currentLiquidation.orDetails:', this.currentLiquidation.orDetails);
       this.dialogs.viewOrDetails = true;
     },
 
