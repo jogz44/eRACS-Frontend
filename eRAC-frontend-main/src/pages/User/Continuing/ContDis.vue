@@ -400,12 +400,19 @@
               @keypress="blockNonNumeric"
               @paste.prevent="handlePasteNumeric"
               placeholder="0.00"
+              :error="isAmountExceedingBalance"
+              :error-message="amountErrorMessage"
             />
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md">
             <q-btn flat label="Cancel" @click="store.closeDialog('expenseDetail')" />
-            <q-btn label="Save" @click="handleSaveExpense" color="primary" />
+            <q-btn 
+              label="Save" 
+              @click="handleSaveExpense" 
+              color="primary" 
+              :disable="isAmountExceedingBalance || !store.forms.expense.particulars?.trim()"
+            />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -505,6 +512,22 @@ const liquidateLoading = ref({})
 
 // Current fiscal year
 const currentFiscalYear = computed(() => new Date().getFullYear())
+
+// Amount validation computed properties
+const isAmountExceedingBalance = computed(() => {
+  const amount = Number(store.forms.expense.amount) || 0
+  const balance = store.forms.expense.balance || 0
+  return amount > balance && amount > 0
+})
+
+const amountErrorMessage = computed(() => {
+  if (isAmountExceedingBalance.value) {
+    const amount = Number(store.forms.expense.amount) || 0
+    const balance = store.forms.expense.balance || 0
+    return `Amount exceeds available balance. Available: ₱${balance.toLocaleString()}, Requested: ₱${amount.toLocaleString()}`
+  }
+  return ''
+})
 
 // Status counts for summary cards
 // const statusCounts = computed(() => {

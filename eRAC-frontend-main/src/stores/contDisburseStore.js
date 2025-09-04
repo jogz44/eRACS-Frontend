@@ -971,6 +971,25 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
     // Expense Actions
     saveExpense() {
       const amount = Number(this.forms.expense.amount) || 0
+      const particulars = this.forms.expense.particulars?.trim() || ''
+
+      // Validate particulars
+      if (!particulars) {
+        throw new Error('Particulars is required')
+      }
+
+      // Validate amount
+      if (amount <= 0) {
+        throw new Error('Amount must be greater than 0')
+      }
+
+      // Get the current available balance (this is the balance shown in the add expense dialog)
+      const currentAvailableBalance = this.forms.expense.balance || 0
+
+      // Validate that the requested amount doesn't exceed the current available balance
+      if (amount > currentAvailableBalance) {
+        throw new Error(`Amount exceeds available balance. Available: ₱${currentAvailableBalance.toLocaleString()}, Requested: ₱${amount.toLocaleString()}`)
+      }
 
       this.expenses.push({
         id: Date.now(),

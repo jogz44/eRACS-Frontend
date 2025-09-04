@@ -566,16 +566,17 @@
 
           <template v-slot:body-cell-remarks="props">
             <q-td :props="props">
-              <div v-if="props.row.status === 'Void Requested' && props.row.remarks">
-                {{ props.row.remarks }}
+              <div v-if="hasRemarks(props.row)" class="row items-center justify-center">
+                <q-icon
+                  name="visibility"
+                  color="blue"
+                  size="md"
+                  class="cursor-pointer"
+                  @click="openRemarksDialog(props.row)"
+                  title="View remarks"
+                />
               </div>
-              <div v-else-if="props.row.status === 'Voided' && props.row.remarks">
-                {{ props.row.remarks }}
-              </div>
-              <div v-else-if="props.row.rejection_remarks">
-                {{ props.row.rejection_remarks }}
-              </div>
-              <div v-else>-</div>
+              <div v-else class="text-grey-6 text-center">-</div>
             </q-td>
           </template>
 
@@ -630,6 +631,53 @@
               :disable="!store.forms.void.remarks || store.forms.void.remarks.trim() === ''"
               @click="handleSubmitVoidRequest"
             />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
+      <!-- Remarks Dialog -->
+      <q-dialog v-model="remarksDialog" persistent>
+        <q-card style="min-width: 500px; max-width: 90vw">
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">Remarks</div>
+          </q-card-section>
+
+          <q-card-section>
+            <div class="text-body1 q-mb-sm">
+              <strong>Disbursement:</strong> {{ selectedRemarksData?.dvNumber || 'N/A' }}
+            </div>
+            <div class="text-body1 q-mb-sm">
+              <strong>Payee:</strong> {{ selectedRemarksData?.payee || 'N/A' }}
+            </div>
+            <div class="text-body1 q-mb-md">
+              <strong>Status:</strong>
+              <q-chip
+                :color="getStatusColor(selectedRemarksData?.status)"
+                :text-color="getStatusTextColor(selectedRemarksData?.status)"
+                dense
+                :label="selectedRemarksData?.status"
+                class="q-ml-sm"
+              />
+            </div>
+
+            <q-separator class="q-mb-md" />
+
+            <div class="text-subtitle1 q-mb-sm text-weight-medium">Remarks:</div>
+            <div class="remarks-content q-pa-md" style="background-color: #f5f5f5; border-radius: 8px; min-height: 100px;">
+              <div v-if="selectedRemarksData?.remarks" class="text-body1">
+                {{ selectedRemarksData.remarks }}
+              </div>
+              <div v-else-if="selectedRemarksData?.rejection_remarks" class="text-body1">
+                {{ selectedRemarksData.rejection_remarks }}
+              </div>
+              <div v-else class="text-grey-6 text-italic">
+                No remarks available
+              </div>
+            </div>
+          </q-card-section>
+
+          <q-card-actions align="right" class="q-pa-md">
+            <q-btn flat label="Close" @click="closeRemarksDialog" color="primary" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -988,6 +1036,10 @@ const initialLoading = ref(true)
 const viewLoading = ref({})
 const liquidateLoading = ref({})
 // const checkingStaleStatus = ref(false)
+
+// Remarks dialog
+const remarksDialog = ref(false)
+const selectedRemarksData = ref(null)
 
 const currentBankLabel = computed(() => {
   if (store.forms.disbursement.bank_id) {
@@ -1445,6 +1497,24 @@ const getBudgetSourceLabel = (budgetSource) => {
 //     checkingStaleStatus.value = false
 //   }
 // }
+
+// Remarks dialog methods
+const hasRemarks = (row) => {
+  return (row.status === 'Void Requested' && row.remarks) ||
+         (row.status === 'Voided' && row.remarks) ||
+         row.rejection_remarks
+}
+
+
+const openRemarksDialog = (row) => {
+  selectedRemarksData.value = row
+  remarksDialog.value = true
+}
+
+const closeRemarksDialog = () => {
+  remarksDialog.value = false
+  selectedRemarksData.value = null
+}
 </script>
 
 <style scoped>
@@ -1557,5 +1627,16 @@ const getBudgetSourceLabel = (budgetSource) => {
   .text-h4 {
     font-size: 1.5rem;
   }
+}
+
+/* Remarks dialog styling */
+.remarks-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.5;
+}
+
+.remarks-content .text-body1 {
+  margin: 0;
 }
 </style>
