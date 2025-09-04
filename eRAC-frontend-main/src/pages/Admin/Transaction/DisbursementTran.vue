@@ -295,15 +295,56 @@
                 :label="isReviewed(props.row.id) ? 'Reviewed' : 'Review'"
                 :color="isReviewed(props.row.id) ? 'positive' : 'primary'"
                 :outline="!isReviewed(props.row.id)"
-                :disable="isReviewed(props.row.id)"
+                :disable="false"
                 :unelevated="!isReviewed(props.row.id)"
                 rounded
-                @click="!isReviewed(props.row.id) && handleReviewClick(props.row)"
-              />
+                @click="isReviewed(props.row.id) ? showRemarksDialog(props.row.id) : handleReviewClick(props.row)"
+              >
+                <q-tooltip v-if="isReviewed(props.row.id)" class="bg-grey-8">
+                  Click to view admin remarks
+                </q-tooltip>
+              </q-btn>
             </q-td>
           </template>
         </q-table>
       </q-card>
+
+      <!-- Review Confirmation Dialog -->
+      <q-dialog v-model="showReviewDialog" @keydown.enter="confirmReview">
+        <q-card style="min-width: 400px">
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">Confirm Review</div>
+          </q-card-section>
+
+          <q-card-section>
+            <div class="q-mb-md">
+              <div class="text-body1 q-mb-sm">
+                Mark DV <strong>{{ currentReviewRow?.dvNumber }}</strong> as reviewed?
+              </div>
+              <q-input
+                outlined
+                v-model="adminRemarks"
+                label="Admin Remarks"
+                placeholder="Enter your remarks here..."
+                type="textarea"
+                rows="3"
+                :rules="[(val) => !!val || 'Remarks are required']"
+                @keydown.enter="confirmReview"
+              />
+            </div>
+          </q-card-section>
+
+          <q-card-actions align="right" class="q-pa-md">
+            <q-btn flat label="Cancel" @click="cancelReview" />
+            <q-btn
+              label="OK"
+              color="primary"
+              @click="confirmReview"
+              :disable="!adminRemarks.trim()"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
 
       <OrDetailsDialog />
       <ViewOrDetails v-model="store.dialogs.viewOrDetails" />
@@ -392,24 +433,69 @@ const $q = useQuasar()
 
 // Local reviewed state per disbursement row (non-persistent)
 const reviewedSet = ref(new Set())
+const disbursementRemarks = ref(new Map()) // Store remarks per reviewed DV
 
 const isReviewed = (id) => reviewedSet.value.has(id)
+const getRemarks = (id) => disbursementRemarks.value.get(id) || ''
+
+// Review dialog state
+const showReviewDialog = ref(false)
+const adminRemarks = ref('')
+const currentReviewRow = ref(null)
 
 const handleReviewClick = (row) => {
   if (isReviewed(row.id)) return
-  $q.dialog({
-    title: 'Confirm Review',
-    message: `Mark DV ${row.dvNumber} as reviewed?`,
-    cancel: true,
-    persistent: true
-  }).onOk(() => {
-    reviewedSet.value.add(row.id)
+  currentReviewRow.value = row
+  adminRemarks.value = ''
+  showReviewDialog.value = true
+}
+
+const confirmReview = () => {
+  if (!adminRemarks.value.trim()) {
+    $q.notify({
+      type: 'negative',
+      message: 'Please enter your remarks before confirming the review.',
+      icon: 'warning',
+      position: 'top',
+    })
+    return
+  }
+
+  if (currentReviewRow.value) {
+    reviewedSet.value.add(currentReviewRow.value.id)
+    disbursementRemarks.value.set(currentReviewRow.value.id, adminRemarks.value)
     // Log admin review activity
-    // Fallback to selected barangay name from auth store if row lacks it
     const selectedBarangayName = (store.authStore?.getSelectedBarangayName && store.authStore.getSelectedBarangayName()) || null
-    const barangayName = row.barangay_name || row.barangayName || (typeof row.barangay === 'string' ? row.barangay : (row.barangay?.name)) || selectedBarangayName || 'Unknown Barangay'
-    logAdminActivity('Reviewed Item', `Admin reviewed Disbursement ${row.dvNumber} (Barangay: ${barangayName})`)
-  })
+    const barangayName = currentReviewRow.value.barangay_name || currentReviewRow.value.barangayName || (typeof currentReviewRow.value.barangay === 'string' ? currentReviewRow.value.barangay : (currentReviewRow.value.barangay?.name)) || selectedBarangayName || 'Unknown Barangay'
+    logAdminActivity('Reviewed Item', `Admin reviewed Disbursement ${currentReviewRow.value.dvNumber} (Barangay: ${barangayName}) - Remarks: ${adminRemarks.value}`)
+    $q.notify({
+      type: 'positive',
+      message: 'Disbursement marked as reviewed successfully!',
+      icon: 'check_circle',
+      position: 'top',
+    })
+  }
+
+  showReviewDialog.value = false
+  adminRemarks.value = ''
+  currentReviewRow.value = null
+}
+
+const cancelReview = () => {
+  showReviewDialog.value = false
+  adminRemarks.value = ''
+  currentReviewRow.value = null
+}
+
+const showRemarksDialog = (id) => {
+  const remarks = getRemarks(id)
+  if (remarks) {
+    $q.dialog({
+      title: 'Admin Remarks',
+      message: remarks,
+      ok: { label: 'Close', color: 'primary' }
+    })
+  }
 }
 
 const currentBankLabel = computed(() => {
