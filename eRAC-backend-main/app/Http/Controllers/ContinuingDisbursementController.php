@@ -102,7 +102,7 @@ class ContinuingDisbursementController extends Controller
                 'bank_id' => $validated['bank_id'],
                 'payee' => $validated['payee'],
                 'dv_amount' => $validated['amount'],
-                'status' => 'Pending',
+                'status' => 'Unliquidated',
                 'is_continuing' => true, // Flag to identify continuing disbursements
                 'user_id' => $request->user()->id,
             ]);

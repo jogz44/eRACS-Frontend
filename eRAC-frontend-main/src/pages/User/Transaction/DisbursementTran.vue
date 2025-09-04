@@ -13,7 +13,7 @@
           color="primary"
           flat
           dense
-          @click="loadPendingUsers"
+          @click="loadDisbursements"
           :loading="store.loadingDisbursements"
           title="Refresh disbursements"
         />
@@ -21,50 +21,7 @@
     </div>
 
     <!-- Status Summary Cards -->
-    <div class="status-indicators-container q-mb-md">
-      <div class="row q-col-gutter-md justify-center">
-        <div class="col-md-2 col-sm-4 col-xs-6">
-          <q-card class="summary-card">
-            <q-card-section class="text-center">
-              <div class="text-h4 text-weight-bold text-orange">{{ statusCounts.pending }}</div>
-              <div class="text-subtitle2 text-grey-7">Pending</div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-md-2 col-sm-4 col-xs-6">
-          <q-card class="summary-card">
-            <q-card-section class="text-center">
-              <div class="text-h4 text-weight-bold text-amber">{{ statusCounts.partial }}</div>
-              <div class="text-subtitle2 text-grey-7">Partial</div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-md-2 col-sm-4 col-xs-6">
-          <q-card class="summary-card">
-            <q-card-section class="text-center">
-              <div class="text-h4 text-weight-bold text-green">{{ statusCounts.liquidated }}</div>
-              <div class="text-subtitle2 text-grey-7">Liquidated</div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-md-2 col-sm-4 col-xs-6">
-          <q-card class="summary-card">
-            <q-card-section class="text-center">
-              <div class="text-h4 text-weight-bold text-red">{{ statusCounts.voided }}</div>
-              <div class="text-subtitle2 text-grey-7">Voided</div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-md-2 col-sm-4 col-xs-6">
-          <q-card class="summary-card">
-            <q-card-section class="text-center">
-              <div class="text-h4 text-weight-bold text-purple">{{ statusCounts.stale }}</div>
-              <div class="text-subtitle2 text-grey-7">Stale</div>
-            </q-card-section>
-          </q-card>
-        </div>
-      </div>
-    </div>
+
 
     <!-- Filters Section -->
     <q-card flat bordered class="q-mb-md filters-section">
@@ -484,11 +441,11 @@
                   dense
                   icon="edit"
                   :color="
-                    props.row.status === 'Pending' || props.row.status === 'Partial'
+                    props.row.status === 'Unliquidated' || props.row.status === 'Partial'
                       ? 'orange'
                       : 'grey'
                   "
-                  :disable="props.row.status !== 'Pending' && props.row.status !== 'Partial'"
+                  :disable="props.row.status !== 'Unliquidated' && props.row.status !== 'Partial'"
                   :loading="store.loadingEditDisbursement === props.row.id"
                   @click="handleEditDisbursement(props.row)"
                   v-permission="'edit'"
@@ -510,7 +467,7 @@
                   color="red"
                   v-if="
                     isTreasurer &&
-                    (props.row.status === 'Pending' || props.row.status === 'Partial') &&
+                    (props.row.status === 'Unliquidated' || props.row.status === 'Partial') &&
                     canVoid(props.row) &&
                     props.row.status !== 'Stale'
                   "
@@ -524,7 +481,7 @@
                   color="red"
                   v-if="
                     isApprover &&
-                    (props.row.status === 'Pending' || props.row.status === 'Partial') &&
+                    (props.row.status === 'Unliquidated' || props.row.status === 'Partial') &&
                     canVoid(props.row) &&
                     props.row.status !== 'Stale'
                   "
@@ -586,7 +543,7 @@
                 dense
                 label="Liquidate"
                 color="primary"
-                v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
+                v-if="props.row.status === 'Unliquidated' || props.row.status === 'Partial'"
                 @click="handleLiquidateDisbursement(props.row)"
                 :loading="liquidateLoading[props.row.id]"
                 :disable="liquidateLoading[props.row.id] || props.row.status === 'Stale'"
@@ -713,7 +670,7 @@ const budgetSourceOptions = [
 const selectedStatus = ref(null)
 const statusOptions = [
   { label: 'All Status', value: null },
-  { label: 'Pending', value: 'Pending' },
+  { label: 'Unliquidated', value: 'Unliquidated' },
   { label: 'Partial', value: 'Partial' },
   { label: 'Liquidated', value: 'Liquidated' },
   { label: 'Void Requested', value: 'Void Requested' },
@@ -809,8 +766,8 @@ const handlePasteNumeric = (event) => {
 }
 
 function canVoid(row) {
-  // Can only void if pending or partial
-  if (!(row.status === 'Pending' || row.status === 'Partial')) return false
+  // Can only void if unliquidated or partial
+  if (!(row.status === 'Unliquidated' || row.status === 'Partial')) return false
 
   // Check aging restriction (≤ 1 day can be voided)
   const aging = Number(getAgingDays(row.aging))
@@ -915,8 +872,8 @@ const handleDirectVoidDisbursement = (row) => {
 // Status color helpers
 const getStatusColor = (status) => {
   switch (status) {
-    case 'Pending':
-      return 'orange'
+    case 'Unliquidated':
+      return 'blue'
     case 'Partial':
       return 'amber'
     case 'Liquidated':
@@ -934,7 +891,7 @@ const getStatusColor = (status) => {
 
 const getStatusTextColor = (status) => {
   switch (status) {
-    case 'Pending':
+    case 'Unliquidated':
     case 'Partial':
     case 'Liquidated':
     case 'Void Requested':
@@ -1062,38 +1019,7 @@ const currentStatusLabel = computed(() => {
 })
 
 // Status counts for summary cards
-const statusCounts = computed(() => {
-  const counts = {
-    pending: 0,
-    partial: 0,
-    liquidated: 0,
-    voided: 0,
-    stale: 0,
-  }
 
-  store.disbursements.forEach((disbursement) => {
-    switch (disbursement.status) {
-      case 'Pending':
-        counts.pending++
-        break
-      case 'Partial':
-        counts.partial++
-        break
-      case 'Liquidated':
-        counts.liquidated++
-        break
-      case 'Void Requested':
-      case 'Voided':
-        counts.voided++
-        break
-      case 'Stale':
-        counts.stale++
-        break
-    }
-  })
-
-  return counts
-})
 
 // Filtered disbursements based on status, search, and date range
 const filteredDisbursements = computed(() => {
@@ -1281,7 +1207,7 @@ const handleDeleteExpense = async (row) => {
   }
 }
 
-const loadPendingUsers = async () => {
+const loadDisbursements = async () => {
   loading.value = true
   try {
     // Only refresh disbursements and banks, skip expense accounts for faster refresh

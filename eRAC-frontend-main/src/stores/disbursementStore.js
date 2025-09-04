@@ -2394,7 +2394,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           // Update the disbursement status in the local array
           const disbursementIndex = this.disbursements.findIndex(d => d.id === disbursementId);
           if (disbursementIndex !== -1) {
-            this.disbursements[disbursementIndex].status = 'Pending';
+            this.disbursements[disbursementIndex].status = 'Unliquidated';
             this.disbursements[disbursementIndex].rejection_remarks = rejectionRemarks;
             this.disbursements[disbursementIndex].void_rejected_at = new Date().toISOString();
           }
