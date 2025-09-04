@@ -45,11 +45,21 @@ return new class extends Migration
         $table->foreignId('expense_type_id')
               ->constrained('lib_expense_types')
               ->onDelete('cascade');
+        $table->unsignedBigInteger('parent_item_id')->nullable();
         $table->string('name');
         $table->integer('order')->default(0);
         $table->timestamps();
 
-        $table->unique(['expense_type_id', 'name']);
+        // Index for parent_item_id
+        $table->index(['parent_item_id']);
+        
+        // Unique constraint that includes parent_item_id for hierarchical support
+        $table->unique(['expense_type_id', 'name', 'parent_item_id'], 'lib_expense_items_unique');
+    });
+
+    // Add foreign key constraint for parent_item_id after table creation
+    Schema::table('lib_expense_items', function (Blueprint $table) {
+        $table->foreign('parent_item_id')->references('id')->on('lib_expense_items')->onDelete('no action');
     });
     }
 

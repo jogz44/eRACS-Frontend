@@ -88,6 +88,12 @@ Route::prefix('barangay')->group(function () {
         Route::post('expense-classes/{class}/types/{type}/items', [AccountsLibController::class, 'createExpenseItem']);
         Route::put('expense-classes/{classId}/types/{typeId}/items/{itemId}', [AccountsLibController::class, 'updateItem']);
         Route::delete('expense-classes/{classId}/types/{typeId}/items/{itemId}', [AccountsLibController::class, 'deleteItem']);
+        
+        // Sub-Items
+        Route::get('expense-classes/{class}/types/{type}/items/{item}/sub-items', [AccountsLibController::class, 'getSubItems']);
+        Route::post('expense-classes/{class}/types/{type}/items/{item}/sub-items', [AccountsLibController::class, 'createSubItem']);
+        Route::put('expense-classes/{classId}/types/{typeId}/items/{itemId}/sub-items/{subItemId}', [AccountsLibController::class, 'updateSubItem']);
+        Route::delete('expense-classes/{classId}/types/{typeId}/items/{itemId}/sub-items/{subItemId}', [AccountsLibController::class, 'deleteSubItem']);
 
         //Banks Library
         Route::get('banks', [BankLibraryController::class, 'getBanks']);
