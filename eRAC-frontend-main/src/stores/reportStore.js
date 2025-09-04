@@ -64,8 +64,21 @@ export const useReportStore = defineStore('report', {
     },
     async fetchData() {
       try {
+        const authStore = useAuthStore()
         const config = this.getAuthConfig()
         const currentYear = new Date().getFullYear()
+        
+        // Handle admin vs regular user differently
+        if (authStore.admin) {
+          // For admin users, skip expense classes fetch as they don't need them for reports
+          // Admin users view reports for selected barangays, not their own expense classes
+          this.expenseOptionsCurrent = []
+          this.expenseOptionsContinuing = []
+          this.positionsOptions = []
+          return
+        }
+        
+        // Regular barangay users can fetch their expense classes
         const expenseClasses = await api.get(
           `/api/barangay/expense-classes?fiscal_year=${currentYear}`,
           config,
