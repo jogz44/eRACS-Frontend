@@ -17,6 +17,16 @@ class Barangay extends Model
 
     protected $fillable = ['name'];
 
+    public function budget()
+    {
+        return $this->hasMany(Budget::class,'barangay_id');
+    }
+    
+    public function fiscalYear()
+    {
+        return $this->hasMany(LibFiscalYear::class,'barangay_id');
+    }
+
     public function users()
     {
         return $this->hasMany(BarangayUser::class);
@@ -29,7 +39,7 @@ class Barangay extends Model
 
     public function appropriations()
     {
-        return $this->hasMany(Appropriation::class);
+        return $this->hasMany(TranAppropriation::class);
     }
 
     // Helper to get all barangays for dropdown

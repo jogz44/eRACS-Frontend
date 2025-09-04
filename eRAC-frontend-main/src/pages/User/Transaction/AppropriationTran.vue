@@ -248,16 +248,19 @@
           </q-td>
         </template>
 
+        <template v-slot:body-cell-budgetType="props">
+          <q-td :props="props">
+            <q-badge
+              :color="getBudgetTypeColor(props.row.description)"
+              :label="getBudgetTypeLabel(props.row.description)"
+              class="budget-type-badge"
+            />
+          </q-td>
+        </template>
+
         <template v-slot:body-cell-description="props">
           <q-td :props="props">
-            <div class="row items-center q-gutter-xs">
-              <q-badge
-                :color="getBudgetTypeColor(props.row.description)"
-                :label="getBudgetTypeLabel(props.row.description)"
-                class="budget-type-badge"
-              />
-              <span>{{ props.row.description }}</span>
-            </div>
+            <span>{{ getDescriptionOnly(props.row.description) }}</span>
           </q-td>
         </template>
 
@@ -387,10 +390,10 @@
 
         <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancel" v-close-popup @click="closeEditAllocationDialog" :disable="editSaveLoading" />
-          <q-btn 
-            label="Save Changes" 
-            color="primary" 
-            @click="saveEditedAllocation" 
+          <q-btn
+            label="Save Changes"
+            color="primary"
+            @click="saveEditedAllocation"
             :loading="editSaveLoading"
             :disable="editSaveLoading"
           />
@@ -897,17 +900,17 @@ const saveEditedAllocation = async () => {
   } catch (error) {
     console.error('Save error:', error)
     let message = error.message || 'Failed to update allocations'
-    
+
     // Handle backend validation errors specifically
     if (error.response && error.response.status === 422 && error.response.data && error.response.data.message) {
       message = error.response.data.message
       console.log('Backend validation error:', error.response.data)
-      
+
       // If it's a disbursement validation error, show it clearly
       if (message.includes('disbursed amount')) {
         message = `${message}`
       }
-      
+
       const errorMap = {}
       editDisplayAccounts.value.forEach(expenseClass => {
         if (!expenseClass || !Array.isArray(expenseClass.children)) return
@@ -921,7 +924,7 @@ const saveEditedAllocation = async () => {
     } else {
       typeErrorMap.value = {}
     }
-    
+
     $q.notify({
       type: 'negative',
       message: message,
@@ -966,10 +969,11 @@ const columns = [
     sortable: true,
     format: (val) => appropriationStore.formatDate(val),
   },
+
   {
-    name: 'barangay',
-    label: 'Barangay',
-    field: 'barangay_name',
+    name: 'budgetType',
+    label: 'Budget Type',
+    field: 'budgetType',
     align: 'left',
   },
   {
@@ -978,6 +982,7 @@ const columns = [
     field: 'description',
     align: 'left',
   },
+
   {
     name: 'amount',
     label: 'Amount',
@@ -1079,16 +1084,16 @@ const formatToTwoDecimals = (value) => {
 const blockNonNumeric = (event) => {
   const key = event.key
   const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
-  
+
   if (allowedKeys.includes(key)) {
     return
   }
-  
+
   // Allow decimal point only if there isn't one already
   if (key === '.' && !event.target.value.includes('.')) {
     return
   }
-  
+
   // Block all other characters except digits
   if (!/^\d$/.test(key)) {
     event.preventDefault()
@@ -1153,6 +1158,23 @@ const getBudgetTypeLabel = (description) => {
     return 'Supplemental'
   }
   return 'Other'
+}
+
+const getDescriptionOnly = (description) => {
+  if (!description) return ''
+
+  // Remove budget type prefixes
+  if (description.toLowerCase().startsWith('annual budget - ')) {
+    return description.substring('Annual Budget - '.length)
+  } else if (description.toLowerCase().startsWith('supplemental budget - ')) {
+    return description.substring('Supplemental Budget - '.length)
+  } else if (description.toLowerCase() === 'annual budget') {
+    return 'Annual Budget'
+  } else if (description.toLowerCase() === 'supplemental budget') {
+    return 'Supplemental Budget'
+  }
+
+  return description
 }
 </script>
 

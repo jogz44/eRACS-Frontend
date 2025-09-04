@@ -26,6 +26,12 @@ class TranAppropriation extends Model
         'amount' => 'decimal:2'
     ];
 
+    
+    public function barangay(): BelongsTo
+    {
+        return $this->belongsTo(Barangay::class,'barangay_id');
+    }
+
     public function budget(): BelongsTo
     {
         return $this->belongsTo(Budget::class,'budget_id')->withDefault();

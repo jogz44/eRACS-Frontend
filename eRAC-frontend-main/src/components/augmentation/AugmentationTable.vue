@@ -116,6 +116,14 @@ import { computed, ref } from 'vue'
 import { useActivityLogging } from 'src/composables/useActivityLogging'
 import { useQuasar } from 'quasar'
 
+// Define props
+const props = defineProps({
+  filteredData: {
+    type: Array,
+    default: () => []
+  }
+})
+
 const store = useAugmentationStore()
 const $q = useQuasar()
 const authStore = useAuthStore()
@@ -132,7 +140,6 @@ const { logAdminActivity } = useActivityLogging()
 const showReviewDialog = ref(false)
 const adminRemarks = ref('')
 const currentReviewRow = ref(null)
-
 const handleReviewClick = (row) => {
   if (isReviewed(row.id)) return
   currentReviewRow.value = row

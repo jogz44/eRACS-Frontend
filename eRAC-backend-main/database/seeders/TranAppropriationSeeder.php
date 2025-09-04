@@ -34,71 +34,93 @@ class TranAppropriationSeeder extends Seeder
                 $remaining = $budget->original_amount;
                 $totalAllocated = 0;
 
-                $expenseClass = LibExpenseClass::where('barangay_id', $barangay->id)
+                $expenseClasses = LibExpenseClass::where('barangay_id', $barangay->id)
                     ->where('fiscal_year_id', $budget->fiscal_year_id)
                     ->inRandomOrder()
-                    ->first();
+                    ->take(3)
+                    ->get();
+                foreach ($expenseClasses as $expenseClass) {
+                    
+                    if (!$expenseClass) {
+                        \Log::warning("Skipping Budget {$budget->id} (no expense class found)");
+                        continue;
+                    }
 
-                if (!$expenseClass) {
-                    \Log::warning("Skipping Budget {$budget->id} (no expense class found)");
-                    continue;
+                    $expenseTypes = LibExpenseType::where('expense_class_id', $expenseClass->id)
+                        ->inRandomOrder()
+                        ->take(6)
+                        ->get();
+                    foreach ($expenseTypes as $expenseType) {
+                        
+                        if($remaining <= 0) {
+                            \Log::info("Budget {$budget->id} fully allocated.");
+                            continue 2; // exit both loops
+                        }elseif($remaining < 200000) {
+                            $allocationAmount=$remaining;
+                        }else{
+                            $allocationAmount = min(
+                                $faker->numberBetween(
+                                    (int) ($remaining * 0.05),
+                                    (int) ($remaining * 0.07)
+                                ),
+                                $faker->numberBetween(
+                                    (int) ($remaining * 0.05),
+                                    (int) ($remaining * 0.07)
+                                )
+                            );
+                            if($remaining < 200000) {
+                                $allocationAmount+=$remaining;
+                            }
+                        }
+                        
+                        if (!$expenseType) {
+                            \Log::warning("Skipping ExpenseClass {$expenseClass->id} (no expense type found)");
+                            continue;
+                        }
+
+                        $fiscalYear = LibFiscalYear::where('barangay_id', $barangay->id)
+                            ->where('id', $budget->fiscal_year_id)
+                            ->first();
+
+                        if (!$fiscalYear) {
+                            \Log::warning("Skipping Budget {$budget->id} (no fiscal year found)");
+                            continue;
+                        }
+
+                        $year = (int) $fiscalYear->year; // ✅ ensure integer
+
+
+                        TranAppropriation::create([
+                            'barangay_id'      => $barangay->id,
+                            'budget_id'        => $budget->id,
+                            'expense_class_id' => $expenseClass->id,
+                            'expense_type_id'  => $expenseType->id,
+                            'expense_item_id'  => null, // nullable
+                            'amount'           => $allocationAmount,
+                            'transaction_date' => $faker->dateTimeBetween(
+                                $now->copy()->setYear($year)->startOfYear(),
+                                $now->copy()->setYear($year)->endOfYear()
+                            ),
+                            'status'           => 'committed',
+                            'user_id'          => $user->id,
+                        ]);
+
+                        // Update budget (this looks unused since $totalAllocated is always 0)
+                        if ($allocationAmount > 0) {
+                            $budget->current_amount = max(0, $budget->current_amount - $allocationAmount);
+                            $budget->save();
+
+                            \Log::info("Barangay {$barangay->id} | Budget {$budget->id} updated", [
+                                'original_amount'    => $budget->original_amount,
+                                'allocation'         => $allocationAmount,
+                                'new_current_amount' => $budget->current_amount,
+                            ]);
+                        }
+                    }
+    
                 }
 
-                $expenseType = LibExpenseType::where('expense_class_id', $expenseClass->id)
-                    ->inRandomOrder()
-                    ->first();
-
-                if (!$expenseType) {
-                    \Log::warning("Skipping ExpenseClass {$expenseClass->id} (no expense type found)");
-                    continue;
-                }
-
-                $fiscalYear = LibFiscalYear::where('barangay_id', $barangay->id)
-                    ->where('id', $budget->fiscal_year_id)
-                    ->first();
-
-                if (!$fiscalYear) {
-                    \Log::warning("Skipping Budget {$budget->id} (no fiscal year found)");
-                    continue;
-                }
-
-                $year = (int) $fiscalYear->year; // ✅ ensure integer
-
-                // Random allocation between 5%–25% of remaining, but max 200k
-                $allocationAmount = min(
-                    $faker->numberBetween(
-                        (int) ($remaining * 0.05),
-                        (int) ($remaining * 0.25)
-                    ),
-                    200000
-                );
-
-                TranAppropriation::create([
-                    'barangay_id'      => $barangay->id,
-                    'budget_id'        => $budget->id,
-                    'expense_class_id' => $expenseClass->id,
-                    'expense_type_id'  => $expenseType->id,
-                    'expense_item_id'  => null, // nullable
-                    'amount'           => $allocationAmount,
-                    'transaction_date' => $faker->dateTimeBetween(
-                        $now->copy()->setYear($year)->startOfYear(),
-                        $now->copy()->setYear($year)->endOfYear()
-                    ),
-                    'status'           => 'committed',
-                    'user_id'          => $user->id,
-                ]);
-
-                // Update budget (this looks unused since $totalAllocated is always 0)
-                if ($allocationAmount > 0) {
-                    $budget->current_amount = max(0, $budget->original_amount - $allocationAmount);
-                    $budget->save();
-
-                    \Log::info("Barangay {$barangay->id} | Budget {$budget->id} updated", [
-                        'original_amount'    => $budget->original_amount,
-                        'allocation'         => $allocationAmount,
-                        'new_current_amount' => $budget->current_amount,
-                    ]);
-                }
+                
             }
         }
     }

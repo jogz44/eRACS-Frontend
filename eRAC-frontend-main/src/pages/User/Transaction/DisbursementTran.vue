@@ -13,47 +13,15 @@
           color="primary"
           flat
           dense
-          @click="loadPendingUsers"
+          @click="loadDisbursements"
           :loading="store.loadingDisbursements"
+          title="Refresh disbursements"
         />
       </div>
     </div>
 
     <!-- Status Summary Cards -->
-    <div class="row q-col-gutter-md q-mb-md">
-      <div class="col-md-3 col-sm-6 col-xs-12">
-        <q-card class="summary-card pending-card">
-          <q-card-section class="text-center">
-            <div class="text-h4 text-weight-bold text-orange">{{ statusCounts.pending }}</div>
-            <div class="text-subtitle2 text-grey-7">Pending</div>
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-md-3 col-sm-6 col-xs-12">
-        <q-card class="summary-card partial-card">
-          <q-card-section class="text-center">
-            <div class="text-h4 text-weight-bold text-amber">{{ statusCounts.partial }}</div>
-            <div class="text-subtitle2 text-grey-7">Partial</div>
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-md-3 col-sm-6 col-xs-12">
-        <q-card class="summary-card liquidated-card">
-          <q-card-section class="text-center">
-            <div class="text-h4 text-weight-bold text-green">{{ statusCounts.liquidated }}</div>
-            <div class="text-subtitle2 text-grey-7">Liquidated</div>
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-md-3 col-sm-6 col-xs-12">
-        <q-card class="summary-card voided-card">
-          <q-card-section class="text-center">
-            <div class="text-h4 text-weight-bold text-red">{{ statusCounts.voided }}</div>
-            <div class="text-subtitle2 text-grey-7">Voided</div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
+
 
     <!-- Filters Section -->
     <q-card flat bordered class="q-mb-md filters-section">
@@ -209,8 +177,8 @@
                   dense
                   v-model="store.forms.disbursement.date"
                   mask="##/##/####"
-                  :readonly="true"
-                  :disable="true"
+
+
                   @keydown.enter="handleEnterKey"
                 >
                   <template v-slot:append>
@@ -473,11 +441,11 @@
                   dense
                   icon="edit"
                   :color="
-                    props.row.status === 'Pending' || props.row.status === 'Partial'
+                    props.row.status === 'Unliquidated' || props.row.status === 'Partial'
                       ? 'orange'
                       : 'grey'
                   "
-                  :disable="props.row.status !== 'Pending' && props.row.status !== 'Partial'"
+                  :disable="props.row.status !== 'Unliquidated' && props.row.status !== 'Partial'"
                   :loading="store.loadingEditDisbursement === props.row.id"
                   @click="handleEditDisbursement(props.row)"
                   v-permission="'edit'"
@@ -499,8 +467,9 @@
                   color="red"
                   v-if="
                     isTreasurer &&
-                    (props.row.status === 'Pending' || props.row.status === 'Partial') &&
-                    canVoid(props.row)
+                    (props.row.status === 'Unliquidated' || props.row.status === 'Partial') &&
+                    canVoid(props.row) &&
+                    props.row.status !== 'Stale'
                   "
                   @click.stop="() => handleVoidDisbursement(props.row)"
                   v-permission="'delete'"
@@ -512,8 +481,9 @@
                   color="red"
                   v-if="
                     isApprover &&
-                    (props.row.status === 'Pending' || props.row.status === 'Partial') &&
-                    canVoid(props.row)
+                    (props.row.status === 'Unliquidated' || props.row.status === 'Partial') &&
+                    canVoid(props.row) &&
+                    props.row.status !== 'Stale'
                   "
                   @click.stop="() => handleDirectVoidDisbursement(props.row)"
                   v-permission="'delete'"
@@ -553,16 +523,17 @@
 
           <template v-slot:body-cell-remarks="props">
             <q-td :props="props">
-              <div v-if="props.row.status === 'Void Requested' && props.row.remarks">
-                {{ props.row.remarks }}
+              <div v-if="hasRemarks(props.row)" class="row items-center justify-center">
+                <q-icon
+                  name="visibility"
+                  color="blue"
+                  size="md"
+                  class="cursor-pointer"
+                  @click="openRemarksDialog(props.row)"
+                  title="View remarks"
+                />
               </div>
-              <div v-else-if="props.row.status === 'Voided' && props.row.remarks">
-                {{ props.row.remarks }}
-              </div>
-              <div v-else-if="props.row.rejection_remarks">
-                {{ props.row.rejection_remarks }}
-              </div>
-              <div v-else>-</div>
+              <div v-else class="text-grey-6 text-center">-</div>
             </q-td>
           </template>
 
@@ -572,10 +543,10 @@
                 dense
                 label="Liquidate"
                 color="primary"
-                v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
+                v-if="props.row.status === 'Unliquidated' || props.row.status === 'Partial'"
                 @click="handleLiquidateDisbursement(props.row)"
                 :loading="liquidateLoading[props.row.id]"
-                :disable="liquidateLoading[props.row.id]"
+                :disable="liquidateLoading[props.row.id] || props.row.status === 'Stale'"
                 v-permission="'add'"
               />
             </q-td>
@@ -620,6 +591,53 @@
           </q-card-actions>
         </q-card>
       </q-dialog>
+
+      <!-- Remarks Dialog -->
+      <q-dialog v-model="remarksDialog" persistent>
+        <q-card style="min-width: 500px; max-width: 90vw">
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">Remarks</div>
+          </q-card-section>
+
+          <q-card-section>
+            <div class="text-body1 q-mb-sm">
+              <strong>Disbursement:</strong> {{ selectedRemarksData?.dvNumber || 'N/A' }}
+            </div>
+            <div class="text-body1 q-mb-sm">
+              <strong>Payee:</strong> {{ selectedRemarksData?.payee || 'N/A' }}
+            </div>
+            <div class="text-body1 q-mb-md">
+              <strong>Status:</strong>
+              <q-chip
+                :color="getStatusColor(selectedRemarksData?.status)"
+                :text-color="getStatusTextColor(selectedRemarksData?.status)"
+                dense
+                :label="selectedRemarksData?.status"
+                class="q-ml-sm"
+              />
+            </div>
+
+            <q-separator class="q-mb-md" />
+
+            <div class="text-subtitle1 q-mb-sm text-weight-medium">Remarks:</div>
+            <div class="remarks-content q-pa-md" style="background-color: #f5f5f5; border-radius: 8px; min-height: 100px;">
+              <div v-if="selectedRemarksData?.remarks" class="text-body1">
+                {{ selectedRemarksData.remarks }}
+              </div>
+              <div v-else-if="selectedRemarksData?.rejection_remarks" class="text-body1">
+                {{ selectedRemarksData.rejection_remarks }}
+              </div>
+              <div v-else class="text-grey-6 text-italic">
+                No remarks available
+              </div>
+            </div>
+          </q-card-section>
+
+          <q-card-actions align="right" class="q-pa-md">
+            <q-btn flat label="Close" @click="closeRemarksDialog" color="primary" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
     </div>
   </q-page>
 </template>
@@ -652,11 +670,12 @@ const budgetSourceOptions = [
 const selectedStatus = ref(null)
 const statusOptions = [
   { label: 'All Status', value: null },
-  { label: 'Pending', value: 'Pending' },
+  { label: 'Unliquidated', value: 'Unliquidated' },
   { label: 'Partial', value: 'Partial' },
   { label: 'Liquidated', value: 'Liquidated' },
   { label: 'Void Requested', value: 'Void Requested' },
   { label: 'Voided', value: 'Voided' },
+  { label: 'Stale', value: 'Stale' },
 ]
 
 // Search query
@@ -747,8 +766,8 @@ const handlePasteNumeric = (event) => {
 }
 
 function canVoid(row) {
-  // Can only void if pending or partial
-  if (!(row.status === 'Pending' || row.status === 'Partial')) return false
+  // Can only void if unliquidated or partial
+  if (!(row.status === 'Unliquidated' || row.status === 'Partial')) return false
 
   // Check aging restriction (≤ 1 day can be voided)
   const aging = Number(getAgingDays(row.aging))
@@ -853,8 +872,8 @@ const handleDirectVoidDisbursement = (row) => {
 // Status color helpers
 const getStatusColor = (status) => {
   switch (status) {
-    case 'Pending':
-      return 'orange'
+    case 'Unliquidated':
+      return 'blue'
     case 'Partial':
       return 'amber'
     case 'Liquidated':
@@ -863,6 +882,8 @@ const getStatusColor = (status) => {
       return 'deep-orange'
     case 'Voided':
       return 'red'
+    case 'Stale':
+      return 'purple'
     default:
       return 'grey'
   }
@@ -870,11 +891,12 @@ const getStatusColor = (status) => {
 
 const getStatusTextColor = (status) => {
   switch (status) {
-    case 'Pending':
+    case 'Unliquidated':
     case 'Partial':
     case 'Liquidated':
     case 'Void Requested':
     case 'Voided':
+    case 'Stale':
       return 'white'
     default:
       return 'black'
@@ -970,6 +992,11 @@ const addingExpense = ref(false)
 const initialLoading = ref(true)
 const viewLoading = ref({})
 const liquidateLoading = ref({})
+// const checkingStaleStatus = ref(false)
+
+// Remarks dialog
+const remarksDialog = ref(false)
+const selectedRemarksData = ref(null)
 
 const currentBankLabel = computed(() => {
   if (store.forms.disbursement.bank_id) {
@@ -992,34 +1019,7 @@ const currentStatusLabel = computed(() => {
 })
 
 // Status counts for summary cards
-const statusCounts = computed(() => {
-  const counts = {
-    pending: 0,
-    partial: 0,
-    liquidated: 0,
-    voided: 0,
-  }
 
-  store.disbursements.forEach((disbursement) => {
-    switch (disbursement.status) {
-      case 'Pending':
-        counts.pending++
-        break
-      case 'Partial':
-        counts.partial++
-        break
-      case 'Liquidated':
-        counts.liquidated++
-        break
-      case 'Void Requested':
-      case 'Voided':
-        counts.voided++
-        break
-    }
-  })
-
-  return counts
-})
 
 // Filtered disbursements based on status, search, and date range
 const filteredDisbursements = computed(() => {
@@ -1207,7 +1207,7 @@ const handleDeleteExpense = async (row) => {
   }
 }
 
-const loadPendingUsers = async () => {
+const loadDisbursements = async () => {
   loading.value = true
   try {
     // Only refresh disbursements and banks, skip expense accounts for faster refresh
@@ -1388,6 +1388,59 @@ const getBudgetSourceLabel = (budgetSource) => {
   }
   return 'Mixed'
 }
+
+// Handle manual stale status check
+// const handleCheckStaleStatus = async () => {
+//   checkingStaleStatus.value = true
+//   try {
+//     const result = await store.checkStaleStatus()
+//     if (result.success) {
+//       $q.notify({
+//         type: 'positive',
+//         message: `Stale status check completed! Updated ${result.data.disbursements_updated} disbursements and ${result.data.cheques_updated} cheques.`,
+//         icon: 'check_circle',
+//         position: 'top',
+//         timeout: 5000,
+//       })
+//     } else {
+//       $q.notify({
+//         type: 'negative',
+//         message: result.message || 'Failed to check stale status',
+//         icon: 'error',
+//         position: 'top',
+//         timeout: 5000,
+//       })
+//     }
+//   } catch (error) {
+//     $q.notify({
+//       type: 'negative',
+//       message: error.message || 'Failed to check stale status',
+//       icon: 'error',
+//       position: 'top',
+//       timeout: 5000,
+//     })
+//   } finally {
+//     checkingStaleStatus.value = false
+//   }
+// }
+
+// Remarks dialog methods
+const hasRemarks = (row) => {
+  return (row.status === 'Void Requested' && row.remarks) ||
+         (row.status === 'Voided' && row.remarks) ||
+         row.rejection_remarks
+}
+
+
+const openRemarksDialog = (row) => {
+  selectedRemarksData.value = row
+  remarksDialog.value = true
+}
+
+const closeRemarksDialog = () => {
+  remarksDialog.value = false
+  selectedRemarksData.value = null
+}
 </script>
 
 <style scoped>
@@ -1411,6 +1464,14 @@ const getBudgetSourceLabel = (budgetSource) => {
   margin: 2px;
 }
 
+/* Status Indicators Container */
+.status-indicators-container {
+  background: #f8f9fa;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #e9ecef;
+}
+
 /* Summary Cards Styling */
 .summary-card {
   border-radius: 12px;
@@ -1418,6 +1479,8 @@ const getBudgetSourceLabel = (budgetSource) => {
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
+  background: white;
+  border: 2px solid transparent;
 }
 
 .summary-card:hover {
@@ -1425,21 +1488,6 @@ const getBudgetSourceLabel = (budgetSource) => {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
-.pending-card {
-  border-left: 4px solid #ff9800;
-}
-
-.partial-card {
-  border-left: 4px solid #ffc107;
-}
-
-.liquidated-card {
-  border-left: 4px solid #4caf50;
-}
-
-.voided-card {
-  border-left: 4px solid #f44336;
-}
 
 /* Filter Section Styling */
 .q-card .q-card-section {
@@ -1484,14 +1532,17 @@ const getBudgetSourceLabel = (budgetSource) => {
     padding: 8px;
   }
 
+  .status-indicators-container {
+    padding: 12px;
+  }
+
   .row.q-col-gutter-md {
     flex-direction: column;
   }
 
-  .col-md-4,
-  .col-sm-6,
-  .col-sm-12 {
-    width: 100%;
+  .col-md-2,
+  .col-sm-4,
+  .col-xs-6 {
     margin-bottom: 8px;
   }
 
@@ -1502,5 +1553,16 @@ const getBudgetSourceLabel = (budgetSource) => {
   .text-h4 {
     font-size: 1.5rem;
   }
+}
+
+/* Remarks dialog styling */
+.remarks-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.5;
+}
+
+.remarks-content .text-body1 {
+  margin: 0;
 }
 </style>

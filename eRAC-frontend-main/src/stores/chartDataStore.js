@@ -22,7 +22,7 @@ export const useChartDataStore = defineStore('chartData', {
     // Enhanced Summary Cards Data - will be populated from backend
     summaryCards: [
       {
-        label: 'Total Appropriation',
+        label: 'Total Budget',
         value: '₱0.00',
         icon: 'account_balance',
         color: 'secondary',
@@ -240,15 +240,15 @@ export const useChartDataStore = defineStore('chartData', {
   actions: {
     getAuthConfig() {
       const authStore = useAuthStore()
-      
+
       // Use admin token if admin is logged in, otherwise use regular token
       const token = authStore.admin ? authStore.adminToken : authStore.token
-      
+
       if (!token) {
         console.error('No authentication token found')
         throw new Error('Authentication required')
       }
-      
+
 
       return {
         headers: {
@@ -316,7 +316,7 @@ export const useChartDataStore = defineStore('chartData', {
         if (this.selectedYear !== 'all') {
           params.year = this.selectedYear
         }
-        
+
         const budgetsResponse = await api.get('/api/barangay/budgets', {
           ...this.getAuthConfig(),
           params
@@ -341,7 +341,7 @@ export const useChartDataStore = defineStore('chartData', {
         // Update summary cards
         this.summaryCards = [
           {
-            label: 'Total Appropriation',
+            label: 'Total Budget',
             value: this.formatCurrency(totalAppropriation),
             icon: 'account_balance',
             color: 'secondary',
@@ -401,7 +401,7 @@ export const useChartDataStore = defineStore('chartData', {
         if (this.selectedYear !== 'all') {
           budgetParams.year = this.selectedYear
         }
-        
+
         const budgetsResponse = await api.get('/api/barangay/budgets', {
           ...this.getAuthConfig(),
           params: budgetParams
@@ -525,7 +525,7 @@ export const useChartDataStore = defineStore('chartData', {
 
       this.summaryCards = [
         {
-          label: 'Total Appropriation',
+          label: 'Total Budget',
           value: this.formatCurrency(0),
           icon: 'account_balance',
           color: 'secondary',
@@ -561,7 +561,7 @@ export const useChartDataStore = defineStore('chartData', {
         if (this.selectedYear !== 'all') {
           params.year = this.selectedYear
         }
-        
+
         const disbResponse = await api.get('/api/barangay/disbursements', {
           ...this.getAuthConfig(),
           params
@@ -617,7 +617,7 @@ export const useChartDataStore = defineStore('chartData', {
           // Update summary cards
           this.summaryCards = [
             {
-              label: 'Total Appropriation',
+              label: 'Total Budget',
               value: this.formatCurrency(dashboardData.summary.total_appropriation),
               icon: 'account_balance',
               color: 'secondary',
@@ -707,7 +707,7 @@ export const useChartDataStore = defineStore('chartData', {
               this.disbursementOverviewRows = disbResponse.data.data.map((row) => {
 
                 const aging = this.calculateAging(row.created_at, row.status)
-                
+
 
                 return {
                   id: row.id,
@@ -791,9 +791,9 @@ export const useChartDataStore = defineStore('chartData', {
     async fetchAvailableYears() {
       try {
         this.isYearFilterLoading = true
-        
+
         const authStore = useAuthStore()
-        
+
         // For admin users, use a different approach since they don't have barangay-specific fiscal years
         if (authStore.admin) {
           // Admin users can see data from multiple barangays, so use current year
@@ -805,13 +805,13 @@ export const useChartDataStore = defineStore('chartData', {
           this.selectedYear = currentYear
           return
         }
-        
+
         // For barangay users, fetch from barangay endpoint
         const response = await api.get('/api/barangay/fiscal-years', this.getAuthConfig())
-        
+
         // Fix: Access the nested data property correctly
         const fiscalYears = response.data?.data || []
-        
+
         // Extract years and add "All Years" option
         this.availableYears = [
           { value: 'all', label: 'All Years' },
@@ -820,7 +820,7 @@ export const useChartDataStore = defineStore('chartData', {
             label: fy.year.toString()
           }))
         ]
-        
+
         // Set default to current year if not already set
         if (!this.selectedYear || this.selectedYear === 'all') {
           this.selectedYear = new Date().getFullYear()
@@ -837,7 +837,7 @@ export const useChartDataStore = defineStore('chartData', {
       // Ensure year is a simple value, not an object
       const yearValue = typeof year === 'object' ? year.value : year
       this.selectedYear = yearValue
-      
+
       // Update date range based on selected year
       if (yearValue === 'all') {
         // For "All Years", set a wide range (e.g., last 10 years)
@@ -849,7 +849,7 @@ export const useChartDataStore = defineStore('chartData', {
         this.dateFrom = new Date(yearValue, 0, 1)
         this.dateTo = new Date(yearValue, 11, 31)
       }
-      
+
 
     },
 

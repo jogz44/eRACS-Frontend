@@ -60,8 +60,8 @@ class DisbursementSeeder extends Seeder
 
                 // exactly 6 disbursements per year
                 for ($d = 0; $d < 18; $d++) {
-                    $status = ($d%3 == 0) ? 'Liquidated' : (($d%3 == 1) ? 'Partial' : 'Pending');
-                    //$status = $faker->randomElement(['Pending', 'Partial', 'Liquidated']);
+                    $status = ($d%3 == 0) ? 'Liquidated' : (($d%3 == 1) ? 'Partial' : 'Unliquidated');
+                    //$status = $faker->randomElement(['Unliquidated', 'Partial', 'Liquidated']);
                     $bank = $banks->random();
 
                     // cheque selection same as before...
@@ -83,7 +83,7 @@ class DisbursementSeeder extends Seeder
                     $startDate = $base->copy()->subMonths(1);
                     $createdAt = $faker->dateTimeBetween($startDate, $base);
 
-                    $dvAmount = $faker->numberBetween(5, 50) * 1000;
+                    $dvAmount = $faker->numberBetween(5, 20) * 1000;
                     $dvNumber = "DV-".substr($year, -2)."-".str_pad($now->month, 2, '0', STR_PAD_LEFT)."-" . str_pad($dvCounter, 3, '0', STR_PAD_LEFT);
 
                     $liquidatedAmount = null;
