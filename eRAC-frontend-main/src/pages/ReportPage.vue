@@ -902,12 +902,13 @@
   </q-page>
 </template>
 <script setup>
-import { ref, reactive, computed, onMounted, onActivated } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated, watch } from 'vue'
 import SetupDialog from 'components/SetupDialog.vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'stores/auth'
 import { useReportStore } from 'stores/reportStore'
 import { usePageLogging } from '../composables/usePageLogging'
+import { useActivityLogging } from '../composables/useActivityLogging'
 
 const computedSACBRows = computed(() => {
   const result = []
@@ -988,6 +989,7 @@ const $q = useQuasar()
 const reportStore = useReportStore()
 const authStore = useAuthStore()
 const { logPageVisit } = usePageLogging()
+const { logAdminActivity } = useActivityLogging()
 
 /* -------------------- STATE -------------------- */
 const showSetupDialog = ref(false)
@@ -1070,6 +1072,11 @@ const openSACBModal = (type) => {
       return notifyError('Please select a valid continuing SACB date range.')
     }
   }
+
+  // Log report generation activity
+  const reportType = getReportTypeLabel(type)
+  logAdminActivity('Report Generated', `Generated ${reportType} report`)
+
   loadSacbReport(
     type === 'current-sacb'
       ? currentSacbDateRange.value.from
@@ -1082,7 +1089,7 @@ const openSACBModal = (type) => {
         ? continuingSacbDateRange.value.to
         : null,
   )
-  SACBModal.reportType = getReportTypeLabel(type)
+  SACBModal.reportType = reportType
   SACBModal.show = true
 }
 
@@ -1118,6 +1125,11 @@ const openRACModal = (type) => {
     return notifyError('Please select an Expense Category.')
   }
 
+  // Log report generation activity
+  const reportType = getReportTypeLabel(type)
+  const expenseCategory = reportStore.expenseRacSelected?.name || 'Unknown'
+  logAdminActivity('Report Generated', `Generated ${reportType} report for expense category: ${expenseCategory}`)
+
   loadRacReport(
     type === 'current-rac'
       ? CurrentRacDateRange
@@ -1125,7 +1137,7 @@ const openRACModal = (type) => {
         ? continuingRacDateRange
         : null,
   )
-  RACModal.reportType = getReportTypeLabel(type)
+  RACModal.reportType = reportType
   RACModal.show = true
 }
 
@@ -1143,46 +1155,68 @@ const getReportTypeLabel = (type) =>
 
 const handleSACBPrint = () => {
   console.log('Printing report:', SACBModal.reportType)
+  logAdminActivity('Report Printed', `Printed ${SACBModal.reportType} report`)
   closeSACBModal()
   notifySuccess('Report sent to printer successfully!')
 }
 
 const handleRACPrint = () => {
   console.log('Printing report:', RACModal.reportType)
+  logAdminActivity('Report Printed', `Printed ${RACModal.reportType} report`)
   closeRACModal()
   notifySuccess('Report sent to printer successfully!')
 }
 // Cur-Rac Date range
 const onDateRangeChange = (newRange) => {
   CurrentRacDateRange.value = newRange
+  // Log activity
+  if (newRange && newRange.from && newRange.to) {
+    logAdminActivity('Date Range Selected', `Selected current RAC date range: ${newRange.from} to ${newRange.to}`)
+  }
 }
 
 const onDateRangeClear = () => {
   CurrentRacDateRange.value = { from: '', to: '' }
+  logAdminActivity('Date Range Cleared', 'Cleared current RAC date range')
 }
 
 const onContinuingDateRangeChange = (newRange) => {
   continuingRacDateRange.value = newRange
+  // Log activity
+  if (newRange && newRange.from && newRange.to) {
+    logAdminActivity('Date Range Selected', `Selected continuing RAC date range: ${newRange.from} to ${newRange.to}`)
+  }
 }
 
 const onContinuingDateRangeClear = () => {
   continuingRacDateRange.value = { from: '', to: '' }
+  logAdminActivity('Date Range Cleared', 'Cleared continuing RAC date range')
 }
 
 const onCurrentSacbDateRangeChange = (newRange) => {
   currentSacbDateRange.value = newRange
+  // Log activity
+  if (newRange && newRange.from && newRange.to) {
+    logAdminActivity('Date Range Selected', `Selected current SACB date range: ${newRange.from} to ${newRange.to}`)
+  }
 }
 
 const onCurrentSacbDateRangeClear = () => {
   currentSacbDateRange.value = { from: '', to: '' }
+  logAdminActivity('Date Range Cleared', 'Cleared current SACB date range')
 }
 
 const onContinuingSacbDateRangeChange = (newRange) => {
   continuingSacbDateRange.value = newRange
+  // Log activity
+  if (newRange && newRange.from && newRange.to) {
+    logAdminActivity('Date Range Selected', `Selected continuing SACB date range: ${newRange.from} to ${newRange.to}`)
+  }
 }
 
 const onContinuingSacbDateRangeClear = () => {
   continuingSacbDateRange.value = { from: '', to: '' }
+  logAdminActivity('Date Range Cleared', 'Cleared continuing SACB date range')
 }
 
 /* -------------------- HELPERS -------------------- */
@@ -1322,6 +1356,9 @@ async function exportToPDF() {
 
     pdf.save('rac-report.pdf')
 
+    // Log PDF export activity
+    logAdminActivity('Report Exported', `Exported ${RACModal.reportType} report to PDF`)
+
     $q.notify({
       type: 'positive',
       message: 'RAC PDF Exported Successfully!',
@@ -1381,6 +1418,9 @@ async function exportSACBToPDF() {
 
     pdf.save('sacb-report.pdf')
 
+    // Log PDF export activity
+    logAdminActivity('Report Exported', `Exported ${SACBModal.reportType} report to PDF`)
+
     $q.notify({
       type: 'positive',
       message: 'SACB PDF Exported Successfully!',
@@ -1419,6 +1459,7 @@ function resetSignatories() {
   SetupModal.Certifiedby = ''
   SetupModal.Certifiedposition = null
 
+  logAdminActivity('Signatory Form Reset', 'Reset all signatory fields in report setup')
   notifySuccess('Signatory fields have been reset')
 }
 
@@ -1434,8 +1475,25 @@ function saveAsTemplate() {
   }
 
   localStorage.setItem('sacbSignatoryTemplate', JSON.stringify(template))
+  logAdminActivity('Signatory Template Saved', 'Saved signatory template for future use')
   notifySuccess('Signatory template saved successfully')
 }
+
+/* -------------------- WATCHERS -------------------- */
+// Watch for expense category selection changes
+watch(expenseSelectedCurrent, (newValue, oldValue) => {
+  if (newValue && newValue !== oldValue) {
+    const categoryName = reportStore.expenseOptionsCurrent.find(opt => opt.id === newValue)?.name || 'Unknown'
+    logAdminActivity('Expense Category Selected', `Selected current year expense category: ${categoryName}`)
+  }
+})
+
+watch(expenseSelectedContinuing, (newValue, oldValue) => {
+  if (newValue && newValue !== oldValue) {
+    const categoryName = reportStore.expenseOptionsContinuing.find(opt => opt.id === newValue)?.name || 'Unknown'
+    logAdminActivity('Expense Category Selected', `Selected continuing year expense category: ${categoryName}`)
+  }
+})
 
 /* -------------------- LIFECYCLE -------------------- */
 onMounted(async () => {
