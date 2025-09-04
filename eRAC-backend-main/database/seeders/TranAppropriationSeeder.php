@@ -96,7 +96,7 @@ class TranAppropriationSeeder extends Seeder
 
                         // Update budget (this looks unused since $totalAllocated is always 0)
                         if ($allocationAmount > 0) {
-                            $budget->current_amount = max(0, $budget->original_amount - $allocationAmount);
+                            $budget->current_amount = max(0, $budget->current_amount - $allocationAmount);
                             $budget->save();
 
                             \Log::info("Barangay {$barangay->id} | Budget {$budget->id} updated", [
