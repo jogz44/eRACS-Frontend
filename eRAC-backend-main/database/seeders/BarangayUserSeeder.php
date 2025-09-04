@@ -42,7 +42,7 @@ class BarangayUserSeeder extends Seeder
         foreach ($barangays as $barangay) {
             // Pick 6 random positions for this barangay (no duplicate positions)
             $randomPositions = $positions->random(4);
-
+            shuffle($people);
             foreach ($randomPositions as $index => $position) {
                 $person = $people[$index];
 
@@ -60,6 +60,13 @@ class BarangayUserSeeder extends Seeder
                     'password' => Hash::make('password123'),
                     'role' => 'barangay_user',
                     'is_approved' => true,
+                    'permissions' =>  [
+                        "view" => true,
+                        "add" => true,
+                        "edit" => true,
+                        "delete" => true,
+                        "print" => true,
+                    ],
                 ]);
             }
         }
