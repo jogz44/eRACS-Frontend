@@ -8,7 +8,7 @@
                   <div class="welcome-text ">
               <h6 class="welcome-title q-pb-md">Welcome </h6>
               <h6 class="to-text q-pb-md">to</h6>
-              <h6 class="erac-title">eRAC</h6>
+              <h6 class="erac-title">eRACs</h6>
             </div>
             <div class="description-text">
               <q-space></q-space>
@@ -58,7 +58,7 @@
             />
           </div>
           <div class="office-name">City Accounting Office</div>
-            <div class="system-name">Electronic Registry of Appropriation and Commitment (eRAC)</div>
+            <div class="system-name">Electronic Registry of Appropriation and Commitment System (eRACs)</div>
 
           <div class="signin-title">{{ getSigninTitle() }}</div>
         </div>
