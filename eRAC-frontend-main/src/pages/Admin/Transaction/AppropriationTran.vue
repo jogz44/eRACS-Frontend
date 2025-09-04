@@ -229,11 +229,15 @@
               :label="isAppropriationReviewed(props.row.id) ? 'Reviewed' : 'Review'"
               :color="isAppropriationReviewed(props.row.id) ? 'positive' : 'primary'"
               :outline="!isAppropriationReviewed(props.row.id)"
-              :disable="isAppropriationReviewed(props.row.id)"
+              :disable="false"
               :unelevated="!isAppropriationReviewed(props.row.id)"
               rounded
-              @click="!isAppropriationReviewed(props.row.id) && handleAppropriationReviewClick(props.row)"
-            />
+              @click="isAppropriationReviewed(props.row.id) ? showRemarksDialog(props.row.id) : handleAppropriationReviewClick(props.row)"
+            >
+              <q-tooltip v-if="isAppropriationReviewed(props.row.id)" class="bg-grey-8">
+                Click to view admin remarks
+              </q-tooltip>
+            </q-btn>
           </q-td>
         </template>
       </q-table>
@@ -241,6 +245,43 @@
 
     <CommitDialog />
     <ViewCommitDialog ref="viewDialogRef" />
+
+    <!-- Review Confirmation Dialog -->
+    <q-dialog v-model="showReviewDialog" @keydown.enter="confirmReview">
+      <q-card style="min-width: 400px">
+        <q-card-section class="q-pb-none">
+          <div class="text-h6">Confirm Review</div>
+        </q-card-section>
+
+        <q-card-section>
+          <div class="q-mb-md">
+            <div class="text-body1 q-mb-sm">
+              Mark Appropriation "<strong>{{ currentReviewRow?.description }}</strong>" as reviewed?
+            </div>
+            <q-input
+              outlined
+              v-model="adminRemarks"
+              label="Admin Remarks"
+              placeholder="Enter your remarks here..."
+              type="textarea"
+              rows="3"
+              :rules="[(val) => !!val || 'Remarks are required']"
+              @keydown.enter="confirmReview"
+            />
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" @click="cancelReview" />
+          <q-btn
+            label="OK"
+            color="primary"
+            @click="confirmReview"
+            :disable="!adminRemarks.trim()"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
     <!-- Edit Allocation Dialog -->
     <q-dialog v-model="showEditAllocationDialog">
@@ -361,6 +402,11 @@ const loading = ref(false)
 const dateRange = ref(null)
 const selectedBarangay = ref(null)
 const barangayOptions = ref([])
+
+// Review dialog variables
+const showReviewDialog = ref(false)
+const adminRemarks = ref('')
+const currentReviewRow = ref(null)
 
 const loadAppropriation = async () => {
   loading.value = true
@@ -840,21 +886,66 @@ const columns = [
 
 // Local reviewed state for appropriation rows
 const appropriationReviewedSet = ref(new Set())
+const appropriationRemarks = ref(new Map()) // Store remarks for each reviewed item
 
 const isAppropriationReviewed = (id) => appropriationReviewedSet.value.has(id)
+const getAppropriationRemarks = (id) => appropriationRemarks.value.get(id) || ''
 
 const handleAppropriationReviewClick = (row) => {
   if (isAppropriationReviewed(row.id)) return
-  $q.dialog({
-    title: 'Confirm Review',
-    message: `Mark Appropriation "${row.description}" as reviewed?`,
-    cancel: true,
-    persistent: true
-  }).onOk(() => {
-    appropriationReviewedSet.value.add(row.id)
-    // Log admin review activity
-    logAdminActivity('Reviewed Item', `Admin reviewed Appropriation: ${row.description} (Barangay: ${row.barangay_name || 'Unknown Barangay'})`)
-  })
+  currentReviewRow.value = row
+  adminRemarks.value = ''
+  showReviewDialog.value = true
+}
+
+const confirmReview = () => {
+  if (!adminRemarks.value.trim()) {
+    $q.notify({
+      type: 'negative',
+      message: 'Please enter your remarks before confirming the review.',
+      icon: 'warning',
+      position: 'top',
+    })
+    return
+  }
+
+  if (currentReviewRow.value) {
+    appropriationReviewedSet.value.add(currentReviewRow.value.id)
+    appropriationRemarks.value.set(currentReviewRow.value.id, adminRemarks.value)
+    // Log admin review activity with remarks
+    logAdminActivity('Reviewed Item', `Admin reviewed Appropriation: ${currentReviewRow.value.description} (Barangay: ${currentReviewRow.value.barangay_name || 'Unknown Barangay'}) - Remarks: ${adminRemarks.value}`)
+
+    $q.notify({
+      type: 'positive',
+      message: 'Appropriation marked as reviewed successfully!',
+      icon: 'check_circle',
+      position: 'top',
+    })
+  }
+
+  showReviewDialog.value = false
+  adminRemarks.value = ''
+  currentReviewRow.value = null
+}
+
+const cancelReview = () => {
+  showReviewDialog.value = false
+  adminRemarks.value = ''
+  currentReviewRow.value = null
+}
+
+const showRemarksDialog = (id) => {
+  const remarks = getAppropriationRemarks(id)
+  if (remarks) {
+    $q.dialog({
+      title: 'Admin Remarks',
+      message: remarks,
+      ok: {
+        label: 'Close',
+        color: 'primary'
+      }
+    })
+  }
 }
 
 const handleEnterKey = (event) => {

@@ -1,7 +1,7 @@
 <template>
   <q-card>
     <q-table
-      :rows="store.filteredAugmentations" 
+      :rows="store.filteredAugmentations"
       :columns="columns"
       row-key="id"
       :pagination="store.pagination"
@@ -56,13 +56,54 @@
             :label="isReviewed(props.row.id) ? 'Reviewed' : 'Review'"
             :color="isReviewed(props.row.id) ? 'positive' : 'primary'"
             :outline="!isReviewed(props.row.id)"
-            :disable="isReviewed(props.row.id)"
+            :disable="false"
             :unelevated="!isReviewed(props.row.id)"
             rounded
-            @click="!isReviewed(props.row.id) && handleReviewClick(props.row)"
-          />
+            @click="isReviewed(props.row.id) ? showRemarksDialog(props.row.id) : handleReviewClick(props.row)"
+          >
+            <q-tooltip v-if="isReviewed(props.row.id)" class="bg-grey-8">
+              Click to view admin remarks
+            </q-tooltip>
+          </q-btn>
         </q-td>
       </template>
+
+      <!-- Review Confirmation Dialog -->
+      <q-dialog v-model="showReviewDialog" @keydown.enter="confirmReview">
+        <q-card style="min-width: 400px">
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">Confirm Review</div>
+          </q-card-section>
+
+          <q-card-section>
+            <div class="q-mb-md">
+              <div class="text-body1 q-mb-sm">
+                Mark Augmentation Ref <strong>{{ currentReviewRow?.ref_number || currentReviewRow?.refNo }}</strong> as reviewed?
+              </div>
+              <q-input
+                outlined
+                v-model="adminRemarks"
+                label="Admin Remarks"
+                placeholder="Enter your remarks here..."
+                type="textarea"
+                rows="3"
+                :rules="[(val) => !!val || 'Remarks are required']"
+                @keydown.enter="confirmReview"
+              />
+            </div>
+          </q-card-section>
+
+          <q-card-actions align="right" class="q-pa-md">
+            <q-btn flat label="Cancel" @click="cancelReview" />
+            <q-btn
+              label="OK"
+              color="primary"
+              @click="confirmReview"
+              :disable="!adminRemarks.trim()"
+            />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
 
     </q-table>
   </q-card>
@@ -82,12 +123,66 @@ const authStore = useAuthStore()
 // Check if current user is admin
 const isAdminUser = computed(() => authStore.admin)
 const reviewedSet = ref(new Set())
+const augmentationRemarks = ref(new Map()) // store remarks per augmentation id
 const isReviewed = (id) => reviewedSet.value.has(id)
+const getRemarks = (id) => augmentationRemarks.value.get(id) || ''
 const { logAdminActivity } = useActivityLogging()
 
+// Review dialog state
+const showReviewDialog = ref(false)
+const adminRemarks = ref('')
+const currentReviewRow = ref(null)
+
 const handleReviewClick = (row) => {
-  reviewedSet.value.add(row.id)
-  logAdminActivity('Reviewed Item', `Admin reviewed Augmentation Ref ${row.ref_number || row.refNo || ''} (Barangay: ${row.barangay_name || 'Unknown Barangay'})`)
+  if (isReviewed(row.id)) return
+  currentReviewRow.value = row
+  adminRemarks.value = ''
+  showReviewDialog.value = true
+}
+
+const confirmReview = () => {
+  if (!adminRemarks.value.trim()) {
+    $q.notify({
+      type: 'negative',
+      message: 'Please enter your remarks before confirming the review.',
+      icon: 'warning',
+      position: 'top',
+    })
+    return
+  }
+
+  if (currentReviewRow.value) {
+    reviewedSet.value.add(currentReviewRow.value.id)
+    augmentationRemarks.value.set(currentReviewRow.value.id, adminRemarks.value)
+    logAdminActivity('Reviewed Item', `Admin reviewed Augmentation Ref ${currentReviewRow.value.ref_number || currentReviewRow.value.refNo || ''} (Barangay: ${currentReviewRow.value.barangay_name || 'Unknown Barangay'}) - Remarks: ${adminRemarks.value}`)
+    $q.notify({
+      type: 'positive',
+      message: 'Augmentation marked as reviewed successfully!',
+      icon: 'check_circle',
+      position: 'top',
+    })
+  }
+
+  showReviewDialog.value = false
+  adminRemarks.value = ''
+  currentReviewRow.value = null
+}
+
+const cancelReview = () => {
+  showReviewDialog.value = false
+  adminRemarks.value = ''
+  currentReviewRow.value = null
+}
+
+const showRemarksDialog = (id) => {
+  const remarks = getRemarks(id)
+  if (remarks) {
+    $q.dialog({
+      title: 'Admin Remarks',
+      message: remarks,
+      ok: { label: 'Close', color: 'primary' }
+    })
+  }
 }
 
 // Build columns dynamically to include admin-only remarks column
@@ -120,7 +215,7 @@ const getBudgetSourceLabel = (budgetSource) => {
 // Helper function to get transfer type color
 const getTransferTypeColor = (transferType) => {
   if (!transferType) return 'grey'
-  
+
   if (transferType.includes('Annual → Annual')) {
     return 'primary'
   } else if (transferType.includes('Supplemental → Supplemental')) {
@@ -136,16 +231,16 @@ const getTransferSummary = (augmentation) => {
   if (!augmentation.details || !Array.isArray(augmentation.details)) {
     return []
   }
-  
+
   const transferTypes = new Set()
-  
+
   augmentation.details.forEach(detail => {
     const fromBudget = detail.from_budget_source || 'Annual Budget'
     const toBudget = detail.to_budget_source || 'Annual Budget'
     const transferType = `${getBudgetSourceLabel(fromBudget)} → ${getBudgetSourceLabel(toBudget)}`
     transferTypes.add(transferType)
   })
-  
+
   return Array.from(transferTypes)
 }
 
