@@ -21,8 +21,8 @@
     </div>
 
     <!-- Status Summary Cards -->
-    <div class="status-indicators-container q-mb-md">
-      <div class="row q-col-gutter-md justify-center">
+    <!-- <div class="status-indicators-container q-mb-md"> -->
+      <!-- <div class="row q-col-gutter-md justify-center">
         <div class="col-md-2 col-sm-4 col-xs-6">
           <q-card class="summary-card">
             <q-card-section class="text-center">
@@ -63,8 +63,8 @@
             </q-card-section>
           </q-card>
         </div>
-      </div>
-    </div>
+      </div> -->
+    <!-- </div> -->
 
     <!-- Filters Section -->
     <q-card flat bordered class="q-mb-md filters-section">
@@ -101,11 +101,7 @@
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date
-                      v-model="dateRange"
-                      range
-                      @update:model-value="onDateRangeChange"
-                    >
+                    <q-date v-model="dateRange" range @update:model-value="onDateRangeChange">
                       <div class="row items-center justify-end">
                         <q-btn v-close-popup label="Close" color="primary" flat />
                       </div>
@@ -148,7 +144,6 @@
     </q-card>
 
     <div class="q-mb-sm">
-
       <!-- Disbursement Dialog -->
       <q-dialog v-model="store.dialogs.disbursement" persistent @keydown.enter="handleEnterKey">
         <q-card style="min-width: 900px; max-width: 95vw">
@@ -275,6 +270,7 @@
                   </div>
                 </q-td>
               </template>
+
             </q-table>
 
             <!-- Amount Display -->
@@ -344,7 +340,7 @@
                   />
                 </q-td>
               </template>
-              
+
               <template v-slot:no-data>
                 <div class="full-width row flex-center text-grey q-gutter-sm">
                   <q-icon size="2em" name="info" />
@@ -352,9 +348,10 @@
                     Loading expense accounts...
                   </span>
                   <span v-else>
-                    No continuing appropriation accounts available. 
-                    <br>
-                    Please create continuing appropriations first in the Continuing Appropriation module.
+                    No continuing appropriation accounts available.
+                    <br />
+                    Please create continuing appropriations first in the Continuing Appropriation
+                    module.
                   </span>
                 </div>
               </template>
@@ -441,6 +438,14 @@
                   :disable="viewLoading[props.row.id]"
                   v-permission="'view'"
                 />
+
+              </div>
+            </q-td>
+          </template>
+           <template v-slot:body-cell-liquidate="props">
+            <q-td :props="props">
+              <div class="row q-gutter-xs items-center justify-center">
+
                 <q-btn
                   dense
                   label="Liquidate"
@@ -486,40 +491,38 @@ const liquidateLoading = ref({})
 const currentFiscalYear = computed(() => new Date().getFullYear())
 
 // Status counts for summary cards
-const statusCounts = computed(() => {
-  const counts = {
-    pending: 0,
-    partial: 0,
-    liquidated: 0,
-    voided: 0,
-    stale: 0,
-  }
+// const statusCounts = computed(() => {
+//   const counts = {
+//     pending: 0,
+//     partial: 0,
+//     liquidated: 0,
+//     voided: 0,
+//     stale: 0,
+//   }
 
-  store.disbursements.forEach((disbursement) => {
-    switch (disbursement.status) {
-      case 'Pending':
-        counts.pending++
-        break
-      case 'Partial':
-        counts.partial++
-        break
-      case 'Liquidated':
-        counts.liquidated++
-        break
-      case 'Void Requested':
-      case 'Voided':
-        counts.voided++
-        break
-      case 'Stale':
-        counts.stale++
-        break
-    }
-  })
+//   store.disbursements.forEach((disbursement) => {
+//     switch (disbursement.status) {
+//       case 'Pending':
+//         counts.pending++
+//         break
+//       case 'Partial':
+//         counts.partial++
+//         break
+//       case 'Liquidated':
+//         counts.liquidated++
+//         break
+//       case 'Void Requested':
+//       case 'Voided':
+//         counts.voided++
+//         break
+//       case 'Stale':
+//         counts.stale++
+//         break
+//     }
+//   })
 
-  return counts
-})
-
-
+//   return counts
+// })
 
 // Removed particulars filtering logic since particulars is now a simple text input
 
@@ -533,8 +536,6 @@ const currentBankLabel = computed(() => {
   }
   return 'Select Bank'
 })
-
-
 
 // Filtered disbursements based on search and date range
 const filteredDisbursements = computed(() => {
@@ -610,7 +611,7 @@ const validateAndSave = () => {
 
 const handleEnterKey = (event) => {
   if (event) {
-  event.preventDefault()
+    event.preventDefault()
   }
   validateAndSave()
 }
@@ -636,11 +637,9 @@ const handleBankSelection = async (bankId) => {
   }
 }
 
-
-
 const handleAddExpense = async () => {
   console.log('Add button clicked, starting to open expense dialog...')
-  
+
   try {
     await store.openDialog('expense')
     console.log('Expense dialog opened successfully')
@@ -740,10 +739,14 @@ const dateRangeDisplay = computed(() => {
     return ''
   }
   const fromDate = new Date(dateRange.value.from).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric'
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
   })
   const toDate = new Date(dateRange.value.to).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric'
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
   })
   return `${fromDate} - ${toDate}`
 })
@@ -869,8 +872,6 @@ const handleLiquidateDisbursement = async (row) => {
   }
 }
 
-
-
 // Function to load all data with optimized loading strategy
 const loadAllData = async () => {
   loading.value = true
@@ -906,8 +907,6 @@ const loadAllData = async () => {
     loading.value = false
   }
 }
-
-
 
 onMounted(async () => {
   await loadAllData()
