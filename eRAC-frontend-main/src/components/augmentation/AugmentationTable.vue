@@ -1,7 +1,7 @@
 <template>
   <q-card>
     <q-table
-      :rows="store.filteredAugmentations" 
+      :rows="tableData"
       :columns="columns"
       row-key="id"
       :pagination="store.pagination"
@@ -75,6 +75,14 @@ import { computed, ref } from 'vue'
 import { useActivityLogging } from 'src/composables/useActivityLogging'
 import { useQuasar } from 'quasar'
 
+// Define props
+const props = defineProps({
+  filteredData: {
+    type: Array,
+    default: () => []
+  }
+})
+
 const store = useAugmentationStore()
 const $q = useQuasar()
 const authStore = useAuthStore()
@@ -84,6 +92,12 @@ const isAdminUser = computed(() => authStore.admin)
 const reviewedSet = ref(new Set())
 const isReviewed = (id) => reviewedSet.value.has(id)
 const { logAdminActivity } = useActivityLogging()
+
+// Always use prop data if provided, even if it's empty
+const tableData = computed(() => {
+  // Always use the prop data, even if it's an empty array
+  return props.filteredData || []
+})
 
 const handleReviewClick = (row) => {
   reviewedSet.value.add(row.id)
@@ -120,7 +134,7 @@ const getBudgetSourceLabel = (budgetSource) => {
 // Helper function to get transfer type color
 const getTransferTypeColor = (transferType) => {
   if (!transferType) return 'grey'
-  
+
   if (transferType.includes('Annual → Annual')) {
     return 'primary'
   } else if (transferType.includes('Supplemental → Supplemental')) {
@@ -136,16 +150,16 @@ const getTransferSummary = (augmentation) => {
   if (!augmentation.details || !Array.isArray(augmentation.details)) {
     return []
   }
-  
+
   const transferTypes = new Set()
-  
+
   augmentation.details.forEach(detail => {
     const fromBudget = detail.from_budget_source || 'Annual Budget'
     const toBudget = detail.to_budget_source || 'Annual Budget'
     const transferType = `${getBudgetSourceLabel(fromBudget)} → ${getBudgetSourceLabel(toBudget)}`
     transferTypes.add(transferType)
   })
-  
+
   return Array.from(transferTypes)
 }
 

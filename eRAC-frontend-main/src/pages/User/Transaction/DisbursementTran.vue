@@ -15,43 +15,54 @@
           dense
           @click="loadPendingUsers"
           :loading="store.loadingDisbursements"
+          title="Refresh disbursements"
         />
       </div>
     </div>
 
     <!-- Status Summary Cards -->
-    <div class="row q-col-gutter-md q-mb-md">
-      <div class="col-md-3 col-sm-6 col-xs-12">
-        <q-card class="summary-card pending-card">
-          <q-card-section class="text-center">
-            <div class="text-h4 text-weight-bold text-orange">{{ statusCounts.pending }}</div>
-            <div class="text-subtitle2 text-grey-7">Pending</div>
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-md-3 col-sm-6 col-xs-12">
-        <q-card class="summary-card partial-card">
-          <q-card-section class="text-center">
-            <div class="text-h4 text-weight-bold text-amber">{{ statusCounts.partial }}</div>
-            <div class="text-subtitle2 text-grey-7">Partial</div>
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-md-3 col-sm-6 col-xs-12">
-        <q-card class="summary-card liquidated-card">
-          <q-card-section class="text-center">
-            <div class="text-h4 text-weight-bold text-green">{{ statusCounts.liquidated }}</div>
-            <div class="text-subtitle2 text-grey-7">Liquidated</div>
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-md-3 col-sm-6 col-xs-12">
-        <q-card class="summary-card voided-card">
-          <q-card-section class="text-center">
-            <div class="text-h4 text-weight-bold text-red">{{ statusCounts.voided }}</div>
-            <div class="text-subtitle2 text-grey-7">Voided</div>
-          </q-card-section>
-        </q-card>
+    <div class="status-indicators-container q-mb-md">
+      <div class="row q-col-gutter-md justify-center">
+        <div class="col-md-2 col-sm-4 col-xs-6">
+          <q-card class="summary-card">
+            <q-card-section class="text-center">
+              <div class="text-h4 text-weight-bold text-orange">{{ statusCounts.pending }}</div>
+              <div class="text-subtitle2 text-grey-7">Pending</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-md-2 col-sm-4 col-xs-6">
+          <q-card class="summary-card">
+            <q-card-section class="text-center">
+              <div class="text-h4 text-weight-bold text-amber">{{ statusCounts.partial }}</div>
+              <div class="text-subtitle2 text-grey-7">Partial</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-md-2 col-sm-4 col-xs-6">
+          <q-card class="summary-card">
+            <q-card-section class="text-center">
+              <div class="text-h4 text-weight-bold text-green">{{ statusCounts.liquidated }}</div>
+              <div class="text-subtitle2 text-grey-7">Liquidated</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-md-2 col-sm-4 col-xs-6">
+          <q-card class="summary-card">
+            <q-card-section class="text-center">
+              <div class="text-h4 text-weight-bold text-red">{{ statusCounts.voided }}</div>
+              <div class="text-subtitle2 text-grey-7">Voided</div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-md-2 col-sm-4 col-xs-6">
+          <q-card class="summary-card">
+            <q-card-section class="text-center">
+              <div class="text-h4 text-weight-bold text-purple">{{ statusCounts.stale }}</div>
+              <div class="text-subtitle2 text-grey-7">Stale</div>
+            </q-card-section>
+          </q-card>
+        </div>
       </div>
     </div>
 
@@ -209,8 +220,8 @@
                   dense
                   v-model="store.forms.disbursement.date"
                   mask="##/##/####"
-                  :readonly="true"
-                  :disable="true"
+
+
                   @keydown.enter="handleEnterKey"
                 >
                   <template v-slot:append>
@@ -500,7 +511,8 @@
                   v-if="
                     isTreasurer &&
                     (props.row.status === 'Pending' || props.row.status === 'Partial') &&
-                    canVoid(props.row)
+                    canVoid(props.row) &&
+                    props.row.status !== 'Stale'
                   "
                   @click.stop="() => handleVoidDisbursement(props.row)"
                   v-permission="'delete'"
@@ -513,7 +525,8 @@
                   v-if="
                     isApprover &&
                     (props.row.status === 'Pending' || props.row.status === 'Partial') &&
-                    canVoid(props.row)
+                    canVoid(props.row) &&
+                    props.row.status !== 'Stale'
                   "
                   @click.stop="() => handleDirectVoidDisbursement(props.row)"
                   v-permission="'delete'"
@@ -575,7 +588,7 @@
                 v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
                 @click="handleLiquidateDisbursement(props.row)"
                 :loading="liquidateLoading[props.row.id]"
-                :disable="liquidateLoading[props.row.id]"
+                :disable="liquidateLoading[props.row.id] || props.row.status === 'Stale'"
                 v-permission="'add'"
               />
             </q-td>
@@ -657,6 +670,7 @@ const statusOptions = [
   { label: 'Liquidated', value: 'Liquidated' },
   { label: 'Void Requested', value: 'Void Requested' },
   { label: 'Voided', value: 'Voided' },
+  { label: 'Stale', value: 'Stale' },
 ]
 
 // Search query
@@ -863,6 +877,8 @@ const getStatusColor = (status) => {
       return 'deep-orange'
     case 'Voided':
       return 'red'
+    case 'Stale':
+      return 'purple'
     default:
       return 'grey'
   }
@@ -875,6 +891,7 @@ const getStatusTextColor = (status) => {
     case 'Liquidated':
     case 'Void Requested':
     case 'Voided':
+    case 'Stale':
       return 'white'
     default:
       return 'black'
@@ -970,6 +987,7 @@ const addingExpense = ref(false)
 const initialLoading = ref(true)
 const viewLoading = ref({})
 const liquidateLoading = ref({})
+// const checkingStaleStatus = ref(false)
 
 const currentBankLabel = computed(() => {
   if (store.forms.disbursement.bank_id) {
@@ -998,6 +1016,7 @@ const statusCounts = computed(() => {
     partial: 0,
     liquidated: 0,
     voided: 0,
+    stale: 0,
   }
 
   store.disbursements.forEach((disbursement) => {
@@ -1014,6 +1033,9 @@ const statusCounts = computed(() => {
       case 'Void Requested':
       case 'Voided':
         counts.voided++
+        break
+      case 'Stale':
+        counts.stale++
         break
     }
   })
@@ -1388,6 +1410,41 @@ const getBudgetSourceLabel = (budgetSource) => {
   }
   return 'Mixed'
 }
+
+// Handle manual stale status check
+// const handleCheckStaleStatus = async () => {
+//   checkingStaleStatus.value = true
+//   try {
+//     const result = await store.checkStaleStatus()
+//     if (result.success) {
+//       $q.notify({
+//         type: 'positive',
+//         message: `Stale status check completed! Updated ${result.data.disbursements_updated} disbursements and ${result.data.cheques_updated} cheques.`,
+//         icon: 'check_circle',
+//         position: 'top',
+//         timeout: 5000,
+//       })
+//     } else {
+//       $q.notify({
+//         type: 'negative',
+//         message: result.message || 'Failed to check stale status',
+//         icon: 'error',
+//         position: 'top',
+//         timeout: 5000,
+//       })
+//     }
+//   } catch (error) {
+//     $q.notify({
+//       type: 'negative',
+//       message: error.message || 'Failed to check stale status',
+//       icon: 'error',
+//       position: 'top',
+//       timeout: 5000,
+//     })
+//   } finally {
+//     checkingStaleStatus.value = false
+//   }
+// }
 </script>
 
 <style scoped>
@@ -1411,6 +1468,14 @@ const getBudgetSourceLabel = (budgetSource) => {
   margin: 2px;
 }
 
+/* Status Indicators Container */
+.status-indicators-container {
+  background: #f8f9fa;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #e9ecef;
+}
+
 /* Summary Cards Styling */
 .summary-card {
   border-radius: 12px;
@@ -1418,6 +1483,8 @@ const getBudgetSourceLabel = (budgetSource) => {
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
+  background: white;
+  border: 2px solid transparent;
 }
 
 .summary-card:hover {
@@ -1425,21 +1492,6 @@ const getBudgetSourceLabel = (budgetSource) => {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
-.pending-card {
-  border-left: 4px solid #ff9800;
-}
-
-.partial-card {
-  border-left: 4px solid #ffc107;
-}
-
-.liquidated-card {
-  border-left: 4px solid #4caf50;
-}
-
-.voided-card {
-  border-left: 4px solid #f44336;
-}
 
 /* Filter Section Styling */
 .q-card .q-card-section {
@@ -1484,14 +1536,17 @@ const getBudgetSourceLabel = (budgetSource) => {
     padding: 8px;
   }
 
+  .status-indicators-container {
+    padding: 12px;
+  }
+
   .row.q-col-gutter-md {
     flex-direction: column;
   }
 
-  .col-md-4,
-  .col-sm-6,
-  .col-sm-12 {
-    width: 100%;
+  .col-md-2,
+  .col-sm-4,
+  .col-xs-6 {
     margin-bottom: 8px;
   }
 

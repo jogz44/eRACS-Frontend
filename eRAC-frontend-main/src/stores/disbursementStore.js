@@ -262,7 +262,9 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     disbursementColumns: () => [
+
       { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
+        { name: 'status', label: 'Status', field: 'status', align: 'center', sortable: true },
       { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
       { name: 'dvNumber', label: 'DV Number', field: 'dvNumber', align: 'left', sortable: true },
       {
@@ -299,7 +301,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           return val
         }
       },
-      { name: 'status', label: 'Status', field: 'status', align: 'center', sortable: true },
+
       { name: 'action', label: 'Action', field: '', align: 'center' },
       { name: 'liquidate', label: 'Liquidate', field: '', align: 'center' },
        { name: 'remarks', label: 'Remarks', field: '', align: 'center' },
@@ -448,7 +450,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           // Check if account has budget_source field first, then fall back to description
           const budgetSource = account.budget_source || account.description || ''
           const budgetSourceLower = budgetSource.toLowerCase()
-          
+
           if (state.selectedBudgetSource === 'annual') {
             return budgetSourceLower.includes('annual')
           } else if (state.selectedBudgetSource === 'supplemental') {
@@ -549,13 +551,13 @@ export const useDisbursementStore = defineStore('disbursement', {
     async fetchExpenseDetails() {
       try {
         const authStore = useAuthStore()
-        
+
         // For admin users, we don't need expense details since they only view disbursements
         if (authStore.admin) {
           this.expenseDetailsData = []
           return
         }
-        
+
         const token = authStore.token
         const endpoint = '/api/barangay/expense-details'
         const params = {}
@@ -586,16 +588,16 @@ export const useDisbursementStore = defineStore('disbursement', {
     async refreshExpenseAccountsWithBalances() {
       try {
         const authStore = useAuthStore()
-        
+
         // For admin users, we don't need to refresh expense accounts since they only view disbursements
         if (authStore.admin) {
           return Promise.resolve()
         }
-        
+
         // Force a refresh of the expense accounts to recalculate balances
         // This will trigger the getter to recalculate with current frontend expenses
         this.expenseData = [...this.expenseData]
-        
+
         return Promise.resolve()
 
       } catch (error) {
@@ -627,13 +629,13 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Fetch from appropriation store for budget allocations (only for barangay users)
         const appropriationStore = useAppropriationStore()
-        
+
         // Pass budget source filter to appropriation store
         if (this.selectedBudgetSource && this.selectedBudgetSource !== 'all') {
           // Set the budget type filter in appropriation store
           appropriationStore.setSelectedBudgetType(this.selectedBudgetSource)
         }
-        
+
         await appropriationStore.fetchExpenseHierarchy()
         this.expenseData = appropriationStore.allocations || []
 
@@ -654,12 +656,12 @@ export const useDisbursementStore = defineStore('disbursement', {
     async forceRefreshExpenseDetails() {
       try {
         const authStore = useAuthStore()
-        
+
         // For admin users, we don't need to refresh expense details since they only view disbursements
         if (authStore.admin) {
           return Promise.resolve()
         }
-        
+
         await this.fetchExpenseDetails()
         return Promise.resolve()
       } catch (error) {
@@ -672,12 +674,12 @@ export const useDisbursementStore = defineStore('disbursement', {
     async refreshExpenseAccountsInBackground() {
       try {
         const authStore = useAuthStore()
-        
+
         // For admin users, we don't need to refresh expense accounts since they only view disbursements
         if (authStore.admin) {
           return Promise.resolve()
         }
-        
+
         // Fetch from appropriation store for budget allocations
         const appropriationStore = useAppropriationStore()
         await appropriationStore.fetchExpenseHierarchy()
@@ -755,7 +757,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     integrateExpenseTypesFromAccountsLib(accountsStore) {
       try {
         const authStore = useAuthStore()
-        
+
         // For admin users, we don't need to integrate expense types since they only view disbursements
         if (authStore.admin) {
           return
@@ -853,7 +855,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             params.barangay_id = selectedBarangay
           }
         }
-        
+
         // Add current fiscal year filter to only show current year transactions
         const currentYear = new Date().getFullYear()
         params.year = currentYear
@@ -985,6 +987,57 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
+    // Fetch disbursement data for viewing only (doesn't modify form data or open dialogs)
+    async fetchDisbursementForView(id) {
+      try {
+        const authStore = useAuthStore();
+        // Use barangay user token for barangay endpoints
+        const token = authStore.token;
+        const response = await api.get(`/api/barangay/disbursements/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+
+        // Get the disbursement data
+        const disbursement = response.data.data;
+        console.log('Raw disbursement data from API:', disbursement);
+        console.log('Raw expenses from API:', disbursement?.expenses);
+
+        if (disbursement) {
+          // Map expenses to ensure proper field names
+          const mappedExpenses = (disbursement.expenses || []).map(expense => ({
+            id: expense.id,
+            accountName: expense.account_name || expense.particular || 'Unknown Account',
+            amount: expense.amount,
+            particular: expense.particular,
+            accountId: expense.accountId,
+            expense_class_id: expense.expense_class_id,
+            expense_type_id: expense.expense_type_id,
+            expense_item_id: expense.expense_item_id,
+          }));
+
+          console.log('Mapped expenses for view:', mappedExpenses);
+
+          return {
+            id: disbursement.id,
+            date: disbursement.date,
+            dvNumber: disbursement.dv_number,
+            chequeNumber: disbursement.cheque_number,
+            bank_id: disbursement.bank_id,
+            payee: disbursement.payee,
+            dvAmount: disbursement.dv_amount,
+            expenses: mappedExpenses,
+          };
+        }
+        return null;
+      } catch (error) {
+        console.error('Error fetching disbursement for view:', error);
+        return null;
+      }
+    },
+
     async liquidateDisbursement(id, liquidatedAmount) {
       try {
         const authStore = useAuthStore();
@@ -1045,7 +1098,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           console.error('Fetched booklets data:', data);
           console.error('Fetched booklets data:', data.booklet_numb);
           console.error('Fetched booklets data:', data.cheque[0].cheque_number);
-        
+
           this.autoBookletID = data.id || null
           this.autoCheque = data.cheque[0].cheque_number || null
           this.forms.disbursement.chequeNumber = 0
@@ -1182,42 +1235,123 @@ export const useDisbursementStore = defineStore('disbursement', {
     // In your actions
     // For viewing only (read-only)
     async openViewOrDetails(row) {
+      // Close any other dialogs that might be open
+      this.dialogs.editDisbursement = false;
+      this.dialogs.orDetails = false;
+      this.dialogs.disbursement = false;
+
       this.currentLiquidation = JSON.parse(JSON.stringify(row));
+      console.log('Opening view OR details for:', row);
+      console.log('Row expenses:', row.expenses);
+
+      // Initialize orDetails as empty array
+      this.currentLiquidation.orDetails = [];
+
+      // Ensure expenses are available
+      if (!this.currentLiquidation.expenses || this.currentLiquidation.expenses.length === 0) {
+        console.log('No expenses found in row, attempting to fetch disbursement details');
+        try {
+          const disbursement = await this.fetchDisbursementForView(row.id);
+          if (disbursement && disbursement.expenses) {
+            this.currentLiquidation.expenses = disbursement.expenses;
+            console.log('Loaded expenses from fetchDisbursementForView:', disbursement.expenses);
+          }
+        } catch (error) {
+          console.error('Error fetching disbursement details:', error);
+        }
+      }
+
       // Fetch OR Details from backend
       if (row.id) {
         try {
+          // Get auth store instance
+          const authStore = useAuthStore();
+
+          // Validate auth store
+          if (!authStore) {
+            throw new Error('Auth store not available');
+          }
+
+          console.log('Auth store:', authStore);
+          console.log('Is admin:', authStore.admin);
+          console.log('Admin token:', authStore.adminToken);
+          console.log('Regular token:', authStore.token);
+
           // Use different endpoints for admin vs regular users
-          const endpoint = this.authStore.admin ? `/api/admin/disbursements/${row.id}/or-details` : `/api/barangay/disbursements/${row.id}/or-details`
-          const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
-          
+          const endpoint = authStore.admin ? `/api/admin/disbursements/${row.id}/or-details` : `/api/barangay/disbursements/${row.id}/or-details`
+          const token = authStore.admin ? authStore.adminToken : authStore.token
+
+          if (!token) {
+            throw new Error('No authentication token available');
+          }
+
+          console.log('Fetching OR details from:', endpoint);
           const res = await api.get(endpoint, {
             headers: {
               Authorization: `Bearer ${token}`,
               Accept: 'application/json',
             }
           });
-          
-          const backendUrl = 'http://localhost:8000'; // Change if your backend runs elsewhere
-          this.currentLiquidation.orDetails = res.data.data.map(or => ({
-            orDate: or.or_date,
-            orNumber: or.or_number,
-            orAmount: or.or_amount,
-            orImage: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
-            orPhotoUrl: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
-          }));
 
-          // Set single remarks from the latest OR detail (most recent one)
-          if (res.data.data.length > 0) {
-            // Get the latest OR detail (last in the array) for remarks
-            const latestOrDetail = res.data.data[res.data.data.length - 1];
-            this.currentLiquidation.remarks = latestOrDetail.remarks || '';
+          console.log('OR Details response:', res.data);
+          console.log('Response data structure:', res.data);
+          console.log('Data array:', res.data.data);
+
+          // Check if we have data and it's an array
+          if (res.data && res.data.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
+            const backendUrl = 'http://localhost:8000'; // Change if your backend runs elsewhere
+            this.currentLiquidation.orDetails = res.data.data.map((or, index) => {
+              console.log(`Processing OR detail ${index}:`, or);
+
+              // Convert YYYY-MM-DD to DD/MM/YYYY format
+              let formattedDate = '';
+              if (or.or_date) {
+                const dateParts = or.or_date.split('-');
+                if (dateParts.length === 3) {
+                  formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+                }
+              }
+
+              const mappedOr = {
+                id: or.id,
+                index: index,
+                orDate: formattedDate || or.or_date,
+                orNumber: or.or_number,
+                orAmount: or.or_amount,
+                orImage: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
+                orPhotoUrl: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
+                serverPhotoPath: or.or_photo,
+                remarks: or.remarks || '',
+                isExisting: true // Flag to identify existing OR details
+              };
+
+              console.log(`Mapped OR detail ${index}:`, mappedOr);
+              return mappedOr;
+            });
+
+            console.log('Final mapped OR Details:', this.currentLiquidation.orDetails);
+
+            // Set single remarks from the latest OR detail (most recent one)
+            if (res.data.data.length > 0) {
+              // Get the latest OR detail (last in the array) for remarks
+              const latestOrDetail = res.data.data[res.data.data.length - 1];
+              this.currentLiquidation.remarks = latestOrDetail.remarks || '';
+            }
+          } else {
+            console.log('No OR details found in response or empty array');
+            this.currentLiquidation.orDetails = [];
           }
-        } catch {
+        } catch (error) {
+          console.error('Error fetching OR details:', error);
+          console.error('Error details:', error.response?.data);
           this.currentLiquidation.orDetails = [];
         }
       } else {
+        console.log('No row ID provided, initializing empty orDetails');
         this.currentLiquidation.orDetails = [];
       }
+
+      console.log('Final currentLiquidation.orDetails:', this.currentLiquidation.orDetails);
       this.dialogs.viewOrDetails = true;
     },
 
@@ -1426,7 +1560,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         this.refreshDataInBackground().catch(error => {
           console.warn('Background refresh failed:', error)
         })
-        
+
         await bankStore.fetchBanks()
 
         return { success: true, data: response.data.data }

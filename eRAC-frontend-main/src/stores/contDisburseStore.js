@@ -7,7 +7,6 @@ const getAuthConfig = () => {
   return {
     headers: {
       Authorization: `Bearer ${authStore.token}`,
-      'Content-Type': 'application/json',
     },
   }
 }
@@ -294,6 +293,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
 
     disbursementColumns: () => [
       { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
+          { name: 'status', label: 'Status', field: 'status', align: 'left', sortable: true },
       { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
       { name: 'dvNumber', label: 'DV Number', field: 'dvNumber', align: 'left', sortable: true },
       {
@@ -314,8 +314,9 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         align: 'left',
         sortable: true,
       },
-      { name: 'status', label: 'Status', field: 'status', align: 'left', sortable: true },
+
       { name: 'action', label: 'Action', field: '', align: 'center' },
+      { name: 'liquidate', label: 'Liquidate', field: '', align: 'center' },
     ],
 
     expenseColumns: () => [
@@ -421,7 +422,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         }
         return !isAlreadyAdded
       })
-      
+
       console.log('Filtered expense accounts remaining:', base.length)
 
       if (!state.expenseSearch.trim()) {
@@ -477,14 +478,14 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         const config = getAuthConfig()
         console.log('Fetching continued accounts for disbursement...')
         console.log('Config:', config)
-        
+
         // Add timeout to prevent hanging
         const controller = new AbortController()
         const timeoutId = setTimeout(() => {
           console.log('API call timed out after 10 seconds')
           controller.abort()
         }, 10000) // 10 second timeout
-        
+
         try {
           // Use the existing endpoint to get continuing appropriations
           console.log('Making API call to:', '/api/barangay/continuing-appropriations/list')
@@ -492,10 +493,10 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
             ...config,
             signal: controller.signal
           })
-          
+
           clearTimeout(timeoutId)
           console.log('API Response received:', response.data)
-          
+
           if (response.data?.status && response.data?.data) {
             // Transform the data to match our expense hierarchy structure
             const appropriations = response.data.data || []
@@ -519,7 +520,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         console.error('Error details:', error.response?.data)
         this.error = error.response?.data?.message || error.message
         this.expenseData = []
-        
+
         // Re-throw the error so the calling function can handle it
         throw error
       } finally {
@@ -531,7 +532,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
     // Transform continuing appropriations to expense hierarchy
     transformContinuingAppropriationsToHierarchy(appropriations) {
       const hierarchy = {}
-      
+
       appropriations.forEach(appropriation => {
         console.log('Processing appropriation:', appropriation.id, 'Status:', appropriation.status)
         // Process both committed and draft appropriations for now
@@ -539,16 +540,16 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
           console.log('Skipping appropriation with status:', appropriation.status)
           return
         }
-        
+
         console.log('Processing accounts for appropriation:', appropriation.id, 'Accounts count:', appropriation.accounts?.length || 0)
-        
+
         // If there are no accounts or accounts array is empty, skip this appropriation
         // because we need actual cont_appro_accounts records to create disbursements
         if (!appropriation.accounts || appropriation.accounts.length === 0) {
           console.log('No accounts found, skipping appropriation:', appropriation.id)
           return
         }
-        
+
         // Process accounts
         appropriation.accounts.forEach(account => {
             console.log('Processing account:', account)
@@ -558,11 +559,11 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
               console.warn('Invalid account name format:', account.accountName)
               return
             }
-            
+
             const expenseClass = accountNameParts[0]
             const expenseType = accountNameParts[1]
             const expenseItem = accountNameParts[2]
-            
+
             if (!hierarchy[expenseClass]) {
               hierarchy[expenseClass] = {
                 id: `class_${expenseClass}`,
@@ -570,7 +571,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
                 children: {}
               }
             }
-            
+
             if (!hierarchy[expenseClass].children[expenseType]) {
               hierarchy[expenseClass].children[expenseType] = {
                 id: `type_${expenseType}`,
@@ -578,7 +579,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
                 children: {}
               }
             }
-            
+
             if (!hierarchy[expenseClass].children[expenseType].children[expenseItem]) {
               hierarchy[expenseClass].children[expenseType].children[expenseItem] = {
                 id: account.id, // Use the continuing account ID
@@ -592,7 +593,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
             }
           })
       })
-      
+
       // Convert to array format
       const result = Object.values(hierarchy).map(classItem => ({
         ...classItem,
@@ -601,7 +602,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
           children: Object.values(typeItem.children)
         }))
       }))
-      
+
       console.log('Final transformed hierarchy:', result)
       return result
     },
@@ -612,7 +613,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       try {
         const config = getAuthConfig()
         const response = await api.get('/api/barangay/continuing-disbursements', config)
-        
+
         if (response.data?.status) {
           this.disbursements = response.data.data || []
         }
@@ -629,7 +630,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       try {
         const config = getAuthConfig()
         const response = await api.get(`/api/barangay/continuing-disbursements/${id}`, config)
-        
+
         if (response.data?.status) {
           return response.data.data
         }
@@ -673,7 +674,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       try {
         const config = getAuthConfig()
         const response = await api.get('/api/barangay/expense-details', config)
-        
+
         if (response.data?.status) {
           this.expenseDetailsData = response.data.data || []
         }
@@ -725,7 +726,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         console.warn('Dialog opened despite error:', error.message)
       }
     },
-    
+
     closeDialog(dialogName) {
       this.dialogs[dialogName] = false
     },
@@ -789,7 +790,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         try {
           const config = getAuthConfig()
           const res = await api.get(`/api/barangay/disbursements/${row.id}/or-details`, config);
-          
+
           const backendUrl = 'http://localhost:8000'; // Change if your backend runs elsewhere
           this.currentLiquidation.orDetails = res.data.data.map(or => ({
             orDate: or.or_date,
@@ -820,7 +821,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       console.log('Opening expense detail for item:', item)
       console.log('Item ID (accountId):', item.id)
       console.log('Item continuingAccountId:', item.continuingAccountId)
-      
+
       this.forms.expense = {
         account: `${item.account} > ${item.expenseType} > ${item.expenseItem}`,
         accountId: item.continuingAccountId || item.id, // Use continuingAccountId if available
@@ -865,22 +866,22 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         })))
 
         const response = await api.post('/api/barangay/continuing-disbursements', disbursementData, config)
-        
+
         if (response.data?.status) {
       // Reset the form and generate new DV number
       this.resetForm('disbursement')
           this.generateNewDisbursementDefaults()
       this.closeDialog('disbursement')
-          
+
           // Refresh disbursements list
           await this.fetchDisbursements()
-          
+
           // Refresh expense accounts to reflect updated balances
           await this.refreshExpenseAccountsWithBalances()
-          
+
           // Refresh continuing appropriations to reflect updated balances
           await this.refreshContinuingAppropriations()
-          
+
           return { success: true, data: response.data.data }
         } else {
           return { success: false, error: response.data?.message || 'Failed to save disbursement' }
@@ -888,21 +889,21 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       } catch (error) {
         console.error('Error saving disbursement:', error)
         console.error('Error response:', error.response?.data)
-        
+
         // Handle validation errors
         if (error.response?.status === 422 && error.response?.data?.errors) {
           const validationErrors = error.response.data.errors
           const errorMessages = Object.values(validationErrors).flat()
-          return { 
-            success: false, 
+          return {
+            success: false,
             error: `Validation failed: ${errorMessages.join(', ')}`,
             validationErrors: validationErrors
           }
         }
-        
-        return { 
-          success: false, 
-          error: error.response?.data?.message || error.message || 'Failed to save disbursement' 
+
+        return {
+          success: false,
+          error: error.response?.data?.message || error.message || 'Failed to save disbursement'
         }
       } finally {
         this.savingDisbursement = false
@@ -949,7 +950,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
           });
           const data = bankData.data.data || [];
           console.log('Fetched bank data:', data);
-          
+
           this.autoBookletID = data.id || null
           this.autoCheque = data.cheque[0]?.cheque_number || null
           this.forms.disbursement.chequeNumber = this.autoCheque
@@ -1054,7 +1055,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
 
         // Then fetch the disbursement with its expenses
         const disbursement = await this.fetchDisbursementById(row.id);
-        
+
       if (disbursement) {
         this.forms.disbursement = {
           date: disbursement.date,
@@ -1082,7 +1083,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       this.savingDisbursement = true
       try {
         const config = getAuthConfig()
-        
+
         // Convert date from DD/MM/YYYY to YYYY-MM-DD format for backend
         const dateParts = this.forms.disbursement.date.split('/')
         const formattedDate = dateParts.length === 3 ? `${dateParts[2]}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}` : this.forms.disbursement.date
@@ -1102,7 +1103,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         }
 
         const response = await api.put(`/api/barangay/continuing-disbursements/${this.currentItem.id}`, disbursementData, config)
-        
+
         if (response.data?.status) {
           // Update the local disbursement
       const index = this.disbursements.findIndex((d) => d.id === this.currentItem.id)
@@ -1114,27 +1115,27 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
           dvAmount: this.totalExpensesAmount,
         }
           }
-          
+
         this.closeDialog('editDisbursement')
-          
+
           // Refresh disbursements list
           await this.fetchDisbursements()
-          
+
           // Refresh expense accounts to reflect updated balances
           await this.refreshExpenseAccountsWithBalances()
-          
+
           // Refresh continuing appropriations to reflect updated balances
           await this.refreshContinuingAppropriations()
-          
+
           return { success: true, data: response.data.data }
         } else {
           return { success: false, error: response.data?.message || 'Failed to update disbursement' }
         }
       } catch (error) {
         console.error('Error updating disbursement:', error)
-        return { 
-          success: false, 
-          error: error.response?.data?.message || error.message || 'Failed to update disbursement' 
+        return {
+          success: false,
+          error: error.response?.data?.message || error.message || 'Failed to update disbursement'
         }
       } finally {
         this.savingDisbursement = false
@@ -1156,17 +1157,34 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
 
     async uploadOrPhoto(file) {
       try {
-        const config = getAuthConfig()
+        console.log('uploadOrPhoto called with file:', file);
+        console.log('File type:', typeof file);
+        console.log('File instanceof File:', file instanceof File);
+        console.log('File name:', file?.name);
+        console.log('File size:', file?.size);
+
+        if (!file || !(file instanceof File)) {
+          throw new Error('Invalid file object provided');
+        }
+
+        const authStore = useAuthStore()
+        const token = authStore.admin ? authStore.adminToken : authStore.token
+
         const formData = new FormData();
         formData.append('photo', file, file.name);
-        
+
+        console.log('FormData created, checking entries:');
+        for (let [key, value] of formData.entries()) {
+          console.log('FormData entry:', key, value);
+        }
+
         const response = await api.post('/api/barangay/disbursements/or-photo/upload', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
-            ...config.headers,
+            'Authorization': `Bearer ${token}`,
           },
         });
-        
+
         return { success: true, path: response.data.path };
       } catch (error) {
         console.error('Upload error:', error.response?.data || error.message);
@@ -1193,17 +1211,17 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
 
       try {
         const config = getAuthConfig()
-        
+
         // Skip photo upload for now - use placeholder for all photos
         for (let i = 0; i < this.currentLiquidation.orDetails.length; i++) {
           const orDetail = this.currentLiquidation.orDetails[i]
-          
+
           if (orDetail.orImageFile && !orDetail.serverPhotoPath) {
             console.log(`Skipping photo upload for OR ${orDetail.orNumber || i + 1} - using placeholder`);
             this.currentLiquidation.orDetails[i].serverPhotoPath = 'no-photo'
           }
         }
-        
+
         // Calculate total actual expense from OR details
         const totalActualExpense = this.currentLiquidation.orDetails?.reduce(
           (sum, or) => sum + (parseFloat(or.orAmount) || 0), 0
@@ -1226,7 +1244,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         console.log('Sending liquidation payload:', JSON.stringify(payload, null, 2))
         console.log('OR Details being sent:', this.currentLiquidation.orDetails)
         const response = await api.post(`/api/barangay/disbursements/${this.currentLiquidation.id}/or-details`, payload, config)
-        
+
         if (response.data?.status) {
           // Update the local disbursement
           const index = this.disbursements.findIndex((d) => d.id === this.currentLiquidation.id)
@@ -1234,27 +1252,27 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
             this.disbursements[index].status = response.data.data.status
             this.disbursements[index].liquidated_amount = response.data.data.liquidated_amount
           }
-          
+
           this.closeDialog('orDetails')
-          
+
           // Refresh disbursements list
           await this.fetchDisbursements()
-          
+
           // Refresh expense accounts to reflect updated balances
           await this.refreshExpenseAccountsWithBalances()
-          
+
           // Refresh continuing appropriations to reflect updated balances
           await this.refreshContinuingAppropriations()
-          
+
           return { success: true, data: response.data.data }
         } else {
           return { success: false, error: response.data?.message || 'Failed to liquidate disbursement' }
         }
       } catch (error) {
         console.error('Error liquidating disbursement:', error)
-        return { 
-          success: false, 
-          error: error.response?.data?.message || error.message || 'Failed to liquidate disbursement' 
+        return {
+          success: false,
+          error: error.response?.data?.message || error.message || 'Failed to liquidate disbursement'
         }
       }
     },
@@ -1277,17 +1295,17 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
 
       try {
         const config = getAuthConfig()
-        
+
         // Skip photo upload for now - use placeholder for all photos
         for (let i = 0; i < this.currentLiquidation.orDetails.length; i++) {
           const orDetail = this.currentLiquidation.orDetails[i]
-          
+
           if (orDetail.orImageFile && !orDetail.serverPhotoPath) {
             console.log(`Skipping photo upload for OR ${orDetail.orNumber || i + 1} - using placeholder`);
             this.currentLiquidation.orDetails[i].serverPhotoPath = 'no-photo'
           }
         }
-        
+
         // Calculate total actual expense from OR details
         const totalActualExpense = this.currentLiquidation.orDetails?.reduce(
           (sum, or) => sum + (parseFloat(or.orAmount) || 0), 0
@@ -1309,7 +1327,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
               // If date is not in DD/MM/YYYY format, use today's date
               formattedDate = todayFormatted
             }
-            
+
             return {
               id: or.id || null, // Include ID for existing OR details
               orNumber: or.orNumber,
@@ -1326,7 +1344,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         console.log('Sending liquidation payload:', JSON.stringify(payload, null, 2))
         console.log('OR Details being sent:', this.currentLiquidation.orDetails)
         const response = await api.post(`/api/barangay/disbursements/${this.currentLiquidation.id}/or-details`, payload, config)
-        
+
         if (response.data?.status) {
           // Update the local disbursement
           const index = this.disbursements.findIndex((d) => d.id === this.currentLiquidation.id)
@@ -1334,18 +1352,18 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
             this.disbursements[index].status = response.data.data.status
             this.disbursements[index].liquidated_amount = response.data.data.liquidated_amount
           }
-          
+
           this.closeDialog('orDetails')
-          
+
           // Refresh disbursements list
           await this.fetchDisbursements()
-          
+
           // Refresh expense accounts to reflect updated balances
           await this.refreshExpenseAccountsWithBalances()
-          
+
           // Refresh continuing appropriations to reflect updated balances
           await this.refreshContinuingAppropriations()
-          
+
           return { success: true, data: response.data.data }
         } else {
           return { success: false, error: response.data?.message || 'Failed to save partial liquidation' }
@@ -1353,9 +1371,9 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       } catch (error) {
         console.error('Error saving partial liquidation:', error)
         console.error('Error response:', error.response?.data)
-        return { 
-          success: false, 
-          error: error.response?.data?.message || error.response?.data?.errors || error.message || 'Failed to save partial liquidation' 
+        return {
+          success: false,
+          error: error.response?.data?.message || error.response?.data?.errors || error.message || 'Failed to save partial liquidation'
         }
       }
     },

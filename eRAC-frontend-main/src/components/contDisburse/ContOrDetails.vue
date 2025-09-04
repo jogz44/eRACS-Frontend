@@ -1,97 +1,120 @@
 <template>
   <q-dialog v-model="store.dialogs.orDetails" persistent>
-    <q-card style="min-width: 900px">
+    <q-card style="min-width: 1100px">
       <q-card-section>
-        <div class="row justify-between items-center">
-          <div class="text-h6">{{ store.currentLiquidation.dvNumber }}</div>
-          <q-btn flat icon="close" color="black" @click="store.closeDialog('orDetails')" />
+        <div class="text-h6">
+          Liquidation Details for Disbursement #{{ store.currentLiquidation.dvNumber }}
+        </div>
+        <div class="text-caption text-grey-6 q-mt-sm">
+          Add official receipt details for liquidation
         </div>
       </q-card-section>
 
       <q-card-section>
-        <!-- Single column layout matching the image -->
         <div class="row q-col-gutter-md">
-          <!-- Left column - Financial details -->
-          <div class="col-12 col-md-6">
-            <!-- Actual Expense -->
-            <div class="q-mb-md">
-              <div class="text-bold q-mb-xs">Actual Expense:</div>
-              <q-input
-                filled
-                unelaveted
-                outlined
-                :model-value="totalActualExpense"
-                placeholder="0.00"
-                type="number"
-                prefix="₱"
-                readonly
-              />
-            </div>
-
-            <!-- DV Amount -->
-            <div class="q-mb-md">
-              <div class="text-bold q-mb-xs">DV Amount:</div>
-              <q-input
-                filled
-                unelaveted
-                outlined
-                :model-value="formatAmount(store.currentLiquidation.dvAmount)"
-                prefix="₱"
-                readonly
-              />
-            </div>
-
-            <!-- Amount to Return to Appropriation -->
-            <div class="q-mb-md">
-              <div class="text-bold q-mb-xs">Amount to Return to Appropriation:</div>
-              <q-input
-                filled
-                unelaveted
-                outlined
-                :model-value="totalReturnAmount"
-                prefix="₱"
-                readonly
-              />
-            </div>
+          <!-- Date Field -->
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">Date:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              v-model="store.currentLiquidation.date"
+              mask="##/##/####"
+            >
+              <template v-slot:append>
+                <q-icon name="event" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date v-model="store.currentLiquidation.date" mask="DD/MM/YYYY" />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
           </div>
 
-          <!-- Right column - Date and Remarks -->
-          <div class="col-12 col-md-6">
-            <!-- Date -->
-            <div class="q-mb-md">
-              <div class="text-bold q-mb-xs">Date:</div>
-              <q-input filled unelaveted outlined v-model="store.currentLiquidation.date">
-                <template v-slot:append>
-                  <q-icon name="event" class="cursor-pointer">
-                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                      <q-date v-model="store.currentLiquidation.date" mask="DD/MM/YYYY" />
-                    </q-popup-proxy>
-                  </q-icon>
-                </template>
-              </q-input>
-            </div>
+          <!-- DV Number Field -->
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">DV Number:</q-item-label>
+            <q-input 
+              filled 
+              outlined 
+              dense 
+              :model-value="store.currentLiquidation.dvNumber"
+              :disable="true"
+            />
+          </div>
 
-            <!-- Remarks -->
-            <div class="q-mb-md">
-              <div class="text-bold q-mb-xs">Remarks:</div>
-              <q-input
-                filled
-                unelaveted
-                outlined
-                v-model="store.currentLiquidation.remarks"
-                placeholder="Enter remarks"
-              />
-            </div>
+          <!-- DV Amount Field -->
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">DV Amount:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="formatCurrency(store.currentLiquidation.dvAmount || 0)"
+              prefix="₱"
+              :disable="true"
+            />
+          </div>
+
+          <!-- Actual Expense Field -->
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">Actual Expense:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="formatCurrency(totalActualExpense)"
+              prefix="₱"
+              :disable="true"
+            />
+          </div>
+
+          <!-- Amount to Return Field -->
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">Amount to Return to Appropriation:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="formatCurrency(totalReturnAmount)"
+              prefix="₱"
+              :disable="true"
+            />
+          </div>
+
+          <!-- Remarks Field -->
+          <div class="col-md-4 col-sm-12">
+            <q-item-label class="q-mb-xs">Remarks:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              v-model="store.currentLiquidation.remarks"
+              placeholder="Enter remarks"
+            />
           </div>
         </div>
+      </q-card-section>
 
-        <!-- Liquidation Section -->
-        <div class="q-mt-lg">
-          <div class="row items-center q-mb-md">
-            <div class="text-bold q-mb-xs">Liquidation:</div>
-            <q-space />
-            <q-btn color="green" icon="add" label="Add" flat @click="addOrDetail" />
+      <!-- Liquidation Details Section -->
+      <q-card-section>
+        <div class="row items-center q-mb-md">
+          <div class="text-subtitle1">
+            <strong>Liquidation Details:</strong>
+            <span class="text-caption text-grey-6 q-ml-sm">
+              ({{ orDetailsCount }} record{{ orDetailsCount !== 1 ? 's' : '' }})
+            </span>
           </div>
+          <q-space />
+          <q-btn
+            color="green"
+            icon="add"
+            label="Add OR"
+            flat
+            @click="addOrDetail"
+          />
+        </div>
 
           <!-- OR Details List - Maintains original styling with added OR Date -->
           <!-- OR Details List - Maintains original styling with added OR Date -->
@@ -154,28 +177,42 @@
 
               <!-- OR Image -->
               <div class="col-12 col-md-3">
-                <div class="text-bold q-mb-xs">OR Image:</div>
-                <q-btn
-                  v-if="!orDetail.orImage"
-                  flat
-                  dense
-                  outline
-                  color="green"
-                  class="full-width"
-                  icon="upload"
-                  label="Upload Image"
-                  @click="$refs[`orImageUploader${index}`][0].pickFiles()"
-                />
-                <q-uploader
-                  :ref="`orImageUploader${index}`"
+                <div class="text-bold q-mb-xs" style="display: flex; align-items: center;">
+                  OR Image:
+                  <q-btn
+                    v-if="orDetail.orPhotoUrl"
+                    flat
+                    dense
+                    round
+                    icon="delete"
+                    color="red"
+                    @click="removeOrImage(index)"
+                    style="margin-left: 8px;"
+                  />
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
+                  <q-btn
+                    v-if="!orDetail.orPhotoUrl"
+                    flat
+                    dense
+                    color="primary"
+                    icon="upload"
+                    label="Upload"
+                    @click="triggerOrFileInput(index)"
+                    style="min-width: 100px;"
+                  />
+                  <q-img
+                    v-if="orDetail.orPhotoUrl"
+                    :src="orDetail.orPhotoUrl"
+                    style="max-width: 100%; max-height: 100px; border-radius: 4px; border: 1px solid #eee;"
+                  />
+                </div>
+                <input
+                  :ref="setOrImageInputRef(index)"
+                  type="file"
+                  accept=".jpg,.jpeg,.png"
                   style="display: none"
-                  accept=".jpg,.png,.pdf"
-                  @added="(files) => uploadOrImage(files, index)"
-                />
-                <q-img
-                  v-if="orDetail.orImage"
-                  :src="orDetail.orImage"
-                  style="max-width: 100%; max-height: 100px; margin-top: 10px"
+                  @change="(e) => onOrImageChange(e, index)"
                 />
                 <q-btn
                   v-if="store.currentLiquidation.orDetails.length > 1"
@@ -189,10 +226,15 @@
               </div>
             </div>
           </div>
-        </div>
       </q-card-section>
 
-      <q-card-actions align="right" class="q-pa-md">
+      <q-card-actions align="right" class="custom-actions">
+        <q-btn
+          flat
+          label="Cancel"
+          class="modal-cancel-btn"
+          @click="store.closeDialog('orDetails')"
+        />
         <q-btn
           flat
           label="Partial"
@@ -235,7 +277,7 @@
 </template>
 
 <script setup>
-import { computed, watch, ref } from 'vue'
+import { computed, watch, ref, nextTick } from 'vue'
 import { useContDisbursementStore } from 'stores/contDisburseStore'
 import { useQuasar } from 'quasar'
 
@@ -298,10 +340,14 @@ const totalReturnAmount = computed(() => {
   return (dvAmount - actualExpense).toFixed(2)
 })
 
-const formatAmount = (amount) => {
-  if (!amount && amount !== 0) return '0.00'
-  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
-  return isNaN(numAmount) ? '0.00' : numAmount.toFixed(2)
+const orDetailsCount = computed(() => {
+  return store.currentLiquidation?.orDetails?.length || 0
+})
+
+// Formatting utilities
+const formatCurrency = (value) => {
+  const num = Number(String(value).replace(/[,\s]/g, '')) || 0
+  return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 const calculateTotals = () => {
@@ -338,18 +384,60 @@ const removeOrDetail = (index) => {
   }
 }
 
-const uploadOrImage = (files, index) => {
-  if (store.currentLiquidation.orDetails?.[index]) {
-    // Store the actual File object for later upload
-    store.currentLiquidation.orDetails[index].orImageFile = files[0]
-    
-    // Also create a preview URL for display
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      store.currentLiquidation.orDetails[index].orImage = e.target.result
-    }
-    reader.readAsDataURL(files[0])
+// Unified OR detail image functions
+const orImageInputs = ref([])
+
+const setOrImageInputRef = (index) => {
+  return (el) => {
+    orImageInputs.value[index] = el
   }
+}
+
+const triggerOrFileInput = (index) => {
+  nextTick(() => {
+    const input = orImageInputs.value[index]
+    if (input) {
+      input.value = '' // allow re-uploading same file
+      input.click()
+    }
+  })
+}
+
+const onOrImageChange = (e, index) => {
+  const file = e.target.files && e.target.files[0]
+  console.log('File selected for index:', index, 'File:', file)
+  console.log('File type:', typeof file)
+  console.log('File instanceof File:', file instanceof File)
+  console.log('File name:', file?.name)
+  console.log('File size:', file?.size)
+  
+  if (file) {
+    // Store the file for later upload
+    store.currentLiquidation.orDetails[index].orImage = file
+    console.log('File stored in orDetails:', store.currentLiquidation.orDetails[index].orImage)
+
+    // Create local file path for preview
+    const localPath = URL.createObjectURL(file)
+    store.currentLiquidation.orDetails[index].orPhotoUrl = localPath
+
+    $q.notify({
+      type: 'positive',
+      message: 'Photo selected successfully!',
+      position: 'top',
+    })
+  }
+}
+
+const removeOrImage = (index) => {
+  const prevUrl = store.currentLiquidation.orDetails[index].orPhotoUrl
+  if (prevUrl && prevUrl.startsWith('blob:')) {
+    URL.revokeObjectURL(prevUrl)
+  }
+  store.currentLiquidation.orDetails[index].orImage = null
+  store.currentLiquidation.orDetails[index].orPhotoUrl = null
+  store.currentLiquidation.orDetails[index].serverPhotoPath = null
+  const input = orImageInputs.value[index]
+  if (input) input.value = ''
 }
 
 const isValid = computed(() => {
@@ -359,9 +447,9 @@ const isValid = computed(() => {
   // If no details exist, return false
   if (allDetails.length === 0) return false
 
-  // Validate all details (photos are optional)
+  // Validate all details (photos are required)
   return allDetails.every((or) =>
-    or.orNumber && or.orAmount && or.orDate
+    or.orNumber && or.orAmount && or.orDate && or.orPhotoUrl
   )
 })
 
@@ -386,6 +474,43 @@ const actualReturnAmount = computed(() => {
 const handlePartialLiquidation = async () => {
   savingPartial.value = true
   try {
+    // First, upload all photos that haven't been uploaded yet
+    for (let i = 0; i < store.currentLiquidation.orDetails.length; i++) {
+      const orDetail = store.currentLiquidation.orDetails[i]
+      if (orDetail.orImage && !orDetail.serverPhotoPath) {
+        try {
+          console.log('Uploading photo for OR detail:', i, 'File:', orDetail.orImage)
+          console.log('File type:', typeof orDetail.orImage)
+          console.log('File instanceof File:', orDetail.orImage instanceof File)
+          console.log('File name:', orDetail.orImage?.name)
+          console.log('File size:', orDetail.orImage?.size)
+          
+          // Check if the file is valid
+          if (!orDetail.orImage || !(orDetail.orImage instanceof File)) {
+            throw new Error('Invalid file object')
+          }
+          
+          const uploadResult = await store.uploadOrPhoto(orDetail.orImage)
+          console.log('Upload result:', uploadResult)
+          
+          if (uploadResult.success) {
+            store.currentLiquidation.orDetails[i].serverPhotoPath = uploadResult.path
+          } else {
+            throw new Error(uploadResult.error)
+          }
+        } catch (error) {
+          console.error('Error uploading photo:', error)
+          $q.notify({
+            type: 'negative',
+            message: `Failed to upload photo for OR ${orDetail.orNumber || i + 1}: ${error.message}`,
+            icon: 'error',
+            position: 'top',
+          })
+          return
+        }
+      }
+    }
+
     // Save as partial liquidation
     const result = await store.savePartialOrDetails()
     if (result.success) {
@@ -438,6 +563,43 @@ const handleSaveOrDetails = async () => {
   console.log('handleSaveOrDetails called - starting liquidation process...')
   savingSubmit.value = true
   try {
+    // First, upload all photos that haven't been uploaded yet
+    for (let i = 0; i < store.currentLiquidation.orDetails.length; i++) {
+      const orDetail = store.currentLiquidation.orDetails[i]
+      if (orDetail.orImage && !orDetail.serverPhotoPath) {
+        try {
+          console.log('Uploading photo for OR detail:', i, 'File:', orDetail.orImage)
+          console.log('File type:', typeof orDetail.orImage)
+          console.log('File instanceof File:', orDetail.orImage instanceof File)
+          console.log('File name:', orDetail.orImage?.name)
+          console.log('File size:', orDetail.orImage?.size)
+          
+          // Check if the file is valid
+          if (!orDetail.orImage || !(orDetail.orImage instanceof File)) {
+            throw new Error('Invalid file object')
+          }
+          
+          const uploadResult = await store.uploadOrPhoto(orDetail.orImage)
+          console.log('Upload result:', uploadResult)
+          
+          if (uploadResult.success) {
+            store.currentLiquidation.orDetails[i].serverPhotoPath = uploadResult.path
+          } else {
+            throw new Error(uploadResult.error)
+          }
+        } catch (error) {
+          console.error('Error uploading photo:', error)
+          $q.notify({
+            type: 'negative',
+            message: `Failed to upload photo for OR ${orDetail.orNumber || i + 1}: ${error.message}`,
+            icon: 'error',
+            position: 'top',
+          })
+          return
+        }
+      }
+    }
+
     // Save the OR details as complete liquidation
     const result = await store.saveOrDetails()
     if (result.success) {
@@ -469,3 +631,26 @@ const handleSaveOrDetails = async () => {
   }
 }
 </script>
+
+<style scoped>
+/* Style for readonly inputs */
+.q-input[readonly] {
+  background-color: #f5f5f5;
+}
+
+/* Custom actions styling */
+.custom-actions {
+  padding: 16px;
+}
+
+.modal-cancel-btn {
+  color: #666;
+}
+
+/* Responsive design for mobile */
+@media (max-width: 768px) {
+  .q-card {
+    min-width: 95vw !important;
+  }
+}
+</style>
