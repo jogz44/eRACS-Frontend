@@ -83,7 +83,7 @@ class DisbursementSeeder extends Seeder
                     $startDate = $base->copy()->subMonths(1);
                     $createdAt = $faker->dateTimeBetween($startDate, $base);
 
-                    $dvAmount = $faker->numberBetween(5, 50) * 1000;
+                    $dvAmount = $faker->numberBetween(5, 20) * 1000;
                     $dvNumber = "DV-".substr($year, -2)."-".str_pad($now->month, 2, '0', STR_PAD_LEFT)."-" . str_pad($dvCounter, 3, '0', STR_PAD_LEFT);
 
                     $liquidatedAmount = null;
