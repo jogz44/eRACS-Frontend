@@ -390,7 +390,7 @@
                    Status of Appropriation and Obligation (SACB)
                  </div>
                  <div class="text-h6 text-center text-weight-medium" style="color: #187C19;">
-                   Barangay {{ authStore.user?.barangay_name }}
+                   Barangay {{ authStore.getSelectedBarangayName() || authStore.user?.barangay_name }}
                  </div>
                  <div class="text-subtitle1 text-center q-mb-lg" style="color: #666;">
                    Period: {{ getSACBDateRangeDisplay() }}
@@ -440,15 +440,15 @@
                           <div class="summary-stats">
                             <div class="stat-item">
                               <span class="stat-label">Total Appropriation:</span>
-                              <span class="stat-value">₱{{ (reportStore.reportSACB || []).reduce((sum, r) => sum + (r.appropriation || 0), 0).toLocaleString() }}</span>
+                              <span class="stat-value">₱{{ (reportStore.reportSACB || []).filter(r => !r.isSection).reduce((sum, r) => sum + (r.appropriation || 0), 0).toLocaleString() }}</span>
                             </div>
                             <div class="stat-item">
                               <span class="stat-label">Total Obligation:</span>
-                              <span class="stat-value">₱{{ (reportStore.reportSACB || []).reduce((sum, r) => sum + (r.obligation || 0), 0).toLocaleString() }}</span>
+                              <span class="stat-value">₱{{ (reportStore.reportSACB || []).filter(r => !r.isSection).reduce((sum, r) => sum + (r.obligation || 0), 0).toLocaleString() }}</span>
                             </div>
                             <div class="stat-item">
                               <span class="stat-label">Remaining Balance:</span>
-                              <span class="stat-value">₱{{ (reportStore.reportSACB || []).reduce((sum, r) => sum + (r.balance || 0), 0).toLocaleString() }}</span>
+                              <span class="stat-value">₱{{ (reportStore.reportSACB || []).filter(r => !r.isSection).reduce((sum, r) => sum + (r.balance || 0), 0).toLocaleString() }}</span>
                             </div>
                           </div>
                         </q-card-section>
@@ -547,7 +547,7 @@
                    {{ RACModal.reportType }}
                  </div>
                  <div class="text-h6 text-center text-weight-medium" style="color: #187C19;">
-                   Barangay {{ authStore.user?.barangay_name }}
+                   Barangay {{ authStore.getSelectedBarangayName() || authStore.user?.barangay_name }}
                  </div>
                  <div class="text-subtitle1 text-center q-mb-lg" style="color: #666;">
                    Date: {{ dateRangeDisplay }}
@@ -745,11 +745,20 @@ const SetupModal = reactive({
 const loadAllData = async () => {
   loading.value = true
   try {
-    const criticalPromises = [
-      reportStore.fetchData(),
-    ]
-
+    const criticalPromises = [ reportStore.fetchData() ]
     await Promise.all(criticalPromises)
+
+    // If admin, fetch expense classes for selected barangay
+    if (authStore.admin) {
+      const selectedBarangayId = authStore.getSelectedBarangay()
+      if (selectedBarangayId) {
+        try {
+          await reportStore.fetchExpenseClassesForBarangay(selectedBarangayId)
+        } catch (e) {
+          console.error('Failed to load expense classes for selected barangay', e)
+        }
+      }
+    }
   } catch (error) {
     console.error('Error loading data:', error)
     notifyError('Failed to load data. Please try again later.')
@@ -778,6 +787,18 @@ const openSACBModal = (type) => {
       : 'No date range'
   logAdminActivity('Report Generated', `Generated ${reportType} report for date range: ${dateRange}`)
 
+  loadSacbReport(
+    type === 'current-sacb'
+      ? currentSacbDateRange.value.from
+      : type === 'continuing-sacb'
+        ? continuingSacbDateRange.value.from
+        : null,
+    type === 'current-sacb'
+      ? currentSacbDateRange.value.to
+      : type === 'continuing-sacb'
+        ? continuingSacbDateRange.value.to
+        : null,
+  )
   SACBModal.reportType = reportType
   SACBModal.show = true
 }
@@ -815,12 +836,12 @@ const openRACModal = (type) => {
   // Log report generation activity
   const reportType = getReportTypeLabel(type)
   const expenseCategory = reportStore.expenseRacSelected?.name || 'Unknown'
-  const dateRange = type === 'current-rac' 
+  const dateRangeText = type === 'current-rac' 
     ? `${dateRange.value.from} to ${dateRange.value.to}`
     : type === 'continuing-rac'
       ? `${continuingDateRange.value.from} to ${continuingDateRange.value.to}`
       : 'No date range'
-  logAdminActivity('Report Generated', `Generated ${reportType} report for expense category: ${expenseCategory} and date range: ${dateRange}`)
+  logAdminActivity('Report Generated', `Generated ${reportType} report for expense category: ${expenseCategory} and date range: ${dateRangeText}`)
 
   loadRacReport(
     type === 'current-rac'
@@ -938,9 +959,21 @@ async function loadRacReport($date) {
     await reportStore.fetchRacReport($date)
   } catch (error) {
     console.error(error)
-    this.$q.notify({
+    $q.notify({
       type: 'negative',
       message: 'Failed to generate Report',
+    })
+  }
+}
+
+async function loadSacbReport($from, $to) {
+  try {
+    await reportStore.fetchSacbReport($from, $to)
+  } catch (error) {
+    console.error(error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to generate SACB Report',
     })
   }
 }

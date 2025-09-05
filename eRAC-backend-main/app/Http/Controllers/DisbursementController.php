@@ -1176,7 +1176,7 @@ class DisbursementController extends Controller
         try {
             $user = $request->user();
 
-            $query = TranExpenseDetail::with(['appropriation.expenseClass', 'appropriation.expenseType', 'appropriation.expenseItem']);
+            $query = TranExpenseDetail::with(['appropriation.expenseClass', 'appropriation.expenseType', 'appropriation.expenseItem', 'disbursement']);
 
             // Determine target barangay: allow explicit barangay_id (for admin), else fallback to user's barangay
             $targetBarangayId = $request->input('barangay_id');
@@ -1190,18 +1190,56 @@ class DisbursementController extends Controller
                 });
             }
 
+            // Optional filters for admin RAC preview
+            $from = $request->input('from');
+            $to = $request->input('to');
+            $expenseClassId = $request->input('expense_class_id');
+
+            if ($from && $to) {
+                // normalize date format
+                $fromDate = str_replace('/', '-', $from);
+                $toDate = str_replace('/', '-', $to);
+                $query->whereHas('disbursement', function($q) use ($fromDate, $toDate) {
+                    $q->whereBetween('date', [$fromDate, $toDate]);
+                });
+            }
+
+            if ($expenseClassId) {
+                $query->whereHas('appropriation', function($q) use ($expenseClassId) {
+                    $q->where('expense_class_id', $expenseClassId);
+                });
+            }
+
             $expenseDetails = $query->get();
 
             $result = $expenseDetails->map(function($detail) {
+                $expenseClassName = optional($detail->appropriation->expenseClass)->name;
+                $expenseTypeName = optional($detail->appropriation->expenseType)->name;
+                $expenseItemName = optional($detail->appropriation->expenseItem)->name;
+
+                // Compose an account title similar to barangay RAC (prefer item/type/class)
+                $accountTitle = $expenseItemName ?: ($expenseTypeName ?: $expenseClassName);
+
                 return [
                     'id' => $detail->id,
                     'disbursement_id' => $detail->disbursement_id,
                     'appropriation_id' => $detail->appropriation_id,
-                    'amount' => $detail->amount,
+                    'amount' => (float) ($detail->amount ?? optional($detail->disbursement)->dv_amount ?? 0),
+                    'particular' => $detail->particulars,
                     'particulars' => $detail->particulars,
+                    'appropriation' => (float) optional($detail->appropriation)->amount,
                     'expense_class_id' => $detail->appropriation->expense_class_id ?? null,
                     'expense_type_id' => $detail->appropriation->expense_type_id ?? null,
                     'expense_item_id' => $detail->appropriation->expense_item_id ?? null,
+                    'expense_class_name' => $expenseClassName,
+                    'expense_class_order' => optional($detail->appropriation->expenseClass)->order,
+                    'expense_type_name' => $expenseTypeName,
+                    'expense_item_name' => $expenseItemName,
+                    'date' => optional($detail->disbursement)->date,
+                    'dvNumber' => optional($detail->disbursement)->dv_number,
+                    'dv_number' => optional($detail->disbursement)->dv_number,
+                    'payee' => optional($detail->disbursement)->payee,
+                    'accountTitle' => $accountTitle,
                     'created_at' => $detail->created_at,
                     'updated_at' => $detail->updated_at,
                 ];

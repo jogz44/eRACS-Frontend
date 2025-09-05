@@ -740,10 +740,8 @@
                           class="col-account-title text-right"
                         >
                           {{
-                            row[`amount_${accountTitle.replace(/\s+/g, '_').toLowerCase()}`]
-                              ? row[
-                                  `amount_${accountTitle.replace(/\s+/g, '_').toLowerCase()}`
-                                ].toLocaleString()
+                            row[reportStore.accountTitleKeyMap[accountTitle]]
+                              ? row[reportStore.accountTitleKeyMap[accountTitle]].toLocaleString()
                               : ''
                           }}
                         </td>
@@ -774,8 +772,7 @@
                               .reduce(
                                 (sum, r) =>
                                   sum +
-                                  (r[`amount_${accountTitle.replace(/\s+/g, '_').toLowerCase()}`] ||
-                                    0),
+                                  (r[reportStore.accountTitleKeyMap[accountTitle]] || 0),
                                 0,
                               )
                               .toLocaleString()
@@ -938,7 +935,7 @@ const computedSACBRows = computed(() => {
 
 function makeTotalRow(items) {
   const sum = (field) =>
-    items.reduce((acc, item) => acc + parseFloat(item[field].replace(/,/g, '')), 0)
+    items.reduce((acc, item) => acc + (typeof item[field] === 'string' ? parseFloat(item[field].replace(/,/g, '')) : item[field]), 0)
 
   return {
     isTotal: true,
@@ -953,7 +950,7 @@ const totalAppropriation = computed(() => {
   return reportStore.reportSACB
     .filter((row) => !row.isSection) // skip section headers
     .reduce((sum, row) => {
-      return sum + parseFloat(row.appropriation.replace(/,/g, ''))
+      return sum + (typeof row.appropriation === 'string' ? parseFloat(row.appropriation.replace(/,/g, '')) : row.appropriation)
     }, 0)
     .toLocaleString('en-US', { minimumFractionDigits: 2 })
 })
@@ -961,14 +958,14 @@ const totalAppropriation = computed(() => {
 const totalObligation = computed(() => {
   return reportStore.reportSACB
     .filter((row) => !row.isSection)
-    .reduce((sum, row) => sum + parseFloat(row.obligation.replace(/,/g, '')), 0)
+    .reduce((sum, row) => sum + (typeof row.obligation === 'string' ? parseFloat(row.obligation.replace(/,/g, '')) : row.obligation), 0)
     .toLocaleString('en-US', { minimumFractionDigits: 2 })
 })
 
 const totalBalance = computed(() => {
   return reportStore.reportSACB
     .filter((row) => !row.isSection)
-    .reduce((sum, row) => sum + parseFloat(row.balance.replace(/,/g, '')), 0)
+    .reduce((sum, row) => sum + (typeof row.balance === 'string' ? parseFloat(row.balance.replace(/,/g, '')) : row.balance), 0)
     .toLocaleString('en-US', { minimumFractionDigits: 2 })
 })
 
