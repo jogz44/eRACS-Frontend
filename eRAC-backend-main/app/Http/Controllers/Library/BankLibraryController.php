@@ -188,7 +188,8 @@ public function createBank(Request $request)
                         'cheque_number' => $cheque->cheque_number,
                         'cheque_status' => $cheque->status,
                         'created_at' => $cheque->created_at->format('Y-m-d'),
-                        'dvn' => $cheque->disbursement->dv_number ?? 'none', // null if no match
+                        'dvn' => $cheque->disbursement->dv_number ?? 'none',
+                        'dvamount' => $cheque->disbursement->dv_amount ?? null,
                     ];
                 });
 
@@ -300,7 +301,7 @@ public function createBooklet(Request $request, LibBank $bank)
     }
 
     $validated = $request->validate([
-        'booklet_numb' => 'required|string|size:8|regex:/^[0-9]+$/',
+        'booklet_numb' => 'required|string',
         'starting_cheque_numb' => 'required|string|size:8|regex:/^[0-9]+$/',
         'quantity' => 'required|integer|min:1|max:50',
     ]);

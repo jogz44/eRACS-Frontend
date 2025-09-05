@@ -24,17 +24,8 @@ export const useBankStore = defineStore('bank', {
         align: 'center',
         format: (val) => (val === 'Available' ? 'Available' : 'Consumed'),
       },
-      { name: 'view',
-      label: 'Cheques',
-      field: 'view',
-     align: 'center',
-      sortable: false
-       },
-      { name: 'actions',
-        label: 'Actions',
-        align: 'center'
-      },
-
+      { name: 'view', label: 'Cheques', field: 'view', align: 'center', sortable: false },
+      { name: 'actions', label: 'Actions', align: 'center' },
     ],
     chequeColumns: [
       {
@@ -45,6 +36,13 @@ export const useBankStore = defineStore('bank', {
         sortable: true,
       },
       {
+        name: 'date',
+        label: 'Date Issued',
+        field: 'date',
+        align: 'center',
+        sortable: true,
+      },
+      {
         name: 'dvn',
         label: 'DV Number',
         field: 'dvn',
@@ -52,8 +50,15 @@ export const useBankStore = defineStore('bank', {
         sortable: true,
       },
       {
+        name: 'dvamount',
+        label: 'Amount',
+        field: 'dvamount',
+        align: 'left',
+        sortable: true,
+      },
+      {
         name: 'status',
-        label: 'Status',
+        label: 'Remarks',
         field: 'status',
         align: 'center',
         format: (val) => {
@@ -69,13 +74,6 @@ export const useBankStore = defineStore('bank', {
               return 'Unknown'
           }
         },
-      },
-      {
-        name: 'date',
-        label: 'Date',
-        field: 'date',
-        align: 'center',
-        sortable: true,
       },
     ],
 
@@ -137,14 +135,14 @@ export const useBankStore = defineStore('bank', {
   actions: {
     getAuthConfig() {
       const authStore = useAuthStore()
-      
+
       // Use admin token if admin is logged in, otherwise use regular token
       const token = authStore.admin ? authStore.adminToken : authStore.token
-      
+
       if (!token) {
         throw new Error('Authentication token not found')
       }
-      
+
       return {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -172,10 +170,10 @@ export const useBankStore = defineStore('bank', {
           booklets_count: bank.booklets_count || 0, // Changed from cheques_count
           booklets: bank.booklets || [], // Changed from cheques
         }))
-        this.availableBanks = this.banks.filter(bank => bank.status === 'Available');
+        this.availableBanks = this.banks.filter((bank) => bank.status === 'Available')
 
-        if(this.availableBanks.length == 0){
-          this.availableBanks[0] = {id:0, name:'No Available Bank'}
+        if (this.availableBanks.length == 0) {
+          this.availableBanks[0] = { id: 0, name: 'No Available Bank' }
         }
 
         return this.banks
@@ -221,10 +219,11 @@ export const useBankStore = defineStore('bank', {
       this.isLoading = true
       this.error = null
       try {
-
-        const response = await api.put(`/api/barangay/banks/${id}`,
-          { name: newName,
-            _method: 'PUT' }, this.getAuthConfig())
+        const response = await api.put(
+          `/api/barangay/banks/${id}`,
+          { name: newName, _method: 'PUT' },
+          this.getAuthConfig(),
+        )
 
         // Update local state
         const index = this.banks.findIndex((bank) => bank.id === id)
@@ -413,6 +412,9 @@ export const useBankStore = defineStore('bank', {
           status: c.status || c.cheque_status || 'error',
           date: c.date || c.created_at || '',
           dvn: c.dvn || 'error',
+          dvamount: c.dvamount 
+            ? '₱ ' + Number(c.dvamount).toLocaleString('en-PH', { minimumFractionDigits: 2 })
+            : '-',
         }))
 
         return {
