@@ -116,13 +116,13 @@ import { computed, ref } from 'vue'
 import { useActivityLogging } from 'src/composables/useActivityLogging'
 import { useQuasar } from 'quasar'
 
-// Define props
-const props = defineProps({
-  filteredData: {
-    type: Array,
-    default: () => []
-  }
-})
+// // Define props
+// const props = defineProps({
+//   filteredData: {
+//     type: Array,
+//     default: () => []
+//   }
+// })
 
 const store = useAugmentationStore()
 const $q = useQuasar()

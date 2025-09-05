@@ -122,7 +122,7 @@
                 dense
                 size="sm"
                 @click="refreshChartData"
-                :loading="chartStore.chartLoading"
+                :loading="chartStore.isLoading"
                 class="refresh-btn"
               >
                 <q-tooltip>Refresh Chart Data</q-tooltip>
@@ -131,7 +131,7 @@
           </q-card-section>
           <q-separator />
           <q-card-section style="height: 350px; position: relative; width: 100%; overflow-x: auto">
-            <div v-if="chartStore.chartLoading" class="absolute-center">
+            <div v-if="chartStore.isLoading" class="absolute-center">
               <q-spinner color="primary" size="3em" />
             </div>
             <div v-else-if="!validateChartData(chartStore.pieChartData)" class="absolute-center text-center">
