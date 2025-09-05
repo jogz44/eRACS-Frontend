@@ -17,7 +17,6 @@ export const useChartDataStore = defineStore('chartData', {
 
     // Loading states
     isLoading: false,
-    chartLoading: false,
 
     // Enhanced Summary Cards Data - will be populated from backend
     summaryCards: [
@@ -378,7 +377,6 @@ export const useChartDataStore = defineStore('chartData', {
     // Fetch pie chart data from backend
     async fetchPieChartData(fiscalYearId = null) {
       try {
-        this.chartLoading = true
 
         // Get expense hierarchy with year filter
         const params = {}
@@ -461,7 +459,7 @@ export const useChartDataStore = defineStore('chartData', {
         }
         throw error
       } finally {
-        this.chartLoading = false
+        this.isLoading= false
       }
     },
 
@@ -763,6 +761,8 @@ export const useChartDataStore = defineStore('chartData', {
           console.warn('Dashboard endpoint failed, trying fallback method:', dashboardError)
 
           // Fallback: Use existing endpoints
+          
+          this.isLoading= true
           await this.fetchDashboardSummary()
           await this.fetchPieChartData()
 
