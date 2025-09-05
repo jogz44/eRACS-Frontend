@@ -513,6 +513,9 @@ class DisbursementController extends Controller
                     return [
                         'id' => $detail->id,
                         'accountId' => $detail->appropriation_id,
+                        'account_name' => '' . $detail->appropriation->expenseClass->name
+                            . ($detail->appropriation->expenseType ? ' > ' . $detail->appropriation->expenseType->name : '')
+                            . ($detail->appropriation->expenseItem ? ' > ' . $detail->appropriation->expenseItem->name : ''),
                         'amount' => $detail->amount,
                         'particular' => $detail->particulars,
                         'expense_class_id' => $detail->appropriation->expense_class_id ?? null,
