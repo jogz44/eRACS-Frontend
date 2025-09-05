@@ -14,20 +14,56 @@
       </div>
     </div>
 
-    <!-- Budget Type Filter Tabs -->
-    <div class="budget-type-filter q-mb-md">
-      <q-tabs
-        v-model="selectedBudgetType"
-        class="text-grey-8"
-        active-color="primary"
-        indicator-color="primary"
-        align="justify"
-        narrow-indicator
-      >
-        <q-tab name="all" label="All Budgets" icon="list" />
-        <q-tab name="annual" label="Annual Budget" icon="calendar_today" />
-        <q-tab name="supplemental" label="Supplemental Budget" icon="add_circle" />
-      </q-tabs>
+    <!-- Budget Type Selection Cards -->
+    <div class="budget-type-selection q-mb-md">
+      <div class="text-subtitle1 text-weight-medium q-mb-sm">Budget Type</div>
+      <div class="row q-col-gutter-sm">
+        <div class="col-md-4 col-sm-12">
+          <q-card
+            :class="['budget-type-card', { 'selected': selectedBudgetType === 'all' }]"
+            @click="selectedBudgetType = 'all'"
+            clickable
+          >
+            <q-card-section class="text-center q-pa-md">
+              <q-icon name="list" size="md" class="q-mb-sm" />
+              <div class="text-subtitle2 text-weight-medium">All Budgets</div>
+              <div class="text-caption text-grey-6">
+                View all budget types
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-md-4 col-sm-12">
+          <q-card
+            :class="['budget-type-card', { 'selected': selectedBudgetType === 'annual' }]"
+            @click="selectedBudgetType = 'annual'"
+            clickable
+          >
+            <q-card-section class="text-center q-pa-md">
+              <q-icon name="calendar_today" size="md" class="q-mb-sm" />
+              <div class="text-subtitle2 text-weight-medium">Annual Budget</div>
+              <div class="text-caption text-grey-6">
+                {{ annualBudgetCount }} budget{{ annualBudgetCount !== 1 ? 's' : '' }}
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-md-4 col-sm-12">
+          <q-card
+            :class="['budget-type-card', { 'selected': selectedBudgetType === 'supplemental' }]"
+            @click="selectedBudgetType = 'supplemental'"
+            clickable
+          >
+            <q-card-section class="text-center q-pa-md">
+              <q-icon name="add_circle" size="md" class="q-mb-sm" />
+              <div class="text-subtitle2 text-weight-medium">Supplemental Budget</div>
+              <div class="text-caption text-grey-6">
+                {{ supplementalBudgetCount }} budget{{ supplementalBudgetCount !== 1 ? 's' : '' }}
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
     </div>
 
     <!-- Budget Summary Cards -->
@@ -1189,9 +1225,41 @@ const getDescriptionOnly = (description) => {
   padding-bottom: 8px;
 }
 
-.budget-type-filter {
-  border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 8px;
+.budget-type-selection {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e0e0;
+}
+
+.budget-type-card {
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  background: white;
+}
+
+.budget-type-card:hover {
+  border-color: #4caf50;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.15);
+  transform: translateY(-2px);
+}
+
+.budget-type-card.selected {
+  border-color: #4caf50;
+  background: linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+}
+
+.budget-type-card.selected .q-icon {
+  color: #4caf50;
+}
+
+.budget-type-card.selected .text-subtitle2 {
+  color: #4caf50;
+  font-weight: 600;
 }
 
 .budget-type-badge {
@@ -1289,6 +1357,26 @@ const getDescriptionOnly = (description) => {
     padding: 8px;
   }
 
+  .budget-type-selection {
+    padding: 12px;
+  }
+
+  .budget-type-card .q-card-section {
+    padding: 12px;
+  }
+
+  .budget-type-card .q-icon {
+    font-size: 1.5rem;
+  }
+
+  .budget-type-card .text-subtitle2 {
+    font-size: 0.9rem;
+  }
+
+  .budget-type-card .text-caption {
+    font-size: 0.75rem;
+  }
+
   .row.items-center.q-gutter-sm {
     flex-direction: column;
     align-items: stretch;
@@ -1359,6 +1447,18 @@ const getDescriptionOnly = (description) => {
 
   /* Tablet styles - show desktop layout but stack inputs vertically */
   @media (min-width: 769px) and (max-width: 1023px) {
+    .budget-type-selection {
+      padding: 14px;
+    }
+
+    .budget-type-card .q-card-section {
+      padding: 14px;
+    }
+
+    .budget-type-card .q-icon {
+      font-size: 1.75rem;
+    }
+
     .mobile-clear-btn-container,
     .mobile-add-btn-container {
       display: none !important;
