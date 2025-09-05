@@ -390,7 +390,7 @@
                    Status of Appropriation and Obligation (SACB)
                  </div>
                  <div class="text-h6 text-center text-weight-medium" style="color: #187C19;">
-                   Barangay {{ authStore.user?.barangay_name }}
+                   Barangay {{ authStore.getSelectedBarangayName() || authStore.user?.barangay_name }}
                  </div>
                  <div class="text-subtitle1 text-center q-mb-lg" style="color: #666;">
                    Period: {{ getSACBDateRangeDisplay() }}
@@ -400,7 +400,7 @@
               <q-card-section>
                 <!-- SACB Table with improved styling -->
                 <q-table
-                  :rows="reportStore.reportSACB"
+                  :rows="computedSACBRows"
                   :columns="sacbColumns"
                   row-key="ppa"
                   flat
@@ -411,13 +411,23 @@
                   hide-pagination
                   :pagination="{ rowsPerPage: 0 }"
                 >
-                  <!-- Custom Body -->
                   <template v-slot:body="props">
+                    <!-- Section Header -->
                     <tr v-if="props.row.isSection">
                       <td :colspan="sacbColumns.length" class="text-bold text-left bg-grey-3">
                         {{ props.row.ppa }}
                       </td>
                     </tr>
+
+                    <!-- Total Row -->
+                    <tr v-else-if="props.row.isTotal">
+                      <td class="text-right text-bold">TOTAL</td>
+                      <td class="text-right text-bold">{{ props.row.appropriation }}</td>
+                      <td class="text-right text-bold">{{ props.row.obligation }}</td>
+                      <td class="text-right text-bold">{{ props.row.balance }}</td>
+                    </tr>
+
+                    <!-- Regular Row -->
                     <tr v-else>
                       <td class="text-left">{{ props.row.ppa }}</td>
                       <td class="text-right">{{ props.row.appropriation }}</td>
@@ -440,15 +450,15 @@
                           <div class="summary-stats">
                             <div class="stat-item">
                               <span class="stat-label">Total Appropriation:</span>
-                              <span class="stat-value">₱{{ (reportStore.reportSACB || []).reduce((sum, r) => sum + (r.appropriation || 0), 0).toLocaleString() }}</span>
+                              <span class="stat-value">₱{{ totalAppropriation }}</span>
                             </div>
                             <div class="stat-item">
                               <span class="stat-label">Total Obligation:</span>
-                              <span class="stat-value">₱{{ (reportStore.reportSACB || []).reduce((sum, r) => sum + (r.obligation || 0), 0).toLocaleString() }}</span>
+                              <span class="stat-value">₱{{ totalObligation }}</span>
                             </div>
                             <div class="stat-item">
                               <span class="stat-label">Remaining Balance:</span>
-                              <span class="stat-value">₱{{ (reportStore.reportSACB || []).reduce((sum, r) => sum + (r.balance || 0), 0).toLocaleString() }}</span>
+                              <span class="stat-value">₱{{ totalBalance }}</span>
                             </div>
                           </div>
                         </q-card-section>
@@ -547,7 +557,7 @@
                    {{ RACModal.reportType }}
                  </div>
                  <div class="text-h6 text-center text-weight-medium" style="color: #187C19;">
-                   Barangay {{ authStore.user?.barangay_name }}
+                   Barangay {{ authStore.getSelectedBarangayName() || authStore.user?.barangay_name }}
                  </div>
                  <div class="text-subtitle1 text-center q-mb-lg" style="color: #666;">
                    Date: {{ dateRangeDisplay }}
@@ -558,56 +568,135 @@
                </q-card-section>
 
               <q-card-section>
-                <!-- RAC Table with improved styling -->
-                <q-table
-                  :rows="reportStore.reportRAC"
-                  :columns="reportStore.racColumn"
-                  row-key="dvNumber"
-                  flat
-                  bordered
-                  dense
-                  separator="cell"
-                  class="rac-table q-mt-md"
-                  hide-pagination
-                  :pagination="{ rowsPerPage: 0 }"
-                >
-                  <!-- Custom two-row header -->
-                  <template v-slot:header>
-                    <q-tr>
-                      <q-th rowspan="2" style="width:25%;">Account Title</q-th>
-                      <q-th rowspan="2" style="width:12%;" class="text-right">Appropriation</q-th>
-                      <q-th colspan="5" class="text-center" style="width:55%;">Obligation</q-th>
-                    </q-tr>
-                    <q-tr>
-                      <q-th style="width:15%;">Particular</q-th>
-                      <q-th style="width:15%;">DV#</q-th>
-                      <q-th style="width:10%;">Date</q-th>
-                      <q-th style="width:15%;">Payee</q-th>
-                      <q-th style="width:15%;" class="text-right">Amount</q-th>
-                    </q-tr>
-                  </template>
+                <!-- Updated RAC Table to match user page format -->
+                <div class="preview-table-container">
+                  <!-- Table with preview layout structure -->
+                  <table
+                    v-if="reportStore.reportRAC && reportStore.reportRAC.length > 0"
+                    class="preview-table"
+                    :data-columns="dynamicColumnsCount"
+                  >
+                    <thead>
+                      <!-- First header row with expense class and obligation -->
+                      <tr class="header-row-main">
+                        <th colspan="20" class="col-expense-class">
+                          {{ reportStore.expenseRacSelected?.name || 'Not Selected' }}
+                        </th>
+                      </tr>
+                      <tr class="header-row-main">
+                        <th colspan="5" class="col-expense-class">OBLIGATION</th>
+                        <th
+                          v-if="hasDynamicColumns"
+                          :colspan="1 + dynamicColumnsCount"
+                          class="col-obligation-header"
+                        >
+                          ACCOUNT TITLE
+                        </th>
+                        <th v-else :colspan="1" class="col-obligation-header">ACCOUNT TITLE</th>
+                      </tr>
+                      <!-- Second header row with individual column names -->
+                      <tr class="header-row">
+                        <th class="col-date">Date</th>
+                        <th class="col-particulars">Particulars</th>
+                        <th class="col-dv">DV#</th>
+                        <th class="col-payee">Payee</th>
+                        <th class="col-appropriation">Appropriation</th>
+                        <!-- Dynamic Account Title Columns -->
+                        <th
+                          v-for="accountTitle in reportStore.dynamicAccountColumns"
+                          :key="accountTitle"
+                          class="col-account-title"
+                        >
+                          {{ accountTitle }}
+                        </th>
+                        <!-- Fallback when no dynamic columns -->
+                        <th v-if="!hasDynamicColumns" class="col-account-title">
+                          No Account Titles Found
+                        </th>
+                      </tr>
 
-                  <!-- Wrap text in all body cells -->
-                  <template v-slot:body-cell="props">
-                    <q-td :props="props" style="white-space: normal; word-break: break-word;">
-                      {{ props.value }}
-                    </q-td>
-                  </template>
+                      <tr class="header-row-main">
+                        <th colspan="20" style="background-color: whitesmoke;"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr
+                        v-for="(row, index) in reportStore.reportRAC"
+                        :key="index"
+                        class="data-row"
+                      >
+                        <td class="col-date">{{ row.date || '' }}</td>
+                        <td class="col-particulars">{{ row.particular || '' }}</td>
+                        <td class="col-dv">{{ row.dvNumber || '' }}</td>
+                        <td class="col-payee">{{ row.payee || '' }}</td>
+                        <td class="col-appropriation text-right">
+                          {{ (row.appropriation || 0).toLocaleString() }}
+                        </td>
+                        <!-- Dynamic Account Title Cells -->
+                        <td
+                          v-for="accountTitle in reportStore.dynamicAccountColumns"
+                          :key="accountTitle"
+                          class="col-account-title text-right"
+                        >
+                          {{
+                            row[reportStore.accountTitleKeyMap[accountTitle]]
+                              ? row[reportStore.accountTitleKeyMap[accountTitle]].toLocaleString()
+                              : ''
+                          }}
+                        </td>
+                        <!-- Fallback when no dynamic columns -->
+                        <td v-if="!hasDynamicColumns" class="col-account-title text-right">-</td>
+                      </tr>
+                      <!-- Total row -->
+                      <tr class="total-row">
+                        <td class="col-date"></td>
+                        <td class="col-particulars font-weight-bold">Total Appropriation</td>
+                        <td class="col-dv"></td>
+                        <td class="col-payee"></td>
+                        <td class="col-appropriation text-right font-weight-bold">
+                          {{
+                            reportStore.reportRAC
+                              .reduce((sum, r) => sum + (r.appropriation || 0), 0)
+                              .toLocaleString()
+                          }}
+                        </td>
+                        <!-- Dynamic Account Title Total Cells -->
+                        <td
+                          v-for="accountTitle in reportStore.dynamicAccountColumns"
+                          :key="accountTitle"
+                          class="col-account-title text-right font-weight-bold"
+                        >
+                          {{
+                            reportStore.reportRAC
+                              .reduce(
+                                (sum, r) =>
+                                  sum +
+                                  (r[reportStore.accountTitleKeyMap[accountTitle]] || 0),
+                                0,
+                              )
+                              .toLocaleString()
+                          }}
+                        </td>
+                        <!-- Fallback when no dynamic columns -->
+                        <td
+                          v-if="!hasDynamicColumns"
+                          class="col-account-title text-right font-weight-bold"
+                        >
+                          -
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
 
-                  <!-- Bottom total row -->
-                  <template v-slot:bottom-row>
-                    <q-tr>
-                      <q-td colspan="1" class="text-right text-bold">Total Appropriation</q-td>
-                      <q-td class="text-right text-bold">
-                        {{reportStore.reportRAC.reduce((sum, r) => sum + r.appropriation, 0).toLocaleString()}}
-                      </q-td>
-                      <q-td colspan="4" class="text-right text-bold">Total Obligation</q-td>
-                      <q-td class="text-right text-bold">
-                        {{reportStore.reportRAC.reduce((sum, r) => sum + r.amount, 0).toLocaleString()}}
-                      </q-td>
-                    </q-tr>
-                  </template>
-                </q-table>
+                  <!-- No data message -->
+                  <div v-else class="q-pa-lg text-center text-grey-6">
+                    <q-icon name="info" size="48px" class="q-mb-md" />
+                    <div class="text-h6">No RAC data available</div>
+                    <div class="text-body2">
+                      Please select a date range and expense category to generate the report.
+                    </div>
+                  </div>
+                </div>
 
                 <!-- Report Summary Section -->
                 <div class="report-summary q-mt-xl">
@@ -671,7 +760,7 @@
   </q-page>
 </template>
 <script setup>
-import { ref, reactive, computed, onMounted, onActivated } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated, watch } from 'vue'
 import SetupDialog from 'components/SetupDialog.vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'stores/auth'
@@ -685,6 +774,38 @@ const reportStore = useReportStore()
 const authStore = useAuthStore()
 const { logPageVisit } = usePageLogging()
 const { logAdminActivity } = useActivityLogging()
+
+// Watch for barangay changes to preserve selections
+watch(() => authStore.selectedBarangay, async (newBarangay, oldBarangay) => {
+  if (newBarangay !== oldBarangay && newBarangay) {
+    try {
+      // Store current selections before fetching new options
+      const currentSelected = expenseSelectedCurrent.value
+      const continuingSelected = expenseSelectedContinuing.value
+
+      // Fetch new options for the new barangay
+      await reportStore.fetchExpenseClassesForBarangay(newBarangay)
+
+      // Try to preserve selections by finding matching names
+      if (currentSelected?.name) {
+        const matchingOption = reportStore.expenseOptionsCurrent.find(opt => opt.name === currentSelected.name)
+        expenseSelectedCurrent.value = matchingOption || null
+      }
+
+      if (continuingSelected?.name) {
+        const matchingOption = reportStore.expenseOptionsContinuing.find(opt => opt.name === continuingSelected.name)
+        expenseSelectedContinuing.value = matchingOption || null
+      }
+    } catch (error) {
+      // Handle 401 errors - token expired, logout handled in store
+      if (error.response?.status === 401) {
+        console.warn('Token expired during barangay change in report page')
+        return
+      }
+      console.error('Error handling barangay change in report page:', error)
+    }
+  }
+})
 
 /* -------------------- STATE -------------------- */
 const showSetupDialog = ref(false)
@@ -745,11 +866,35 @@ const SetupModal = reactive({
 const loadAllData = async () => {
   loading.value = true
   try {
-    const criticalPromises = [
-      reportStore.fetchData(),
-    ]
-
+    const criticalPromises = [ reportStore.fetchData() ]
     await Promise.all(criticalPromises)
+
+    // If admin, fetch expense classes for selected barangay
+    if (authStore.admin) {
+      const selectedBarangayId = authStore.getSelectedBarangay()
+      if (selectedBarangayId) {
+        // Store current selections before fetching
+        const currentSelected = expenseSelectedCurrent.value
+        const continuingSelected = expenseSelectedContinuing.value
+
+        try {
+          await reportStore.fetchExpenseClassesForBarangay(selectedBarangayId)
+
+          // Try to preserve selections by finding matching names
+          if (currentSelected?.name) {
+            const matchingOption = reportStore.expenseOptionsCurrent.find(opt => opt.name === currentSelected.name)
+            expenseSelectedCurrent.value = matchingOption || null
+          }
+
+          if (continuingSelected?.name) {
+            const matchingOption = reportStore.expenseOptionsContinuing.find(opt => opt.name === continuingSelected.name)
+            expenseSelectedContinuing.value = matchingOption || null
+          }
+        } catch (e) {
+          console.error('Failed to load expense classes for selected barangay', e)
+        }
+      }
+    }
   } catch (error) {
     console.error('Error loading data:', error)
     notifyError('Failed to load data. Please try again later.')
@@ -778,6 +923,18 @@ const openSACBModal = (type) => {
       : 'No date range'
   logAdminActivity('Report Generated', `Generated ${reportType} report for date range: ${dateRange}`)
 
+  loadSacbReport(
+    type === 'current-sacb'
+      ? currentSacbDateRange.value.from
+      : type === 'continuing-sacb'
+        ? continuingSacbDateRange.value.from
+        : null,
+    type === 'current-sacb'
+      ? currentSacbDateRange.value.to
+      : type === 'continuing-sacb'
+        ? continuingSacbDateRange.value.to
+        : null,
+  )
   SACBModal.reportType = reportType
   SACBModal.show = true
 }
@@ -815,12 +972,12 @@ const openRACModal = (type) => {
   // Log report generation activity
   const reportType = getReportTypeLabel(type)
   const expenseCategory = reportStore.expenseRacSelected?.name || 'Unknown'
-  const dateRange = type === 'current-rac' 
+  const dateRangeText = type === 'current-rac' 
     ? `${dateRange.value.from} to ${dateRange.value.to}`
     : type === 'continuing-rac'
       ? `${continuingDateRange.value.from} to ${continuingDateRange.value.to}`
       : 'No date range'
-  logAdminActivity('Report Generated', `Generated ${reportType} report for expense category: ${expenseCategory} and date range: ${dateRange}`)
+  logAdminActivity('Report Generated', `Generated ${reportType} report for expense category: ${expenseCategory} and date range: ${dateRangeText}`)
 
   loadRacReport(
     type === 'current-rac'
@@ -933,14 +1090,101 @@ const continuingSacbDateRangeDisplay = computed(() => {
   return `${continuingSacbDateRange.value.from} - ${continuingSacbDateRange.value.to}`
 })
 
+// Computed property for dynamic columns count
+const dynamicColumnsCount = computed(() => {
+  console.log('Dynamic columns:', reportStore.dynamicAccountColumns)
+  console.log('Report RAC:', reportStore.reportRAC)
+  return reportStore.dynamicAccountColumns.length
+})
+
+// Check if there are dynamic columns
+const hasDynamicColumns = computed(() => {
+  return reportStore.dynamicAccountColumns.length > 0
+})
+
+// SACB computed properties to match user page
+const computedSACBRows = computed(() => {
+  const result = []
+  let sectionItems = []
+
+  reportStore.reportSACB.forEach((row, index) => {
+    if (row.isSection) {
+      // If sectionItems has data, push a total before starting new section
+      if (sectionItems.length) {
+        result.push(makeTotalRow(sectionItems))
+        sectionItems = []
+      }
+      result.push(row) // push the section header
+    } else {
+      result.push(row)
+      sectionItems.push(row)
+    }
+
+    // Last row check
+    if (index === reportStore.reportSACB.length - 1 && sectionItems.length) {
+      result.push(makeTotalRow(sectionItems))
+    }
+  })
+
+  return result
+})
+
+function makeTotalRow(items) {
+  const sum = (field) =>
+    items.reduce((acc, item) => acc + (typeof item[field] === 'string' ? parseFloat(item[field].replace(/,/g, '')) : item[field]), 0)
+
+  return {
+    isTotal: true,
+    ppa: 'TOTAL',
+    appropriation: sum('appropriation').toLocaleString('en-US', { minimumFractionDigits: 2 }),
+    obligation: sum('obligation').toLocaleString('en-US', { minimumFractionDigits: 2 }),
+    balance: sum('balance').toLocaleString('en-US', { minimumFractionDigits: 2 }),
+  }
+}
+
+const totalAppropriation = computed(() => {
+  return reportStore.reportSACB
+    .filter((row) => !row.isSection) // skip section headers
+    .reduce((sum, row) => {
+      return sum + (typeof row.appropriation === 'string' ? parseFloat(row.appropriation.replace(/,/g, '')) : row.appropriation)
+    }, 0)
+    .toLocaleString('en-US', { minimumFractionDigits: 2 })
+})
+
+const totalObligation = computed(() => {
+  return reportStore.reportSACB
+    .filter((row) => !row.isSection)
+    .reduce((sum, row) => sum + (typeof row.obligation === 'string' ? parseFloat(row.obligation.replace(/,/g, '')) : row.obligation), 0)
+    .toLocaleString('en-US', { minimumFractionDigits: 2 })
+})
+
+const totalBalance = computed(() => {
+  return reportStore.reportSACB
+    .filter((row) => !row.isSection)
+    .reduce((sum, row) => sum + (typeof row.balance === 'string' ? parseFloat(row.balance.replace(/,/g, '')) : row.balance), 0)
+    .toLocaleString('en-US', { minimumFractionDigits: 2 })
+})
+
 async function loadRacReport($date) {
   try {
     await reportStore.fetchRacReport($date)
   } catch (error) {
     console.error(error)
-    this.$q.notify({
+    $q.notify({
       type: 'negative',
       message: 'Failed to generate Report',
+    })
+  }
+}
+
+async function loadSacbReport($from, $to) {
+  try {
+    await reportStore.fetchSacbReport($from, $to)
+  } catch (error) {
+    console.error(error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to generate SACB Report',
     })
   }
 }
@@ -967,11 +1211,11 @@ async function exportToPDF() {
     })
 
     const imgData = canvas.toDataURL('image/png')
-    const pdf = new jsPDF('p', 'mm', 'a4')
+    // Create PDF in landscape orientation with A4 dimensions
+    const pdf = new jsPDF('l', 'mm', 'a4') // 'l' for landscape
 
-
-    const pageWidth = pdf.internal.pageSize.getWidth()
-    const pageHeight = pdf.internal.pageSize.getHeight()
+    const pageWidth = pdf.internal.pageSize.getWidth() // 297mm (A4 landscape width)
+    const pageHeight = pdf.internal.pageSize.getHeight() // 210mm (A4 landscape height)
     const imgWidth = pageWidth
     const imgHeight = (canvas.height * imgWidth) / canvas.width
 
@@ -1030,10 +1274,11 @@ async function exportSACBToPDF() {
     })
 
     const imgData = canvas.toDataURL('image/png')
-    const pdf = new jsPDF('p', 'mm', 'a4')
+    // Create PDF in landscape orientation with A4 dimensions
+    const pdf = new jsPDF('l', 'mm', 'a4') // 'l' for landscape
 
-    const pageWidth = pdf.internal.pageSize.getWidth()
-    const pageHeight = pdf.internal.pageSize.getHeight()
+    const pageWidth = pdf.internal.pageSize.getWidth() // 297mm (A4 landscape width)
+    const pageHeight = pdf.internal.pageSize.getHeight() // 210mm (A4 landscape height)
     const imgWidth = pageWidth
     const imgHeight = (canvas.height * imgWidth) / canvas.width
 
@@ -1182,10 +1427,9 @@ onActivated(async () => {
 }
 
 .print-modal {
-  /* A4 aspect ratio (width:height = 1:1.414) */
-  width: min(100%, 310mm);
-  min-height: 297mm;
-  /* Minimum height is A4 */
+  /* A4 Landscape aspect ratio (width:height = 1.414:1) */
+  width: min(100%, 420mm); /* A4 landscape width */
+  min-height: 297mm; /* A4 landscape height */
   max-width: 100%;
   overflow-y: auto;
   display: block;
@@ -1445,8 +1689,9 @@ onActivated(async () => {
 }
 
 /* Print Content Wrapper - Natural Scrolling */
+/* Configured for A4 Landscape layout (297mm x 210mm) */
 .print-content-wrapper {
-  max-width: 210mm; /* A4 width */
+  max-width: 297mm; /* A4 landscape height (now width) */
   margin: 0 auto;
   padding: 20px;
 }
@@ -1754,6 +1999,219 @@ onActivated(async () => {
   .sacb-header .q-toolbar-title,
   .rac-header .q-toolbar-title {
     font-size: 0.9rem;
+  }
+}
+
+/* Added preview table styles to match the user page format */
+.preview-table-container {
+  width: 100%;
+  margin: 20px 0;
+  border: 2px solid #dee2e6;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.preview-header {
+  text-align: center;
+  font-weight: bold;
+  font-size: 14px;
+  padding: 12px;
+  background: linear-gradient(135deg, #187C19 0%, #0E780E 100%);
+  color: white;
+  border-bottom: 2px solid #dee2e6;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.preview-table th,
+.preview-table td {
+  border: 1px solid #dee2e6;
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+/* Main header row styling */
+.preview-table .header-row-main th {
+  background: whitesmoke;
+  color: black;
+  font-weight: 600;
+  font-size: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Expense class header styling */
+.preview-table .col-expense-class {
+  background: whitesmoke !important;
+  color: black !important;
+  font-weight: 600 !important;
+  font-size: 15px !important;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  text-transform: uppercase !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  text-align: center !important;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Obligation header styling */
+.preview-table .col-obligation-header {
+  background: whitesmoke!important;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: black !important;
+  font-weight: 600 !important;
+  font-size: 15px !important;
+  text-transform: uppercase !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  text-align: center !important;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Regular header row styling */
+.preview-table .header-row th {
+  background: whitesmoke;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: black;
+  font-weight: 600;
+  font-size: 12px;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.preview-table .text-right {
+  text-align: right;
+}
+
+.preview-table .font-weight-bold {
+  font-weight: bold;
+}
+
+.preview-table tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.preview-table tr:hover {
+  background-color: #E0FFE7;
+}
+
+.preview-table .data-row:nth-child(even) {
+  background: #f8f9fa;
+}
+
+.preview-table .total-row {
+  background: #e9ecef;
+  font-weight: bold;
+}
+
+/* Column widths to match preview */
+.col-date {
+  width: 8%;
+}
+.col-particulars {
+  width: 20%;
+}
+.col-dv {
+  width: 15%;
+}
+.col-payee {
+  width: 15%;
+}
+.col-appropriation {
+  width: 12%;
+}
+.col-account-title {
+  width: calc((100% - 70%) / max(1, var(--dynamic-columns, 1)));
+  min-width: 80px;
+  text-align: center;
+}
+
+/* Set CSS custom property for dynamic columns */
+.preview-table {
+  --dynamic-columns: 1;
+}
+
+.preview-table[data-columns='0'] {
+  --dynamic-columns: 1;
+}
+.preview-table[data-columns='1'] {
+  --dynamic-columns: 1;
+}
+.preview-table[data-columns='2'] {
+  --dynamic-columns: 2;
+}
+.preview-table[data-columns='3'] {
+  --dynamic-columns: 3;
+}
+.preview-table[data-columns='4'] {
+  --dynamic-columns: 4;
+}
+.preview-table[data-columns='5'] {
+  --dynamic-columns: 5;
+}
+
+/* Print styles */
+@media print {
+  .preview-table-container {
+    page-break-inside: avoid;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+  }
+
+  .preview-table {
+    font-size: 10px;
+  }
+
+  .preview-table th,
+  .preview-table td {
+    padding: 4px 6px;
+    border: 1px solid #dee2e6;
+  }
+
+  .preview-header {
+    background: linear-gradient(135deg, #187C19 0%, #0E780E 100%) !important;
+    color: black !important;
+  }
+
+  /* Main header row print styling */
+  .preview-table .header-row-main th {
+    background: linear-gradient(135deg, #187C19 0%, #0E780E 100%) !important;
+    color: black !important;
+    font-size: 20px;
+  }
+
+  /* Regular header row print styling */
+  .preview-table .header-row th {
+    background: linear-gradient(135deg, #69B31E 0%, #187C19 100%) !important;
+    color: black !important;
+  }
+
+  /* Landscape print optimization */
+  .print-modal {
+    transform: none !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    width: 100% !important;
+    min-height: auto !important;
+  }
+
+  .print-content-wrapper {
+    max-width: none !important;
+    padding: 10px !important;
   }
 }
 </style>

@@ -326,8 +326,9 @@ onMounted(async () => {
       const savedBarangayId = localStorage.getItem('admin_selected_barangay')
       if (savedBarangayId) {
         barangay.value = parseInt(savedBarangayId)
-
-        // Stores now get barangay ID directly from auth store
+        // Update reactive state
+        authStore.selectedBarangay = parseInt(savedBarangayId)
+        authStore.selectedBarangayName = localStorage.getItem('admin_selected_barangay_name') || null
       }
     }
   } catch (error) {
@@ -479,13 +480,11 @@ const handleLogout = async () => {
     // Clear barangay selection before logout
     barangay.value = null
     localStorage.removeItem('admin_selected_barangay')
+    localStorage.removeItem('admin_selected_barangay_name')
 
-    // Clear barangay selection from stores
-    try {
-      // Stores now get barangay ID directly from auth store
-    } catch (error) {
-      console.error('Error clearing store barangay selections:', error)
-    }
+    // Clear barangay selection from auth store
+    authStore.selectedBarangay = null
+    authStore.selectedBarangayName = null
 
     await authStore.adminLogout()
     router.push('/admin/login')
@@ -497,11 +496,14 @@ const handleLogout = async () => {
                         // Save to localStorage for persistence across page refreshes
                         if (barangayId) {
                           localStorage.setItem('admin_selected_barangay', barangayId.toString())
+                          // Update reactive state
+                          authStore.selectedBarangay = barangayId
                           // Save barangay name for later display/logging
                           try {
                             const selected = (barangayOptions.value || []).find(b => b.id === barangayId)
                             if (selected?.name) {
                               localStorage.setItem('admin_selected_barangay_name', selected.name)
+                              authStore.selectedBarangayName = selected.name
                             }
                           } catch (error) {
                             console.error('Error saving barangay selection:', error)
@@ -509,6 +511,9 @@ const handleLogout = async () => {
                         } else {
                           localStorage.removeItem('admin_selected_barangay')
                           localStorage.removeItem('admin_selected_barangay_name')
+                          // Update reactive state
+                          authStore.selectedBarangay = null
+                          authStore.selectedBarangayName = null
                           // Show warning notification
                           $q.notify({
                             type: 'warning',
@@ -537,6 +542,28 @@ const handleLogout = async () => {
                             const { useAugmentationStore } = await import('stores/augmentation')
                             const augmentationStore = useAugmentationStore()
                             await augmentationStore.fetchAugmentations()
+                          } else if (currentRoute.includes('/admin/reportPage')) {
+                            // On reports page - refresh report store expense classes
+                            const { useReportStore } = await import('stores/reportStore')
+                            const reportStore = useReportStore()
+                            if (barangayId) {
+                              // Store current selections before fetching
+                              const currentSelected = reportStore.expenseSelectedCurrent
+                              const continuingSelected = reportStore.expenseSelectedContinuing
+
+                              await reportStore.fetchExpenseClassesForBarangay(barangayId)
+
+                              // Try to preserve selections by finding matching names
+                              if (currentSelected?.name) {
+                                const matchingOption = reportStore.expenseOptionsCurrent.find(opt => opt.name === currentSelected.name)
+                                reportStore.expenseSelectedCurrent = matchingOption || null
+                              }
+
+                              if (continuingSelected?.name) {
+                                const matchingOption = reportStore.expenseOptionsContinuing.find(opt => opt.name === continuingSelected.name)
+                                reportStore.expenseSelectedContinuing = matchingOption || null
+                              }
+                            }
                           } else {
                             // On other admin pages - refresh all stores (dashboard, etc.)
                             const { useAppropriationStore } = await import('stores/appropriationStore')
@@ -554,6 +581,12 @@ const handleLogout = async () => {
                             ])
                           }
                         } catch (error) {
+                          // Handle 401 Unauthorized - token expired
+                          if (error.response?.status === 401) {
+                            console.warn('Admin token expired during barangay change, logging out...')
+                            await authStore.adminLogout(router)
+                            return
+                          }
                           console.error('Error refreshing stores with new barangay filter:', error)
                         }
                       } catch (error) {
