@@ -14,17 +14,14 @@ class ReportController extends Controller
             'from' => 'required|date',
             'to'   => 'required|date|after_or_equal:from',
             'expense_class_id' => 'required|integer',
+            'barangay_id' => 'nullable|integer|exists:barangays,id',
         ]);
 
-        // Debug logging
-        \Log::info('RAC Report Date Range', [
-            'from' => $data['from'],
-            'to' => $data['to'],
-            'expense_class_id' => $data['expense_class_id']
-        ]);
-
+        // Determine barangay scope: explicit param (admin) or authenticated user's barangay
+        $barangayId = $data['barangay_id'] ?? $request->user()?->barangay_id;
         
         $q = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem', 'details','details.disbursement'])
+            ->when($barangayId, fn($qq) => $qq->where('barangay_id', $barangayId))
             ->whereHas('details.disbursement', function($query) use ($data) {
                 $query->whereDate('date', '>=', $data['from'])
                       ->whereDate('date', '<=', $data['to']);
@@ -115,6 +112,26 @@ class ReportController extends Controller
             ->sortBy('dvNumber')
             ->values();
 
+        // Extract account titles and create key map
+        $accountTitles = [];
+        $accountTitleKeyMap = [];
+        
+        $rows->each(function ($row) use (&$accountTitles, &$accountTitleKeyMap) {
+            foreach ($row as $key => $value) {
+                if (str_starts_with($key, 'amount_')) {
+                    // Convert key back to readable account title
+                    $accountTitle = str_replace('amount_', '', $key);
+                    $accountTitle = str_replace('_', ' ', $accountTitle);
+                    $accountTitle = preg_replace('/\s+/', ' ', trim($accountTitle));
+                    
+                    if (!in_array($accountTitle, $accountTitles)) {
+                        $accountTitles[] = $accountTitle;
+                        $accountTitleKeyMap[$accountTitle] = $key;
+                    }
+                }
+            }
+        });
+
         $summary = [
             'count' => $rows->count(),
             'total' => round($rows->sum('amount'), 2),
@@ -122,9 +139,13 @@ class ReportController extends Controller
         ];
 
         return response()->json([
-            'rows' => $rows,
-            'filters' => $data,
-            'summary' => $summary,
+            'data' => [
+                'rows' => $rows,
+                'filters' => $data,
+                'summary' => $summary,
+                'account_titles' => $accountTitles,
+                'account_title_key_map' => $accountTitleKeyMap,
+            ]
         ]);
     }
 
@@ -197,9 +218,11 @@ class ReportController extends Controller
         ];
 
         return response()->json([
-            'rows' => $rows,
-            'filters' => $data,
-            'summary' => $summary,
+            'data' => [
+                'rows' => $rows,
+                'filters' => $data,
+                'summary' => $summary,
+            ]
         ]);
     }
 

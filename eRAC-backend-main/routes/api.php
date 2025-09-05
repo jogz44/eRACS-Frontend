@@ -233,6 +233,7 @@ Route::prefix('admin')->group(function () {
 
         // Admin report endpoints
         Route::get('/report/sacb', [ReportController::class, 'getSacbReport']);
+        Route::get('/report/rac', [ReportController::class, 'getRacReport']);
 
         // Admin banks endpoint (list all banks for selection in admin UI)
         Route::get('/banks', [\App\Http\Controllers\Library\BankLibraryController::class, 'getBanks']);
