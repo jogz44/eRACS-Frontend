@@ -38,7 +38,7 @@ class DisbursementSeeder extends Seeder
 
                 if ($appropriations->isEmpty()) continue;
 
-                
+
                 $likePattern = 'DV-%'.substr($year, -2).'-'.$now->month.'-%';
 
                 $lastDisbursement = Disbursement::where('dv_number', 'like', $likePattern)
@@ -80,7 +80,7 @@ class DisbursementSeeder extends Seeder
                     if (!$chequeNumber) continue;
 
                     $base = Carbon::create($year, $now->month, $now->day);
-                    $startDate = $base->copy()->subMonths(1);
+                    $startDate = $base->copy()->subMonths(8);
                     $createdAt = $faker->dateTimeBetween($startDate, $base);
 
                     $dvAmount = $faker->numberBetween(5, 20) * 1000;

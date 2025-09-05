@@ -14,21 +14,71 @@
       </div>
     </div>
 
-    <!-- Budget Source Filter -->
-    <div class="budget-source-filter q-mb-md">
-      <q-tabs
-        v-model="selectedBudgetSource"
-        class="text-grey-8"
-        active-color="primary"
-        :indicator-color="selectedBudgetSource === 'all' ? 'primary' : 'transparent'"
-        align="justify"
-        narrow-indicator
-      >
-        <q-tab name="all" label="All Augmentations" icon="list" />
-        <q-tab name="cross" label="Cross Budget Augmentations" icon="swap_horiz" />
-        <q-tab name="annual" label="Annual > Annual" icon="calendar_today" />
-        <q-tab name="supplemental" label="Supplemental > Supplemental" icon="add_circle" />
-      </q-tabs>
+    <!-- Budget Source Selection Cards -->
+    <div class="budget-source-selection q-mb-md">
+      <div class="text-subtitle1 text-weight-medium q-mb-sm">Augmentation Type</div>
+      <div class="row q-col-gutter-sm">
+        <div class="col-lg-3 col-md-6 col-sm-12">
+          <q-card
+            :class="['budget-source-card', { 'selected': selectedBudgetSource === 'all' }]"
+            @click="selectedBudgetSource = 'all'"
+            clickable
+          >
+            <q-card-section class="text-center q-pa-md">
+              <q-icon name="list" size="md" class="q-mb-sm" />
+              <div class="text-subtitle2 text-weight-medium">All Augmentations</div>
+              <div class="text-caption text-grey-6">
+                View all augmentation types
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-lg-3 col-md-6 col-sm-12">
+          <q-card
+            :class="['budget-source-card', { 'selected': selectedBudgetSource === 'cross' }]"
+            @click="selectedBudgetSource = 'cross'"
+            clickable
+          >
+            <q-card-section class="text-center q-pa-md">
+              <q-icon name="swap_horiz" size="md" class="q-mb-sm" />
+              <div class="text-subtitle2 text-weight-medium">Cross Budget</div>
+              <div class="text-caption text-grey-6">
+                {{ crossBudgetTransfers }} transfer{{ crossBudgetTransfers !== 1 ? 's' : '' }}
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-lg-3 col-md-6 col-sm-12">
+          <q-card
+            :class="['budget-source-card', { 'selected': selectedBudgetSource === 'annual' }]"
+            @click="selectedBudgetSource = 'annual'"
+            clickable
+          >
+            <q-card-section class="text-center q-pa-md">
+              <q-icon name="calendar_today" size="md" class="q-mb-sm" />
+              <div class="text-subtitle2 text-weight-medium">Annual > Annual</div>
+              <div class="text-caption text-grey-6">
+                Within annual budget
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-lg-3 col-md-6 col-sm-12">
+          <q-card
+            :class="['budget-source-card', { 'selected': selectedBudgetSource === 'supplemental' }]"
+            @click="selectedBudgetSource = 'supplemental'"
+            clickable
+          >
+            <q-card-section class="text-center q-pa-md">
+              <q-icon name="add_circle" size="md" class="q-mb-sm" />
+              <div class="text-subtitle2 text-weight-medium">Supplemental > Supplemental</div>
+              <div class="text-caption text-grey-6">
+                Within supplemental budget
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
     </div>
 
     <!-- Augmentation Summary -->
@@ -439,9 +489,41 @@ onMounted(async () => {
   padding-bottom: 8px;
 }
 
-.budget-source-filter {
-  border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 8px;
+.budget-source-selection {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e0e0;
+}
+
+.budget-source-card {
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  background: white;
+}
+
+.budget-source-card:hover {
+  border-color: #4caf50;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.15);
+  transform: translateY(-2px);
+}
+
+.budget-source-card.selected {
+  border-color: #4caf50;
+  background: linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+}
+
+.budget-source-card.selected .q-icon {
+  color: #4caf50;
+}
+
+.budget-source-card.selected .text-subtitle2 {
+  color: #4caf50;
+  font-weight: 600;
 }
 
 .budget-source-badge {
@@ -457,6 +539,41 @@ onMounted(async () => {
 @media (max-width: 768px) {
   .q-pa-md {
     padding: 8px;
+  }
+
+  .budget-source-selection {
+    padding: 12px;
+  }
+
+  .budget-source-card .q-card-section {
+    padding: 12px;
+  }
+
+  .budget-source-card .q-icon {
+    font-size: 1.5rem;
+  }
+
+  .budget-source-card .text-subtitle2 {
+    font-size: 0.9rem;
+  }
+
+  .budget-source-card .text-caption {
+    font-size: 0.75rem;
+  }
+}
+
+/* Tablet styles */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .budget-source-selection {
+    padding: 14px;
+  }
+
+  .budget-source-card .q-card-section {
+    padding: 14px;
+  }
+
+  .budget-source-card .q-icon {
+    font-size: 1.75rem;
   }
 }
 </style>
