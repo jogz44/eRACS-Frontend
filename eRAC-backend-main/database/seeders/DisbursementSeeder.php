@@ -41,8 +41,7 @@ class DisbursementSeeder extends Seeder
                 
                 $likePattern = 'DV-%'.substr($year, -2).'-'.$now->month.'-%';
 
-                $lastDisbursement = Disbursement::where('barangay_id', $barangay->id)
-                    ->where('dv_number', 'like', $likePattern)
+                $lastDisbursement = Disbursement::where('dv_number', 'like', $likePattern)
                     ->orderByDesc('dv_number')
                     ->first();
 
@@ -66,6 +65,7 @@ class DisbursementSeeder extends Seeder
 
                     // cheque selection same as before...
                     $chequeNumber = null;
+                    $cheque =null;
                     $bookletIds = LibBooklet::where('bank_id', $bank->id)->pluck('id');
                     if ($bookletIds->isNotEmpty()) {
                         $cheque = LibCheque::whereIn('booklet_id', $bookletIds)
@@ -106,6 +106,7 @@ class DisbursementSeeder extends Seeder
                         'created_at'        => $createdAt,
                         'updated_at'        => $createdAt,
                     ]);
+                    $cheque->update(['disbursement_id' => $disb->id]);
 
                     $this->seedExpenseDetails($faker, $disb->id, $appropriations, $dvAmount, Carbon::parse($startDate));
 

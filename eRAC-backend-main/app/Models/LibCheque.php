@@ -28,7 +28,7 @@ class LibCheque extends Model
 
     public function booklet(): BelongsTo
     {
-        return $this->belongsTo(LibBooklet::class);
+        return $this->belongsTo(LibBooklet::class, 'booklet_id');
     }
     public function disbursement()
     {

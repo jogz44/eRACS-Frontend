@@ -185,8 +185,10 @@ class DisbursementController extends Controller
                 ->where('booklet_id', $request->cheque_booklet) // Assuming cheque_booklet is passed in the request
                 ->where('status', 'unused')
                 ->firstorFail();
+
             $cheque->update([
                 'status' => 'issued',
+                'disbursement_id' => $disbursement->id,
             ]);
 
 
@@ -1477,8 +1479,7 @@ class DisbursementController extends Controller
 
         $likePattern = 'DV-%'.substr($yyyy, -2).'-'.$mm.'-%';
 
-        $lastDisbursement = Disbursement::where('barangay_id', $barangayId)
-            ->where('dv_number', 'like', $likePattern)
+        $lastDisbursement = Disbursement::where('dv_number', 'like', $likePattern)
             ->orderByDesc('dv_number')
             ->first();
 
