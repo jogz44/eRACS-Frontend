@@ -197,7 +197,7 @@
     <q-dialog v-model="showBookletDialog" persistent>
       <q-card style="min-width: 800px">
         <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">Booklets: {{ selectedBank?.name }}</div>
+          <div class="text-h6">{{ selectedBank?.name }} Booklets</div>
           <q-space />
           <q-btn icon="close" flat round dense v-close-popup @click="loadPendingUsers" />
         </q-card-section>
@@ -208,10 +208,11 @@
               dense
               debounce="300"
               v-model="search"
-              placeholder="Search Booklet..."
+              placeholder="Search Cheque"
+              mask="########"
               outlined
               clearable
-              style="width: 300px"
+              style="width: 400px"
             >
               <template v-slot:append>
                 <q-icon name="search" />
@@ -508,7 +509,6 @@ const newCheque = ref({
   date: new Date().toISOString().split('T')[0],
 })
 const search = ref('')
-const chequeNumberSearch = ref('')
 
 const selectedBooklet = ref(null)
 
@@ -724,23 +724,17 @@ const filteredBooklets = computed(() => {
 
   if (search.value) {
     const searchTerm = search.value.toLowerCase()
+    const chequeTerm = Number(search.value) // convert input to number
     results = results.filter(
-      (booklet) =>
-        booklet.booklet_numb.toLowerCase().includes(searchTerm) ||
-        booklet.starting_cheque_numb.toLowerCase().includes(searchTerm) ||
-        booklet.ending_cheque_numb.toLowerCase().includes(searchTerm),
+      (booklet) =>{
+          const start = Number(booklet.starting_cheque_numb)
+          const end = Number(booklet.ending_cheque_numb)
+
+          return booklet.booklet_numb.toLowerCase().includes(searchTerm) ||
+            booklet.starting_cheque_numb.toLowerCase().includes(searchTerm) ||
+            booklet.ending_cheque_numb.toLowerCase().includes(searchTerm) || chequeTerm >= start && chequeTerm <= end
+        }
     )
-  }
-
-  if (chequeNumberSearch.value) {
-    const chequeTerm = chequeNumberSearch.value.toLowerCase()
-    results = results.filter((booklet) => {
-      const start = booklet.starting_cheque_numb
-      const end = booklet.ending_cheque_numb
-      const target = chequeTerm.padStart(8, '0')
-
-      return target >= start && target <= end
-    })
   }
 
   return results
