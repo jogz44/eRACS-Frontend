@@ -187,7 +187,7 @@ class DisbursementController extends Controller
                 ->firstorFail();
 
             $cheque->update([
-                'status' => 'issued',
+                'status' => 'used',
                 'disbursement_id' => $disbursement->id,
             ]);
 
@@ -782,11 +782,11 @@ class DisbursementController extends Controller
                 ->where('barangay_id', $user->barangay_id)
                 ->firstOrFail();
 
-            // Check if disbursement can be modified (only if status is Pending or Partial)
-            if ($disbursement->status !== 'Pending' && $disbursement->status !== 'Partial') {
+            // Check if disbursement can be modified (only if status is Unliquidated or Partial)
+            if ($disbursement->status !== 'Unliquidated' && $disbursement->status !== 'Partial') {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Only pending and partial disbursements can be modified'
+                    'message' => 'Only unliquidated and partial disbursements can be modified'
                 ], 400);
             }
 
@@ -823,11 +823,11 @@ class DisbursementController extends Controller
                 ->where('barangay_id', $user->barangay_id)
                 ->firstOrFail();
 
-            // Check if disbursement can be deleted (only if status is Pending or Partial)
-            if ($disbursement->status !== 'Pending' && $disbursement->status !== 'Partial') {
+            // Check if disbursement can be deleted (only if status is Unliquidated or Partial)
+            if ($disbursement->status !== 'Unliquidated' && $disbursement->status !== 'Partial') {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Only pending and partial disbursements can be deleted'
+                    'message' => 'Only Unliquidated and partial disbursements can be deleted'
                 ], 400);
             }
 
@@ -882,11 +882,11 @@ class DisbursementController extends Controller
                 ->where('barangay_id', $user->barangay_id)
                 ->firstOrFail();
 
-            // Can only request void for Pending or Partial
-            if (!in_array($disbursement->status, ['Pending', 'Partial'])) {
+            // Can only request void for Unliquidated or Partial
+            if (!in_array($disbursement->status, ['Unliquidated', 'Partial'])) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Only pending or partial disbursements can be void requested'
+                    'message' => 'Only Unliquidated or partial disbursements can be void requested'
                 ], 400);
             }
 
@@ -1045,8 +1045,8 @@ class DisbursementController extends Controller
                 ], 400);
             }
 
-            // On reject, return to Pending and save rejection remarks
-            $disbursement->status = 'Pending';
+            // On reject, return to Unliquidated and save rejection remarks
+            $disbursement->status = 'Unliquidated';
             $disbursement->rejection_remarks = $request->remarks;
             $disbursement->save();
 
@@ -1105,11 +1105,11 @@ class DisbursementController extends Controller
                 ->where('barangay_id', $user->barangay_id)
                 ->firstOrFail();
 
-            // Can only void Pending or Partial disbursements
-            if (!in_array($disbursement->status, ['Pending', 'Partial'])) {
+            // Can only void Unliquidated or Partial disbursements
+            if (!in_array($disbursement->status, ['Unliquidated', 'Partial'])) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Only pending or partial disbursements can be voided'
+                    'message' => 'Only Unliquidated or partial disbursements can be voided'
                 ], 400);
             }
 

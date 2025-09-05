@@ -461,7 +461,7 @@ const filteredDisbursementRows = computed(() => {
       (row) => row.status === 'Liquidated'
     )
   } else {
-    // Show specific status (Pending, Partial)
+    // Show specific status (Unliquidated, Partial)
     rows = chartStore.disbursementOverviewRows.filter(
       (row) => row.status === selectedDisbursementFilter.value
     )
@@ -478,7 +478,7 @@ const filteredDisbursementRows = computed(() => {
 // Helper function to get status color
 const getStatusColor = (status) => {
   const statusColors = {
-    Pending: 'orange',
+    Unliquidated: 'orange',
     Partial: 'blue',
     Liquidated: 'green',
   }

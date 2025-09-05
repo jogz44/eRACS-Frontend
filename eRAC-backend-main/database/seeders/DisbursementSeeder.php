@@ -74,7 +74,7 @@ class DisbursementSeeder extends Seeder
                             ->first();
                         if ($cheque) {
                             $chequeNumber = $cheque->cheque_number;
-                            $cheque->update(['status' => 'issued']);
+                            $cheque->update(['status' => 'used']);
                         }
                     }
                     if (!$chequeNumber) continue;

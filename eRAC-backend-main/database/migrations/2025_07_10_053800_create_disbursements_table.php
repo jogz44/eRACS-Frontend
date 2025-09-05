@@ -23,7 +23,7 @@ return new class extends Migration
             $table->decimal('dv_amount', 15, 2);
             $table->decimal('liquidated_amount', 15, 2)->nullable();
             // For MySQL/Postgres enum works fine
-            $table->enum('status', ['Pending', 'Liquidated', 'Partial', 'Void Requested', 'Voided'])->default('Pending');
+            $table->enum('status', ['Unliquidated', 'Liquidated', 'Partial', 'Void Requested', 'Voided'])->default('Unliquidated');
             $table->timestamp('liquidated_at')->nullable();
             $table->text('remarks')->nullable();
             $table->text('rejection_remarks')->nullable();
@@ -39,7 +39,7 @@ return new class extends Migration
             DB::statement("
                 ALTER TABLE disbursements 
                 ADD CONSTRAINT CK_disbursements_status 
-                CHECK (status IN ('Pending', 'Liquidated', 'Partial', 'Void Requested', 'Voided'))
+                CHECK (status IN ('Unliquidated', 'Liquidated', 'Partial', 'Void Requested', 'Voided'))
             ");
         }
     }
