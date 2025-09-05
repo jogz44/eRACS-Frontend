@@ -1010,8 +1010,10 @@ const getChequeStatusColor = (status) => {
       return 'green'
     case 'used':
       return 'orange'
-    case 'void':
+    case 'cancelled':
       return 'red'
+    case 'void':
+      return 'black'
     default:
       return 'grey'
   }
@@ -1021,11 +1023,13 @@ const getChequeStatusLabel = (status) => {
   const statusLower = (status || '').toLowerCase()
   switch (statusLower) {
     case 'unused':
-      return 'Unused'
+      return 'UNUSED'
     case 'used':
-      return 'used'
+      return 'USED'
+    case 'cancelled':
+      return 'CANCELLED'
     case 'void':
-      return 'Voided'
+      return 'VOID'
     default:
       return 'Unknown'
   }

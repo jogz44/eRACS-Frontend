@@ -19,7 +19,7 @@ return new class extends Migration
 
             $table->string('cheque_number');
 
-            $table->enum('status', ['unused', 'used', 'void'])->default('unused');
+            $table->enum('status', ['unused', 'used', 'void','cancelled'])->default('unused');
 
             $table->timestamps();
         });

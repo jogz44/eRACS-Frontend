@@ -77,6 +77,18 @@
             <q-item-label class="q-mb-xs">Payee:</q-item-label>
             <q-input filled outlined dense v-model="store.forms.disbursement.payee"/>
           </div>
+
+          <!-- Cancel Cheque Button -->
+          <div class="col-md-4 col-sm-12 flex flex-center">
+            <q-btn
+              color="negative"
+              label="Cancel Cheque"
+              icon="cancel"
+              class="full-width"
+              @click="store.openDialog('cancelChequeConfirmation')"
+              :disable="store.forms.disbursement.is_cancelled"
+            />
+          </div>
         </div>
       </q-card-section>
 
