@@ -132,7 +132,7 @@ class ContinuingDisbursementController extends Controller
             // Update cheque status
             $cheque = LibCheque::where('cheque_number', $validated['chequeNumber'])->first();
             if ($cheque) {
-                $cheque->status = 'issued';
+                $cheque->status = 'used';
                 $cheque->disbursement_id = $disbursement->id;
                 $cheque->save();
             }

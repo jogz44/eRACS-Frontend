@@ -61,8 +61,8 @@ export const useBankStore = defineStore('bank', {
           switch (status) {
             case 'unused':
               return 'Unused'
-            case 'issued':
-              return 'Issued'
+            case 'used':
+              return 'used'
             case 'void':
               return 'Voided'
             default:

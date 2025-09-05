@@ -443,11 +443,11 @@
                   dense
                   icon="edit"
                   :color="
-                    props.row.status === 'Pending' || props.row.status === 'Partial'
+                    props.row.status === 'Unliquidated' || props.row.status === 'Partial'
                       ? 'orange'
                       : 'grey'
                   "
-                  :disable="props.row.status !== 'Pending' && props.row.status !== 'Partial'"
+                  :disable="props.row.status !== 'Unliquidated' && props.row.status !== 'Partial'"
                   :loading="store.loadingEditDisbursement === props.row.id"
                   @click="handleEditDisbursement(props.row)"
                   v-permission="'edit'"
@@ -473,7 +473,7 @@
                   dense
                   label="Liquidate"
                   color="primary"
-                  v-if="props.row.status === 'Pending' || props.row.status === 'Partial'"
+                  v-if="props.row.status === 'Unliquidated' || props.row.status === 'Partial'"
                   @click="handleLiquidateDisbursement(props.row)"
                   :loading="liquidateLoading[props.row.id]"
                   :disable="liquidateLoading[props.row.id]"
@@ -656,7 +656,7 @@ const handleEnterKey = (event) => {
 }
 const getStatusColor = (status) => {
   switch (status) {
-    case 'Pending':
+    case 'Unliquidated':
       return 'orange'
     case 'Partial':
       return 'amber'
@@ -674,7 +674,7 @@ const getStatusColor = (status) => {
 }
 const getStatusTextColor = (status) => {
   switch (status) {
-    case 'Pending':
+    case 'Unliquidated':
     case 'Partial':
     case 'Liquidated':
     case 'Void Requested':

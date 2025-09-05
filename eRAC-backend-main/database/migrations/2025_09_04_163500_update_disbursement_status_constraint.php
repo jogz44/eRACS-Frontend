@@ -25,9 +25,6 @@ return new class extends Migration
             // Constraint might not exist
         }
         
-        // Update all 'Pending' statuses to 'Unliquidated' using raw SQL
-        DB::statement("UPDATE disbursements SET status = 'Unliquidated' WHERE status = 'Pending'");
-        
         // Add new check constraint that includes 'Unliquidated'
         DB::statement("ALTER TABLE disbursements ADD CONSTRAINT CK_disbursement_status 
             CHECK (status IN ('Unliquidated', 'Partial', 'Liquidated', 'Void Requested', 'Voided', 'Stale'))");
@@ -41,8 +38,8 @@ return new class extends Migration
         // Drop the new constraint
         DB::statement('ALTER TABLE disbursements DROP CONSTRAINT CK_disbursement_status');
         
-        // Restore the original constraint (assuming it was for 'Pending', 'Partial', 'Liquidated', etc.)
+        // Restore the original constraint (assuming it was for 'Unliquidated', 'Partial', 'Liquidated', etc.)
         DB::statement("ALTER TABLE disbursements ADD CONSTRAINT CK__disbursem__statu__057A84B9 
-            CHECK (status IN ('Pending', 'Partial', 'Liquidated', 'Void Requested', 'Voided', 'Stale'))");
+            CHECK (status IN ('Unliquidated', 'Partial', 'Liquidated', 'Void Requested', 'Voided', 'Stale'))");
     }
 };

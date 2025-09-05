@@ -124,7 +124,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         bank: 'Bank A',
         payee: 'John Doe',
         dvAmount: 1000.00,
-        status: 'Pending',
+        status: 'Unliquidated',
         aging: '30 days',
         expenses: [
           { id: 1, accountId: 1, accountName: 'Expense Class A > Expense Type A > Expense Item A', amount: 100.00, particular: 'Particular 1' },
