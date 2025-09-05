@@ -271,10 +271,8 @@
               @keydown.enter="handleAddBookletEnterKey"
               :rules="[
                 (val) => !!val || 'Booklet number is required',
-                (val) => val.length === 8 || 'Must be exactly 8 digits',
               ]"
-              maxlength="8"
-              mask="########"
+              maxlength="14"
             />
             <q-input
               v-model="newBooklet.starting_cheque_numb"
@@ -838,6 +836,7 @@ watch(
     if (!isNaN(startNum) && !isNaN(quantityNum) && quantityNum > 0) {
       const end = startNum + quantityNum - 1;
       newBooklet.value.ending_cheque_numb = end.toString().padStart(8, '0');
+      newBooklet.value.booklet_numb = `${startNum.toString().padStart(4,0).slice(-4)}-${(end).toString().padStart(4,0).slice(-4)}`;
     } else {
       newBooklet.value.ending_cheque_numb = '';
     }

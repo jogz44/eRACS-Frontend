@@ -300,7 +300,7 @@ public function createBooklet(Request $request, LibBank $bank)
     }
 
     $validated = $request->validate([
-        'booklet_numb' => 'required|string|size:8|regex:/^[0-9]+$/',
+        'booklet_numb' => 'required|string',
         'starting_cheque_numb' => 'required|string|size:8|regex:/^[0-9]+$/',
         'quantity' => 'required|integer|min:1|max:50',
     ]);
