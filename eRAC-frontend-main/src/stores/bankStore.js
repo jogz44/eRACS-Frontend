@@ -65,13 +65,15 @@ export const useBankStore = defineStore('bank', {
           const status = (val || '').toLowerCase()
           switch (status) {
             case 'unused':
-              return 'Unused'
+              return 'unused'
             case 'used':
               return 'used'
+            case 'cancelled':
+              return 'cancelled'
             case 'void':
-              return 'Voided'
+              return 'void'
             default:
-              return 'Unknown'
+              return 'ERROR'
           }
         },
       },

@@ -964,7 +964,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             this.expenses = disbursement.expenses.map(expense => ({
               id: expense.id, // Use the actual database ID from tran_expense_details
               accountId: expense.accountId,
-              accountName: expense.particular || 'Unknown Account', // Use particular as fallback
+              accountName: expense.account_name || 'Unknown Account', // Use particular as fallback
               amount: expense.amount,
               particular: expense.particular,
               expense_class_id: expense.expense_class_id,
@@ -1009,7 +1009,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           // Map expenses to ensure proper field names
           const mappedExpenses = (disbursement.expenses || []).map(expense => ({
             id: expense.id,
-            accountName: expense.account_name || expense.particular || 'Unknown Account',
+            accountName: expense.account_name  || 'Unknown Account',
             amount: expense.amount,
             particular: expense.particular,
             accountId: expense.accountId,
