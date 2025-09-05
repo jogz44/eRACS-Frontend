@@ -697,12 +697,6 @@ function filterFn(val, update) {
     )
   })
 }
-// Helper function to extract numeric days from aging string
-const getAgingDays = (agingString) => {
-  if (!agingString) return 0
-  const match = agingString.match(/(\d+)\s*days?/)
-  return match ? parseInt(match[1]) : 0
-}
 
 // Formatting helpers for amount input (kept local to this component)
 const formatInputValue = (value) => {
@@ -769,9 +763,6 @@ function canVoid(row) {
   // Can only void if unliquidated or partial
   if (!(row.status === 'Unliquidated' || row.status === 'Partial')) return false
 
-  // Check aging restriction (≤ 1 day can be voided)
-  const aging = Number(getAgingDays(row.aging))
-  if (Number.isNaN(aging) || aging > 1) return false
 
   return true
 }
