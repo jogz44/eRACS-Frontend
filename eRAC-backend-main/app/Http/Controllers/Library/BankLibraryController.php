@@ -75,7 +75,7 @@ public function createBank(Request $request)
                 foreach($booklets as $booklet){
                     $totalCheques = $booklet->cheques()->count();
                     $usedCheques = $booklet->cheques()->where('status', '!=', 'unused')->count();
-                    if ($totalCheques == 0) {
+                    if ($usedCheques == 0) {
                         $booklet->status = 'unused';
                     } elseif ($usedCheques==$totalCheques) {
                         $booklet->status = 'consumed';
