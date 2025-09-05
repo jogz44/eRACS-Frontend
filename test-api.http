@@ -3,8 +3,8 @@
 # Accept: application/json
 
 
-GET http://localhost:8000/api/admin/particulars
-Authorization: Bearer 26|1p7YrFAt6Y5IFPw8HAiv9pvNRyJtwcKun9i9iW5F0483cf00
+GET http://localhost:8000/api/barangay/booklets/1/cheques
+Authorization: Bearer 3|iDos83MsWTH1lKNBdFUBM6zHxoBGaHgRLwJVdRtG1f0eab70
 Accept: application/json
 
 # GET http://localhost:8000/api/user
