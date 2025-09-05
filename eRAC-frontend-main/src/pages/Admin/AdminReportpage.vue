@@ -760,7 +760,7 @@
   </q-page>
 </template>
 <script setup>
-import { ref, reactive, computed, onMounted, onActivated } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated, watch } from 'vue'
 import SetupDialog from 'components/SetupDialog.vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'stores/auth'
@@ -774,6 +774,38 @@ const reportStore = useReportStore()
 const authStore = useAuthStore()
 const { logPageVisit } = usePageLogging()
 const { logAdminActivity } = useActivityLogging()
+
+// Watch for barangay changes to preserve selections
+watch(() => authStore.selectedBarangay, async (newBarangay, oldBarangay) => {
+  if (newBarangay !== oldBarangay && newBarangay) {
+    try {
+      // Store current selections before fetching new options
+      const currentSelected = expenseSelectedCurrent.value
+      const continuingSelected = expenseSelectedContinuing.value
+
+      // Fetch new options for the new barangay
+      await reportStore.fetchExpenseClassesForBarangay(newBarangay)
+
+      // Try to preserve selections by finding matching names
+      if (currentSelected?.name) {
+        const matchingOption = reportStore.expenseOptionsCurrent.find(opt => opt.name === currentSelected.name)
+        expenseSelectedCurrent.value = matchingOption || null
+      }
+
+      if (continuingSelected?.name) {
+        const matchingOption = reportStore.expenseOptionsContinuing.find(opt => opt.name === continuingSelected.name)
+        expenseSelectedContinuing.value = matchingOption || null
+      }
+    } catch (error) {
+      // Handle 401 errors - token expired, logout handled in store
+      if (error.response?.status === 401) {
+        console.warn('Token expired during barangay change in report page')
+        return
+      }
+      console.error('Error handling barangay change in report page:', error)
+    }
+  }
+})
 
 /* -------------------- STATE -------------------- */
 const showSetupDialog = ref(false)
@@ -841,8 +873,23 @@ const loadAllData = async () => {
     if (authStore.admin) {
       const selectedBarangayId = authStore.getSelectedBarangay()
       if (selectedBarangayId) {
+        // Store current selections before fetching
+        const currentSelected = expenseSelectedCurrent.value
+        const continuingSelected = expenseSelectedContinuing.value
+
         try {
           await reportStore.fetchExpenseClassesForBarangay(selectedBarangayId)
+
+          // Try to preserve selections by finding matching names
+          if (currentSelected?.name) {
+            const matchingOption = reportStore.expenseOptionsCurrent.find(opt => opt.name === currentSelected.name)
+            expenseSelectedCurrent.value = matchingOption || null
+          }
+
+          if (continuingSelected?.name) {
+            const matchingOption = reportStore.expenseOptionsContinuing.find(opt => opt.name === continuingSelected.name)
+            expenseSelectedContinuing.value = matchingOption || null
+          }
         } catch (e) {
           console.error('Failed to load expense classes for selected barangay', e)
         }

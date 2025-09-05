@@ -13,7 +13,11 @@ export const useAuthStore = defineStore('auth', {
     admin: JSON.parse(localStorage.getItem('admin_data')) || null,
     adminToken: localStorage.getItem('admin_token') || null,
     adminReturnUrl: '/admin/dashboard',
-    
+
+    // Reactive barangay selection for admin
+    selectedBarangay: localStorage.getItem('admin_selected_barangay') ? parseInt(localStorage.getItem('admin_selected_barangay')) : null,
+    selectedBarangayName: localStorage.getItem('admin_selected_barangay_name') || null,
+
     // Logout state
     isLoggingOut: false,
   }),
@@ -43,14 +47,13 @@ export const useAuthStore = defineStore('auth', {
     
     getSelectedBarangay() {
       if (this.admin) {
-        const savedBarangayId = localStorage.getItem('admin_selected_barangay')
-        return savedBarangayId ? parseInt(savedBarangayId) : null
+        return this.selectedBarangay
       }
       return null
     },
     getSelectedBarangayName() {
       if (this.admin) {
-        return localStorage.getItem('admin_selected_barangay_name') || null
+        return this.selectedBarangayName
       }
       return null
     },

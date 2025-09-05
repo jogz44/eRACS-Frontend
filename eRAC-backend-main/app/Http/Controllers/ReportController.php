@@ -20,6 +20,15 @@ class ReportController extends Controller
         // Determine barangay scope: explicit param (admin) or authenticated user's barangay
         $barangayId = $data['barangay_id'] ?? $request->user()?->barangay_id;
         
+        // Debug logging for barangay ID
+        \Log::info('RAC Report - Barangay ID Debug', [
+            'requested_barangay_id' => $data['barangay_id'] ?? 'not provided',
+            'user_barangay_id' => $request->user()?->barangay_id ?? 'not authenticated',
+            'final_barangay_id' => $barangayId,
+            'is_admin_request' => isset($data['barangay_id']),
+            'request_params' => $data
+        ]);
+        
         $q = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem', 'details','details.disbursement'])
             ->when($barangayId, fn($qq) => $qq->where('barangay_id', $barangayId))
             ->whereHas('details.disbursement', function($query) use ($data) {
@@ -29,7 +38,42 @@ class ReportController extends Controller
 
         $q->where('expense_class_id', $data['expense_class_id']);
 
-        $rows = $q->orderBy('transaction_date')->get()
+        // Debug: Check total TranAppropriation records for this barangay without disbursement filter
+        $totalAppropriationsForBarangay = TranAppropriation::where('barangay_id', $barangayId)->count();
+        $appropriationsForClass = TranAppropriation::where('barangay_id', $barangayId)
+            ->where('expense_class_id', $data['expense_class_id'])
+            ->count();
+        \Log::info('RAC Report - Total Appropriations Check', [
+            'barangay_id' => $barangayId,
+            'total_appropriations_for_barangay' => $totalAppropriationsForBarangay,
+            'appropriations_for_class' => $appropriationsForClass,
+            'expense_class_id' => $data['expense_class_id']
+        ]);
+
+        $initialResults = $q->orderBy('transaction_date')->get();
+
+        // Debug logging for initial query results
+        \Log::info('RAC Report - Initial Query Results', [
+            'barangay_id' => $barangayId,
+            'expense_class_id' => $data['expense_class_id'],
+            'date_range' => $data['from'] . ' to ' . $data['to'],
+            'total_appropriations_found' => $initialResults->count(),
+            'appropriation_ids' => $initialResults->pluck('id')->toArray(),
+            'sample_appropriation' => $initialResults->first() ? [
+                'id' => $initialResults->first()->id,
+                'barangay_id' => $initialResults->first()->barangay_id,
+                'expense_class_id' => $initialResults->first()->expense_class_id,
+                'details_count' => $initialResults->first()->details->count(),
+                'sample_detail' => $initialResults->first()->details->first() ? [
+                    'id' => $initialResults->first()->details->first()->id,
+                    'amount' => $initialResults->first()->details->first()->amount,
+                    'disbursement_id' => $initialResults->first()->details->first()->disbursement_id,
+                    'disbursement_date' => $initialResults->first()->details->first()->disbursement ? $initialResults->first()->details->first()->disbursement->date : null
+                ] : null
+            ] : null
+        ]);
+        
+        $rows = $initialResults
             ->flatMap(function ($o) use ($data) {
                 return $o->details->filter(function ($detail) use ($data) {
                     // Only include details where the disbursement date is within the range
@@ -111,6 +155,15 @@ class ReportController extends Controller
             ->values()
             ->sortBy('dvNumber')
             ->values();
+
+        // Debug logging for final processed rows
+        \Log::info('RAC Report - Final Processed Rows', [
+            'barangay_id' => $barangayId,
+            'expense_class_id' => $data['expense_class_id'],
+            'total_rows_after_processing' => $rows->count(),
+            'dv_numbers' => $rows->pluck('dvNumber')->toArray(),
+            'sample_row' => $rows->first() ? array_slice($rows->first(), 0, 5) : null // First 5 keys/values
+        ]);
 
         // Extract account titles and create key map
         $accountTitles = [];
