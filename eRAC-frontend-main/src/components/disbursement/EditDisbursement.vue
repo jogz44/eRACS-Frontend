@@ -33,15 +33,36 @@
           <div class="col-md-4 col-sm-12">
             <q-item-label class="q-mb-xs">Bank:</q-item-label>
             <q-select filled outlined dense
-              :label="bankStore.banks.find(b => b.id === store.forms.disbursement.bank_id).name" :readonly="true"
-              :disable="true" />
+              v-model="store.forms.disbursement.bank_id"
+              :options="bankStore.availableBanks"
+              option-label="name"
+              option-value="id"
+              emit-value
+              map-options
+              :label="currentBankLabel"
+              :disable="!isChequeCancelled"
+              @update:model-value="handleBankSelection" />
           </div>
 
           <!-- Check Number Field -->
           <div class="col-md-4 col-sm-12">
             <q-item-label class="q-mb-xs">Cheque Number:</q-item-label>
-
-            <q-input outlined dense v-model="store.forms.disbursement.chequeNumber" :disable="true"></q-input>
+            <div class="row q-gutter-xs">
+              <div class="col">
+                <q-input outlined dense v-model="store.forms.disbursement.chequeNumber"
+                  :disable="!isChequeCancelled" placeholder="Select a bank first"></q-input>
+              </div>
+              <div class="col-auto">
+                <q-btn
+                  v-if="isChequeCancelled && store.forms.disbursement.bank_id"
+                  icon="add"
+                  color="primary"
+                  dense
+                  @click="handleAddCheque"
+                  :loading="addingCheque"
+                  title="Add new cheque number" />
+              </div>
+            </div>
           </div>
           <!-- DV Number Field -->
           <div class="col-md-4 col-sm-6">
@@ -57,8 +78,13 @@
 
           <!-- Cancel Cheque Button -->
           <div class="col-md-4 col-sm-12 flex flex-center q-mt-lg">
-            <q-btn color="negative" label="Cancel Cheque" icon="cancel" class="full-width"
-              @click="showCancelDialog = true" :disable="store.forms.disbursement.is_cancelled" />
+            <q-btn
+              color="negative"
+              label="Cancel Cheque"
+              icon="cancel"
+              class="full-width"
+              @click="handleCancelCheque"
+              :disable="isChequeCancelled" />
           </div>
         </div>
       </q-card-section>
@@ -66,63 +92,32 @@
       <div>
 
         <!-- Cancel Cheque Dialog -->
-        <q-dialog v-model="showCancelDialog" persistent>
+
+
+        <!-- Cancel Cheque Confirmation Dialog -->
+        <q-dialog v-model="showConfirmDialog" persistent>
           <q-card style="min-width: 400px">
             <q-card-section>
               <div class="text-h6">Cancel Cheque</div>
             </q-card-section>
 
-            <q-separator />
-
-            <q-card-section class="q-gutter-md">
-              <!-- Bank Selection -->
-
-              <div class="col-md-4 col-sm-12">
-                <q-item-label class="q-mb-xs">Bank:</q-item-label>
-                <q-select filled outlined dense v-model="store.cancelBank" :options="store.cancelBanks"
-                  option-label="name" option-value="id" emit-value map-options label="Select Bank"
-                  />
-              </div>
-
-              <div class="col-md-4 col-sm-12">
-                <q-item-label class="q-mb-xs">Cheque Number:</q-item-label>
-
-                <q-input outlined dense v-model="store.cancelChequed" :disable="true"
-                  ></q-input>
-              </div>
-
-              <!-- Payee Field -->
-              <div class="col-md-4 col-sm-12">
-                <q-item-label class="q-mb-xs">Payee:</q-item-label>
-                <q-input filled outlined dense v-model="store.forms.disbursement.payee" />
-              </div>
-            </q-card-section>
-
-            <q-separator />
-
-            <q-card-actions align="right">
-              <q-btn flat label="Close" v-close-popup />
-              <q-btn color="negative" label="Cancel Cheque" @click="openConfirmDialog" />
-            </q-card-actions>
-          </q-card>
-        </q-dialog>
-
-        <!-- Confirmation Dialog -->
-        <q-dialog v-model="showConfirmDialog" persistent>
-          <q-card>
             <q-card-section>
-              <div class="text-h6">Confirm Cancellation</div>
-            </q-card-section>
-
-            <q-card-section>
-              Are you sure you want to cancel cheque
-              <b>{{ store.forms.disbursement.chequeNumber }}</b> from <b>{{ currentBankLabel }}</b>
-              payable to <b>{{ store.forms.disbursement.payee }}</b>?
+              <div class="text-body1">
+                Are you sure you want to cancel this cheque?
+              </div>
+              <div class="q-mt-md">
+                <div><strong>Cheque Number:</strong> {{ store.forms.disbursement.chequeNumber }}</div>
+                <div><strong>Bank:</strong> {{ currentBankLabel }}</div>
+                <div><strong>Payee:</strong> {{ store.forms.disbursement.payee }}</div>
+              </div>
+              <div class="text-caption text-grey-6 q-mt-sm">
+                After canceling, you can select a different bank and add a new cheque number.
+              </div>
             </q-card-section>
 
             <q-card-actions align="right">
               <q-btn flat label="No" v-close-popup />
-              <q-btn color="negative" label="Yes, Cancel" @click="confirmCancel" />
+              <q-btn color="negative" label="Yes, Cancel" @click="confirmCancelCheque" />
             </q-card-actions>
           </q-card>
         </q-dialog>
@@ -202,18 +197,29 @@
 <script setup>
 import { useDisbursementStore } from 'stores/disbursementStore'
 import { useBankStore } from 'stores/bankStore'
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, ref, watch, computed } from 'vue'
 import { useQuasar } from 'quasar'
 
 const store = useDisbursementStore()
 const bankStore = useBankStore()
 const $q = useQuasar()
 const saving = ref(false)
+const addingCheque = ref(false)
 
-const showCancelDialog = ref(false)
+
 const showConfirmDialog = ref(false)
+const isChequeCancelled = ref(false)
 
 // Example bank list (replace with your data)
+
+// Computed properties
+const currentBankLabel = computed(() => {
+  if (store.forms.disbursement.bank_id) {
+    const selectedBank = bankStore.banks.find(b => b.id === store.forms.disbursement.bank_id)
+    return selectedBank ? selectedBank.name : 'Select Bank'
+  }
+  return 'Select Bank'
+})
 
 onMounted(async () => {
   await bankStore.fetchBanks()
@@ -401,15 +407,115 @@ const handlePasteNumeric = (event) => {
   input.dispatchEvent(e)
 }
 
-function openConfirmDialog () {
+
+// Handle cancel cheque button click
+const handleCancelCheque = () => {
   showConfirmDialog.value = true
 }
 
-function confirmCancel () {
-  showConfirmDialog.value = false
-  showCancelDialog.value = false
+// Confirm cancel cheque action
+const confirmCancelCheque = async () => {
+  try {
+    showConfirmDialog.value = false
 
-  // Handle the cancel cheque action here
+    // Call backend API to mark cheque as cancelled
+    const result = await store.cancelCheque(store.forms.disbursement.id, store.forms.disbursement.chequeNumber)
+
+    if (result.success) {
+      // Clear the cheque number and enable bank selection
+      store.forms.disbursement.chequeNumber = ''
+      store.forms.disbursement.bank_id = null
+      isChequeCancelled.value = true
+
+      // Refresh bank data to reflect the cancelled cheque status
+      await bankStore.fetchBanks()
+
+      $q.notify({
+        type: 'positive',
+        message: 'Cheque cancelled successfully! You can now select a different bank and add a new cheque.',
+        icon: 'check_circle',
+        position: 'top',
+        timeout: 4000
+      })
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: result.message || 'Failed to cancel cheque',
+        icon: 'error',
+        position: 'top',
+        timeout: 3000
+      })
+    }
+  } catch (error) {
+    console.error('Error cancelling cheque:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to cancel cheque',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000
+    })
+  }
+}
+
+// Handle bank selection
+const handleBankSelection = async (bankId) => {
+  if (bankId) {
+    try {
+      // Clear the current cheque number when bank changes
+      store.forms.disbursement.chequeNumber = ''
+    } catch (error) {
+      console.error('Error handling bank selection:', error)
+    }
+  }
+}
+
+// Handle add cheque button click
+const handleAddCheque = async () => {
+  if (!store.forms.disbursement.bank_id) {
+    $q.notify({
+      type: 'warning',
+      message: 'Please select a bank first',
+      icon: 'warning',
+      position: 'top',
+      timeout: 3000
+    })
+    return
+  }
+
+  addingCheque.value = true
+  try {
+    const result = await store.getAvailableCheque(store.forms.disbursement.bank_id)
+    if (result.success && result.chequeNumber) {
+      store.forms.disbursement.chequeNumber = result.chequeNumber
+      $q.notify({
+        type: 'positive',
+        message: `New cheque number ${result.chequeNumber} assigned successfully!`,
+        icon: 'check_circle',
+        position: 'top',
+        timeout: 3000
+      })
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: result.message || 'No available cheques found for this bank',
+        icon: 'error',
+        position: 'top',
+        timeout: 3000
+      })
+    }
+  } catch (error) {
+    console.error('Error adding cheque:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to get available cheque number',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000
+    })
+  } finally {
+    addingCheque.value = false
+  }
 }
 
 // Watch for changes in the expense detail dialog

@@ -338,6 +338,14 @@
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">Cheques: {{ selectedBooklet?.booklet_numb }}</div>
           <q-space />
+          <q-btn 
+            icon="picture_as_pdf" 
+            color="red" 
+            flat 
+            dense 
+            @click="exportChequesToPDF"
+            title="Export to PDF"
+          />
           <q-btn icon="close" flat round dense v-close-popup />
         </q-card-section>
 
@@ -427,6 +435,16 @@
 </template>
 
 <script setup>
+import { useBankStore } from 'src/stores/bankStore'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useQuasar } from 'quasar'
+import { usePageLogging } from '../../../composables/usePageLogging'
+// Dynamic imports will be used for PDF functionality
+
+const $q = useQuasar()
+const bankStore = useBankStore()
+const { logPageVisit } = usePageLogging()
+
 const loading = ref(false)
 
 const loadPendingUsers = async () => {
@@ -450,15 +468,6 @@ const clearAllFilters = () => {
   searchTerm.value = ''
 }
 
-import { useBankStore } from 'src/stores/bankStore'
-import { ref, computed, onMounted, watch } from 'vue'
-import { useQuasar } from 'quasar'
-import { usePageLogging } from '../../../composables/usePageLogging'
-
-const $q = useQuasar()
-const bankStore = useBankStore()
-const { logPageVisit } = usePageLogging()
-
 const tableRefreshKey = ref(0)
 
 onMounted(async () => {
@@ -467,7 +476,7 @@ onMounted(async () => {
     console.log('Fetching banks...')
     await bankStore.fetchBanks()
     console.log('Banks after fetch:', bankStore.banks)
-    
+
     // Log page visit
     await logPageVisit('Bank Library')
   } catch (error) {
@@ -1014,6 +1023,8 @@ const getChequeStatusColor = (status) => {
       return 'red'
     case 'void':
       return 'black'
+    case 'stale':
+      return 'purple'
     default:
       return 'grey'
   }
@@ -1030,10 +1041,135 @@ const getChequeStatusLabel = (status) => {
       return 'CANCELLED'
     case 'void':
       return 'VOID'
+    case 'stale':
+      return 'STALE'
     default:
       return 'Unknown'
   }
 }
+
+// Simple PDF Export function using browser print
+const exportChequesToPDF = () => {
+  if (!selectedBooklet.value?.cheques || selectedBooklet.value.cheques.length === 0) {
+    $q.notify({
+      type: 'negative',
+      message: 'No cheques to export',
+      position: 'top',
+    })
+    return
+  }
+
+  try {
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank')
+    
+    // Get the current date
+    const currentDate = new Date().toLocaleDateString()
+    
+    // Create HTML content for the PDF
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Cheques: ${selectedBooklet.value.booklet_numb}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          .header { text-align: center; margin-bottom: 20px; }
+          .title { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+          .date { font-size: 12px; color: #666; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background-color: #f2f2f2; font-weight: bold; }
+          .summary { margin-top: 20px; font-size: 14px; }
+          .status-count { margin: 5px 0; }
+          @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">Cheques: ${selectedBooklet.value.booklet_numb}</div>
+          <div class="date">Generated on: ${currentDate}</div>
+        </div>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>Cheque No.</th>
+              <th>Date Issued</th>
+              <th>DV Number</th>
+              <th>Amount</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${selectedBooklet.value.cheques.map(cheque => `
+              <tr>
+                <td>${cheque.chequeNo || ''}</td>
+                <td>${cheque.date || ''}</td>
+                <td>${cheque.dvn || ''}</td>
+                <td>${typeof cheque.dvamount === 'string' && cheque.dvamount.includes('₱') ? cheque.dvamount : `₱${(cheque.dvamount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
+                <td>${cheque.status || ''}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        
+        <div class="summary">
+          <div><strong>Total Cheques: ${selectedBooklet.value.cheques.length}</strong></div>
+          ${Object.entries(
+            selectedBooklet.value.cheques.reduce((acc, cheque) => {
+              const status = cheque.status || 'Unknown'
+              acc[status] = (acc[status] || 0) + 1
+              return acc
+            }, {})
+          ).map(([status, count]) => `
+            <div class="status-count">${status}: ${count}</div>
+          `).join('')}
+        </div>
+      </body>
+      </html>
+    `
+    
+    // Write content to the new window
+    printWindow.document.write(htmlContent)
+    printWindow.document.close()
+    
+    // Wait for content to load, then print
+    printWindow.onload = () => {
+      printWindow.print()
+      printWindow.close()
+    }
+    
+    $q.notify({
+      type: 'positive',
+      message: 'Cheques exported to PDF successfully!',
+      position: 'top',
+    })
+  } catch (error) {
+    console.error('Error exporting PDF:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to export PDF: ' + error.message,
+      position: 'top',
+    })
+  }
+}
+
+// Function to check if a cheque should be marked as stale based on disbursement status
+// const shouldChequeBeStale = (cheque) => {
+//   // If the cheque is already stale, void, or cancelled, don't change it
+//   if (['stale', 'void', 'cancelled'].includes(cheque.status?.toLowerCase())) {
+//     return false
+//   }
+
+//   // Check if the associated disbursement is stale
+//   // This would need to be implemented based on your data structure
+//   // For now, we'll assume the cheque status should match the disbursement status
+//   return false // This will be implemented when we have the disbursement data
+// }
 </script>
 
 <style scoped>
