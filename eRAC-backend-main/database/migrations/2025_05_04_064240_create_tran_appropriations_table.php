@@ -15,7 +15,8 @@ return new class extends Migration
             $table->id();
            $table->foreignId('barangay_id')->constrained();
            $table->foreignId('budget_id')->nullable()->constrained();
-
+            
+            //$table->foreignId('cont_appropriation_id')->nullable()->constrained('cont_appropriations');
              // Expense hierarchy (class->type->item)
             $table->foreignId('expense_class_id')->nullable()->constrained('lib_expense_classes');
             $table->foreignId('expense_type_id')->nullable()->constrained('lib_expense_types');

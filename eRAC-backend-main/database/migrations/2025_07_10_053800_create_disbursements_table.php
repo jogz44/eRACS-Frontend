@@ -17,31 +17,26 @@ return new class extends Migration
             $table->unsignedBigInteger('barangay_id');
             $table->date('date');
             $table->string('dv_number');
+            $table->string('ref_dv_number')->nullable();
             $table->string('cheque_number');
             $table->unsignedBigInteger('bank_id');
             $table->string('payee');
             $table->decimal('dv_amount', 15, 2);
             $table->decimal('liquidated_amount', 15, 2)->nullable();
             // For MySQL/Postgres enum works fine
-            $table->enum('status', ['Unliquidated', 'Liquidated', 'Partial', 'Void Requested', 'Voided'])->default('Unliquidated');
+            $table->enum('status', ['Unliquidated', 'Partial', 'Liquidated', 'Void Requested', 'Voided', 'Stale'])->default('Unliquidated');
+            $table->boolean('is_continuing')->default(false);
+            $table->unsignedBigInteger('user_id')->nullable();
             $table->timestamp('liquidated_at')->nullable();
             $table->text('remarks')->nullable();
             $table->text('rejection_remarks')->nullable();
             $table->timestamps();
-
+            
+            $table->foreign('user_id')->references('id')->on('barangay_users')->onDelete('set null');
             $table->foreign('barangay_id')->references('id')->on('barangays')->onDelete('cascade');
             $table->foreign('bank_id')->references('id')->on('lib_banks')->onDelete('NO ACTION');
         });
 
-        // Handle SQL Server CHECK constraint separately
-        if (DB::getDriverName() === 'sqlsrv') {
-            // SQL Server does not support ENUM, so we enforce it via CHECK constraint
-            DB::statement("
-                ALTER TABLE disbursements 
-                ADD CONSTRAINT CK_disbursements_status 
-                CHECK (status IN ('Unliquidated', 'Liquidated', 'Partial', 'Void Requested', 'Voided'))
-            ");
-        }
     }
 
     /**
