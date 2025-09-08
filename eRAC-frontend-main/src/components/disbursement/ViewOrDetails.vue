@@ -166,6 +166,32 @@
       </q-card-section>
 
       <q-card-actions align="right" class="custom-actions">
+        <!-- Void Request Action Buttons (only for approvers) -->
+        <div v-if="isApprover && store.currentLiquidation?.status === 'Void Requested'" class="q-mr-auto void-action-buttons">
+          <div class="void-request-indicator">
+            <q-icon name="pending_actions" color="orange" size="20px" class="q-mr-sm" />
+            <span class="void-request-text">Void Request Pending</span>
+          </div>
+          <q-btn
+            unelevated
+            label="Approve Void"
+            color="green"
+            icon="check_circle"
+            @click="handleApproveVoid"
+            :loading="voidActionLoading"
+            class="void-approve-btn"
+          />
+          <q-btn
+            unelevated
+            label="Reject Void"
+            color="red"
+            icon="cancel"
+            @click="handleRejectVoid"
+            :loading="voidActionLoading"
+            class="void-reject-btn"
+          />
+        </div>
+        
         <q-btn
           flat
           label="Close"
@@ -180,11 +206,14 @@
 <script setup>
 import { computed, watch, ref } from 'vue'
 import { useDisbursementStore } from 'stores/disbursementStore'
+import { useAuthStore } from 'stores/auth'
 import { useQuasar } from 'quasar'
 
 const store = useDisbursementStore()
+const authStore = useAuthStore()
 const $q = useQuasar()
 const loadingOrDetails = ref(false)
+const voidActionLoading = ref(false)
 
 // Table columns for Expense Accounts - matching the image structure
 const expenseAccountColumns = [
@@ -313,6 +342,15 @@ const expenseCount = computed(() => {
   return store.currentLiquidation?.expenses?.length || 0
 })
 
+// Check if user is an approver (Captain/SK Chairperson)
+const isApprover = computed(() => {
+  const userPosition = authStore.user?.position_name?.toLowerCase().trim() || ''
+  return userPosition.includes('captain') || 
+         userPosition.includes('chairperson') || 
+         userPosition.includes('barangay captain') || 
+         userPosition.includes('sk chairperson')
+})
+
 // Method to manually reload OR details if needed
 const reloadOrDetails = async () => {
   if (store.currentLiquidation?.id) {
@@ -336,6 +374,78 @@ const formatCurrency = (value) => {
   const num = Number(String(value).replace(/[,\s]/g, '')) || 0
   return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
+
+// Handle void approval
+const handleApproveVoid = async () => {
+  if (!store.currentLiquidation?.id) return
+  
+  voidActionLoading.value = true
+  try {
+    await store.approveVoidRequest(store.currentLiquidation.id)
+    $q.notify({
+      type: 'positive',
+      message: 'Void request approved successfully!',
+      icon: 'check_circle',
+      position: 'top',
+      timeout: 3000,
+    })
+    // Close the dialog after successful approval
+    store.closeDialog('viewOrDetails')
+  } catch (error) {
+    console.error('Error approving void request:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to approve void request',
+      icon: 'error',
+      position: 'top',
+      timeout: 5000,
+    })
+  } finally {
+    voidActionLoading.value = false
+  }
+}
+
+// Handle void rejection
+const handleRejectVoid = () => {
+  if (!store.currentLiquidation?.id) return
+  
+  $q.dialog({
+    title: 'Reject Void Request',
+    message: 'Please provide rejection remarks:',
+    prompt: {
+      model: '',
+      type: 'textarea',
+      isValid: (val) => val && val.trim() !== '',
+    },
+    cancel: true,
+    persistent: true,
+  }).onOk(async (remarks) => {
+    voidActionLoading.value = true
+    try {
+      await store.rejectVoidRequest(store.currentLiquidation.id, remarks?.trim?.() || '')
+      $q.notify({
+        type: 'positive',
+        message: 'Void request rejected successfully!',
+        icon: 'check_circle',
+        position: 'top',
+        timeout: 3000,
+      })
+      // Close the dialog after successful rejection
+      store.closeDialog('viewOrDetails')
+    } catch (error) {
+      console.error('Error rejecting void request:', error)
+      $q.notify({
+        type: 'negative',
+        message: error.message || 'Failed to reject void request',
+        icon: 'error',
+        position: 'top',
+        timeout: 5000,
+      })
+    } finally {
+      voidActionLoading.value = false
+    }
+  })
+}
 </script>
 
 <style scoped>
@@ -358,6 +468,81 @@ const formatCurrency = (value) => {
   color: #666;
 }
 
+/* Void action buttons styling */
+.void-action-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  margin-right: 16px;
+}
+
+.void-approve-btn {
+  font-weight: 600;
+  text-transform: none;
+  padding: 8px 16px;
+  min-width: 120px;
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
+  transition: all 0.2s ease;
+}
+
+.void-approve-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+}
+
+.void-reject-btn {
+  font-weight: 600;
+  text-transform: none;
+  padding: 8px 16px;
+  min-width: 120px;
+  box-shadow: 0 2px 4px rgba(244, 67, 54, 0.2);
+  transition: all 0.2s ease;
+}
+
+.void-reject-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
+}
+
+.void-action-buttons .q-btn {
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+
+.void-request-indicator {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-weight: 500;
+  color: #856404;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(255, 193, 7, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+  }
+}
+
+.void-request-text {
+  font-size: 14px;
+  font-weight: 600;
+}
+
 /* Responsive design for mobile */
 @media (max-width: 768px) {
   .q-card {
@@ -366,6 +551,39 @@ const formatCurrency = (value) => {
 
   .q-table {
     font-size: 12px;
+  }
+
+  .void-action-buttons {
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    margin-right: 0;
+    margin-bottom: 16px;
+  }
+
+  .void-request-indicator {
+    margin-bottom: 8px;
+    padding: 6px 10px;
+  }
+
+  .void-request-text {
+    font-size: 13px;
+  }
+
+  .void-approve-btn,
+  .void-reject-btn {
+    min-width: 100%;
+    width: 100%;
+  }
+
+  .custom-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .custom-actions .q-mr-auto {
+    margin-right: 0 !important;
+    margin-bottom: 16px;
   }
 }
 </style>
