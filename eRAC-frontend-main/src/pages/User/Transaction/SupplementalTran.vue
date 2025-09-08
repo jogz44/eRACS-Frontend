@@ -102,6 +102,26 @@
           <!-- Flexible spacer -->
           <div class="col"></div>
 
+          <!-- Selected Count Indicator and Proceed Transfer Button -->
+          <div class="col-auto">
+            <div class="row items-center q-gutter-sm">
+              <!-- Selected Count Indicator -->
+              <div v-if="selectedExpenses.length > 0" class="text-caption text-grey-7">
+                {{ selectedExpenses.length }} selected
+              </div>
+              
+              <!-- Proceed Transfer Button -->
+              <q-btn
+                dense
+                color="primary"
+                icon="swap_horiz"
+                label="Proceed Transfer"
+                @click="openCreateDialog"
+                :disable="selectedExpenses.length === 0"
+              />
+            </div>
+          </div>
+
           <!-- Create Supplemental Budget Button -->
           <!-- <div class="col-auto">
             <q-btn
@@ -276,58 +296,6 @@
 
         </q-tab-panel>
       </q-tab-panels>
-        <div v-if="selectedExpenses.length > 0" class="q-mt-md">
-        <q-card flat bordered class="bg-blue-1">
-          <q-card-section>
-            <div class="text-subtitle2 text-weight-medium q-mb-md">
-              Create Supplemental Budget
-            </div>
-
-            <!-- Summary -->
-            <div class="row q-col-gutter-md q-mb-md">
-              <div class="col-6">
-                <div class="text-caption text-grey-7">Selected Expenses:</div>
-                <div class="text-weight-medium">{{ selectedExpenses.length }}</div>
-              </div>
-              <div class="col-6">
-                <div class="text-caption text-grey-7">Total Amount:</div>
-                <div class="text-weight-medium text-green">
-                  {{ supplementalBudgetStore.formatCurrency(selectedExpenses.reduce((sum, exp) => sum + (exp.amount_to_use || 0), 0)) }}
-                </div>
-              </div>
-            </div>
-
-            <!-- Description Input -->
-            <q-input
-              outlined
-              v-model="supplementalDescription"
-              label="Supplemental Budget Description"
-              type="text"
-              placeholder="e.g., Supplemental Budget for Emergency Expenses"
-              hint="Describe the purpose of this supplemental budget"
-              class="q-mb-md"
-            />
-
-            <!-- Action Buttons -->
-            <div class="row justify-end q-gutter-sm">
-              <q-btn
-                flat
-                label="Clear Selection"
-                @click="clearSelection"
-                color="grey-7"
-              />
-              <q-btn
-                label="Create Supplemental Budget"
-                color="primary"
-                @click="handleCreateClick"
-                :disable="selectedExpenses.length === 0 || !supplementalDescription"
-                :loading="loading"
-                icon="add"
-              />
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
     </q-card>
 
     <!-- View Dialog -->
@@ -434,6 +402,62 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <!-- Create Supplemental Budget Dialog -->
+    <q-dialog v-model="showCreateDialog">
+      <q-card style="min-width: 600px; max-width: 90vw">
+        <q-card-section class="q-pb-none">
+          <div class="row items-center justify-between">
+            <div class="text-h6">Create Supplemental Budget</div>
+            <q-btn icon="close" flat round dense @click="showCreateDialog = false" />
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <!-- Summary -->
+          <div class="row q-col-gutter-md q-mb-md">
+            <div class="col-6">
+              <div class="text-caption text-grey-7">Selected Expenses:</div>
+              <div class="text-weight-medium">{{ selectedExpenses.length }}</div>
+            </div>
+            <div class="col-6">
+              <div class="text-caption text-grey-7">Total Amount:</div>
+              <div class="text-weight-medium text-green">
+                {{ supplementalBudgetStore.formatCurrency(selectedExpenses.reduce((sum, exp) => sum + (exp.amount_to_use || 0), 0)) }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Description Input -->
+          <q-input
+            outlined
+            v-model="supplementalDescription"
+            label="Supplemental Budget Description"
+            type="text"
+            placeholder="e.g., Supplemental Budget for Emergency Expenses"
+            hint="Describe the purpose of this supplemental budget"
+            class="q-mb-md"
+          />
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn
+            flat
+            label="Clear Selection"
+            @click="clearSelection"
+            color="grey-7"
+          />
+          <q-btn
+            label="Create Supplemental Budget"
+            color="primary"
+            @click="handleCreateClick"
+            :disable="selectedExpenses.length === 0 || !supplementalDescription"
+            :loading="loading"
+            icon="add"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -449,6 +473,7 @@ const { logPageVisit } = usePageLogging()
 
 const loading = ref(false)
 const showViewDialog = ref(false)
+const showCreateDialog = ref(false)
 const searchQuery = ref('')
 const selectedYear = ref(new Date().getFullYear())
 const activeTab = ref('unused')
@@ -675,6 +700,19 @@ const clearSelection = () => {
   supplementalDescription.value = ''
 }
 
+const openCreateDialog = () => {
+  if (selectedExpenses.value.length === 0) {
+    $q.notify({
+      type: 'info',
+      message: 'Please select expenses from the table above to create a supplemental budget',
+      icon: 'info',
+      position: 'top',
+    })
+    return
+  }
+  showCreateDialog.value = true
+}
+
 // const scrollToSelection = () => {
 //   if (selectedExpenses.value.length === 0) {
 //     $q.notify({
@@ -805,6 +843,9 @@ const createSupplementalBudget = async () => {
       // Clear form data
       clearSelection()
 
+      // Close dialog
+      showCreateDialog.value = false
+
       // Additional refresh to ensure UI is updated
       console.log('Performing additional data refresh...')
       await loadData()
@@ -866,6 +907,15 @@ onMounted(async () => {
 
 // Watch for dialog close to clear selections
 watch(showViewDialog, (newValue) => {
+  if (!newValue) {
+    // Dialog was closed, clear selections
+    selectedExpenses.value = []
+    supplementalDescription.value = ''
+  }
+})
+
+// Watch for create dialog close to clear selections
+watch(showCreateDialog, (newValue) => {
   if (!newValue) {
     // Dialog was closed, clear selections
     selectedExpenses.value = []

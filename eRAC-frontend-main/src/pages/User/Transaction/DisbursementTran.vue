@@ -28,13 +28,6 @@
               @update:model-value="handleStatusChange" />
           </div>
 
-          <!-- Budget Source Filter -->
-          <div class="col-md-2 col-sm-6 col-xs-12">
-            <q-item-label class="q-mb-xs text-weight-medium">Budget Source:</q-item-label>
-            <q-select outlined dense v-model="selectedBudgetSource" :options="budgetSourceOptions" option-label="label"
-              option-value="value" emit-value map-options :label="currentBudgetSourceLabel"
-              @update:model-value="handleBudgetSourceChange" />
-          </div>
 
           <!-- Search Input -->
           <div class="col-md-2 col-sm-6 col-xs-12">
@@ -95,14 +88,6 @@
 
           <q-card-section>
             <div class="row q-col-gutter-md">
-              <!-- Budget Source Selection -->
-              <div class="col-md-4 col-sm-12">
-                <q-item-label class="q-mb-xs">Budget Source:</q-item-label>
-                <q-select outlined dense v-model="selectedBudgetSource" :options="budgetSourceOptions"
-                  option-label="label" option-value="value" emit-value map-options :label="currentBudgetSourceLabel"
-                  @update:model-value="handleBudgetSourceChange" @keydown.enter="handleEnterKey" />
-              </div>
-
               <!-- Date Field -->
               <div class="col-md-4 col-sm-6">
                 <q-item-label class="q-mb-xs">Date:</q-item-label>
@@ -201,12 +186,6 @@
 
             <q-table :rows="store.filteredExpenseAccounts" :columns="store.expenseAccountColumns" row-key="id"
               :loading="store.loading || store.expenseTypeLoading" :filter="store.expenseSearch" flat bordered>
-              <template v-slot:body-cell-budget_source="props">
-                <q-td :props="props">
-                  <q-badge :color="getBudgetSourceColor(props.row.budget_source)"
-                    :label="getBudgetSourceLabel(props.row.budget_source)" class="budget-source-badge" />
-                </q-td>
-              </template>
               <template v-slot:body-cell-action="props">
                 <q-td :props="props">
                   <q-btn dense label="Select" color="primary" @click="store.openExpenseDetail(props.row)" />
@@ -408,13 +387,6 @@ const store = useDisbursementStore()
 const bankStore = useBankStore()
 const authStore = useAuthStore()
 
-// Budget source selection
-const selectedBudgetSource = ref('all')
-const budgetSourceOptions = [
-  { label: 'All Budgets', value: 'all' },
-  { label: 'Annual Budget Only', value: 'annual' },
-  { label: 'Supplemental Budget Only', value: 'supplemental' },
-]
 
 // Status filtering
 const selectedStatus = ref(null)
@@ -519,7 +491,6 @@ function canVoid(row) {
 // Clear all filters
 const clearAllFilters = () => {
   selectedStatus.value = null
-  selectedBudgetSource.value = 'all'
   searchQuery.value = ''
   dateRange.value = null
   store.searchQuery = ''
@@ -703,6 +674,7 @@ onMounted(async () => {
   // Refresh expense accounts with updated balances
   store.refreshExpenseAccountsWithBalances()
 
+
   // Log page visit
   const { logPageVisit } = usePageLogging()
   await logPageVisit('Current Disbursement')
@@ -718,14 +690,6 @@ watch(
   },
 )
 
-// Sync selected budget source with store and refresh expense accounts
-watch(selectedBudgetSource, async (newBudgetSource) => {
-  store.setBudgetSourceFilter(newBudgetSource)
-  // Refresh expense accounts when budget source changes
-  if (store.dialogs.expense) {
-    await store.refreshExpenseAccountsWithBalances()
-  }
-})
 
 const $q = useQuasar()
 const loading = ref(false)
@@ -733,7 +697,6 @@ const addingExpense = ref(false)
 const initialLoading = ref(true)
 const viewLoading = ref({})
 const liquidateLoading = ref({})
-// const checkingStaleStatus = ref(false)
 
 // Remarks dialog
 const remarksDialog = ref(false)
@@ -749,10 +712,6 @@ const currentBankLabel = computed(() => {
   return 'Select Bank'
 })
 
-const currentBudgetSourceLabel = computed(() => {
-  const option = budgetSourceOptions.find((opt) => opt.value === selectedBudgetSource.value)
-  return option ? option.label : 'Select Budget Source'
-})
 
 const currentStatusLabel = computed(() => {
   const option = statusOptions.find((opt) => opt.value === selectedStatus.value)
@@ -814,23 +773,6 @@ const handleBankSelection = async (bankId) => {
   }
 }
 
-const handleBudgetSourceChange = async (budgetSource) => {
-  if (budgetSource) {
-    try {
-      // Update the store to filter expense accounts based on budget source
-      await store.setBudgetSourceFilter(budgetSource)
-      // Refresh expense accounts with the new filter
-      await store.refreshExpenseAccountsWithBalances()
-    } catch (error) {
-      $q.notify({
-        type: 'negative',
-        message: `Failed to update budget source filter: ${error.message}`,
-        icon: 'error',
-        position: 'top',
-      })
-    }
-  }
-}
 
 const handleStatusChange = () => {
   // Status filtering is handled by the computed property
@@ -1060,24 +1002,6 @@ const handleLiquidateDisbursement = async (row) => {
   }
 }
 
-// Budget source helper functions
-const getBudgetSourceColor = (budgetSource) => {
-  if (budgetSource?.toLowerCase().includes('annual')) {
-    return 'primary'
-  } else if (budgetSource?.toLowerCase().includes('supplemental')) {
-    return 'secondary'
-  }
-  return 'grey'
-}
-
-const getBudgetSourceLabel = (budgetSource) => {
-  if (budgetSource?.toLowerCase().includes('annual')) {
-    return 'Annual'
-  } else if (budgetSource?.toLowerCase().includes('supplemental')) {
-    return 'Supplemental'
-  }
-  return 'Mixed'
-}
 
 // Handle manual stale status check
 // const handleCheckStaleStatus = async () => {
@@ -1131,6 +1055,7 @@ const closeRemarksDialog = () => {
   remarksDialog.value = false
   selectedRemarksData.value = null
 }
+
 </script>
 
 <style scoped>

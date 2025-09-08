@@ -72,6 +72,8 @@ export const useBankStore = defineStore('bank', {
               return 'cancelled'
             case 'void':
               return 'void'
+            case 'stale':
+              return 'stale'
             default:
               return 'ERROR'
           }
@@ -419,6 +421,9 @@ export const useBankStore = defineStore('bank', {
             : '-',
         }))
 
+        // Check for stale disbursements and update cheque status accordingly
+        await this.updateChequeStatusFromDisbursements(cheques)
+
         return {
           status: true,
           message: 'Success',
@@ -433,6 +438,50 @@ export const useBankStore = defineStore('bank', {
         throw error
       } finally {
         this.isLoading = false
+      }
+    },
+
+    // Helper method to update cheque status based on disbursement status
+    async updateChequeStatusFromDisbursements(cheques) {
+      try {
+        // Import disbursement store to check for stale disbursements
+        const { useDisbursementStore } = await import('./disbursementStore')
+        const disbursementStore = useDisbursementStore()
+        
+        // Get all disbursements
+        await disbursementStore.fetchDisbursements()
+        
+        // Update cheque status based on disbursement status and frontend cancelled cheques
+        cheques.forEach(cheque => {
+          const disbursement = disbursementStore.disbursements.find(d => d.chequeNumber === cheque.chequeNo)
+          
+          // Check if cheque is cancelled in frontend
+          if (disbursementStore.cancelledCheques.has(cheque.chequeNo)) {
+            cheque.status = 'cancelled'
+          }
+          // Check disbursement status
+          else if (disbursement) {
+            // If disbursement is stale, update cheque status to stale
+            if (disbursement.status === 'Stale') {
+              cheque.status = 'stale'
+            }
+            // If disbursement is liquidated, keep cheque as used
+            else if (disbursement.status === 'Liquidated') {
+              cheque.status = 'used'
+            }
+            // If disbursement is voided, update cheque status to void
+            else if (disbursement.status === 'Voided') {
+              cheque.status = 'void'
+            }
+            // If disbursement is cancelled, update cheque status to cancelled
+            else if (disbursement.status === 'Cancelled' || disbursement.is_cancelled) {
+              cheque.status = 'cancelled'
+            }
+          }
+        })
+      } catch (error) {
+        console.warn('Failed to update cheque status from disbursements:', error)
+        // Don't throw error, just log it and continue
       }
     },
 
@@ -457,6 +506,9 @@ export const useBankStore = defineStore('bank', {
           date: cheque.date || '',
           dvs: cheque.dvs || [],
         }))
+
+        // Check for stale disbursements and update cheque status accordingly
+        await this.updateChequeStatusFromDisbursements(cheques)
 
         // Optional: sort by cheque number
         cheques.sort((a, b) => a.chequeNo.localeCompare(b.chequeNo, undefined, { numeric: true }))

@@ -55,6 +55,9 @@ export const useDisbursementStore = defineStore('disbursement', {
     cancelBank: null,
     cancelpayee: null,
 
+    // Track cancelled cheques in frontend
+    cancelledCheques: new Set(), // Store cancelled cheque numbers
+
     // Current selections
     currentLiquidation: null,
     lockedTotalAmount: null, // Store the original DV amount for edit mode
@@ -492,7 +495,7 @@ export const useDisbursementStore = defineStore('disbursement', {
   },
 
   actions: {
-    
+
     getAuthConfig() {
       const authStore = useAuthStore()
 
@@ -866,6 +869,9 @@ export const useDisbursementStore = defineStore('disbursement', {
     async fetchDisbursements() {
       this.loadingDisbursements = true
       try {
+        // Load cancelled cheques from localStorage
+        this.loadCancelledCheques()
+
         const authStore = useAuthStore()
 
         // Use different endpoints and tokens for admin vs regular users
@@ -910,22 +916,33 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Derive selected barangay name for admin context as fallback
         const selectedBarangayName = authStore.admin ? (authStore.getSelectedBarangayName && authStore.getSelectedBarangayName()) : null
 
-        this.disbursements = (disbursementsResponse.data.data || []).map(d => ({
-          id: d.id,
-          date: d.date,
-          dvNumber: d.dv_number,
-          chequeNumber: d.cheque_number,
-          bank: d.bank_name,
-          payee: d.payee,
-          dvAmount: d.dv_amount,
-          status: d.status,
-          remarks: d.remarks,
-          rejection_remarks: d.rejection_remarks,
-          // Normalize barangay name across possible backend shapes; fallback to selected name for admin context
-          barangay_name: d.barangay_name || d.barangayName || (typeof d.barangay === 'string' ? d.barangay : (d.barangay?.name)) || selectedBarangayName || '',
-          aging: calculateAging(d.date),
-          expenses: d.expenses || [],
-        }))
+        this.disbursements = (disbursementsResponse.data.data || []).map(d => {
+          const disbursement = {
+            id: d.id,
+            date: d.date,
+            dvNumber: d.dv_number,
+            chequeNumber: d.cheque_number,
+            bank: d.bank_name,
+            payee: d.payee,
+            dvAmount: d.dv_amount,
+            status: d.status,
+            remarks: d.remarks,
+            rejection_remarks: d.rejection_remarks,
+            // Normalize barangay name across possible backend shapes; fallback to selected name for admin context
+            barangay_name: d.barangay_name || d.barangayName || (typeof d.barangay === 'string' ? d.barangay : (d.barangay?.name)) || selectedBarangayName || '',
+            aging: calculateAging(d.date),
+            expenses: d.expenses || [],
+          }
+
+          // Check if disbursement should be marked as stale based on aging
+          if (shouldBeStale(disbursement)) {
+            disbursement.status = 'Stale'
+            // Also update the associated cheque status to stale
+            this.updateChequeStatusToStale(disbursement.chequeNumber)
+          }
+
+          return disbursement
+        })
 
         // Only fetch expense details if we don't have any (for admin users, this is not essential)
         if (!this.expenseDetailsData.length && !authStore.admin) {
@@ -2537,6 +2554,230 @@ export const useDisbursementStore = defineStore('disbursement', {
           error: error.response?.data?.message || 'Failed to submit cancel cheque'
         }
       }
+    },
+
+    // Method to load cancelled cheques from localStorage
+    loadCancelledCheques() {
+      try {
+        const stored = localStorage.getItem('cancelledCheques')
+        if (stored) {
+          this.cancelledCheques = new Set(JSON.parse(stored))
+        }
+      } catch (error) {
+        console.warn('Failed to load cancelled cheques from localStorage:', error)
+        this.cancelledCheques = new Set()
+      }
+    },
+
+    // Method to get an available cheque number for a specific bank
+    async getAvailableCheque(bankId) {
+      try {
+        // Load cancelled cheques from localStorage
+        this.loadCancelledCheques()
+
+        const config = this.getAuthConfig()
+        const response = await api.get(`/api/barangay/banks/${bankId}/available-cheques`, config)
+
+        const data = response.data.data || []
+        if (data.cheque && data.cheque.length > 0) {
+          // Filter out cancelled cheques (both from backend status and frontend tracking)
+          const availableCheques = data.cheque.filter(cheque => {
+            const chequeNumber = cheque.cheque_number || cheque.chequeNo
+            const backendStatus = (cheque.status || '').toLowerCase()
+            const isFrontendCancelled = this.cancelledCheques.has(chequeNumber)
+
+            return backendStatus !== 'cancelled' && !isFrontendCancelled
+          })
+
+          if (availableCheques.length > 0) {
+            const availableCheque = availableCheques[0]
+            return {
+              success: true,
+              chequeNumber: availableCheque.cheque_number || availableCheque.chequeNo,
+              message: 'Available cheque found'
+            }
+          } else {
+            return {
+              success: false,
+              message: 'No available cheques found for this bank (all cheques are cancelled or used)'
+            }
+          }
+        } else {
+          return {
+            success: false,
+            message: 'No available cheques found for this bank'
+          }
+        }
+      } catch (error) {
+        console.error('Failed to get available cheque:', error)
+        return {
+          success: false,
+          message: error.response?.data?.message || 'Failed to get available cheque'
+        }
+      }
+    },
+
+    // Method to cancel a cheque and mark it as cancelled in the frontend
+    // async cancelCheque(disbursementId, chequeNumber) {
+    //   try {
+    //     // Add the cheque to the cancelled cheques set
+    //     this.cancelledCheques.add(chequeNumber)
+
+    //     // Store in localStorage for persistence across sessions
+    //     localStorage.setItem('cancelledCheques', JSON.stringify(Array.from(this.cancelledCheques)))
+
+    //     return {
+    //       success: true,
+    //       message: 'Cheque cancelled successfully'
+    //     }
+    //   } catch (error) {
+    //     console.error('Failed to cancel cheque:', error)
+    //     return {
+    //       success: false,
+    //       message: error.message || 'Failed to cancel cheque'
+    //     }
+    //   }
+    // },
+
+    // Method to update disbursement status to stale in the backend
+    async updateDisbursementToStale(disbursementId) {
+      try {
+        const authStore = useAuthStore()
+        const token = authStore.admin ? authStore.adminToken : authStore.token
+
+        const response = await api.patch(`/api/barangay/disbursements/${disbursementId}/mark-stale`, {}, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        })
+
+        if (response.data.status) {
+          // Update the local disbursement status
+          const disbursementIndex = this.disbursements.findIndex(d => d.id === disbursementId)
+          if (disbursementIndex !== -1) {
+            this.disbursements[disbursementIndex].status = 'Stale'
+          }
+
+          // Also update the associated cheque status to stale
+          try {
+            await this.updateChequeToStale(disbursementId)
+          } catch (chequeError) {
+            console.warn('Failed to update cheque status to stale:', chequeError)
+            // Don't fail the entire operation if cheque update fails
+          }
+
+          return { success: true, message: response.data.message }
+        } else {
+          return { success: false, message: response.data.message }
+        }
+      } catch (error) {
+        console.error('Failed to update disbursement to stale:', error)
+        return {
+          success: false,
+          message: error.response?.data?.message || 'Failed to update disbursement to stale'
+        }
+      }
+    },
+
+    // Method to update cheque status to stale (frontend only)
+    async updateChequeToStale(disbursementId) {
+      try {
+        // Find the disbursement to get the cheque number
+        const disbursement = this.disbursements.find(d => d.id === disbursementId)
+        if (!disbursement || !disbursement.chequeNumber) {
+          return { success: false, message: 'Disbursement or cheque number not found' }
+        }
+
+        // Update the cheque status in the bank store
+        this.updateChequeStatusToStale(disbursement.chequeNumber)
+
+        return { success: true, message: 'Cheque marked as stale' }
+      } catch (error) {
+        console.error('Failed to update cheque to stale:', error)
+        return {
+          success: false,
+          message: error.message || 'Failed to update cheque to stale'
+        }
+      }
+    },
+
+    // Helper method to update cheque status to stale in bank store
+    updateChequeStatusToStale(chequeNumber) {
+      try {
+        // Import bank store and update cheque status
+        import('./bankStore').then(({ useBankStore }) => {
+          const bankStore = useBankStore()
+
+          // Find the bank that contains this cheque and update its status
+          for (const bank of bankStore.banks) {
+            if (bank.cheques) {
+              const cheque = bank.cheques.find(c => c.chequeNo === chequeNumber)
+              if (cheque) {
+                cheque.status = 'stale'
+                break
+              }
+            }
+          }
+        }).catch(error => {
+          console.warn('Failed to update cheque status in bank store:', error)
+        })
+      } catch (error) {
+        console.warn('Failed to update cheque status:', error)
+      }
+    },
+
+    // Method to check and update stale disbursements
+    async checkAndUpdateStaleDisbursements() {
+      try {
+        const staleDisbursements = this.disbursements.filter(disbursement =>
+          shouldBeStale(disbursement) && disbursement.status !== 'Stale'
+        )
+
+        if (staleDisbursements.length === 0) {
+          return { success: true, message: 'No disbursements need to be marked as stale' }
+        }
+
+        // Update each stale disbursement and its cheque in the backend
+        const updatePromises = staleDisbursements.map(async disbursement => {
+          const disbursementResult = await this.updateDisbursementToStale(disbursement.id)
+          const chequeResult = await this.updateChequeToStale(disbursement.id)
+          return {
+            disbursement: disbursementResult,
+            cheque: chequeResult,
+            success: disbursementResult.success && chequeResult.success
+          }
+        })
+
+        const results = await Promise.allSettled(updatePromises)
+        const successful = results.filter(result => result.status === 'fulfilled' && result.value.success).length
+        const failed = results.filter(result => result.status === 'rejected' || !result.value.success).length
+
+        // Refresh bank data to reflect cheque status changes
+        if (successful > 0) {
+          try {
+            const { useBankStore } = await import('./bankStore')
+            const bankStore = useBankStore()
+            await bankStore.fetchBanks()
+          } catch (bankError) {
+            console.warn('Failed to refresh bank data after stale update:', bankError)
+            // Don't fail the entire operation if bank refresh fails
+          }
+        }
+
+        return {
+          success: true,
+          message: `Updated ${successful} disbursements and their cheques to stale status. ${failed} failed.`,
+          updated: successful,
+          failed: failed
+        }
+      } catch (error) {
+        console.error('Failed to check and update stale disbursements:', error)
+        return {
+          success: false,
+          message: error.message || 'Failed to check and update stale disbursements'
+        }
+      }
     }
   }
 })
@@ -2558,4 +2799,36 @@ function calculateAging(dateString) {
   const diffTime = today - disbDate;
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   return `${diffDays} days`;
+}
+
+function calculateAgingDays(dateString) {
+  // Helper function to get just the number of days for stale checking
+  if (!dateString) return 0;
+  const parts = dateString.includes('-') ? dateString.split('-') : dateString.split('/');
+  let yyyy, mm, dd;
+  if (parts[0].length === 4) {
+    // 'YYYY-MM-DD'
+    [yyyy, mm, dd] = parts;
+  } else {
+    // 'DD/MM/YYYY'
+    [dd, mm, yyyy] = parts;
+  }
+  const disbDate = new Date(`${yyyy}-${mm}-${dd}`);
+  const today = new Date();
+  const diffTime = today - disbDate;
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+}
+
+function shouldBeStale(disbursement) {
+  // Check if disbursement should be marked as stale based on aging
+  if (!disbursement.date) return false;
+
+  // Don't mark as stale if already liquidated, voided, or already stale
+  if (['Liquidated', 'Voided', 'Stale'].includes(disbursement.status)) {
+    return false;
+  }
+
+  const agingDays = calculateAgingDays(disbursement.date);
+  return agingDays >= 180;
 }
