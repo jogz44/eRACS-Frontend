@@ -14,6 +14,7 @@ return new class extends Migration
             $table->date('or_date')->nullable();
             $table->string('or_number')->nullable();
             $table->decimal('or_amount', 15, 2)->nullable();
+            $table->decimal('ref_or_amount', 15, 2)->nullable();
             $table->string('or_photo')->nullable(); // file path or URL
             $table->text('remarks')->nullable();
             $table->timestamps();
