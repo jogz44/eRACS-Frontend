@@ -11,6 +11,7 @@ use App\Http\Controllers\Transaction\AppropriationController;
 use App\Http\Controllers\Transaction\ContinuingAppropriationController;
 use App\Http\Controllers\ContinuingDisbursementController;
 use App\Http\Controllers\BudgetAugmentationController;
+use App\Http\Controllers\AdminReviewController;
 use App\Http\Middleware\AuthTokenValid;
 use App\Models\Barangay;
 use App\Models\BarangayPosition;
@@ -242,6 +243,12 @@ Route::prefix('admin')->group(function () {
         Route::get('/augmentations', [BudgetAugmentationController::class, 'adminIndex']);
         // Admin can view individual augmentation
         Route::get('/augmentations/{id}', [BudgetAugmentationController::class, 'show']);
+
+        // Admin review endpoints
+        Route::post('/reviews', [AdminReviewController::class, 'store']);
+        Route::get('/reviews/check', [AdminReviewController::class, 'checkReview']);
+        Route::get('/reviews', [AdminReviewController::class, 'getReviews']);
+        Route::post('/reviews/bulk', [AdminReviewController::class, 'getBulkReviews']);
     });
 
     // Dashboard Routes updated

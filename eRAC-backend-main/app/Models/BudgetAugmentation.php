@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class BudgetAugmentation extends Model
 {
@@ -48,5 +49,8 @@ class BudgetAugmentation extends Model
         return $query->where('barangay_id', $barangayId);
     }
 
-
+    public function adminReviews(): MorphMany
+    {
+        return $this->morphMany(AdminReview::class, 'reviewable');
+    }
 } 

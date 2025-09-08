@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class TranAppropriation extends Model
 {
@@ -63,5 +64,10 @@ class TranAppropriation extends Model
     public function continuing()
     {
         return $this->hasMany(ContApproAccounts::class, 'contAppropriation_id');
+    }
+
+    public function adminReviews(): MorphMany
+    {
+        return $this->morphMany(AdminReview::class, 'reviewable');
     }
 }

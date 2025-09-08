@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Disbursement extends Model
 {
@@ -51,5 +52,10 @@ class Disbursement extends Model
     public function cheque()
     {
         return $this->hasOne(LibCheque::class, 'disbursement_id');
+    }
+
+    public function adminReviews(): MorphMany
+    {
+        return $this->morphMany(AdminReview::class, 'reviewable');
     }
 }
