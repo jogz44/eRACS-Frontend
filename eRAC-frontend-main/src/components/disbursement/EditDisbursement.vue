@@ -79,15 +79,15 @@
               
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Bank:</q-item-label>
-                <q-select filled outlined dense v-model="newBank" :options="bankStore.availableBanks"
-                  option-label="name" option-value="id" emit-value map-options @update:model-value="handleBankSelection"
+                <q-select filled outlined dense v-model="store.cancelBank" :options="store.cancelBanks"
+                  option-label="name" option-value="id" emit-value map-options label="Select Bank" 
                   />
               </div>
 
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Cheque Number:</q-item-label>
 
-                <q-input outlined dense v-model="newChequeNumber" :disable="true"
+                <q-input outlined dense v-model="store.cancelChequed" :disable="true"
                   ></q-input>
               </div>
 
@@ -202,7 +202,7 @@
 <script setup>
 import { useDisbursementStore } from 'stores/disbursementStore'
 import { useBankStore } from 'stores/bankStore'
-import { onMounted, computed, ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 
 const store = useDisbursementStore()
@@ -213,20 +213,11 @@ const saving = ref(false)
 const showCancelDialog = ref(false)
 const showConfirmDialog = ref(false)
 
-const newBank = ref("Select Bank");
-
-// if newBank changes, update cheque number
-const newChequeNumber = computed(() => {
-  const selectedBank = bankStore.banks.find(b => b.id === newBank.value)
-  return selectedBank ? store.autoCheque : ''
-});
-
-
-
 // Example bank list (replace with your data)
 
 onMounted(async () => {
   await bankStore.fetchBanks()
+  await store.cancelCheque()
 })
 
 
@@ -419,21 +410,6 @@ function confirmCancel () {
   showCancelDialog.value = false
 
   // Handle the cancel cheque action here
-}
-
-const handleBankSelection = async (bankId) => {
-  if (bankId) {
-    try {
-      await store.selectBank(bankId)
-    } catch (error) {
-      $q.notify({
-        type: 'negative',
-        message: `Failed to load booklets for selected bank: ${error.message}`,
-        icon: 'error',
-        position: 'top',
-      })
-    }
-  }
 }
 
 // Watch for changes in the expense detail dialog
