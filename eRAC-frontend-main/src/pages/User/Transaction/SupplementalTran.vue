@@ -109,7 +109,7 @@
               <div v-if="selectedExpenses.length > 0" class="text-caption text-grey-7">
                 {{ selectedExpenses.length }} selected
               </div>
-              
+
               <!-- Proceed Transfer Button -->
               <q-btn
                 dense
