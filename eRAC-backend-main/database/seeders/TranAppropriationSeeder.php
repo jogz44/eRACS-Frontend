@@ -31,6 +31,8 @@ class TranAppropriationSeeder extends Seeder
             }
 
             foreach ($budgets as $budget) {
+                
+                $yearBudget = (int)LibFiscalYear::where('id', $budget->fiscal_year_id)->value('year');
                 $remaining = $budget->original_amount;
                 $totalAllocated = 0;
 
@@ -46,12 +48,25 @@ class TranAppropriationSeeder extends Seeder
                         continue;
                     }
 
+                    if($yearBudget!=2025){
+                        // filter where if order is not 0,4,5, it continue
+                        if(!$expenseClass->where('order', 0)->orWhere('order', 4)->first()){
+                            continue;
+                        }
+                    }
+
                     $expenseTypes = LibExpenseType::where('expense_class_id', $expenseClass->id)
                         ->inRandomOrder()
                         ->take(6)
                         ->get();
                     foreach ($expenseTypes as $expenseType) {
                         
+                        if($yearBudget!=2025){
+                            if(!$expenseType->where('name', 'like', '%Capital%')->first()){
+                                continue;
+                            }
+                        }
+
                         if($remaining <= 0) {
                             \Log::info("Budget {$budget->id} fully allocated.");
                             continue 2; // exit both loops
