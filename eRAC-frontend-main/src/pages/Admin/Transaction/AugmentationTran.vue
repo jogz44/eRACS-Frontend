@@ -71,10 +71,10 @@ const loadPendingUsers = async () => {
 
 onMounted(async () => {
   try {
-    
     // For admin users, only fetch augmentations (view-only)
     // fetchAvailableBudgets is only needed for creating augmentations, which admins don't do
     await store.fetchAugmentations()
+    
     // Log page visit
     await logPageVisit('Current Augmentation')
   } catch (error) {

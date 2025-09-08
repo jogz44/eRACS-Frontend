@@ -56,13 +56,17 @@
             :label="isReviewed(props.row.id) ? 'Reviewed' : 'Review'"
             :color="isReviewed(props.row.id) ? 'positive' : 'primary'"
             :outline="!isReviewed(props.row.id)"
-            :disable="false"
+            :disable="isLoadingReview(props.row.id)"
+            :loading="isLoadingReview(props.row.id)"
             :unelevated="!isReviewed(props.row.id)"
             rounded
             @click="isReviewed(props.row.id) ? showRemarksDialog(props.row.id) : handleReviewClick(props.row)"
           >
             <q-tooltip v-if="isReviewed(props.row.id)" class="bg-grey-8">
               Click to view admin remarks
+            </q-tooltip>
+            <q-tooltip v-else-if="isLoadingReview(props.row.id)" class="bg-grey-8">
+              Loading review status...
             </q-tooltip>
           </q-btn>
         </q-td>
@@ -112,9 +116,10 @@
 <script setup>
 import { useAugmentationStore } from 'stores/augmentation'
 import { useAuthStore } from 'stores/auth'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useActivityLogging } from 'src/composables/useActivityLogging'
 import { useQuasar } from 'quasar'
+import { api } from 'boot/axios'
 
 // // Define props
 // const props = defineProps({
@@ -132,9 +137,52 @@ const authStore = useAuthStore()
 const isAdminUser = computed(() => authStore.admin)
 const reviewedSet = ref(new Set())
 const augmentationRemarks = ref(new Map()) // store remarks per augmentation id
+const loadingReviews = ref(new Set()) // Track which items are loading reviews
+
 const isReviewed = (id) => reviewedSet.value.has(id)
 const getRemarks = (id) => augmentationRemarks.value.get(id) || ''
+const isLoadingReview = (id) => loadingReviews.value.has(id)
 const { logAdminActivity } = useActivityLogging()
+
+// Load existing reviews for augmentations
+const loadAugmentationReviews = async () => {
+  try {
+    const items = store.filteredAugmentations.map(item => ({
+      reviewable_type: 'App\\Models\\BudgetAugmentation',
+      reviewable_id: item.id
+    }))
+    
+    if (items.length === 0) return
+    
+    // Mark all items as loading
+    items.forEach(item => loadingReviews.value.add(item.reviewable_id))
+    
+    const response = await api.post('/api/admin/reviews/bulk', { items }, {
+      headers: {
+        Authorization: `Bearer ${authStore.adminToken}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+    })
+    
+    if (response.data.success) {
+      response.data.data.forEach(review => {
+        if (review.is_reviewed && review.review) {
+          reviewedSet.value.add(review.reviewable_id)
+          augmentationRemarks.value.set(review.reviewable_id, review.review.remarks)
+        }
+        // Remove from loading set
+        loadingReviews.value.delete(review.reviewable_id)
+      })
+    }
+  } catch (error) {
+    console.error('Failed to load augmentation reviews:', error)
+    // Clear loading state on error
+    store.filteredAugmentations.forEach(item => {
+      loadingReviews.value.delete(item.id)
+    })
+  }
+}
 
 // Review dialog state
 const showReviewDialog = ref(false)
@@ -147,7 +195,7 @@ const handleReviewClick = (row) => {
   showReviewDialog.value = true
 }
 
-const confirmReview = () => {
+const confirmReview = async () => {
   if (!adminRemarks.value.trim()) {
     $q.notify({
       type: 'negative',
@@ -159,15 +207,44 @@ const confirmReview = () => {
   }
 
   if (currentReviewRow.value) {
-    reviewedSet.value.add(currentReviewRow.value.id)
-    augmentationRemarks.value.set(currentReviewRow.value.id, adminRemarks.value)
-    logAdminActivity('Reviewed Item', `Admin reviewed Augmentation Ref ${currentReviewRow.value.ref_number || currentReviewRow.value.refNo || ''} (Barangay: ${currentReviewRow.value.barangay_name || 'Unknown Barangay'}) - Remarks: ${adminRemarks.value}`)
-    $q.notify({
-      type: 'positive',
-      message: 'Augmentation marked as reviewed successfully!',
-      icon: 'check_circle',
-      position: 'top',
-    })
+    try {
+      const response = await api.post('/api/admin/reviews', {
+        reviewable_type: 'App\\Models\\BudgetAugmentation',
+        reviewable_id: currentReviewRow.value.id,
+        remarks: adminRemarks.value
+      }, {
+        headers: {
+          Authorization: `Bearer ${authStore.adminToken}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      })
+
+      if (response.data.success) {
+        reviewedSet.value.add(currentReviewRow.value.id)
+        augmentationRemarks.value.set(currentReviewRow.value.id, adminRemarks.value)
+        
+        logAdminActivity('Reviewed Item', `Admin reviewed Augmentation Ref ${currentReviewRow.value.ref_number || currentReviewRow.value.refNo || ''} (Barangay: ${currentReviewRow.value.barangay_name || 'Unknown Barangay'}) - Remarks: ${adminRemarks.value}`)
+        
+        $q.notify({
+          type: 'positive',
+          message: 'Augmentation marked as reviewed successfully!',
+          icon: 'check_circle',
+          position: 'top',
+        })
+      } else {
+        throw new Error(response.data.message || 'Failed to save review')
+      }
+    } catch (error) {
+      console.error('Failed to save review:', error)
+      $q.notify({
+        type: 'negative',
+        message: error.response?.data?.message || 'Failed to save review',
+        icon: 'error',
+        position: 'top',
+      })
+      return
+    }
   }
 
   showReviewDialog.value = false
@@ -281,6 +358,20 @@ const deleteAugmentation = (row) => {
     }
   })
 }
+
+// Watch for augmentations data to be available and load reviews immediately
+watch(
+  () => store.filteredAugmentations,
+  async (newAugmentations) => {
+    if (isAdminUser.value && newAugmentations && newAugmentations.length > 0) {
+      // Only load if we haven't loaded reviews yet (prevent double loading)
+      if (reviewedSet.value.size === 0 && loadingReviews.value.size === 0) {
+        await loadAugmentationReviews()
+      }
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>
