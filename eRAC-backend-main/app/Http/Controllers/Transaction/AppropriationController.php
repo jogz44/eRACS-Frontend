@@ -1507,9 +1507,12 @@ class AppropriationController extends Controller
             'barangay_id' => 'nullable|exists:barangays,id'
         ]);
 
-        // Get base query for appropriations
+        // Get base query for appropriations - exclude supplemental budget appropriations
         $query = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem', 'budget.fiscalYear'])
-            ->where('status', 'committed');
+            ->where('status', 'committed')
+            ->whereDoesntHave('budget', function($q) {
+                $q->where('description', 'like', '%supplemental%');
+            });
 
         // Filter by barangay
         if ($request->barangay_id) {
@@ -1529,6 +1532,14 @@ class AppropriationController extends Controller
         }
 
         $appropriations = $query->get();
+        
+        \Log::info('Filtered appropriations for unused expenses calculation:', [
+            'total_appropriations' => $appropriations->count(),
+            'appropriation_ids' => $appropriations->pluck('id')->toArray(),
+            'budget_descriptions' => $appropriations->map(function($appr) {
+                return $appr->budget ? $appr->budget->description : 'No Budget';
+            })->unique()->values()->toArray()
+        ]);
 
         // Group by expense hierarchy and calculate unused amounts
         $groupedExpenses = [];
@@ -1560,7 +1571,7 @@ class AppropriationController extends Controller
                            $appr->expense_item_id === $appropriation->expense_item_id;
                 });
 
-                // Calculate total appropriated amount
+                // Calculate total appropriated amount (current sum of appropriation amounts)
                 $totalAppropriated = $matchingAppropriations->sum('amount');
                 
                 // Calculate total disbursed amount from expense details
@@ -1569,7 +1580,8 @@ class AppropriationController extends Controller
                     $totalDisbursed += $appr->details()->sum('amount');
                 }
 
-                // Calculate unused amount (remaining amount in appropriations)
+                // Calculate unused amount (current appropriation amount minus disbursed)
+                // This correctly reflects the current state after any supplemental budget transfers
                 $unusedAmount = $totalAppropriated - $totalDisbursed;
 
                 \Log::info('Calculating unused amount for expense:', [
@@ -1577,7 +1589,11 @@ class AppropriationController extends Controller
                     'total_appropriated' => $totalAppropriated,
                     'total_disbursed' => $totalDisbursed,
                     'unused_amount' => $unusedAmount,
-                    'appropriation_ids' => $matchingAppropriations->pluck('id')->toArray()
+                    'appropriation_ids' => $matchingAppropriations->pluck('id')->toArray(),
+                    'individual_amounts' => $matchingAppropriations->pluck('amount')->toArray(),
+                    'individual_disbursed' => $matchingAppropriations->map(function($appr) {
+                        return $appr->details()->sum('amount');
+                    })->toArray()
                 ]);
 
                 // Only include if there's unused amount
@@ -1698,8 +1714,22 @@ class AppropriationController extends Controller
                     throw new \Exception('Insufficient amount in source appropriation. Available: ' . $sourceAppropriation->amount . ', Requested: ' . $source['amount']);
                 }
 
+                // Log before reduction
+                \Log::info('Before reducing source appropriation:', [
+                    'source_id' => $sourceAppropriation->id,
+                    'current_amount' => $sourceAppropriation->amount,
+                    'amount_to_reduce' => $source['amount'],
+                    'remaining_after' => $sourceAppropriation->amount - $source['amount']
+                ]);
+
                 // Reduce the source appropriation amount FIRST
                 $sourceAppropriation->decrement('amount', $source['amount']);
+                
+                // Log after reduction
+                \Log::info('After reducing source appropriation:', [
+                    'source_id' => $sourceAppropriation->id,
+                    'new_amount' => $sourceAppropriation->fresh()->amount
+                ]);
 
                 // Create new appropriation for supplemental budget - this will be unappropriated
                 $newAppropriation = TranAppropriation::create([

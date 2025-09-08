@@ -142,11 +142,24 @@ export const useSupplementalBudgetStore = defineStore('supplementalBudget', {
 
         console.log('Supplemental budget created successfully:', response.data)
 
-        // Refresh the supplemental budgets list
+        // Add a small delay to ensure backend transaction is committed
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        // Refresh both data sources in parallel to ensure consistency
         console.log('Refreshing data after creation...')
-        await this.fetchSupplementalBudgets()
-        await this.fetchAvailableUnusedExpenses()
-        console.log('Data refresh completed')
+        await Promise.all([
+          this.fetchSupplementalBudgets(),
+          this.fetchAvailableUnusedExpenses()
+        ])
+        
+        // Force reactive update by recalculating totals
+        this.totalSupplementalAmount = this.supplementalBudgets.reduce((sum, budget) => sum + (budget.total_amount || 0), 0)
+        this.totalUnusedAmount = this.availableUnusedExpenses.reduce((sum, expense) => sum + (expense.unused_amount || 0), 0)
+        
+        console.log('Data refresh completed - Unused expenses:', this.availableUnusedExpenses.length)
+        console.log('Total unused amount:', this.totalUnusedAmount)
+        console.log('Supplemental budgets:', this.supplementalBudgets.length)
+        console.log('Total supplemental amount:', this.totalSupplementalAmount)
 
         return response.data
       } catch (error) {

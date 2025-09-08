@@ -37,16 +37,16 @@
       <div class="col-md-6 col-sm-12">
         <q-card class="summary-card">
           <q-card-section class="text-center">
-          <div class="text-h6 text-secondary">Total Supplemental Budgets</div>
-          <div class="text-h5 text-weight-bold">
-            {{ supplementalBudgetStore.formatCurrency(supplementalBudgetStore.totalSupplementalAmount) }}
-          </div>
-          <div class="text-caption text-grey-6">
-            {{ supplementalBudgetStore.supplementalBudgets.length }} supplemental budget{{ supplementalBudgetStore.supplementalBudgets.length !== 1 ? 's' : '' }}
-          </div>
-          <div class="text-caption text-grey-6 q-mt-xs">
-            Funds transferred from unused expenses (unappropriated)
-          </div>
+            <div class="text-h6 text-secondary">Total Supplemental Budgets</div>
+            <div class="text-h5 text-weight-bold">
+              {{ supplementalBudgetStore.formatCurrency(supplementalBudgetStore.totalSupplementalAmount) }}
+            </div>
+            <div class="text-caption text-grey-6">
+              {{ supplementalBudgetStore.supplementalBudgets.length }} supplemental budget{{ supplementalBudgetStore.supplementalBudgets.length !== 1 ? 's' : '' }}
+            </div>
+            <div class="text-caption text-grey-6 q-mt-xs">
+              Funds transferred from unused expenses (unappropriated)
+            </div>
           </q-card-section>
         </q-card>
       </div>
@@ -103,146 +103,29 @@
           <div class="col"></div>
 
           <!-- Create Supplemental Budget Button -->
-          <div class="col-auto">
+          <!-- <div class="col-auto">
             <q-btn
               label="Create Supplemental Budget"
-              @click="openCreateDialog"
+              @click="scrollToSelection"
               color="primary"
               v-permission="'add'"
               :loading="loading"
               class="btn-match-input"
               icon="add"
+              :disable="selectedExpenses.length === 0"
             />
-          </div>
+          </div> -->
         </div>
       </q-card-section>
     </q-card>
 
-    <!-- Create Supplemental Budget Dialog -->
-    <q-dialog v-model="showCreateDialog" @keydown.enter="handleEnterKey">
-      <q-card style="min-width: 800px; max-width: 90vw">
-        <q-card-section class="q-pb-none">
-          <div class="text-h6">Create Supplemental Budget</div>
-          <div class="text-caption text-grey-7 q-mt-xs">
-            Transfer unused expenses to create a supplemental budget. These funds will be available as unappropriated for future allocation.
-          </div>
-        </q-card-section>
+    <!-- Main Table -->
+    <q-card flat bordered>
 
-        <q-card-section>
-          <div class="row items-center q-gutter-sm q-mb-md">
-            <q-input
-              dense
-              outlined
-              debounce="300"
-              v-model="dialogSearchQuery"
-              placeholder="Search expenses..."
-              style="min-width: 250px"
-              @keydown.enter="handleEnterKey"
-            />
-          </div>
 
-          <q-table
-            :rows="filteredDialogExpenses"
-            :columns="createColumns"
-            row-key="id"
-            selection="multiple"
-            v-model:selected="selectedExpenses"
-            :pagination="{ rowsPerPage: 0 }"
-            style="max-height: 400px"
-            flat
-            bordered
-          >
-            <template v-slot:header-selection="scope">
-              <q-checkbox color="primary" v-model="scope.selected" />
-            </template>
-            <template v-slot:body-selection="scope">
-              <q-checkbox color="primary" v-model="scope.selected" />
-            </template>
+      <!-- Added supplemental budget controls below main table -->
 
-            <template v-slot:body-cell-account_name="props">
-              <q-td :props="props">
-                <div class="text-weight-medium">{{ props.row.account_name }}</div>
-                <div class="text-caption text-grey-6">{{ props.row.budget_description }}</div>
-              </q-td>
-            </template>
-
-            <template v-slot:body-cell-unused_amount="props">
-              <q-td :props="props">
-                <div class="text-weight-medium text-green">
-                  {{ supplementalBudgetStore.formatCurrency(props.row.unused_amount) }}
-                </div>
-                <div class="text-caption text-grey-6">
-                  Available for supplemental budget
-                </div>
-              </q-td>
-            </template>
-
-            <template v-slot:body-cell-amount_to_use="props">
-              <q-td :props="props">
-                <q-input
-                  v-model.number="props.row.amount_to_use"
-                  type="number"
-                  :max="props.row.unused_amount"
-                  :min="0"
-                  step="0.01"
-                  dense
-                  outlined
-                  :rules="[
-                    val => val > 0 || 'Amount must be greater than 0',
-                    val => val <= props.row.unused_amount || `Amount cannot exceed ${supplementalBudgetStore.formatCurrency(props.row.unused_amount)}`
-                  ]"
-                />
-              </q-td>
-            </template>
-          </q-table>
-
-          <!-- Summary of selected expenses -->
-          <div v-if="selectedExpenses.length > 0" class="q-mt-md">
-            <q-card flat bordered class="bg-blue-1">
-              <q-card-section class="q-py-sm">
-                <div class="text-subtitle2 text-weight-medium q-mb-xs">
-                  Selected Expenses Summary
-                </div>
-                <div class="row q-col-gutter-md">
-                  <div class="col-6">
-                    <div class="text-caption text-grey-7">Number of Expenses:</div>
-                    <div class="text-weight-medium">{{ selectedExpenses.length }}</div>
-                  </div>
-                  <div class="col-6">
-                    <div class="text-caption text-grey-7">Total Amount:</div>
-                    <div class="text-weight-medium text-green">
-                      {{ supplementalBudgetStore.formatCurrency(selectedExpenses.reduce((sum, exp) => sum + (exp.amount_to_use || 0), 0)) }}
-                    </div>
-                  </div>
-                </div>
-              </q-card-section>
-            </q-card>
-          </div>
-
-          <q-input
-            outlined
-            v-model="supplementalDescription"
-            label="Supplemental Budget Description"
-            type="text"
-            placeholder="e.g., Supplemental Budget for Emergency Expenses"
-            class="q-mt-md"
-            @keydown.enter="handleEnterKey"
-            hint="Describe the purpose of this supplemental budget"
-          />
-        </q-card-section>
-
-        <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" @click="handleCancelCreate" />
-          <q-btn
-            label="Create Supplemental Budget"
-            color="primary"
-            @click="handleCreateClick"
-            :disable="selectedExpenses.length === 0 || !supplementalDescription"
-            :loading="loading"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+    </q-card>
 
     <!-- Tabs for Unused Expenses and Supplemental Budgets -->
     <q-card flat bordered>
@@ -264,65 +147,74 @@
       <q-tab-panels v-model="activeTab" animated>
         <!-- Unused Expenses Tab -->
         <q-tab-panel name="unused">
-          <q-table
-            :rows="filteredUnusedExpenses"
-            :columns="unusedColumns"
-            :loading="loading"
-            row-key="id"
-            flat
-            :pagination="{ rowsPerPage: 10 }"
-          >
-            <template v-slot:body-cell-index="props">
-              <q-td :props="props">
-                {{ props.pageIndex + 1 }}
-              </q-td>
-            </template>
+             <q-table
+        :rows="filteredExpenses"
+        :columns="columns"
+        row-key="id"
+        selection="multiple"
+        v-model:selected="selectedExpenses"
+        :pagination="pagination"
+        v-model:pagination="pagination"
+        :loading="loading"
+        @request="onRequest"
+        binary-state-sort
+        flat
+        bordered
+      >
+        <template v-slot:header-selection="scope">
+          <q-checkbox color="primary" v-model="scope.selected" />
+        </template>
 
-            <template v-slot:body-cell-account_name="props">
-              <q-td :props="props">
-                <div class="text-weight-medium">{{ props.row.account_name }}</div>
-                <div class="text-caption text-grey-6">{{ props.row.budget_description }}</div>
-              </q-td>
-            </template>
+        <template v-slot:body-selection="scope">
+          <q-checkbox color="primary" v-model="scope.selected" />
+        </template>
 
-            <template v-slot:body-cell-total_appropriated="props">
-              <q-td :props="props">
-                {{ supplementalBudgetStore.formatCurrency(props.row.total_appropriated) }}
-              </q-td>
-            </template>
+        <template v-slot:body-cell-account_name="props">
+          <q-td :props="props">
+            <div class="text-weight-medium">{{ props.row.account_name }}</div>
+            <div class="text-caption text-grey-6">{{ props.row.budget_description }}</div>
+          </q-td>
+        </template>
 
-            <template v-slot:body-cell-total_disbursed="props">
-              <q-td :props="props">
-                {{ supplementalBudgetStore.formatCurrency(props.row.total_disbursed) }}
-              </q-td>
-            </template>
+        <template v-slot:body-cell-unused_amount="props">
+          <q-td :props="props">
+            <div class="text-weight-medium text-green">
+              {{ supplementalBudgetStore.formatCurrency(props.row.unused_amount) }}
+            </div>
+            <div class="text-caption text-grey-6">
+              Available for supplemental budget
+            </div>
+          </q-td>
+        </template>
 
-            <template v-slot:body-cell-unused_amount="props">
-              <q-td :props="props">
-                <div class="text-weight-medium text-green">
-                  {{ supplementalBudgetStore.formatCurrency(props.row.unused_amount) }}
-                </div>
-                <div class="text-caption text-grey-6">
-                  Available for supplemental budget
-                </div>
-              </q-td>
-            </template>
+        <!-- Added amount input column to main table -->
+        <template v-slot:body-cell-amount_to_use="props">
+          <q-td :props="props">
+            <q-input
+              v-model.number="props.row.amount_to_use"
+              type="number"
+              :max="props.row.unused_amount"
+              :min="0"
+              step="0.01"
+              dense
+              outlined
+              :disable="!selectedExpenses.some(exp => exp.id === props.row.id)"
+              :rules="[
+                val => val > 0 || 'Amount must be greater than 0',
+                val => val <= props.row.unused_amount || `Amount cannot exceed ${supplementalBudgetStore.formatCurrency(props.row.unused_amount)}`
+              ]"
+              @focus="ensureSelected(props.row)"
+            />
+          </q-td>
+        </template>
 
-            <template v-slot:body-cell-action="props">
-              <q-td :props="props">
-                <div class="q-gutter-xs">
-                  <q-btn
-                    dense
-                    icon="add"
-                    color="primary"
-                    @click="addToSupplemental(props.row)"
-                    v-permission="'add'"
-                    :disable="props.row.unused_amount <= 0"
-                  />
-                </div>
-              </q-td>
-            </template>
-          </q-table>
+        <template v-slot:no-data>
+          <div class="full-width row flex-center text-grey q-gutter-sm">
+            <q-icon size="2em" name="sentiment_dissatisfied" />
+            <span>No expenses available for supplemental budget</span>
+          </div>
+        </template>
+      </q-table>
         </q-tab-panel>
 
         <!-- Supplemental Budgets Tab -->
@@ -376,14 +268,67 @@
                     v-permission="'view'"
                   />
                 </div>
+
               </q-td>
+
             </template>
           </q-table>
+
         </q-tab-panel>
       </q-tab-panels>
+        <div v-if="selectedExpenses.length > 0" class="q-mt-md">
+        <q-card flat bordered class="bg-blue-1">
+          <q-card-section>
+            <div class="text-subtitle2 text-weight-medium q-mb-md">
+              Create Supplemental Budget
+            </div>
+
+            <!-- Summary -->
+            <div class="row q-col-gutter-md q-mb-md">
+              <div class="col-6">
+                <div class="text-caption text-grey-7">Selected Expenses:</div>
+                <div class="text-weight-medium">{{ selectedExpenses.length }}</div>
+              </div>
+              <div class="col-6">
+                <div class="text-caption text-grey-7">Total Amount:</div>
+                <div class="text-weight-medium text-green">
+                  {{ supplementalBudgetStore.formatCurrency(selectedExpenses.reduce((sum, exp) => sum + (exp.amount_to_use || 0), 0)) }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Description Input -->
+            <q-input
+              outlined
+              v-model="supplementalDescription"
+              label="Supplemental Budget Description"
+              type="text"
+              placeholder="e.g., Supplemental Budget for Emergency Expenses"
+              hint="Describe the purpose of this supplemental budget"
+              class="q-mb-md"
+            />
+
+            <!-- Action Buttons -->
+            <div class="row justify-end q-gutter-sm">
+              <q-btn
+                flat
+                label="Clear Selection"
+                @click="clearSelection"
+                color="grey-7"
+              />
+              <q-btn
+                label="Create Supplemental Budget"
+                color="primary"
+                @click="handleCreateClick"
+                :disable="selectedExpenses.length === 0 || !supplementalDescription"
+                :loading="loading"
+                icon="add"
+              />
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
     </q-card>
-
-
 
     <!-- View Dialog -->
     <q-dialog v-model="showViewDialog">
@@ -489,31 +434,32 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-
-
   </q-page>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
-// import { storeToRefs } from 'pinia'
 import { useSupplementalBudgetStore } from 'src/stores/supplementalBudgetStore'
 import { usePageLogging } from '../../../composables/usePageLogging'
 
 const $q = useQuasar()
 const supplementalBudgetStore = useSupplementalBudgetStore()
-// const { supplementalBudgets, availableUnusedExpenses, years } = storeToRefs(supplementalBudgetStore)
+const { logPageVisit } = usePageLogging()
 
 const loading = ref(false)
-const showCreateDialog = ref(false)
 const showViewDialog = ref(false)
 const searchQuery = ref('')
-const dialogSearchQuery = ref('')
 const selectedYear = ref(new Date().getFullYear())
 const activeTab = ref('unused')
 const selectedExpenses = ref([])
 const supplementalDescription = ref('')
+const pagination = ref({
+  sortBy: 'desc',
+  descending: false,
+  page: 1,
+  rowsPerPage: 10
+})
 
 // View dialog state variables
 const selectedRow = ref({
@@ -528,57 +474,82 @@ const selectedRow = ref({
 })
 
 // Column definitions
-const unusedColumns = [
-  {
-    name: 'index',
-    label: '#',
-    field: 'index',
-    align: 'left',
-    sortable: false,
-  },
+const columns = computed(() => [
   {
     name: 'account_name',
+    required: true,
     label: 'Account',
+    align: 'left',
     field: 'account_name',
-    align: 'left',
-    sortable: true,
-  },
-  {
-    name: 'expense_class',
-    label: 'Expense Class',
-    field: 'expense_class',
-    align: 'left',
-    sortable: true,
-  },
-  {
-    name: 'total_appropriated',
-    label: 'Total Appropriated',
-    field: 'total_appropriated',
-    align: 'right',
-    sortable: true,
-  },
-  {
-    name: 'total_disbursed',
-    label: 'Total Disbursed',
-    field: 'total_disbursed',
-    align: 'right',
     sortable: true,
   },
   {
     name: 'unused_amount',
     label: 'Unused Amount',
-    field: 'unused_amount',
     align: 'right',
+    field: 'unused_amount',
     sortable: true,
   },
   {
-    name: 'action',
-    label: 'Action',
-    field: 'action',
-    align: 'center',
+    name: 'amount_to_use',
+    label: 'Amount to Use',
+    align: 'right',
+    field: 'amount_to_use',
     sortable: false,
-  },
-]
+  }
+])
+
+// const unusedColumns = [
+//   {
+//     name: 'index',
+//     label: '#',
+//     field: 'index',
+//     align: 'left',
+//     sortable: false,
+//   },
+//   {
+//     name: 'account_name',
+//     label: 'Account',
+//     field: 'account_name',
+//     align: 'left',
+//     sortable: true,
+//   },
+//   {
+//     name: 'expense_class',
+//     label: 'Expense Class',
+//     field: 'expense_class',
+//     align: 'left',
+//     sortable: true,
+//   },
+//   {
+//     name: 'total_appropriated',
+//     label: 'Total Appropriated',
+//     field: 'total_appropriated',
+//     align: 'right',
+//     sortable: true,
+//   },
+//   {
+//     name: 'total_disbursed',
+//     label: 'Total Disbursed',
+//     field: 'total_disbursed',
+//     align: 'right',
+//     sortable: true,
+//   },
+//   {
+//     name: 'unused_amount',
+//     label: 'Unused Amount',
+//     field: 'unused_amount',
+//     align: 'right',
+//     sortable: true,
+//   },
+//   {
+//     name: 'action',
+//     label: 'Action',
+//     field: 'action',
+//     align: 'center',
+//     sortable: false,
+//   },
+// ]
 
 const supplementalColumns = [
   {
@@ -618,46 +589,15 @@ const supplementalColumns = [
   },
 ]
 
-const createColumns = [
-  {
-    name: 'account_name',
-    label: 'Account',
-    field: 'account_name',
-    align: 'left',
-    sortable: true,
-  },
-  {
-    name: 'expense_class',
-    label: 'Expense Class',
-    field: 'expense_class',
-    align: 'left',
-    sortable: true,
-  },
-  {
-    name: 'unused_amount',
-    label: 'Available Amount',
-    field: 'unused_amount',
-    align: 'right',
-    sortable: true,
-  },
-  {
-    name: 'amount_to_use',
-    label: 'Amount to Use',
-    field: 'amount_to_use',
-    align: 'right',
-    sortable: false,
-  },
-]
-
 // Computed properties
-// const yearOptions = computed(() => {
-//   return years.value.map(year => ({
-//     label: year.year.toString(),
-//     value: year.year
-//   }))
-// })
+const yearOptions = computed(() => {
+  return supplementalBudgetStore.years.map(year => ({
+    label: year.year.toString(),
+    value: year.year
+  }))
+})
 
-const filteredUnusedExpenses = computed(() => {
+const filteredExpenses = computed(() => {
   const query = searchQuery.value.toLowerCase()
   return supplementalBudgetStore.filteredUnusedExpenses.filter(expense =>
     expense.account_name.toLowerCase().includes(query) ||
@@ -665,6 +605,15 @@ const filteredUnusedExpenses = computed(() => {
     expense.budget_description.toLowerCase().includes(query)
   )
 })
+
+// const filteredUnusedExpenses = computed(() => {
+//   const query = searchQuery.value.toLowerCase()
+//   return supplementalBudgetStore.filteredUnusedExpenses.filter(expense =>
+//     expense.account_name.toLowerCase().includes(query) ||
+//     expense.expense_class.toLowerCase().includes(query) ||
+//     expense.budget_description.toLowerCase().includes(query)
+//   )
+// })
 
 const filteredSupplementalBudgets = computed(() => {
   const query = searchQuery.value.toLowerCase()
@@ -673,17 +622,6 @@ const filteredSupplementalBudgets = computed(() => {
     budget.barangay_name.toLowerCase().includes(query)
   )
 })
-
-const filteredDialogExpenses = computed(() => {
-  const query = dialogSearchQuery.value.toLowerCase()
-  return supplementalBudgetStore.filteredUnusedExpenses.filter(expense =>
-    expense.account_name.toLowerCase().includes(query) ||
-    expense.expense_class.toLowerCase().includes(query) ||
-    expense.budget_description.toLowerCase().includes(query)
-  )
-})
-
-
 
 // Methods
 const loadData = async () => {
@@ -719,21 +657,10 @@ const onYearChange = async (year) => {
 
 const clearAllFilters = () => {
   searchQuery.value = ''
-  dialogSearchQuery.value = ''
   selectedYear.value = new Date().getFullYear()
 }
 
-
-
-const openCreateDialog = () => {
-  selectedExpenses.value = []
-  supplementalDescription.value = ''
-  dialogSearchQuery.value = ''
-  showCreateDialog.value = true
-}
-
-const addToSupplemental = (expense) => {
-  // Add to selected expenses with default amount
+const ensureSelected = (expense) => {
   const existingIndex = selectedExpenses.value.findIndex(exp => exp.id === expense.id)
   if (existingIndex === -1) {
     selectedExpenses.value.push({
@@ -743,12 +670,37 @@ const addToSupplemental = (expense) => {
   }
 }
 
-const handleEnterKey = (event) => {
-  event.preventDefault()
-  if (showCreateDialog.value) {
-    handleCreateClick()
-  }
+const clearSelection = () => {
+  selectedExpenses.value = []
+  supplementalDescription.value = ''
 }
+
+// const scrollToSelection = () => {
+//   if (selectedExpenses.value.length === 0) {
+//     $q.notify({
+//       type: 'info',
+//       message: 'Please select expenses from the table above to create a supplemental budget',
+//       icon: 'info',
+//       position: 'top',
+//     })
+//   }
+//   // Scroll to the supplemental budget section if it exists
+//   const element = document.querySelector('.bg-blue-1')
+//   if (element) {
+//     element.scrollIntoView({ behavior: 'smooth' })
+//   }
+// }
+
+// const addToSupplemental = (expense) => {
+//   // Add to selected expenses with default amount
+//   const existingIndex = selectedExpenses.value.findIndex(exp => exp.id === expense.id)
+//   if (existingIndex === -1) {
+//     selectedExpenses.value.push({
+//       ...expense,
+//       amount_to_use: expense.unused_amount
+//     })
+//   }
+// }
 
 const handleCreateClick = async () => {
   const hasSelectedExpenses = selectedExpenses.value && selectedExpenses.value.length > 0
@@ -808,13 +760,6 @@ const handleCreateClick = async () => {
   await createSupplementalBudget()
 }
 
-const handleCancelCreate = () => {
-  selectedExpenses.value = []
-  supplementalDescription.value = ''
-  dialogSearchQuery.value = ''
-  showCreateDialog.value = false
-}
-
 const createSupplementalBudget = async () => {
   loading.value = true
   try {
@@ -857,12 +802,11 @@ const createSupplementalBudget = async () => {
         timeout: 5000
       })
 
-      selectedExpenses.value = []
-      supplementalDescription.value = ''
-      dialogSearchQuery.value = ''
-      showCreateDialog.value = false
+      // Clear form data
+      clearSelection()
 
-      // Force refresh the data
+      // Additional refresh to ensure UI is updated
+      console.log('Performing additional data refresh...')
       await loadData()
       console.log('Data refresh completed after creation')
     } else {
@@ -909,34 +853,23 @@ const openViewDialog = (row) => {
   showViewDialog.value = true
 }
 
-
-
-
+const onRequest = (props) => {
+  pagination.value = props.pagination
+}
 
 onMounted(async () => {
-  try {
-    await supplementalBudgetStore.fetchYears()
-    await loadData()
+  await supplementalBudgetStore.fetchYears()
+  await loadData()
 
-    // Log page visit
-    const { logPageVisit } = usePageLogging()
-    await logPageVisit('Supplemental Budget')
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: error.message || 'Failed to load data',
-      position: 'top',
-    })
-  }
+  await logPageVisit('Supplemental Budget')
 })
 
 // Watch for dialog close to clear selections
-watch(showCreateDialog, (newValue) => {
+watch(showViewDialog, (newValue) => {
   if (!newValue) {
     // Dialog was closed, clear selections
     selectedExpenses.value = []
     supplementalDescription.value = ''
-    dialogSearchQuery.value = ''
   }
 })
 
