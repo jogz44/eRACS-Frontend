@@ -7,7 +7,8 @@
           Edit Expenses for Disbursement #{{ store.forms.disbursement.dvNumber }}
         </div>
         <div class="text-caption text-grey-6 q-mt-sm">
-          Note: Total amount is locked to ₱{{ store.lockedTotalAmount?.toLocaleString() || '0' }}. You can only redistribute amounts between expenses.
+          Note: Total amount is locked to ₱{{ store.lockedTotalAmount?.toLocaleString() || '0' }}. You can only
+          redistribute amounts between expenses.
         </div>
       </q-card-section>
 
@@ -16,15 +17,8 @@
           <!-- Date Field -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">Date:</q-item-label>
-            <q-input
-              filled
-              outlined
-              dense
-              v-model="store.forms.disbursement.date"
-              mask="##/##/####"
-              :readonly="true"
-              :disable="true"
-            >
+            <q-input filled outlined dense v-model="store.forms.disbursement.date" mask="##/##/####" :readonly="true"
+              :disable="true">
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
@@ -38,80 +32,110 @@
           <!-- Bank Field -->
           <div class="col-md-4 col-sm-12">
             <q-item-label class="q-mb-xs">Bank:</q-item-label>
-            <q-select
-              filled
-              outlined
-              dense
-              v-model="store.forms.disbursement.bank_id"
-              :options="bankStore.banks"
-              option-label="name"
-              option-value="id"
-              emit-value
-              map-options
-              :label="currentBankLabel"
-              :readonly="true"
-              :disable="true"
-            />
+            <q-select filled outlined dense 
+              :label="bankStore.banks.find(b => b.id === store.forms.disbursement.bank_id).name" :readonly="true"
+              :disable="true" />
           </div>
 
           <!-- Check Number Field -->
           <div class="col-md-4 col-sm-12">
             <q-item-label class="q-mb-xs">Cheque Number:</q-item-label>
 
-            <q-input
-              outlined
-              dense
-              v-model="store.forms.disbursement.chequeNumber"
-              :disable="true"
-            ></q-input>
+            <q-input outlined dense v-model="store.forms.disbursement.chequeNumber" :disable="true"></q-input>
           </div>
           <!-- DV Number Field -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">DV Number:</q-item-label>
-            <q-input filled outlined dense v-model="store.forms.disbursement.dvNumber"
-              :disable="true"/>
+            <q-input filled outlined dense v-model="store.forms.disbursement.dvNumber" :disable="true" />
           </div>
 
           <!-- Payee Field -->
           <div class="col-md-4 col-sm-12">
             <q-item-label class="q-mb-xs">Payee:</q-item-label>
-            <q-input filled outlined dense v-model="store.forms.disbursement.payee"/>
+            <q-input filled outlined dense v-model="store.forms.disbursement.payee" :disable="true" />
           </div>
 
           <!-- Cancel Cheque Button -->
           <div class="col-md-4 col-sm-12 flex flex-center">
-            <q-btn
-              color="negative"
-              label="Cancel Cheque"
-              icon="cancel"
-              class="full-width"
-              @click="store.openDialog('cancelChequeConfirmation')"
-              :disable="store.forms.disbursement.is_cancelled"
-            />
+            <q-btn color="negative" label="Cancel Cheque" icon="cancel" class="full-width"
+              @click="showCancelDialog = true" :disable="store.forms.disbursement.is_cancelled" />
           </div>
         </div>
       </q-card-section>
 
+      <div>
+
+        <!-- Cancel Cheque Dialog -->
+        <q-dialog v-model="showCancelDialog" persistent>
+          <q-card style="min-width: 400px">
+            <q-card-section>
+              <div class="text-h6">Cancel Cheque</div>
+            </q-card-section>
+
+            <q-separator />
+
+            <q-card-section class="q-gutter-md">
+              <!-- Bank Selection -->
+              
+              <div class="col-md-4 col-sm-12">
+                <q-item-label class="q-mb-xs">Bank:</q-item-label>
+                <q-select filled outlined dense v-model="newBank" :options="bankStore.availableBanks"
+                  option-label="name" option-value="id" emit-value map-options @update:model-value="handleBankSelection"
+                  />
+              </div>
+
+              <div class="col-md-4 col-sm-12">
+                <q-item-label class="q-mb-xs">Cheque Number:</q-item-label>
+
+                <q-input outlined dense v-model="newChequeNumber" :disable="true"
+                  ></q-input>
+              </div>
+
+              <!-- Payee Field -->
+              <div class="col-md-4 col-sm-12">
+                <q-item-label class="q-mb-xs">Payee:</q-item-label>
+                <q-input filled outlined dense v-model="store.forms.disbursement.payee" />
+              </div>
+            </q-card-section>
+
+            <q-separator />
+
+            <q-card-actions align="right">
+              <q-btn flat label="Close" v-close-popup />
+              <q-btn color="negative" label="Cancel Cheque" @click="openConfirmDialog" />
+            </q-card-actions>
+          </q-card>
+        </q-dialog>
+
+        <!-- Confirmation Dialog -->
+        <q-dialog v-model="showConfirmDialog" persistent>
+          <q-card>
+            <q-card-section>
+              <div class="text-h6">Confirm Cancellation</div>
+            </q-card-section>
+
+            <q-card-section>
+              Are you sure you want to cancel cheque
+              <b>{{ store.forms.disbursement.chequeNumber }}</b> from <b>{{ currentBankLabel }}</b>
+              payable to <b>{{ store.forms.disbursement.payee }}</b>?
+            </q-card-section>
+
+            <q-card-actions align="right">
+              <q-btn flat label="No" v-close-popup />
+              <q-btn color="negative" label="Yes, Cancel" @click="confirmCancel" />
+            </q-card-actions>
+          </q-card>
+        </q-dialog>
+      </div>
+
       <!-- Expense Table Section -->
       <q-card-section>
         <!-- Expense Table -->
-        <q-table
-          :rows="store.expenses"
-          :columns="store.expenseColumns"
-          row-key="id"
-          :pagination="{ rowsPerPage: 5 }"
-        >
+        <q-table :rows="store.expenses" :columns="store.expenseColumns" row-key="id" :pagination="{ rowsPerPage: 5 }">
           <template v-slot:body-cell-action="props">
             <q-td :props="props">
               <div class="button-group">
-                <q-btn
-                  size="sm"
-                  flat
-                  round
-                  color="green"
-                  icon="edit"
-                  @click="editExpenseInline(props.row)"
-                />
+                <q-btn size="sm" flat round color="green" icon="edit" @click="editExpenseInline(props.row)" />
               </div>
             </q-td>
           </template>
@@ -120,15 +144,9 @@
         <!-- Amount Display -->
         <div class="q-mt-md">
           <q-item-label class="q-mb-xs">Total Amount:</q-item-label>
-          <q-input
-            filled
-            outlined
-            dense
+          <q-input filled outlined dense
             :model-value="`₱${(store.totalExpensesAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`"
-            :class="getTotalAmountClass()"
-            style="width: 40%"
-            readonly
-          />
+            :class="getTotalAmountClass()" style="width: 40%" readonly />
           <div v-if="getAmountDifference() !== 0" class="text-caption text-negative q-mt-xs">
             {{ getAmountDifferenceMessage() }}
           </div>
@@ -136,24 +154,14 @@
       </q-card-section>
 
       <q-card-actions align="right" class="custom-actions">
-        <q-btn
-          flat
-          label="Cancel"
-          class="modal-cancel-btn"
-          @click="
-            () => {
-              store.closeDialog('editDisbursement')
-              store.resetEditDisbursement()
-            }
-          "
-        />
-        <q-btn
-          label="Save"
-          class="modal-save-btn"
-          @click="handleSaveEditedDisbursement"
-          :loading="saving"
-          :disable="!store.expenses || store.expenses.length === 0 || store.totalExpensesAmount !== store.lockedTotalAmount"
-        />
+        <q-btn flat label="Cancel" class="modal-cancel-btn" @click="
+          () => {
+            store.closeDialog('editDisbursement')
+            store.resetEditDisbursement()
+          }
+        " />
+        <q-btn label="Save" class="modal-save-btn" @click="handleSaveEditedDisbursement" :loading="saving"
+          :disable="!store.expenses || store.expenses.length === 0 || store.totalExpensesAmount !== store.lockedTotalAmount" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -173,38 +181,18 @@
           <strong>Available Balance:</strong> ₱{{ store.forms.expense.balance.toLocaleString() }}
         </div>
 
-        <q-input
-          outlined
-          dense
-          v-model="store.forms.expense.particulars"
-          label="Particulars"
-          class="q-mb-md"
-          type="textarea"
-          autogrow
-        />
+        <q-input outlined dense v-model="store.forms.expense.particulars" label="Particulars" class="q-mb-md"
+          type="textarea" autogrow />
 
-        <q-input
-          outlined
-          dense
-          :model-value="formatInputValue(store.forms.expense.amount)"
+        <q-input outlined dense :model-value="formatInputValue(store.forms.expense.amount)"
           @update:model-value="(val) => store.forms.expense.amount = handleAmountInput(val)"
-          @blur="(e) => (store.forms.expense.amount = formatToTwoDecimals(e.target.value))"
-          label="Amount"
-          class="q-mb-md"
-          prefix="₱"
-          inputmode="decimal"
-          pattern="\\d*\\.?\\d{0,2}"
-          @keypress="blockNonNumeric"
-          @paste.prevent="handlePasteNumeric"
-        />
+          @blur="(e) => (store.forms.expense.amount = formatToTwoDecimals(e.target.value))" label="Amount"
+          class="q-mb-md" prefix="₱" inputmode="decimal" pattern="\\d*\\.?\\d{0,2}" @keypress="blockNonNumeric"
+          @paste.prevent="handlePasteNumeric" />
       </q-card-section>
 
       <q-card-actions align="right" class="q-pa-md">
-        <q-btn
-          flat
-          label="Cancel"
-          @click="store.closeDialog('expenseDetail')"
-        />
+        <q-btn flat label="Cancel" @click="store.closeDialog('expenseDetail')" />
         <q-btn label="Save" @click="handleSaveExpense" color="primary" />
       </q-card-actions>
     </q-card>
@@ -222,14 +210,26 @@ const bankStore = useBankStore()
 const $q = useQuasar()
 const saving = ref(false)
 
+const showCancelDialog = ref(false)
+const showConfirmDialog = ref(false)
+
+const newBank = ref("Select Bank");
+
+// if newBank changes, update cheque number
+const newChequeNumber = computed(() => {
+  const selectedBank = bankStore.banks.find(b => b.id === newBank.value)
+  return selectedBank ? store.autoCheque : ''
+});
+
+
+
+// Example bank list (replace with your data)
+
 onMounted(async () => {
   await bankStore.fetchBanks()
 })
 
-const currentBankLabel = computed(() => {
-  const bank = bankStore.banks.find(b => b.id === store.forms.disbursement.bank_id)
-  return bank ? bank.name : 'Select Bank'
-})
+
 
 const handleSaveEditedDisbursement = async () => {
   // Validate total amount before saving
@@ -410,6 +410,31 @@ const handlePasteNumeric = (event) => {
   input.dispatchEvent(e)
 }
 
+function openConfirmDialog () {
+  showConfirmDialog.value = true
+}
+
+function confirmCancel () {
+  showConfirmDialog.value = false
+  showCancelDialog.value = false
+
+  // Handle the cancel cheque action here
+}
+
+const handleBankSelection = async (bankId) => {
+  if (bankId) {
+    try {
+      await store.selectBank(bankId)
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: `Failed to load booklets for selected bank: ${error.message}`,
+        icon: 'error',
+        position: 'top',
+      })
+    }
+  }
+}
 
 // Watch for changes in the expense detail dialog
 watch(
@@ -473,4 +498,3 @@ watch(
   }
 }
 </style>
-
