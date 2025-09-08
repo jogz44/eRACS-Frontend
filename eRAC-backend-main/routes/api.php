@@ -174,6 +174,15 @@ Route::prefix('barangay')->group(function () {
         // Budget Augmentation endpoints
         Route::apiResource('budget-augmentations', BudgetAugmentationController::class);
 
+        // Supplemental Budget endpoints
+        Route::get('unused-expenses', [AppropriationController::class, 'getUnusedExpenses']);
+        Route::post('supplemental-budgets', [AppropriationController::class, 'createSupplementalBudget']);
+        Route::get('supplemental-budgets', [AppropriationController::class, 'getSupplementalBudgets']);
+        Route::get('fiscal-years', [AppropriationController::class, 'getFiscalYears']);
+        
+        // Budget Transfer endpoint
+        Route::post('budget-transfer', [AppropriationController::class, 'transferBudget']);
+
         // Report routes aka Preview and PDF download by Dan Steve
         Route::get('/report/rac', [ReportController::class, 'getRacReport']);
         Route::get('/report/sacb', [ReportController::class, 'getSacbReport']);
@@ -244,11 +253,21 @@ Route::prefix('admin')->group(function () {
         // Admin can view individual augmentation
         Route::get('/augmentations/{id}', [BudgetAugmentationController::class, 'show']);
 
+
+        // Admin supplemental budget endpoints
+        Route::get('/unused-expenses', [AppropriationController::class, 'getUnusedExpenses']);
+        Route::get('/supplemental-budgets', [AppropriationController::class, 'getSupplementalBudgets']);
+        Route::get('/fiscal-years', [AppropriationController::class, 'getFiscalYears']);
+        
+        // Admin budget transfer endpoint
+        Route::post('/budget-transfer', [AppropriationController::class, 'transferBudget']);
+
         // Admin review endpoints
         Route::post('/reviews', [AdminReviewController::class, 'store']);
         Route::get('/reviews/check', [AdminReviewController::class, 'checkReview']);
         Route::get('/reviews', [AdminReviewController::class, 'getReviews']);
         Route::post('/reviews/bulk', [AdminReviewController::class, 'getBulkReviews']);
+
     });
 
     // Dashboard Routes updated

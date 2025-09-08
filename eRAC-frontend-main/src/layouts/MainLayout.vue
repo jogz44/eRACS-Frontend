@@ -2,7 +2,7 @@
   <q-layout view="lHh Lpr lFf">
     <!-- HEADER -->
     <q-header elevated class="custom-header">
-      <q-toolbar class="q-pr-md items-center" style="display: flex; flex-direction: row;">
+      <q-toolbar class="q-pr-md items-center" style="display: flex; flex-direction: row">
         <q-btn
           flat
           round
@@ -12,14 +12,17 @@
           v-if="$q.screen.lt.md"
           @click="leftDrawerOpen = !leftDrawerOpen"
         />
-        <div v-if="$q.screen.lt.md && authStore.user?.barangay_name" class="barangay-mobile-title text-weight-bold q-mr-md">
+        <div
+          v-if="$q.screen.lt.md && authStore.user?.barangay_name"
+          class="barangay-mobile-title text-weight-bold q-mr-md"
+        >
           Barangay {{ authStore.user.barangay_name }}
         </div>
         <q-space v-if="$q.screen.lt.md" />
         <q-toolbar-title
           v-if="$q.screen.gt.sm"
           class="welcome-title"
-          style="color: white; font-weight: bold ;"
+          style="color: white; font-weight: bold"
         >
           Barangay {{ authStore.user?.barangay_name }}
         </q-toolbar-title>
@@ -39,46 +42,60 @@
       <div class="drawer-content">
         <!-- Logo & Title Section -->
         <div class="logo-section">
-          <q-item class="row items-center q-pt-md" style="padding: 5px;">
+          <q-item class="row items-center q-pt-md" style="padding: 5px">
             <img
               src="src/assets/tagumlogo.png"
               alt="ERACS Logo"
-              style="width: 100px; height: 75px; max-width: 100%; height: auto;"
+              style="width: 100px; height: 75px; max-width: 100%; height: auto"
               class="q-mb-sm"
             />
-            <q-item-label class="eracs-title text-center" style="font-size: small;color: black; font-style: normal;">
+            <q-item-label
+              class="eracs-title text-center"
+              style="font-size: small; color: black; font-style: normal"
+            >
               Electronic Registry of Appropriation and Commitment System (eRACs)
             </q-item-label>
           </q-item>
         </div>
 
+        <!-- Favorites Section -->
+        <div class="favorites-section">
+          <div class="section-title">Main Functions</div>
+          <div class="favorites-list q-pa-sm">
+            <div
+              v-for="favorite in favorites"
+              :key="favorite.title"
+              class="favorite-item"
+              @click="
+                favorite.type === 'panel'
+                  ? togglePanel(favorite.panelType)
+                  : navigateToFavorite(favorite.link)
+              "
+            >
+              <q-icon :name="favorite.icon" size="16px" />
+              <span class="favorite-title">{{ favorite.title }}</span>
+              <!-- Void Request Notification Badge for Transactions -->
+              <div
+                v-if="favorite.title === 'Transactions' && voidRequestCount > 0"
+                class="void-notification-badge"
+              >
+                {{ voidRequestCount }}
+              </div>
+              <q-icon
+                v-if="favorite.type === 'panel'"
+                name="chevron_right"
+                size="14px"
+                class="panel-indicator"
+              />
 
-
-                          <!-- Favorites Section -->
-         <div class="favorites-section">
-           <div class="section-title">Main Functions</div>
-           <div class="favorites-list q-pa-sm ">
-             <div
-               v-for="favorite in favorites"
-               :key="favorite.title"
-               class="favorite-item"
-               @click="favorite.type === 'panel' ? togglePanel(favorite.panelType) : navigateToFavorite(favorite.link)"
-             >
-               <q-icon :name="favorite.icon" size="16px" />
-               <span class="favorite-title">{{ favorite.title }}</span>
-               <!-- Void Request Notification Badge for Transactions -->
-               <div v-if="favorite.title === 'Transactions' && voidRequestCount > 0" class="void-notification-badge">
-                 {{ voidRequestCount }}
-               </div>
-               <q-icon v-if="favorite.type === 'panel'" name="chevron_right" size="14px" class="panel-indicator" />
-
-               <!-- Tooltip for void requests -->
-               <q-tooltip v-if="favorite.title === 'Transactions' && voidRequestCount > 0">
-                 {{ voidRequestCount }} void request{{ voidRequestCount > 1 ? 's' : '' }} pending approval
-               </q-tooltip>
-             </div>
-           </div>
-         </div>
+              <!-- Tooltip for void requests -->
+              <q-tooltip v-if="favorite.title === 'Transactions' && voidRequestCount > 0">
+                {{ voidRequestCount }} void request{{ voidRequestCount > 1 ? 's' : '' }} pending
+                approval
+              </q-tooltip>
+            </div>
+          </div>
+        </div>
 
         <!-- Saved Searches Section -->
         <div class="saved-searches-section">
@@ -88,10 +105,22 @@
               v-for="search in savedSearches"
               :key="search.title"
               class="saved-search-item"
-              :class="{ 'restricted-item': !hasAccessToRestrictedFeatures && (search.link === '/home/logsview' || search.link === '/home/useraccess') }"
+              :class="{
+                'restricted-item':
+                  !hasAccessToRestrictedFeatures &&
+                  (search.link === '/home/logsview' || search.link === '/home/useraccess'),
+              }"
               @click="navigateToSearch(search.link)"
             >
-              <q-icon :name="!hasAccessToRestrictedFeatures && (search.link === '/home/logsview' || search.link === '/home/useraccess') ? 'lock' : search.icon" size="16px" />
+              <q-icon
+                :name="
+                  !hasAccessToRestrictedFeatures &&
+                  (search.link === '/home/logsview' || search.link === '/home/useraccess')
+                    ? 'lock'
+                    : search.icon
+                "
+                size="16px"
+              />
               <span class="search-title">{{ search.title }}</span>
             </div>
           </div>
@@ -102,7 +131,11 @@
           <div class="text-caption text-grey items-center q-pa-sm footer-avatar">
             <div class="footer-user q-pa-sm">
               <q-avatar size="$q.screen.lt.md ? '32px' : '45px'">
-                <img :src="userPhoto" @error="handleImageError" style="max-width: 100%; height: auto;" />
+                <img
+                  :src="userPhoto"
+                  @error="handleImageError"
+                  style="max-width: 100%; height: auto"
+                />
               </q-avatar>
               <div class="footer-user-info">
                 <span class="Custom-text text-caption text-white text-weight-bold">
@@ -113,14 +146,7 @@
                 </span>
               </div>
               <q-space />
-              <q-btn
-                icon="logout"
-                color="white"
-                flat
-                round
-                dense
-                @click="handleLogout"
-              >
+              <q-btn icon="logout" color="white" flat round dense @click="handleLogout">
                 <q-tooltip>Log Out</q-tooltip>
               </q-btn>
             </div>
@@ -143,24 +169,37 @@
 
       <div class="panel-content">
         <!-- Void Request Summary Header -->
-        <div v-if="voidRequestCount > 0" class="void-request-header">
-          <div class="void-request-count">
-            <q-icon name="pending_actions" color="orange" size="20px" />
-            <span class="void-request-text">{{ voidRequestCount }} Void Request{{ voidRequestCount > 1 ? 's' : '' }}</span>
-            <q-btn
-              flat
-              round
-              dense
-              icon="refresh"
-              size="sm"
-              color="white"
-              @click="refreshVoidRequestCount"
-              class="refresh-void-btn"
-            >
-              <q-tooltip>Refresh void request count</q-tooltip>
-            </q-btn>
-          </div>
-          <div class="void-request-subtitle">Pending Approval</div>
+        <div v-if="voidRequestCount > 0" class="void-request-container">
+          <q-btn
+            unelevated
+            class="void-request-button"
+            @click="handleVoidRequestClick()"
+            :loading="false"
+          >
+            <div class="void-request-content">
+              <div class="void-request-header">
+                <q-icon name="pending_actions" color="white" size="24px" class="void-icon" />
+                <div class="void-request-text-container">
+                  <div class="void-request-count">
+                    {{ voidRequestCount }} VOID REQUEST{{ voidRequestCount > 1 ? 'S' : '' }}
+                  </div>
+                  <div class="void-request-subtitle">CLICK TO VIEW DETAILS</div>
+                </div>
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="refresh"
+                  size="sm"
+                  color="white"
+                  @click.stop="refreshVoidRequestCount"
+                  class="refresh-void-btn"
+                >
+                  <q-tooltip>Refresh void request count</q-tooltip>
+                </q-btn>
+              </div>
+            </div>
+          </q-btn>
         </div>
 
         <!-- Current Transactions -->
@@ -182,6 +221,10 @@
             <div class="colored-dot dot-blue"></div>
             <span>Augmentation</span>
           </div>
+           <div class="panel-item" @click="navigateTo('/home/transactions/supplemental')">
+            <div class="colored-dot dot-red"></div>
+            <span>Supplemental</span>
+          </div>
         </div>
 
         <!-- Continuing Transactions -->
@@ -195,7 +238,6 @@
             <div class="colored-dot dot-purple"></div>
             <span>Disbursement</span>
           </div>
-
         </div>
       </div>
     </div>
@@ -226,14 +268,10 @@
     </div>
 
     <!-- Backdrop -->
-    <div
-      v-if="activePanel"
-      class="panel-backdrop"
-      @click="closePanel"
-    ></div>
+    <div v-if="activePanel" class="panel-backdrop" @click="closePanel"></div>
 
     <!-- MAIN CONTENT -->
-    <q-page-container style="background: #D9D9D9; min-height: 100vh;">
+    <q-page-container style="background: #d9d9d9; min-height: 100vh">
       <SetupDialog v-model="showSetupDialog" />
       <router-view />
     </q-page-container>
@@ -262,9 +300,7 @@ const activePanel = ref(null)
 
 // Computed property to check if user has access to restricted features
 const hasAccessToRestrictedFeatures = computed(() => {
-  const restrictedPositions = [
-    'barangay captain'
-  ]
+  const restrictedPositions = ['barangay captain']
   const userPosition = authStore.user?.position_name?.toLowerCase().trim()
   return restrictedPositions.includes(userPosition)
 })
@@ -273,38 +309,44 @@ const hasAccessToRestrictedFeatures = computed(() => {
 const voidRequestCount = computed(() => {
   // Only show count for users who can approve/reject void requests
   // Try to get position from the relationship first, fallback to position_name
-  const userPosition = authStore.user?.position?.name?.toLowerCase().trim() ||
-                      authStore.user?.position_name?.toLowerCase().trim()
+  const userPosition =
+    authStore.user?.position?.name?.toLowerCase().trim() ||
+    authStore.user?.position_name?.toLowerCase().trim()
 
-  const canApproveVoid = userPosition && (
-    userPosition.includes('captain') ||
-    userPosition.includes('chairperson') ||
-    userPosition.includes('barangay captain') ||
-    userPosition.includes('sk chairperson')
-  )
+  const canApproveVoid =
+    userPosition &&
+    (userPosition.includes('captain') ||
+      userPosition.includes('chairperson') ||
+      userPosition.includes('barangay captain') ||
+      userPosition.includes('sk chairperson'))
 
   if (!canApproveVoid) return 0
 
   // Count disbursements with 'Void Requested' status
-  const voidCount = disbursementStore.disbursements.filter(d => d.status === 'Void Requested').length
+  const voidCount = disbursementStore.disbursements.filter(
+    (d) => d.status === 'Void Requested',
+  ).length
   return voidCount
 })
 
 // Favorites data
 const favorites = ref([
   { title: 'Dashboard', link: '/home/dashboard', icon: 'dashboard' },
-  { title: 'Transactions', type: 'panel', panelType: 'transactions', icon: 'account_balance_wallet' },
+  {
+    title: 'Transactions',
+    type: 'panel',
+    panelType: 'transactions',
+    icon: 'account_balance_wallet',
+  },
   { title: 'Libraries', type: 'panel', panelType: 'libraries', icon: 'library_books' },
-  { title: 'Reports', link: '/home/reports', icon: 'assessment' }
+  { title: 'Reports', link: '/home/reports', icon: 'assessment' },
 ])
 
 // Saved searches data
 const savedSearches = ref([
   //  { title: 'Accounts', link: '/home/libraries/accounts', icon: 'settings' },
-    { title: 'User Control', link: '/home/useraccess', icon: 'admin_panel_settings' },
+  { title: 'User Control', link: '/home/useraccess', icon: 'admin_panel_settings' },
   { title: 'Log Activities', link: '/home/logsview', icon: 'history' },
-
-
 ])
 
 const handleImageError = (e) => (e.target.src = 'src/assets/user.png')
@@ -323,7 +365,7 @@ const navigateToSearch = (link) => {
         message: 'Access Denied',
         caption: 'You do not have permission to access this resource.',
         position: 'top',
-        timeout: 5000
+        timeout: 5000,
       })
       return
     }
@@ -375,11 +417,31 @@ const refreshVoidRequestCount = async () => {
   }
 }
 
+// Method to handle void request click - navigate to disbursement page and open first void request
+const handleVoidRequestClick = async () => {
+  // Close the panel first
+  closePanel()
 
+  // Navigate to disbursement page
+  await router.push('/home/transactions/disbursement')
+
+  // Find the first void requested disbursement
+  const voidRequestedDisbursement = disbursementStore.disbursements.find(
+    d => d.status === 'Void Requested'
+  )
+
+  if (voidRequestedDisbursement) {
+    // Open the ViewOrDetails dialog for the void requested disbursement
+    await disbursementStore.openViewOrDetails(voidRequestedDisbursement)
+  }
+}
 
 const userPhoto = computed(() => {
   if (!authStore.user) return 'src/assets/user.png'
-  return authStore.user.photo_url || (authStore.user.photo_path ? `/storage/${authStore.user.photo_path}` : 'src/assets/user.png')
+  return (
+    authStore.user.photo_url ||
+    (authStore.user.photo_path ? `/storage/${authStore.user.photo_path}` : 'src/assets/user.png')
+  )
 })
 
 const handleLogout = async () => {
@@ -387,7 +449,7 @@ const handleLogout = async () => {
     title: 'Confirm Logout',
     message: 'Are you sure you want to logout?',
     cancel: true,
-    persistent: true
+    persistent: true,
   }).onOk(async () => {
     await authStore.logout()
     router.push('/')
@@ -423,29 +485,36 @@ onMounted(async () => {
   }
 })
 
-watch(() => authStore.user, async (newUser) => {
-  imageLoadingFailed.value = false
+watch(
+  () => authStore.user,
+  async (newUser) => {
+    imageLoadingFailed.value = false
 
-  // Refresh disbursements when user changes to update void request count
-  if (newUser?.barangay_id) {
-    await disbursementStore.fetchDisbursements()
-  }
-}, { deep: true })
+    // Refresh disbursements when user changes to update void request count
+    if (newUser?.barangay_id) {
+      await disbursementStore.fetchDisbursements()
+    }
+  },
+  { deep: true },
+)
 
-watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${newTitle} | ERACS` : 'ERACS' })
+watch(
+  () => route.meta.title,
+  (newTitle) => {
+    document.title = newTitle ? `${newTitle} | ERACS` : 'ERACS'
+  },
+)
 </script>
 
 <style>
 .custom-card-drawer {
   position: sticky;
-  background:linear-gradient(30deg,#187C19,#E0FFE7,#187C19);
+  background: linear-gradient(30deg, #187c19, #e0ffe7, #187c19);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   padding-top: 0;
   overflow: hidden;
   overflow-x: hidden;
   border-right: 1px solid #e0e0e0;
-
-
 }
 
 .Custom-text {
@@ -454,12 +523,11 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
 }
 
 .custom-header {
-  background: #0E780E;
+  background: #0e780e;
   justify-content: center;
   /* border-bottom: 1px solid #e0e0e0; */
   border-left: black;
   margin-left: -2px;
-
 }
 
 .eracs-title {
@@ -498,7 +566,7 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
 .section-title {
   font-size: 12px;
   font-weight: 600;
-  color:black;
+  color: black;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 12px 16px 4px 16px;
@@ -565,19 +633,19 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
   cursor: pointer;
   transition: all 0.2s ease;
   color: white !important;
-  background-color: #69B31E;
+  background-color: #69b31e;
   box-shadow: 0 4px 8px rgba(82, 140, 24, 0.4);
 }
 
 .favorite-item:hover {
-  background-color: #0E780E;
+  background-color: #0e780e;
 }
 
 .favorite-title {
   margin-left: 12px;
   font-size: 15px;
   font-weight: 500;
- color: white !important;
+  color: white !important;
 }
 
 .panel-trigger {
@@ -607,8 +675,8 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
   width: 280px;
   height: auto;
   max-height: 600px;
-   /* background:linear-gradient(30deg,#187C19,#E0FFE7,#187C19); */
-  background: linear-gradient(30deg, #187C19 0%, #E0FFE7 50%, #187C19 100%);
+  /* background:linear-gradient(30deg,#187C19,#E0FFE7,#187C19); */
+  background: linear-gradient(30deg, #187c19 0%, #e0ffe7 50%, #187c19 100%);
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
   z-index: 3000;
   transform: translate(-100%, -50%);
@@ -636,8 +704,12 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .panel-header {
@@ -689,7 +761,7 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
   letter-spacing: 0.8px;
   margin-bottom: 8px;
   padding-bottom: 4px;
-  border-bottom: 1px solid black
+  border-bottom: 1px solid black;
 }
 
 .panel-item {
@@ -701,17 +773,16 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
   cursor: pointer;
   transition: all 0.2s ease;
   color: white !important;
-  background-color: #69B31E;
+  background-color: #69b31e;
   border: 1px solid rgba(76, 175, 80, 0.1);
 }
 
 .panel-item:hover {
-  background-color: #187C19;
+  background-color: #187c19;
   transform: translateX(3px);
   border-color: rgba(76, 175, 80, 0.3);
   box-shadow: 0 2px 8px rgba(76, 175, 80, 0.15);
 }
-
 
 .panel-indicator {
   margin-left: auto;
@@ -789,6 +860,31 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
     width: 28px !important;
     height: 28px !important;
   }
+
+  /* Mobile void request button */
+  .void-request-container {
+    margin: 0 4px 12px 4px;
+  }
+
+  .void-request-button {
+    min-height: 70px;
+  }
+
+  .void-request-content {
+    padding: 12px 16px;
+  }
+
+  .void-request-count {
+    font-size: 14px;
+  }
+
+  .void-request-subtitle {
+    font-size: 10px;
+  }
+
+  .void-icon {
+    size: 20px;
+  }
 }
 
 .full-width {
@@ -796,7 +892,7 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
 }
 .favorite-item:hover .panel-indicator {
   transform: translateX(2px);
-  color: #69B31E;
+  color: #69b31e;
 }
 
 /* Void Request Notification Badge */
@@ -823,44 +919,118 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
   position: relative;
 }
 
-/* Void Request Header in Transactions Panel */
-.void-request-header {
-  background: linear-gradient(135deg, #ff9800, #ff5722);
-  color: white;
-  padding: 12px 16px;
+/* Void Request Container */
+.void-request-container {
   margin: 0 8px 16px 8px;
-  border-radius: 8px;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.2);
+  transition: all 0.3s ease;
+  animation: voidRequestPulse 3s infinite;
 }
 
-.void-request-count {
+.void-request-container:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 152, 0, 0.3);
+  animation: none;
+}
+
+@keyframes voidRequestPulse {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.2);
+  }
+  50% {
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4), 0 0 0 4px rgba(255, 152, 0, 0.1);
+  }
+}
+
+.void-request-button {
+  width: 100%;
+  background: linear-gradient(135deg, #ff9800, #ff5722) !important;
+  color: white !important;
+  border-radius: 12px;
+  padding: 0;
+  min-height: 80px;
+  text-transform: none;
+  font-weight: 600;
+  box-shadow: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.void-request-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.void-request-button:hover::before {
+  left: 100%;
+}
+
+.void-request-content {
+  width: 100%;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-bottom: 4px;
+}
+
+.void-request-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+}
+
+.void-icon {
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.void-request-text-container {
+  flex: 1;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.void-request-count {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  line-height: 1.2;
+}
+
+.void-request-subtitle {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.8px;
+  opacity: 0.9;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  line-height: 1.2;
 }
 
 .refresh-void-btn {
-  margin-left: 8px;
+  flex-shrink: 0;
   opacity: 0.8;
   transition: all 0.2s ease;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
 }
 
 .refresh-void-btn:hover {
   opacity: 1;
   transform: rotate(180deg);
-}
-
-.void-request-text {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.void-request-subtitle {
-  font-size: 11px;
-  opacity: 0.9;
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 /* Panel Void Badge */
@@ -888,8 +1058,6 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
 
 /* End of Panel */
 
-
-
 .saved-searches-section {
   border-top: 1px solid black;
   padding-top: 8px;
@@ -912,20 +1080,19 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
   cursor: pointer;
   transition: all 0.2s ease;
   color: white !important;
-   background-color: #69B31E;
-   box-shadow: 0 4px 8px rgba(82, 140, 24, 0.4);
-
+  background-color: #69b31e;
+  box-shadow: 0 4px 8px rgba(82, 140, 24, 0.4);
 }
 
 .saved-search-item:hover {
-  background-color: #0E780E;
+  background-color: #0e780e;
 }
 
 .search-title {
   margin-left: 12px;
   font-size: 15px;
   font-weight: 500;
-    color: white !important;
+  color: white !important;
 }
 
 .restricted-item {
@@ -981,7 +1148,7 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
 .drawer-footer {
   justify-content: space-between;
   flex-shrink: 0;
-  background-color: #0E780E;
+  background-color: #0e780e;
   /* border-top: 1px solid #e0e0e0; */
   height: 12%;
 }
@@ -1028,7 +1195,6 @@ watch(() => route.meta.title, (newTitle) => { document.title = newTitle ? `${new
 .footer-avatar-center {
   margin-bottom: 0;
 }
-
 
 .position-text {
   font-style: italic;

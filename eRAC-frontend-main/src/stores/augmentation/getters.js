@@ -21,9 +21,9 @@ export function useGetters(state) {
       sortable: true,
     },
     {
-      name: 'transfer_summary',
-      label: 'Transfer Types',
-      field: 'transfer_summary',
+      name: 'expense_class_summary',
+      label: 'Expense Classes',
+      field: 'expense_class_summary',
       align: 'center',
       sortable: false,
     },
@@ -47,13 +47,6 @@ export function useGetters(state) {
       sortable: true,
     },
     {
-      name: 'from_budget_source',
-      label: 'From Budget',
-      field: 'from_budget_source',
-      align: 'center',
-      sortable: true,
-    },
-    {
       name: 'to_expense',
       label: 'To Expense',
       field: 'to_expense',
@@ -61,16 +54,9 @@ export function useGetters(state) {
       sortable: true,
     },
     {
-      name: 'to_budget_source',
-      label: 'To Budget',
-      field: 'to_budget_source',
-      align: 'center',
-      sortable: true,
-    },
-    {
-      name: 'transfer_type',
-      label: 'Transfer Type',
-      field: 'transfer_type',
+      name: 'expense_class',
+      label: 'Expense Class',
+      field: 'expense_class',
       align: 'center',
       sortable: true,
     },
@@ -96,9 +82,9 @@ export function useGetters(state) {
       style: 'width: 40%; min-width: 250px;'
     },
     {
-      name: 'budget_source',
-      label: 'Budget Source',
-      field: 'budget_source',
+      name: 'expense_class',
+      label: 'Expense Class',
+      field: 'expense_class',
       align: 'center',
       sortable: true,
       style: 'width: 20%; min-width: 120px;'
@@ -179,35 +165,42 @@ export function useGetters(state) {
 
   const filteredExpenseAccounts = computed(() => {
     if (!state.AugexpenseAccounts.value || state.AugexpenseAccounts.value.length === 0) {
+      console.log('No expense accounts available')
       return []
     }
 
     let base = state.AugexpenseAccounts.value
+    console.log('Total expense accounts:', base.length)
+    console.log('Selected expense class:', state.selectedExpenseClass.value)
 
-    // Apply budget source filtering
-    if (state.selectedBudgetSource.value !== 'all') {
+    // Apply expense class filtering when selecting TO expense
+    if (state.selectedExpenseClass.value) {
+      console.log('Filtering by expense class:', state.selectedExpenseClass.value)
+      const beforeFilter = base.length
       base = base.filter(item => {
-        const budgetSource = item.budget_source || item.description || ''
-        if (state.selectedBudgetSource.value === 'annual') {
-          return budgetSource.toLowerCase().includes('annual')
-        } else if (state.selectedBudgetSource.value === 'supplemental') {
-          return budgetSource.toLowerCase().includes('supplemental')
+        const matches = item.expense_class === state.selectedExpenseClass.value
+        if (!matches) {
+          console.log('Filtered out:', item.account, 'expense_class:', item.expense_class)
         }
-        return true
+        return matches
       })
+      console.log('After expense class filtering:', base.length, 'out of', beforeFilter)
     }
 
     // Apply search filtering
     if (!state.expenseSearch.value.trim()) {
+      console.log('No search query, returning filtered results:', base.length)
       return base
     }
 
     const query = state.expenseSearch.value.toLowerCase()
-    return base.filter(
+    const searchFiltered = base.filter(
       (item) =>
         item.account.toLowerCase().includes(query) ||
         (item.description && item.description.toLowerCase().includes(query))
     )
+    console.log('After search filtering:', searchFiltered.length)
+    return searchFiltered
   })
 
   return {

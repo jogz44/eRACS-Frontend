@@ -2,7 +2,7 @@
   <q-page class="q-pa-md augmentation-page">
     <div class="page-header q-mb-md">
       <div class="row items-center justify-between">
-        <div class="text-h6 text-weight-medium">Augmentation Transaction</div>
+        <div class="text-h6 text-weight-medium">Expense Class Augmentation</div>
         <q-btn
           icon="refresh"
           color="primary"
@@ -14,77 +14,29 @@
       </div>
     </div>
 
-    <!-- Budget Source Selection Cards -->
-    <div class="budget-source-selection q-mb-md">
-      <div class="text-subtitle1 text-weight-medium q-mb-sm">Augmentation Type</div>
-      <div class="row q-col-gutter-sm">
-        <div class="col-lg-3 col-md-6 col-sm-12">
-          <q-card
-            :class="['budget-source-card', { 'selected': selectedBudgetSource === 'all' }]"
-            @click="selectedBudgetSource = 'all'"
-            clickable
-          >
-            <q-card-section class="text-center q-pa-md">
-              <q-icon name="list" size="md" class="q-mb-sm" />
-              <div class="text-subtitle2 text-weight-medium">All Augmentations</div>
-              <div class="text-caption text-grey-6">
-                View all augmentation types
+    <!-- Expense Class Augmentation Info -->
+    <div class="augmentation-info q-mb-md">
+      <q-card flat bordered class="info-card">
+        <q-card-section>
+          <div class="row items-center">
+            <div class="col-auto">
+              <q-icon name="info" size="md" color="primary" class="q-mr-sm" />
+            </div>
+            <div class="col">
+              <div class="text-subtitle1 text-weight-medium">Expense Class Augmentation</div>
+              <div class="text-caption text-grey-7">
+                Transfer funds between expense types within the same expense class to address budget shortfalls
               </div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-lg-3 col-md-6 col-sm-12">
-          <q-card
-            :class="['budget-source-card', { 'selected': selectedBudgetSource === 'cross' }]"
-            @click="selectedBudgetSource = 'cross'"
-            clickable
-          >
-            <q-card-section class="text-center q-pa-md">
-              <q-icon name="swap_horiz" size="md" class="q-mb-sm" />
-              <div class="text-subtitle2 text-weight-medium">Cross Budget</div>
-              <div class="text-caption text-grey-6">
-                {{ crossBudgetTransfers }} transfer{{ crossBudgetTransfers !== 1 ? 's' : '' }}
-              </div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-lg-3 col-md-6 col-sm-12">
-          <q-card
-            :class="['budget-source-card', { 'selected': selectedBudgetSource === 'annual' }]"
-            @click="selectedBudgetSource = 'annual'"
-            clickable
-          >
-            <q-card-section class="text-center q-pa-md">
-              <q-icon name="calendar_today" size="md" class="q-mb-sm" />
-              <div class="text-subtitle2 text-weight-medium">Annual > Annual</div>
-              <div class="text-caption text-grey-6">
-                Within annual budget
-              </div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-lg-3 col-md-6 col-sm-12">
-          <q-card
-            :class="['budget-source-card', { 'selected': selectedBudgetSource === 'supplemental' }]"
-            @click="selectedBudgetSource = 'supplemental'"
-            clickable
-          >
-            <q-card-section class="text-center q-pa-md">
-              <q-icon name="add_circle" size="md" class="q-mb-sm" />
-              <div class="text-subtitle2 text-weight-medium">Supplemental > Supplemental</div>
-              <div class="text-caption text-grey-6">
-                Within supplemental budget
-              </div>
-            </q-card-section>
-          </q-card>
-        </div>
-      </div>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
     </div>
 
     <!-- Augmentation Summary -->
-    <div class="augmentation-summary q-mb-md" v-if="selectedBudgetSource === 'all'">
+    <div class="augmentation-summary q-mb-md">
       <div class="row q-col-gutter-md">
-        <div class="col-md-3 col-sm-6">
+        <div class="col-md-4 col-sm-6">
           <q-card class="summary-card">
             <q-card-section class="text-center">
               <div class="text-h6 text-primary">{{ totalAugmentations }}</div>
@@ -92,15 +44,7 @@
             </q-card-section>
           </q-card>
         </div>
-        <div class="col-md-3 col-sm-6">
-          <q-card class="summary-card">
-            <q-card-section class="text-center">
-              <div class="text-h6 text-secondary">{{ crossBudgetTransfers }}</div>
-              <div class="text-caption">Cross-Budget Transfers</div>
-            </q-card-section>
-          </q-card>
-        </div>
-        <div class="col-md-3 col-sm-6">
+        <div class="col-md-4 col-sm-6">
           <q-card class="summary-card">
             <q-card-section class="text-center">
               <div class="text-h6 text-positive">₱{{ totalAmount.toLocaleString() }}</div>
@@ -108,11 +52,11 @@
             </q-card-section>
           </q-card>
         </div>
-        <div class="col-md-3 col-sm-6">
+        <div class="col-md-4 col-sm-6">
           <q-card class="summary-card">
             <q-card-section class="text-center">
-              <div class="text-h6 text-orange">₱{{ crossBudgetAmount.toLocaleString() }}</div>
-              <div class="text-caption">Cross-Budget Amount</div>
+              <div class="text-h6 text-info">{{ totalExpenseClasses }}</div>
+              <div class="text-caption">Affected Expense Classes</div>
             </q-card-section>
           </q-card>
         </div>
@@ -223,51 +167,43 @@ import { usePageLogging } from '../../../composables/usePageLogging'
 const $q = useQuasar()
 const store = useAugmentationStore()
 const loading = ref(false)
-const selectedBudgetSource = ref('all')
 const searchQuery = ref('')
 const dateRange = ref(null)
 
 // Hooks must be called at the top level
 const { logPageVisit } = usePageLogging()
 
-// Watch for budget source changes and sync with store
-watch(selectedBudgetSource, async (newBudgetSource) => {
-  store.setBudgetSourceFilter(newBudgetSource)
-  // Refresh expense accounts when budget source filter changes
-  if (newBudgetSource === 'annual' || newBudgetSource === 'supplemental') {
-    await store.fetchExpenseAccounts()
-  } else if (newBudgetSource === 'cross') {
-    // For cross-budget augmentations, fetch all expense accounts
-    // First try to fetch without any budget filter, or fetch both types
-    try {
-      // Try to fetch all accounts by setting to 'all' or not setting a filter
-      store.setBudgetSourceFilter('all')
-      await store.fetchExpenseAccounts()
-    } catch (error) {
-      console.log('Could not fetch all accounts, trying annual accounts:', error)
-      // Fallback to annual accounts if 'all' doesn't work
-      store.setBudgetSourceFilter('annual')
-      await store.fetchExpenseAccounts()
-    }
-  }
-})
 
 // Computed properties for summary statistics (using filtered data)
 const totalAugmentations = computed(() => {
   return filteredAugmentations.value?.length || 0
 })
 
-const crossBudgetTransfers = computed(() => {
+const totalExpenseClasses = computed(() => {
   if (!filteredAugmentations.value) return 0
 
-  return filteredAugmentations.value.reduce((count, augmentation) => {
-    const hasCrossBudgetTransfer = augmentation.details?.some(detail => {
-      const fromBudget = detail.from_budget_source || 'Annual Budget'
-      const toBudget = detail.to_budget_source || 'Annual Budget'
-      return fromBudget !== toBudget
-    })
-    return hasCrossBudgetTransfer ? count + 1 : count
-  }, 0)
+  const expenseClasses = new Set()
+  filteredAugmentations.value.forEach(augmentation => {
+    if (augmentation.details && Array.isArray(augmentation.details)) {
+      augmentation.details.forEach(detail => {
+        // Try to extract expense class from account names
+        // Account names typically follow: "EXPENSE CLASS > EXPENSE TYPE > EXPENSE ITEM"
+        if (detail.from_account) {
+          const fromParts = detail.from_account.split(' > ')
+          if (fromParts.length >= 1) {
+            expenseClasses.add(fromParts[0].trim())
+          }
+        }
+        if (detail.to_account) {
+          const toParts = detail.to_account.split(' > ')
+          if (toParts.length >= 1) {
+            expenseClasses.add(toParts[0].trim())
+          }
+        }
+      })
+    }
+  })
+  return expenseClasses.size
 })
 
 const totalAmount = computed(() => {
@@ -278,21 +214,6 @@ const totalAmount = computed(() => {
   }, 0)
 })
 
-const crossBudgetAmount = computed(() => {
-  if (!filteredAugmentations.value) return 0
-
-  return filteredAugmentations.value.reduce((total, augmentation) => {
-    const crossBudgetDetails = augmentation.details?.filter(detail => {
-      const fromBudget = detail.from_budget_source || 'Annual Budget'
-      const toBudget = detail.to_budget_source || 'Annual Budget'
-      return fromBudget !== toBudget
-    }) || []
-
-    return total + crossBudgetDetails.reduce((detailTotal, detail) => {
-      return detailTotal + (detail.amount || 0)
-    }, 0)
-  }, 0)
-})
 
 const loadPendingUsers = async () => {
   loading.value = true
@@ -349,10 +270,8 @@ const onDateRangeClear = () => {
 
 const clearAllFilters = () => {
   // Clear any filters if needed
-  selectedBudgetSource.value = 'all'
   searchQuery.value = ''
   dateRange.value = null
-  store.setBudgetSourceFilter('all')
   store.searchQuery = ''
   store.dateFrom = ''
   store.dateTo = ''
@@ -386,70 +305,6 @@ const filteredAugmentations = computed(() => {
     })
   }
 
-  // Filter by transfer type
-  if (selectedBudgetSource.value !== 'all') {
-    filtered = filtered.filter(augmentation => {
-      if (!augmentation.details || !Array.isArray(augmentation.details)) {
-        return false
-      }
-
-      // Helper function to determine budget type
-      const getBudgetType = (budgetSource) => {
-        const lower = budgetSource.toLowerCase().trim()
-
-        // More specific supplemental detection
-        if (lower.includes('supplemental') ||
-            lower.includes('supplement') ||
-            lower.includes('additional') ||
-            lower.includes('extra') ||
-            lower.includes('special')) {
-          return 'supplemental'
-        }
-
-        // More specific annual detection
-        if (lower.includes('annual') ||
-            lower.includes('regular') ||
-            lower.includes('main') ||
-            lower.includes('base') ||
-            lower.includes('primary') ||
-            lower === 'annual budget') {
-          return 'annual'
-        }
-
-        return null
-      }
-
-      // Check if this augmentation has ANY details that match the selected filter
-      const hasMatchingDetail = augmentation.details.some(detail => {
-        const fromBudget = detail.from_budget_source || 'Annual Budget'
-        const toBudget = detail.to_budget_source || 'Annual Budget'
-
-        const fromType = getBudgetType(fromBudget)
-        const toType = getBudgetType(toBudget)
-
-        // If we can't determine the budget types, exclude this detail
-        if (fromType === null || toType === null) {
-          return false
-        }
-
-        if (selectedBudgetSource.value === 'cross') {
-          // Cross Budget Augmentations: show only augmentations that have cross-budget transfers
-          return (fromType === 'annual' && toType === 'supplemental') ||
-                 (fromType === 'supplemental' && toType === 'annual')
-        } else if (selectedBudgetSource.value === 'annual') {
-          // Annual > Annual: show only augmentations within annual budget
-          return fromType === 'annual' && toType === 'annual'
-        } else if (selectedBudgetSource.value === 'supplemental') {
-          // Supplemental > Supplemental: show only augmentations within supplemental budget
-          return fromType === 'supplemental' && toType === 'supplemental'
-        }
-        return false
-      })
-
-      // Only include the augmentation if it has at least one matching detail
-      return hasMatchingDetail
-    })
-  }
 
   return filtered
 })
@@ -459,7 +314,7 @@ onMounted(async () => {
   await store.fetchExpenseAccounts()
 
   // Log page visit
-  await logPageVisit('Current Augmentation')
+  await logPageVisit('Expense Class Augmentation')
 })
 </script>
 
@@ -489,46 +344,17 @@ onMounted(async () => {
   padding-bottom: 8px;
 }
 
-.budget-source-selection {
+.augmentation-info {
   background: white;
   border-radius: 8px;
-  padding: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid #e0e0e0;
 }
 
-.budget-source-card {
-  border: 2px solid #e0e0e0;
+.info-card {
   border-radius: 8px;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  background: white;
-}
-
-.budget-source-card:hover {
-  border-color: #4caf50;
-  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.15);
-  transform: translateY(-2px);
-}
-
-.budget-source-card.selected {
-  border-color: #4caf50;
-  background: linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
-}
-
-.budget-source-card.selected .q-icon {
-  color: #4caf50;
-}
-
-.budget-source-card.selected .text-subtitle2 {
-  color: #4caf50;
-  font-weight: 600;
-}
-
-.budget-source-badge {
-  font-size: 0.75rem;
-  font-weight: 500;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  border: 1px solid #bbdefb;
 }
 
 .filters-section {
@@ -541,39 +367,23 @@ onMounted(async () => {
     padding: 8px;
   }
 
-  .budget-source-selection {
+  .augmentation-info {
     padding: 12px;
   }
 
-  .budget-source-card .q-card-section {
+  .info-card .q-card-section {
     padding: 12px;
-  }
-
-  .budget-source-card .q-icon {
-    font-size: 1.5rem;
-  }
-
-  .budget-source-card .text-subtitle2 {
-    font-size: 0.9rem;
-  }
-
-  .budget-source-card .text-caption {
-    font-size: 0.75rem;
   }
 }
 
 /* Tablet styles */
 @media (min-width: 769px) and (max-width: 1023px) {
-  .budget-source-selection {
+  .augmentation-info {
     padding: 14px;
   }
 
-  .budget-source-card .q-card-section {
+  .info-card .q-card-section {
     padding: 14px;
-  }
-
-  .budget-source-card .q-icon {
-    font-size: 1.75rem;
   }
 }
 </style>

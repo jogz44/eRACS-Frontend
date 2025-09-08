@@ -49,22 +49,22 @@ class DisbursementController extends Controller
     {
         $user = $request->user();
         $query = Disbursement::with('bank');
-        
+
         // If user is authenticated and has barangay_id, filter by it
         if ($user && isset($user->barangay_id)) {
             $query->where('barangay_id', $user->barangay_id);
         } else {
         }
-        
+
         // Apply year filter if provided
         if ($request->filled('year')) {
             $query->whereRelation('expenseDetails.appropriation.expenseClass.fiscalYear', 'year', $request->year);
         } else {
             $query->whereRelation('expenseDetails.appropriation.expenseClass.fiscalYear', 'year', now()->year);
         }
-        
+
         $disbursements = $query->orderByDesc('date')->get();
-        
+
         $result = $disbursements->map(function($d) {
             return [
                 'id' => $d->id,
@@ -897,13 +897,13 @@ class DisbursementController extends Controller
             $disbursementDate = new \DateTime($disbursement->date);
             $today = new \DateTime();
             $aging = $today->diff($disbursementDate)->days;
-            
-            if ($aging > 1) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Only disbursements aged 1 day or less can be voided'
-                ], 400);
-            }
+
+            // if ($aging < 0) {
+            //     return response()->json([
+            //         'status' => false,
+            //         'message' => 'Only disbursements aged 0 day or more can be voided'
+            //     ], 400);
+            // }
 
             // Update status to Void Requested and save remarks
             $disbursement->status = 'Void Requested';
@@ -941,13 +941,13 @@ class DisbursementController extends Controller
             $positionName = $user->position ? $user->position->name : '';
             $position = strtolower($positionName);
             \Log::info('User position for void approval: ' . $positionName . ' (lowercase: ' . $position . ')');
-            
+
             // Check if user has approval role (Captain or Chairperson)
-            $canApprove = strpos($position, 'captain') !== false || 
+            $canApprove = strpos($position, 'captain') !== false ||
                          strpos($position, 'chairperson') !== false ||
                          strpos($position, 'barangay captain') !== false ||
                          strpos($position, 'sk chairperson') !== false;
-                         
+
             if (!$canApprove) {
                 \Log::warning('User not authorized for void approval. Position: ' . $positionName);
                 return response()->json([
@@ -980,7 +980,7 @@ class DisbursementController extends Controller
             if ($cheque) {
                 $cheque->status = 'void';
                 $cheque->save();
-                
+
                 // Update bank and booklet statuses after voiding cheque
                 $bankLibraryController = new \App\Http\Controllers\Library\BankLibraryController();
                 $bankLibraryController->updateBanksStatus();
@@ -1022,13 +1022,13 @@ class DisbursementController extends Controller
             $positionName = $user->position ? $user->position->name : '';
             $position = strtolower($positionName);
             \Log::info('User position for void rejection: ' . $positionName . ' (lowercase: ' . $position . ')');
-            
+
             // Check if user has approval role (Captain or Chairperson)
-            $canReject = strpos($position, 'captain') !== false || 
+            $canReject = strpos($position, 'captain') !== false ||
                         strpos($position, 'chairperson') !== false ||
                         strpos($position, 'barangay captain') !== false ||
                         strpos($position, 'sk chairperson') !== false;
-                        
+
             if (!$canReject) {
                 \Log::warning('User not authorized for void rejection. Position: ' . $positionName);
                 return response()->json([
@@ -1088,13 +1088,13 @@ class DisbursementController extends Controller
             $positionName = $user->position ? $user->position->name : '';
             $position = strtolower($positionName);
             \Log::info('User position for direct void: ' . $positionName . ' (lowercase: ' . $position . ')');
-            
+
             // Check if user has approval role (Captain or Chairperson)
-            $canVoidDirectly = strpos($position, 'captain') !== false || 
+            $canVoidDirectly = strpos($position, 'captain') !== false ||
                               strpos($position, 'chairperson') !== false ||
                               strpos($position, 'barangay captain') !== false ||
                               strpos($position, 'sk chairperson') !== false;
-                              
+
             if (!$canVoidDirectly) {
                 \Log::warning('User not authorized for direct void. Position: ' . $positionName);
                 return response()->json([
@@ -1120,13 +1120,13 @@ class DisbursementController extends Controller
             $disbursementDate = new \DateTime($disbursement->date);
             $today = new \DateTime();
             $aging = $today->diff($disbursementDate)->days;
-            
-            if ($aging > 1) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Only disbursements aged 1 day or less can be voided'
-                ], 400);
-            }
+
+            // if ($aging > 1) {
+            //     return response()->json([
+            //         'status' => false,
+            //         'message' => 'Only disbursements aged 1 day or less can be voided'
+            //     ], 400);
+            // }
 
             // Update status to Voided and save remarks
             $disbursement->status = 'Voided';
@@ -1143,7 +1143,7 @@ class DisbursementController extends Controller
             if ($cheque) {
                 $cheque->status = 'void';
                 $cheque->save();
-                
+
                 // Update bank and booklet statuses after voiding cheque
                 $bankLibraryController = new \App\Http\Controllers\Library\BankLibraryController();
                 $bankLibraryController->updateBanksStatus();
@@ -1507,7 +1507,7 @@ class DisbursementController extends Controller
             ], 500);
         }
     }
-    
+
     public function generateDvNumber(Request $request)
     {
         $today = now();

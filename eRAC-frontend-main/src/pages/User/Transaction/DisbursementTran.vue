@@ -281,13 +281,8 @@
                   canVoid(props.row) &&
                   props.row.status !== 'Stale'
                 " @click.stop="() => handleDirectVoidDisbursement(props.row)" v-permission="'delete'" />
-                <!-- Approver: Handle void requests -->
-                <div v-if="isApprover">
-                  <q-btn dense icon="check_circle" color="green" class="q-mr-xs"
-                    v-if="props.row.status === 'Void Requested'" @click="handleApproveVoid(props.row)" />
-                  <q-btn dense icon="cancel" color="grey" v-if="props.row.status === 'Void Requested'"
-                    @click="handleRejectVoid(props.row)" />
-                </div>
+                <!-- Approver: Handle void requests - now handled in ViewOrDetails -->
+                <!-- Void approval/rejection buttons removed - now handled in ViewOrDetails component -->
               </div>
             </q-td>
           </template>
@@ -1008,59 +1003,8 @@ const handleSubmitVoidRequest = async () => {
   }
 }
 
-// Approver actions
-const handleApproveVoid = async (row) => {
-  try {
-    await store.approveVoidRequest(row.id)
-    $q.notify({
-      type: 'positive',
-      message: 'Void approved.',
-      icon: 'check_circle',
-      position: 'top',
-      timeout: 2500,
-    })
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: error.message || 'Failed to approve void',
-      icon: 'error',
-      position: 'top',
-      timeout: 5000,
-    })
-  }
-}
-
-const handleRejectVoid = async (row) => {
-  $q.dialog({
-    title: 'Reject Void Request',
-    message: 'Please provide rejection remarks:',
-    prompt: {
-      model: '',
-      type: 'textarea',
-    },
-    cancel: true,
-    persistent: true,
-  }).onOk(async (remarks) => {
-    try {
-      await store.rejectVoidRequest(row.id, remarks?.trim?.() || '')
-      $q.notify({
-        type: 'positive',
-        message: 'Void request rejected.',
-        icon: 'check_circle',
-        position: 'top',
-        timeout: 2500,
-      })
-    } catch (error) {
-      $q.notify({
-        type: 'negative',
-        message: error.message || 'Failed to reject void request',
-        icon: 'error',
-        position: 'top',
-        timeout: 5000,
-      })
-    }
-  })
-}
+// Approver actions - now handled in ViewOrDetails component
+// Removed handleApproveVoid and handleRejectVoid methods
 
 // Handle edit disbursement with loading state
 const handleEditDisbursement = async (row) => {

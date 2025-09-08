@@ -32,7 +32,7 @@
           <!-- Bank Field -->
           <div class="col-md-4 col-sm-12">
             <q-item-label class="q-mb-xs">Bank:</q-item-label>
-            <q-select filled outlined dense 
+            <q-select filled outlined dense
               :label="bankStore.banks.find(b => b.id === store.forms.disbursement.bank_id).name" :readonly="true"
               :disable="true" />
           </div>
@@ -56,7 +56,7 @@
           </div>
 
           <!-- Cancel Cheque Button -->
-          <div class="col-md-4 col-sm-12 flex flex-center">
+          <div class="col-md-4 col-sm-12 flex flex-center q-mt-lg">
             <q-btn color="negative" label="Cancel Cheque" icon="cancel" class="full-width"
               @click="showCancelDialog = true" :disable="store.forms.disbursement.is_cancelled" />
           </div>
@@ -76,11 +76,11 @@
 
             <q-card-section class="q-gutter-md">
               <!-- Bank Selection -->
-              
+
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Bank:</q-item-label>
                 <q-select filled outlined dense v-model="store.cancelBank" :options="store.cancelBanks"
-                  option-label="name" option-value="id" emit-value map-options label="Select Bank" 
+                  option-label="name" option-value="id" emit-value map-options label="Select Bank"
                   />
               </div>
 

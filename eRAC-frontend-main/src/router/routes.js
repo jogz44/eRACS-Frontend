@@ -74,6 +74,11 @@ const routes = [
             name: 'Augmentation',
             component: () => import('../pages/User/Transaction/AugmentationTran.vue'),
           },
+          {
+            path: 'supplemental',
+            name: 'Supplemental',
+            component: () => import('../pages/User/Transaction/SupplementalTran.vue'),
+          },
         ],
       },
 
@@ -131,15 +136,15 @@ const routes = [
         path: 'useraccess',
         name: 'userAccess',
         component: () => import('../pages/User/UserAccess.vue'),
-        meta: {title: 'UserAccess'}
+        meta: { title: 'UserAccess' },
       },
       // Logs
       {
         path: 'logsview',
         name: 'Logsview',
         component: () => import('../pages/User/UserLogs.vue'),
-        meta: {title: 'Logs' }
-      }
+        meta: { title: 'Logs' },
+      },
     ],
   },
 
@@ -154,7 +159,7 @@ const routes = [
         component: () => import('../pages/Admin/DashBoard.vue'),
         meta: { title: 'Dashboard' },
       },
-       {
+      {
         path: 'reportPage',
         name: 'aDminReportPage',
         component: () => import('../pages/Admin/AdminReportpage.vue'),
@@ -209,6 +214,7 @@ const routes = [
         name: 'adminAugmentation',
         component: () => import('../pages/Admin/Transaction/AugmentationTran.vue'),
       },
+
       // Continuing Transactions
 
       {
@@ -221,8 +227,6 @@ const routes = [
         name: 'AdminDisbursement',
         component: () => import('../pages/Admin/Continuing/ContDis.vue'),
       },
-
-
     ],
   },
 
@@ -232,7 +236,7 @@ const routes = [
     name: 'ErrorNotFound',
     component: () => import('../pages/ErrorNotFound.vue'),
     meta: { title: 'Page Not Found' },
-  }
+  },
 ]
 
 export default routes

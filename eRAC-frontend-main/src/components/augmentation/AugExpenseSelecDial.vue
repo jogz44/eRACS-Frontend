@@ -3,7 +3,7 @@
   <q-dialog v-model="store.dialogs.augExpense">
     <q-card :style="cardWidthStyle">
       <q-card-section>
-        <div class="text-h6">Select Expense Account</div>
+        <div class="text-h6">Select Expense Account (Same Class)</div>
       </q-card-section>
 
       <q-card-section class="q-pa-md">
@@ -30,12 +30,12 @@
             flat
             bordered
           >
-            <template v-slot:body-cell-budget_source="props">
+            <template v-slot:body-cell-expense_class="props">
               <q-td :props="props">
                 <q-badge
-                  :color="getBudgetSourceColor(props.row.budget_source)"
-                  :label="getBudgetSourceLabel(props.row.budget_source)"
-                  class="budget-source-badge"
+                  :color="getExpenseClassColor(props.row.expense_class)"
+                  :label="props.row.expense_class || 'N/A'"
+                  class="expense-class-badge"
                 />
               </q-td>
             </template>
@@ -65,23 +65,26 @@ import { useAugmentationStore } from 'stores/augmentation'
 import { computed } from 'vue'
 const store = useAugmentationStore()
 
-// Budget source helper functions
-const getBudgetSourceColor = (budgetSource) => {
-  if (budgetSource?.toLowerCase().includes('annual')) {
-    return 'primary'
-  } else if (budgetSource?.toLowerCase().includes('supplemental')) {
-    return 'secondary'
+// Expense class helper functions
+const getExpenseClassColor = (expenseClass) => {
+  if (!expenseClass) return 'grey'
+  
+  // Color coding based on expense class
+  const classColors = {
+    'Sangguniang Kabataan': 'purple',
+    'General Services': 'blue',
+    'Social Services': 'green',
+    'Economic Services': 'orange',
+    'Environmental Services': 'teal',
+    'Capital Outlay': 'indigo',
+    'Disaster Risk Reduction': 'red',
+    'Infrastructure': 'brown',
+    'Peace and Order': 'deep-orange',
+    'Sports and Recreation': 'pink',
+    'Other': 'grey'
   }
-  return 'grey'
-}
-
-const getBudgetSourceLabel = (budgetSource) => {
-  if (budgetSource?.toLowerCase().includes('annual')) {
-    return 'Annual'
-  } else if (budgetSource?.toLowerCase().includes('supplemental')) {
-    return 'Supplemental'
-  }
-  return 'Mixed'
+  
+  return classColors[expenseClass] || 'info'
 }
 
 const cardWidthStyle = computed(() => {
@@ -126,7 +129,7 @@ const cardWidthStyle = computed(() => {
   min-width: 250px;
 }
 
-.budget-source-badge {
+.expense-class-badge {
   font-size: 0.75rem;
   font-weight: 500;
 }

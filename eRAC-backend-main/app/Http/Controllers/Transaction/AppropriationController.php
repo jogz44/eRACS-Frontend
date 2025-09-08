@@ -93,8 +93,21 @@ class AppropriationController extends Controller
                 // Calculate total appropriated amount
                 $totalAppropriated = $budget->tranAppropriations->sum('amount');
                 
-                // Calculate unappropriated amount
-                $unappropriated = $totalAvailable - $totalAppropriated;
+                // Calculate unappropriated amount based on budget type
+                $isSupplemental = str_contains(strtolower($budget->description), 'supplemental');
+                
+                if ($isSupplemental) {
+                    // For supplemental budgets, calculate total disbursed amount
+                    $totalDisbursed = 0;
+                    foreach ($budget->tranAppropriations as $appropriation) {
+                        $totalDisbursed += $appropriation->details()->sum('amount');
+                    }
+                    // Unappropriated = total appropriated - total disbursed (actual available amount)
+                    $unappropriated = max(0, $totalAppropriated - $totalDisbursed);
+                } else {
+                    // For annual budgets, unappropriated = total available - total appropriated
+                    $unappropriated = $totalAvailable - $totalAppropriated;
+                }
                 
 
 
@@ -181,8 +194,21 @@ class AppropriationController extends Controller
                 // Calculate total appropriated amount
                 $totalAppropriated = $budget->tranAppropriations->sum('amount');
                 
-                // Calculate unappropriated amount
-                $unappropriated = $totalAvailable - $totalAppropriated;
+                // Calculate unappropriated amount based on budget type
+                $isSupplemental = str_contains(strtolower($budget->description), 'supplemental');
+                
+                if ($isSupplemental) {
+                    // For supplemental budgets, calculate total disbursed amount
+                    $totalDisbursed = 0;
+                    foreach ($budget->tranAppropriations as $appropriation) {
+                        $totalDisbursed += $appropriation->details()->sum('amount');
+                    }
+                    // Unappropriated = total appropriated - total disbursed (actual available amount)
+                    $unappropriated = max(0, $totalAppropriated - $totalDisbursed);
+                } else {
+                    // For annual budgets, unappropriated = total available - total appropriated
+                    $unappropriated = $totalAvailable - $totalAppropriated;
+                }
 
                 return [
                     'id' => $budget->id,
@@ -1469,5 +1495,527 @@ class AppropriationController extends Controller
             'status' => true,
             'data' => $result
         ]);
+    }
+
+    /**
+     * Get unused expenses for supplemental budget creation
+     */
+    public function getUnusedExpenses(Request $request)
+    {
+        $request->validate([
+            'year' => 'nullable|integer',
+            'barangay_id' => 'nullable|exists:barangays,id'
+        ]);
+
+        // Get base query for appropriations - exclude supplemental budget appropriations
+        $query = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem', 'budget.fiscalYear'])
+            ->where('status', 'committed')
+            ->whereDoesntHave('budget', function($q) {
+                $q->where('description', 'like', '%supplemental%');
+            });
+
+        // Filter by barangay
+        if ($request->barangay_id) {
+            $query->where('barangay_id', $request->barangay_id);
+        } else {
+            $user = $request->user('barangay');
+            if ($user) {
+                $query->where('barangay_id', $user->barangay_id);
+            }
+        }
+
+        // Filter by year
+        if ($request->year) {
+            $query->whereHas('budget.fiscalYear', function($q) use ($request) {
+                $q->where('year', $request->year);
+            });
+        }
+
+        $appropriations = $query->get();
+        
+        \Log::info('Filtered appropriations for unused expenses calculation:', [
+            'total_appropriations' => $appropriations->count(),
+            'appropriation_ids' => $appropriations->pluck('id')->toArray(),
+            'budget_descriptions' => $appropriations->map(function($appr) {
+                return $appr->budget ? $appr->budget->description : 'No Budget';
+            })->unique()->values()->toArray()
+        ]);
+
+        // Group by expense hierarchy and calculate unused amounts
+        $groupedExpenses = [];
+        
+        foreach ($appropriations as $appropriation) {
+            $key = $appropriation->expense_class_id . '_' . 
+                   ($appropriation->expense_type_id ?? 'null') . '_' . 
+                   ($appropriation->expense_item_id ?? 'null');
+            
+            if (!isset($groupedExpenses[$key])) {
+                // Build account name
+                $accountParts = [];
+                if ($appropriation->expenseClass) {
+                    $accountParts[] = $appropriation->expenseClass->name;
+                }
+                if ($appropriation->expenseType) {
+                    $accountParts[] = $appropriation->expenseType->name;
+                }
+                if ($appropriation->expenseItem) {
+                    $accountParts[] = $appropriation->expenseItem->name;
+                }
+                
+                $accountName = implode(' > ', $accountParts);
+
+                // Get all appropriations with the same expense hierarchy
+                $matchingAppropriations = $appropriations->filter(function($appr) use ($appropriation) {
+                    return $appr->expense_class_id === $appropriation->expense_class_id &&
+                           $appr->expense_type_id === $appropriation->expense_type_id &&
+                           $appr->expense_item_id === $appropriation->expense_item_id;
+                });
+
+                // Calculate total appropriated amount (current sum of appropriation amounts)
+                $totalAppropriated = $matchingAppropriations->sum('amount');
+                
+                // Calculate total disbursed amount from expense details
+                $totalDisbursed = 0;
+                foreach ($matchingAppropriations as $appr) {
+                    $totalDisbursed += $appr->details()->sum('amount');
+                }
+
+                // Calculate unused amount (current appropriation amount minus disbursed)
+                // This correctly reflects the current state after any supplemental budget transfers
+                $unusedAmount = $totalAppropriated - $totalDisbursed;
+
+                \Log::info('Calculating unused amount for expense:', [
+                    'account_name' => $accountName,
+                    'total_appropriated' => $totalAppropriated,
+                    'total_disbursed' => $totalDisbursed,
+                    'unused_amount' => $unusedAmount,
+                    'appropriation_ids' => $matchingAppropriations->pluck('id')->toArray(),
+                    'individual_amounts' => $matchingAppropriations->pluck('amount')->toArray(),
+                    'individual_disbursed' => $matchingAppropriations->map(function($appr) {
+                        return $appr->details()->sum('amount');
+                    })->toArray()
+                ]);
+
+                // Only include if there's unused amount
+                if ($unusedAmount > 0) {
+                    $groupedExpenses[$key] = [
+                        'id' => $matchingAppropriations->first()->id,
+                        'account_name' => $accountName,
+                        'expense_class' => $appropriation->expenseClass->name ?? '',
+                        'expense_type' => $appropriation->expenseType->name ?? '',
+                        'expense_item' => $appropriation->expenseItem->name ?? '',
+                        'total_appropriated' => (float)$totalAppropriated,
+                        'total_disbursed' => (float)$totalDisbursed,
+                        'unused_amount' => (float)$unusedAmount,
+                        'budget_description' => $matchingAppropriations->first()->budget->description ?? '',
+                        'budget_type' => str_contains(strtolower($matchingAppropriations->first()->budget->description ?? ''), 'supplemental') ? 'supplemental' : 'annual'
+                    ];
+                }
+            }
+        }
+
+        $totalUnused = collect($groupedExpenses)->sum('unused_amount');
+
+        return response()->json([
+            'status' => true,
+            'data' => array_values($groupedExpenses),
+            'total_unused' => $totalUnused
+        ]);
+    }
+
+    /**
+     * Create supplemental budget from unused expenses
+     */
+    public function createSupplementalBudget(Request $request)
+    {
+        \Log::info('Creating supplemental budget with data:', $request->all());
+
+        try {
+            $request->validate([
+                'description' => 'required|string|max:255',
+                'year' => 'required|integer',
+                'expense_sources' => 'required|array|min:1',
+                'expense_sources.*.appropriation_id' => 'required|exists:tran_appropriations,id',
+                'expense_sources.*.amount' => 'required|numeric|min:0.01',
+                'barangay_id' => 'nullable|exists:barangays,id'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Validation failed for createSupplementalBudget:', [
+                'errors' => $e->errors(),
+                'request_data' => $request->all()
+            ]);
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        }
+
+        return DB::transaction(function () use ($request) {
+            // Determine barangay_id
+            $barangayId = null;
+            if ($request->barangay_id) {
+                $barangayId = $request->barangay_id;
+            } else {
+                $user = $request->user('barangay');
+                $barangayId = $user->barangay_id;
+            }
+
+            // Get fiscal year ID from year
+            $fiscalYear = LibFiscalYear::where('year', $request->year)
+                ->where('barangay_id', $barangayId)
+                ->first();
+            
+            if (!$fiscalYear) {
+                throw new \Exception('Fiscal year not found for year: ' . $request->year);
+            }
+
+            // Calculate total amount
+            $totalAmount = collect($request->expense_sources)->sum('amount');
+
+            // Ensure description contains "supplemental" for proper identification
+            $description = $request->description;
+            if (!str_contains(strtolower($description), 'supplemental')) {
+                $description = 'Supplemental Budget - ' . $description;
+            }
+
+            // Create supplemental budget
+            $budget = Budget::create([
+                'barangay_id' => $barangayId,
+                'fiscal_year_id' => $fiscalYear->id,
+                'start_date' => now()->startOfYear(),
+                'end_date' => now()->endOfYear(),
+                'description' => $description,
+                'original_amount' => $totalAmount,
+                'current_amount' => $totalAmount,
+                'augmentation' => 0,
+                'return_amount' => 0,
+                'user_id' => $request->user('barangay')->id ?? $request->user('admin')->id
+            ]);
+
+            \Log::info('Created supplemental budget:', [
+                'budget_id' => $budget->id,
+                'description' => $budget->description,
+                'total_amount' => $budget->original_amount,
+                'fiscal_year_id' => $budget->fiscal_year_id
+            ]);
+
+            // Create appropriations for each expense source
+            $createdAppropriations = [];
+            foreach ($request->expense_sources as $source) {
+                $sourceAppropriation = TranAppropriation::find($source['appropriation_id']);
+                
+                if (!$sourceAppropriation) {
+                    throw new \Exception('Source appropriation not found with ID: ' . $source['appropriation_id']);
+                }
+
+                // Check if source has enough amount
+                if ($sourceAppropriation->amount < $source['amount']) {
+                    throw new \Exception('Insufficient amount in source appropriation. Available: ' . $sourceAppropriation->amount . ', Requested: ' . $source['amount']);
+                }
+
+                // Log before reduction
+                \Log::info('Before reducing source appropriation:', [
+                    'source_id' => $sourceAppropriation->id,
+                    'current_amount' => $sourceAppropriation->amount,
+                    'amount_to_reduce' => $source['amount'],
+                    'remaining_after' => $sourceAppropriation->amount - $source['amount']
+                ]);
+
+                // Reduce the source appropriation amount FIRST
+                $sourceAppropriation->decrement('amount', $source['amount']);
+                
+                // Log after reduction
+                \Log::info('After reducing source appropriation:', [
+                    'source_id' => $sourceAppropriation->id,
+                    'new_amount' => $sourceAppropriation->fresh()->amount
+                ]);
+
+                // Create new appropriation for supplemental budget - this will be unappropriated
+                $newAppropriation = TranAppropriation::create([
+                    'barangay_id' => $barangayId,
+                    'budget_id' => $budget->id,
+                    'expense_class_id' => $sourceAppropriation->expense_class_id,
+                    'expense_type_id' => $sourceAppropriation->expense_type_id,
+                    'expense_item_id' => $sourceAppropriation->expense_item_id,
+                    'amount' => $source['amount'],
+                    'transaction_date' => now(),
+                    'status' => 'committed',
+                    'user_id' => $request->user('barangay')->id ?? $request->user('admin')->id
+                ]);
+
+                $createdAppropriations[] = $newAppropriation;
+
+                \Log::info('Created supplemental appropriation (unappropriated):', [
+                    'source_id' => $sourceAppropriation->id,
+                    'source_amount_before' => $sourceAppropriation->amount + $source['amount'],
+                    'source_amount_after' => $sourceAppropriation->amount,
+                    'deducted_amount' => $source['amount'],
+                    'new_appropriation_id' => $newAppropriation->id,
+                    'new_appropriation_amount' => $newAppropriation->amount,
+                    'note' => 'This appropriation is unappropriated and available for allocation'
+                ]);
+            }
+
+            // Log the creation
+            AdminAuthController::logUserAction(
+                $request->user('barangay') ?? $request->user('admin'),
+                'Created Supplemental Budget',
+                sprintf(
+                    'Created supplemental budget "%s" with amount ₱%s from %d expense sources',
+                    $request->description,
+                    number_format($totalAmount, 2),
+                    count($request->expense_sources)
+                )
+            );
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Supplemental budget created successfully',
+                'data' => [
+                    'budget' => $budget,
+                    'appropriations' => $createdAppropriations
+                ]
+            ], 201);
+        });
+    }
+
+    /**
+     * Get supplemental budgets
+     */
+    public function getSupplementalBudgets(Request $request)
+    {
+        $request->validate([
+            'year' => 'nullable|integer',
+            'barangay_id' => 'nullable|exists:barangays,id'
+        ]);
+
+        // Get base query for budgets with supplemental description
+        $query = Budget::with(['tranAppropriations.expenseType', 'fiscalYear', 'barangay'])
+            ->where('description', 'like', '%supplemental%');
+
+        // Filter by barangay
+        if ($request->barangay_id) {
+            $query->where('barangay_id', $request->barangay_id);
+        } else {
+            $user = $request->user('barangay');
+            if ($user) {
+                $query->where('barangay_id', $user->barangay_id);
+            }
+        }
+
+        // Filter by year
+        if ($request->year) {
+            $query->whereHas('fiscalYear', function($q) use ($request) {
+                $q->where('year', $request->year);
+            });
+        }
+
+        $budgets = $query->orderBy('created_at', 'desc')->get();
+
+        $supplementalBudgets = $budgets->map(function($budget) {
+            $totalAppropriated = $budget->tranAppropriations->sum('amount');
+            $totalDisbursed = 0;
+            
+            foreach ($budget->tranAppropriations as $appropriation) {
+                $totalDisbursed += $appropriation->details()->sum('amount');
+            }
+            
+            // For supplemental budgets, the available amount should be the total appropriated amount minus disbursed
+            // This is because supplemental budgets are created from unused expenses and the appropriations represent available funds
+            $unusedAmount = max(0, $totalAppropriated - $totalDisbursed);
+
+            \Log::info('Processing supplemental budget:', [
+                'budget_id' => $budget->id,
+                'description' => $budget->description,
+                'original_amount' => $budget->original_amount,
+                'total_appropriated' => $totalAppropriated,
+                'total_disbursed' => $totalDisbursed,
+                'unused_amount' => $unusedAmount,
+                'appropriations_count' => $budget->tranAppropriations->count(),
+                'note' => 'Supplemental budgets: available = total_appropriated - total_disbursed'
+            ]);
+
+            return [
+                'id' => $budget->id,
+                'description' => $budget->description,
+                'total_amount' => (float)$budget->original_amount,
+                'total_appropriated' => (float)$totalAppropriated,
+                'total_disbursed' => (float)$totalDisbursed,
+                'unused_amount' => (float)$unusedAmount,
+                'created_at' => $budget->created_at->format('Y-m-d'),
+                'fiscal_year' => $budget->fiscalYear->year ?? '',
+                'barangay_name' => $budget->barangay->name ?? '',
+                'appropriations' => $budget->tranAppropriations->map(function($appr) {
+                    return [
+                        'id' => $appr->id,
+                        'account_name' => $this->buildAccountName($appr->expenseClass, $appr->expenseType, $appr->expenseItem),
+                        'amount' => (float)$appr->amount
+                    ];
+                })
+            ];
+        });
+
+        $totalAmount = $supplementalBudgets->sum('total_amount');
+
+        return response()->json([
+            'status' => true,
+            'data' => $supplementalBudgets,
+            'total_amount' => $totalAmount
+        ]);
+    }
+
+    /**
+     * Get fiscal years for dropdown
+     */
+    public function getFiscalYears(Request $request)
+    {
+        $request->validate([
+            'barangay_id' => 'nullable|exists:barangays,id'
+        ]);
+
+        // Filter by barangay
+        $query = LibFiscalYear::query();
+        if ($request->barangay_id) {
+            $query->where('barangay_id', $request->barangay_id);
+        } else {
+            $user = $request->user('barangay');
+            if ($user) {
+                $query->where('barangay_id', $user->barangay_id);
+            }
+        }
+
+        $fiscalYears = $query->orderBy('year', 'desc')->get();
+
+        return response()->json([
+            'status' => true,
+            'data' => $fiscalYears
+        ]);
+    }
+
+    /**
+     * Transfer budget from supplemental to annual
+     */
+    public function transferBudget(Request $request)
+    {
+        try {
+            $request->validate([
+                'from_budget_id' => 'required|exists:budgets,id',
+                'to_budget_id' => 'required|exists:budgets,id',
+                'amount' => 'required|numeric|min:0.01',
+                'description' => 'nullable|string|max:255'
+            ]);
+
+            \Log::info('Budget transfer request:', $request->all());
+
+            $fromBudget = Budget::findOrFail($request->from_budget_id);
+            $toBudget = Budget::findOrFail($request->to_budget_id);
+
+            // Check if from budget is supplemental
+            if (!str_contains(strtolower($fromBudget->description), 'supplemental')) {
+                throw new \Exception('Source budget must be a supplemental budget');
+            }
+
+            // Check if to budget is annual
+            if (!str_contains(strtolower($toBudget->description), 'annual')) {
+                throw new \Exception('Destination budget must be an annual budget');
+            }
+
+            // Check if from budget has sufficient unappropriated amount
+            $fromUnappropriated = $fromBudget->tranAppropriations->sum('amount') - 
+                                $fromBudget->tranAppropriations->sum(function($appr) {
+                                    return $appr->details()->sum('amount');
+                                });
+
+            if ($fromUnappropriated < $request->amount) {
+                throw new \Exception('Insufficient unappropriated amount in source budget');
+            }
+
+            // Get barangay ID
+            $barangayId = $request->user('barangay')?->barangay_id ?? 
+                         $request->user('admin')?->selected_barangay_id ?? 
+                         $fromBudget->barangay_id;
+
+            if ($fromBudget->barangay_id !== $barangayId || $toBudget->barangay_id !== $barangayId) {
+                throw new \Exception('Both budgets must belong to the same barangay');
+            }
+
+            // Start database transaction
+            \DB::beginTransaction();
+
+            try {
+                // Reduce from budget's original amount
+                $fromBudget->decrement('original_amount', $request->amount);
+                $fromBudget->decrement('current_amount', $request->amount);
+
+                // Increase to budget's original amount
+                $toBudget->increment('original_amount', $request->amount);
+                $toBudget->increment('current_amount', $request->amount);
+
+                // Log the transfer
+                AdminAuthController::logUserAction(
+                    $request->user('barangay') ?? $request->user('admin'),
+                    'Budget Transfer',
+                    "Transferred ₱" . number_format($request->amount, 2) . " from {$fromBudget->description} to {$toBudget->description}",
+                    $barangayId
+                );
+
+                \DB::commit();
+
+                \Log::info('Budget transfer completed successfully:', [
+                    'from_budget_id' => $fromBudget->id,
+                    'to_budget_id' => $toBudget->id,
+                    'amount' => $request->amount,
+                    'from_remaining' => $fromBudget->fresh()->original_amount,
+                    'to_new_total' => $toBudget->fresh()->original_amount
+                ]);
+
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Budget transferred successfully',
+                    'data' => [
+                        'from_budget' => $fromBudget->fresh(),
+                        'to_budget' => $toBudget->fresh(),
+                        'amount' => $request->amount
+                    ]
+                ]);
+
+            } catch (\Exception $e) {
+                \DB::rollback();
+                throw $e;
+            }
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Budget transfer validation error:', [
+                'errors' => $e->errors(),
+                'request' => $request->all()
+            ]);
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Budget transfer error:', [
+                'message' => $e->getMessage(),
+                'request' => $request->all()
+            ]);
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * Helper method to build account names
+     */
+    private function buildAccountName($expenseClass, $expenseType, $expenseItem)
+    {
+        $parts = [];
+        if ($expenseClass && $expenseClass->name) $parts[] = $expenseClass->name;
+        if ($expenseType && $expenseType->name) $parts[] = $expenseType->name;
+        if ($expenseItem && $expenseItem->name) $parts[] = $expenseItem->name;
+        return implode(' > ', $parts);
     }
 }

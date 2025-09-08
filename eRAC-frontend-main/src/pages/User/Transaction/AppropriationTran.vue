@@ -163,8 +163,21 @@
           <!-- Flexible spacer to push Add button to the right -->
           <div class="col"></div>
 
-          <!-- Add Button -->
+          <!-- Transfer Button -->
           <div class="col-auto">
+            <q-btn
+              label="Transfer"
+              color="secondary"
+              icon="swap_horiz"
+              @click="openTransferDialog"
+              :disable="supplementalBudgets.length === 0 || annualBudgets.length === 0"
+              class="full-width btn-match-input"
+              v-permission="'add'"
+            />
+          </div>
+
+          <!-- Add Button - Hidden for supplemental budget -->
+          <div class="col-auto" v-if="selectedBudgetType !== 'supplemental'">
             <q-btn
               label="Add"
               color="primary"
@@ -316,24 +329,26 @@
         <template v-slot:body-cell-action="props">
           <q-td :props="props">
             <div class="q-gutter-xs">
-                             <q-btn
-                 dense
-                 icon="edit"
-                 color="orange"
-                 @click="openEditAllocationDialog(props.row)"
-                 :disable="!props.row.allocations || props.row.allocations.length === 0 || editLoading[props.row.id]"
-                 :loading="editLoading[props.row.id]"
-                 v-permission="'edit'"
-               />
-                             <q-btn
-                 dense
-                 icon="visibility"
-                 color="blue"
-                 @click="openViewDialog(props.row)"
-                 :loading="viewLoading[props.row.id]"
-                 :disable="viewLoading[props.row.id]"
-                 v-permission="'view'"
-               />
+              <!-- Edit button - hidden for supplemental budgets -->
+              <q-btn
+                v-if="selectedBudgetType !== 'supplemental'"
+                dense
+                icon="edit"
+                color="orange"
+                @click="openEditAllocationDialog(props.row)"
+                :disable="!props.row.allocations || props.row.allocations.length === 0 || editLoading[props.row.id]"
+                :loading="editLoading[props.row.id]"
+                v-permission="'edit'"
+              />
+              <q-btn
+                dense
+                icon="visibility"
+                color="blue"
+                @click="openViewDialog(props.row)"
+                :loading="viewLoading[props.row.id]"
+                :disable="viewLoading[props.row.id]"
+                v-permission="'view'"
+              />
             </div>
           </q-td>
         </template>
@@ -342,6 +357,111 @@
 
     <CommitDialog />
     <ViewCommitDialog ref="viewDialogRef" />
+
+    <!-- Supplemental Budget View Dialog -->
+    <q-dialog v-model="showSupplementalViewDialog">
+      <q-card style="min-width: 900px; max-width: 90vw">
+        <q-card-section class="q-pb-none">
+          <div class="row items-center justify-between">
+            <div class="text-h6">View Supplemental Budget Details</div>
+            <q-btn icon="close" flat round dense @click="showSupplementalViewDialog = false" />
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <!-- Summary section -->
+          <div class="row q-mb-md q-col-gutter-md">
+            <div class="col-12 col-sm-6">
+              <div class="text-caption">Description:</div>
+              <strong>{{ selectedSupplementalRow.description || '-' }}</strong>
+            </div>
+
+            <div class="col-12 col-sm-6">
+              <div class="text-caption">Created Date:</div>
+              <strong>{{ selectedSupplementalRow.created_at || '-' }}</strong>
+            </div>
+            <div class="col-12 col-sm-6">
+              <div class="text-caption">Total Amount:</div>
+              <strong>{{ appropriationStore.formatCurrency(selectedSupplementalRow.amount) }}</strong>
+            </div>
+            <div class="col-12 col-sm-6">
+              <div class="text-caption">Available for Transfer:</div>
+              <strong>{{ appropriationStore.formatCurrency(selectedSupplementalRow.unappropriated) }}</strong>
+            </div>
+          </div>
+
+          <!-- Transferred Funds in this supplemental budget -->
+          <div class="q-mb-md">
+            <div class="text-h6 text-weight-medium q-mb-sm">
+              Transferred Funds in this Supplemental Budget
+            </div>
+            <div class="text-caption q-mb-sm">
+              These funds were transferred from unused expenses and are available for transfer to annual budgets
+            </div>
+
+            <div class="hierarchical-table" style="border: 1px solid #e0e0e0">
+              <div class="row q-pa-sm bg-grey-2 text-weight-medium">
+                <div class="col-6">Account</div>
+                <div class="col-6 text-right">Amount (₱)</div>
+              </div>
+
+              <div class="hierarchical-body">
+                <template v-if="selectedSupplementalRow.appropriations && selectedSupplementalRow.appropriations.length > 0">
+                  <div
+                    v-for="appropriation in selectedSupplementalRow.appropriations"
+                    :key="'appropriation-' + appropriation.id"
+                    class="row q-pa-sm"
+                    style="border-bottom: 1px solid #f0f0f0"
+                  >
+                    <div class="col-6">
+                      <div class="text-weight-medium">
+                        {{ appropriation.account_name || 'Unknown Account' }}
+                      </div>
+                    </div>
+                    <div class="col-6 text-right">
+                      <div class="text-weight-medium">{{ appropriationStore.formatCurrency(appropriation.amount) }}</div>
+                    </div>
+                  </div>
+                </template>
+                <div v-else class="row q-pa-sm">
+                  <div class="col-12 text-center text-grey-6">
+                    <q-icon name="info" size="1.5em" class="q-mb-xs" />
+                    <div>No appropriation details available</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Transfer Information -->
+          <div class="q-mb-md">
+            <div class="text-h6 text-weight-medium q-mb-sm">Transfer Information</div>
+            <div class="row q-col-gutter-md">
+              <div class="col-12 col-sm-6">
+                <q-card flat bordered class="q-pa-md">
+                  <div class="text-caption text-grey-7">Purpose</div>
+                  <div class="text-h6 text-primary">
+                    Available for Transfer
+                  </div>
+                </q-card>
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-card flat bordered class="q-pa-md">
+                  <div class="text-caption text-grey-7">Available Amount</div>
+                  <div class="text-h6 text-secondary">
+                    {{ appropriationStore.formatCurrency(selectedSupplementalRow.unappropriated) }}
+                  </div>
+                </q-card>
+              </div>
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Close" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
     <!-- Edit Allocation Dialog -->
     <q-dialog v-model="showEditAllocationDialog">
@@ -436,11 +556,151 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <!-- Transfer Budget Dialog -->
+    <q-dialog v-model="showTransferDialog" @keydown.enter="executeTransfer">
+      <q-card style="min-width: 600px">
+        <q-card-section class="q-pb-none">
+          <div class="text-h6">Transfer from Supplemental to Annual Budget</div>
+        </q-card-section>
+
+        <q-card-section class="q-gutter-sm">
+          <q-select
+            outlined
+            v-model="selectedSupplementalBudget"
+            :options="supplementalBudgets"
+            option-label="description"
+            option-value="id"
+            emit-value
+            map-options
+            label="From Supplemental Budget"
+            :rules="[(val) => !!val || 'Required']"
+            @keydown.enter="executeTransfer"
+            @update:model-value="onSupplementalBudgetChange"
+          >
+            <template v-slot:option="scope">
+              <q-item v-bind="scope.itemProps">
+                <q-item-section>
+                  <q-item-label>{{ scope.opt.description }}</q-item-label>
+                  <q-item-label caption>
+                    Available: {{ appropriationStore.formatCurrency(scope.opt.unused_amount || 0) }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+            </template>
+          </q-select>
+
+          <!-- Available Balance Display -->
+          <div v-if="selectedSupplementalBudget" class="q-mt-sm q-mb-md">
+            <q-card flat bordered class="bg-primary-1">
+              <q-card-section class="q-pa-md">
+                <div class="row items-center">
+                  <div class="col">
+                    <div class="text-caption text-grey-7">Available Balance for Transfer</div>
+                    <div class="text-h6 text-green-8">
+                      {{ appropriationStore.formatCurrency(getSelectedSupplementalBudget()?.unused_amount || 0) }}
+                    </div>
+                  </div>
+                  <div class="col-auto">
+                    <q-icon name="account_balance_wallet" size="24px" color="green-6" />
+                  </div>
+                </div>
+              </q-card-section>
+            </q-card>
+          </div>
+
+          <q-select
+            outlined
+            v-model="selectedAnnualBudget"
+            :options="annualBudgets"
+            option-label="description"
+            option-value="id"
+            emit-value
+            map-options
+            label="To Annual Budget"
+            :rules="[(val) => !!val || 'Required']"
+            @keydown.enter="executeTransfer"
+          >
+            <template v-slot:option="scope">
+              <q-item v-bind="scope.itemProps">
+                <q-item-section>
+                  <q-item-label>{{ scope.opt.description }}</q-item-label>
+                  <q-item-label caption>
+                    Unappropriated: {{ appropriationStore.formatCurrency(scope.opt.unappropriated) }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+            </template>
+          </q-select>
+
+          <q-input
+            outlined
+            v-model="transferAmount"
+            label="Transfer Amount"
+            prefix="₱"
+            @keydown.enter="executeTransfer"
+            placeholder="0.00"
+            type="number"
+            step="0.01"
+            min="0"
+            :rules="[
+              (val) => !!val || 'Required',
+              (val) => parseFloat(val) > 0 || 'Amount must be greater than 0',
+              (val) => {
+                if (!selectedSupplementalBudget) return true
+                const supplementalBudget = supplementalBudgets.find(b => b.id === selectedSupplementalBudget)
+                return !supplementalBudget || parseFloat(val) <= (supplementalBudget?.unused_amount || 0) || 'Amount exceeds available balance'
+              }
+            ]"
+            @input="handleTransferAmountInput"
+            @blur="handleTransferAmountBlur"
+          >
+            <template v-slot:hint>
+              <div v-if="selectedSupplementalBudget" class="text-caption">
+                Maximum: {{ appropriationStore.formatCurrency(getSelectedSupplementalBudget()?.unused_amount || 0) }}
+              </div>
+            </template>
+          </q-input>
+
+          <q-input
+            outlined
+            v-model="transferDescription"
+            label="Transfer Description (Optional)"
+            @keydown.enter="executeTransfer"
+            hint="Leave blank for auto-generated description"
+          />
+
+
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" v-close-popup @click="closeTransferDialog" :disable="transferLoading" />
+          <q-btn
+            label="Transfer"
+            color="secondary"
+            @click="executeTransfer"
+            :loading="transferLoading"
+            :disable="!canTransfer || transferLoading"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 
-  <!-- Mobile Add Button -->
-  <div class="mobile-add-btn-container">
+  <!-- Mobile Action Buttons -->
+  <div class="mobile-action-btn-container">
     <q-btn
+      round
+      dense
+      color="secondary"
+      icon="swap_horiz"
+      class="mobile-transfer-btn"
+      @click="openTransferDialog"
+      :disable="supplementalBudgets.length === 0 || annualBudgets.length === 0"
+      v-permission="'add'"
+    />
+    <q-btn
+      v-if="selectedBudgetType !== 'supplemental'"
       round
       dense
       color="primary"
@@ -484,8 +744,7 @@ const selectedBudgetType = ref('all')
 const budgetType = ref('annual')
 
 const budgetTypeOptions = [
-  { label: 'Annual Budget', value: 'annual' },
-  { label: 'Supplemental Budget', value: 'supplemental' }
+  { label: 'Annual Budget', value: 'annual' }
 ]
 
 const loadAppropriation = async () => {
@@ -548,6 +807,42 @@ const supplementalBudgetCount = computed(() => {
     .length
 })
 
+// Transfer functionality computed properties
+const supplementalBudgets = computed(() => {
+  return appropriationStore.appropriations
+    .filter(budget => budget.description?.toLowerCase().includes('supplemental'))
+    .map(budget => {
+      // For supplemental budgets, use the unappropriated amount from the appropriation store
+      // The backend now correctly calculates this as the total appropriated amount for supplemental budgets
+      const unappropriatedAmount = budget.unappropriated || 0
+
+      return {
+        ...budget,
+        unused_amount: unappropriatedAmount, // Map unappropriated to unused_amount for the transfer dialog
+        available_amount: unappropriatedAmount
+      }
+    })
+})
+
+const annualBudgets = computed(() => {
+  return appropriationStore.appropriations
+    .filter(budget => budget.description?.toLowerCase().includes('annual'))
+})
+
+const canTransfer = computed(() => {
+  if (!selectedSupplementalBudget.value || !selectedAnnualBudget.value || !transferAmount.value || transferAmount.value <= 0) {
+    return false
+  }
+
+  // Find the full supplemental budget object
+  const supplementalBudget = supplementalBudgets.value.find(budget => budget.id === selectedSupplementalBudget.value)
+  if (!supplementalBudget) {
+    return false
+  }
+
+  return transferAmount.value <= (supplementalBudget.unused_amount || 0)
+})
+
 const onDateRangeChange = (newRange) => {
   if (newRange && newRange.from && newRange.to) {
     const fromDate = new Date(newRange.from)
@@ -566,6 +861,19 @@ const onDateRangeClear = () => {
   appropriationStore.dateTo = ''
 }
 
+// Helper function to get selected supplemental budget
+const getSelectedSupplementalBudget = () => {
+  if (!selectedSupplementalBudget.value) return null
+  return supplementalBudgets.value.find(budget => budget.id === selectedSupplementalBudget.value)
+}
+
+// Handle supplemental budget selection change
+const onSupplementalBudgetChange = (value) => {
+  selectedSupplementalBudget.value = value
+  // Clear transfer amount when changing supplemental budget
+  transferAmount.value = null
+}
+
 const clearAllFilters = () => {
   appropriationStore.searchQuery = ''
   appropriationStore.dateFrom = ''
@@ -580,6 +888,25 @@ const typeErrorMap = ref({})
 const editDisplayAccounts = ref([])
 const editLoading = ref({})
 const viewLoading = ref({})
+
+// Transfer functionality
+const showTransferDialog = ref(false)
+const transferLoading = ref(false)
+const selectedSupplementalBudget = ref(null)
+const selectedAnnualBudget = ref(null)
+const transferAmount = ref(null)
+const transferDescription = ref('')
+
+// Supplemental budget view dialog
+const showSupplementalViewDialog = ref(false)
+const selectedSupplementalRow = ref({
+  id: null,
+  description: '',
+  amount: 0,
+  unappropriated: 0,
+  created_at: '',
+  appropriations: []
+})
 
 const initializeEditDisplayAccounts = () => {
   if (!editAllocations.value || editAllocations.value.length === 0) {
@@ -695,10 +1022,21 @@ const viewDialogRef = ref(null)
 const openViewDialog = async (row) => {
   viewLoading.value[row.id] = true
   try {
-    if (viewDialogRef.value) {
-      await viewDialogRef.value.openDialog(row)
+    // Check if this is a supplemental budget
+    if (row.description?.toLowerCase().includes('supplemental')) {
+      // Open supplemental budget view dialog
+      selectedSupplementalRow.value = {
+        ...row,
+        appropriations: row.appropriations || []
+      }
+      showSupplementalViewDialog.value = true
     } else {
-      console.error('View dialog reference is not available')
+      // Open regular view dialog for annual budgets
+      if (viewDialogRef.value) {
+        await viewDialogRef.value.openDialog(row)
+      } else {
+        console.error('View dialog reference is not available')
+      }
     }
   } catch (error) {
     console.error('Failed to open view dialog:', error)
@@ -786,12 +1124,87 @@ const closeEditAllocationDialog = () => {
   editDisplayAccounts.value = []
 }
 
+// Transfer functions
+const openTransferDialog = () => {
+  selectedSupplementalBudget.value = null
+  selectedAnnualBudget.value = null
+  transferAmount.value = null
+  transferDescription.value = ''
+  showTransferDialog.value = true
+}
+
+const closeTransferDialog = () => {
+  showTransferDialog.value = false
+  selectedSupplementalBudget.value = null
+  selectedAnnualBudget.value = null
+  transferAmount.value = null
+  transferDescription.value = ''
+}
+
+const executeTransfer = async () => {
+  if (!canTransfer.value) {
+    $q.notify({
+      type: 'negative',
+      message: 'Please fill in all required fields and ensure transfer amount is valid',
+      icon: 'error',
+      position: 'top',
+    })
+    return
+  }
+
+  transferLoading.value = true
+  try {
+    const payload = {
+      from_budget_id: selectedSupplementalBudget.value,
+      to_budget_id: selectedAnnualBudget.value,
+      amount: parseFloat(transferAmount.value),
+
+    }
+
+    // Call the transfer API
+    const authStore = useAuthStore()
+    const endpoint = authStore.admin ? '/api/admin/budget-transfer' : '/api/barangay/budget-transfer'
+    const token = authStore.admin ? authStore.adminToken : authStore.token
+
+    const response = await api.post(endpoint, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+    })
+
+    if (response.data.status) {
+      $q.notify({
+        type: 'positive',
+        message: `Successfully transferred ₱${parseFloat(transferAmount.value).toLocaleString()} from supplemental to annual budget`,
+        icon: 'check_circle',
+        position: 'top',
+      })
+
+      // Refresh the budgets list
+      await appropriationStore.fetchBudgets()
+      closeTransferDialog()
+    } else {
+      throw new Error(response.data.message || 'Transfer failed')
+    }
+  } catch (error) {
+    console.error('Transfer error:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Failed to transfer budget',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    transferLoading.value = false
+  }
+}
+
 const saveBudget = async () => {
   addLoading.value = true
   try {
-    // Set description based on budget type
-    const budgetTypeDescription = budgetType.value === 'annual' ? 'Annual Budget' : 'Supplemental Budget'
-    const finalDescription = description.value ? `${budgetTypeDescription} - ${description.value}` : budgetTypeDescription
+    // Only allow annual budget creation
+    const finalDescription = description.value ? `Annual Budget - ${description.value}` : 'Annual Budget'
 
     const payload = {
       fiscal_year_id: selectedFiscalYear.value,
@@ -808,7 +1221,7 @@ const saveBudget = async () => {
 
     $q.notify({
       type: 'positive',
-      message: 'Budget added successfully!',
+      message: 'Annual budget added successfully!',
       icon: 'check_circle',
       position: 'top',
     })
@@ -989,7 +1402,8 @@ onMounted(async () => {
   }
 })
 
-const columns = [
+// Base columns definition
+const baseColumns = [
   {
     name: 'index',
     label: '#',
@@ -1005,7 +1419,6 @@ const columns = [
     sortable: true,
     format: (val) => appropriationStore.formatDate(val),
   },
-
   {
     name: 'budgetType',
     label: 'Budget Type',
@@ -1018,7 +1431,6 @@ const columns = [
     field: 'description',
     align: 'left',
   },
-
   {
     name: 'amount',
     label: 'Amount',
@@ -1046,6 +1458,32 @@ const columns = [
     align: 'center',
   },
 ]
+
+// Dynamic columns based on selected budget type
+const columns = computed(() => {
+  if (selectedBudgetType.value === 'all') {
+    // For "All Budgets": Show only Entry date, Budget Type, Description, and Amount
+    return baseColumns.filter(col =>
+      ['startdate', 'budgetType', 'description', 'amount'].includes(col.name)
+    )
+  } else if (selectedBudgetType.value === 'supplemental') {
+    // For "Supplemental Budget": Show like SupplementalTran.vue (remove amount, commit, but keep action for view button)
+    return baseColumns.filter(col =>
+      !['amount', 'commit'].includes(col.name)
+    ).map(col => {
+      if (col.name === 'unappropriated') {
+        return {
+          ...col,
+          label: 'Unappropriated Amount'
+        }
+      }
+      return col
+    })
+  } else {
+    // For "Annual Budget": Show all columns (stay as is)
+    return baseColumns
+  }
+})
 
 // Real-time input formatting function: strings (typing) show commas only; numbers (after blur) show two decimals
 const formatInputValue = (value) => {
@@ -1091,12 +1529,30 @@ const handleEditAmountBlur = (item, value) => {
   item.amount = formatted
 }
 
+// Transfer amount input handlers
+const handleTransferAmountInput = (value) => {
+  let cleanValue = String(value).replace(/[^\d.]/g, '')
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    cleanValue = parts[0] + '.' + parts.slice(1).join('')
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
+  }
+  transferAmount.value = cleanValue
+}
+
+const handleTransferAmountBlur = (value) => {
+  const formatted = formatToTwoDecimals(value)
+  transferAmount.value = formatted
+}
+
 // Format input value to exactly two decimal places
 const formatToTwoDecimals = (value) => {
   // Remove peso sign, commas, and spaces
   const cleanValue = String(value).replace(/[₱,\s]/g, '')
 
-  if (cleanValue === '') return 0
+  if (cleanValue === '') return ''
 
   // Handle multiple decimal points
   const parts = cleanValue.split('.')
@@ -1111,7 +1567,7 @@ const formatToTwoDecimals = (value) => {
   }
 
   const num = parseFloat(parts.join('.'))
-  if (isNaN(num)) return 0
+  if (isNaN(num)) return ''
 
   // Return numeric value with two decimals
   return Math.round(num * 100) / 100
@@ -1409,17 +1865,20 @@ const getDescriptionOnly = (description) => {
     display: block !important;
   }
 
-  /* Show mobile Add button */
-  .mobile-add-btn-container {
+  /* Show mobile action buttons */
+  .mobile-action-btn-container {
     display: flex;
     justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
     position: fixed;
     bottom: 32px;
     right: 16px;
     z-index: 1000;
   }
 
-  .mobile-add-btn {
+  .mobile-add-btn,
+  .mobile-transfer-btn {
     display: block !important;
     width: 56px !important;
     height: 56px !important;
@@ -1460,12 +1919,13 @@ const getDescriptionOnly = (description) => {
     }
 
     .mobile-clear-btn-container,
-    .mobile-add-btn-container {
+    .mobile-action-btn-container {
       display: none !important;
     }
 
     .mobile-clear-btn,
-    .mobile-add-btn {
+    .mobile-add-btn,
+    .mobile-transfer-btn {
       display: none !important;
     }
 
@@ -1519,12 +1979,13 @@ const getDescriptionOnly = (description) => {
   /* Desktop styles - hide mobile buttons and show full layout */
   @media (min-width: 1024px) {
     .mobile-clear-btn-container,
-    .mobile-add-btn-container {
+    .mobile-action-btn-container {
       display: none !important;
     }
 
     .mobile-clear-btn,
-    .mobile-add-btn {
+    .mobile-add-btn,
+    .mobile-transfer-btn {
       display: none !important;
     }
 
