@@ -50,6 +50,8 @@ export function useDialogActions(state, fetchExpenseAccounts, resetForm ) {
     if (dialogName === 'augExpense') {
       state.toExpenseSelectionLoading.value = false
       state.isSelectingToExpense.value = false
+      // Clear expense class filter when closing selection dialog
+      state.selectedExpenseClass.value = null
     }
 
     // Reset view-only mode when closing augmentation dialog
@@ -70,6 +72,7 @@ export function useDialogActions(state, fetchExpenseAccounts, resetForm ) {
       state.forms.value.augExpense.value.to_expense = accountName
       state.forms.value.augExpense.value.to_appropriation_id = expenseItem.appropriation_id
       state.forms.value.augExpense.value.to_budget_source = expenseItem.budget_source || 'Annual Budget'
+      state.forms.value.augExpense.value.to_expense_class = expenseItem.expense_class
 
       // Reset the flag and loading state
       state.isSelectingToExpense.value = false
@@ -88,6 +91,8 @@ export function useDialogActions(state, fetchExpenseAccounts, resetForm ) {
           to_appropriation_id: null,
           from_expense: '',
           to_expense: '',
+          from_expense_class: '',
+          to_expense_class: '',
           from_budget_source: '',
           to_budget_source: '',
           account: '',
@@ -104,11 +109,17 @@ export function useDialogActions(state, fetchExpenseAccounts, resetForm ) {
     // Extract the expense details from the selected item (this becomes the FROM expense)
     const accountName = expenseItem.account || 'Unknown Account'
 
+    // Set the selected expense class for filtering TO expenses
+    console.log('Setting selected expense class to:', expenseItem.expense_class)
+    state.selectedExpenseClass.value = expenseItem.expense_class
+
     state.forms.value.augExpense.value = {
       from_appropriation_id: expenseItem.appropriation_id,
       to_appropriation_id: null,
       from_expense: accountName, // Set the FROM expense
       to_expense: '', // TO expense will be selected later
+      from_expense_class: expenseItem.expense_class, // Set the FROM expense class
+      to_expense_class: '', // TO expense class will be set when TO expense is selected
       from_budget_source: expenseItem.budget_source || 'Annual Budget',
       to_budget_source: '',
       account: accountName,

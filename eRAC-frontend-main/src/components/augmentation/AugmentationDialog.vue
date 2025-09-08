@@ -2,7 +2,7 @@
   <q-dialog v-model="dialogModel" persistent @keydown.enter="handleEnterKey">
     <q-card style="min-width: 1100px">
       <q-card-section>
-        <div class="text-h6">Augmentation</div>
+        <div class="text-h6">Expense Class Augmentation</div>
       </q-card-section>
       <q-card-section>
         <div class="row q-col-gutter-md">
@@ -83,30 +83,12 @@
           row-key="id"
           :pagination="{ rowsPerPage: 5 }"
         >
-          <template v-slot:body-cell-from_budget_source="props">
+          <template v-slot:body-cell-expense_class="props">
             <q-td :props="props">
               <q-badge
-                :color="getBudgetSourceColor(props.row.from_budget_source)"
-                :label="getBudgetSourceLabel(props.row.from_budget_source)"
-                class="budget-source-badge"
-              />
-            </q-td>
-          </template>
-          <template v-slot:body-cell-to_budget_source="props">
-            <q-td :props="props">
-              <q-badge
-                :color="getBudgetSourceColor(props.row.to_budget_source)"
-                :label="getBudgetSourceLabel(props.row.to_budget_source)"
-                class="budget-source-badge"
-              />
-            </q-td>
-          </template>
-          <template v-slot:body-cell-transfer_type="props">
-            <q-td :props="props">
-              <q-badge
-                :color="getTransferTypeColor(props.row.transfer_type)"
-                :label="props.row.transfer_type"
-                class="transfer-type-badge"
+                :color="getExpenseClassColor(props.row.expense_class)"
+                :label="props.row.expense_class || 'N/A'"
+                class="expense-class-badge"
               />
             </q-td>
           </template>
@@ -171,36 +153,26 @@ import { useQuasar } from 'quasar'
 const store = useAugmentationStore()
 const $q = useQuasar()
 
-// Budget source helper functions
-const getBudgetSourceColor = (budgetSource) => {
-  if (budgetSource?.toLowerCase().includes('annual')) {
-    return 'primary'
-  } else if (budgetSource?.toLowerCase().includes('supplemental')) {
-    return 'secondary'
+// Expense class helper functions
+const getExpenseClassColor = (expenseClass) => {
+  if (!expenseClass) return 'grey'
+  
+  // Color coding based on expense class
+  const classColors = {
+    'Sangguniang Kabataan': 'purple',
+    'General Services': 'blue',
+    'Social Services': 'green',
+    'Economic Services': 'orange',
+    'Environmental Services': 'teal',
+    'Capital Outlay': 'indigo',
+    'Disaster Risk Reduction': 'red',
+    'Infrastructure': 'brown',
+    'Peace and Order': 'deep-orange',
+    'Sports and Recreation': 'pink',
+    'Other': 'grey'
   }
-  return 'grey'
-}
-
-const getBudgetSourceLabel = (budgetSource) => {
-  if (budgetSource?.toLowerCase().includes('annual')) {
-    return 'Annual'
-  } else if (budgetSource?.toLowerCase().includes('supplemental')) {
-    return 'Supplemental'
-  }
-  return 'Mixed'
-}
-
-const getTransferTypeColor = (transferType) => {
-  if (!transferType) return 'grey'
-
-  if (transferType.includes('Annual → Annual')) {
-    return 'primary'
-  } else if (transferType.includes('Supplemental → Supplemental')) {
-    return 'secondary'
-  } else if (transferType.includes('Annual → Supplemental') || transferType.includes('Supplemental → Annual')) {
-    return 'orange' // Cross-budget transfer
-  }
-  return 'grey'
+  
+  return classColors[expenseClass] || 'info'
 }
 
 // Computed property for total amount to ensure reactivity
@@ -308,15 +280,9 @@ const handleSave = async () => {
 </script>
 
 <style scoped>
-.budget-source-badge {
+.expense-class-badge {
   font-size: 0.75rem;
   font-weight: 500;
-}
-
-.transfer-type-badge {
-  font-size: 0.75rem;
-  font-weight: 600;
-  min-width: 120px;
 }
 
 /* Responsive Dialog - Only sizing adjustments for mobile and tablet */

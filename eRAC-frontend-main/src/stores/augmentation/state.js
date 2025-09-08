@@ -21,6 +21,7 @@ export function initialState() {
     expenseSearch: ref(''),
     selectedBarangayId: ref(null), // Added for admin barangay filtering
     selectedBudgetSource: ref('all'), // For budget source filtering (annual/supplemental)
+    selectedExpenseClass: ref(null), // For expense class filtering when selecting TO expense
 
     // Pagination
     pagination: ref({
@@ -48,6 +49,8 @@ export function initialState() {
         to_appropriation_id: null,
         from_expense: '',
         to_expense: '',
+        from_expense_class: '',
+        to_expense_class: '',
         account: '',
         balance: 0,
         particulars: '',

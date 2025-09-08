@@ -105,14 +105,108 @@ export function useAugmentationActions(state) {
             budgetSource = 'Annual Budget'
           }
         }
+
+        // Determine expense class based on account name
+        const accountName = appropriation.account_name || 'Unknown Account'
+        let expenseClass = 'Other' // Default
+        let expenseClassId = appropriation.expense_class_id || null
+        
+        // First try to match by expense_class_id if available
+        if (appropriation.expense_class_id) {
+          // Try to find the expense class name by ID from the accounts library
+          // This would require fetching expense classes, but for now we'll use the ID
+          expenseClass = `Class ID: ${appropriation.expense_class_id}`
+          console.log('Using expense_class_id:', accountName, '->', expenseClass)
+        } else {
+          // Fallback to pattern matching if no expense_class_id
+          const lowerAccountName = accountName.toLowerCase()
+          
+          // Try to extract expense class from account name structure
+          // Account names typically follow: "EXPENSE CLASS > EXPENSE TYPE > EXPENSE ITEM"
+          const accountParts = accountName.split(' > ')
+          if (accountParts.length >= 1) {
+            const possibleClassName = accountParts[0].trim()
+            expenseClass = possibleClassName
+            console.log('Extracted from account structure:', accountName, '->', expenseClass)
+          } else {
+            // Fallback to pattern matching
+            if (lowerAccountName.includes('sangguniang kabataan') || 
+                lowerAccountName.includes('sk -') ||
+                lowerAccountName.includes('sk)')) {
+              expenseClass = 'Sangguniang Kabataan'
+            } else if (lowerAccountName.includes('capital outlay') ||
+                       lowerAccountName.includes('infrastructure') ||
+                       lowerAccountName.includes('equipment') ||
+                       lowerAccountName.includes('machinery') ||
+                       lowerAccountName.includes('furniture') ||
+                       lowerAccountName.includes('vehicle')) {
+              expenseClass = 'Capital Outlay'
+            } else if (lowerAccountName.includes('disaster') ||
+                       lowerAccountName.includes('bdrrmf') ||
+                       lowerAccountName.includes('risk reduction')) {
+              expenseClass = 'Disaster Risk Reduction'
+            } else if (lowerAccountName.includes('general services') ||
+                       lowerAccountName.includes('general fund') ||
+                       lowerAccountName.includes('office supplies') ||
+                       lowerAccountName.includes('utilities') ||
+                       lowerAccountName.includes('communication') ||
+                       lowerAccountName.includes('travel') ||
+                       lowerAccountName.includes('training')) {
+              expenseClass = 'General Services'
+            } else if (lowerAccountName.includes('social services') ||
+                       lowerAccountName.includes('social fund') ||
+                       lowerAccountName.includes('health') ||
+                       lowerAccountName.includes('education') ||
+                       lowerAccountName.includes('welfare') ||
+                       lowerAccountName.includes('assistance')) {
+              expenseClass = 'Social Services'
+            } else if (lowerAccountName.includes('economic services') ||
+                       lowerAccountName.includes('economic fund') ||
+                       lowerAccountName.includes('agriculture') ||
+                       lowerAccountName.includes('livelihood') ||
+                       lowerAccountName.includes('business') ||
+                       lowerAccountName.includes('employment')) {
+              expenseClass = 'Economic Services'
+            } else if (lowerAccountName.includes('environmental services') ||
+                       lowerAccountName.includes('environmental fund') ||
+                       lowerAccountName.includes('environment') ||
+                       lowerAccountName.includes('sanitation') ||
+                       lowerAccountName.includes('waste') ||
+                       lowerAccountName.includes('cleanup')) {
+              expenseClass = 'Environmental Services'
+            } else if (lowerAccountName.includes('maintenance') ||
+                       lowerAccountName.includes('repair') ||
+                       lowerAccountName.includes('construction') ||
+                       lowerAccountName.includes('road') ||
+                       lowerAccountName.includes('bridge') ||
+                       lowerAccountName.includes('building')) {
+              expenseClass = 'Infrastructure'
+            } else if (lowerAccountName.includes('security') ||
+                       lowerAccountName.includes('peace and order') ||
+                       lowerAccountName.includes('police') ||
+                       lowerAccountName.includes('fire') ||
+                       lowerAccountName.includes('emergency')) {
+              expenseClass = 'Peace and Order'
+            } else if (lowerAccountName.includes('sports') ||
+                       lowerAccountName.includes('recreation') ||
+                       lowerAccountName.includes('youth') ||
+                       lowerAccountName.includes('cultural') ||
+                       lowerAccountName.includes('festival')) {
+              expenseClass = 'Sports and Recreation'
+            }
+            
+            console.log('Matched by pattern:', accountName, '->', expenseClass)
+          }
+        }
         
         return {
           id: appropriation.id,
-          account: appropriation.account_name || 'Unknown Account',
+          account: accountName,
           balance: appropriation.amount || 0,
           appropriation_id: appropriation.id, // This is now the representative ID
           // Store additional info for debugging
-          expense_class_id: appropriation.expense_class_id,
+          expense_class_id: expenseClassId,
+          expense_class: expenseClass, // Add expense class mapping
           expense_type_id: appropriation.expense_type_id,
           expense_item_id: appropriation.expense_item_id,
           appropriation_ids: appropriation.appropriation_ids || [appropriation.id], // All IDs in the group

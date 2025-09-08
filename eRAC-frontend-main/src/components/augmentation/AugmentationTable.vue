@@ -8,15 +8,15 @@
       :loading="store.loadingAugmentations"
     >
 
-      <template #body-cell-transfer_summary="props">
+      <template #body-cell-expense_class_summary="props">
         <q-td :props="props">
-          <div class="transfer-summary-container">
+          <div class="expense-class-summary-container">
             <q-badge
-              v-for="(transfer, index) in getTransferSummary(props.row)"
+              v-for="(expenseClass, index) in getExpenseClassSummary(props.row)"
               :key="index"
-              :color="getTransferTypeColor(transfer)"
-              :label="transfer"
-              class="transfer-summary-badge q-mr-xs q-mb-xs"
+              :color="getExpenseClassColor(expenseClass)"
+              :label="expenseClass"
+              class="expense-class-summary-badge q-mr-xs q-mb-xs"
             />
           </div>
         </q-td>
@@ -209,46 +209,43 @@ const columns = computed(() => {
 })
 
 
-// Helper function to get budget source label
-const getBudgetSourceLabel = (budgetSource) => {
-  if (budgetSource?.toLowerCase().includes('annual')) {
-    return 'Annual'
-  } else if (budgetSource?.toLowerCase().includes('supplemental')) {
-    return 'Supplemental'
+// Helper function to get expense class color
+const getExpenseClassColor = (expenseClass) => {
+  if (!expenseClass) return 'grey'
+  
+  // Color coding based on expense class
+  const classColors = {
+    'Sangguniang Kabataan': 'purple',
+    'General Services': 'blue',
+    'Social Services': 'green',
+    'Economic Services': 'orange',
+    'Environmental Services': 'teal',
+    'Capital Outlay': 'indigo',
+    'Disaster Risk Reduction': 'red',
+    'Infrastructure': 'brown',
+    'Peace and Order': 'deep-orange',
+    'Sports and Recreation': 'pink',
+    'Other': 'grey'
   }
-  return 'Annual' // Default
+  
+  return classColors[expenseClass] || 'info'
 }
 
-// Helper function to get transfer type color
-const getTransferTypeColor = (transferType) => {
-  if (!transferType) return 'grey'
-
-  if (transferType.includes('Annual → Annual')) {
-    return 'primary'
-  } else if (transferType.includes('Supplemental → Supplemental')) {
-    return 'secondary'
-  } else if (transferType.includes('Annual → Supplemental') || transferType.includes('Supplemental → Annual')) {
-    return 'orange' // Cross-budget transfer
-  }
-  return 'grey'
-}
-
-// Helper function to get transfer summary for an augmentation
-const getTransferSummary = (augmentation) => {
+// Helper function to get expense class summary for an augmentation
+const getExpenseClassSummary = (augmentation) => {
   if (!augmentation.details || !Array.isArray(augmentation.details)) {
     return []
   }
 
-  const transferTypes = new Set()
+  const expenseClasses = new Set()
 
   augmentation.details.forEach(detail => {
-    const fromBudget = detail.from_budget_source || 'Annual Budget'
-    const toBudget = detail.to_budget_source || 'Annual Budget'
-    const transferType = `${getBudgetSourceLabel(fromBudget)} → ${getBudgetSourceLabel(toBudget)}`
-    transferTypes.add(transferType)
+    if (detail.expense_class) {
+      expenseClasses.add(detail.expense_class)
+    }
   })
 
-  return Array.from(transferTypes)
+  return Array.from(expenseClasses)
 }
 
 const viewAugmentation = (row) => {
@@ -284,7 +281,7 @@ const deleteAugmentation = (row) => {
 </script>
 
 <style scoped>
-.transfer-summary-container {
+.expense-class-summary-container {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
@@ -292,15 +289,15 @@ const deleteAugmentation = (row) => {
   align-items: center;
 }
 
-.transfer-summary-badge {
+.expense-class-summary-badge {
   font-size: 0.7rem;
   font-weight: 600;
   min-width: 80px;
   text-align: center;
 }
 
-/* Cross-budget transfer row highlighting */
-.cross-budget-transfer-row {
+/* Cross-class transfer row highlighting */
+.cross-class-transfer-row {
   background-color: rgba(255, 152, 0, 0.1) !important;
 }
 </style>

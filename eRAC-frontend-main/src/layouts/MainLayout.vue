@@ -170,9 +170,9 @@
       <div class="panel-content">
         <!-- Void Request Summary Header -->
         <div v-if="voidRequestCount > 0" class="void-request-container">
-          <q-btn 
-            unelevated 
-            class="void-request-button" 
+          <q-btn
+            unelevated
+            class="void-request-button"
             @click="handleVoidRequestClick()"
             :loading="false"
           >
@@ -220,6 +220,10 @@
           <div class="panel-item" @click="navigateTo('/home/transactions/augmentation')">
             <div class="colored-dot dot-blue"></div>
             <span>Augmentation</span>
+          </div>
+           <div class="panel-item" @click="navigateTo('/home/transactions/supplemental')">
+            <div class="colored-dot dot-red"></div>
+            <span>Supplemental</span>
           </div>
         </div>
 
@@ -417,15 +421,15 @@ const refreshVoidRequestCount = async () => {
 const handleVoidRequestClick = async () => {
   // Close the panel first
   closePanel()
-  
+
   // Navigate to disbursement page
   await router.push('/home/transactions/disbursement')
-  
+
   // Find the first void requested disbursement
   const voidRequestedDisbursement = disbursementStore.disbursements.find(
     d => d.status === 'Void Requested'
   )
-  
+
   if (voidRequestedDisbursement) {
     // Open the ViewOrDetails dialog for the void requested disbursement
     await disbursementStore.openViewOrDetails(voidRequestedDisbursement)
