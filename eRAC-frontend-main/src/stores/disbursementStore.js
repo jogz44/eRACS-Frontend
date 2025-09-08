@@ -49,6 +49,12 @@ export const useDisbursementStore = defineStore('disbursement', {
     selectedChequeNumber: null,
     disbursements: [], // <-- Remove static data, will be loaded from API
 
+    //cheque is computed
+    cancelChequed: null,
+    cancelBanks: [],
+    cancelBank: null,
+    cancelpayee: null,
+
     // Current selections
     currentLiquidation: null,
     lockedTotalAmount: null, // Store the original DV amount for edit mode
@@ -486,6 +492,25 @@ export const useDisbursementStore = defineStore('disbursement', {
   },
 
   actions: {
+    
+    getAuthConfig() {
+      const authStore = useAuthStore()
+
+      // Use admin token if admin is logged in, otherwise use regular token
+      const token = authStore.admin ? authStore.adminToken : authStore.token
+
+      if (!token) {
+        throw new Error('Authentication token not found')
+      }
+
+      return {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      }
+    },
     // Calculate remaining balance by deducting expenses from tran_expense_details table
     calculateRemainingBalance(expenseId, originalAmount, expenseLevel) {
       try {
@@ -2460,7 +2485,60 @@ export const useDisbursementStore = defineStore('disbursement', {
         this.voidingDisbursement = false;
       }
     },
-  },
+    async cancelCheque(){
+      try {
+
+        const config = this.getAuthConfig()
+        // Use admin banks endpoint when admin is logged in
+        const authStore = useAuthStore()
+        const endpoint = authStore.admin ? '/api/admin/banks' : '/api/barangay/banks'
+        const response = await api.get(endpoint, config)
+
+        const cancelBanks = (response.data.data || response.data || []).map((bank) => ({
+          id: bank.id,
+          name: bank.bank_name || bank.name,
+          status: bank.status || 'Available',
+          booklets_count: bank.booklets_count || 0, // Changed from cheques_count
+          booklets: bank.booklets || [], // Changed from cheques
+        }))
+        this.cancelBanks = cancelBanks.filter((bank) => bank.status === 'Available')
+
+        if (this.cancelBanks.length == 0) {
+          this.cancelBanks[0] = { id: 0, name: 'No Available Bank' }
+        }
+
+        //============================================================================
+        //============================================================================
+        //============================================================================
+
+      } catch (error) {
+        console.error('Failed to cancel cheque:', error)
+        return {
+          success: false,
+          error: error.response?.data?.message || 'Failed to cancel cheque'
+        }
+      }
+    },
+    async submitCancelCheque(){
+      try {
+
+        const config = this.getAuthConfig()
+        console.error('Fsksdghisdgh', this.cancelBank);
+        const bankData = await api.get(`/api/barangay/banks/${this.cancelBank.id}/available-cheques`, config);
+        const data = bankData.data.data || [];
+        console.error('Fetched booklets data:', data.booklet_numb);
+        console.error('Fetched booklets data:', data.cheque[0].cheque_number);
+
+        this.cancelChequed = data.cheque[0].cheque_number || null
+      } catch (error) {
+        console.error('Failed to submit cancel cheque:', error)
+        return {
+          success: false,
+          error: error.response?.data?.message || 'Failed to submit cancel cheque'
+        }
+      }
+    }
+  }
 })
 
 function calculateAging(dateString) {
