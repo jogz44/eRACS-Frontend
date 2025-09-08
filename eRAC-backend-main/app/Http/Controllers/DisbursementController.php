@@ -538,7 +538,7 @@ class DisbursementController extends Controller
     {
         $request->validate([
             'date' => 'required|string|regex:/^\d{2}\/\d{2}\/\d{4}$/',
-            'dv_number' => 'required|string|unique:disbursements,dv_number,' . $id,
+            'dv_number' => 'required|string',
             'cheque_number' => 'required|string',
             'bank_id' => 'required|exists:lib_banks,id',
             'payee' => 'required|string',

@@ -8,15 +8,8 @@
             Showing transactions for fiscal year {{ currentFiscalYear }}
           </div>
         </div>
-        <q-btn
-          icon="refresh"
-          color="primary"
-          flat
-          dense
-          @click="loadDisbursements"
-          :loading="store.loadingDisbursements"
-          title="Refresh disbursements"
-        />
+        <q-btn icon="refresh" color="primary" flat dense @click="loadDisbursements"
+          :loading="store.loadingDisbursements" title="Refresh disbursements" />
       </div>
     </div>
 
@@ -30,48 +23,23 @@
           <!-- Status Filter -->
           <div class="col-md-2 col-sm-6 col-xs-12">
             <q-item-label class="q-mb-xs text-weight-medium">Status:</q-item-label>
-            <q-select
-              outlined
-              dense
-              v-model="selectedStatus"
-              :options="statusOptions"
-              option-label="label"
-              option-value="value"
-              emit-value
-              map-options
-              :label="currentStatusLabel"
-              clearable
-              @update:model-value="handleStatusChange"
-            />
+            <q-select outlined dense v-model="selectedStatus" :options="statusOptions" option-label="label"
+              option-value="value" emit-value map-options :label="currentStatusLabel" clearable
+              @update:model-value="handleStatusChange" />
           </div>
 
           <!-- Budget Source Filter -->
           <div class="col-md-2 col-sm-6 col-xs-12">
             <q-item-label class="q-mb-xs text-weight-medium">Budget Source:</q-item-label>
-            <q-select
-              outlined
-              dense
-              v-model="selectedBudgetSource"
-              :options="budgetSourceOptions"
-              option-label="label"
-              option-value="value"
-              emit-value
-              map-options
-              :label="currentBudgetSourceLabel"
-              @update:model-value="handleBudgetSourceChange"
-            />
+            <q-select outlined dense v-model="selectedBudgetSource" :options="budgetSourceOptions" option-label="label"
+              option-value="value" emit-value map-options :label="currentBudgetSourceLabel"
+              @update:model-value="handleBudgetSourceChange" />
           </div>
 
           <!-- Search Input -->
           <div class="col-md-2 col-sm-6 col-xs-12">
             <q-item-label class="q-mb-xs text-weight-medium">Search:</q-item-label>
-            <q-input
-              outlined
-              dense
-              v-model="searchQuery"
-              placeholder="Search payee, DV number..."
-              clearable
-            >
+            <q-input outlined dense v-model="searchQuery" placeholder="Search payee, DV number..." clearable>
               <template v-slot:append>
                 <q-icon name="search" />
               </template>
@@ -81,23 +49,12 @@
           <!-- Date Range Filter -->
           <div class="col-md-2 col-sm-6 col-xs-12">
             <q-item-label class="q-mb-xs text-weight-medium">Date Range:</q-item-label>
-            <q-input
-              outlined
-              dense
-              v-model="dateRangeDisplay"
-              placeholder="Select date range..."
-              readonly
-              clearable
-              @clear="onDateRangeClear"
-            >
+            <q-input outlined dense v-model="dateRangeDisplay" placeholder="Select date range..." readonly clearable
+              @clear="onDateRangeClear">
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date
-                      v-model="dateRange"
-                      range
-                      @update:model-value="onDateRangeChange"
-                    >
+                    <q-date v-model="dateRange" range @update:model-value="onDateRangeChange">
                       <div class="row items-center justify-end">
                         <q-btn v-close-popup label="Close" color="primary" flat />
                       </div>
@@ -110,15 +67,8 @@
 
           <!-- Clear Button -->
           <div class="col-md-1 col-sm-6 col-xs-12">
-            <q-btn
-              dense
-              outlined
-              color="red-10"
-              icon="clear_all"
-              label="Clear"
-              @click="clearAllFilters"
-              class="full-width"
-            />
+            <q-btn dense outlined color="red-10" icon="clear_all" label="Clear" @click="clearAllFilters"
+              class="full-width" />
           </div>
 
           <!-- Spacer to push Add button to the right -->
@@ -126,14 +76,8 @@
 
           <!-- Add Button -->
           <div class="col-md-1 col-sm-6 col-xs-12">
-            <q-btn
-              label="Add"
-              color="primary"
-              icon="add"
-              @click="store.openDialog('disbursement')"
-              class="full-width"
-              v-permission="'add'"
-            />
+            <q-btn label="Add" color="primary" icon="add" @click="store.openDialog('disbursement')" class="full-width"
+              v-permission="'add'" />
           </div>
         </div>
       </q-card-section>
@@ -154,33 +98,16 @@
               <!-- Budget Source Selection -->
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Budget Source:</q-item-label>
-                <q-select
-                  outlined
-                  dense
-                  v-model="selectedBudgetSource"
-                  :options="budgetSourceOptions"
-                  option-label="label"
-                  option-value="value"
-                  emit-value
-                  map-options
-                  :label="currentBudgetSourceLabel"
-                  @update:model-value="handleBudgetSourceChange"
-                  @keydown.enter="handleEnterKey"
-                />
+                <q-select outlined dense v-model="selectedBudgetSource" :options="budgetSourceOptions"
+                  option-label="label" option-value="value" emit-value map-options :label="currentBudgetSourceLabel"
+                  @update:model-value="handleBudgetSourceChange" @keydown.enter="handleEnterKey" />
               </div>
 
               <!-- Date Field -->
               <div class="col-md-4 col-sm-6">
                 <q-item-label class="q-mb-xs">Date:</q-item-label>
-                <q-input
-                  outlined
-                  dense
-                  v-model="store.forms.disbursement.date"
-                  mask="##/##/####"
-
-
-                  @keydown.enter="handleEnterKey"
-                >
+                <q-input outlined dense v-model="store.forms.disbursement.date" mask="##/##/####"
+                  @keydown.enter="handleEnterKey">
                   <template v-slot:append>
                     <q-icon name="event" class="cursor-not-allowed" />
                   </template>
@@ -190,56 +117,31 @@
               <!-- Bank Field -->
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Bank:</q-item-label>
-                <q-select
-                  outlined
-                  dense
-                  v-model="store.forms.disbursement.bank_id"
-                  :options="bankStore.availableBanks"
-                  option-label="name"
-                  option-value="id"
-                  emit-value
-                  map-options
-                  :label="currentBankLabel"
-                  :loading="store.bankLoading"
-                  @update:model-value="handleBankSelection"
-                  @keydown.enter="handleEnterKey"
-                />
+                <q-select outlined dense v-model="store.forms.disbursement.bank_id" :options="bankStore.availableBanks"
+                  option-label="name" option-value="id" emit-value map-options :label="currentBankLabel"
+                  :loading="store.bankLoading" @update:model-value="handleBankSelection"
+                  @keydown.enter="handleEnterKey" />
               </div>
 
               <!-- Check Number Field -->
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Cheque Number:</q-item-label>
 
-                <q-input
-                  outlined
-                  dense
-                  v-model="store.autoCheque"
-                  :disable="true"
-                  @keydown.enter="handleEnterKey"
-                ></q-input>
+                <q-input outlined dense v-model="store.autoCheque" :disable="true"
+                  @keydown.enter="handleEnterKey"></q-input>
               </div>
 
               <!-- DV Number Field -->
               <div class="col-md-4 col-sm-6">
                 <q-item-label class="q-mb-xs">DV Number:</q-item-label>
-                <q-input
-                  outlined
-                  dense
-                  :disable="true"
-                  v-model="store.forms.disbursement.dvNumber"
-                  @keydown.enter="handleEnterKey"
-                />
+                <q-input outlined dense :disable="true" v-model="store.forms.disbursement.dvNumber"
+                  @keydown.enter="handleEnterKey" />
               </div>
 
               <!-- Payee Field -->
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Payee:</q-item-label>
-                <q-input
-                  outlined
-                  dense
-                  v-model="store.forms.disbursement.payee"
-                  @keydown.enter="handleEnterKey"
-                />
+                <q-input outlined dense v-model="store.forms.disbursement.payee" @keydown.enter="handleEnterKey" />
               </div>
             </div>
           </q-card-section>
@@ -247,43 +149,19 @@
           <!-- Add Expense Button -->
           <q-card-section>
             <div class="row justify-end q-mb-md">
-              <q-btn
-                label="Add"
-                color="primary"
-                icon="add"
-                @click="handleAddExpense"
-                @mouseenter="preloadExpenseAccounts"
-                :loading="addingExpense || store.expenseTypeLoading"
-                v-permission="'add'"
-              />
+              <q-btn label="Add" color="primary" icon="add" @click="handleAddExpense"
+                @mouseenter="preloadExpenseAccounts" :loading="addingExpense || store.expenseTypeLoading"
+                v-permission="'add'" />
             </div>
 
             <!-- Expense Table -->
-            <q-table
-              :rows="store.expenses"
-              :columns="store.expenseColumns"
-              row-key="id"
-              :pagination="{ rowsPerPage: 5 }"
-              flat
-              bordered
-            >
+            <q-table :rows="store.expenses" :columns="store.expenseColumns" row-key="id"
+              :pagination="{ rowsPerPage: 5 }" flat bordered>
               <template v-slot:body-cell-action="props">
                 <q-td :props="props">
                   <div class="q-gutter-xs">
-                    <q-btn
-                      size="sm"
-                      dense
-                      icon="edit"
-                      color="orange"
-                      @click="store.editItem(props.row)"
-                    />
-                    <q-btn
-                      size="sm"
-                      dense
-                      icon="delete"
-                      color="red"
-                      @click="handleDeleteExpense(props.row)"
-                    />
+                    <q-btn size="sm" dense icon="edit" color="orange" @click="store.editItem(props.row)" />
+                    <q-btn size="sm" dense icon="delete" color="red" @click="handleDeleteExpense(props.row)" />
                   </div>
                 </q-td>
               </template>
@@ -292,26 +170,16 @@
             <!-- Amount Display -->
             <div class="q-mt-md">
               <q-item-label class="q-mb-xs">Amount:</q-item-label>
-              <q-input
-                outlined
-                dense
+              <q-input outlined dense
                 :model-value="`₱${(store.totalExpensesAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`"
-                style="width: 300px"
-                readonly
-              />
+                style="width: 300px" readonly />
             </div>
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md">
             <q-btn flat label="Cancel" @click="store.closeDialog('disbursement')" />
-            <q-btn
-              label="Disburse"
-              color="primary"
-              @click="handleSaveClick"
-              v-permission="'add'"
-              :loading="store.savingDisbursement"
-              :disable="store.savingDisbursement"
-            />
+            <q-btn label="Disburse" color="primary" @click="handleSaveClick" v-permission="'add'"
+              :loading="store.savingDisbursement" :disable="store.savingDisbursement" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -324,45 +192,24 @@
           </q-card-section>
 
           <q-card-section>
-            <q-input
-              outlined
-              dense
-              placeholder="Search expense account..."
-              v-model="store.expenseSearch"
-              class="q-mb-sm"
-              style="width: 300px"
-            >
+            <q-input outlined dense placeholder="Search expense account..." v-model="store.expenseSearch"
+              class="q-mb-sm" style="width: 300px">
               <template v-slot:append>
                 <q-icon name="search" />
               </template>
             </q-input>
 
-            <q-table
-              :rows="store.filteredExpenseAccounts"
-              :columns="store.expenseAccountColumns"
-              row-key="id"
-              :loading="store.loading || store.expenseTypeLoading"
-              :filter="store.expenseSearch"
-              flat
-              bordered
-            >
+            <q-table :rows="store.filteredExpenseAccounts" :columns="store.expenseAccountColumns" row-key="id"
+              :loading="store.loading || store.expenseTypeLoading" :filter="store.expenseSearch" flat bordered>
               <template v-slot:body-cell-budget_source="props">
                 <q-td :props="props">
-                  <q-badge
-                    :color="getBudgetSourceColor(props.row.budget_source)"
-                    :label="getBudgetSourceLabel(props.row.budget_source)"
-                    class="budget-source-badge"
-                  />
+                  <q-badge :color="getBudgetSourceColor(props.row.budget_source)"
+                    :label="getBudgetSourceLabel(props.row.budget_source)" class="budget-source-badge" />
                 </q-td>
               </template>
               <template v-slot:body-cell-action="props">
                 <q-td :props="props">
-                  <q-btn
-                    dense
-                    label="Select"
-                    color="primary"
-                    @click="store.openExpenseDetail(props.row)"
-                  />
+                  <q-btn dense label="Select" color="primary" @click="store.openExpenseDetail(props.row)" />
                 </q-td>
               </template>
             </q-table>
@@ -388,33 +235,13 @@
             <div class="text-subtitle1 q-mb-md">
               <strong>Balance:</strong> ₱{{ store.forms.expense.balance.toLocaleString() }}
             </div>
-            <q-select
-              outlined
-              dense
-              v-model="store.forms.expense.particulars"
-              :options="filteredParticulars"
-              label="Particulars"
-              use-input
-              fill-input
-              hide-selected
-              new-value-mode="add-unique"
-              @filter="filterFn"
-            />
-            <q-input
-              outlined
-              dense
-              :model-value="formatInputValue(store.forms.expense.amount)"
+            <q-select outlined dense v-model="store.forms.expense.particulars" :options="filteredParticulars"
+              label="Particulars" use-input fill-input hide-selected new-value-mode="add-unique" @filter="filterFn" />
+            <q-input outlined dense :model-value="formatInputValue(store.forms.expense.amount)"
               @update:model-value="(val) => (store.forms.expense.amount = handleAmountInput(val))"
-              @blur="(e) => (store.forms.expense.amount = formatToTwoDecimals(e.target.value))"
-              label="Amount"
-              class="q-mb-md"
-              prefix="₱"
-              inputmode="decimal"
-              pattern="\\d*\\.?\\d{0,2}"
-              @keypress="blockNonNumeric"
-              @paste.prevent="handlePasteNumeric"
-              placeholder="0.00"
-            />
+              @blur="(e) => (store.forms.expense.amount = formatToTwoDecimals(e.target.value))" label="Amount"
+              class="q-mb-md" prefix="₱" inputmode="decimal" pattern="\\d*\\.?\\d{0,2}" @keypress="blockNonNumeric"
+              @paste.prevent="handlePasteNumeric" placeholder="0.00" />
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md">
@@ -426,85 +253,40 @@
 
       <!-- Main Data Table -->
       <q-card flat bordered>
-        <q-table
-          :rows="filteredDisbursements"
-          :columns="store.disbursementColumns"
-          row-key="id"
-          :pagination="store.pagination"
-          :loading="store.loadingDisbursements"
-          flat
-        >
+        <q-table :rows="filteredDisbursements" :columns="store.disbursementColumns" row-key="id"
+          :pagination="store.pagination" :loading="store.loadingDisbursements" flat>
           <template v-slot:body-cell-action="props">
             <q-td :props="props">
               <div class="row q-gutter-xs items-center justify-center">
-                <q-btn
-                  dense
-                  icon="edit"
-                  :color="
-                    props.row.status === 'Unliquidated' || props.row.status === 'Partial'
-                      ? 'orange'
-                      : 'grey'
-                  "
-                  :disable="props.row.status !== 'Unliquidated' && props.row.status !== 'Partial'"
-                  :loading="store.loadingEditDisbursement === props.row.id"
-                  @click="handleEditDisbursement(props.row)"
-                  v-permission="'edit'"
-                />
-                <q-btn
-                  dense
-                  icon="visibility"
-                  color="blue"
-                  @click="handleViewDisbursement(props.row)"
-                  :loading="viewLoading[props.row.id]"
-                  :disable="viewLoading[props.row.id]"
-                  v-permission="'view'"
-                />
+                <q-btn dense icon="edit" :color="props.row.status === 'Unliquidated' || props.row.status === 'Partial'
+                    ? 'orange'
+                    : 'grey'
+                  " :disable="props.row.status !== 'Unliquidated' && props.row.status !== 'Partial'"
+                  :loading="store.loadingEditDisbursement === props.row.id" @click="handleEditDisbursement(props.row)"
+                  v-permission="'edit'" />
+                <q-btn dense icon="visibility" color="blue" @click="handleViewDisbursement(props.row)"
+                  :loading="viewLoading[props.row.id]" :disable="viewLoading[props.row.id]" v-permission="'view'" />
 
                 <!-- Treasurer: Request void -->
-                <q-btn
-                  dense
-                  icon="block"
-                  color="red"
-                  v-if="
-                    isTreasurer &&
-                    (props.row.status === 'Unliquidated' || props.row.status === 'Partial') &&
-                    canVoid(props.row) &&
-                    props.row.status !== 'Stale'
-                  "
-                  @click.stop="() => handleVoidDisbursement(props.row)"
-                  v-permission="'delete'"
-                />
+                <q-btn dense icon="block" color="red" v-if="
+                  isTreasurer &&
+                  (props.row.status === 'Unliquidated' || props.row.status === 'Partial') &&
+                  canVoid(props.row) &&
+                  props.row.status !== 'Stale'
+                " @click.stop="() => handleVoidDisbursement(props.row)" v-permission="'delete'" />
                 <!-- Captain/SK Chairperson: Direct void -->
-                <q-btn
-                  dense
-                  icon="block"
-                  color="red"
-                  v-if="
-                    isApprover &&
-                    (props.row.status === 'Unliquidated' || props.row.status === 'Partial') &&
-                    canVoid(props.row) &&
-                    props.row.status !== 'Stale'
-                  "
-                  @click.stop="() => handleDirectVoidDisbursement(props.row)"
-                  v-permission="'delete'"
-                />
+                <q-btn dense icon="block" color="red" v-if="
+                  isApprover &&
+                  (props.row.status === 'Unliquidated' || props.row.status === 'Partial') &&
+                  canVoid(props.row) &&
+                  props.row.status !== 'Stale'
+                " @click.stop="() => handleDirectVoidDisbursement(props.row)" v-permission="'delete'" />
                 <!-- Approver: Handle void requests -->
                 <div v-if="isApprover">
-                  <q-btn
-                    dense
-                    icon="check_circle"
-                    color="green"
-                    class="q-mr-xs"
-                    v-if="props.row.status === 'Void Requested'"
-                    @click="handleApproveVoid(props.row)"
-                  />
-                  <q-btn
-                    dense
-                    icon="cancel"
-                    color="grey"
-                    v-if="props.row.status === 'Void Requested'"
-                    @click="handleRejectVoid(props.row)"
-                  />
+                  <q-btn dense icon="check_circle" color="green" class="q-mr-xs"
+                    v-if="props.row.status === 'Void Requested'" @click="handleApproveVoid(props.row)" />
+                  <q-btn dense icon="cancel" color="grey" v-if="props.row.status === 'Void Requested'"
+                    @click="handleRejectVoid(props.row)" />
                 </div>
               </div>
             </q-td>
@@ -512,26 +294,16 @@
 
           <template v-slot:body-cell-status="props">
             <q-td :props="props">
-              <q-chip
-                :color="getStatusColor(props.row.status)"
-                :text-color="getStatusTextColor(props.row.status)"
-                dense
-                :label="props.row.status"
-              />
+              <q-chip :color="getStatusColor(props.row.status)" :text-color="getStatusTextColor(props.row.status)" dense
+                :label="props.row.status" />
             </q-td>
           </template>
 
           <template v-slot:body-cell-remarks="props">
             <q-td :props="props">
               <div v-if="hasRemarks(props.row)" class="row items-center justify-center">
-                <q-icon
-                  name="visibility"
-                  color="blue"
-                  size="md"
-                  class="cursor-pointer"
-                  @click="openRemarksDialog(props.row)"
-                  title="View remarks"
-                />
+                <q-icon name="visibility" color="blue" size="md" class="cursor-pointer"
+                  @click="openRemarksDialog(props.row)" title="View remarks" />
               </div>
               <div v-else class="text-grey-6 text-center">-</div>
             </q-td>
@@ -539,16 +311,10 @@
 
           <template v-slot:body-cell-liquidate="props">
             <q-td :props="props">
-              <q-btn
-                dense
-                label="Liquidate"
-                color="primary"
+              <q-btn dense label="Liquidate" color="primary"
                 v-if="props.row.status === 'Unliquidated' || props.row.status === 'Partial'"
-                @click="handleLiquidateDisbursement(props.row)"
-                :loading="liquidateLoading[props.row.id]"
-                :disable="liquidateLoading[props.row.id] || props.row.status === 'Stale'"
-                v-permission="'add'"
-              />
+                @click="handleLiquidateDisbursement(props.row)" :loading="liquidateLoading[props.row.id]"
+                :disable="liquidateLoading[props.row.id] || props.row.status === 'Stale'" v-permission="'add'" />
             </q-td>
           </template>
         </q-table>
@@ -566,28 +332,20 @@
           </q-card-section>
 
           <q-card-section>
-            <div class="text-body1 q-mb-md">Please provide remarks for this void request. The request will be sent to the Barangay Captain or SK Chairperson for approval.</div>
+            <div class="text-body1 q-mb-md">Please provide remarks for this void request. The request will be sent to
+              the
+              Barangay Captain or SK Chairperson for approval.</div>
 
-            <q-input
-              outlined
-              v-model="store.forms.void.remarks"
-              label="Remarks (Required)"
-              type="textarea"
-              rows="3"
+            <q-input outlined v-model="store.forms.void.remarks" label="Remarks (Required)" type="textarea" rows="3"
               :rules="[(val) => (!!val && val.trim() !== '') || 'Remarks are required']"
-              hint="Reason for requesting to void this disbursement"
-            />
+              hint="Reason for requesting to void this disbursement" />
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md">
             <q-btn flat label="Cancel" @click="store.closeVoidDialog()" />
-            <q-btn
-              label="Submit Void Request"
-              color="red"
-              :loading="store.voidingDisbursement"
+            <q-btn label="Submit Void Request" color="red" :loading="store.voidingDisbursement"
               :disable="!store.forms.void.remarks || store.forms.void.remarks.trim() === ''"
-              @click="handleSubmitVoidRequest"
-            />
+              @click="handleSubmitVoidRequest" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -608,19 +366,16 @@
             </div>
             <div class="text-body1 q-mb-md">
               <strong>Status:</strong>
-              <q-chip
-                :color="getStatusColor(selectedRemarksData?.status)"
-                :text-color="getStatusTextColor(selectedRemarksData?.status)"
-                dense
-                :label="selectedRemarksData?.status"
-                class="q-ml-sm"
-              />
+              <q-chip :color="getStatusColor(selectedRemarksData?.status)"
+                :text-color="getStatusTextColor(selectedRemarksData?.status)" dense :label="selectedRemarksData?.status"
+                class="q-ml-sm" />
             </div>
 
             <q-separator class="q-mb-md" />
 
             <div class="text-subtitle1 q-mb-sm text-weight-medium">Remarks:</div>
-            <div class="remarks-content q-pa-md" style="background-color: #f5f5f5; border-radius: 8px; min-height: 100px;">
+            <div class="remarks-content q-pa-md"
+              style="background-color: #f5f5f5; border-radius: 8px; min-height: 100px;">
               <div v-if="selectedRemarksData?.remarks" class="text-body1">
                 {{ selectedRemarksData.remarks }}
               </div>
@@ -1418,8 +1173,8 @@ const getBudgetSourceLabel = (budgetSource) => {
 // Remarks dialog methods
 const hasRemarks = (row) => {
   return (row.status === 'Void Requested' && row.remarks) ||
-         (row.status === 'Voided' && row.remarks) ||
-         row.rejection_remarks
+    (row.status === 'Voided' && row.remarks) ||
+    row.rejection_remarks
 }
 
 

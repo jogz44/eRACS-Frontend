@@ -18,20 +18,10 @@
         <q-card-section class="row items-center justify-between q-pa-md">
           <div class="row items-center q-gutter-md q-mt-sm">
             <div class="text-subtitle2 text-weight-medium">Year Filter:</div>
-            <q-select
-              v-model="chartStore.selectedYear"
-              :options="chartStore.availableYears"
-              option-value="value"
-              option-label="label"
-              emit-value
-              map-options
-              dense
-              outlined
-              style="min-width: 150px"
-              :loading="chartStore.isYearFilterLoading"
-              :disable="chartStore.isYearFilterLoading"
-              @update:model-value="onYearChange"
-            >
+            <q-select v-model="chartStore.selectedYear" :options="chartStore.availableYears" option-value="value"
+              option-label="label" emit-value map-options dense outlined style="min-width: 150px"
+              :loading="chartStore.isYearFilterLoading" :disable="chartStore.isYearFilterLoading"
+              @update:model-value="onYearChange">
               <template v-slot:prepend>
                 <q-icon name="calendar_today" />
               </template>
@@ -41,26 +31,16 @@
             </q-select>
 
             <!-- Refresh years button -->
-            <q-btn
-              icon="refresh"
-              color="primary"
-              flat
-              dense
-              size="sm"
-              @click="refreshYears"
-              :loading="chartStore.isYearFilterLoading"
-              :disable="chartStore.isYearFilterLoading"
-            >
+            <q-btn icon="refresh" color="primary" flat dense size="sm" @click="refreshYears"
+              :loading="chartStore.isYearFilterLoading" :disable="chartStore.isYearFilterLoading">
               <q-tooltip>Refresh available years</q-tooltip>
             </q-btn>
 
 
 
             <!-- Error state for year filter -->
-            <div
-              v-if="chartStore.availableYears.length === 0 && !chartStore.isYearFilterLoading"
-              class="text-caption text-negative"
-            >
+            <div v-if="chartStore.availableYears.length === 0 && !chartStore.isYearFilterLoading"
+              class="text-caption text-negative">
               No years available
             </div>
           </div>
@@ -78,21 +58,12 @@
 
     <!-- Summary Cards Row -->
     <div class="row q-col-gutter-lg q-mb-lg">
-      <div
-        v-for="(card, index) in chartStore.summaryCards"
-        :key="index"
-        class="col-xs-12 col-sm-6 col-md-4 q-mb-md"
-      >
+      <div v-for="(card, index) in chartStore.summaryCards" :key="index" class="col-xs-12 col-sm-6 col-md-4 q-mb-md">
         <q-card class="summary-card" :class="`card-${index}`">
           <q-card-section class="row items-center justify-evenly q-pa-md" style="height: 100%">
             <div class="row items-center" style="max-width: 90%">
-              <q-avatar
-                :icon="card.icon"
-                size="45px"
-                :color="card.color || 'primary'"
-                text-color="white"
-                class="q-mr-md"
-              />
+              <q-avatar :icon="card.icon" size="45px" :color="card.color || 'primary'" text-color="white"
+                class="q-mr-md" />
               <div class="text-left">
                 <div class="Custome-text text-caption text-grey">{{ card.label }}</div>
                 <div class="text-h5 text-weight-bold">{{ card.value }}</div>
@@ -115,16 +86,8 @@
                   {{ chartStore.selectedYear === 'all' ? 'All Years' : chartStore.selectedYear }}
                 </div>
               </div>
-              <q-btn
-                icon="refresh"
-                color="primary"
-                flat
-                dense
-                size="sm"
-                @click="refreshChartData"
-                :loading="chartStore.isLoading"
-                class="refresh-btn"
-              >
+              <q-btn icon="refresh" color="primary" flat dense size="sm" @click="refreshChartData"
+                :loading="chartStore.isLoading" class="refresh-btn">
                 <q-tooltip>Refresh Chart Data</q-tooltip>
               </q-btn>
             </div>
@@ -138,13 +101,8 @@
               <q-icon name="pie_chart" size="3em" color="grey-4" />
               <div class="text-grey-6 q-mt-sm">No chart data available</div>
               <div class="text-caption text-grey-5">Select a different year or check data availability</div>
-              <q-btn
-                label="Load Test Data"
-                color="primary"
-                size="sm"
-                class="q-mt-md"
-                @click="chartStore.setTestData()"
-              />
+              <q-btn label="Load Test Data" color="primary" size="sm" class="q-mt-md"
+                @click="chartStore.setTestData()" />
             </div>
             <PieChart v-else :chart-data="chartStore.pieChartData" :options="chartOptions" />
           </q-card-section>
@@ -157,20 +115,13 @@
             <div class="row items-center justify-between">
               <div class="text-h6 text-weight-medium">Disbursement Overview</div>
               <div class="row q-gutter-sm">
-                <div
-                  v-for="status in ['unliquidated', 'Partial', 'Liquidated']"
-                  :key="status"
-                  class="status-count-chip"
+                <div v-for="status in ['unliquidated', 'Partial', 'Liquidated']" :key="status" class="status-count-chip"
                   :class="{ active: selectedDisbursementFilter === status }"
-                  @click="selectedDisbursementFilter = status"
-                >
-                  <q-chip
-                    :color="status === 'unliquidated' ? 'orange' : getStatusColor(status)"
-                    text-color="white"
+                  @click="selectedDisbursementFilter = status">
+                  <q-chip :color="status === 'unliquidated' ? 'orange' : getStatusColor(status)" text-color="white"
                     size="sm"
                     :label="`${status === 'unliquidated' ? 'Unliquidated' : status}: ${getStatusCount(status)}`"
-                    clickable
-                  />
+                    clickable />
                 </div>
               </div>
             </div>
@@ -182,29 +133,14 @@
             <!-- Filter Controls and Refresh -->
             <div class="row q-gutter-sm q-mt-md items-center justify-between">
               <div class="row q-gutter-sm">
-                <q-btn
-                  v-for="filter in disbursementFilters"
-                  :key="filter.value"
-                  :label="filter.label"
-                  :color="getFilterButtonColor(filter.value)"
-                  :text-color="getFilterButtonTextColor(filter.value)"
-                  :outline="selectedDisbursementFilter !== filter.value"
-                  size="sm"
-                  @click="selectedDisbursementFilter = filter.value"
-                  class="filter-btn"
-                />
+                <q-btn v-for="filter in disbursementFilters" :key="filter.value" :label="filter.label"
+                  :color="getFilterButtonColor(filter.value)" :text-color="getFilterButtonTextColor(filter.value)"
+                  :outline="selectedDisbursementFilter !== filter.value" size="sm"
+                  @click="selectedDisbursementFilter = filter.value" class="filter-btn" />
               </div>
 
-              <q-btn
-                icon="refresh"
-                color="primary"
-                flat
-                dense
-                size="sm"
-                @click="refreshDisbursements"
-                :loading="chartStore.isLoading"
-                class="refresh-btn"
-              >
+              <q-btn icon="refresh" color="primary" flat dense size="sm" @click="refreshDisbursements"
+                :loading="chartStore.isLoading" class="refresh-btn">
                 <q-tooltip>Refresh Disbursements</q-tooltip>
               </q-btn>
             </div>
@@ -219,26 +155,13 @@
               <q-spinner color="primary" size="3em" />
             </div>
 
-            <q-table
-              v-else
-              :rows="filteredDisbursementRows"
-              :columns="disbursementTableColumns"
-              row-key="id"
-              flat
-              bordered
-              :pagination="{ rowsPerPage: 5 }"
-              class="disbursement-table responsive-table"
-              style="height: 100%"
-            >
+            <q-table v-else :rows="filteredDisbursementRows" :columns="disbursementTableColumns" row-key="id" flat
+              bordered :pagination="{ rowsPerPage: 5 }" class="disbursement-table responsive-table"
+              style="height: 100%">
               <!-- Status column with color coding -->
               <template v-slot:body-cell-status="props">
                 <q-td :props="props">
-                  <q-chip
-                    :color="getStatusColor(props.value)"
-                    text-color="white"
-                    size="sm"
-                    :label="props.value"
-                  />
+                  <q-chip :color="getStatusColor(props.value)" text-color="white" size="sm" :label="props.value" />
                 </q-td>
               </template>
 
@@ -254,16 +177,9 @@
                 <q-td :props="props">
                   <!-- Debug info (remove in production) -->
 
-                  <div
-                    v-if="props.value !== '-' && props.row.status !== 'Liquidated'"
-                    class="aging-display"
-                  >
-                    <q-chip
-                      :color="getAgingColor(props.value)"
-                      text-color="white"
-                      size="sm"
-                      :label="`${props.value} days`"
-                    >
+                  <div v-if="props.value !== '-' && props.row.status !== 'Liquidated'" class="aging-display">
+                    <q-chip :color="getAgingColor(props.value)" text-color="white" size="sm"
+                      :label="`${props.value} days`">
                       <q-tooltip>
                         <div class="text-center">
                           <div class="text-weight-bold">Aging Information</div>
@@ -287,14 +203,12 @@
             </q-table>
 
             <!-- Empty state when no data -->
-            <div
-              v-if="!chartStore.isLoading && filteredDisbursementRows.length === 0"
-              class="text-center q-pa-lg"
-            >
+            <div v-if="!chartStore.isLoading && filteredDisbursementRows.length === 0" class="text-center q-pa-lg">
               <q-icon name="inbox" size="3em" color="grey-4" />
               <div class="text-grey-6 q-mt-sm">No disbursements found for the selected filter</div>
               <div class="text-caption text-grey-5 q-mt-xs">
-                {{ selectedDisbursementFilter === 'unliquidated' ? 'All disbursements may be liquidated' : `No ${selectedDisbursementFilter} disbursements found` }}
+                {{ selectedDisbursementFilter === 'unliquidated' ? 'All disbursements may be liquidated' : `No
+                ${selectedDisbursementFilter} disbursements found` }}
               </div>
               <div class="text-caption text-grey-5 q-mt-xs">
                 Total disbursements: {{ chartStore.disbursementOverviewRows.length }}
@@ -317,40 +231,34 @@
       </div>
     </q-inner-loading>
 
-                <!-- Debug Panel (remove in production) -->
-            <div v-if="showDebugPanel" class="q-mt-lg">
-              <q-card class="debug-card">
-                <q-card-section>
-                  <div class="row items-center justify-between q-mb-md">
-                    <div class="text-h6">Debug Information</div>
-                    <q-btn
-                      label="Test Backend"
-                      color="secondary"
-                      size="sm"
-                      @click="testBackend"
-                      :loading="testingBackend"
-                    />
-                  </div>
-                  <div class="row q-col-gutter-md">
-                    <div class="col-12 col-md-6">
-                      <div class="text-subtitle2">Chart Data:</div>
-                      <pre class="debug-text">{{ JSON.stringify(chartStore.pieChartData, null, 2) }}</pre>
-                    </div>
-                    <div class="col-12 col-md-6">
-                      <div class="text-subtitle2">Disbursements:</div>
-                      <div>Total: {{ chartStore.disbursementOverviewRows.length }}</div>
-                      <div>Filtered: {{ filteredDisbursementRows.length }}</div>
-                      <div>Selected Filter: {{ selectedDisbursementFilter }}</div>
-                      <div class="q-mt-md">
-                        <div class="text-subtitle2">Backend Debug:</div>
-                        <pre v-if="backendDebugData" class="debug-text">{{ JSON.stringify(backendDebugData, null, 2) }}</pre>
-                        <div v-else class="text-caption text-grey-5">Click "Test Backend" to check data</div>
-                      </div>
-                    </div>
-                  </div>
-                </q-card-section>
-              </q-card>
+    <!-- Debug Panel (remove in production) -->
+    <div v-if="showDebugPanel" class="q-mt-lg">
+      <q-card class="debug-card">
+        <q-card-section>
+          <div class="row items-center justify-between q-mb-md">
+            <div class="text-h6">Debug Information</div>
+            <q-btn label="Test Backend" color="secondary" size="sm" @click="testBackend" :loading="testingBackend" />
+          </div>
+          <div class="row q-col-gutter-md">
+            <div class="col-12 col-md-6">
+              <div class="text-subtitle2">Chart Data:</div>
+              <pre class="debug-text">{{ JSON.stringify(chartStore.pieChartData, null, 2) }}</pre>
             </div>
+            <div class="col-12 col-md-6">
+              <div class="text-subtitle2">Disbursements:</div>
+              <div>Total: {{ chartStore.disbursementOverviewRows.length }}</div>
+              <div>Filtered: {{ filteredDisbursementRows.length }}</div>
+              <div>Selected Filter: {{ selectedDisbursementFilter }}</div>
+              <div class="q-mt-md">
+                <div class="text-subtitle2">Backend Debug:</div>
+                <pre v-if="backendDebugData" class="debug-text">{{ JSON.stringify(backendDebugData, null, 2) }}</pre>
+                <div v-else class="text-caption text-grey-5">Click "Test Backend" to check data</div>
+              </div>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </div>
   </q-page>
 </template>
 
@@ -925,7 +833,8 @@ onMounted(async () => {
   min-width: unset !important;
   width: 100%;
   position: sticky;
-  min-height: 150px !important; /* Override any defaults */
+  min-height: 150px !important;
+  /* Override any defaults */
   align-items: center;
   justify-content: space-evenly;
   border-radius: 12px;
@@ -945,10 +854,12 @@ onMounted(async () => {
     border-top: 4px solid rgba(88, 178, 101, 1);
     background-color: white;
   }
+
   &.card-1 {
     border-top: 4px solid rgba(88, 178, 101, 1);
     background-color: white;
   }
+
   &.card-2 {
     border-top: 4px solid rgba(88, 178, 101, 1);
     background-color: white;
@@ -989,6 +900,7 @@ onMounted(async () => {
       padding-bottom: 7px;
       flex-shrink: 0;
     }
+
     &:last-child {
       height: 350px;
       padding-top: 1;
@@ -1042,6 +954,7 @@ onMounted(async () => {
     min-width: unset !important;
     width: 100% !important;
   }
+
   .chart-card,
   .responsive-card,
   .responsive-table {
@@ -1069,22 +982,27 @@ onMounted(async () => {
     min-width: unset !important;
     width: 100% !important;
   }
+
   .chart-card,
   .responsive-card,
   .responsive-table {
     width: 100% !important;
     min-width: unset !important;
   }
+
   .dashboard-page {
     padding: 8px !important;
   }
+
   .welcome-user {
     font-size: 18px !important;
     text-align: left;
   }
+
   .Custom-caption {
     font-size: 10px !important;
   }
+
   .Custome-text {
     font-size: 12px;
   }
@@ -1284,9 +1202,11 @@ onMounted(async () => {
 
 .welcome-user {
   font-weight: bold;
-  color: Black; /* Dark green */
+  color: Black;
+  /* Dark green */
   margin-top: -10px;
 }
+
 .dashboard-page {
   background: whitesmoke;
 }
