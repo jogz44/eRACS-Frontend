@@ -229,13 +229,17 @@
               :label="isAppropriationReviewed(props.row.id) ? 'Reviewed' : 'Review'"
               :color="isAppropriationReviewed(props.row.id) ? 'positive' : 'primary'"
               :outline="!isAppropriationReviewed(props.row.id)"
-              :disable="false"
+              :disable="isLoadingReview(props.row.id)"
+              :loading="isLoadingReview(props.row.id)"
               :unelevated="!isAppropriationReviewed(props.row.id)"
               rounded
               @click="isAppropriationReviewed(props.row.id) ? showRemarksDialog(props.row.id) : handleAppropriationReviewClick(props.row)"
             >
               <q-tooltip v-if="isAppropriationReviewed(props.row.id)" class="bg-grey-8">
                 Click to view admin remarks
+              </q-tooltip>
+              <q-tooltip v-else-if="isLoadingReview(props.row.id)" class="bg-grey-8">
+                Loading review status...
               </q-tooltip>
             </q-btn>
           </q-td>
@@ -412,6 +416,8 @@ const loadAppropriation = async () => {
   loading.value = true
   try {
     await appropriationStore.fetchBudgets()
+    // Reload reviews after refreshing appropriations
+    await loadAppropriationReviews()
     $q.notify({
       type: 'positive',
       message: 'Appropriation refreshed!',
@@ -611,6 +617,20 @@ watch(selectedFiscalYear, (newYearId) => {
   }
 })
 
+// Watch for appropriations data to be available and load reviews immediately
+watch(
+  () => appropriationStore.filteredAppropriations,
+  async (newAppropriations) => {
+    if (newAppropriations && newAppropriations.length > 0) {
+      // Only load if we haven't loaded reviews yet (prevent double loading)
+      if (appropriationReviewedSet.value.size === 0 && loadingReviews.value.size === 0) {
+        await loadAppropriationReviews()
+      }
+    }
+  },
+  { immediate: true }
+)
+
 // const openEditAllocationDialog = async (row) => {
 //   try {
 //     const response = await api.get(`/api/barangay/budgets/${row.id}/history`)
@@ -788,6 +808,7 @@ const saveEditedAllocation = async () => {
 onMounted(async () => {
   try {
     await appropriationStore.initialize()
+    
     // Log page visit
     await logPageVisit('Current Appropriation')
 
@@ -884,12 +905,54 @@ const columns = [
   },
 ]
 
-// Local reviewed state for appropriation rows
+// Persistent review state for appropriation rows
 const appropriationReviewedSet = ref(new Set())
 const appropriationRemarks = ref(new Map()) // Store remarks for each reviewed item
+const loadingReviews = ref(new Set()) // Track which items are loading reviews
 
 const isAppropriationReviewed = (id) => appropriationReviewedSet.value.has(id)
 const getAppropriationRemarks = (id) => appropriationRemarks.value.get(id) || ''
+const isLoadingReview = (id) => loadingReviews.value.has(id)
+
+// Load existing reviews for appropriations
+const loadAppropriationReviews = async () => {
+  try {
+    const items = appropriationStore.filteredAppropriations.map(item => ({
+      reviewable_type: 'App\\Models\\TranAppropriation',
+      reviewable_id: item.id
+    }))
+    
+    if (items.length === 0) return
+    
+    // Mark all items as loading
+    items.forEach(item => loadingReviews.value.add(item.reviewable_id))
+    
+    const response = await api.post('/api/admin/reviews/bulk', { items }, {
+      headers: {
+        Authorization: `Bearer ${authStore.adminToken}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+    })
+    
+    if (response.data.success) {
+      response.data.data.forEach(review => {
+        if (review.is_reviewed && review.review) {
+          appropriationReviewedSet.value.add(review.reviewable_id)
+          appropriationRemarks.value.set(review.reviewable_id, review.review.remarks)
+        }
+        // Remove from loading set
+        loadingReviews.value.delete(review.reviewable_id)
+      })
+    }
+  } catch (error) {
+    console.error('Failed to load appropriation reviews:', error)
+    // Clear loading state on error
+    appropriationStore.filteredAppropriations.forEach(item => {
+      loadingReviews.value.delete(item.id)
+    })
+  }
+}
 
 const handleAppropriationReviewClick = (row) => {
   if (isAppropriationReviewed(row.id)) return
@@ -898,7 +961,7 @@ const handleAppropriationReviewClick = (row) => {
   showReviewDialog.value = true
 }
 
-const confirmReview = () => {
+const confirmReview = async () => {
   if (!adminRemarks.value.trim()) {
     $q.notify({
       type: 'negative',
@@ -910,17 +973,45 @@ const confirmReview = () => {
   }
 
   if (currentReviewRow.value) {
-    appropriationReviewedSet.value.add(currentReviewRow.value.id)
-    appropriationRemarks.value.set(currentReviewRow.value.id, adminRemarks.value)
-    // Log admin review activity with remarks
-    logAdminActivity('Reviewed Item', `Admin reviewed Appropriation: ${currentReviewRow.value.description} (Barangay: ${currentReviewRow.value.barangay_name || 'Unknown Barangay'}) - Remarks: ${adminRemarks.value}`)
+    try {
+      const response = await api.post('/api/admin/reviews', {
+        reviewable_type: 'App\\Models\\TranAppropriation',
+        reviewable_id: currentReviewRow.value.id,
+        remarks: adminRemarks.value
+      }, {
+        headers: {
+          Authorization: `Bearer ${authStore.adminToken}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      })
 
-    $q.notify({
-      type: 'positive',
-      message: 'Appropriation marked as reviewed successfully!',
-      icon: 'check_circle',
-      position: 'top',
-    })
+      if (response.data.success) {
+        appropriationReviewedSet.value.add(currentReviewRow.value.id)
+        appropriationRemarks.value.set(currentReviewRow.value.id, adminRemarks.value)
+        
+        // Log admin review activity with remarks
+        logAdminActivity('Reviewed Item', `Admin reviewed Appropriation: ${currentReviewRow.value.description} (Barangay: ${currentReviewRow.value.barangay_name || 'Unknown Barangay'}) - Remarks: ${adminRemarks.value}`)
+
+        $q.notify({
+          type: 'positive',
+          message: 'Appropriation marked as reviewed successfully!',
+          icon: 'check_circle',
+          position: 'top',
+        })
+      } else {
+        throw new Error(response.data.message || 'Failed to save review')
+      }
+    } catch (error) {
+      console.error('Failed to save review:', error)
+      $q.notify({
+        type: 'negative',
+        message: error.response?.data?.message || 'Failed to save review',
+        icon: 'error',
+        position: 'top',
+      })
+      return
+    }
   }
 
   showReviewDialog.value = false
