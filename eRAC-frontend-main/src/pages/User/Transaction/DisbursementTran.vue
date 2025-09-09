@@ -214,8 +214,25 @@
             <div class="text-subtitle1 q-mb-md">
               <strong>Balance:</strong> ₱{{ store.forms.expense.balance.toLocaleString() }}
             </div>
-            <q-select outlined dense v-model="store.forms.expense.particulars" :options="filteredParticulars"
-              label="Particulars" use-input fill-input hide-selected new-value-mode="add-unique" @filter="filterFn" />
+            <!-- <q-select outlined dense v-model="store.forms.expense.particulars" :options="filteredParticulars"
+              label="Particulars" use-input fill-input hide-selected new-value-mode="add-unique" @filter="filterFn" /> -->
+<q-select
+  outlined
+  dense
+  v-model="store.forms.expense.particulars"
+  :options="filteredParticulars"
+  label="Particulars"
+  use-input
+  fill-input
+  hide-selected
+  new-value-mode="add-unique"
+  option-label="label"
+  option-value="label"
+  map-options
+  emit-value
+  @filter="filterFn"
+/>
+
             <q-input outlined dense :model-value="formatInputValue(store.forms.expense.amount)"
               @update:model-value="(val) => (store.forms.expense.amount = handleAmountInput(val))"
               @blur="(e) => (store.forms.expense.amount = formatToTwoDecimals(e.target.value))" label="Amount"
@@ -238,8 +255,8 @@
             <q-td :props="props">
               <div class="row q-gutter-xs items-center justify-center">
                 <q-btn dense icon="edit" :color="props.row.status === 'Unliquidated' || props.row.status === 'Partial'
-                    ? 'orange'
-                    : 'grey'
+                  ? 'orange'
+                  : 'grey'
                   " :disable="props.row.status !== 'Unliquidated' && props.row.status !== 'Partial'"
                   :loading="store.loadingEditDisbursement === props.row.id" @click="handleEditDisbursement(props.row)"
                   v-permission="'edit'" />
@@ -404,9 +421,13 @@ const statusOptions = [
 const searchQuery = ref('')
 
 const filteredParticulars = ref(store.particulars)
-function filterFn(val, update) {
+
+function filterFn (val, update) {
+  console.log('[filterFn] input value:', val)
+
   if (val === '') {
     update(() => {
+      console.log('[filterFn] reset to all', store.particulars.length, 'items')
       filteredParticulars.value = store.particulars
     })
     return
@@ -414,11 +435,17 @@ function filterFn(val, update) {
 
   update(() => {
     const needle = val.toLowerCase()
-    filteredParticulars.value = store.particulars.filter((opt) =>
-      opt.label.toLowerCase().includes(needle),
+    const results = store.particulars.filter(opt =>
+      opt.label.toLowerCase().includes(needle)
     )
+    console.log('[filterFn] matches:', results.length, 'items')
+    filteredParticulars.value = results
   })
 }
+
+watch(filteredParticulars, (val) => {
+  console.log('[watch] filteredParticulars updated:', val.length)
+})
 
 // Formatting helpers for amount input (kept local to this component)
 const formatInputValue = (value) => {
