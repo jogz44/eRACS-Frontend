@@ -461,6 +461,7 @@ export const useChartDataStore = defineStore('chartData', {
       } finally {
         this.isLoading= false
       }
+      
     },
 
     // Process allocations to create pie chart data
@@ -755,6 +756,11 @@ export const useChartDataStore = defineStore('chartData', {
             this.disbursementOverviewRows = []
             this.recentDisbursementRows = []
           }
+          
+          console.log('pie chart data:', this.pieChartData)
+          this.pieChartData.labels.push("Unappropriated")
+          this.pieChartData.datasets[0].data.push(dashboardData.summary.total_balance)
+          this.pieChartData.datasets[0].backgroundColor.push("#BDBDBD")
 
           return dashboardData
         } catch (dashboardError) {
@@ -768,6 +774,7 @@ export const useChartDataStore = defineStore('chartData', {
 
           return { fallback: true }
         }
+        
       } catch (error) {
         console.error('Error loading dashboard data:', error)
         // Set error state for pie chart
