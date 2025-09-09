@@ -59,7 +59,7 @@ public function register(Request $request)
         'role' => 'barangay_user'
     ]);
 
-    AdminAuthController::logUserAction($user, 'Registration','User registration to system');
+    //AdminAuthController::logUserAction($user, 'Registration','User registration to system');
 
     return response()->json([
         'message' => 'Registration successful',
