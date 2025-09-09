@@ -35,10 +35,10 @@
           <!-- DV Number Field -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">DV Number:</q-item-label>
-            <q-input 
-              filled 
-              outlined 
-              dense 
+            <q-input
+              filled
+              outlined
+              dense
               :model-value="store.currentLiquidation.dvNumber"
               :disable="true"
             />
@@ -183,15 +183,13 @@
                       filled
                       unelaveted
                       outlined
-                      :model-value="formatInputValue(orDetail.orAmount)"
-                      @update:model-value="(val) => { orDetail.orAmount = handleAmountInput(val); calculateTotals() }"
-                      @blur="(e) => { orDetail.orAmount = formatToTwoDecimals(e.target.value); calculateTotals() }"
+                      v-model="orDetail.orAmount"
                       placeholder="0.00"
                       prefix="₱"
                       inputmode="decimal"
-                      pattern="\\d*\\.?\\d{0,2}"
                       @keypress="blockNonNumeric"
                       @paste.prevent="handlePasteNumeric"
+                      @input="calculateTotals"
                     />
                     <!-- Over-liquidation warning -->
                     <div v-if="actualReturnAmount < 0" class="text-negative q-mt-xs text-caption">
@@ -261,10 +259,10 @@
           :loading="savingPartial"
         />
         <q-btn
-          label="Submit"
-          color="green"
-          @click="showSubmitConfirmation"
-          :disable="!canSubmit || savingPartial"
+          :label="needsReimbursement ? 'Reimbursement' : 'Submit'"
+          :color="needsReimbursement ? 'orange' : 'green'"
+          @click="needsReimbursement ? handleReimbursement() : showSubmitConfirmation()"
+          :disable="!isValid || savingPartial"
           :loading="savingSubmit"
         />
       </q-card-actions>
@@ -291,19 +289,352 @@
       </q-card-actions>
     </q-card>
   </q-dialog>
+
+  <!-- Reimbursement Dialog -->
+  <q-dialog v-model="showReimbursementDialog" persistent>
+    <q-card style="min-width: 1000px">
+      <q-card-section class="q-pb-none">
+        <div class="text-h6">Reimbursement for Disbursement #{{ store.currentLiquidation.dvNumber }}</div>
+        <div class="text-caption text-grey-6 q-mt-sm">
+          OR Amount exceeds DV Amount by ₱{{ formatCurrency(reimbursementAmount) }}
+        </div>
+      </q-card-section>
+
+      <q-card-section>
+        <div class="row q-col-gutter-md">
+          <!-- Date Field -->
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">Date:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="store.currentLiquidation.date"
+              :disable="true"
+            />
+          </div>
+
+          <!-- DV Number Field -->
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">DV Number:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="reimbursementDvNumber"
+              :disable="true"
+            />
+          </div>
+
+          <!-- DV Amount Field -->
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">DV Amount:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="formatCurrency(reimbursementAmount)"
+              prefix="₱"
+              :disable="true"
+            />
+          </div>
+
+          <!-- Bank Selection -->
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">Bank:</q-item-label>
+            <q-select
+              filled
+              outlined
+              dense
+              v-model="selectedReimbursementBank"
+              :options="bankStore.availableBanks"
+              option-label="name"
+              option-value="id"
+              emit-value
+              map-options
+              :label="currentReimbursementBankLabel"
+              @update:model-value="handleReimbursementBankSelection"
+            />
+          </div>
+
+          <!-- Cheque Number Field -->
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">Cheque Number:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              v-model="reimbursementChequeNumber"
+              :disable="true"
+            />
+          </div>
+
+          <!-- Payee Field -->
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">Payee:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="store.currentLiquidation.payee"
+              :disable="true"
+            />
+          </div>
+        </div>
+      </q-card-section>
+
+      <!-- Expense Account Selection Section -->
+      <q-card-section>
+        <div class="row items-center q-mb-md">
+          <div class="text-subtitle1">
+            <strong>Select Expense Account for Reimbursement:</strong>
+          </div>
+          <q-space />
+          <q-btn
+            color="primary"
+            icon="add"
+            label="Add"
+            flat
+            @click="showExpenseAccountDialog = true"
+          />
+        </div>
+
+        <!-- Selected Expense Accounts Table -->
+        <q-table
+          :rows="selectedReimbursementExpenseAccounts"
+          :columns="selectedExpenseAccountColumns"
+          row-key="id"
+          :pagination="{ rowsPerPage: 5 }"
+          flat
+          bordered
+        >
+          <template v-slot:body-cell-amount="props">
+            <q-td :props="props">
+              <q-input
+                dense
+                v-model="props.row.amount"
+                prefix="₱"
+                inputmode="decimal"
+                pattern="\\d*\\.?\\d{0,2}"
+                @keypress="blockNonNumeric"
+                @paste.prevent="handlePasteNumeric"
+                style="width: 120px;"
+              />
+            </q-td>
+          </template>
+          <template v-slot:body-cell-action="props">
+            <q-td :props="props">
+              <q-btn
+                dense
+                icon="delete"
+                color="red"
+                @click="removeExpenseAccount(props.row)"
+              />
+            </q-td>
+          </template>
+        </q-table>
+
+        <!-- Total Amount Display -->
+        <div class="q-mt-md q-pa-md" style="background-color: #f5f5f5; border-radius: 8px;">
+          <div class="text-body2">
+            <strong>Total Selected: ₱{{ formatCurrency(totalSelectedExpenseAmount) }}</strong>
+            <span class="text-grey-7 q-ml-md">of ₱{{ formatCurrency(reimbursementAmount) }} needed</span>
+          </div>
+          <div v-if="totalSelectedExpenseAmount > reimbursementAmount" class="text-negative text-caption q-mt-xs">
+            Total exceeds reimbursement amount by ₱{{ formatCurrency(totalSelectedExpenseAmount - reimbursementAmount) }}
+          </div>
+        </div>
+      </q-card-section>
+
+      <!-- OR Details for Reimbursement -->
+      <q-card-section>
+        <div class="row items-center q-mb-md">
+          <div class="text-subtitle1">
+            <strong>OR Details for Reimbursement:</strong>
+          </div>
+          <q-space />
+          <q-btn
+            color="primary"
+            icon="add"
+            label="Add OR"
+            flat
+            @click="showOrSelectionDialog = true"
+          />
+        </div>
+
+        <!-- Selected ORs Table -->
+        <q-table
+          :rows="selectedReimbursementOrs"
+          :columns="selectedOrColumns"
+          row-key="id"
+          :pagination="{ rowsPerPage: 5 }"
+          flat
+          bordered
+        >
+          <template v-slot:body-cell-orAmount="props">
+            <q-td :props="props">
+              <q-input
+                dense
+                v-model="props.row.orAmount"
+                prefix="₱"
+                inputmode="decimal"
+                pattern="\\d*\\.?\\d{0,2}"
+                @keypress="blockNonNumeric"
+                @paste.prevent="handlePasteNumeric"
+                style="width: 120px;"
+              />
+            </q-td>
+          </template>
+          <template v-slot:body-cell-action="props">
+            <q-td :props="props">
+              <q-btn
+                dense
+                icon="delete"
+                color="red"
+                @click="removeOr(props.row)"
+              />
+            </q-td>
+          </template>
+        </q-table>
+
+        <!-- Total OR Amount Display -->
+        <div class="q-mt-md q-pa-md" style="background-color: #f5f5f5; border-radius: 8px;">
+          <div class="text-body2">
+            <strong>Total OR Amount: ₱{{ formatCurrency(totalSelectedOrAmount) }}</strong>
+            <span class="text-grey-7 q-ml-md">of ₱{{ formatCurrency(reimbursementAmount) }} needed</span>
+          </div>
+          <div v-if="totalSelectedOrAmount !== reimbursementAmount" class="text-negative text-caption q-mt-xs">
+            Total must exactly match reimbursement amount
+          </div>
+        </div>
+      </q-card-section>
+
+      <q-card-actions align="right" class="custom-actions">
+        <q-btn flat label="Cancel" @click="showReimbursementDialog = false" />
+        <q-btn
+          label="Submit Reimbursement"
+          color="orange"
+          @click="handleSubmitReimbursement"
+          :loading="savingReimbursement"
+          :disable="!canSubmitReimbursement"
+        />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+
+  <!-- Expense Account Selection Dialog -->
+  <q-dialog v-model="showExpenseAccountDialog" persistent>
+    <q-card style="min-width: 800px; max-width: 90vw">
+      <q-card-section class="q-pb-none">
+        <div class="text-h6">Select Expense Account</div>
+        <div class="text-caption text-grey-6 q-mt-sm">
+          Select accounts to fund the reimbursement (₱{{ formatCurrency(reimbursementAmount) }} needed)
+        </div>
+      </q-card-section>
+
+      <q-card-section>
+        <q-input outlined dense placeholder="Search expense account..." v-model="store.expenseSearch"
+          class="q-mb-sm" style="width: 300px">
+          <template v-slot:append>
+            <q-icon name="search" />
+          </template>
+        </q-input>
+
+        <q-table
+          :rows="store.filteredExpenseAccounts"
+          :columns="store.expenseAccountColumns"
+          row-key="id"
+          :pagination="{ rowsPerPage: 5 }"
+          :loading="store.loading || store.expenseTypeLoading"
+          :filter="store.expenseSearch"
+          flat
+          bordered
+        >
+          <template v-slot:body-cell-budget_source="props">
+            <q-td :props="props">
+              <q-badge :color="getBudgetSourceColor(props.row.budget_source)"
+                :label="getBudgetSourceLabel(props.row.budget_source)" class="budget-source-badge" />
+            </q-td>
+          </template>
+          <template v-slot:body-cell-action="props">
+            <q-td :props="props">
+              <q-btn dense label="Select" color="primary" @click="addExpenseAccount(props.row)" />
+            </q-td>
+          </template>
+        </q-table>
+      </q-card-section>
+
+      <q-card-actions align="right" class="q-pa-md">
+        <q-btn flat label="Cancel" @click="showExpenseAccountDialog = false" />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+
+  <!-- OR Selection Dialog -->
+  <q-dialog v-model="showOrSelectionDialog" persistent>
+    <q-card style="min-width: 800px">
+      <q-card-section class="q-pb-none">
+        <div class="text-h6">Select OR for Reimbursement</div>
+        <div class="text-caption text-grey-6 q-mt-sm">
+          Select existing ORs to use for the reimbursement
+        </div>
+      </q-card-section>
+
+      <q-card-section>
+        <q-table
+          :rows="store.currentLiquidation.orDetails"
+          :columns="orSelectionColumns"
+          row-key="id"
+          :pagination="{ rowsPerPage: 5 }"
+        >
+          <template v-slot:body-cell-action="props">
+            <q-td :props="props">
+              <q-btn
+                dense
+                label="Select"
+                color="primary"
+                @click="addOr(props.row)"
+                :disable="selectedReimbursementOrs.some(or => or.id === props.row.id)"
+              />
+            </q-td>
+          </template>
+        </q-table>
+      </q-card-section>
+
+      <q-card-actions align="right" class="q-pa-md">
+        <q-btn flat label="Cancel" @click="showOrSelectionDialog = false" />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
 </template>
 
 <script setup>
 import { computed, watch, ref, nextTick } from 'vue'
 import { useDisbursementStore } from 'stores/disbursementStore'
+import { useBankStore } from 'stores/bankStore'
 import { useQuasar } from 'quasar'
+import { api } from 'src/boot/axios'
 
 const $q = useQuasar()
 const savingPartial = ref(false)
 const savingSubmit = ref(false)
+const savingReimbursement = ref(false)
 const showConfirmationDialog = ref(false)
+const showReimbursementDialog = ref(false)
+
+// Reimbursement reactive variables
+const selectedReimbursementBank = ref(null)
+const reimbursementChequeNumber = ref('')
+const reimbursementPayee = ref('')
+const reimbursementDvNumber = ref('')
+const selectedReimbursementExpenseAccounts = ref([])
+const selectedReimbursementOrs = ref([])
+const availableOrNumbers = ref([])
+const showExpenseAccountDialog = ref(false)
+const showOrSelectionDialog = ref(false)
 
 const store = useDisbursementStore()
+const bankStore = useBankStore()
 
 // Initialize OR Details when dialog opens
 function initializeOrDetails() {
@@ -353,6 +684,47 @@ watch(
   { deep: true }
 )
 
+// Watch reimbursement dialog open to initialize defaults
+watch(
+  () => showReimbursementDialog.value,
+  async (isOpen) => {
+    if (isOpen) {
+      // Generate new DV number for reimbursement
+      try {
+        const response = await api.get('/api/barangay/generate-dvnumber', store.getAuthConfig())
+        const newDVNumber = response.data.data.dv_number || ''
+        reimbursementDvNumber.value = newDVNumber
+      } catch (error) {
+        console.error('Failed to generate new DV number:', error)
+        reimbursementDvNumber.value = ''
+      }
+
+      // Initialize bank selection to match the original disbursement
+      if (store.currentLiquidation?.bank_id) {
+        selectedReimbursementBank.value = store.currentLiquidation.bank_id
+        // Auto-generate cheque number for the selected bank
+        await handleReimbursementBankSelection(store.currentLiquidation.bank_id)
+      }
+
+      // Load available OR numbers from the current disbursement
+      if (store.currentLiquidation?.orDetails?.length > 0) {
+        availableOrNumbers.value = store.currentLiquidation.orDetails.map(or => ({
+          orNumber: or.orNumber,
+          orDate: or.orDate
+        }))
+      }
+
+      // Ensure expense accounts are loaded
+      if (store.expenseAccounts.length === 0) {
+        await store.fetchExpenseAccounts()
+      }
+    } else {
+      // Reset form when dialog closes
+      resetReimbursementForm()
+    }
+  }
+)
+
 const totalActualExpense = computed(() => {
   if (!store.currentLiquidation?.orDetails) return '0.00'
   return store.currentLiquidation.orDetails
@@ -373,9 +745,166 @@ const actualReturnAmount = computed(() => {
   return store.currentLiquidation.dvAmount - parseFloat(totalActualExpense.value)
 })
 
+// Reimbursement amount calculation (OR amount - DV amount)
+const reimbursementAmount = computed(() => {
+  const excess = actualReturnAmount.value
+  return excess < 0 ? Math.abs(excess) : 0
+})
+
+// Check if reimbursement is needed
+const needsReimbursement = computed(() => {
+  return reimbursementAmount.value > 0
+})
+
 const orDetailsCount = computed(() => {
   return store.currentLiquidation?.orDetails?.length || 0
 })
+
+// Reimbursement computed properties
+const currentReimbursementBankLabel = computed(() => {
+  if (selectedReimbursementBank.value) {
+    const selectedBank = bankStore.banks.find(b => b.id === selectedReimbursementBank.value)
+    return selectedBank ? selectedBank.name : 'Select Bank'
+  }
+  return 'Select Bank'
+})
+
+const selectedExpenseAccountColumns = computed(() => [
+  {
+    name: 'account',
+    label: 'Expense Account',
+    field: 'accountName',
+    align: 'left',
+    sortable: true,
+  },
+  {
+    name: 'amount',
+    label: 'Amount',
+    field: 'amount',
+    align: 'right',
+    sortable: true,
+  },
+  {
+    name: 'action',
+    label: 'Action',
+    field: '',
+    align: 'center',
+  },
+])
+
+const totalSelectedExpenseAmount = computed(() => {
+  return selectedReimbursementExpenseAccounts.value.reduce((sum, account) => sum + (parseFloat(account.amount) || 0), 0)
+})
+
+const selectedOrColumns = computed(() => [
+  {
+    name: 'orNumber',
+    label: 'OR Number',
+    field: 'orNumber',
+    align: 'left',
+    sortable: true,
+  },
+  {
+    name: 'orDate',
+    label: 'OR Date',
+    field: 'orDate',
+    align: 'left',
+    sortable: true,
+  },
+  {
+    name: 'orAmount',
+    label: 'Amount',
+    field: 'orAmount',
+    align: 'right',
+    sortable: true,
+  },
+  {
+    name: 'action',
+    label: 'Action',
+    field: '',
+    align: 'center',
+  },
+])
+
+const totalSelectedOrAmount = computed(() => {
+  return selectedReimbursementOrs.value.reduce((sum, or) => sum + (parseFloat(or.orAmount) || 0), 0)
+})
+
+const orSelectionColumns = computed(() => [
+  {
+    name: 'orNumber',
+    label: 'OR Number',
+    field: 'orNumber',
+    align: 'left',
+    sortable: true,
+  },
+  {
+    name: 'orDate',
+    label: 'OR Date',
+    field: 'orDate',
+    align: 'left',
+    sortable: true,
+  },
+  {
+    name: 'orAmount',
+    label: 'OR Amount',
+    field: 'orAmount',
+    format: (val) => `₱${Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    align: 'right',
+    sortable: true,
+  },
+  {
+    name: 'action',
+    label: 'Action',
+    field: '',
+    align: 'center',
+  },
+])
+
+const canSubmitReimbursement = computed(() => {
+  return selectedReimbursementBank.value &&
+         selectedReimbursementExpenseAccounts.value.length > 0 &&
+         selectedReimbursementOrs.value.length > 0 &&
+         totalSelectedExpenseAmount.value === reimbursementAmount.value
+})
+
+// Budget source helper functions
+const getBudgetSourceColor = (budgetSource) => {
+  if (budgetSource?.toLowerCase().includes('annual')) {
+    return 'primary'
+  } else if (budgetSource?.toLowerCase().includes('supplemental')) {
+    return 'secondary'
+  }
+  return 'grey'
+}
+
+const getBudgetSourceLabel = (budgetSource) => {
+  if (budgetSource?.toLowerCase().includes('annual')) {
+    return 'Annual'
+  } else if (budgetSource?.toLowerCase().includes('supplemental')) {
+    return 'Supplemental'
+  }
+  return 'Mixed'
+}
+
+// Handle reimbursement bank selection for auto-generating cheque numbers
+const handleReimbursementBankSelection = async (bankId) => {
+  if (bankId) {
+    try {
+      // Use the same auth config as the store
+      const authConfig = store.getAuthConfig()
+      // Fetch available cheque for the selected bank
+      const response = await api.get(`/api/barangay/banks/${bankId}/available-cheques`, authConfig)
+      const data = response.data.data || []
+      reimbursementChequeNumber.value = data.cheque && data.cheque[0] ? data.cheque[0].cheque_number : ''
+    } catch (error) {
+      console.error('Error fetching cheque number for bank:', error)
+      reimbursementChequeNumber.value = ''
+    }
+  } else {
+    reimbursementChequeNumber.value = ''
+  }
+}
 
 
 
@@ -663,6 +1192,116 @@ const handleConfirmationPartial = () => {
   handlePartialLiquidation()
 }
 
+const handleReimbursement = () => {
+  console.log('Reimbursement triggered - showing reimbursement modal...')
+  showReimbursementDialog.value = true
+}
+
+// Reimbursement functions
+const addExpenseAccount = (account) => {
+  // Check if account is already selected
+  const existing = selectedReimbursementExpenseAccounts.value.find(acc => acc.id === account.id)
+  if (!existing) {
+    selectedReimbursementExpenseAccounts.value.push({
+      ...account,
+      accountName: `${account.account}${account.expenseType ? ` > ${account.expenseType}` : ''}${account.expenseItem ? ` > ${account.expenseItem}` : ''}`,
+      amount: 0
+    })
+  }
+  showExpenseAccountDialog.value = false
+}
+
+const removeExpenseAccount = (account) => {
+  selectedReimbursementExpenseAccounts.value = selectedReimbursementExpenseAccounts.value.filter(acc => acc.id !== account.id)
+}
+
+const addOr = (or) => {
+  // Check if OR is already selected
+  const existing = selectedReimbursementOrs.value.find(o => o.id === or.id)
+  if (!existing) {
+    selectedReimbursementOrs.value.push({
+      ...or,
+      orAmount: 0
+    })
+  }
+  showOrSelectionDialog.value = false
+}
+
+const removeOr = (or) => {
+  selectedReimbursementOrs.value = selectedReimbursementOrs.value.filter(o => o.id !== or.id)
+}
+
+const handleSubmitReimbursement = async () => {
+  savingReimbursement.value = true
+  try {
+    // Prepare reimbursement data
+    const reimbursementData = {
+      ref_dv_number: store.currentLiquidation.dvNumber,
+      dv_number: reimbursementDvNumber.value,
+      dv_amount: reimbursementAmount.value,
+      bank_id: selectedReimbursementBank.value,
+      cheque_number: reimbursementChequeNumber.value,
+      payee: store.currentLiquidation.payee,
+      expenses: selectedReimbursementExpenseAccounts.value.map(acc => ({
+        accountId: acc.id,
+        amount: acc.amount,
+        particular: `Reimbursement from ${acc.accountName}`,
+        expense_class_id: acc.expense_class_id,
+        expense_type_id: acc.expense_type_id,
+        expense_item_id: acc.expense_item_id,
+      })),
+      orDetails: selectedReimbursementOrs.value.map(or => ({
+        orNumber: or.orNumber,
+        orAmount: or.orAmount,
+        orDate: or.orDate,
+        remarks: `Reimbursement OR for DV ${store.currentLiquidation.dvNumber}`,
+      })),
+      is_reimbursement: true,
+    }
+
+    // Call store method to submit reimbursement
+    const result = await store.submitReimbursement(reimbursementData)
+
+    if (result.success) {
+      $q.notify({
+        type: 'positive',
+        message: 'Reimbursement submitted successfully!',
+        icon: 'check_circle',
+        position: 'top',
+      })
+      showReimbursementDialog.value = false
+      // Reset reimbursement form
+      resetReimbursementForm()
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: result.error || 'Failed to submit reimbursement',
+        icon: 'error',
+        position: 'top',
+      })
+    }
+  } catch (error) {
+    console.error('Error submitting reimbursement:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'An error occurred while submitting reimbursement',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    savingReimbursement.value = false
+  }
+}
+
+const resetReimbursementForm = () => {
+  selectedReimbursementBank.value = null
+  reimbursementChequeNumber.value = ''
+  reimbursementPayee.value = ''
+  reimbursementDvNumber.value = ''
+  selectedReimbursementExpenseAccounts.value = []
+  selectedReimbursementOrs.value = []
+}
+
 const handleSaveOrDetails = async () => {
   console.log('handleSaveOrDetails called - starting liquidation process...')
   savingSubmit.value = true
@@ -728,46 +1367,6 @@ const handleSaveOrDetails = async () => {
 const formatCurrency = (value) => {
   const num = Number(String(value).replace(/[,\s]/g, '')) || 0
   return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-const formatInputValue = (value) => {
-  if (value === '' || value === null || value === undefined) return ''
-  const isNumber = typeof value === 'number'
-  const cleanValue = String(value).replace(/[₱,\s]/g, '').replace(/,/g, '')
-  const num = parseFloat(cleanValue)
-  if (isNaN(num)) return ''
-  return isNumber ?
-    num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) :
-    num.toLocaleString('en-US')
-}
-
-const handleAmountInput = (value) => {
-  let cleanValue = String(value).replace(/[₱,\s]/g, '')
-  cleanValue = cleanValue.replace(/[^\d.]/g, '')
-  const parts = cleanValue.split('.')
-  if (parts.length > 2) {
-    cleanValue = parts[0] + '.' + parts.slice(1).join('')
-  }
-  if (parts.length === 2 && parts[1].length > 2) {
-    cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
-  }
-  return cleanValue
-}
-
-const formatToTwoDecimals = (value) => {
-  const cleanValue = String(value).replace(/[₱,\s]/g, '')
-  if (cleanValue === '') return 0
-  const parts = cleanValue.split('.')
-  if (parts.length > 2) {
-    const collapsed = parts[0] + '.' + parts.slice(1).join('')
-    return formatToTwoDecimals(collapsed)
-  }
-  if (parts.length === 2 && parts[1].length > 2) {
-    parts[1] = parts[1].substring(0, 2)
-  }
-  const num = parseFloat(parts.join('.'))
-  if (isNaN(num)) return 0
-  return Math.round(num * 100) / 100
 }
 
 const blockNonNumeric = (event) => {
