@@ -481,7 +481,7 @@ class DisbursementController extends Controller
             $user = request()->user();
             \Log::info("User: ", ['user_id' => $user ? $user->id : 'null', 'barangay_id' => $user ? $user->barangay_id : 'null']);
 
-            $query = Disbursement::with(['bank', 'expenseDetails.appropriation']);
+            $query = Disbursement::with(['bank', 'cheque.booklet', 'expenseDetails.appropriation']);
 
             // If user is authenticated and has barangay_id, filter by it
             if ($user && isset($user->barangay_id)) {
@@ -506,6 +506,7 @@ class DisbursementController extends Controller
                 'cheque_number' => $disbursement->cheque_number,
                 'bank_id' => $disbursement->bank_id,
                 'bank_name' => $disbursement->bank ? $disbursement->bank->bank_name : null,
+                'booklet_id' => $disbursement->cheque ? $disbursement->cheque->booklet_id : null,
                 'payee' => $disbursement->payee,
                 'dv_amount' => $disbursement->dv_amount,
                 'status' => $disbursement->status,

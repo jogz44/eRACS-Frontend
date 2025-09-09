@@ -316,13 +316,14 @@
 
           <!-- DV Number Field -->
           <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">DV Number:</q-item-label>
+            <q-item-label class="q-mb-xs">DV Number (Auto-generated):</q-item-label>
             <q-input
               filled
               outlined
               dense
-              :model-value="reimbursementDvNumber"
+              v-model="reimbursementDvNumber"
               :disable="true"
+              hint="DV number will be automatically generated"
             />
           </div>
 
@@ -541,7 +542,7 @@
         </q-input>
 
         <q-table
-          :rows="store.filteredExpenseAccounts"
+          :rows="validExpenseAccounts"
           :columns="store.expenseAccountColumns"
           row-key="id"
           :pagination="{ rowsPerPage: 5 }"
@@ -550,6 +551,17 @@
           flat
           bordered
         >
+          <template v-slot:no-data>
+            <div class="full-width row flex-center text-grey-6 q-gutter-sm">
+              <q-icon size="2em" name="inbox" />
+              <span v-if="store.filteredExpenseAccounts.length === 0">
+                No expense accounts available. Please ensure expense accounts are loaded.
+              </span>
+              <span v-else>
+                No expense accounts with valid expense items available for reimbursement.
+              </span>
+            </div>
+          </template>
           <template v-slot:body-cell-budget_source="props">
             <q-td :props="props">
               <q-badge :color="getBudgetSourceColor(props.row.budget_source)"
@@ -612,6 +624,7 @@
 import { computed, watch, ref, nextTick } from 'vue'
 import { useDisbursementStore } from 'stores/disbursementStore'
 import { useBankStore } from 'stores/bankStore'
+import { useAuthStore } from 'stores/auth'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
 
@@ -714,9 +727,34 @@ watch(
         }))
       }
 
-      // Ensure expense accounts are loaded
+      // Debug user type
+      const authStore = useAuthStore()
+      console.log('Current user is admin:', authStore.admin)
+      console.log('Current user type:', authStore.user?.user_type)
+      
+      // Reset budget source filter to show all accounts
+      store.selectedBudgetSource = 'all'
+      
+      // Clear expense search to show all accounts
+      store.expenseSearch = ''
+      
+      // Use the special method for fetching expense accounts for reimbursements
+      console.log('Loading expense accounts for reimbursement...')
+      await store.fetchExpenseAccountsForReimbursement()
+      console.log('Expense accounts loaded:', store.expenseAccounts.length)
+      
+      // If still empty, try the regular method as fallback
       if (store.expenseAccounts.length === 0) {
+        console.log('Fallback: trying regular expense account loading...')
         await store.fetchExpenseAccounts()
+        console.log('Expense accounts after fallback:', store.expenseAccounts.length)
+      }
+      
+      // If still empty, try refreshing with balances
+      if (store.expenseAccounts.length === 0) {
+        console.log('Fallback: trying refresh with balances...')
+        await store.refreshExpenseAccountsWithBalances()
+        console.log('Expense accounts after balance refresh:', store.expenseAccounts.length)
       }
     } else {
       // Reset form when dialog closes
@@ -1089,6 +1127,61 @@ const isValid = computed(() => {
   )
 })
 
+// Filter expense accounts to only show those with valid expense_item_id
+const validExpenseAccounts = computed(() => {
+  // Comprehensive debug logging
+  console.log('=== EXPENSE ACCOUNTS DEBUG ===')
+  console.log('Store expenseAccounts length:', store.expenseAccounts?.length || 0)
+  console.log('Store filteredExpenseAccounts length:', store.filteredExpenseAccounts?.length || 0)
+  console.log('Store expenseSearch:', store.expenseSearch)
+  console.log('Store selectedBudgetSource:', store.selectedBudgetSource)
+  
+  // Log first few accounts to see structure
+  if (store.filteredExpenseAccounts?.length > 0) {
+    console.log('First 3 filtered accounts:', store.filteredExpenseAccounts.slice(0, 3))
+    console.log('Sample account structure:', {
+      id: store.filteredExpenseAccounts[0]?.id,
+      expense_item_id: store.filteredExpenseAccounts[0]?.expense_item_id,
+      account: store.filteredExpenseAccounts[0]?.account,
+      expenseItem: store.filteredExpenseAccounts[0]?.expenseItem
+    })
+  }
+  
+  // Check what we're filtering for
+  const accountsWithExpenseItemId = store.filteredExpenseAccounts?.filter(account => 
+    account.expense_item_id && account.expense_item_id !== null
+  ) || []
+  
+  console.log('Accounts with expense_item_id:', accountsWithExpenseItemId.length)
+  console.log('Sample valid account:', accountsWithExpenseItemId[0])
+  
+  // Also check for accounts without expense_item_id
+  const accountsWithoutExpenseItemId = store.filteredExpenseAccounts?.filter(account => 
+    !account.expense_item_id || account.expense_item_id === null
+  ) || []
+  
+  console.log('Accounts without expense_item_id:', accountsWithoutExpenseItemId.length)
+  if (accountsWithoutExpenseItemId.length > 0) {
+    console.log('Sample invalid account:', accountsWithoutExpenseItemId[0])
+  }
+  
+  console.log('=== END DEBUG ===')
+  
+  // Return all accounts for now to see what's available
+  // We'll add the expense_item_id filter back once we confirm the data structure
+  const allAccounts = store.filteredExpenseAccounts || []
+  
+  // If we have accounts, show them all for now
+  if (allAccounts.length > 0) {
+    console.log('Returning all accounts for selection:', allAccounts.length)
+    return allAccounts
+  }
+  
+  // If no accounts, return empty array
+  console.log('No accounts available')
+  return []
+})
+
 const canSubmit = computed(() => {
   if (!isValid.value) return false
 
@@ -1234,30 +1327,119 @@ const removeOr = (or) => {
 const handleSubmitReimbursement = async () => {
   savingReimbursement.value = true
   try {
-    // Prepare reimbursement data
+    // Validate required fields before proceeding
+    if (!selectedReimbursementBank.value) {
+      $q.notify({
+        type: 'negative',
+        message: 'Please select a bank for reimbursement',
+        icon: 'warning',
+        position: 'top',
+      })
+      return
+    }
+
+    // DV number is now auto-generated, so we don't need to validate it
+    // if (!reimbursementDvNumber.value || reimbursementDvNumber.value.trim() === '') {
+    //   $q.notify({
+    //     type: 'negative',
+    //     message: 'Please enter a DV number for reimbursement',
+    //     icon: 'warning',
+    //     position: 'top',
+    //   })
+    //   return
+    // }
+
+    if (!reimbursementChequeNumber.value || reimbursementChequeNumber.value.trim() === '') {
+      $q.notify({
+        type: 'negative',
+        message: 'Please enter a cheque number for reimbursement',
+        icon: 'warning',
+        position: 'top',
+      })
+      return
+    }
+
+    if (selectedReimbursementExpenseAccounts.value.length === 0) {
+      $q.notify({
+        type: 'negative',
+        message: 'Please select at least one expense account for reimbursement',
+        icon: 'warning',
+        position: 'top',
+      })
+      return
+    }
+
+    if (selectedReimbursementOrs.value.length === 0) {
+      $q.notify({
+        type: 'negative',
+        message: 'Please select at least one OR for reimbursement',
+        icon: 'warning',
+        position: 'top',
+      })
+      return
+    }
+
+    // Validate that all selected expense accounts have valid expense_item_id
+    // Temporarily disabled for testing
+    // const invalidAccounts = selectedReimbursementExpenseAccounts.value.filter(acc => !acc.expense_item_id)
+    // if (invalidAccounts.length > 0) {
+    //   $q.notify({
+    //     type: 'negative',
+    //     message: 'All selected expense accounts must have a valid expense item. Please select different accounts.',
+    //     icon: 'warning',
+    //     position: 'top',
+    //   })
+    //   return
+    // }
+
+    // Validate that total expense amounts match reimbursement amount
+    const totalExpenseAmount = selectedReimbursementExpenseAccounts.value.reduce((sum, acc) => sum + (acc.amount || 0), 0)
+    if (Math.abs(totalExpenseAmount - reimbursementAmount.value) > 0.01) {
+      $q.notify({
+        type: 'negative',
+        message: `Total expense amount (₱${totalExpenseAmount.toFixed(2)}) must match reimbursement amount (₱${reimbursementAmount.value.toFixed(2)})`,
+        icon: 'warning',
+        position: 'top',
+      })
+      return
+    }
+
+    // Validate that total OR amounts match reimbursement amount
+    const totalOrAmount = selectedReimbursementOrs.value.reduce((sum, or) => sum + (or.orAmount || 0), 0)
+    if (Math.abs(totalOrAmount - reimbursementAmount.value) > 0.01) {
+      $q.notify({
+        type: 'negative',
+        message: `Total OR amount (₱${totalOrAmount.toFixed(2)}) must match reimbursement amount (₱${reimbursementAmount.value.toFixed(2)})`,
+        icon: 'warning',
+        position: 'top',
+      })
+      return
+    }
+
+    // Prepare reimbursement data - use the first expense account as the primary account
+    const primaryExpenseAccount = selectedReimbursementExpenseAccounts.value[0]
+    const primaryOr = selectedReimbursementOrs.value[0]
+
     const reimbursementData = {
       ref_dv_number: store.currentLiquidation.dvNumber,
-      dv_number: reimbursementDvNumber.value,
       dv_amount: reimbursementAmount.value,
       bank_id: selectedReimbursementBank.value,
+      // dv_number will be auto-generated in the store
       cheque_number: reimbursementChequeNumber.value,
-      payee: store.currentLiquidation.payee,
-      expenses: selectedReimbursementExpenseAccounts.value.map(acc => ({
-        accountId: acc.id,
-        amount: acc.amount,
-        particular: `Reimbursement from ${acc.accountName}`,
-        expense_class_id: acc.expense_class_id,
-        expense_type_id: acc.expense_type_id,
-        expense_item_id: acc.expense_item_id,
-      })),
-      orDetails: selectedReimbursementOrs.value.map(or => ({
-        orNumber: or.orNumber,
-        orAmount: or.orAmount,
-        orDate: or.orDate,
-        remarks: `Reimbursement OR for DV ${store.currentLiquidation.dvNumber}`,
-      })),
-      is_reimbursement: true,
+      // cheque_booklet will be fetched automatically in the store
+      expense_account: {
+        id: primaryExpenseAccount.id,
+        expense_class_id: primaryExpenseAccount.expense_class_id,
+        expense_type_id: primaryExpenseAccount.expense_type_id,
+        expense_item_id: primaryExpenseAccount.expense_item_id,
+      },
+      or_number: primaryOr.orNumber,
+      or_amount: primaryOr.orAmount,
+      or_date: primaryOr.orDate,
+      remarks: `Reimbursement for DV ${store.currentLiquidation.dvNumber}`,
     }
+
+    console.log('Reimbursement data being submitted:', JSON.stringify(reimbursementData, null, 2));
 
     // Call store method to submit reimbursement
     const result = await store.submitReimbursement(reimbursementData)

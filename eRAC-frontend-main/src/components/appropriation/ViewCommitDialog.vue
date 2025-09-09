@@ -80,26 +80,63 @@
                     <strong>{{ appropriationStore.formatCurrency(calculateTypeTotal(expenseType)) }}</strong>
                   </div>
                 </div>
-                <!-- Expense Item Rows (only if expanded) -->
+                <!-- Expense Item and Sub-Item Rows (only if expanded) -->
                 <template v-if="expandedTypes[expenseType.id] && expenseType.children && expenseType.children.length > 0">
                   <template v-for="expenseItem in expenseType.children" :key="'item-' + expenseItem.id">
+
+                    <!-- Item Row (always show as header) -->
+
                     <div
-                      class="row"
-                      style="padding: 6px 12px; min-height: 32px; border-bottom: 1px solid #f0f0f0"
+                      class="row item-row"
+                      :class="getItemClass(expenseItem)"
+                      style="
+                        padding: 6px 12px;
+                        min-height: 32px;
+                        border-bottom: 1px solid #f0f0f0;
+                        margin-left: 0;
+                      "
                     >
-                                             <div
-                         class="col-6"
-                         style="padding-left: 170px; display: flex; align-items: center"
-                       >
-                         <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
-                         <span class="text-weight-regular">{{ expenseItem.name }}</span>
-                       </div>
+                      <div
+
+                        class="col-6"
+                        style="padding-left: 170px; display: flex; align-items: center"
+                      >
+                        <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
+                        <span :class="expenseItem.children && expenseItem.children.length > 0 ? 'text-weight-bold' : 'text-weight-regular'">{{ expenseItem.name }}</span>
+                      </div>
                       <div class="col-6 text-right">
-                        <span class="text-weight-regular"
-                          >{{ appropriationStore.formatCurrency(expenseItem.amount) }}
+                        <!-- Show item amount if no sub-items, otherwise show calculated total (bold if has sub-items) -->
+                        <span :class="expenseItem.children && expenseItem.children.length > 0 ? 'text-weight-bold' : 'text-weight-regular'"
+                          >{{ appropriationStore.formatCurrency(expenseItem.children && expenseItem.children.length > 0 ? calculateItemTotal(expenseItem) : expenseItem.amount) }}
+
                         </span>
                       </div>
                     </div>
+
+
+                    <!-- Sub-Item Rows (only if item has sub-items) -->
+                    <template v-if="expenseItem.children && expenseItem.children.length > 0">
+                      <template v-for="expenseSubItem in expenseItem.children" :key="'subitem-' + expenseSubItem.id">
+                        <div
+                          class="row"
+                          style="padding: 6px 12px; min-height: 32px; border-bottom: 1px solid #f0f0f0"
+                        >
+                          <div
+                            class="col-6"
+                            style="padding-left: 200px; display: flex; align-items: center"
+                          >
+                            <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
+                            <span class="text-weight-regular">{{ expenseSubItem.name }}</span>
+                          </div>
+                          <div class="col-6 text-right">
+                            <span class="text-weight-regular"
+                              >{{ appropriationStore.formatCurrency(expenseSubItem.amount) }}
+
+                            </span>
+                          </div>
+                        </div>
+                      </template>
+                    </template>
                   </template>
                 </template>
               </template>
@@ -130,6 +167,7 @@ const viewAllocationData = ref(null)
 const viewAllocations = ref([])
 const allHistoryData = ref([])
 const expandedTypes = ref({})
+// const expandedItems = ref({})
 
 const displayAccounts = computed(() => {
   if (!viewAllocations.value || viewAllocations.value.length === 0) return []
@@ -170,7 +208,7 @@ const displayAccounts = computed(() => {
       }
     }
 
-    // Handle item-level allocations
+    // Handle item-level and sub-item-level allocations
     if (itemId) {
       // Find or create the type
       let type = classMap[classId].children.find((t) => t.id === typeId)
@@ -184,22 +222,58 @@ const displayAccounts = computed(() => {
         classMap[classId].children.push(type)
       }
 
-      // Add the item
-      type.children.push({
-        id: itemId,
-        name: itemName,
-        amount: alloc.amount,
-      })
+      // Check if this is a sub-item allocation
+      const subItemId = alloc.expense_sub_item_id
+      const subItemName = alloc.expense_sub_item_name || `Sub-item ${subItemId}`
+
+      if (subItemId) {
+        // Handle sub-item allocation
+        let item = type.children.find((i) => i.id === itemId)
+        if (!item) {
+          item = {
+            id: itemId,
+            name: itemName,
+            amount: 0,
+            children: [],
+          }
+          type.children.push(item)
+        }
+
+        // Add the sub-item
+        item.children.push({
+          id: subItemId,
+          name: subItemName,
+          amount: alloc.amount,
+        })
+      } else {
+        // Handle regular item allocation
+        let item = type.children.find((i) => i.id === itemId)
+        if (item) {
+          item.amount += alloc.amount
+        } else {
+          type.children.push({
+            id: itemId,
+            name: itemName,
+            amount: alloc.amount,
+            children: [],
+          })
+        }
+      }
     }
   })
 
-  // Sort classes, types, and items by id to keep order static
+  // Sort classes, types, items, and sub-items by id to keep order static
   const classArr = Object.values(classMap)
   classArr.forEach(cls => {
     cls.children.sort((a, b) => a.id - b.id)
     cls.children.forEach(type => {
       if (type.children) {
         type.children.sort((a, b) => a.id - b.id)
+        type.children.forEach(item => {
+          if (item.children) {
+            item.children.sort((a, b) => a.id - b.id)
+          }
+        })
       }
     })
   })
@@ -244,9 +318,15 @@ const toggleType = (typeId) => {
   }
 }
 const calculateTypeTotal = (expenseType) => {
-  // Sum the type's own amount plus the items under this type
+  // Sum the type's own amount plus the items and sub-items under this type
   const typeAmount = expenseType.amount || 0
-  const itemsAmount = expenseType.children?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0
+
+  const itemsAmount = expenseType.children?.reduce((sum, item) => {
+    const itemAmount = item.amount || 0
+    const subItemsAmount = item.children?.reduce((subSum, subItem) => subSum + (subItem.amount || 0), 0) || 0
+    return sum + itemAmount + subItemsAmount
+  }, 0) || 0
+
   return typeAmount + itemsAmount
 }
 const $q = useQuasar()
@@ -312,15 +392,54 @@ const totalAllocated = computed(() => {
 const calculateClassTotal = (expenseClass) => {
   return expenseClass.children.reduce((sum, type) => {
     const typeAmount = type.amount || 0
-    const itemsAmount =
-      type.children?.reduce((childSum, item) => childSum + (item.amount || 0), 0) || 0
+
+    const itemsAmount = type.children?.reduce((childSum, item) => {
+      const itemAmount = item.amount || 0
+      const subItemsAmount = item.children?.reduce((subSum, subItem) => subSum + (subItem.amount || 0), 0) || 0
+      return childSum + itemAmount + subItemsAmount
+    }, 0) || 0
+
     return sum + typeAmount + itemsAmount
   }, 0)
+}
+
+const calculateItemTotal = (expenseItem) => {
+  let total = 0
+
+  // Include the item's own amount if it exists
+  if (expenseItem.amount) {
+    total += parseCurrency(expenseItem.amount)
+  }
+
+  // Include all sub-item amounts
+  expenseItem.children?.forEach((subItem) => {
+    if (subItem.amount) {
+      total += parseCurrency(subItem.amount)
+    }
+  })
+
+  return Math.round(total * 100) / 100
+}
+
+// Utility function for consistent currency parsing
+const parseCurrency = (value) => {
+  if (!value && value !== 0) return 0
+
+  const cleanValue = String(value).replace(/[₱,\s]/g, "")
+  const parsed = Number.parseFloat(cleanValue)
+
+  return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100
 }
 
 const getTypeClass = (expenseType) => {
   return expenseType.children?.length > 0 ? 'text-weight-bold' : 'text-weight-regular'
 }
+
+const getItemClass = (expenseItem) => {
+  return expenseItem.children?.length > 0 ? 'text-weight-bold' : 'text-weight-regular'
+}
+
+
 
 defineExpose({
   openDialog,
@@ -844,6 +963,118 @@ defineExpose({
 @media (min-width: 601px) and (max-width: 900px) {
   .q-input .q-icon[name="search"] {
     font-size: 0.9rem !important;
+  }
+}
+
+/* Item and Subitem row styles */
+.item-row {
+  background-color: #ffffff !important;
+  border-left: none !important;
+}
+
+.subitem-row {
+  background-color: #fafafa !important;
+  border-left: 3px solid #e0e0e0 !important;
+  margin-left: 24px !important;
+  position: relative;
+}
+
+.subitem-row:hover {
+  background-color: #f0f0f0 !important;
+}
+
+.subitem-row::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: #e0e0e0;
+}
+
+/* Column-specific styles */
+.item-name-column {
+  position: relative;
+}
+
+.subitem-name-column {
+  position: relative;
+  padding-left: 48px !important;
+}
+
+.item-amount-column,
+.subitem-amount-column {
+  position: relative;
+}
+
+/* Expand/collapse button styles */
+.expand-btn {
+  min-width: 20px !important;
+  margin-right: 4px !important;
+  padding: 2px !important;
+}
+
+.expand-btn .q-icon {
+  font-size: 0.7rem !important;
+}
+
+/* Icon styles */
+.item-icon {
+  font-size: 0.7rem !important;
+}
+
+.subitem-icon {
+  font-size: 0.6rem !important;
+  color: #666 !important;
+}
+
+/* Name styles */
+.item-name {
+  font-size: 0.9rem !important;
+}
+
+.subitem-name {
+  font-size: 0.85rem !important;
+  color: #666 !important;
+}
+
+/* Amount styles */
+.subitem-amount {
+  font-size: 0.85rem !important;
+  color: #666 !important;
+}
+
+/* Chip styles for subitem count */
+.subitem-count-chip {
+  font-size: 0.6rem !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  padding: 0 6px !important;
+}
+
+/* Visual hierarchy improvements */
+.item-row {
+  border-left: 2px solid transparent !important;
+}
+
+.item-row:hover {
+  background-color: #f8f9fa !important;
+  border-left-color: #e3f2fd !important;
+}
+
+/* Responsive adjustments for better column separation */
+@media (max-width: 768px) {
+  .subitem-row {
+    margin-left: 16px !important;
+  }
+  
+  .subitem-name-column {
+    padding-left: 32px !important;
+  }
+  
+  .item-name-column {
+    padding-left: 32px !important;
   }
 }
 </style>

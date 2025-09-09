@@ -6,10 +6,10 @@
           <div class="text-h6 text-weight-medium">Disbursement Transaction</div>
           <div class="text-caption text-grey-6">
             Showing transactions for fiscal year {{ currentFiscalYear }}
-          </div>
         </div>
-        <q-btn icon="refresh" color="primary" flat dense @click="loadDisbursements"
-          :loading="store.loadingDisbursements" title="Refresh disbursements" />
+        </div>
+        <q-btn icon="refresh" color="primary" flat dense @click="refreshData"
+          :loading="loading" title="Refresh disbursements" />
       </div>
     </div>
 
@@ -35,6 +35,9 @@
             <q-input outlined dense v-model="searchQuery" placeholder="Search payee, DV number..." clearable>
               <template v-slot:append>
                 <q-icon name="search" />
+              </template>
+              <template v-slot:hint v-if="searchQuery">
+                {{ filteredDisbursements.length }} result{{ filteredDisbursements.length !== 1 ? 's' : '' }} found
               </template>
             </q-input>
           </div>
@@ -162,7 +165,7 @@
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md">
-            <q-btn flat label="Cancel" @click="store.closeDialog('disbursement')" />
+            <q-btn flat label="Cancel" @click="handleDialogClose('disbursement')" />
             <q-btn label="Disburse" color="primary" @click="handleSaveClick" v-permission="'add'"
               :loading="store.savingDisbursement" :disable="store.savingDisbursement" />
           </q-card-actions>
@@ -195,7 +198,7 @@
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md">
-            <q-btn flat label="Cancel" @click="store.closeDialog('expense')" />
+            <q-btn flat label="Cancel" @click="handleDialogClose('expense')" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -214,8 +217,25 @@
             <div class="text-subtitle1 q-mb-md">
               <strong>Balance:</strong> ₱{{ store.forms.expense.balance.toLocaleString() }}
             </div>
-            <q-select outlined dense v-model="store.forms.expense.particulars" :options="filteredParticulars"
-              label="Particulars" use-input fill-input hide-selected new-value-mode="add-unique" @filter="filterFn" />
+            <!-- <q-select outlined dense v-model="store.forms.expense.particulars" :options="filteredParticulars"
+              label="Particulars" use-input fill-input hide-selected new-value-mode="add-unique" @filter="filterFn" /> -->
+            <q-select
+  outlined
+  dense
+  v-model="store.forms.expense.particulars"
+  :options="filteredParticulars"
+  label="Particulars"
+  use-input
+  fill-input
+  hide-selected
+  new-value-mode="add-unique"
+  option-label="label"
+  option-value="label"
+  map-options
+  emit-value
+  @filter="filterFn"
+/>
+
             <q-input outlined dense :model-value="formatInputValue(store.forms.expense.amount)"
               @update:model-value="(val) => (store.forms.expense.amount = handleAmountInput(val))"
               @blur="(e) => (store.forms.expense.amount = formatToTwoDecimals(e.target.value))" label="Amount"
@@ -224,11 +244,25 @@
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md">
-            <q-btn flat label="Cancel" @click="store.closeDialog('expenseDetail')" />
+
+            <q-btn flat label="Cancel" @click="handleDialogClose('expenseDetail')" />
             <q-btn label="Save" @click="handleSaveExpense" color="primary" />
+
           </q-card-actions>
         </q-card>
       </q-dialog>
+
+      <!-- Results Summary -->
+      <div v-if="filteredDisbursements.length > 0" class="q-mb-sm">
+        <q-chip 
+          :color="filteredDisbursements.length === store.disbursements.length ? 'grey-6' : 'primary'"
+          :text-color="filteredDisbursements.length === store.disbursements.length ? 'white' : 'white'"
+          dense
+        >
+          {{ filteredDisbursements.length }} of {{ store.disbursements.length }} disbursements
+          <span v-if="filteredDisbursements.length !== store.disbursements.length">(filtered)</span>
+        </q-chip>
+      </div>
 
       <!-- Main Data Table -->
       <q-card flat bordered>
@@ -238,8 +272,8 @@
             <q-td :props="props">
               <div class="row q-gutter-xs items-center justify-center">
                 <q-btn dense icon="edit" :color="props.row.status === 'Unliquidated' || props.row.status === 'Partial'
-                    ? 'orange'
-                    : 'grey'
+                  ? 'orange'
+                  : 'grey'
                   " :disable="props.row.status !== 'Unliquidated' && props.row.status !== 'Partial'"
                   :loading="store.loadingEditDisbursement === props.row.id" @click="handleEditDisbursement(props.row)"
                   v-permission="'edit'" />
@@ -267,11 +301,11 @@
           </template>
 
           <template v-slot:body-cell-status="props">
-            <q-td :props="props">
+             <q-td :props="props">
               <q-chip :color="getStatusColor(props.row.status)" :text-color="getStatusTextColor(props.row.status)" dense
                 :label="props.row.status" />
-            </q-td>
-          </template>
+             </q-td>
+           </template>
 
           <template v-slot:body-cell-remarks="props">
             <q-td :props="props">
@@ -316,7 +350,7 @@
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md">
-            <q-btn flat label="Cancel" @click="store.closeVoidDialog()" />
+            <q-btn flat label="Cancel" @click="handleDialogClose('void')" />
             <q-btn label="Submit Void Request" color="red" :loading="store.voidingDisbursement"
               :disable="!store.forms.void.remarks || store.forms.void.remarks.trim() === ''"
               @click="handleSubmitVoidRequest" />
@@ -404,9 +438,13 @@ const statusOptions = [
 const searchQuery = ref('')
 
 const filteredParticulars = ref(store.particulars)
-function filterFn(val, update) {
+
+function filterFn (val, update) {
+  console.log('[filterFn] input value:', val)
+
   if (val === '') {
     update(() => {
+      console.log('[filterFn] reset to all', store.particulars.length, 'items')
       filteredParticulars.value = store.particulars
     })
     return
@@ -414,11 +452,17 @@ function filterFn(val, update) {
 
   update(() => {
     const needle = val.toLowerCase()
-    filteredParticulars.value = store.particulars.filter((opt) =>
-      opt.label.toLowerCase().includes(needle),
+    const results = store.particulars.filter(opt =>
+      opt.label.toLowerCase().includes(needle)
     )
+    console.log('[filterFn] matches:', results.length, 'items')
+    filteredParticulars.value = results
   })
 }
+
+watch(filteredParticulars, (val) => {
+  console.log('[watch] filteredParticulars updated:', val.length)
+})
 
 // Formatting helpers for amount input (kept local to this component)
 const formatInputValue = (value) => {
@@ -665,19 +709,57 @@ const loadAllData = async () => {
   }
 }
 
+// Enhanced data loading with better error handling
+const loadDataWithRetry = async (retryCount = 0, maxRetries = 3) => {
+  try {
+    await loadAllData()
+  } catch (error) {
+    if (retryCount < maxRetries) {
+      console.warn(`Data loading failed, retrying... (${retryCount + 1}/${maxRetries})`)
+      setTimeout(() => {
+        loadDataWithRetry(retryCount + 1, maxRetries)
+      }, 1000 * (retryCount + 1)) // Exponential backoff
+    } else {
+      console.error('Data loading failed after all retries:', error)
+      $q.notify({
+        type: 'negative',
+        message: 'Failed to load data after multiple attempts. Please refresh the page.',
+        icon: 'error',
+        position: 'top',
+        timeout: 10000,
+        actions: [
+          {
+            label: 'Retry',
+            color: 'white',
+            handler: () => loadDataWithRetry()
+          }
+        ]
+      })
+    }
+  }
+}
+
 // Set up periodic refresh for expense accounts
 // Removed to reduce excessive API calls
 
 onMounted(async () => {
-  await loadAllData()
+  try {
+    // Use enhanced data loading with retry mechanism
+    await loadDataWithRetry()
 
-  // Refresh expense accounts with updated balances
-  store.refreshExpenseAccountsWithBalances()
-
-
-  // Log page visit
-  const { logPageVisit } = usePageLogging()
-  await logPageVisit('Current Disbursement')
+    // Log page visit
+    const { logPageVisit } = usePageLogging()
+    await logPageVisit('Current Disbursement')
+  } catch (error) {
+    console.error('Error initializing DisbursementTran page:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to initialize page. Please refresh.',
+      icon: 'error',
+      position: 'top',
+      timeout: 5000,
+    })
+  }
 })
 
 // Auto-refresh expense accounts when the expense dialog is opened
@@ -721,39 +803,73 @@ const currentStatusLabel = computed(() => {
 // Status counts for summary cards
 
 
-// Filtered disbursements based on status, search, and date range
+// Enhanced filtered disbursements with better search and filtering
 const filteredDisbursements = computed(() => {
-  let filtered = store.disbursements
+  let filtered = store.disbursements || []
 
   // Filter by status
   if (selectedStatus.value) {
     filtered = filtered.filter((disbursement) => disbursement.status === selectedStatus.value)
   }
 
-  // Filter by search query
+  // Enhanced search functionality
   if (searchQuery.value && searchQuery.value.trim()) {
     const query = searchQuery.value.toLowerCase().trim()
-    filtered = filtered.filter(
-      (disbursement) =>
-        disbursement.payee?.toLowerCase().includes(query) ||
-        disbursement.dvNumber?.toLowerCase().includes(query) ||
-        disbursement.chequeNumber?.toLowerCase().includes(query),
-    )
+    filtered = filtered.filter((disbursement) => {
+      // Search in multiple fields
+      const searchableFields = [
+        disbursement.payee,
+        disbursement.dvNumber,
+        disbursement.chequeNumber,
+        disbursement.bank,
+        disbursement.barangay_name,
+        disbursement.status
+      ]
+      
+      return searchableFields.some(field => 
+        field && field.toString().toLowerCase().includes(query)
+      )
+    })
   }
 
-  // Filter by date range
+  // Enhanced date range filtering
   if (store.dateFrom && store.dateTo) {
     filtered = filtered.filter((disbursement) => {
       if (!disbursement.date) return false
 
-      // Convert disbursement date to DD/MM/YYYY format for comparison
-      const disbursementDate = disbursement.date.includes('/')
-        ? disbursement.date
-        : new Date(disbursement.date).toLocaleDateString('en-GB')
+      try {
+        // Convert disbursement date to DD/MM/YYYY format for comparison
+        let disbursementDate
+        if (disbursement.date.includes('/')) {
+          disbursementDate = disbursement.date
+        } else {
+          // Handle different date formats
+          const date = new Date(disbursement.date)
+          if (isNaN(date.getTime())) return false
+          disbursementDate = date.toLocaleDateString('en-GB')
+        }
 
-      return disbursementDate >= store.dateFrom && disbursementDate <= store.dateTo
+        // Compare dates
+        return disbursementDate >= store.dateFrom && disbursementDate <= store.dateTo
+      } catch (error) {
+        console.warn('Error parsing disbursement date:', disbursement.date, error)
+        return false
+      }
     })
   }
+
+  // Sort by date (newest first) and then by DV number
+  filtered.sort((a, b) => {
+    // First sort by date
+    const dateA = new Date(a.date)
+    const dateB = new Date(b.date)
+    if (dateA.getTime() !== dateB.getTime()) {
+      return dateB.getTime() - dateA.getTime() // Newest first
+    }
+    
+    // Then sort by DV number
+    return (b.dvNumber || '').localeCompare(a.dvNumber || '')
+  })
 
   return filtered
 })
@@ -761,15 +877,36 @@ const filteredDisbursements = computed(() => {
 const handleBankSelection = async (bankId) => {
   if (bankId) {
     try {
+      // Clear previous auto-generated values
+      store.autoCheque = null
+      store.autoBookletID = null
+      
       await store.selectBank(bankId)
+      
+      // Auto-generate cheque number after bank selection
+      if (store.autoCheque && store.autoBookletID) {
+        $q.notify({
+          type: 'positive',
+          message: `Auto-generated cheque number: ${store.autoCheque}`,
+          icon: 'check_circle',
+          position: 'top',
+          timeout: 2000,
+        })
+      }
     } catch (error) {
+      console.error('Error selecting bank:', error)
       $q.notify({
         type: 'negative',
         message: `Failed to load booklets for selected bank: ${error.message}`,
         icon: 'error',
         position: 'top',
+        timeout: 5000,
       })
     }
+  } else {
+    // Clear auto-generated values when bank is deselected
+    store.autoCheque = null
+    store.autoBookletID = null
   }
 }
 
@@ -783,27 +920,51 @@ const validateAndSave = () => {
   if (store.dialogs.disbursement) {
     const form = store.forms.disbursement
     const hasRequiredFields = form.date && form.bank_id && form.dvNumber && form.payee
-    if (hasRequiredFields && !store.loading) {
-      store.saveDisbursement().then((result) => {
-        if (!result.success) {
-          $q.notify({
-            type: 'negative',
-            message: result.error || 'Failed to save disbursement',
-            icon: 'error',
-            position: 'top',
-            timeout: 5000,
-          })
-        }
-      })
-    } else {
+    const hasExpenses = store.expenses && store.expenses.length > 0
+    const hasValidAmounts = store.expenses.every(expense => 
+      expense.amount && parseFloat(expense.amount) > 0
+    )
+    
+    if (!hasRequiredFields) {
       $q.notify({
         type: 'negative',
-        message: 'Please fill in all required fields before saving',
+        message: 'Please fill in all required fields (Date, Bank, DV Number, Payee)',
         icon: 'warning',
         position: 'top',
+        timeout: 3000,
       })
+      return false
     }
+    
+    if (!hasExpenses) {
+      $q.notify({
+        type: 'negative',
+        message: 'Please add at least one expense before saving',
+        icon: 'warning',
+        position: 'top',
+        timeout: 3000,
+      })
+      return false
+    }
+    
+    if (!hasValidAmounts) {
+      $q.notify({
+        type: 'negative',
+        message: 'All expenses must have valid amounts greater than 0',
+        icon: 'warning',
+        position: 'top',
+        timeout: 3000,
+      })
+      return false
+    }
+    
+    if (store.savingDisbursement) {
+      return false // Prevent multiple saves
+    }
+    
+    return true
   }
+  return false
 }
 
 const handleEnterKey = (event) => {
@@ -814,9 +975,41 @@ const handleEnterKey = (event) => {
 }
 
 const handleSaveClick = async () => {
-  await validateAndSave()
-  // Refresh the disbursement list after saving
-  await store.fetchDisbursements()
+  if (!validateAndSave()) {
+    return // Validation failed, don't proceed
+  }
+  
+  try {
+    const result = await store.saveDisbursement()
+    if (result.success) {
+      $q.notify({
+        type: 'positive',
+        message: 'Disbursement saved successfully!',
+        icon: 'check_circle',
+        position: 'top',
+        timeout: 3000,
+      })
+      // Refresh the disbursement list after saving
+      await store.fetchDisbursements()
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: result.error || 'Failed to save disbursement',
+        icon: 'error',
+        position: 'top',
+        timeout: 5000,
+      })
+    }
+  } catch (error) {
+    console.error('Error saving disbursement:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'An error occurred while saving disbursement',
+      icon: 'error',
+      position: 'top',
+      timeout: 5000,
+    })
+  }
 }
 
 const preloadExpenseAccounts = () => {
@@ -847,6 +1040,42 @@ const handleAddExpense = async () => {
 }
 
 const handleSaveExpense = async () => {
+  // Validate expense before saving
+  const expense = store.forms.expense
+  
+  if (!expense.account) {
+    $q.notify({
+      type: 'negative',
+      message: 'Please select an expense account',
+      icon: 'warning',
+      position: 'top',
+      timeout: 3000,
+    })
+    return
+  }
+  
+  if (!expense.amount || parseFloat(expense.amount) <= 0) {
+    $q.notify({
+      type: 'negative',
+      message: 'Please enter a valid amount greater than 0',
+      icon: 'warning',
+      position: 'top',
+      timeout: 3000,
+    })
+    return
+  }
+  
+  if (parseFloat(expense.amount) > expense.balance) {
+    $q.notify({
+      type: 'negative',
+      message: `Amount cannot exceed available balance of ${formatInputValue(expense.balance)}`,
+      icon: 'warning',
+      position: 'top',
+      timeout: 3000,
+    })
+    return
+  }
+  
   try {
     await store.saveExpense()
     $q.notify({
@@ -907,15 +1136,55 @@ const loadDisbursements = async () => {
       timeout: 3000,
     })
   } catch (error) {
+    console.error('Error refreshing disbursements:', error)
     $q.notify({
       type: 'negative',
       message: error.response?.data?.message || 'Failed to refresh disbursements',
       icon: 'error',
       position: 'top',
+      timeout: 5000,
     })
   } finally {
     loading.value = false
   }
+}
+
+// Enhanced refresh with better error handling
+const refreshData = async () => {
+  try {
+    await loadDisbursements()
+  } catch (error) {
+    console.error('Error refreshing data:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to refresh data. Please try again.',
+      icon: 'error',
+      position: 'top',
+      timeout: 5000,
+    })
+  }
+}
+
+// Enhanced dialog management
+const handleDialogClose = (dialogName) => {
+  if (dialogName === 'disbursement') {
+    // Clear all form data when closing disbursement dialog
+    store.resetForm('disbursement')
+    store.expenses = []
+    store.autoCheque = null
+    store.autoBookletID = null
+  } else if (dialogName === 'expense') {
+    // Clear expense form when closing expense dialog
+    store.resetForm('expense')
+  } else if (dialogName === 'expenseDetail') {
+    // Clear expense detail form when closing expense detail dialog
+    store.resetForm('expense')
+  } else if (dialogName === 'void') {
+    // Clear void form when closing void dialog
+    store.resetForm('void')
+  }
+  
+  store.closeDialog(dialogName)
 }
 
 // Open void dialog for treasurer
@@ -925,24 +1194,50 @@ const handleVoidDisbursement = (row) => {
 
 // Submit void request from dialog
 const handleSubmitVoidRequest = async () => {
-  try {
-    await store.submitVoidRequest()
+
+  if (!store.forms.void.remarks || store.forms.void.remarks.trim() === '') {
     $q.notify({
-      type: 'positive',
-      message: 'Void request submitted successfully!',
-      icon: 'check_circle',
+      type: 'negative',
+      message: 'Please provide remarks for the void request',
+      icon: 'warning',
       position: 'top',
       timeout: 3000,
     })
+    return
+  }
+
+  try {
+    const result = await store.submitVoidRequest()
+    if (result.success) {
+      $q.notify({
+        type: 'positive',
+        message: 'Void request submitted successfully!',
+        icon: 'check_circle',
+        position: 'top',
+        timeout: 3000,
+      })
+      // Refresh data after successful void request
+      await refreshData()
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: result.message || 'Failed to submit void request',
+        icon: 'error',
+        position: 'top',
+        timeout: 5000,
+      })
+    }
   } catch (error) {
+    console.error('Error submitting void request:', error)
     $q.notify({
       type: 'negative',
+
       message: error.message || 'Failed to submit void request',
-      icon: 'error',
-      position: 'top',
+        icon: 'error',
+        position: 'top',
       timeout: 5000,
-    })
-  }
+      })
+    }
 }
 
 // Approver actions - now handled in ViewOrDetails component

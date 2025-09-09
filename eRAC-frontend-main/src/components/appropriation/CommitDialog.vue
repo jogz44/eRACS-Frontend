@@ -152,23 +152,28 @@
                     v-for="expenseItem in expenseType.children"
                     :key="'item-' + expenseItem.id"
                   >
-                    <template v-if="!expenseItem.children || expenseItem.children.length === 0">
+
+                    <!-- Item Row (always show as header, with input only if no sub-items) -->
+                    <div
+                      class="row"
+
+                      style="
+                        padding: 6px 12px;
+                        min-height: 32px;
+                        border-bottom: 1px solid #f0f0f0;
+
+                      "
+                    >
                       <div
-                        class="row"
-                        style="
-                          padding: 6px 12px;
-                          min-height: 32px;
-                          border-bottom: 1px solid #f0f0f0;
-                        "
+                        class="col-6"
+                        style="padding-left: 48px; display: flex; align-items: center"
                       >
-                        <div
-                          class="col-6"
-                          style="padding-left: 48px; display: flex; align-items: center"
-                        >
-                          <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
-                          <span class="text-weight-regular">{{ expenseItem.name }}</span>
-                        </div>
-                        <div class="col-6 text-right">
+                        <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
+                        <span :class="expenseItem.children && expenseItem.children.length > 0 ? 'text-weight-bold' : 'text-weight-regular'">{{ expenseItem.name }}</span>
+                      </div>
+                      <div class="col-6 text-right">
+                        <!-- Only show input if item has no sub-items -->
+                        <template v-if="!expenseItem.children || expenseItem.children.length === 0">
                           <q-input
                             dense
                             :model-value="formatInputValue(expenseItem.amount)"
@@ -197,8 +202,72 @@
                             input-class="q-py-xs"
                             placeholder="0.00"
                           />
-                        </div>
+                        </template>
+                        <!-- Show amount display if item has sub-items -->
+                        <template v-else>
+                          <span class="text-weight-regular">{{ appropriationStore.formatCurrency(calculateItemTotal(expenseItem)) }}</span>
+                        </template>
                       </div>
+                    </div>
+
+                    <!-- Sub-Item Rows (only if item has sub-items) -->
+                    <template v-if="expenseItem.children && expenseItem.children.length > 0">
+                      <template
+                        v-for="expenseSubItem in expenseItem.children"
+                        :key="'subitem-' + expenseSubItem.id"
+                      >
+                        <div
+                          class="row"
+
+                          style="
+                            padding: 6px 12px;
+                            min-height: 32px;
+                            border-bottom: 1px solid #f0f0f0;
+
+                          "
+                        >
+                          <div
+                            class="col-6"
+                            style="padding-left: 72px; display: flex; align-items: center"
+                          >
+                            <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
+                            <span class="text-weight-regular">{{ expenseSubItem.name }}</span>
+                          </div>
+                          <div class="col-6 text-right">
+                            <q-input
+                              dense
+                              :model-value="formatInputValue(appropriationStore.inputCache[`subitem-${expenseSubItem.id}`] || '')"
+                              @update:model-value="
+                                (val) => {
+                                  const cleanValue = handleAmountInput(val)
+                                  appropriationStore.updateAllocationAmount(`subitem-${expenseSubItem.id}`, cleanValue)
+
+                                  updateUnappropriated()
+                                }
+                              "
+                              @blur="
+                                (event) => {
+                                  const formatted = formatToTwoDecimals(event.target.value)
+
+                                  appropriationStore.updateAllocationAmount(`subitem-${expenseSubItem.id}`, formatted)
+
+                                  updateUnappropriated()
+                                }
+                              "
+                              prefix="₱"
+                              inputmode="decimal"
+                              pattern="\\d*\\.?\\d{0,2}"
+                              @keypress="blockNonNumeric"
+                              @paste.prevent="handlePasteNumeric"
+                              :rules="[validateAmountRule]"
+                              style="max-width: 230px; width: 100%; display: inline-block"
+                              class="q-pa-none"
+                              input-class="q-py-xs"
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </div>
+                      </template>
                     </template>
                   </template>
                 </template>
@@ -285,6 +354,9 @@ const searchQuery = ref('')
 // const showDebugInfo = ref(false)
 const $q = useQuasar()
 
+// State for managing expanded items
+// const expandedItems = ref({})
+
 // Utility function to safely parse currency values
 const parseCurrency = (value) => {
   if (!value && value !== 0) return 0
@@ -334,6 +406,14 @@ const displayAccounts = computed(() => {
                 name: item.name,
                 isMainCategory: item.isMainCategory,
                 amount: appropriationStore.inputCache[`item-${item.id}`] || '',
+                children: Array.isArray(item.children)
+                  ? item.children.map((subItem) => ({
+                      id: subItem.id,
+                      name: subItem.name,
+                      isMainCategory: subItem.isMainCategory,
+                      amount: appropriationStore.inputCache[`subitem-${subItem.id}`] || '',
+                    }))
+                  : [],
               }))
             : [],
         }))
@@ -355,9 +435,19 @@ const filterBySearchQuery = (allocations, query) => {
       }
 
       if (expenseType.children) {
-        expenseType.children = expenseType.children.filter((item) =>
-          item.name.toLowerCase().includes(lowerQuery),
-        )
+        expenseType.children = expenseType.children.filter((item) => {
+          if (item.name.toLowerCase().includes(lowerQuery)) {
+            return true
+          }
+
+          if (item.children) {
+            item.children = item.children.filter((subItem) =>
+              subItem.name.toLowerCase().includes(lowerQuery),
+            )
+            return item.children.length > 0
+          }
+          return false
+        })
         return expenseType.children.length > 0
       }
       return false
@@ -383,9 +473,30 @@ const newAllocationsTotal = computed(() => {
     expenseClass.children.forEach((expenseType) => {
       if (expenseType.children?.length) {
         expenseType.children.forEach((item) => {
-          const currentAmount = parseCurrency(item.amount)
-          if (currentAmount > 0) {
-            total += currentAmount
+          if (item.children?.length) {
+            // For items with sub-items, only count sub-item amounts
+            item.children.forEach((subItem) => {
+              const currentAmount = parseCurrency(subItem.amount)
+              if (currentAmount > 0) {
+                total += currentAmount
+              }
+            })
+          } else {
+            // For items without sub-items, count the item amount
+            const currentAmount = parseCurrency(item.amount)
+            if (currentAmount > 0) {
+              total += currentAmount
+            }
+          }
+          
+          // Include subitems
+          if (item.children && item.children.length > 0) {
+            item.children.forEach((subItem) => {
+              const subAmount = parseCurrency(subItem.amount)
+              if (subAmount > 0) {
+                total += subAmount
+              }
+            })
           }
         })
       } else {
@@ -454,6 +565,7 @@ const getTypeClass = (expenseType) => {
   return expenseType.children?.length > 0 ? 'text-weight-bold' : 'text-weight-regular'
 }
 
+
 const calculateClassTotal = (expenseClass) => {
   let total = 0
 
@@ -466,7 +578,34 @@ const calculateClassTotal = (expenseClass) => {
       if (item.amount) {
         total += parseCurrency(item.amount)
       }
+
+
+      // Include sub-items
+      item.children?.forEach((subItem) => {
+        if (subItem.amount) {
+          total += parseCurrency(subItem.amount)
+        }
+      })
+
     })
+  })
+
+  return Math.round(total * 100) / 100
+}
+
+const calculateItemTotal = (expenseItem) => {
+  let total = 0
+
+  // Include the item's own amount if it exists
+  if (expenseItem.amount) {
+    total += parseCurrency(expenseItem.amount)
+  }
+
+  // Include all sub-item amounts
+  expenseItem.children?.forEach((subItem) => {
+    if (subItem.amount) {
+      total += parseCurrency(subItem.amount)
+    }
   })
 
   return Math.round(total * 100) / 100
@@ -493,17 +632,55 @@ const submitAllocation = async () => {
       expenseClass.children?.forEach((expenseType) => {
         if (expenseType.children?.length) {
           expenseType.children.forEach((item) => {
-            const amount = parseCurrency(item.amount)
-            if (amount > 0) {
-              allocations.push({
-                id: item.id,
-                type: 'item',
-                amount: amount,
-                expense_class_id: expenseClass.id,
-                expense_type_id: expenseType.id,
-                expense_item_id: item.id
+            if (item.children?.length) {
+              // For items with sub-items, only allocate to sub-items
+              item.children.forEach((subItem) => {
+                const amount = parseCurrency(subItem.amount)
+                if (amount > 0) {
+                  allocations.push({
+                    type: 'sub-item',
+                    amount: amount,
+                    expense_class_id: expenseClass.id,
+                    expense_type_id: expenseType.id,
+                    expense_item_id: item.id,
+                    expense_sub_item_id: subItem.id
+                  })
+                  hasValidAllocation = true
+                }
               })
-              hasValidAllocation = true
+            } else {
+              // For items without sub-items, allocate to the item
+              const amount = parseCurrency(item.amount)
+              if (amount > 0) {
+                allocations.push({
+                  type: 'item',
+                  amount: amount,
+                  expense_class_id: expenseClass.id,
+                  expense_type_id: expenseType.id,
+                  expense_item_id: item.id,
+                  expense_sub_item_id: null
+                })
+                hasValidAllocation = true
+              }
+            }
+            
+            // Handle subitems
+            if (item.children && item.children.length > 0) {
+              item.children.forEach((subItem) => {
+                const subAmount = parseCurrency(subItem.amount)
+                if (subAmount > 0) {
+                  allocations.push({
+                    id: subItem.id,
+                    type: 'subitem',
+                    amount: subAmount,
+                    expense_class_id: expenseClass.id,
+                    expense_type_id: expenseType.id,
+                    expense_item_id: item.id,
+                    expense_subitem_id: subItem.id
+                  })
+                  hasValidAllocation = true
+                }
+              })
             }
           })
         } else {
@@ -515,7 +692,8 @@ const submitAllocation = async () => {
               amount: amount,
               expense_class_id: expenseClass.id,
               expense_type_id: expenseType.id,
-              expense_item_id: null
+              expense_item_id: null,
+              expense_sub_item_id: null
             })
             hasValidAllocation = true
           }
@@ -711,22 +889,33 @@ const showConfirmationDialog = ref(false)
 const checkAndSubmitAllocation = () => {
   // Check for conflicts where type-level allocations exist but items also have allocations
   const conflicts = []
-  
+
   displayAccounts.value.forEach(expenseClass => {
     console.log('Checking expense class:', expenseClass.name)
     expenseClass.children?.forEach(expenseType => {
       // Read directly from input cache for current values
       const typeAmount = parseCurrency(appropriationStore.inputCache[`type-${expenseType.id}`] || '')
       const typeId = expenseType.id
-      
+
       if (typeAmount > 0 && expenseType.children && expenseType.children.length > 0) {
         let totalItemsAmount = 0
         expenseType.children.forEach(item => {
-          // Read directly from input cache for current values
-          const itemAmount = parseCurrency(appropriationStore.inputCache[`item-${item.id}`] || '')
-          console.log(`    Item: ${item.name}, Amount: ${itemAmount}, Raw: ${appropriationStore.inputCache[`item-${item.id}`]}`)
-          if (itemAmount > 0) {
-            totalItemsAmount += itemAmount
+          // For items with sub-items, sum all sub-item amounts
+          if (item.children && item.children.length > 0) {
+            item.children.forEach(subItem => {
+              const subItemAmount = parseCurrency(appropriationStore.inputCache[`subitem-${subItem.id}`] || '')
+              console.log(`      Sub-item: ${subItem.name}, Amount: ${subItemAmount}, Raw: ${appropriationStore.inputCache[`subitem-${subItem.id}`]}`)
+              if (subItemAmount > 0) {
+                totalItemsAmount += subItemAmount
+              }
+            })
+          } else {
+            // For items without sub-items, use item amount
+            const itemAmount = parseCurrency(appropriationStore.inputCache[`item-${item.id}`] || '')
+            console.log(`    Item: ${item.name}, Amount: ${itemAmount}, Raw: ${appropriationStore.inputCache[`item-${item.id}`]}`)
+            if (itemAmount > 0) {
+              totalItemsAmount += itemAmount
+            }
           }
         })
 
@@ -837,6 +1026,112 @@ const confirmAndSubmitAllocation = async () => {
 
 .text-warning {
   color: #ff9800;
+}
+
+/* Item and Subitem row styles */
+.item-row {
+  background-color: #ffffff !important;
+  border-left: none !important;
+}
+
+.subitem-row {
+  background-color: #fafafa !important;
+  border-left: 3px solid #e0e0e0 !important;
+  margin-left: 24px !important;
+  position: relative;
+}
+
+.subitem-row:hover {
+  background-color: #f0f0f0 !important;
+}
+
+.subitem-row::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: #e0e0e0;
+}
+
+/* Column-specific styles */
+.item-name-column {
+  position: relative;
+}
+
+.subitem-name-column {
+  position: relative;
+  padding-left: 48px !important;
+}
+
+.item-amount-column,
+.subitem-amount-column {
+  position: relative;
+}
+
+/* Expand/collapse button styles */
+.expand-btn {
+  min-width: 20px !important;
+  margin-right: 4px !important;
+  padding: 2px !important;
+}
+
+.expand-btn .q-icon {
+  font-size: 0.7rem !important;
+}
+
+/* Icon styles */
+.item-icon {
+  font-size: 0.7rem !important;
+}
+
+.subitem-icon {
+  font-size: 0.6rem !important;
+  color: #666 !important;
+}
+
+/* Name styles */
+.item-name {
+  font-size: 0.9rem !important;
+}
+
+.subitem-name {
+  font-size: 0.85rem !important;
+  color: #666 !important;
+}
+
+/* Chip styles for subitem count */
+.subitem-count-chip {
+  font-size: 0.6rem !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  padding: 0 6px !important;
+}
+
+/* Visual hierarchy improvements */
+.item-row {
+  border-left: 2px solid transparent !important;
+}
+
+.item-row:hover {
+  background-color: #f8f9fa !important;
+  border-left-color: #e3f2fd !important;
+}
+
+/* Responsive adjustments for better column separation */
+@media (max-width: 768px) {
+  .subitem-row {
+    margin-left: 16px !important;
+  }
+  
+  .subitem-name-column {
+    padding-left: 32px !important;
+  }
+  
+  .item-name-column {
+    padding-left: 32px !important;
+  }
 }
 
 /* Responsive confirmation dialog */

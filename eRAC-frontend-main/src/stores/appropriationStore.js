@@ -133,7 +133,17 @@ export const useAppropriationStore = defineStore("appropriation", {
           if (state.selectedBudgetType === 'annual') {
             return description.includes('annual')
           } else if (state.selectedBudgetType === 'supplemental') {
-            return description.includes('supplemental')
+            // For supplemental budgets, only show those with unappropriated amount > 0
+            return description.includes('supplemental') && (item.unappropriated || 0) > 0
+          }
+          return true
+        })
+      } else {
+        // For 'all' view, filter out supplemental budgets with zero unappropriated amount
+        results = results.filter((item) => {
+          const description = item.description?.toLowerCase() || ''
+          if (description.includes('supplemental')) {
+            return (item.unappropriated || 0) > 0
           }
           return true
         })
@@ -345,6 +355,7 @@ export const useAppropriationStore = defineStore("appropriation", {
           date: budget.date,
           description: budget.description,
           amount: parseCurrency(budget.amount),
+          current_amount: parseCurrency(budget.current_amount || budget.amount),
           unappropriated: parseCurrency(budget.unappropriated),
           fiscal_year: budget.fiscal_year,
           barangay_name: budget.barangay_name,
@@ -461,8 +472,11 @@ export const useAppropriationStore = defineStore("appropriation", {
         allocations.forEach((allocation) => {
           let id = null
           let key = null
-          
-          if (allocation.expense_item_id) {
+
+          if (allocation.expense_sub_item_id) {
+            id = allocation.expense_sub_item_id
+            key = `subitem-${id}`
+          } else if (allocation.expense_item_id) {
             id = allocation.expense_item_id
             key = `item-${id}`
           } else if (allocation.expense_type_id) {
@@ -472,15 +486,60 @@ export const useAppropriationStore = defineStore("appropriation", {
             id = allocation.expense_class_id
             key = `class-${id}`
           }
-          
+
           if (id && key) {
             const amount = parseCurrency(allocation.amount)
             this.inputCache[key] = amount.toString()
             this.allocationInputs[key] = amount.toString()
             this.originalAllocations[key] = amount
-            this.existingAllocationsTotal += amount
+            // Don't add to existingAllocationsTotal here, will calculate lowest level later
           }
         })
+
+        // Calculate existingAllocationsTotal using lowest level
+        const lowestLevel = []
+        const processedItems = []
+        const processedTypes = []
+        const processedClasses = []
+
+        allocations.forEach((allocation) => {
+          if (allocation.expense_sub_item_id) {
+            lowestLevel.push(parseCurrency(allocation.amount))
+            processedItems.push(allocation.expense_item_id)
+          } else if (allocation.expense_item_id && !processedItems.includes(allocation.expense_item_id)) {
+            lowestLevel.push(parseCurrency(allocation.amount))
+            processedTypes.push(allocation.expense_type_id)
+          } else if (allocation.expense_type_id && !processedTypes.includes(allocation.expense_type_id)) {
+            lowestLevel.push(parseCurrency(allocation.amount))
+            processedClasses.push(allocation.expense_class_id)
+          } else if (allocation.expense_class_id && !processedClasses.includes(allocation.expense_class_id)) {
+            lowestLevel.push(parseCurrency(allocation.amount))
+          }
+        })
+
+        this.existingAllocationsTotal = lowestLevel.reduce((sum, amount) => sum + amount, 0)
+
+        // Calculate item totals from sub-items if not already set
+        const itemTotals = {}
+        allocations.forEach((allocation) => {
+          if (allocation.expense_sub_item_id) {
+            const itemId = allocation.expense_item_id
+            if (!itemTotals[itemId]) {
+              itemTotals[itemId] = 0
+            }
+            itemTotals[itemId] += parseCurrency(allocation.amount)
+          }
+        })
+
+        for (const itemId in itemTotals) {
+          const key = `item-${itemId}`
+          if (!this.inputCache[key]) {
+            const amount = itemTotals[itemId]
+            this.inputCache[key] = amount.toString()
+            this.allocationInputs[key] = amount.toString()
+            this.originalAllocations[key] = amount
+          }
+        }
 
       } catch (error) {
         console.error("[ERROR] fetchExistingAllocations:", {
@@ -609,7 +668,14 @@ export const useAppropriationStore = defineStore("appropriation", {
           }
           if (item.children) {
             // Determine the next level
-            const nextLevel = level === 'class' ? 'type' : 'item'
+            let nextLevel = 'item'
+            if (level === 'class') {
+              nextLevel = 'type'
+            } else if (level === 'type') {
+              nextLevel = 'item'
+            } else if (level === 'item') {
+              nextLevel = 'subitem'
+            }
             processItems(item.children, nextLevel)
           }
         })
@@ -628,6 +694,12 @@ export const useAppropriationStore = defineStore("appropriation", {
         expenseType.children?.forEach((item) => {
           const itemAmount = parseCurrency(this.inputCache[`item-${item.id}`] || 0)
           total += itemAmount
+
+          // Include sub-items
+          item.children?.forEach((subItem) => {
+            const subItemAmount = parseCurrency(this.inputCache[`subitem-${subItem.id}`] || 0)
+            total += subItemAmount
+          })
         })
       })
       return Math.round(total * 100) / 100
@@ -671,14 +743,14 @@ export const useAppropriationStore = defineStore("appropriation", {
             }
           }
 
-          if (alloc.expense_type_id && !alloc.expense_item_id) {
+          if (alloc.expense_type_id && !alloc.expense_item_id && !alloc.expense_sub_item_id) {
             groupedByClass[classId].children.push({
               id: alloc.expense_type_id,
               name: alloc.expense_type_name,
               amount: parseCurrency(alloc.amount),
               children: [],
             })
-          } else if (alloc.expense_item_id) {
+          } else if (alloc.expense_item_id && !alloc.expense_sub_item_id) {
             let type = groupedByClass[classId].children.find((t) => t.id === alloc.expense_type_id)
             if (!type) {
               type = {
@@ -693,6 +765,35 @@ export const useAppropriationStore = defineStore("appropriation", {
             type.children.push({
               id: alloc.expense_item_id,
               name: alloc.expense_item_name,
+              amount: parseCurrency(alloc.amount),
+              children: [],
+            })
+          } else if (alloc.expense_sub_item_id) {
+            let type = groupedByClass[classId].children.find((t) => t.id === alloc.expense_type_id)
+            if (!type) {
+              type = {
+                id: alloc.expense_type_id,
+                name: alloc.expense_type_name,
+                amount: 0,
+                children: [],
+              }
+              groupedByClass[classId].children.push(type)
+            }
+
+            let item = type.children.find((i) => i.id === alloc.expense_item_id)
+            if (!item) {
+              item = {
+                id: alloc.expense_item_id,
+                name: alloc.expense_item_name,
+                amount: 0,
+                children: [],
+              }
+              type.children.push(item)
+            }
+
+            item.children.push({
+              id: alloc.expense_sub_item_id,
+              name: alloc.expense_sub_item_name,
               amount: parseCurrency(alloc.amount),
             })
           }
@@ -750,9 +851,14 @@ export const useAppropriationStore = defineStore("appropriation", {
           category.children?.forEach((type) => {
             total += amountMap[type.id] || 0
 
-            // Sum child items
+            // Sum child items and sub-items
             type.children?.forEach((item) => {
               total += amountMap[item.id] || 0
+
+              // Sum child sub-items
+              item.children?.forEach((subItem) => {
+                total += amountMap[subItem.id] || 0
+              })
             })
           })
 
