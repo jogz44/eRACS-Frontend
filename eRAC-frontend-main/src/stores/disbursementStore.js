@@ -2502,6 +2502,66 @@ export const useDisbursementStore = defineStore('disbursement', {
         this.voidingDisbursement = false;
       }
     },
+
+    // Submit reimbursement
+    async submitReimbursement(reimbursementData) {
+      try {
+        const authStore = useAuthStore();
+        const token = authStore.admin ? authStore.adminToken : authStore.token;
+
+        // Prepare the payload for reimbursement
+        const payload = {
+          ref_dv_number: reimbursementData.ref_dv_number,
+          dv_amount: reimbursementData.dv_amount,
+          bank_id: reimbursementData.bank_id,
+          payee: 'Reimbursement', // Default payee for reimbursements
+          expenses: [{
+            accountId: reimbursementData.expense_account.id,
+            amount: reimbursementData.dv_amount,
+            particular: `Reimbursement for DV ${reimbursementData.ref_dv_number}`,
+            expense_class_id: reimbursementData.expense_account.expense_class_id,
+            expense_type_id: reimbursementData.expense_account.expense_type_id,
+            expense_item_id: reimbursementData.expense_account.expense_item_id,
+          }],
+          orDetails: [{
+            orNumber: reimbursementData.or_number,
+            orAmount: reimbursementData.or_amount,
+            orDate: reimbursementData.or_date,
+            remarks: reimbursementData.remarks,
+          }],
+          is_reimbursement: true, // Flag to indicate this is a reimbursement
+        };
+
+        // Add barangay_id for admin users if selected
+        if (authStore.admin) {
+          const selectedBarangay = authStore.getSelectedBarangay();
+          if (selectedBarangay) {
+            payload.barangay_id = selectedBarangay;
+          }
+        }
+
+        // Use different endpoints for admin vs regular users
+        const endpoint = authStore.admin ? "/api/admin/disbursements/create" : "/api/barangay/disbursements";
+
+        const response = await api.post(endpoint, payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+
+        // Refresh the disbursements list
+        await this.fetchDisbursements();
+
+        return { success: true, data: response.data.data };
+      } catch (error) {
+        console.error('Failed to submit reimbursement:', error);
+        return {
+          success: false,
+          error: error.response?.data?.message || 'Failed to submit reimbursement'
+        };
+      }
+    },
     async cancelCheque(){
       try {
 
