@@ -903,10 +903,12 @@ export const useDisbursementStore = defineStore('disbursement', {
           })
         ])
 
+
         // Process particulars data
         const pData = Array.isArray(particularsResponse.data?.data) ? particularsResponse.data.data : (Array.isArray(particularsResponse.data) ? particularsResponse.data : [])
         this.particulars = pData.map(item => ({ label: item.particulars }))
 
+        console.error('=-=-------------------------------------------------------------------------===============',this.particulars);
         // Map backend fields to frontend fields if needed
         // Derive selected barangay name for admin context as fallback
         const selectedBarangayName = authStore.admin ? (authStore.getSelectedBarangayName && authStore.getSelectedBarangayName()) : null
