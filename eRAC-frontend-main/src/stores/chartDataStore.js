@@ -37,6 +37,14 @@ export const useChartDataStore = defineStore('chartData', {
         change: '0%',
       },
       {
+        label: 'Total Unappropriated',
+        value: '₱0.00',
+        icon: 'unappropriated',
+        color: 'secondary',
+        trend: 'up',
+        change: '0%',
+      },
+      {
         label: 'Total Balance',
         value: '₱0.00',
         icon: 'balance',
@@ -356,6 +364,14 @@ export const useChartDataStore = defineStore('chartData', {
             change: '1.2%',
           },
           {
+            label: 'Total Unappropriated',
+            value: this.formatCurrency(totalBalance),
+            icon: 'unappropriated',
+            color: 'secondary',
+            trend: 'up',
+            change: '3.8%',
+          },
+          {
             label: 'Total Balance',
             value: this.formatCurrency(totalBalance),
             icon: 'balance',
@@ -461,6 +477,7 @@ export const useChartDataStore = defineStore('chartData', {
       } finally {
         this.isLoading= false
       }
+      
     },
 
     // Process allocations to create pie chart data
@@ -537,6 +554,14 @@ export const useChartDataStore = defineStore('chartData', {
           color: 'secondary',
           trend: 'down',
           change: '1.2%',
+        },
+        {
+          label: 'Total Unappropriated',
+          value: this.formatCurrency(0),
+          icon: 'unappropriated',
+          color: 'secondary',
+          trend: 'up',
+          change: '3.8%',
         },
         {
           label: 'Total Balance',
@@ -630,6 +655,7 @@ export const useChartDataStore = defineStore('chartData', {
               trend: 'down',
               change: '1.2%',
             },
+           
             {
               label: 'Total Balance',
               value: this.formatCurrency(dashboardData.summary.total_balance),
@@ -755,6 +781,11 @@ export const useChartDataStore = defineStore('chartData', {
             this.disbursementOverviewRows = []
             this.recentDisbursementRows = []
           }
+          
+          console.log('pie chart data:', this.pieChartData)
+          this.pieChartData.labels.push("UNAPPROPRIATED")
+          this.pieChartData.datasets[0].data.push(dashboardData.summary.total_unappropriated)
+          this.pieChartData.datasets[0].backgroundColor.push("#BDBDBD")
 
           return dashboardData
         } catch (dashboardError) {
@@ -768,6 +799,7 @@ export const useChartDataStore = defineStore('chartData', {
 
           return { fallback: true }
         }
+        
       } catch (error) {
         console.error('Error loading dashboard data:', error)
         // Set error state for pie chart

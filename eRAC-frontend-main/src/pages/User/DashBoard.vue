@@ -696,6 +696,9 @@ const loadDashboardData = async () => {
 watch(
   () => chartStore.pieChartData,
   (newVal) => {
+    // newVal.labels.push("NEW FUND")
+    // newVal.datasets[0].data.push(123456)
+    // newVal.datasets[0].backgroundColor.push("#FF5722")
     console.log('Updated pie chart data:', newVal)
     console.log('Pie chart labels:', newVal.labels)
     console.log('Pie chart data:', newVal.datasets?.[0]?.data)
