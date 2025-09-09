@@ -141,6 +141,7 @@
 
                     <div
                       :ref="(el) => initTypeContainer(el, expenseClass.id)"
+                      :data-type-container="expenseClass.id"
                       class="type-container"
                     >
                       <template
@@ -210,6 +211,7 @@
                                         if (el) initItemContainer(el, expenseType.id)
                                       }
                                     "
+                                    :data-item-container="expenseType.id"
                                     class="item-container"
                                   >
                                     <template
@@ -219,11 +221,11 @@
                                       <div class="draggable-item" :data-id="item.id">
                                         <q-card flat bordered>
                                           <q-expansion-item
-                                            v-model="expandedItems[item.id]"
+                                            :value="!!expandedItems[item.id]"
                                             class="item-expansion"
                                             header-class="q-pa-none"
                                             expand-icon-class="hidden"
-                                            @update:model-value="toggleItemExpansion(item)"
+                                            @update:model-value="(val) => toggleItemExpansion(item, val)"
                                           >
                                             <template #header>
                                               <div class="q-pa-xs full-width row items-center justify-between">
@@ -260,8 +262,9 @@
                                                     @click.stop="showAddSubItemDialogForItem(item)"
                                                   />
                                                   <q-icon
-                                                    :name="expandedItems[item.id] ? 'expand_less' : 'expand_more'"
+                                                    :name="!!expandedItems[item.id] ? 'expand_less' : 'expand_more'"
                                                     color="grey"
+                                                    class="transition-transform"
                                                   />
                                                 </div>
                                               </div>
@@ -279,6 +282,7 @@
                                                       if (el) initSubItemContainer(el, item.id)
                                                     }
                                                   "
+                                                  :data-sub-item-container="item.id"
                                                   class="sub-item-container"
                                                 >
                                                   <template
@@ -689,7 +693,7 @@ const loadPendingUsers = async () => {
 }
 
 import Sortable from 'sortablejs'
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAccountsLibraryStore } from 'stores/accountsLibstore'
 import { usePageLogging } from '../../../composables/usePageLogging'
@@ -985,7 +989,6 @@ const getSelectedClassName = () => {
 
 const saveExpenseType = async () => {
   try {
-
     if (!newExpenseType.value.name) {
       throw new Error('Type name is required')
     }
@@ -1012,20 +1015,18 @@ const saveExpenseType = async () => {
 
     console.log('Successfully created type:', newType)
 
-    if (!accountsStore.expenseTypes.some((t) => t.id === newType.id)) {
-      accountsStore.expenseTypes.push({
-        id: newType.id,
-        name: newType.name,
-        expense_class_id: newType.expense_class_id,
-        year: fiscalYear.year.toString(),
-        order: newType.order || 0,
-      })
+    // Force refresh types to ensure the new one is displayed
+    await accountsStore.fetchExpenseTypes(currentParentClass.value.id)
+
+    // Re-initialize sortable for the type container
+    await nextTick()
+    const container = document.querySelector(`[data-type-container="${currentParentClass.value.id}"]`)
+    if (container && !typeSortables.value[currentParentClass.value.id]) {
+      initTypeContainer(container, currentParentClass.value.id)
     }
 
     $q.notify({ type: 'positive', message: 'Type added successfully' })
     resetTypeForm()
-
-    await nextTick()
   } catch (error) {
     console.error('Error adding expense type:', error)
     $q.notify({
@@ -1118,6 +1119,20 @@ const saveExpenseItem = async () => {
       expenseClassId: currentParentType.value.expense_class_id,
       expenseTypeId: currentParentType.value.id,
     })
+
+    // Force refresh items to ensure the new one is displayed
+    await accountsStore.fetchExpenseItems(
+      currentParentType.value.expense_class_id,
+      currentParentType.value.id,
+      true // force refresh
+    )
+
+    // Re-initialize sortable for the item container
+    await nextTick()
+    const container = document.querySelector(`[data-item-container="${currentParentType.value.id}"]`)
+    if (container && !container.sortable) {
+      initItemContainer(container, currentParentType.value.id)
+    }
 
     $q.notify({
       type: 'positive',
@@ -1235,13 +1250,20 @@ const saveExpenseSubItem = async () => {
     // Ensure the parent item is expanded to show the new sub-item
     expandedItems.value[currentParentItem.value.id] = true
 
-    // Re-fetch sub-items to ensure the new one is displayed
+    // Force refresh sub-items to ensure the new one is displayed
     await accountsStore.fetchExpenseSubItems(
       currentParentItem.value.expense_class_id,
       currentParentItem.value.expense_type_id,
       currentParentItem.value.id,
       true // force refresh
     )
+
+    // Re-initialize sortable for the sub-item container
+    await nextTick()
+    const container = document.querySelector(`[data-sub-item-container="${currentParentItem.value.id}"]`)
+    if (container && !subItemSortables.value[currentParentItem.value.id]) {
+      initSubItemContainer(container, currentParentItem.value.id)
+    }
 
     $q.notify({
       type: 'positive',
@@ -1348,12 +1370,30 @@ const getExpenseSubItemsForItem = (itemId) => {
   const fiscalYear = accountsStore.years.find((y) => y.id == selectedYear.value)
   const yearValue = fiscalYear?.year?.toString()
 
+  // Get the parent item to ensure we have the correct context
+  const parentItem = accountsStore.expenseItems.find(item => item.id === itemId)
+  if (!parentItem) {
+    console.warn('Parent item not found:', itemId)
+    return []
+  }
+
   console.log(`Filtering sub-items for item ${itemId} and year ${yearValue}`)
+  console.log('Parent item:', parentItem)
   console.log('All sub-items in store:', accountsStore.expenseSubItems)
-  console.log('Selected year:', selectedYear.value, 'Year value:', yearValue)
 
   const filteredSubItems = accountsStore.expenseSubItems
-    .filter((subItem) => subItem.expense_item_id == itemId && subItem.year == yearValue)
+    .filter((subItem) => {
+      const matches =
+        subItem.expense_item_id == itemId &&
+        subItem.expense_type_id == parentItem.expense_type_id &&
+        subItem.expense_class_id == parentItem.expense_class_id &&
+        subItem.year == yearValue
+
+      if (matches) {
+        console.log('Found matching sub-item:', subItem)
+      }
+      return matches
+    })
     .sort((a, b) => (a.order || 0) - (b.order || 0))
 
   console.log('Filtered sub-items:', filteredSubItems)
@@ -1464,6 +1504,24 @@ const resetAllDialogs = () => {
   deleteType.value = null
 }
 
+const cleanupSortables = () => {
+  // Clean up type sortables
+  Object.values(typeSortables.value).forEach(sortable => {
+    if (sortable && sortable.destroy) {
+      sortable.destroy()
+    }
+  })
+  typeSortables.value = {}
+
+  // Clean up sub-item sortables
+  Object.values(subItemSortables.value).forEach(sortable => {
+    if (sortable && sortable.destroy) {
+      sortable.destroy()
+    }
+  })
+  subItemSortables.value = {}
+}
+
 const confirmDelete = async () => {
   try {
     if (!itemToDelete.value?.id) {
@@ -1523,9 +1581,15 @@ const confirmDelete = async () => {
       })
     }
 
+    // Refresh data after deletion
     if (selectedYear.value) {
       await accountsStore.fetchExpenseClasses(selectedYear.value)
     }
+
+    // Reset expansion states to prevent stale data
+    expandedClasses.value = {}
+    expandedTypes.value = {}
+    expandedItems.value = {}
 
   } catch (error) {
     console.error('Delete error:', error)
@@ -1706,23 +1770,57 @@ const toggleExpansion = async (classId) => {
           const fiscalYear = accountsStore.years.find((y) => y.id == accountsStore.selectedYear)
           const yearValue = fiscalYear?.year?.toString() || ''
 
-          const firstType = accountsStore.expenseTypes.find(
+          // Get all types for this class
+          const classTypes = accountsStore.expenseTypes.filter(
             (type) => type.expense_class_id == classId && type.year == yearValue,
           )
 
-          if (firstType) {
+          // Fetch items for all types, not just the first one
+          for (const type of classTypes) {
             const alreadyFetchedItems = accountsStore.expenseItems.some(
               (item) =>
                 item.expense_class_id == classId &&
-                item.expense_type_id == firstType.id &&
+                item.expense_type_id == type.id &&
                 item.year == yearValue,
             )
 
             if (!alreadyFetchedItems) {
-              console.log('Fetching items for type:', firstType.id)
-              await accountsStore.fetchExpenseItems(classId, firstType.id)
+              console.log('Fetching items for type:', type.id)
+              await accountsStore.fetchExpenseItems(classId, type.id)
             } else {
-              console.log('Expense items already loaded, skipping fetch')
+              console.log('Expense items already loaded for type:', type.id)
+            }
+          }
+
+          // Fetch sub-items for all items in this class
+          const classItems = accountsStore.expenseItems.filter(
+            (item) => item.expense_class_id == classId && item.year == yearValue,
+          )
+
+          for (const item of classItems) {
+            const alreadyFetchedSubItems = accountsStore.expenseSubItems.some(
+              (subItem) =>
+                subItem.expense_class_id == classId &&
+                subItem.expense_type_id == item.expense_type_id &&
+                subItem.expense_item_id == item.id &&
+                subItem.year == yearValue,
+            )
+
+            if (!alreadyFetchedSubItems) {
+              console.log('Fetching sub-items for item:', item.id)
+              try {
+                await accountsStore.fetchExpenseSubItems(
+                  classId,
+                  item.expense_type_id,
+                  item.id,
+                  false // Don't force refresh, just fetch if not already fetched
+                )
+              } catch (error) {
+                console.warn('Failed to fetch sub-items for item:', item.id, error)
+                // Don't throw error here, just log it and continue
+              }
+            } else {
+              console.log('Sub-items already loaded for item:', item.id)
             }
           }
         }
@@ -1731,14 +1829,19 @@ const toggleExpansion = async (classId) => {
       }
     } catch (error) {
       console.error('Error loading types or items:', error)
+      $q.notify({
+        type: 'negative',
+        message: 'Failed to load expense data',
+        position: 'top',
+      })
     }
 
-    nextTick(() => {
-      const container = document.querySelector(`[ref="typeContainer_${classId}"]`)
-      if (container && !typeSortables.value[classId]) {
-        initTypeContainer(container, classId)
-      }
-    })
+    // Wait for DOM update and initialize sortable
+    await nextTick()
+    const container = document.querySelector(`[data-type-container="${classId}"]`)
+    if (container && !typeSortables.value[classId]) {
+      initTypeContainer(container, classId)
+    }
   } else {
     newExpanded[classId] = false
   }
@@ -1746,44 +1849,56 @@ const toggleExpansion = async (classId) => {
   expandedClasses.value = newExpanded
 }
 
-const toggleItemExpansion = async (item) => {
-  console.log('Toggling expansion for item:', item.id)
+const toggleItemExpansion = async (item, forceState = null) => {
+  console.log('Toggling expansion for item:', item.id, 'Force state:', forceState)
 
-  const newExpanded = { ...expandedItems.value }
+  try {
+    // Determine the new expansion state
+    const currentlyExpanded = expandedItems.value[item.id] || false
+    const shouldExpand = forceState !== null ? forceState : !currentlyExpanded
 
-  if (!newExpanded[item.id]) {
-    // Close other expanded items
-    Object.keys(newExpanded).forEach((id) => {
-      newExpanded[id] = false
-    })
-    newExpanded[item.id] = true
-
-    try {
+    // If we're expanding or forcing a refresh
+    if (shouldExpand) {
+      // Fetch sub-items if we're expanding
       if (selectedYear.value) {
         console.log('Fetching sub-items for item:', item.id)
         await accountsStore.fetchExpenseSubItems(
           item.expense_class_id,
           item.expense_type_id,
-          item.id
+          item.id,
+          true // Always force refresh to get latest DB data
         )
-      } else {
-        console.warn('Cannot fetch sub-items - no year selected')
       }
-    } catch (error) {
-      console.error('Error loading sub-items:', error)
     }
 
-    nextTick(() => {
+    // Update expansion state
+    expandedItems.value = {
+      ...expandedItems.value,
+      [item.id]: shouldExpand
+    }
+
+    // Handle sortable initialization/cleanup
+    await nextTick()
+    if (shouldExpand) {
       const container = document.querySelector(`[data-sub-item-container="${item.id}"]`)
       if (container && !subItemSortables.value[item.id]) {
         initSubItemContainer(container, item.id)
       }
-    })
-  } else {
-    newExpanded[item.id] = false
-  }
+    } else {
+      if (subItemSortables.value[item.id]) {
+        subItemSortables.value[item.id].destroy()
+        delete subItemSortables.value[item.id]
+      }
+    }
 
-  expandedItems.value = newExpanded
+  } catch (error) {
+    console.error('Error in toggleItemExpansion:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to load or display sub-items',
+      position: 'top',
+    })
+  }
 }
 
 // Lifecycle hooks
@@ -1819,8 +1934,21 @@ onMounted(async () => {
   })
 })
 
+// Cleanup on unmount
+onUnmounted(() => {
+  cleanupSortables()
+})
+
 watch(selectedYear, (newYear) => {
   if (newYear) {
+    // Clean up existing sortables
+    cleanupSortables()
+
+    // Reset all expansion states when year changes
+    expandedClasses.value = {}
+    expandedTypes.value = {}
+    expandedItems.value = {}
+
     loadExpenseClassesForYear(newYear)
   }
   showAddClassDialog.value = false
@@ -1918,6 +2046,15 @@ watch(
 
 .item-expansion {
   border-left: 3px solid #e3f2fd;
+  transition: all 0.3s ease;
+}
+
+.transition-transform {
+  transition: transform 0.3s ease;
+}
+
+.q-expansion-item--expanded .transition-transform {
+  transform: rotate(180deg);
 }
 
 @media (max-width: 768px) {
