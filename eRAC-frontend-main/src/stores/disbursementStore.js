@@ -49,11 +49,6 @@ export const useDisbursementStore = defineStore('disbursement', {
     selectedChequeNumber: null,
     disbursements: [], // <-- Remove static data, will be loaded from API
 
-    //cheque is computed
-    cancelChequed: null,
-    cancelBanks: [],
-    cancelBank: null,
-    cancelpayee: null,
 
     // Track cancelled cheques in frontend
     cancelledCheques: new Set(), // Store cancelled cheque numbers
@@ -84,6 +79,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     bankLoading: false,
     bookletLoading: false,
     expenseTypeLoading: false,
+    isChequeCancel: false, // Loading state for cancelling cheque
     savingDisbursement: false, // New loading state for save button
     loadingEditDisbursement: null, // Loading state for edit disbursement (stores the ID of the disbursement being loaded)
     loadingDisbursements: false, // Loading state for fetching disbursements
@@ -868,9 +864,8 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     async fetchDisbursements() {
       this.loadingDisbursements = true
+      this.isCancelCheque = false
       try {
-        // Load cancelled cheques from localStorage
-        this.loadCancelledCheques()
 
         const authStore = useAuthStore()
 
@@ -966,6 +961,7 @@ export const useDisbursementStore = defineStore('disbursement', {
 
 
     async fetchDisbursementById(id) {
+      this.isChequeCancel=false
       try {
         const authStore = useAuthStore();
         // Use barangay user token for barangay endpoints
@@ -1741,9 +1737,10 @@ export const useDisbursementStore = defineStore('disbursement', {
         }, 0)
 
         const newTotal = currentTotal + amount
-
-        if (newTotal > this.lockedTotalAmount) {
-          throw new Error(`Total amount cannot exceed the original DV amount of ₱${this.lockedTotalAmount.toLocaleString()}. Current total would be ₱${newTotal.toLocaleString()}`)
+        if(!this.isChequeCancel){
+          if (newTotal > this.lockedTotalAmount) {
+            throw new Error(`Total amount cannot exceed the original DV amount of ₱${this.lockedTotalAmount.toLocaleString()}. Current total would be ₱${newTotal.toLocaleString()}`)
+          }
         }
       }
 
@@ -1812,6 +1809,7 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     // Alias functions for EditDisbursement component
     editItem(row) {
+      this.isChequeCancel=false
       this.openExpenseDetailForEdit(row)
     },
 
@@ -1972,17 +1970,19 @@ export const useDisbursementStore = defineStore('disbursement', {
           }
         }
 
-        // Use the locked total amount to ensure consistency
-        const dvAmount = this.lockedTotalAmount || 0
 
         // Prepare the payload with ids for all expenses so backend keeps them
         const payload = {
+          cancel: this.isChequeCancel,
+          bank_id: this.forms.disbursement.bank_id,
+          cheque_number: this.autoCheque,
+          payee: this.forms.disbursement.payee,
+
           date: this.forms.disbursement.date,
           dv_number: this.forms.disbursement.dvNumber,
-          cheque_number: this.forms.disbursement.chequeNumber,
-          bank_id: this.forms.disbursement.bank_id,
-          payee: this.forms.disbursement.payee,
-          dv_amount: dvAmount,
+          dv_amount: !this.cancelledCheques
+            ? (this.lockedTotalAmount || 0)
+            : this.totalExpensesAmount,
           expenses: this.expenses.map(expense => ({
             id: Number(expense.id) || undefined,
             accountId: expense.accountId,
@@ -2500,6 +2500,65 @@ export const useDisbursementStore = defineStore('disbursement', {
         throw new Error(error.response?.data?.message || 'Failed to void disbursement');
       } finally {
         this.voidingDisbursement = false;
+      }
+    },
+    // Submit reimbursement
+    async submitReimbursement(reimbursementData) {
+      try {
+        const authStore = useAuthStore();
+        const token = authStore.admin ? authStore.adminToken : authStore.token;
+
+        // Prepare the payload for reimbursement
+        const payload = {
+          ref_dv_number: reimbursementData.ref_dv_number,
+          dv_amount: reimbursementData.dv_amount,
+          bank_id: reimbursementData.bank_id,
+          payee: 'Reimbursement', // Default payee for reimbursements
+          expenses: [{
+            accountId: reimbursementData.expense_account.id,
+            amount: reimbursementData.dv_amount,
+            particular: `Reimbursement for DV ${reimbursementData.ref_dv_number}`,
+            expense_class_id: reimbursementData.expense_account.expense_class_id,
+            expense_type_id: reimbursementData.expense_account.expense_type_id,
+            expense_item_id: reimbursementData.expense_account.expense_item_id,
+          }],
+          orDetails: [{
+            orNumber: reimbursementData.or_number,
+            orAmount: reimbursementData.or_amount,
+            orDate: reimbursementData.or_date,
+            remarks: reimbursementData.remarks,
+          }],
+          is_reimbursement: true, // Flag to indicate this is a reimbursement
+        };
+
+        // Add barangay_id for admin users if selected
+        if (authStore.admin) {
+          const selectedBarangay = authStore.getSelectedBarangay();
+          if (selectedBarangay) {
+            payload.barangay_id = selectedBarangay;
+          }
+        }
+
+        // Use different endpoints for admin vs regular users
+        const endpoint = authStore.admin ? "/api/admin/disbursements/create" : "/api/barangay/disbursements";
+
+        const response = await api.post(endpoint, payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+
+        // Refresh the disbursements list
+        await this.fetchDisbursements();
+
+        return { success: true, data: response.data.data };
+      } catch (error) {
+        console.error('Failed to submit reimbursement:', error);
+        return {
+          success: false,
+          error: error.response?.data?.message || 'Failed to submit reimbursement'
+        };
       }
     },
     async cancelCheque(){
