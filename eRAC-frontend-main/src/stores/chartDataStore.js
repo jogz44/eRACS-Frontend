@@ -37,6 +37,14 @@ export const useChartDataStore = defineStore('chartData', {
         change: '0%',
       },
       {
+        label: 'Total Unappropriated',
+        value: '₱0.00',
+        icon: 'unappropriated',
+        color: 'secondary',
+        trend: 'up',
+        change: '0%',
+      },
+      {
         label: 'Total Balance',
         value: '₱0.00',
         icon: 'balance',
@@ -356,6 +364,14 @@ export const useChartDataStore = defineStore('chartData', {
             change: '1.2%',
           },
           {
+            label: 'Total Unappropriated',
+            value: this.formatCurrency(totalBalance),
+            icon: 'unappropriated',
+            color: 'secondary',
+            trend: 'up',
+            change: '3.8%',
+          },
+          {
             label: 'Total Balance',
             value: this.formatCurrency(totalBalance),
             icon: 'balance',
@@ -540,6 +556,14 @@ export const useChartDataStore = defineStore('chartData', {
           change: '1.2%',
         },
         {
+          label: 'Total Unappropriated',
+          value: this.formatCurrency(0),
+          icon: 'unappropriated',
+          color: 'secondary',
+          trend: 'up',
+          change: '3.8%',
+        },
+        {
           label: 'Total Balance',
           value: this.formatCurrency(0),
           icon: 'balance',
@@ -631,6 +655,7 @@ export const useChartDataStore = defineStore('chartData', {
               trend: 'down',
               change: '1.2%',
             },
+           
             {
               label: 'Total Balance',
               value: this.formatCurrency(dashboardData.summary.total_balance),
@@ -758,8 +783,8 @@ export const useChartDataStore = defineStore('chartData', {
           }
           
           console.log('pie chart data:', this.pieChartData)
-          this.pieChartData.labels.push("Unappropriated")
-          this.pieChartData.datasets[0].data.push(dashboardData.summary.total_balance)
+          this.pieChartData.labels.push("UNAPPROPRIATED")
+          this.pieChartData.datasets[0].data.push(dashboardData.summary.total_unappropriated)
           this.pieChartData.datasets[0].backgroundColor.push("#BDBDBD")
 
           return dashboardData

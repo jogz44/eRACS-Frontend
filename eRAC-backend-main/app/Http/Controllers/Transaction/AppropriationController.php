@@ -1099,7 +1099,60 @@ class AppropriationController extends Controller
                 // Sum all allocations (items, types, and classes)
                 return $budget->tranAppropriations->sum('amount');
             });
-            $totalBalance = $totalAppropriation - $totalObligation;
+            $totals = TranAppropriation::select(
+                            'tran_appropriations.expense_class_id',
+                            'tran_appropriations.expense_type_id',
+                            'tran_appropriations.expense_item_id',
+                            DB::raw('SUM(tran_appropriations.amount) as total_amount')
+                        )
+                        ->where('tran_appropriations.barangay_id', $request->user()->barangay_id)
+                        ->whereRelation('expenseClass.fiscalYear', 'year', '=', $year)
+                        ->whereNotExists(function ($query) {
+                            $query->select(DB::raw(1))
+                                ->from('cont_appro_accounts')
+                                ->whereColumn('cont_appro_accounts.tranAppropriation_id', 'tran_appropriations.id')
+                                ->where('cont_appro_accounts.status', 'active');
+                        })
+                        ->groupBy(
+                            'tran_appropriations.expense_class_id',
+                            'tran_appropriations.expense_type_id',
+                            'tran_appropriations.expense_item_id'
+                        )
+                        ->get();
+
+            $details = TranAppropriation::select(
+                            'tran_appropriations.expense_class_id',
+                            'tran_appropriations.expense_type_id',
+                            'tran_appropriations.expense_item_id',
+                            DB::raw('SUM(ISNULL(tran_expense_details.amount,0)) as details_amount')
+                        )
+                        ->leftJoin('tran_expense_details', 'tran_expense_details.appropriation_id', '=', 'tran_appropriations.id')
+                        ->where('tran_appropriations.barangay_id', $request->user()->barangay_id)
+                        ->whereRelation('expenseClass.fiscalYear', 'year', '=', $year)
+                        ->whereNotExists(function ($query) {
+                            $query->select(DB::raw(1))
+                                ->from('cont_appro_accounts')
+                                ->whereColumn('cont_appro_accounts.tranAppropriation_id', 'tran_appropriations.id')
+                                ->where('cont_appro_accounts.status', 'active');
+                        })
+                        ->groupBy(
+                            'tran_appropriations.expense_class_id',
+                            'tran_appropriations.expense_type_id',
+                            'tran_appropriations.expense_item_id'
+                        )
+                        ->get();
+
+
+            $totalBalance = $totals->sum(function ($o) use ($details) {
+                $d = $details->first(fn($d) =>
+                    $d->expense_class_id == $o->expense_class_id &&
+                    $d->expense_type_id == $o->expense_type_id &&
+                    $d->expense_item_id == $o->expense_item_id
+                );
+
+                return (float) $o->total_amount - (float) ($d->details_amount ?? 0);
+            });
+            $totalUnappropriated = $totalAppropriation - $totalObligation;
 
             \Log::info('Totals - Appropriation: ' . $totalAppropriation . ', Obligation: ' . $totalObligation . ', Balance: ' . $totalBalance);
 
@@ -1269,6 +1322,7 @@ class AppropriationController extends Controller
                     'summary' => [
                         'total_appropriation' => (float)$totalAppropriation,
                         'total_obligation' => (float)$totalObligation,
+                        'total_unappropriated' => (float)$totalUnappropriated,
                         'total_balance' => (float)$totalBalance,
                         'type_level_total' => (float)$typeLevelTotal,
                         'item_level_total' => (float)$itemLevelTotal,

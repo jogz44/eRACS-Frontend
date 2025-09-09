@@ -52,7 +52,7 @@ class ContinuingAppropriationController extends Controller
                     ->leftJoin('tran_expense_details', 'tran_expense_details.appropriation_id', '=', 'tran_appropriations.id')
                     ->with(['expenseClass.fiscalYear', 'expenseType', 'expenseItem'])
                     ->where('tran_appropriations.barangay_id', $request->user()->barangay_id)
-                    ->whereRelation('expenseClass.fiscalYear', 'year', '=', now()->year)
+                    ->whereRelation('expenseClass.fiscalYear', 'year', '!=', now()->year)
                     ->whereNotExists(function ($query) {
                         $query->select(DB::raw(1))
                               ->from('cont_appro_accounts')
