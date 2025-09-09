@@ -6,7 +6,7 @@
           <div class="text-h6 text-weight-medium">Disbursement Transaction</div>
           <div class="text-caption text-grey-6">
             Showing transactions for fiscal year {{ currentFiscalYear }}
-          </div>
+        </div>
         </div>
         <q-btn icon="refresh" color="primary" flat dense @click="loadDisbursements"
           :loading="store.loadingDisbursements" title="Refresh disbursements" />
@@ -216,7 +216,7 @@
             </div>
             <!-- <q-select outlined dense v-model="store.forms.expense.particulars" :options="filteredParticulars"
               label="Particulars" use-input fill-input hide-selected new-value-mode="add-unique" @filter="filterFn" /> -->
-<q-select
+            <q-select
   outlined
   dense
   v-model="store.forms.expense.particulars"
@@ -242,7 +242,7 @@
 
           <q-card-actions align="right" class="q-pa-md">
             <q-btn flat label="Cancel" @click="store.closeDialog('expenseDetail')" />
-            <q-btn label="Save" @click="handleSaveExpense" color="primary" />
+              <q-btn label="Save" @click="handleSaveExpense" color="primary" />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -284,11 +284,11 @@
           </template>
 
           <template v-slot:body-cell-status="props">
-            <q-td :props="props">
+             <q-td :props="props">
               <q-chip :color="getStatusColor(props.row.status)" :text-color="getStatusTextColor(props.row.status)" dense
                 :label="props.row.status" />
-            </q-td>
-          </template>
+             </q-td>
+           </template>
 
           <template v-slot:body-cell-remarks="props">
             <q-td :props="props">
@@ -954,22 +954,22 @@ const handleVoidDisbursement = (row) => {
 const handleSubmitVoidRequest = async () => {
   try {
     await store.submitVoidRequest()
-    $q.notify({
-      type: 'positive',
+        $q.notify({
+          type: 'positive',
       message: 'Void request submitted successfully!',
-      icon: 'check_circle',
-      position: 'top',
+          icon: 'check_circle',
+          position: 'top',
       timeout: 3000,
     })
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
       message: error.message || 'Failed to submit void request',
-      icon: 'error',
-      position: 'top',
+        icon: 'error',
+        position: 'top',
       timeout: 5000,
-    })
-  }
+      })
+    }
 }
 
 // Approver actions - now handled in ViewOrDetails component
