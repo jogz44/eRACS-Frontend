@@ -6,10 +6,13 @@
         <div class="text-h6">
           Edit Expenses for Disbursement #{{ store.forms.disbursement.dvNumber }}
         </div>
-        <div class="text-caption text-grey-6 q-mt-sm">
+        <div v-if="!isChequeCancelled" class="text-caption text-grey-6 q-mt-sm">
           Note: Total amount is locked to ₱{{ store.lockedTotalAmount?.toLocaleString() || '0' }}. You can only
-          redistribute amounts between expenses.
+          redistribute amounts between expenses, UNLESS you cancel the cheque.
         </div>
+        <q-banner v-if="isChequeCancelled" class="bg-orange-2 text-orange-10 q-mt-sm" dense>
+          ⚠️ Don't forget to save to confirm the cheque cancellation.
+        </q-banner>
       </q-card-section>
 
       <q-card-section>
@@ -32,16 +35,9 @@
           <!-- Bank Field -->
           <div class="col-md-4 col-sm-12">
             <q-item-label class="q-mb-xs">Bank:</q-item-label>
-            <q-select filled outlined dense
-              v-model="store.forms.disbursement.bank_id"
-              :options="bankStore.availableBanks"
-              option-label="name"
-              option-value="id"
-              emit-value
-              map-options
-              :label="currentBankLabel"
-              :disable="!isChequeCancelled"
-              @update:model-value="handleBankSelection" />
+            <q-select outlined dense v-model="store.forms.disbursement.bank_id" :options="bankStore.availableBanks"
+              option-label="name" option-value="id" emit-value map-options :label="currentBankLabel"
+              :disable="!isChequeCancelled" @update:model-value="handleBankSelection" />
           </div>
 
           <!-- Check Number Field -->
@@ -49,18 +45,7 @@
             <q-item-label class="q-mb-xs">Cheque Number:</q-item-label>
             <div class="row q-gutter-xs">
               <div class="col">
-                <q-input outlined dense v-model="store.forms.disbursement.chequeNumber"
-                  :disable="!isChequeCancelled" placeholder="Select a bank first"></q-input>
-              </div>
-              <div class="col-auto">
-                <q-btn
-                  v-if="isChequeCancelled && store.forms.disbursement.bank_id"
-                  icon="add"
-                  color="primary"
-                  dense
-                  @click="handleAddCheque"
-                  :loading="addingCheque"
-                  title="Add new cheque number" />
+                <q-input outlined dense v-model="chequeField" :disable="true" placeholder="Select a bank first" />
               </div>
             </div>
           </div>
@@ -73,26 +58,18 @@
           <!-- Payee Field -->
           <div class="col-md-4 col-sm-12">
             <q-item-label class="q-mb-xs">Payee:</q-item-label>
-            <q-input filled outlined dense v-model="store.forms.disbursement.payee" :disable="true" />
+            <q-input filled outlined dense v-model="store.forms.disbursement.payee" :disable="!isChequeCancelled" />
           </div>
 
           <!-- Cancel Cheque Button -->
-          <div class="col-md-4 col-sm-12 flex flex-center q-mt-lg">
-            <q-btn
-              color="negative"
-              label="Cancel Cheque"
-              icon="cancel"
-              class="full-width"
-              @click="handleCancelCheque"
-              :disable="isChequeCancelled" />
+          <div v-if="!isChequeCancelled" class="col-md-4 col-sm-12 flex flex-center q-mt-lg">
+            <q-btn color="negative" label="Cancel Cheque" icon="cancel" class="full-width" @click="handleCancelCheque"
+               />
           </div>
         </div>
       </q-card-section>
 
       <div>
-
-        <!-- Cancel Cheque Dialog -->
-
 
         <!-- Cancel Cheque Confirmation Dialog -->
         <q-dialog v-model="showConfirmDialog" persistent>
@@ -125,6 +102,11 @@
 
       <!-- Expense Table Section -->
       <q-card-section>
+        <div v-if="isChequeCancelled" class="row justify-end q-mb-md">
+          <q-btn label="Add" color="primary" icon="add" @click="handleAddExpense"
+            @mouseenter="preloadExpenseAccounts" :loading="addingExpense || store.expenseTypeLoading"
+            v-permission="'add'" />
+        </div>
         <!-- Expense Table -->
         <q-table :rows="store.expenses" :columns="store.expenseColumns" row-key="id" :pagination="{ rowsPerPage: 5 }">
           <template v-slot:body-cell-action="props">
@@ -151,12 +133,13 @@
       <q-card-actions align="right" class="custom-actions">
         <q-btn flat label="Cancel" class="modal-cancel-btn" @click="
           () => {
+            isChequeCancelled=false
             store.closeDialog('editDisbursement')
             store.resetEditDisbursement()
           }
         " />
         <q-btn label="Save" class="modal-save-btn" @click="handleSaveEditedDisbursement" :loading="saving"
-          :disable="!store.expenses || store.expenses.length === 0 || store.totalExpensesAmount !== store.lockedTotalAmount" />
+          :disable="!store.expenses || store.expenses.length === 0 || (store.totalExpensesAmount !== store.lockedTotalAmount && !isChequeCancelled)" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -185,8 +168,10 @@
           class="q-mb-md" prefix="₱" inputmode="decimal" pattern="\\d*\\.?\\d{0,2}" @keypress="blockNonNumeric"
           @paste.prevent="handlePasteNumeric" />
       </q-card-section>
-
+      
       <q-card-actions align="right" class="q-pa-md">
+        
+        
         <q-btn flat label="Cancel" @click="store.closeDialog('expenseDetail')" />
         <q-btn label="Save" @click="handleSaveExpense" color="primary" />
       </q-card-actions>
@@ -204,11 +189,11 @@ const store = useDisbursementStore()
 const bankStore = useBankStore()
 const $q = useQuasar()
 const saving = ref(false)
-const addingCheque = ref(false)
 
 
 const showConfirmDialog = ref(false)
-const isChequeCancelled = ref(false)
+const addingExpense = ref(false)
+const isChequeCancelled = ref(store.isChequeCancel) // Track if cheque is cancelled
 
 // Example bank list (replace with your data)
 
@@ -223,14 +208,13 @@ const currentBankLabel = computed(() => {
 
 onMounted(async () => {
   await bankStore.fetchBanks()
-  await store.cancelCheque()
 })
 
 
 
 const handleSaveEditedDisbursement = async () => {
   // Validate total amount before saving
-  if (store.totalExpensesAmount !== store.lockedTotalAmount) {
+  if (store.totalExpensesAmount !== store.lockedTotalAmount && !isChequeCancelled.value) {
     $q.notify({
       type: 'negative',
       message: `Total amount must equal the original DV amount of ₱${store.lockedTotalAmount?.toLocaleString()}. Current total: ₱${store.totalExpensesAmount?.toLocaleString()}`,
@@ -301,9 +285,9 @@ const getAmountDifference = () => {
 const getAmountDifferenceMessage = () => {
   const difference = getAmountDifference()
 
-  if (difference > 0) {
+  if (difference > 0&&!isChequeCancelled.value) {
     return `Amount exceeds original DV amount by ₱${difference.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-  } else if (difference < 0) {
+  } else if (difference < 0&&!isChequeCancelled.value) {
     return `Amount is less than original DV amount by ₱${Math.abs(difference).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
   return ''
@@ -419,9 +403,9 @@ const confirmCancelCheque = async () => {
     showConfirmDialog.value = false
 
     // Call backend API to mark cheque as cancelled
-    const result = await store.cancelCheque(store.forms.disbursement.id, store.forms.disbursement.chequeNumber)
+    store.isChequeCancel = true
 
-    if (result.success) {
+    if (store.isChequeCancel) {
       // Clear the cheque number and enable bank selection
       store.forms.disbursement.chequeNumber = ''
       store.forms.disbursement.bank_id = null
@@ -432,7 +416,7 @@ const confirmCancelCheque = async () => {
 
       $q.notify({
         type: 'positive',
-        message: 'Cheque cancelled successfully! You can now select a different bank and add a new cheque.',
+        message: 'Cheque cancelled successfully! You can now select a different bank and add a new cheque and expenses',
         icon: 'check_circle',
         position: 'top',
         timeout: 4000
@@ -440,7 +424,7 @@ const confirmCancelCheque = async () => {
     } else {
       $q.notify({
         type: 'negative',
-        message: result.message || 'Failed to cancel cheque',
+        message: 'Failed to cancel cheque',
         icon: 'error',
         position: 'top',
         timeout: 3000
@@ -462,59 +446,58 @@ const confirmCancelCheque = async () => {
 const handleBankSelection = async (bankId) => {
   if (bankId) {
     try {
-      // Clear the current cheque number when bank changes
-      store.forms.disbursement.chequeNumber = ''
+      await store.selectBank(bankId)
     } catch (error) {
-      console.error('Error handling bank selection:', error)
+      $q.notify({
+        type: 'negative',
+        message: `Failed to load booklets for selected bank: ${error.message}`,
+        icon: 'error',
+        position: 'top',
+      })
     }
   }
 }
 
-// Handle add cheque button click
-const handleAddCheque = async () => {
-  if (!store.forms.disbursement.bank_id) {
-    $q.notify({
-      type: 'warning',
-      message: 'Please select a bank first',
-      icon: 'warning',
-      position: 'top',
-      timeout: 3000
-    })
-    return
-  }
-
-  addingCheque.value = true
-  try {
-    const result = await store.getAvailableCheque(store.forms.disbursement.bank_id)
-    if (result.success && result.chequeNumber) {
-      store.forms.disbursement.chequeNumber = result.chequeNumber
-      $q.notify({
-        type: 'positive',
-        message: `New cheque number ${result.chequeNumber} assigned successfully!`,
-        icon: 'check_circle',
-        position: 'top',
-        timeout: 3000
-      })
+const chequeField = computed({
+  get() {
+    return !isChequeCancelled.value
+      ? store.forms.disbursement.chequeNumber
+      : store.autoCheque
+  },
+  set(val) {
+    if (!isChequeCancelled.value) {
+      store.forms.disbursement.chequeNumber = val
     } else {
-      $q.notify({
-        type: 'negative',
-        message: result.message || 'No available cheques found for this bank',
-        icon: 'error',
-        position: 'top',
-        timeout: 3000
-      })
+      store.autoCheque = val
     }
+  }
+})
+
+
+const preloadExpenseAccounts = () => {
+  // Preload expense accounts when user hovers over Add button
+  if (store.expenseAccounts.length === 0 && !store.expenseAccountsLoading) {
+    store.refreshExpenseAccountsWithBalances().catch((error) => {
+      console.warn('Failed to preload expense accounts:', error)
+    })
+  }
+}
+
+const handleAddExpense = async () => {
+  addingExpense.value = true
+  try {
+    await store.openDialog('expense')
   } catch (error) {
-    console.error('Error adding cheque:', error)
+    console.error('Error opening expense dialog:', error)
     $q.notify({
       type: 'negative',
-      message: 'Failed to get available cheque number',
+      message: 'Failed to open expense dialog',
       icon: 'error',
       position: 'top',
-      timeout: 3000
+      timeout: 3000,
     })
   } finally {
-    addingCheque.value = false
+    addingExpense.value = false
   }
 }
 

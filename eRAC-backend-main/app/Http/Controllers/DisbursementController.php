@@ -537,11 +537,14 @@ class DisbursementController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
+            'cancel'        => 'required|boolean',
+            'bank_id'       => 'required_if:cancel,true|exists:lib_banks,id',
+            'cheque_number' => 'required_if:cancel,true|string',
+            'payee'         => 'required_if:cancel,true|string',
+
+
             'date' => 'required|string|regex:/^\d{2}\/\d{2}\/\d{4}$/',
             'dv_number' => 'required|string',
-            'cheque_number' => 'required|string',
-            'bank_id' => 'required|exists:lib_banks,id',
-            'payee' => 'required|string',
             'dv_amount' => 'required|numeric|min:0',
             'expenses' => 'array',
             'expenses.*.id' => 'nullable|exists:tran_expense_details,id',
@@ -579,11 +582,37 @@ class DisbursementController extends Controller
             $disbursement->update([
                 'date' => $formattedDate,
                 'dv_number' => $request->dv_number,
-                'cheque_number' => $request->cheque_number,
-                'bank_id' => $request->bank_id,
-                'payee' => $request->payee,
                 'dv_amount' => $request->dv_amount,
             ]);
+            if($request->cancel){
+                $disbursement->update([
+                    'cheque_number' => $request->cheque_number,
+                    'bank_id' => $request->bank_id,
+                    'payee' => $request->payee,
+                ]);
+                $cheque=LibCheque::where('disbursement_id', $id)
+                    ->first();
+                    
+                if ($cheque) {
+                    $cheque->status = 'cancelled';
+                    $cheque->save();
+                }
+
+                $newbooklets = LibBooklet::where('bank_id', $request->bank_id)->get();
+                $newcheque = LibCheque::where('cheque_number', $request->cheque_number)
+                    ->whereIn('booklet_id', $newbooklets->pluck('id'))
+                    ->first();
+
+                if ($newcheque) {
+                    $newcheque->status = 'used';
+                    $newcheque->disbursement_id = $id;
+                    $newcheque->save();
+                }
+            }
+
+            // Update bank and booklet statuses after voiding cheque
+            $bankLibraryController = new \App\Http\Controllers\Library\BankLibraryController();
+            $bankLibraryController->updateBanksStatus();
 
             // Update expense details - handle existing and new ones
             if ($request->has('expenses') && is_array($request->expenses)) {
