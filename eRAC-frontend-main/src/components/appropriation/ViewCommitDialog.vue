@@ -83,12 +83,21 @@
                 <!-- Expense Item and Sub-Item Rows (only if expanded) -->
                 <template v-if="expandedTypes[expenseType.id] && expenseType.children && expenseType.children.length > 0">
                   <template v-for="expenseItem in expenseType.children" :key="'item-' + expenseItem.id">
+
                     <!-- Item Row (always show as header) -->
+
                     <div
-                      class="row"
-                      style="padding: 6px 12px; min-height: 32px; border-bottom: 1px solid #f0f0f0"
+                      class="row item-row"
+                      :class="getItemClass(expenseItem)"
+                      style="
+                        padding: 6px 12px;
+                        min-height: 32px;
+                        border-bottom: 1px solid #f0f0f0;
+                        margin-left: 0;
+                      "
                     >
                       <div
+
                         class="col-6"
                         style="padding-left: 170px; display: flex; align-items: center"
                       >
@@ -99,9 +108,11 @@
                         <!-- Show item amount if no sub-items, otherwise show calculated total (bold if has sub-items) -->
                         <span :class="expenseItem.children && expenseItem.children.length > 0 ? 'text-weight-bold' : 'text-weight-regular'"
                           >{{ appropriationStore.formatCurrency(expenseItem.children && expenseItem.children.length > 0 ? calculateItemTotal(expenseItem) : expenseItem.amount) }}
+
                         </span>
                       </div>
                     </div>
+
 
                     <!-- Sub-Item Rows (only if item has sub-items) -->
                     <template v-if="expenseItem.children && expenseItem.children.length > 0">
@@ -120,6 +131,7 @@
                           <div class="col-6 text-right">
                             <span class="text-weight-regular"
                               >{{ appropriationStore.formatCurrency(expenseSubItem.amount) }}
+
                             </span>
                           </div>
                         </div>
@@ -155,6 +167,7 @@ const viewAllocationData = ref(null)
 const viewAllocations = ref([])
 const allHistoryData = ref([])
 const expandedTypes = ref({})
+const expandedItems = ref({})
 
 const displayAccounts = computed(() => {
   if (!viewAllocations.value || viewAllocations.value.length === 0) return []
@@ -307,11 +320,13 @@ const toggleType = (typeId) => {
 const calculateTypeTotal = (expenseType) => {
   // Sum the type's own amount plus the items and sub-items under this type
   const typeAmount = expenseType.amount || 0
+
   const itemsAmount = expenseType.children?.reduce((sum, item) => {
     const itemAmount = item.amount || 0
     const subItemsAmount = item.children?.reduce((subSum, subItem) => subSum + (subItem.amount || 0), 0) || 0
     return sum + itemAmount + subItemsAmount
   }, 0) || 0
+
   return typeAmount + itemsAmount
 }
 const $q = useQuasar()
@@ -377,11 +392,13 @@ const totalAllocated = computed(() => {
 const calculateClassTotal = (expenseClass) => {
   return expenseClass.children.reduce((sum, type) => {
     const typeAmount = type.amount || 0
+
     const itemsAmount = type.children?.reduce((childSum, item) => {
       const itemAmount = item.amount || 0
       const subItemsAmount = item.children?.reduce((subSum, subItem) => subSum + (subItem.amount || 0), 0) || 0
       return childSum + itemAmount + subItemsAmount
     }, 0) || 0
+
     return sum + typeAmount + itemsAmount
   }, 0)
 }
@@ -416,6 +433,21 @@ const parseCurrency = (value) => {
 
 const getTypeClass = (expenseType) => {
   return expenseType.children?.length > 0 ? 'text-weight-bold' : 'text-weight-regular'
+}
+
+const getItemClass = (expenseItem) => {
+  return expenseItem.children?.length > 0 ? 'text-weight-bold' : 'text-weight-regular'
+}
+
+const toggleItem = (itemId) => {
+  expandedItems.value[itemId] = !expandedItems.value[itemId]
+}
+
+const calculateItemTotal = (expenseItem) => {
+  // Sum the item's own amount plus the subitems under this item
+  const itemAmount = expenseItem.amount || 0
+  const subItemsAmount = expenseItem.children?.reduce((sum, subItem) => sum + (subItem.amount || 0), 0) || 0
+  return itemAmount + subItemsAmount
 }
 
 defineExpose({
@@ -940,6 +972,118 @@ defineExpose({
 @media (min-width: 601px) and (max-width: 900px) {
   .q-input .q-icon[name="search"] {
     font-size: 0.9rem !important;
+  }
+}
+
+/* Item and Subitem row styles */
+.item-row {
+  background-color: #ffffff !important;
+  border-left: none !important;
+}
+
+.subitem-row {
+  background-color: #fafafa !important;
+  border-left: 3px solid #e0e0e0 !important;
+  margin-left: 24px !important;
+  position: relative;
+}
+
+.subitem-row:hover {
+  background-color: #f0f0f0 !important;
+}
+
+.subitem-row::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: #e0e0e0;
+}
+
+/* Column-specific styles */
+.item-name-column {
+  position: relative;
+}
+
+.subitem-name-column {
+  position: relative;
+  padding-left: 48px !important;
+}
+
+.item-amount-column,
+.subitem-amount-column {
+  position: relative;
+}
+
+/* Expand/collapse button styles */
+.expand-btn {
+  min-width: 20px !important;
+  margin-right: 4px !important;
+  padding: 2px !important;
+}
+
+.expand-btn .q-icon {
+  font-size: 0.7rem !important;
+}
+
+/* Icon styles */
+.item-icon {
+  font-size: 0.7rem !important;
+}
+
+.subitem-icon {
+  font-size: 0.6rem !important;
+  color: #666 !important;
+}
+
+/* Name styles */
+.item-name {
+  font-size: 0.9rem !important;
+}
+
+.subitem-name {
+  font-size: 0.85rem !important;
+  color: #666 !important;
+}
+
+/* Amount styles */
+.subitem-amount {
+  font-size: 0.85rem !important;
+  color: #666 !important;
+}
+
+/* Chip styles for subitem count */
+.subitem-count-chip {
+  font-size: 0.6rem !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  padding: 0 6px !important;
+}
+
+/* Visual hierarchy improvements */
+.item-row {
+  border-left: 2px solid transparent !important;
+}
+
+.item-row:hover {
+  background-color: #f8f9fa !important;
+  border-left-color: #e3f2fd !important;
+}
+
+/* Responsive adjustments for better column separation */
+@media (max-width: 768px) {
+  .subitem-row {
+    margin-left: 16px !important;
+  }
+  
+  .subitem-name-column {
+    padding-left: 32px !important;
+  }
+  
+  .item-name-column {
+    padding-left: 32px !important;
   }
 }
 </style>

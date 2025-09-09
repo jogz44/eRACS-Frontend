@@ -80,8 +80,15 @@ export const useSupplementalBudgetStore = defineStore('supplementalBudget', {
 
         this.supplementalBudgets = response.data.data || []
         this.totalSupplementalAmount = response.data.total_amount || 0
+        
+        // Recalculate total if not provided by API
+        if (!response.data.total_amount) {
+          this.totalSupplementalAmount = this.supplementalBudgets.reduce((sum, budget) => sum + (budget.total_amount || 0), 0)
+        }
       } catch (error) {
         console.error('Error fetching supplemental budgets:', error)
+        // Don't clear existing data on error, just log it
+        console.warn('Keeping existing supplemental budgets data due to fetch error')
         throw error
       } finally {
         this.loading = false
@@ -115,8 +122,15 @@ export const useSupplementalBudgetStore = defineStore('supplementalBudget', {
 
         this.availableUnusedExpenses = response.data.data || []
         this.totalUnusedAmount = response.data.total_unused || 0
+        
+        // Recalculate total if not provided by API
+        if (!response.data.total_unused) {
+          this.totalUnusedAmount = this.availableUnusedExpenses.reduce((sum, expense) => sum + (expense.unused_amount || 0), 0)
+        }
       } catch (error) {
         console.error('Error fetching unused expenses:', error)
+        // Don't clear existing data on error, just log it
+        console.warn('Keeping existing unused expenses data due to fetch error')
         throw error
       } finally {
         this.loading = false
@@ -142,15 +156,17 @@ export const useSupplementalBudgetStore = defineStore('supplementalBudget', {
 
         console.log('Supplemental budget created successfully:', response.data)
 
-        // Add a small delay to ensure backend transaction is committed
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
-        // Refresh both data sources in parallel to ensure consistency
-        console.log('Refreshing data after creation...')
-        await Promise.all([
+        // Use Promise.allSettled to handle partial failures gracefully
+        const results = await Promise.allSettled([
           this.fetchSupplementalBudgets(),
           this.fetchAvailableUnusedExpenses()
         ])
+        
+        // Check for any failures
+        const failures = results.filter(result => result.status === 'rejected')
+        if (failures.length > 0) {
+          console.warn('Some data refresh operations failed:', failures)
+        }
         
         // Force reactive update by recalculating totals
         this.totalSupplementalAmount = this.supplementalBudgets.reduce((sum, budget) => sum + (budget.total_amount || 0), 0)

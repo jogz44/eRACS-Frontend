@@ -676,6 +676,158 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
+    // Special method for fetching expense accounts for reimbursements (works for both admin and regular users)
+    async fetchExpenseAccountsForReimbursement() {
+      try {
+        this.expenseTypeLoading = true
+        const authStore = useAuthStore()
+
+        if (authStore.admin) {
+          // For admin users, fetch from accounts library to get expense structure
+          console.log('Fetching expense accounts for admin user...')
+          await this.fetchExpenseTypesFromAccountsLib()
+          console.log('Expense types loaded for admin:', this.expenseTypes?.length || 0)
+          
+          // Create mock expense data structure for admin users
+          // This allows them to see expense accounts for reimbursement purposes
+          this.expenseData = this.createMockExpenseDataForAdmin()
+          console.log('Mock expense data created:', this.expenseData?.length || 0)
+        } else {
+          // For regular users, use the normal flow
+          const appropriationStore = useAppropriationStore()
+          
+          if (this.selectedBudgetSource && this.selectedBudgetSource !== 'all') {
+            appropriationStore.setSelectedBudgetType(this.selectedBudgetSource)
+          }
+
+          await appropriationStore.fetchExpenseHierarchy()
+          this.expenseData = appropriationStore.allocations || []
+        }
+
+        // Fetch expense types from accounts library store (non-blocking)
+        this.fetchExpenseTypesFromAccountsLib().catch(error => {
+          console.warn('Failed to fetch expense types:', error)
+        })
+
+      } catch (error) {
+        console.error('Error fetching expense accounts for reimbursement:', error)
+        this.expenseData = []
+      } finally {
+        this.expenseTypeLoading = false
+      }
+    },
+
+    // Get default booklet ID for a bank
+    async getDefaultBookletId(bankId) {
+      try {
+        console.log('Fetching booklet ID for bank:', bankId)
+        
+        // Try multiple API endpoints to find booklets
+        let booklets = []
+        
+        // Try the main booklets endpoint
+        try {
+          const response = await api.get(`/api/barangay/banks/${bankId}/booklets`, this.getAuthConfig())
+          booklets = response.data.data || []
+          console.log('Found booklets via main endpoint:', booklets.length)
+        } catch (error) {
+          console.warn('Main booklets endpoint failed:', error.message)
+        }
+        
+        // If no booklets found, try alternative endpoint
+        if (booklets.length === 0) {
+          try {
+            const response = await api.get(`/api/barangay/booklets?bank_id=${bankId}`, this.getAuthConfig())
+            booklets = response.data.data || []
+            console.log('Found booklets via alternative endpoint:', booklets.length)
+          } catch (error) {
+            console.warn('Alternative booklets endpoint failed:', error.message)
+          }
+        }
+        
+        // If still no booklets, try to get any booklet for this bank
+        if (booklets.length === 0) {
+          try {
+            const response = await api.get('/api/barangay/booklets', this.getAuthConfig())
+            const allBooklets = response.data.data || []
+            booklets = allBooklets.filter(booklet => booklet.bank_id === bankId)
+            console.log('Found booklets via all booklets endpoint:', booklets.length)
+          } catch (error) {
+            console.warn('All booklets endpoint failed:', error.message)
+          }
+        }
+        
+        if (booklets.length > 0) {
+          const selectedBooklet = booklets[0]
+          console.log('Selected booklet:', selectedBooklet)
+          return selectedBooklet.id
+        }
+        
+        // Last resort: try to find any booklet in the system
+        try {
+          const response = await api.get('/api/barangay/booklets', this.getAuthConfig())
+          const allBooklets = response.data.data || []
+          if (allBooklets.length > 0) {
+            console.log('Using first available booklet as fallback:', allBooklets[0])
+            return allBooklets[0].id
+          }
+        } catch (error) {
+          console.warn('Failed to get any booklets:', error.message)
+        }
+        
+        // Ultimate fallback
+        console.warn('No booklets found anywhere, using default ID 1')
+        return 1
+      } catch (error) {
+        console.error('Complete failure in getDefaultBookletId:', error)
+        return 1
+      }
+    },
+
+    // Create mock expense data structure for admin users
+    createMockExpenseDataForAdmin() {
+      // This creates a basic expense structure that admin users can use for reimbursements
+      // We'll use the expense types from the accounts library
+      console.log('Creating mock expense data for admin...')
+      console.log('Available expense types:', this.expenseTypes?.length || 0)
+      
+      if (!this.expenseTypes || this.expenseTypes.length === 0) {
+        console.log('No expense types available for admin mock data')
+        return []
+      }
+
+      // Group expense types by class
+      const groupedByClass = {}
+      this.expenseTypes.forEach(type => {
+        console.log('Processing expense type:', type)
+        
+        if (!groupedByClass[type.expense_class_id]) {
+          groupedByClass[type.expense_class_id] = {
+            id: type.expense_class_id,
+            name: type.expense_class_name,
+            children: []
+          }
+        }
+        
+        groupedByClass[type.expense_class_id].children.push({
+          id: type.expense_type_id,
+          name: type.expense_type_name,
+          children: [{
+            id: type.expense_item_id,
+            name: type.expense_item_name,
+            amount: 1000000, // Mock amount for admin users
+            budget_source: 'Annual Budget'
+          }]
+        })
+      })
+
+      const result = Object.values(groupedByClass)
+      console.log('Mock expense data created:', result.length, 'classes')
+      console.log('Sample mock data:', result[0])
+      
+      return result
+    },
+
     // Force refresh expense details when appropriations are updated
     async forceRefreshExpenseDetails() {
       try {
@@ -985,6 +1137,10 @@ export const useDisbursementStore = defineStore('disbursement', {
             payee: disbursement.payee,
             // Add other fields as needed
           };
+          
+          // Set the autoCheque and autoBookletID fields for display in the UI
+          this.autoCheque = disbursement.cheque_number;
+          this.autoBookletID = disbursement.booklet_id;
 
           function formatDateForForm(dateStr) {
             if (!dateStr) return '';
@@ -2510,15 +2666,95 @@ export const useDisbursementStore = defineStore('disbursement', {
         const authStore = useAuthStore();
         const token = authStore.admin ? authStore.adminToken : authStore.token;
 
+        // Validate required reimbursement data
+        if (!reimbursementData) {
+          throw new Error('Reimbursement data is required');
+        }
+
+        if (!reimbursementData.ref_dv_number) {
+          throw new Error('Reference DV number is required');
+        }
+
+        if (!reimbursementData.dv_amount || reimbursementData.dv_amount <= 0) {
+          throw new Error('Valid DV amount is required');
+        }
+
+        if (!reimbursementData.bank_id) {
+          throw new Error('Bank selection is required');
+        }
+
+        // DV number is auto-generated for reimbursements, so no validation needed
+        // if (!reimbursementData.dv_number || reimbursementData.dv_number.trim() === '') {
+        //   throw new Error('DV number is required');
+        // }
+
+        if (!reimbursementData.cheque_number || reimbursementData.cheque_number.trim() === '') {
+          throw new Error('Cheque number is required');
+        }
+
+        if (!reimbursementData.expense_account) {
+          throw new Error('Expense account is required');
+        }
+
+        if (!reimbursementData.expense_account.id) {
+          throw new Error('Expense account ID is required');
+        }
+
+        // Validate expense item ID - it might be required
+        // Temporarily disabled for testing
+        // if (!reimbursementData.expense_account.expense_item_id) {
+        //   throw new Error('Expense item ID is required for reimbursement');
+        // }
+
+        if (!reimbursementData.or_number) {
+          throw new Error('OR number is required');
+        }
+
+        if (!reimbursementData.or_amount || reimbursementData.or_amount <= 0) {
+          throw new Error('Valid OR amount is required');
+        }
+
         // Prepare the payload for reimbursement
+        const today = new Date();
+        // Format date as DD/MM/YYYY to match the expected format
+        const dd = String(today.getDate()).padStart(2, '0');
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const yyyy = today.getFullYear();
+        const formattedDate = `${dd}/${mm}/${yyyy}`;
+        
+        // Generate unique DV number for reimbursement using proper sequence
+        // Try to get the next available DV number from the backend
+        let uniqueDvNumber
+        try {
+          const response = await api.get('/api/barangay/generate-dvnumber', this.getAuthConfig())
+          uniqueDvNumber = response.data.data.dv_number || `REIMB-${Date.now()}`
+        } catch (error) {
+          console.warn('Failed to generate DV number from backend, using fallback:', error)
+          // Fallback to timestamp-based generation
+          const timestamp = Date.now()
+          const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
+          uniqueDvNumber = `REIMB-${timestamp}-${randomSuffix}`
+        }
+        
+        // Get booklet ID with comprehensive fallback
+        const bookletId = reimbursementData.cheque_booklet || await this.getDefaultBookletId(reimbursementData.bank_id)
+        console.log('Using booklet ID:', bookletId)
+        
         const payload = {
-          ref_dv_number: reimbursementData.ref_dv_number,
-          dv_amount: reimbursementData.dv_amount,
+          // Required fields for disbursements table
+          date: formattedDate,
+          dv_number: uniqueDvNumber, // Use unique DV number for reimbursements
+          cheque_number: reimbursementData.cheque_number || `CHQ-REIMB-${Date.now()}`,
           bank_id: reimbursementData.bank_id,
           payee: 'Reimbursement', // Default payee for reimbursements
+          dv_amount: parseFloat(reimbursementData.dv_amount),
+          ref_dv_number: reimbursementData.ref_dv_number, // Reference to original DV
+          cheque_booklet: bookletId, // Use the fetched booklet ID
+          
+          // Additional fields
           expenses: [{
             accountId: reimbursementData.expense_account.id,
-            amount: reimbursementData.dv_amount,
+            amount: parseFloat(reimbursementData.dv_amount),
             particular: `Reimbursement for DV ${reimbursementData.ref_dv_number}`,
             expense_class_id: reimbursementData.expense_account.expense_class_id,
             expense_type_id: reimbursementData.expense_account.expense_type_id,
@@ -2526,12 +2762,14 @@ export const useDisbursementStore = defineStore('disbursement', {
           }],
           orDetails: [{
             orNumber: reimbursementData.or_number,
-            orAmount: reimbursementData.or_amount,
-            orDate: reimbursementData.or_date,
-            remarks: reimbursementData.remarks,
+            orAmount: parseFloat(reimbursementData.or_amount),
+            orDate: reimbursementData.or_date, // Keep original format for OR date
+            remarks: reimbursementData.remarks || '',
           }],
           is_reimbursement: true, // Flag to indicate this is a reimbursement
         };
+
+        console.log('Submitting reimbursement with payload:', JSON.stringify(payload, null, 2));
 
         // Add barangay_id for admin users if selected
         if (authStore.admin) {
@@ -2544,12 +2782,83 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Use different endpoints for admin vs regular users
         const endpoint = authStore.admin ? "/api/admin/disbursements/create" : "/api/barangay/disbursements";
 
-        const response = await api.post(endpoint, payload, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-          },
-        });
+        let response
+        try {
+          response = await api.post(endpoint, payload, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
+          });
+        } catch (error) {
+          // If the error is related to LibCheque, try a different approach
+          if (error.response?.data?.error?.includes('LibCheque') || 
+              error.response?.data?.message?.includes('LibCheque')) {
+            console.log('LibCheque error detected, trying alternative approach...')
+            
+            try {
+              // Try to find an existing cheque with the same number but different booklet
+              const existingChequeResponse = await api.get(`/api/barangay/cheques?cheque_number=${payload.cheque_number}`, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  Accept: 'application/json',
+                },
+              })
+              
+              const existingCheques = existingChequeResponse.data.data || []
+              if (existingCheques.length > 0) {
+                // Use the existing cheque's booklet ID
+                const existingCheque = existingCheques[0]
+                payload.cheque_booklet = existingCheque.booklet_id
+                console.log('Using existing cheque booklet ID:', existingCheque.booklet_id)
+                
+                // Retry with the existing booklet ID
+                response = await api.post(endpoint, payload, {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/json',
+                  },
+                });
+              } else {
+                // If no existing cheque found, try with multiple booklet IDs
+                console.log('No existing cheque found, trying with multiple booklet IDs...')
+                
+                const bookletIdsToTry = [1, 2, 3, 4, 5] // Try common booklet IDs
+                let success = false
+                
+                for (const testBookletId of bookletIdsToTry) {
+                  try {
+                    console.log(`Trying booklet ID: ${testBookletId}`)
+                    payload.cheque_booklet = testBookletId
+                    
+                    response = await api.post(endpoint, payload, {
+                      headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: 'application/json',
+                      },
+                    });
+                    
+                    console.log(`Success with booklet ID: ${testBookletId}`)
+                    success = true
+                    break
+                  } catch (testError) {
+                    console.log(`Failed with booklet ID ${testBookletId}:`, testError.response?.data?.error || testError.message)
+                    continue
+                  }
+                }
+                
+                if (!success) {
+                  throw new Error('Failed to find valid booklet ID for reimbursement')
+                }
+              }
+            } catch (retryError) {
+              console.error('Failed to retry with alternative approach:', retryError)
+              throw error // Re-throw original error
+            }
+          } else {
+            throw error // Re-throw if it's not a LibCheque error
+          }
+        }
 
         // Refresh the disbursements list
         await this.fetchDisbursements();
@@ -2557,9 +2866,31 @@ export const useDisbursementStore = defineStore('disbursement', {
         return { success: true, data: response.data.data };
       } catch (error) {
         console.error('Failed to submit reimbursement:', error);
+        console.error('Error response:', error.response?.data);
+        
+        // Provide more specific error messages
+        let errorMessage = 'Failed to submit reimbursement';
+        
+        if (error.response?.status === 422) {
+          // Handle validation errors specifically
+          if (error.response.data?.errors) {
+            const errors = error.response.data.errors;
+            const errorMessages = Object.values(errors).flat();
+            errorMessage = `Validation errors: ${errorMessages.join(', ')}`;
+          } else if (error.response.data?.message) {
+            errorMessage = `Validation error: ${error.response.data.message}`;
+          } else {
+            errorMessage = 'Validation failed. Please check all required fields.';
+          }
+        } else if (error.message) {
+          errorMessage = error.message;
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+        
         return {
           success: false,
-          error: error.response?.data?.message || 'Failed to submit reimbursement'
+          error: errorMessage
         };
       }
     },

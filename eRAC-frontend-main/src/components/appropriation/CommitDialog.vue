@@ -152,13 +152,16 @@
                     v-for="expenseItem in expenseType.children"
                     :key="'item-' + expenseItem.id"
                   >
+
                     <!-- Item Row (always show as header, with input only if no sub-items) -->
                     <div
                       class="row"
+
                       style="
                         padding: 6px 12px;
                         min-height: 32px;
                         border-bottom: 1px solid #f0f0f0;
+
                       "
                     >
                       <div
@@ -215,10 +218,12 @@
                       >
                         <div
                           class="row"
+
                           style="
                             padding: 6px 12px;
                             min-height: 32px;
                             border-bottom: 1px solid #f0f0f0;
+
                           "
                         >
                           <div
@@ -236,13 +241,16 @@
                                 (val) => {
                                   const cleanValue = handleAmountInput(val)
                                   appropriationStore.updateAllocationAmount(`subitem-${expenseSubItem.id}`, cleanValue)
+
                                   updateUnappropriated()
                                 }
                               "
                               @blur="
                                 (event) => {
                                   const formatted = formatToTwoDecimals(event.target.value)
+
                                   appropriationStore.updateAllocationAmount(`subitem-${expenseSubItem.id}`, formatted)
+
                                   updateUnappropriated()
                                 }
                               "
@@ -345,6 +353,9 @@ const appropriationStore = useAppropriationStore()
 const searchQuery = ref('')
 // const showDebugInfo = ref(false)
 const $q = useQuasar()
+
+// State for managing expanded items
+const expandedItems = ref({})
 
 // Utility function to safely parse currency values
 const parseCurrency = (value) => {
@@ -477,6 +488,16 @@ const newAllocationsTotal = computed(() => {
               total += currentAmount
             }
           }
+          
+          // Include subitems
+          if (item.children && item.children.length > 0) {
+            item.children.forEach((subItem) => {
+              const subAmount = parseCurrency(subItem.amount)
+              if (subAmount > 0) {
+                total += subAmount
+              }
+            })
+          }
         })
       } else {
         const currentAmount = parseCurrency(expenseType.amount)
@@ -544,6 +565,14 @@ const getTypeClass = (expenseType) => {
   return expenseType.children?.length > 0 ? 'text-weight-bold' : 'text-weight-regular'
 }
 
+const getItemClass = (expenseItem) => {
+  return expenseItem.children?.length > 0 ? 'text-weight-bold' : 'text-weight-regular'
+}
+
+const toggleItem = (itemId) => {
+  expandedItems.value[itemId] = !expandedItems.value[itemId]
+}
+
 const calculateClassTotal = (expenseClass) => {
   let total = 0
 
@@ -557,12 +586,14 @@ const calculateClassTotal = (expenseClass) => {
         total += parseCurrency(item.amount)
       }
 
+
       // Include sub-items
       item.children?.forEach((subItem) => {
         if (subItem.amount) {
           total += parseCurrency(subItem.amount)
         }
       })
+
     })
   })
 
@@ -638,6 +669,25 @@ const submitAllocation = async () => {
                 })
                 hasValidAllocation = true
               }
+            }
+            
+            // Handle subitems
+            if (item.children && item.children.length > 0) {
+              item.children.forEach((subItem) => {
+                const subAmount = parseCurrency(subItem.amount)
+                if (subAmount > 0) {
+                  allocations.push({
+                    id: subItem.id,
+                    type: 'subitem',
+                    amount: subAmount,
+                    expense_class_id: expenseClass.id,
+                    expense_type_id: expenseType.id,
+                    expense_item_id: item.id,
+                    expense_subitem_id: subItem.id
+                  })
+                  hasValidAllocation = true
+                }
+              })
             }
           })
         } else {
@@ -983,6 +1033,112 @@ const confirmAndSubmitAllocation = async () => {
 
 .text-warning {
   color: #ff9800;
+}
+
+/* Item and Subitem row styles */
+.item-row {
+  background-color: #ffffff !important;
+  border-left: none !important;
+}
+
+.subitem-row {
+  background-color: #fafafa !important;
+  border-left: 3px solid #e0e0e0 !important;
+  margin-left: 24px !important;
+  position: relative;
+}
+
+.subitem-row:hover {
+  background-color: #f0f0f0 !important;
+}
+
+.subitem-row::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: #e0e0e0;
+}
+
+/* Column-specific styles */
+.item-name-column {
+  position: relative;
+}
+
+.subitem-name-column {
+  position: relative;
+  padding-left: 48px !important;
+}
+
+.item-amount-column,
+.subitem-amount-column {
+  position: relative;
+}
+
+/* Expand/collapse button styles */
+.expand-btn {
+  min-width: 20px !important;
+  margin-right: 4px !important;
+  padding: 2px !important;
+}
+
+.expand-btn .q-icon {
+  font-size: 0.7rem !important;
+}
+
+/* Icon styles */
+.item-icon {
+  font-size: 0.7rem !important;
+}
+
+.subitem-icon {
+  font-size: 0.6rem !important;
+  color: #666 !important;
+}
+
+/* Name styles */
+.item-name {
+  font-size: 0.9rem !important;
+}
+
+.subitem-name {
+  font-size: 0.85rem !important;
+  color: #666 !important;
+}
+
+/* Chip styles for subitem count */
+.subitem-count-chip {
+  font-size: 0.6rem !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  padding: 0 6px !important;
+}
+
+/* Visual hierarchy improvements */
+.item-row {
+  border-left: 2px solid transparent !important;
+}
+
+.item-row:hover {
+  background-color: #f8f9fa !important;
+  border-left-color: #e3f2fd !important;
+}
+
+/* Responsive adjustments for better column separation */
+@media (max-width: 768px) {
+  .subitem-row {
+    margin-left: 16px !important;
+  }
+  
+  .subitem-name-column {
+    padding-left: 32px !important;
+  }
+  
+  .item-name-column {
+    padding-left: 32px !important;
+  }
 }
 
 /* Responsive confirmation dialog */
