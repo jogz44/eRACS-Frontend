@@ -16,6 +16,7 @@ class TranAppropriation extends Model
         'expense_class_id',
         'expense_type_id',
         'expense_item_id',
+        'expense_sub_item_id',
         'amount',
         'transaction_date',
         'status',
@@ -56,6 +57,11 @@ class TranAppropriation extends Model
     public function expenseItem(): BelongsTo
     {
         return $this->belongsTo(LibExpenseItem::class);
+    }
+
+    public function expenseSubItem(): BelongsTo
+    {
+        return $this->belongsTo(LibExpenseItem::class, 'expense_sub_item_id');
     }
     public function details()
     {

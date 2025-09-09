@@ -581,22 +581,53 @@
                           style="padding-left: 32px; display: flex; align-items: center"
                         >
                           <q-icon name="arrow_right" size="xs" class="q-mr-xs" />
-                          <span>{{ expenseItem.name }}</span>
+                          <span :class="expenseItem.children && expenseItem.children.length > 0 ? 'text-weight-bold' : 'text-weight-regular'">{{ expenseItem.name }}</span>
                         </div>
                         <div class="col-6 text-right">
-                          <q-input
-                            :model-value="formatInputValue(expenseItem.amount)"
-                            @update:model-value="(val) => handleEditAmountInput(expenseItem, val)"
-                            @blur="(event) => handleEditAmountBlur(expenseItem, event.target.value)"
-                            @keypress="blockNonNumeric"
-                            dense
-                            outlined
-                            class="edit-allocation-input"
-                            prefix="₱"
-                            placeholder="0.00"
-                          />
+                          <!-- Only show input if item has no sub-items -->
+                          <template v-if="!expenseItem.children || expenseItem.children.length === 0">
+                            <q-input
+                              :model-value="formatInputValue(expenseItem.amount)"
+                              @update:model-value="(val) => handleEditAmountInput(expenseItem, val)"
+                              @blur="(event) => handleEditAmountBlur(expenseItem, event.target.value)"
+                              @keypress="blockNonNumeric"
+                              dense
+                              outlined
+                              class="edit-allocation-input"
+                              prefix="₱"
+                              placeholder="0.00"
+                            />
+                          </template>
+                          <!-- Show amount display if item has sub-items -->
+                          <template v-else>
+                            <span class="text-weight-regular">{{ appropriationStore.formatCurrency(calculateItemTotal(expenseItem)) }}</span>
+                          </template>
                         </div>
                       </div>
+                      <!-- Sub-Item Rows (only if item has sub-items) -->
+                      <template v-if="expenseItem.children && expenseItem.children.length > 0">
+                        <template v-for="expenseSubItem in expenseItem.children" :key="'subitem-' + expenseSubItem.id">
+                          <div class="row q-pa-xs" style="border-bottom: 1px solid #f0f0f0">
+                            <div class="col-6" style="padding-left: 48px; display: flex; align-items: center">
+                              <q-icon name="arrow_right" size="xs" class="q-mr-xs" />
+                              <span class="text-weight-regular">{{ expenseSubItem.name }}</span>
+                            </div>
+                            <div class="col-6 text-right">
+                              <q-input
+                                :model-value="formatInputValue(expenseSubItem.amount)"
+                                @update:model-value="(val) => handleEditAmountInput(expenseSubItem, val)"
+                                @blur="(event) => handleEditAmountBlur(expenseSubItem, event.target.value)"
+                                @keypress="blockNonNumeric"
+                                dense
+                                outlined
+                                class="edit-allocation-input"
+                                prefix="₱"
+                                placeholder="0.00"
+                              />
+                            </div>
+                          </div>
+                        </template>
+                      </template>
                     </template>
                   </template>
                 </template>
@@ -1179,6 +1210,8 @@ const initializeEditDisplayAccounts = () => {
     const typeName = alloc.expense_type_name || `Type ${typeId}`
     const itemId = alloc.expense_item_id
     const itemName = alloc.expense_item_name || `Item ${itemId}`
+    const subItemId = alloc.expense_sub_item_id
+    const subItemName = alloc.expense_sub_item_name || `Sub-item ${subItemId}`
 
     if (!classMap[classId]) {
       classMap[classId] = {
@@ -1215,11 +1248,41 @@ const initializeEditDisplayAccounts = () => {
       } else {
         type.amount = 0
       }
-      type.children.push({
-        id: itemId,
-        name: itemName,
-        amount: alloc.amount,
-      })
+      
+      // Check if this is a sub-item allocation
+      if (subItemId) {
+        // Handle sub-item allocation
+        let item = type.children.find((i) => i.id === itemId)
+        if (!item) {
+          item = {
+            id: itemId,
+            name: itemName,
+            amount: 0,
+            children: [],
+          }
+          type.children.push(item)
+        }
+
+        // Add the sub-item
+        item.children.push({
+          id: subItemId,
+          name: subItemName,
+          amount: alloc.amount,
+        })
+      } else {
+        // Handle regular item allocation
+        let item = type.children.find((i) => i.id === itemId)
+        if (item) {
+          item.amount += alloc.amount
+        } else {
+          type.children.push({
+            id: itemId,
+            name: itemName,
+            amount: alloc.amount,
+            children: [],
+          })
+        }
+      }
     }
   })
 
@@ -1229,6 +1292,11 @@ const initializeEditDisplayAccounts = () => {
     cls.children.forEach((type) => {
       if (type.children) {
         type.children.sort((a, b) => a.id - b.id)
+        type.children.forEach(item => {
+          if (item.children) {
+            item.children.sort((a, b) => a.id - b.id)
+          }
+        })
       }
     })
   })
@@ -1417,8 +1485,11 @@ const openEditAllocationDialog = async (row) => {
     // Group by expense hierarchy to combine amounts for the same expense items/types
     const allocationMap = new Map()
 
-    allAllocations.forEach((allocation) => {
-      const key = `${allocation.expense_class_id}-${allocation.expense_type_id}-${allocation.expense_item_id || 'null'}`
+
+    allAllocations.forEach(allocation => {
+      // Include sub-item ID in the key to properly distinguish sub-item allocations
+      const key = `${allocation.expense_class_id}-${allocation.expense_type_id}-${allocation.expense_item_id || 'null'}-${allocation.expense_sub_item_id || 'null'}`
+
 
       if (allocationMap.has(key)) {
         // Add amounts for the same expense
@@ -1742,7 +1813,33 @@ const parseCurrency = (value) => {
 
 const calculateTypeTotal = (type) => {
   if (!type || !type.children) return 0
-  return type.children.reduce((sum, item) => sum + parseCurrency(item.amount), 0)
+
+  let total = 0
+
+  type.children.forEach((item) => {
+    // Use the item total which includes the item's own amount plus all of its sub-items
+    total += calculateItemTotal(item)
+  })
+
+  return Math.round(total * 100) / 100
+}
+
+const calculateItemTotal = (expenseItem) => {
+  let total = 0
+
+  // Include the item's own amount if it exists
+  if (expenseItem.amount) {
+    total += parseCurrency(expenseItem.amount)
+  }
+
+  // Include all sub-item amounts
+  expenseItem.children?.forEach((subItem) => {
+    if (subItem.amount) {
+      total += parseCurrency(subItem.amount)
+    }
+  })
+
+  return Math.round(total * 100) / 100
 }
 
 const canEditType = (expenseType) => {
@@ -1784,18 +1881,41 @@ const saveEditedAllocation = async () => {
           expenseType.children.forEach((item) => {
             if (!item) return
 
-            const itemAmount = parseCurrency(item.amount)
-            if (itemAmount > 0) {
-              totalAllocated += itemAmount
+            if (item.children && item.children.length > 0) {
+              // For items with sub-items, only allocate to sub-items
+              item.children.forEach((subItem) => {
+                const subItemAmount = parseCurrency(subItem.amount)
+                if (subItemAmount > 0) {
+                  totalAllocated += subItemAmount
+                }
+                allocations.push({
+                  id: subItem.id,
+                  type: 'sub-item',
+                  amount: subItemAmount,
+                  expense_class_id: expenseClass.id,
+                  expense_type_id: expenseType.id,
+                  expense_item_id: item.id,
+                  expense_sub_item_id: subItem.id
+                })
+              })
+            } else {
+              // For items without sub-items, allocate to the item
+              const itemAmount = parseCurrency(item.amount)
+              if (itemAmount > 0) {
+                totalAllocated += itemAmount
+              }
+              allocations.push({
+                id: item.id,
+                type: 'item',
+                amount: itemAmount,
+                expense_class_id: expenseClass.id,
+                expense_type_id: expenseType.id,
+                expense_item_id: item.id,
+                expense_sub_item_id: null
+              })
             }
-            allocations.push({
-              id: item.id,
-              type: 'item',
-              amount: itemAmount,
-              expense_class_id: expenseClass.id,
-              expense_type_id: expenseType.id,
-              expense_item_id: item.id,
-            })
+
+
           })
         }
       })

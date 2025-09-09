@@ -37,6 +37,14 @@ export const useChartDataStore = defineStore('chartData', {
         change: '0%',
       },
       {
+        label: 'Total Unappropriated',
+        value: '₱0.00',
+        icon: 'unappropriated',
+        color: 'secondary',
+        trend: 'up',
+        change: '0%',
+      },
+      {
         label: 'Total Balance',
         value: '₱0.00',
         icon: 'balance',
@@ -248,7 +256,6 @@ export const useChartDataStore = defineStore('chartData', {
         throw new Error('Authentication required')
       }
 
-
       return {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -318,7 +325,7 @@ export const useChartDataStore = defineStore('chartData', {
 
         const budgetsResponse = await api.get('/api/barangay/budgets', {
           ...this.getAuthConfig(),
-          params
+          params,
         })
         const budgets = budgetsResponse.data.data || []
 
@@ -356,6 +363,14 @@ export const useChartDataStore = defineStore('chartData', {
             change: '1.2%',
           },
           {
+            label: 'Total Unappropriated',
+            value: this.formatCurrency(totalBalance),
+            icon: 'unappropriated',
+            color: 'secondary',
+            trend: 'up',
+            change: '3.8%',
+          },
+          {
             label: 'Total Balance',
             value: this.formatCurrency(totalBalance),
             icon: 'balance',
@@ -377,7 +392,6 @@ export const useChartDataStore = defineStore('chartData', {
     // Fetch pie chart data from backend
     async fetchPieChartData(fiscalYearId = null) {
       try {
-
         // Get expense hierarchy with year filter
         const params = {}
         if (this.selectedYear !== 'all') {
@@ -389,7 +403,7 @@ export const useChartDataStore = defineStore('chartData', {
 
         const hierarchyResponse = await api.get('/api/barangay/expense-hierarchy', {
           ...this.getAuthConfig(),
-          params
+          params,
         })
 
         const expenseHierarchy = hierarchyResponse.data || []
@@ -402,7 +416,7 @@ export const useChartDataStore = defineStore('chartData', {
 
         const budgetsResponse = await api.get('/api/barangay/budgets', {
           ...this.getAuthConfig(),
-          params: budgetParams
+          params: budgetParams,
         })
         const budgets = budgetsResponse.data.data || []
 
@@ -459,7 +473,7 @@ export const useChartDataStore = defineStore('chartData', {
         }
         throw error
       } finally {
-        this.isLoading= false
+        this.isLoading = false
       }
     },
 
@@ -539,6 +553,14 @@ export const useChartDataStore = defineStore('chartData', {
           change: '1.2%',
         },
         {
+          label: 'Total Unappropriated',
+          value: this.formatCurrency(0),
+          icon: 'unappropriated',
+          color: 'secondary',
+          trend: 'up',
+          change: '3.8%',
+        },
+        {
           label: 'Total Balance',
           value: this.formatCurrency(0),
           icon: 'balance',
@@ -562,12 +584,11 @@ export const useChartDataStore = defineStore('chartData', {
 
         const disbResponse = await api.get('/api/barangay/disbursements', {
           ...this.getAuthConfig(),
-          params
+          params,
         })
         if (disbResponse.data && disbResponse.data.data) {
           // Transform data for the overview table
           this.disbursementOverviewRows = disbResponse.data.data.map((row) => {
-
             const aging = this.calculateAging(row.created_at, row.status)
 
             return {
@@ -599,13 +620,18 @@ export const useChartDataStore = defineStore('chartData', {
       try {
         this.isLoading = true
         console.log('Loading dashboard data...')
-        console.log('Selected year for API call:', this.selectedYear, 'Type:', typeof this.selectedYear)
+        console.log(
+          'Selected year for API call:',
+          this.selectedYear,
+          'Type:',
+          typeof this.selectedYear,
+        )
 
         try {
           // Try the new optimized dashboard endpoint first
           const response = await api.get('/api/barangay/dashboard/summary', {
             ...this.getAuthConfig(),
-            params: { year: this.selectedYear }
+            params: { year: this.selectedYear },
           })
           console.log('Dashboard API response:', response.data)
 
@@ -630,6 +656,7 @@ export const useChartDataStore = defineStore('chartData', {
               trend: 'down',
               change: '1.2%',
             },
+
             {
               label: 'Total Balance',
               value: this.formatCurrency(dashboardData.summary.total_balance),
@@ -698,14 +725,12 @@ export const useChartDataStore = defineStore('chartData', {
           try {
             const disbResponse = await api.get('/api/barangay/disbursements', {
               ...this.getAuthConfig(),
-              params: { year: this.selectedYear }
+              params: { year: this.selectedYear },
             })
             if (disbResponse.data && disbResponse.data.data) {
               // Transform data for the overview table
               this.disbursementOverviewRows = disbResponse.data.data.map((row) => {
-
                 const aging = this.calculateAging(row.created_at, row.status)
-
 
                 return {
                   id: row.id,
@@ -756,13 +781,19 @@ export const useChartDataStore = defineStore('chartData', {
             this.recentDisbursementRows = []
           }
 
+          if (dashboardData.summary.total_unappropriated > 0) {
+            this.pieChartData.labels.push('UNAPPROPRIATED')
+            this.pieChartData.datasets[0].data.push(dashboardData.summary.total_unappropriated)
+            this.pieChartData.datasets[0].backgroundColor.push('#BDBDBD')
+          }
+
           return dashboardData
         } catch (dashboardError) {
           console.warn('Dashboard endpoint failed, trying fallback method:', dashboardError)
 
           // Fallback: Use existing endpoints
-          
-          this.isLoading= true
+
+          this.isLoading = true
           await this.fetchDashboardSummary()
           await this.fetchPieChartData()
 
@@ -800,7 +831,7 @@ export const useChartDataStore = defineStore('chartData', {
           const currentYear = new Date().getFullYear()
           this.availableYears = [
             { value: 'all', label: 'All Years' },
-            { value: currentYear, label: currentYear.toString() }
+            { value: currentYear, label: currentYear.toString() },
           ]
           this.selectedYear = currentYear
           return
@@ -815,10 +846,10 @@ export const useChartDataStore = defineStore('chartData', {
         // Extract years and add "All Years" option
         this.availableYears = [
           { value: 'all', label: 'All Years' },
-          ...fiscalYears.map(fy => ({
+          ...fiscalYears.map((fy) => ({
             value: fy.year,
-            label: fy.year.toString()
-          }))
+            label: fy.year.toString(),
+          })),
         ]
 
         // Set default to current year if not already set
@@ -849,8 +880,6 @@ export const useChartDataStore = defineStore('chartData', {
         this.dateFrom = new Date(yearValue, 0, 1)
         this.dateTo = new Date(yearValue, 11, 31)
       }
-
-
     },
 
     resetToCurrentYear() {

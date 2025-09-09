@@ -6,7 +6,7 @@
           <div class="text-h6 text-weight-medium">Disbursement Transaction</div>
           <div class="text-caption text-grey-6">
             Showing transactions for fiscal year {{ currentFiscalYear }}
-          </div>
+        </div>
         </div>
         <q-btn icon="refresh" color="primary" flat dense @click="refreshData"
           :loading="loading" title="Refresh disbursements" />
@@ -217,8 +217,25 @@
             <div class="text-subtitle1 q-mb-md">
               <strong>Balance:</strong> ₱{{ store.forms.expense.balance.toLocaleString() }}
             </div>
-            <q-select outlined dense v-model="store.forms.expense.particulars" :options="filteredParticulars"
-              label="Particulars" use-input fill-input hide-selected new-value-mode="add-unique" @filter="filterFn" />
+            <!-- <q-select outlined dense v-model="store.forms.expense.particulars" :options="filteredParticulars"
+              label="Particulars" use-input fill-input hide-selected new-value-mode="add-unique" @filter="filterFn" /> -->
+            <q-select
+  outlined
+  dense
+  v-model="store.forms.expense.particulars"
+  :options="filteredParticulars"
+  label="Particulars"
+  use-input
+  fill-input
+  hide-selected
+  new-value-mode="add-unique"
+  option-label="label"
+  option-value="label"
+  map-options
+  emit-value
+  @filter="filterFn"
+/>
+
             <q-input outlined dense :model-value="formatInputValue(store.forms.expense.amount)"
               @update:model-value="(val) => (store.forms.expense.amount = handleAmountInput(val))"
               @blur="(e) => (store.forms.expense.amount = formatToTwoDecimals(e.target.value))" label="Amount"
@@ -227,8 +244,10 @@
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md">
+
             <q-btn flat label="Cancel" @click="handleDialogClose('expenseDetail')" />
             <q-btn label="Save" @click="handleSaveExpense" color="primary" />
+
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -253,8 +272,8 @@
             <q-td :props="props">
               <div class="row q-gutter-xs items-center justify-center">
                 <q-btn dense icon="edit" :color="props.row.status === 'Unliquidated' || props.row.status === 'Partial'
-                    ? 'orange'
-                    : 'grey'
+                  ? 'orange'
+                  : 'grey'
                   " :disable="props.row.status !== 'Unliquidated' && props.row.status !== 'Partial'"
                   :loading="store.loadingEditDisbursement === props.row.id" @click="handleEditDisbursement(props.row)"
                   v-permission="'edit'" />
@@ -282,11 +301,11 @@
           </template>
 
           <template v-slot:body-cell-status="props">
-            <q-td :props="props">
+             <q-td :props="props">
               <q-chip :color="getStatusColor(props.row.status)" :text-color="getStatusTextColor(props.row.status)" dense
                 :label="props.row.status" />
-            </q-td>
-          </template>
+             </q-td>
+           </template>
 
           <template v-slot:body-cell-remarks="props">
             <q-td :props="props">
@@ -419,9 +438,13 @@ const statusOptions = [
 const searchQuery = ref('')
 
 const filteredParticulars = ref(store.particulars)
-function filterFn(val, update) {
+
+function filterFn (val, update) {
+  console.log('[filterFn] input value:', val)
+
   if (val === '') {
     update(() => {
+      console.log('[filterFn] reset to all', store.particulars.length, 'items')
       filteredParticulars.value = store.particulars
     })
     return
@@ -429,11 +452,17 @@ function filterFn(val, update) {
 
   update(() => {
     const needle = val.toLowerCase()
-    filteredParticulars.value = store.particulars.filter((opt) =>
-      opt.label.toLowerCase().includes(needle),
+    const results = store.particulars.filter(opt =>
+      opt.label.toLowerCase().includes(needle)
     )
+    console.log('[filterFn] matches:', results.length, 'items')
+    filteredParticulars.value = results
   })
 }
+
+watch(filteredParticulars, (val) => {
+  console.log('[watch] filteredParticulars updated:', val.length)
+})
 
 // Formatting helpers for amount input (kept local to this component)
 const formatInputValue = (value) => {
@@ -1165,6 +1194,7 @@ const handleVoidDisbursement = (row) => {
 
 // Submit void request from dialog
 const handleSubmitVoidRequest = async () => {
+
   if (!store.forms.void.remarks || store.forms.void.remarks.trim() === '') {
     $q.notify({
       type: 'negative',
@@ -1201,12 +1231,13 @@ const handleSubmitVoidRequest = async () => {
     console.error('Error submitting void request:', error)
     $q.notify({
       type: 'negative',
+
       message: error.message || 'Failed to submit void request',
-      icon: 'error',
-      position: 'top',
+        icon: 'error',
+        position: 'top',
       timeout: 5000,
-    })
-  }
+      })
+    }
 }
 
 // Approver actions - now handled in ViewOrDetails component

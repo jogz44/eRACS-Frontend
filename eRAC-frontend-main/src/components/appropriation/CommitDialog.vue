@@ -152,126 +152,105 @@
                     v-for="expenseItem in expenseType.children"
                     :key="'item-' + expenseItem.id"
                   >
-                    <!-- Item Row (always show, regardless of children) -->
+
+                    <!-- Item Row (always show as header, with input only if no sub-items) -->
                     <div
-                      class="row item-row"
-                      :class="getItemClass(expenseItem)"
+                      class="row"
+
                       style="
                         padding: 6px 12px;
                         min-height: 32px;
                         border-bottom: 1px solid #f0f0f0;
-                        margin-left: 0;
+
                       "
                     >
                       <div
-                        class="col-6 item-name-column"
+                        class="col-6"
                         style="padding-left: 48px; display: flex; align-items: center"
                       >
-                        <!-- Expand/Collapse button for items with subitems -->
-                        <q-btn
-                          v-if="expenseItem.children && expenseItem.children.length > 0"
-                          flat
-                          dense
-                          size="xs"
-                          :icon="expandedItems[expenseItem.id] ? 'expand_more' : 'chevron_right'"
-                          @click="toggleItem(expenseItem.id)"
-                          style="min-width: 20px; margin-right: 4px;"
-                          class="q-pa-none expand-btn"
-                        />
-                        <q-icon 
-                          v-else
-                          name="arrow_right" 
-                          size="xs" 
-                          class="q-mr-sm item-icon" 
-                        />
-                        <span 
-                          class="item-name"
-                          :class="expenseItem.children && expenseItem.children.length > 0 ? 'text-weight-bold' : 'text-weight-regular'"
-                        >
-                          {{ expenseItem.name }}
-                        </span>
-                        <!-- Show subitem count if applicable -->
-                        <q-chip
-                          v-if="expenseItem.children && expenseItem.children.length > 0"
-                          size="xs"
-                          color="primary"
-                          text-color="white"
-                          class="q-ml-sm subitem-count-chip"
-                        >
-                          {{ expenseItem.children.length }} subitem{{ expenseItem.children.length !== 1 ? 's' : '' }}
-                        </q-chip>
+                        <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
+                        <span :class="expenseItem.children && expenseItem.children.length > 0 ? 'text-weight-bold' : 'text-weight-regular'">{{ expenseItem.name }}</span>
                       </div>
-                      <div class="col-6 text-right item-amount-column">
-                        <q-input
-                          dense
-                          :model-value="formatInputValue(expenseItem.amount)"
-                          @update:model-value="
-                            (val) => {
-                              const cleanValue = handleAmountInput(val)
-                              appropriationStore.updateAllocationAmount(`item-${expenseItem.id}`, cleanValue)
-                              updateUnappropriated()
-                            }
-                          "
-                          @blur="
-                            (event) => {
-                              const formatted = formatToTwoDecimals(event.target.value)
-                              appropriationStore.updateAllocationAmount(`item-${expenseItem.id}`, formatted)
-                              updateUnappropriated()
-                            }
-                          "
-                          prefix="₱"
-                          inputmode="decimal"
-                          pattern="\\d*\\.?\\d{0,2}"
-                          @keypress="blockNonNumeric"
-                          @paste.prevent="handlePasteNumeric"
-                          :rules="[validateAmountRule]"
-                          style="max-width: 230px; width: 100%; display: inline-block"
-                          class="q-pa-none"
-                          input-class="q-py-xs"
-                          placeholder="0.00"
-                        />
+                      <div class="col-6 text-right">
+                        <!-- Only show input if item has no sub-items -->
+                        <template v-if="!expenseItem.children || expenseItem.children.length === 0">
+                          <q-input
+                            dense
+                            :model-value="formatInputValue(expenseItem.amount)"
+                            @update:model-value="
+                              (val) => {
+                                const cleanValue = handleAmountInput(val)
+                                appropriationStore.updateAllocationAmount(`item-${expenseItem.id}`, cleanValue)
+                                updateUnappropriated()
+                              }
+                            "
+                            @blur="
+                              (event) => {
+                                const formatted = formatToTwoDecimals(event.target.value)
+                                appropriationStore.updateAllocationAmount(`item-${expenseItem.id}`, formatted)
+                                updateUnappropriated()
+                              }
+                            "
+                            prefix="₱"
+                            inputmode="decimal"
+                            pattern="\\d*\\.?\\d{0,2}"
+                            @keypress="blockNonNumeric"
+                            @paste.prevent="handlePasteNumeric"
+                            :rules="[validateAmountRule]"
+                            style="max-width: 230px; width: 100%; display: inline-block"
+                            class="q-pa-none"
+                            input-class="q-py-xs"
+                            placeholder="0.00"
+                          />
+                        </template>
+                        <!-- Show amount display if item has sub-items -->
+                        <template v-else>
+                          <span class="text-weight-regular">{{ appropriationStore.formatCurrency(calculateItemTotal(expenseItem)) }}</span>
+                        </template>
                       </div>
                     </div>
 
-                    <!-- Subitem Rows (only if expanded) -->
-                    <template v-if="expandedItems[expenseItem.id] && expenseItem.children && expenseItem.children.length > 0">
+                    <!-- Sub-Item Rows (only if item has sub-items) -->
+                    <template v-if="expenseItem.children && expenseItem.children.length > 0">
                       <template
-                        v-for="subItem in expenseItem.children"
-                        :key="'subitem-' + subItem.id"
+                        v-for="expenseSubItem in expenseItem.children"
+                        :key="'subitem-' + expenseSubItem.id"
                       >
                         <div
-                          class="row subitem-row"
+                          class="row"
+
                           style="
                             padding: 6px 12px;
                             min-height: 32px;
                             border-bottom: 1px solid #f0f0f0;
-                            background-color: #fafafa;
-                            margin-left: 24px;
-                            border-left: 3px solid #e0e0e0;
+
                           "
                         >
                           <div
-                            class="col-6 subitem-name-column"
-                            style="padding-left: 48px; display: flex; align-items: center"
+                            class="col-6"
+                            style="padding-left: 72px; display: flex; align-items: center"
                           >
-                            <q-icon name="subdirectory_arrow_right" size="xs" class="q-mr-sm subitem-icon" />
-                            <span class="text-weight-regular text-grey-7 subitem-name">{{ subItem.name }}</span>
+                            <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
+                            <span class="text-weight-regular">{{ expenseSubItem.name }}</span>
                           </div>
-                          <div class="col-6 text-right subitem-amount-column">
+                          <div class="col-6 text-right">
                             <q-input
                               dense
-                              :model-value="formatInputValue(subItem.amount)"
+                              :model-value="formatInputValue(appropriationStore.inputCache[`subitem-${expenseSubItem.id}`] || '')"
                               @update:model-value="
                                 (val) => {
                                   const cleanValue = handleAmountInput(val)
-                                  appropriationStore.updateAllocationAmount(`subitem-${subItem.id}`, cleanValue)
+                                  appropriationStore.updateAllocationAmount(`subitem-${expenseSubItem.id}`, cleanValue)
+
                                   updateUnappropriated()
                                 }
                               "
                               @blur="
                                 (event) => {
                                   const formatted = formatToTwoDecimals(event.target.value)
-                                  appropriationStore.updateAllocationAmount(`subitem-${subItem.id}`, formatted)
+
+                                  appropriationStore.updateAllocationAmount(`subitem-${expenseSubItem.id}`, formatted)
+
                                   updateUnappropriated()
                                 }
                               "
@@ -427,6 +406,14 @@ const displayAccounts = computed(() => {
                 name: item.name,
                 isMainCategory: item.isMainCategory,
                 amount: appropriationStore.inputCache[`item-${item.id}`] || '',
+                children: Array.isArray(item.children)
+                  ? item.children.map((subItem) => ({
+                      id: subItem.id,
+                      name: subItem.name,
+                      isMainCategory: subItem.isMainCategory,
+                      amount: appropriationStore.inputCache[`subitem-${subItem.id}`] || '',
+                    }))
+                  : [],
               }))
             : [],
         }))
@@ -448,9 +435,19 @@ const filterBySearchQuery = (allocations, query) => {
       }
 
       if (expenseType.children) {
-        expenseType.children = expenseType.children.filter((item) =>
-          item.name.toLowerCase().includes(lowerQuery),
-        )
+        expenseType.children = expenseType.children.filter((item) => {
+          if (item.name.toLowerCase().includes(lowerQuery)) {
+            return true
+          }
+
+          if (item.children) {
+            item.children = item.children.filter((subItem) =>
+              subItem.name.toLowerCase().includes(lowerQuery),
+            )
+            return item.children.length > 0
+          }
+          return false
+        })
         return expenseType.children.length > 0
       }
       return false
@@ -476,9 +473,20 @@ const newAllocationsTotal = computed(() => {
     expenseClass.children.forEach((expenseType) => {
       if (expenseType.children?.length) {
         expenseType.children.forEach((item) => {
-          const currentAmount = parseCurrency(item.amount)
-          if (currentAmount > 0) {
-            total += currentAmount
+          if (item.children?.length) {
+            // For items with sub-items, only count sub-item amounts
+            item.children.forEach((subItem) => {
+              const currentAmount = parseCurrency(subItem.amount)
+              if (currentAmount > 0) {
+                total += currentAmount
+              }
+            })
+          } else {
+            // For items without sub-items, count the item amount
+            const currentAmount = parseCurrency(item.amount)
+            if (currentAmount > 0) {
+              total += currentAmount
+            }
           }
           
           // Include subitems
@@ -577,16 +585,34 @@ const calculateClassTotal = (expenseClass) => {
       if (item.amount) {
         total += parseCurrency(item.amount)
       }
-      
-      // Include subitems
-      if (item.children && item.children.length > 0) {
-        item.children.forEach((subItem) => {
-          if (subItem.amount) {
-            total += parseCurrency(subItem.amount)
-          }
-        })
-      }
+
+
+      // Include sub-items
+      item.children?.forEach((subItem) => {
+        if (subItem.amount) {
+          total += parseCurrency(subItem.amount)
+        }
+      })
+
     })
+  })
+
+  return Math.round(total * 100) / 100
+}
+
+const calculateItemTotal = (expenseItem) => {
+  let total = 0
+
+  // Include the item's own amount if it exists
+  if (expenseItem.amount) {
+    total += parseCurrency(expenseItem.amount)
+  }
+
+  // Include all sub-item amounts
+  expenseItem.children?.forEach((subItem) => {
+    if (subItem.amount) {
+      total += parseCurrency(subItem.amount)
+    }
   })
 
   return Math.round(total * 100) / 100
@@ -613,17 +639,36 @@ const submitAllocation = async () => {
       expenseClass.children?.forEach((expenseType) => {
         if (expenseType.children?.length) {
           expenseType.children.forEach((item) => {
-            const amount = parseCurrency(item.amount)
-            if (amount > 0) {
-              allocations.push({
-                id: item.id,
-                type: 'item',
-                amount: amount,
-                expense_class_id: expenseClass.id,
-                expense_type_id: expenseType.id,
-                expense_item_id: item.id
+            if (item.children?.length) {
+              // For items with sub-items, only allocate to sub-items
+              item.children.forEach((subItem) => {
+                const amount = parseCurrency(subItem.amount)
+                if (amount > 0) {
+                  allocations.push({
+                    type: 'sub-item',
+                    amount: amount,
+                    expense_class_id: expenseClass.id,
+                    expense_type_id: expenseType.id,
+                    expense_item_id: item.id,
+                    expense_sub_item_id: subItem.id
+                  })
+                  hasValidAllocation = true
+                }
               })
-              hasValidAllocation = true
+            } else {
+              // For items without sub-items, allocate to the item
+              const amount = parseCurrency(item.amount)
+              if (amount > 0) {
+                allocations.push({
+                  type: 'item',
+                  amount: amount,
+                  expense_class_id: expenseClass.id,
+                  expense_type_id: expenseType.id,
+                  expense_item_id: item.id,
+                  expense_sub_item_id: null
+                })
+                hasValidAllocation = true
+              }
             }
             
             // Handle subitems
@@ -654,7 +699,8 @@ const submitAllocation = async () => {
               amount: amount,
               expense_class_id: expenseClass.id,
               expense_type_id: expenseType.id,
-              expense_item_id: null
+              expense_item_id: null,
+              expense_sub_item_id: null
             })
             hasValidAllocation = true
           }
@@ -850,22 +896,33 @@ const showConfirmationDialog = ref(false)
 const checkAndSubmitAllocation = () => {
   // Check for conflicts where type-level allocations exist but items also have allocations
   const conflicts = []
-  
+
   displayAccounts.value.forEach(expenseClass => {
     console.log('Checking expense class:', expenseClass.name)
     expenseClass.children?.forEach(expenseType => {
       // Read directly from input cache for current values
       const typeAmount = parseCurrency(appropriationStore.inputCache[`type-${expenseType.id}`] || '')
       const typeId = expenseType.id
-      
+
       if (typeAmount > 0 && expenseType.children && expenseType.children.length > 0) {
         let totalItemsAmount = 0
         expenseType.children.forEach(item => {
-          // Read directly from input cache for current values
-          const itemAmount = parseCurrency(appropriationStore.inputCache[`item-${item.id}`] || '')
-          console.log(`    Item: ${item.name}, Amount: ${itemAmount}, Raw: ${appropriationStore.inputCache[`item-${item.id}`]}`)
-          if (itemAmount > 0) {
-            totalItemsAmount += itemAmount
+          // For items with sub-items, sum all sub-item amounts
+          if (item.children && item.children.length > 0) {
+            item.children.forEach(subItem => {
+              const subItemAmount = parseCurrency(appropriationStore.inputCache[`subitem-${subItem.id}`] || '')
+              console.log(`      Sub-item: ${subItem.name}, Amount: ${subItemAmount}, Raw: ${appropriationStore.inputCache[`subitem-${subItem.id}`]}`)
+              if (subItemAmount > 0) {
+                totalItemsAmount += subItemAmount
+              }
+            })
+          } else {
+            // For items without sub-items, use item amount
+            const itemAmount = parseCurrency(appropriationStore.inputCache[`item-${item.id}`] || '')
+            console.log(`    Item: ${item.name}, Amount: ${itemAmount}, Raw: ${appropriationStore.inputCache[`item-${item.id}`]}`)
+            if (itemAmount > 0) {
+              totalItemsAmount += itemAmount
+            }
           }
         })
 

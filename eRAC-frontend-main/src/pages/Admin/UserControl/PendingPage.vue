@@ -181,7 +181,7 @@
           <div class="q-gutter-sm">
             <div><strong>Name:</strong> {{ viewModal.selectedRow?.name }}</div>
             <div><strong>Barangay:</strong> {{ viewModal.selectedRow?.barangay }}</div>
-            <div><strong>Position:</strong> {{ viewModal.selectedRow?.position?.name }}</div>
+            <div><strong>Position:</strong> {{ formatPosition(viewModal.selectedRow) }}</div>
             <div><strong>Username:</strong> {{ viewModal.selectedRow?.username }}</div>
             <div><strong>Email:</strong> {{ viewModal.selectedRow?.email }}</div>
             <div><strong>Request Date:</strong> {{ viewModal.selectedRow?.created_at }}</div>
@@ -323,6 +323,10 @@ export default {
         minute: '2-digit'
       })
     },
+    formatPosition(user) {
+      if (!user) return 'Unknown Position'
+      return (user.position && user.position.name) || user.position || user.position_name || 'Unknown Position'
+    },
     async loadPendingUsers() {
       this.loading = true
       try {
@@ -332,9 +336,9 @@ export default {
       } //catch (error) {
        // this.$q.notify({
         //  type: 'negative',
-       //   message: 'Failed to load pending users',
-       //   position: 'top',
-       // })
+        //  message: 'Failed to load pending users',
+        //  position: 'top',
+        // })
       finally {
         this.loading = false
       }

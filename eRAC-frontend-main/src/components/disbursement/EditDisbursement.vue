@@ -61,8 +61,8 @@
 
           <!-- Cancel Cheque Button -->
           <div v-if="!isChequeCancelled" class="col-md-4 col-sm-12 flex flex-center q-mt-lg">
-            <q-btn color="negative" label="Cancel Cheque" icon="cancel" class="full-width" @click="handleCancelCheque"
-               />
+            <q-btn color="negative" label="Cancel Cheque" icon="cancel" class="full-width"
+              @click="handleCancelCheque" />
           </div>
         </div>
       </q-card-section>
@@ -101,9 +101,8 @@
       <!-- Expense Table Section -->
       <q-card-section>
         <div v-if="isChequeCancelled" class="row justify-end q-mb-md">
-          <q-btn label="Add" color="primary" icon="add" @click="handleAddExpense"
-            @mouseenter="preloadExpenseAccounts" :loading="addingExpense || store.expenseTypeLoading"
-            v-permission="'add'" />
+          <q-btn label="Add" color="primary" icon="add" @click="handleAddExpense" @mouseenter="preloadExpenseAccounts"
+            :loading="addingExpense || store.expenseTypeLoading" v-permission="'add'" />
         </div>
         <!-- Expense Table -->
         <q-table :rows="store.expenses" :columns="store.expenseColumns" row-key="id" :pagination="{ rowsPerPage: 5 }">
@@ -131,7 +130,7 @@
       <q-card-actions align="right" class="custom-actions">
         <q-btn flat label="Cancel" class="modal-cancel-btn" @click="
           () => {
-            isChequeCancelled=false
+            isChequeCancelled = false
             store.closeDialog('editDisbursement')
             // Don't reset form data immediately - let the dialog close handler manage it
           }
@@ -146,7 +145,7 @@
   <q-dialog v-model="store.dialogs.expenseDetail">
     <q-card style="min-width: 500px">
       <q-card-section class="q-pb-none">
-        <div class="text-h6">Edit Expense</div>
+        <div class="text-h6">Add Expense</div>
       </q-card-section>
 
       <q-card-section>
@@ -156,15 +155,19 @@
         <div class="text-subtitle1 q-mb-md">
           <strong>Available Balance:</strong> ₱{{ store.forms.expense.balance.toLocaleString() }}
         </div>
+        <div class="text-subtitle1 q-mb-md">
+        <q-select outlined dense v-model="store.forms.expense.particulars" :options="filteredParticulars"
+          label="Particulars" use-input fill-input hide-selected new-value-mode="add-unique" option-label="label"
+          option-value="label" map-options emit-value @filter="filterFn" />
 
-        <q-input outlined dense v-model="store.forms.expense.particulars" label="Particulars" class="q-mb-md"
-          type="textarea" autogrow />
-
+        </div>
+        <div class="text-subtitle1 q-mb-md">
         <q-input outlined dense :model-value="formatInputValue(store.forms.expense.amount)"
           @update:model-value="(val) => store.forms.expense.amount = handleAmountInput(val)"
           @blur="(e) => (store.forms.expense.amount = formatToTwoDecimals(e.target.value))" label="Amount"
           class="q-mb-md" prefix="₱" inputmode="decimal" pattern="\\d*\\.?\\d{0,2}" @keypress="blockNonNumeric"
           @paste.prevent="handlePasteNumeric" />
+        </div>
       </q-card-section>
 
       <q-card-actions align="right" class="q-pa-md">
@@ -192,6 +195,28 @@ const saving = ref(false)
 const showConfirmDialog = ref(false)
 const addingExpense = ref(false)
 const isChequeCancelled = ref(store.isChequeCancel) // Track if cheque is cancelled
+
+const filteredParticulars = ref(store.particulars)
+
+function filterFn (val, update) {
+  if (val === '') {
+    update(() => {
+      filteredParticulars.value = store.particulars.slice(0, 5)
+    })
+    return
+  }
+
+  update(() => {
+    const needle = val.toLowerCase()
+    const results = store.particulars.filter(opt =>
+      opt.label.toLowerCase().includes(needle)
+    )
+
+    // 👇 only keep first 5 matches
+    filteredParticulars.value = results.slice(0, 5)
+  })
+}
+
 
 // Example bank list (replace with your data)
 
@@ -296,9 +321,9 @@ const getAmountDifference = () => {
 const getAmountDifferenceMessage = () => {
   const difference = getAmountDifference()
 
-  if (difference > 0&&!isChequeCancelled.value) {
+  if (difference > 0 && !isChequeCancelled.value) {
     return `Amount exceeds original DV amount by ₱${difference.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-  } else if (difference < 0&&!isChequeCancelled.value) {
+  } else if (difference < 0 && !isChequeCancelled.value) {
     return `Amount is less than original DV amount by ₱${Math.abs(difference).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
   return ''

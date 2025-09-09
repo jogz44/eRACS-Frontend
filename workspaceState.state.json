@@ -1,0 +1,186 @@
+{
+  "workspaceFoldersFilePaths": [
+    "c:\\Users\\MSI\\Desktop\\Steve Workspace\\eRAC/"
+  ],
+  "symbols": [
+    {
+      "name": "duplicateWarning",
+      "kind": 12,
+      "containerName": "",
+      "filePath": "c:\\Users\\MSI\\Desktop\\Steve Workspace\\eRAC\\eRAC-frontend-main\\src\\pages\\User\\Libraries\\AccountsLib.vue",
+      "start": {
+        "line": 761,
+        "character": 6
+      },
+      "end": {
+        "line": 761,
+        "character": 34
+      }
+    }
+  ],
+  "activeFileDiagnostics": [],
+  "activeTextEditor": {
+    "selections": [
+      {
+        "anchor": {
+          "line": 237,
+          "character": 84
+        },
+        "active": {
+          "line": 237,
+          "character": 84
+        },
+        "isReversed": true
+      }
+    ],
+    "documentFilePath": "c:\\Users\\MSI\\Desktop\\Steve Workspace\\eRAC\\eRAC-backend-main\\routes\\api.php",
+    "visibleRanges": [
+      {
+        "start": {
+          "line": 224,
+          "character": 0
+        },
+        "end": {
+          "line": 245,
+          "character": 77
+        }
+      }
+    ],
+    "languageId": "php"
+  },
+  "debugConsoleOutput": "",
+  "terminalBuffer": "\r\n  2025-09-09 14:28:21 /api/barangay/fiscal-years\r  2025-09-09 14:28:21 /api/barangay/fiscal-years  ~ 514.7\r\n1ms\r\n  2025-09-09 14:28:22 /api/barangay/fiscal-years\r  2025-09-09 14:28:22 /api/barangay/fiscal-years  ~ 501.2\r\n3ms\r\n  2025-09-09 14:28:22 /api/barangay/fiscal-years  ~ 512.6\n9ms\r\n  2025-09-09 14:28:21 /api/barangay/heartbeat ..\r  2025-09-09 14:28:21 /api/barangay/heartbeat .. ~ 14s   \r\n  2025-09-09 14:28:36 /api/barangay/heartbeat  ~ 0.40ms  \n  2025-09-09 14:29:03 /api/barangay/fiscal-years\r  2025-09-09 14:29:03 /api/barangay/fiscal-years  ~ 0.42m\r\ns\r\n  2025-09-09 14:28:36 /api/barangay/fiscal-years  ~ 27s  \r\n  2025-09-09 14:29:03 /api/barangay/fiscal-years\r  2025-09-09 14:29:03 /api/barangay/fiscal-years  ~ 503.8\r\n1ms\r\n  2025-09-09 14:29:03 /api/barangay/fiscal-years  ~ 505.3\r\n4ms\r\n  2025-09-09 14:29:03 /api/barangay/fiscal-years  ~ 505.7\r\n4ms\r\n  2025-09-09 14:29:04 /api/barangay/fiscal-years  ~ 0.09m\r\ns\r\n  2025-09-09 14:29:04 /api/barangay/fiscal-years  ~ 0.22m\r\ns\r\n  2025-09-09 14:29:04 /api/barangay/fiscal-years  ~ 0.18m\r\ns\r\n  2025-09-09 14:29:05\r  2025-09-09 14:29:05 ....................... ~ 1m 15s   \r\n  2025-09-09 14:29:04 ....................... ~ 1m 16s   \r\n  2025-09-09 14:31:00 /api/barangay/heartbeat  ~ 509.22ms\n  2025-09-09 14:31:00 /api/barangay/heartbeat  ~ 502.43ms\r\n",
+  "terminalLastCommand": {
+    "commandLine": "php artisan migrate --seed",
+    "cwd": "C:/Users/MSI/Desktop/Steve Workspace/eRAC/eRAC-backend-main",
+    "exitCode": 0,
+    "output": "$ php artisan migrate --seed\n\n   INFO  Preparing database.\n\n  Creating migration table .............. 252.34ms DONE  \n\n   INFO  Running migrations.\n\n  2025_04_10_121521_create_personal_access_tokens_table  \n212.69ms DONE\n  2025_04_16_072536_create_barangays_table  18.45ms DONE \n  2025_04_16_081549_create_barangay_positions_table  15.7\n9ms DONE\n  2025_04_16_081550_create_barangay_users_table  80.35ms \nDONE\n  2025_04_17_094906_create_admins_table . 911.31ms DONE  \n  2025_04_26_150625_create_lib_fiscal_years_table  9.69ms\n DONE\n  2025_04_27_133402_create_lib_expense_tables  30.09ms DO\nNE\n  2025_05_04_040200_create_budgets_table . 25.78ms DONE  \n  2025_05_04_064240_create_tran_appropriations_table  26.\n56ms DONE\n  2025_05_07_075253_create_lib_banks_table  50.75ms DONE \n  2025_05_21_020049_create_lib_booklet_table  9.22ms DONE\n  2025_07_10_053713_create_lib_cheque_table  8.78ms DONE \n  2025_07_10_053800_create_disbursements_table  14.69ms D\nONE\n  2025_07_21_062401_create_logs_table ..... 7.57ms DONE  \n  2025_07_24_000000_create_disbursement_or_details_table \n 7.32ms DONE\n  2025_07_25_000000_create_budget_augmentations_table  19\n.97ms DONE\n  2025_07_25_000001_create_budget_augmentation_details_ta\nble  17.60ms DONE\n  2025_08_15_090511_create_tran_expense_details_table  13\n.25ms DONE\n  2025_08_20_164317_create_cont_appropriations_table  18.\n95ms DONE\n  2025_08_20_164357_create_cont_appro_accounts_table  17.\n16ms DONE\n  2025_08_29_000000_create_admin_logs_table  9.22ms DONE \n  2025_09_08_103427_create_admin_reviews_table  13.83ms D\nONE\n\n\n   INFO  Seeding database.\n\n  Database\\Seeders\\BarangayUserSeeder ......... RUNNING  \n  Database\\Seeders\\BarangayUserSeeder .. 43,433 ms DONE  \n\n  Database\\Seeders\\LibFiscalYearSeeder ........ RUNNING  \n  Database\\Seeders\\LibFiscalYearSeeder .... 385 ms DONE  \n\n  Database\\Seeders\\LibExpenseClassAndTypeSeeder  RUNNING \n\n  Database\\Seeders\\LibExpenseClassAndTypeSeeder  29,027 m\ns DONE\n\n  Database\\Seeders\\BudgetSeeder ............... RUNNING  \n  Database\\Seeders\\BudgetSeeder ........... 655 ms DONE  \n\n  Database\\Seeders\\TranAppropriationSeeder .... RUNNING  \n  Database\\Seeders\\TranAppropriationSeeder  14,340 ms DON\nE\n\n  Database\\Seeders\\BookletAndChequeSeeder ..... RUNNING  \n  Database\\Seeders\\BookletAndChequeSeeder  3,192 ms DONE \n\n\n  Database\\Seeders\\DisbursementSeeder ......... RUNNING  \n  Database\\Seeders\\DisbursementSeeder .. 24,470 ms DONE  \n\n"
+  },
+  "terminalSelection": "",
+  "terminalShellType": "gitbash",
+  "repoContexts": [
+    {
+      "_repo": {
+        "rootUri": {
+          "$mid": 1,
+          "path": "/c:/Users/MSI/Desktop/Steve Workspace/eRAC",
+          "scheme": "file"
+        },
+        "inputBox": {},
+        "state": {},
+        "ui": {}
+      },
+      "rootUri": {
+        "$mid": 1,
+        "path": "/c:/Users/MSI/Desktop/Steve Workspace/eRAC",
+        "scheme": "file"
+      },
+      "headBranchName": "seeker-of-novelty",
+      "headCommitHash": "55359778256e855eb3e6309efeed4fa429b55466",
+      "upstreamBranchName": "seeker-of-novelty",
+      "upstreamRemote": "origin",
+      "isRebasing": true,
+      "remotes": [
+        "origin"
+      ],
+      "remoteFetchUrls": [
+        "https://github.com/RebbDev/eRAC.git"
+      ],
+      "changes": {
+        "mergeChanges": [],
+        "indexChanges": [],
+        "workingTree": [
+          {}
+        ],
+        "untrackedChanges": []
+      },
+      "_onDidChangeSignal": {
+        "_observers": {},
+        "debugName": "Observable Signal From Event"
+      },
+      "headBranchNameObs": {
+        "_observers": {},
+        "_debugNameData": {},
+        "_state": 0,
+        "_updateCount": 0,
+        "_dependencies": {},
+        "_dependenciesToBeRemoved": {},
+        "_isUpdating": false,
+        "_isComputing": false,
+        "_didReportChange": false,
+        "_isInBeforeUpdate": false,
+        "_isReaderValid": false,
+        "_removedObserverToCallEndUpdateOn": null
+      },
+      "headCommitHashObs": {
+        "_observers": {},
+        "_debugNameData": {},
+        "_state": 0,
+        "_updateCount": 0,
+        "_dependencies": {},
+        "_dependenciesToBeRemoved": {},
+        "_isUpdating": false,
+        "_isComputing": false,
+        "_didReportChange": false,
+        "_isInBeforeUpdate": false,
+        "_isReaderValid": false,
+        "_removedObserverToCallEndUpdateOn": null
+      },
+      "upstreamBranchNameObs": {
+        "_observers": {},
+        "_debugNameData": {},
+        "_state": 0,
+        "_updateCount": 0,
+        "_dependencies": {},
+        "_dependenciesToBeRemoved": {},
+        "_isUpdating": false,
+        "_isComputing": false,
+        "_didReportChange": false,
+        "_isInBeforeUpdate": false,
+        "_isReaderValid": false,
+        "_removedObserverToCallEndUpdateOn": null
+      },
+      "upstreamRemoteObs": {
+        "_observers": {},
+        "_debugNameData": {},
+        "_state": 0,
+        "_updateCount": 0,
+        "_dependencies": {},
+        "_dependenciesToBeRemoved": {},
+        "_isUpdating": false,
+        "_isComputing": false,
+        "_didReportChange": false,
+        "_isInBeforeUpdate": false,
+        "_isReaderValid": false,
+        "_removedObserverToCallEndUpdateOn": null
+      },
+      "isRebasingObs": {
+        "_observers": {},
+        "_debugNameData": {},
+        "_state": 0,
+        "_updateCount": 0,
+        "_dependencies": {},
+        "_dependenciesToBeRemoved": {},
+        "_isUpdating": false,
+        "_isComputing": false,
+        "_didReportChange": false,
+        "_isInBeforeUpdate": false,
+        "_isReaderValid": false,
+        "_removedObserverToCallEndUpdateOn": null
+      },
+      "_checkIsIgnored": {
+        "_waitingTimeMs": 1000,
+        "_queue": [],
+        "_timeout": null
+      },
+      "_isIgnored": {
+        "_map": {},
+        "_map2": {}
+      }
+    }
+  ],
+  "notebookDocumentFilePaths": [],
+  "textDocumentFilePaths": [
+    "eRAC-backend-main/routes/api.php"
+  ]
+}

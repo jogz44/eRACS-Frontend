@@ -153,7 +153,7 @@
           <div class="q-gutter-sm">
             <div><strong>Name:</strong> {{ viewModal.selectedRow?.name }}</div>
             <div><strong>Barangay:</strong> {{ viewModal.selectedRow?.barangay }}</div>
-            <div><strong>Position:</strong> {{ viewModal.selectedRow?.position?.name }}</div>
+            <div><strong>Position:</strong> {{ formatPosition(viewModal.selectedRow) }}</div>
             <div><strong>Username:</strong> {{ viewModal.selectedRow?.username }}</div>
             <div><strong>Approved Date:</strong> {{ viewModal.selectedRow?.created_at }}</div>
           </div>
@@ -292,6 +292,10 @@ export default {
         hour: '2-digit',
         minute: '2-digit'
       })
+    },
+    formatPosition(user) {
+      if (!user) return 'Unknown Position'
+      return (user.position && user.position.name) || user.position || user.position_name || 'Unknown Position'
     },
     async loadAcceptedUsers() {
       this.loading = true
