@@ -152,53 +152,143 @@
                     v-for="expenseItem in expenseType.children"
                     :key="'item-' + expenseItem.id"
                   >
-                    <template v-if="!expenseItem.children || expenseItem.children.length === 0">
+                    <!-- Item Row (always show, regardless of children) -->
+                    <div
+                      class="row item-row"
+                      :class="getItemClass(expenseItem)"
+                      style="
+                        padding: 6px 12px;
+                        min-height: 32px;
+                        border-bottom: 1px solid #f0f0f0;
+                        margin-left: 0;
+                      "
+                    >
                       <div
-                        class="row"
-                        style="
-                          padding: 6px 12px;
-                          min-height: 32px;
-                          border-bottom: 1px solid #f0f0f0;
-                        "
+                        class="col-6 item-name-column"
+                        style="padding-left: 48px; display: flex; align-items: center"
+                      >
+                        <!-- Expand/Collapse button for items with subitems -->
+                        <q-btn
+                          v-if="expenseItem.children && expenseItem.children.length > 0"
+                          flat
+                          dense
+                          size="xs"
+                          :icon="expandedItems[expenseItem.id] ? 'expand_more' : 'chevron_right'"
+                          @click="toggleItem(expenseItem.id)"
+                          style="min-width: 20px; margin-right: 4px;"
+                          class="q-pa-none expand-btn"
+                        />
+                        <q-icon 
+                          v-else
+                          name="arrow_right" 
+                          size="xs" 
+                          class="q-mr-sm item-icon" 
+                        />
+                        <span 
+                          class="item-name"
+                          :class="expenseItem.children && expenseItem.children.length > 0 ? 'text-weight-bold' : 'text-weight-regular'"
+                        >
+                          {{ expenseItem.name }}
+                        </span>
+                        <!-- Show subitem count if applicable -->
+                        <q-chip
+                          v-if="expenseItem.children && expenseItem.children.length > 0"
+                          size="xs"
+                          color="primary"
+                          text-color="white"
+                          class="q-ml-sm subitem-count-chip"
+                        >
+                          {{ expenseItem.children.length }} subitem{{ expenseItem.children.length !== 1 ? 's' : '' }}
+                        </q-chip>
+                      </div>
+                      <div class="col-6 text-right item-amount-column">
+                        <q-input
+                          dense
+                          :model-value="formatInputValue(expenseItem.amount)"
+                          @update:model-value="
+                            (val) => {
+                              const cleanValue = handleAmountInput(val)
+                              appropriationStore.updateAllocationAmount(`item-${expenseItem.id}`, cleanValue)
+                              updateUnappropriated()
+                            }
+                          "
+                          @blur="
+                            (event) => {
+                              const formatted = formatToTwoDecimals(event.target.value)
+                              appropriationStore.updateAllocationAmount(`item-${expenseItem.id}`, formatted)
+                              updateUnappropriated()
+                            }
+                          "
+                          prefix="₱"
+                          inputmode="decimal"
+                          pattern="\\d*\\.?\\d{0,2}"
+                          @keypress="blockNonNumeric"
+                          @paste.prevent="handlePasteNumeric"
+                          :rules="[validateAmountRule]"
+                          style="max-width: 230px; width: 100%; display: inline-block"
+                          class="q-pa-none"
+                          input-class="q-py-xs"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Subitem Rows (only if expanded) -->
+                    <template v-if="expandedItems[expenseItem.id] && expenseItem.children && expenseItem.children.length > 0">
+                      <template
+                        v-for="subItem in expenseItem.children"
+                        :key="'subitem-' + subItem.id"
                       >
                         <div
-                          class="col-6"
-                          style="padding-left: 48px; display: flex; align-items: center"
+                          class="row subitem-row"
+                          style="
+                            padding: 6px 12px;
+                            min-height: 32px;
+                            border-bottom: 1px solid #f0f0f0;
+                            background-color: #fafafa;
+                            margin-left: 24px;
+                            border-left: 3px solid #e0e0e0;
+                          "
                         >
-                          <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
-                          <span class="text-weight-regular">{{ expenseItem.name }}</span>
+                          <div
+                            class="col-6 subitem-name-column"
+                            style="padding-left: 48px; display: flex; align-items: center"
+                          >
+                            <q-icon name="subdirectory_arrow_right" size="xs" class="q-mr-sm subitem-icon" />
+                            <span class="text-weight-regular text-grey-7 subitem-name">{{ subItem.name }}</span>
+                          </div>
+                          <div class="col-6 text-right subitem-amount-column">
+                            <q-input
+                              dense
+                              :model-value="formatInputValue(subItem.amount)"
+                              @update:model-value="
+                                (val) => {
+                                  const cleanValue = handleAmountInput(val)
+                                  appropriationStore.updateAllocationAmount(`subitem-${subItem.id}`, cleanValue)
+                                  updateUnappropriated()
+                                }
+                              "
+                              @blur="
+                                (event) => {
+                                  const formatted = formatToTwoDecimals(event.target.value)
+                                  appropriationStore.updateAllocationAmount(`subitem-${subItem.id}`, formatted)
+                                  updateUnappropriated()
+                                }
+                              "
+                              prefix="₱"
+                              inputmode="decimal"
+                              pattern="\\d*\\.?\\d{0,2}"
+                              @keypress="blockNonNumeric"
+                              @paste.prevent="handlePasteNumeric"
+                              :rules="[validateAmountRule]"
+                              style="max-width: 230px; width: 100%; display: inline-block"
+                              class="q-pa-none"
+                              input-class="q-py-xs"
+                              placeholder="0.00"
+                            />
+                          </div>
                         </div>
-                        <div class="col-6 text-right">
-                          <q-input
-                            dense
-                            :model-value="formatInputValue(expenseItem.amount)"
-                            @update:model-value="
-                              (val) => {
-                                const cleanValue = handleAmountInput(val)
-                                appropriationStore.updateAllocationAmount(`item-${expenseItem.id}`, cleanValue)
-                                updateUnappropriated()
-                              }
-                            "
-                            @blur="
-                              (event) => {
-                                const formatted = formatToTwoDecimals(event.target.value)
-                                appropriationStore.updateAllocationAmount(`item-${expenseItem.id}`, formatted)
-                                updateUnappropriated()
-                              }
-                            "
-                            prefix="₱"
-                            inputmode="decimal"
-                            pattern="\\d*\\.?\\d{0,2}"
-                            @keypress="blockNonNumeric"
-                            @paste.prevent="handlePasteNumeric"
-                            :rules="[validateAmountRule]"
-                            style="max-width: 230px; width: 100%; display: inline-block"
-                            class="q-pa-none"
-                            input-class="q-py-xs"
-                            placeholder="0.00"
-                          />
-                        </div>
-                      </div>
+                      </template>
                     </template>
                   </template>
                 </template>
@@ -284,6 +374,9 @@ const appropriationStore = useAppropriationStore()
 const searchQuery = ref('')
 // const showDebugInfo = ref(false)
 const $q = useQuasar()
+
+// State for managing expanded items
+const expandedItems = ref({})
 
 // Utility function to safely parse currency values
 const parseCurrency = (value) => {
@@ -387,6 +480,16 @@ const newAllocationsTotal = computed(() => {
           if (currentAmount > 0) {
             total += currentAmount
           }
+          
+          // Include subitems
+          if (item.children && item.children.length > 0) {
+            item.children.forEach((subItem) => {
+              const subAmount = parseCurrency(subItem.amount)
+              if (subAmount > 0) {
+                total += subAmount
+              }
+            })
+          }
         })
       } else {
         const currentAmount = parseCurrency(expenseType.amount)
@@ -454,6 +557,14 @@ const getTypeClass = (expenseType) => {
   return expenseType.children?.length > 0 ? 'text-weight-bold' : 'text-weight-regular'
 }
 
+const getItemClass = (expenseItem) => {
+  return expenseItem.children?.length > 0 ? 'text-weight-bold' : 'text-weight-regular'
+}
+
+const toggleItem = (itemId) => {
+  expandedItems.value[itemId] = !expandedItems.value[itemId]
+}
+
 const calculateClassTotal = (expenseClass) => {
   let total = 0
 
@@ -465,6 +576,15 @@ const calculateClassTotal = (expenseClass) => {
     expenseType.children?.forEach((item) => {
       if (item.amount) {
         total += parseCurrency(item.amount)
+      }
+      
+      // Include subitems
+      if (item.children && item.children.length > 0) {
+        item.children.forEach((subItem) => {
+          if (subItem.amount) {
+            total += parseCurrency(subItem.amount)
+          }
+        })
       }
     })
   })
@@ -504,6 +624,25 @@ const submitAllocation = async () => {
                 expense_item_id: item.id
               })
               hasValidAllocation = true
+            }
+            
+            // Handle subitems
+            if (item.children && item.children.length > 0) {
+              item.children.forEach((subItem) => {
+                const subAmount = parseCurrency(subItem.amount)
+                if (subAmount > 0) {
+                  allocations.push({
+                    id: subItem.id,
+                    type: 'subitem',
+                    amount: subAmount,
+                    expense_class_id: expenseClass.id,
+                    expense_type_id: expenseType.id,
+                    expense_item_id: item.id,
+                    expense_subitem_id: subItem.id
+                  })
+                  hasValidAllocation = true
+                }
+              })
             }
           })
         } else {
@@ -837,6 +976,112 @@ const confirmAndSubmitAllocation = async () => {
 
 .text-warning {
   color: #ff9800;
+}
+
+/* Item and Subitem row styles */
+.item-row {
+  background-color: #ffffff !important;
+  border-left: none !important;
+}
+
+.subitem-row {
+  background-color: #fafafa !important;
+  border-left: 3px solid #e0e0e0 !important;
+  margin-left: 24px !important;
+  position: relative;
+}
+
+.subitem-row:hover {
+  background-color: #f0f0f0 !important;
+}
+
+.subitem-row::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: #e0e0e0;
+}
+
+/* Column-specific styles */
+.item-name-column {
+  position: relative;
+}
+
+.subitem-name-column {
+  position: relative;
+  padding-left: 48px !important;
+}
+
+.item-amount-column,
+.subitem-amount-column {
+  position: relative;
+}
+
+/* Expand/collapse button styles */
+.expand-btn {
+  min-width: 20px !important;
+  margin-right: 4px !important;
+  padding: 2px !important;
+}
+
+.expand-btn .q-icon {
+  font-size: 0.7rem !important;
+}
+
+/* Icon styles */
+.item-icon {
+  font-size: 0.7rem !important;
+}
+
+.subitem-icon {
+  font-size: 0.6rem !important;
+  color: #666 !important;
+}
+
+/* Name styles */
+.item-name {
+  font-size: 0.9rem !important;
+}
+
+.subitem-name {
+  font-size: 0.85rem !important;
+  color: #666 !important;
+}
+
+/* Chip styles for subitem count */
+.subitem-count-chip {
+  font-size: 0.6rem !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  padding: 0 6px !important;
+}
+
+/* Visual hierarchy improvements */
+.item-row {
+  border-left: 2px solid transparent !important;
+}
+
+.item-row:hover {
+  background-color: #f8f9fa !important;
+  border-left-color: #e3f2fd !important;
+}
+
+/* Responsive adjustments for better column separation */
+@media (max-width: 768px) {
+  .subitem-row {
+    margin-left: 16px !important;
+  }
+  
+  .subitem-name-column {
+    padding-left: 32px !important;
+  }
+  
+  .item-name-column {
+    padding-left: 32px !important;
+  }
 }
 
 /* Responsive confirmation dialog */

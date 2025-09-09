@@ -133,7 +133,17 @@ export const useAppropriationStore = defineStore("appropriation", {
           if (state.selectedBudgetType === 'annual') {
             return description.includes('annual')
           } else if (state.selectedBudgetType === 'supplemental') {
-            return description.includes('supplemental')
+            // For supplemental budgets, only show those with unappropriated amount > 0
+            return description.includes('supplemental') && (item.unappropriated || 0) > 0
+          }
+          return true
+        })
+      } else {
+        // For 'all' view, filter out supplemental budgets with zero unappropriated amount
+        results = results.filter((item) => {
+          const description = item.description?.toLowerCase() || ''
+          if (description.includes('supplemental')) {
+            return (item.unappropriated || 0) > 0
           }
           return true
         })
@@ -345,6 +355,7 @@ export const useAppropriationStore = defineStore("appropriation", {
           date: budget.date,
           description: budget.description,
           amount: parseCurrency(budget.amount),
+          current_amount: parseCurrency(budget.current_amount || budget.amount),
           unappropriated: parseCurrency(budget.unappropriated),
           fiscal_year: budget.fiscal_year,
           barangay_name: budget.barangay_name,

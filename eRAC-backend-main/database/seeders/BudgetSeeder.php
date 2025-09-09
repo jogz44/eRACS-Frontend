@@ -43,19 +43,19 @@ class BudgetSeeder extends Seeder
                     'user_id'         => $user->id,
                 ]);
                 // Supplemental Budget
-                Budget::updateOrCreate([
-                    'barangay_id'    => $barangay->id,
-                    'fiscal_year_id' => $fiscalYear->id,
-                    'description'    => 'Supplemental Budget',
-                ], [
-                    'start_date'      => now()->copy()->setYear($year)->addMonths(6)->startOfMonth(),
-                    'end_date'        => now()->copy()->setYear($year)->addMonths(11)->endOfMonth(),
-                    'original_amount' => 1000000,
-                    'current_amount'  => 1000000,
-                    'augmentation'    => 0,
-                    'return_amount'   => 0,
-                    'user_id'         => $user->id,
-                ]);
+                // Budget::updateOrCreate([
+                //     'barangay_id'    => $barangay->id,
+                //     'fiscal_year_id' => $fiscalYear->id,
+                //     'description'    => 'Supplemental Budget',
+                // ], [
+                //     'start_date'      => now()->copy()->setYear($year)->addMonths(6)->startOfMonth(),
+                //     'end_date'        => now()->copy()->setYear($year)->addMonths(11)->endOfMonth(),
+                //     'original_amount' => 1000000,
+                //     'current_amount'  => 1000000,
+                //     'augmentation'    => 0,
+                //     'return_amount'   => 0,
+                //     'user_id'         => $user->id,
+                // ]);
             }
 
         }

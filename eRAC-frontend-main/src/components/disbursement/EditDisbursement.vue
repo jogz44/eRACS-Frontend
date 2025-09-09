@@ -10,9 +10,7 @@
           Note: Total amount is locked to ₱{{ store.lockedTotalAmount?.toLocaleString() || '0' }}. You can only
           redistribute amounts between expenses, UNLESS you cancel the cheque.
         </div>
-        <q-banner v-if="isChequeCancelled" class="bg-orange-2 text-orange-10 q-mt-sm" dense>
-          ⚠️ Don't forget to save to confirm the cheque cancellation.
-        </q-banner>
+
       </q-card-section>
 
       <q-card-section>
@@ -135,7 +133,7 @@
           () => {
             isChequeCancelled=false
             store.closeDialog('editDisbursement')
-            store.resetEditDisbursement()
+            // Don't reset form data immediately - let the dialog close handler manage it
           }
         " />
         <q-btn label="Save" class="modal-save-btn" @click="handleSaveEditedDisbursement" :loading="saving"
@@ -168,10 +166,10 @@
           class="q-mb-md" prefix="₱" inputmode="decimal" pattern="\\d*\\.?\\d{0,2}" @keypress="blockNonNumeric"
           @paste.prevent="handlePasteNumeric" />
       </q-card-section>
-      
+
       <q-card-actions align="right" class="q-pa-md">
-        
-        
+
+
         <q-btn flat label="Cancel" @click="store.closeDialog('expenseDetail')" />
         <q-btn label="Save" @click="handleSaveExpense" color="primary" />
       </q-card-actions>
@@ -210,6 +208,16 @@ onMounted(async () => {
   await bankStore.fetchBanks()
 })
 
+// Watch for dialog close to reset form data
+watch(() => store.dialogs.editDisbursement, (isOpen) => {
+  if (!isOpen) {
+    // Dialog is closed, reset form data after a short delay to allow for data persistence
+    setTimeout(() => {
+      store.resetEditDisbursement()
+    }, 100)
+  }
+})
+
 
 
 const handleSaveEditedDisbursement = async () => {
@@ -236,6 +244,9 @@ const handleSaveEditedDisbursement = async () => {
         position: 'top',
         timeout: 3000
       })
+      isChequeCancelled.value = false
+      store.isChequeCancel = false
+
     } else {
       $q.notify({
         type: 'negative',
@@ -409,6 +420,9 @@ const confirmCancelCheque = async () => {
       // Clear the cheque number and enable bank selection
       store.forms.disbursement.chequeNumber = ''
       store.forms.disbursement.bank_id = null
+      store.autoCheque = ''
+
+
       isChequeCancelled.value = true
 
       // Refresh bank data to reflect the cancelled cheque status

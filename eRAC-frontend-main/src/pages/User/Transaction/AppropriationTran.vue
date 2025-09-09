@@ -20,22 +20,20 @@
       <div class="row q-col-gutter-sm">
         <div class="col-md-4 col-sm-12">
           <q-card
-            :class="['budget-type-card', { 'selected': selectedBudgetType === 'all' }]"
+            :class="['budget-type-card', { selected: selectedBudgetType === 'all' }]"
             @click="selectedBudgetType = 'all'"
             clickable
           >
             <q-card-section class="text-center q-pa-md">
               <q-icon name="list" size="md" class="q-mb-sm" />
               <div class="text-subtitle2 text-weight-medium">All Budgets</div>
-              <div class="text-caption text-grey-6">
-                View all budget types
-              </div>
+              <div class="text-caption text-grey-6">View all budget types</div>
             </q-card-section>
           </q-card>
         </div>
         <div class="col-md-4 col-sm-12">
           <q-card
-            :class="['budget-type-card', { 'selected': selectedBudgetType === 'annual' }]"
+            :class="['budget-type-card', { selected: selectedBudgetType === 'annual' }]"
             @click="selectedBudgetType = 'annual'"
             clickable
           >
@@ -50,7 +48,7 @@
         </div>
         <div class="col-md-4 col-sm-12">
           <q-card
-            :class="['budget-type-card', { 'selected': selectedBudgetType === 'supplemental' }]"
+            :class="['budget-type-card', { selected: selectedBudgetType === 'supplemental' }]"
             @click="selectedBudgetType = 'supplemental'"
             clickable
           >
@@ -69,7 +67,7 @@
     <!-- Budget Summary Cards -->
     <div class="budget-summary q-mb-md" v-if="selectedBudgetType === 'all'">
       <div class="row q-col-gutter-md">
-        <div class="col-md-6 col-sm-12">
+        <div class="col-md-4 col-sm-12">
           <q-card class="summary-card annual-budget">
             <q-card-section class="text-center">
               <div class="text-h6 text-primary">Annual Budget</div>
@@ -82,7 +80,7 @@
             </q-card-section>
           </q-card>
         </div>
-        <div class="col-md-6 col-sm-12">
+        <div class="col-md-4 col-sm-12">
           <q-card class="summary-card supplemental-budget">
             <q-card-section class="text-center">
               <div class="text-h6 text-secondary">Supplemental Budget</div>
@@ -91,6 +89,19 @@
               </div>
               <div class="text-caption text-grey-6">
                 {{ supplementalBudgetCount }} budget{{ supplementalBudgetCount !== 1 ? 's' : '' }}
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+        <div class="col-md-4 col-sm-12">
+          <q-card class="summary-card transfer-summary">
+            <q-card-section class="text-center">
+              <div class="text-h6 text-accent">Transfer Activity</div>
+              <div class="text-h5 text-weight-bold">
+                {{ appropriationStore.formatCurrency(totalTransferredAmount) }}
+              </div>
+              <div class="text-caption text-grey-6">
+                Total transferred this period
               </div>
             </q-card-section>
           </q-card>
@@ -133,11 +144,7 @@
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date
-                      v-model="dateRange"
-                      range
-                      @update:model-value="onDateRangeChange"
-                    >
+                    <q-date v-model="dateRange" range @update:model-value="onDateRangeChange">
                       <div class="row items-center justify-end">
                         <q-btn v-close-popup label="Close" color="primary" flat />
                       </div>
@@ -336,7 +343,11 @@
                 icon="edit"
                 color="orange"
                 @click="openEditAllocationDialog(props.row)"
-                :disable="!props.row.allocations || props.row.allocations.length === 0 || editLoading[props.row.id]"
+                :disable="
+                  !props.row.allocations ||
+                  props.row.allocations.length === 0 ||
+                  editLoading[props.row.id]
+                "
                 :loading="editLoading[props.row.id]"
                 v-permission="'edit'"
               />
@@ -382,11 +393,15 @@
             </div>
             <div class="col-12 col-sm-6">
               <div class="text-caption">Total Amount:</div>
-              <strong>{{ appropriationStore.formatCurrency(selectedSupplementalRow.amount) }}</strong>
+              <strong>{{
+                appropriationStore.formatCurrency(selectedSupplementalRow.amount)
+              }}</strong>
             </div>
             <div class="col-12 col-sm-6">
               <div class="text-caption">Available for Transfer:</div>
-              <strong>{{ appropriationStore.formatCurrency(selectedSupplementalRow.unappropriated) }}</strong>
+              <strong>{{
+                appropriationStore.formatCurrency(selectedSupplementalRow.unappropriated)
+              }}</strong>
             </div>
           </div>
 
@@ -396,7 +411,8 @@
               Transferred Funds in this Supplemental Budget
             </div>
             <div class="text-caption q-mb-sm">
-              These funds were transferred from unused expenses and are available for transfer to annual budgets
+              These funds were transferred from unused expenses and are available for transfer to
+              annual budgets
             </div>
 
             <div class="hierarchical-table" style="border: 1px solid #e0e0e0">
@@ -406,7 +422,20 @@
               </div>
 
               <div class="hierarchical-body">
-                <template v-if="selectedSupplementalRow.appropriations && selectedSupplementalRow.appropriations.length > 0">
+                <!-- Loading state -->
+                <div v-if="loadingSupplementalData" class="row q-pa-sm">
+                  <div class="col-12 text-center text-grey-6">
+                    <q-spinner size="1.5em" class="q-mb-xs" />
+                    <div>Loading appropriation details...</div>
+                  </div>
+                </div>
+                <!-- Data loaded -->
+                <template
+                  v-else-if="
+                    selectedSupplementalRow.appropriations &&
+                    selectedSupplementalRow.appropriations.length > 0
+                  "
+                >
                   <div
                     v-for="appropriation in selectedSupplementalRow.appropriations"
                     :key="'appropriation-' + appropriation.id"
@@ -419,10 +448,13 @@
                       </div>
                     </div>
                     <div class="col-6 text-right">
-                      <div class="text-weight-medium">{{ appropriationStore.formatCurrency(appropriation.amount) }}</div>
+                      <div class="text-weight-medium">
+                        {{ appropriationStore.formatCurrency(appropriation.amount) }}
+                      </div>
                     </div>
                   </div>
                 </template>
+                <!-- No data -->
                 <div v-else class="row q-pa-sm">
                   <div class="col-12 text-center text-grey-6">
                     <q-icon name="info" size="1.5em" class="q-mb-xs" />
@@ -440,9 +472,7 @@
               <div class="col-12 col-sm-6">
                 <q-card flat bordered class="q-pa-md">
                   <div class="text-caption text-grey-7">Purpose</div>
-                  <div class="text-h6 text-primary">
-                    Available for Transfer
-                  </div>
+                  <div class="text-h6 text-primary">Available for Transfer</div>
                 </q-card>
               </div>
               <div class="col-12 col-sm-6">
@@ -478,19 +508,38 @@
             </div>
 
             <div class="hierarchical-body" style="max-height: 400px; overflow-y: auto">
-              <template v-for="expenseClass in editDisplayAccounts" :key="'class-' + expenseClass.id">
+              <template
+                v-for="expenseClass in editDisplayAccounts"
+                :key="'class-' + expenseClass.id"
+              >
                 <div class="row q-pa-sm bg-grey-1 text-weight-medium">
                   <div class="col-12">{{ expenseClass.name }}</div>
                 </div>
 
-                <template v-for="expenseType in expenseClass.children" :key="'type-' + expenseType.id">
+                <template
+                  v-for="expenseType in expenseClass.children"
+                  :key="'type-' + expenseType.id"
+                >
                   <div class="row q-pa-xs" style="border-bottom: 1px solid #f0f0f0">
-                    <div class="col-6" style="padding-left: 16px; display: flex; align-items: center">
+                    <div
+                      class="col-6"
+                      style="padding-left: 16px; display: flex; align-items: center"
+                    >
                       <q-btn
                         dense
                         flat
-                        :icon="(expenseType.children && expenseType.children.length > 0 && expandedEditTypes[expenseType.id]) ? 'expand_more' : 'chevron_right'"
-                        @click="(expenseType.children && expenseType.children.length > 0) ? toggleEditType(expenseType.id) : null"
+                        :icon="
+                          expenseType.children &&
+                          expenseType.children.length > 0 &&
+                          expandedEditTypes[expenseType.id]
+                            ? 'expand_more'
+                            : 'chevron_right'
+                        "
+                        @click="
+                          expenseType.children && expenseType.children.length > 0
+                            ? toggleEditType(expenseType.id)
+                            : null
+                        "
                         size="sm"
                       />
                       <span>{{ expenseType.name }}</span>
@@ -515,10 +564,22 @@
                     </div>
                   </div>
 
-                  <template v-if="expandedEditTypes[expenseType.id] && expenseType.children && expenseType.children.length > 0">
-                    <template v-for="expenseItem in expenseType.children" :key="'item-' + expenseItem.id">
+                  <template
+                    v-if="
+                      expandedEditTypes[expenseType.id] &&
+                      expenseType.children &&
+                      expenseType.children.length > 0
+                    "
+                  >
+                    <template
+                      v-for="expenseItem in expenseType.children"
+                      :key="'item-' + expenseItem.id"
+                    >
                       <div class="row q-pa-xs" style="border-bottom: 1px solid #f0f0f0">
-                        <div class="col-6" style="padding-left: 32px; display: flex; align-items: center">
+                        <div
+                          class="col-6"
+                          style="padding-left: 32px; display: flex; align-items: center"
+                        >
                           <q-icon name="arrow_right" size="xs" class="q-mr-xs" />
                           <span>{{ expenseItem.name }}</span>
                         </div>
@@ -545,7 +606,13 @@
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup @click="closeEditAllocationDialog" :disable="editSaveLoading" />
+          <q-btn
+            flat
+            label="Cancel"
+            v-close-popup
+            @click="closeEditAllocationDialog"
+            :disable="editSaveLoading"
+          />
           <q-btn
             label="Save Changes"
             color="primary"
@@ -558,7 +625,7 @@
     </q-dialog>
 
     <!-- Transfer Budget Dialog -->
-    <q-dialog v-model="showTransferDialog" @keydown.enter="executeTransfer">
+    <q-dialog v-model="showTransferDialog">
       <q-card style="min-width: 600px">
         <q-card-section class="q-pb-none">
           <div class="text-h6">Transfer from Supplemental to Annual Budget</div>
@@ -575,7 +642,6 @@
             map-options
             label="From Supplemental Budget"
             :rules="[(val) => !!val || 'Required']"
-            @keydown.enter="executeTransfer"
             @update:model-value="onSupplementalBudgetChange"
           >
             <template v-slot:option="scope">
@@ -598,11 +664,37 @@
                   <div class="col">
                     <div class="text-caption text-grey-7">Available Balance for Transfer</div>
                     <div class="text-h6 text-green-8">
-                      {{ appropriationStore.formatCurrency(getSelectedSupplementalBudget()?.unused_amount || 0) }}
+                      {{
+                        appropriationStore.formatCurrency(
+                          getSelectedSupplementalBudget()?.unused_amount || 0,
+                        )
+                      }}
+                    </div>
+                    <div class="text-caption text-grey-6 q-mt-xs">
+                      Maximum transferable amount
                     </div>
                   </div>
                   <div class="col-auto">
                     <q-icon name="account_balance_wallet" size="24px" color="green-6" />
+                  </div>
+                </div>
+              </q-card-section>
+            </q-card>
+          </div>
+
+          <!-- Transfer Amount Validation Display -->
+          <div v-if="transferAmount && selectedSupplementalBudget" class="q-mt-sm q-mb-md">
+            <q-card flat bordered :class="getTransferValidationClass()">
+              <q-card-section class="q-pa-sm">
+                <div class="row items-center">
+                  <div class="col">
+                    <div class="text-caption text-grey-7">Transfer Validation</div>
+                    <div class="text-subtitle2" :class="getTransferValidationTextClass()">
+                      {{ getTransferValidationMessage() }}
+                    </div>
+                  </div>
+                  <div class="col-auto">
+                    <q-icon :name="getTransferValidationIcon()" :color="getTransferValidationColor()" size="20px" />
                   </div>
                 </div>
               </q-card-section>
@@ -619,14 +711,14 @@
             map-options
             label="To Annual Budget"
             :rules="[(val) => !!val || 'Required']"
-            @keydown.enter="executeTransfer"
           >
             <template v-slot:option="scope">
               <q-item v-bind="scope.itemProps">
                 <q-item-section>
                   <q-item-label>{{ scope.opt.description }}</q-item-label>
                   <q-item-label caption>
-                    Unappropriated: {{ appropriationStore.formatCurrency(scope.opt.unappropriated) }}
+                    Unappropriated:
+                    {{ appropriationStore.formatCurrency(scope.opt.unappropriated) }}
                   </q-item-label>
                 </q-item-section>
               </q-item>
@@ -635,53 +727,76 @@
 
           <q-input
             outlined
-            v-model="transferAmount"
+            v-model.number="transferAmount"
             label="Transfer Amount"
             prefix="₱"
-            @keydown.enter="executeTransfer"
             placeholder="0.00"
-            type="number"
+            type="text"
+            inputmode="decimal"
             step="0.01"
             min="0"
             :rules="[
-              (val) => !!val || 'Required',
-              (val) => parseFloat(val) > 0 || 'Amount must be greater than 0',
+              (val) => !!val || 'Transfer amount is required',
+              (val) => {
+                const num = parseFloat(val)
+                return !isNaN(num) && num > 0 || 'Amount must be greater than 0'
+              },
               (val) => {
                 if (!selectedSupplementalBudget) return true
-                const supplementalBudget = supplementalBudgets.find(b => b.id === selectedSupplementalBudget)
-                return !supplementalBudget || parseFloat(val) <= (supplementalBudget?.unused_amount || 0) || 'Amount exceeds available balance'
+                const supplementalBudget = supplementalBudgets.find(
+                  (b) => b.id === selectedSupplementalBudget,
+                )
+                const availableAmount = supplementalBudget?.unused_amount || 0
+                const requestedAmount = parseFloat(val) || 0
+                return (
+                  !supplementalBudget ||
+                  requestedAmount <= availableAmount ||
+                  `Amount cannot exceed available balance of ₱${availableAmount.toLocaleString()}`
+                )
+              },
+              (val) => {
+                const num = parseFloat(val)
+                return num <= 10000000 || 'Amount cannot exceed ₱10,000,000'
               }
             ]"
-            @input="handleTransferAmountInput"
-            @blur="handleTransferAmountBlur"
-          >
-            <template v-slot:hint>
-              <div v-if="selectedSupplementalBudget" class="text-caption">
-                Maximum: {{ appropriationStore.formatCurrency(getSelectedSupplementalBudget()?.unused_amount || 0) }}
-              </div>
-            </template>
-          </q-input>
+            @input="validateTransferAmount"
+            @blur="formatTransferAmount"
+          />
 
           <q-input
             outlined
             v-model="transferDescription"
             label="Transfer Description (Optional)"
-            @keydown.enter="executeTransfer"
             hint="Leave blank for auto-generated description"
           />
-
-
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup @click="closeTransferDialog" :disable="transferLoading" />
+          <q-btn
+            flat
+            label="Cancel"
+            v-close-popup
+            @click="closeTransferDialog"
+            :disable="transferLoading"
+          />
           <q-btn
             label="Transfer"
             color="secondary"
             @click="executeTransfer"
             :loading="transferLoading"
             :disable="!canTransfer || transferLoading"
-          />
+            :class="{ 'q-btn--loading': transferLoading }"
+            icon="swap_horiz"
+          >
+            <template v-if="!transferLoading">
+              <q-icon name="swap_horiz" class="q-mr-xs" />
+              Transfer ₱{{ transferAmount ? parseFloat(transferAmount).toLocaleString() : '0' }}
+            </template>
+            <template v-else>
+              <q-spinner size="16px" class="q-mr-xs" />
+              Processing Transfer...
+            </template>
+          </q-btn>
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -743,26 +858,49 @@ const dateRange = ref(null)
 const selectedBudgetType = ref('all')
 const budgetType = ref('annual')
 
-const budgetTypeOptions = [
-  { label: 'Annual Budget', value: 'annual' }
-]
+const budgetTypeOptions = [{ label: 'Annual Budget', value: 'annual' }]
 
 const loadAppropriation = async () => {
   loading.value = true
   try {
-    await appropriationStore.fetchBudgets()
-    $q.notify({
-      type: 'positive',
-      message: 'Appropriation refreshed!',
-      icon: 'refresh',
-      position: 'top',
-    })
+    // Use Promise.allSettled to handle partial failures gracefully
+    const results = await Promise.allSettled([
+      appropriationStore.fetchBudgets(),
+      appropriationStore.fetchAppropriations()
+    ])
+
+    // Check for any failures
+    const failures = results.filter(result => result.status === 'rejected')
+    
+    if (failures.length === 0) {
+      $q.notify({
+        type: 'positive',
+        message: 'Appropriation data refreshed successfully!',
+        icon: 'refresh',
+        position: 'top',
+        timeout: 3000
+      })
+    } else if (failures.length < results.length) {
+      // Partial success
+      $q.notify({
+        type: 'warning',
+        message: 'Some data could not be refreshed. Please try again.',
+        icon: 'warning',
+        position: 'top',
+        timeout: 4000
+      })
+    } else {
+      // Complete failure
+      throw new Error('Failed to refresh data')
+    }
   } catch (error) {
+    console.error('Error loading appropriation data:', error)
     $q.notify({
       type: 'negative',
-      message: error.response?.data?.message || 'Failed to refresh data',
+      message: error.response?.data?.message || error.message || 'Failed to refresh data',
       icon: 'error',
       position: 'top',
+      timeout: 5000
     })
   } finally {
     loading.value = false
@@ -774,10 +912,14 @@ const dateRangeDisplay = computed(() => {
     return ''
   }
   const fromDate = new Date(dateRange.value.from).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric'
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
   })
   const toDate = new Date(dateRange.value.to).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric'
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
   })
   return `${fromDate} - ${toDate}`
 })
@@ -785,63 +927,178 @@ const dateRangeDisplay = computed(() => {
 // Budget summary computed properties
 const annualBudgetTotal = computed(() => {
   return appropriationStore.appropriations
-    .filter(budget => budget.description?.toLowerCase().includes('annual'))
+    .filter((budget) => budget.description?.toLowerCase().includes('annual'))
     .reduce((total, budget) => total + (parseFloat(budget.amount) || 0), 0)
 })
 
 const supplementalBudgetTotal = computed(() => {
   return appropriationStore.appropriations
-    .filter(budget => budget.description?.toLowerCase().includes('supplemental'))
+    .filter((budget) => {
+      const isSupplemental = budget.description?.toLowerCase().includes('supplemental')
+      const hasUnappropriated = (budget.unappropriated || 0) > 0
+      return isSupplemental && hasUnappropriated
+    })
     .reduce((total, budget) => total + (parseFloat(budget.amount) || 0), 0)
 })
 
 const annualBudgetCount = computed(() => {
-  return appropriationStore.appropriations
-    .filter(budget => budget.description?.toLowerCase().includes('annual'))
-    .length
+  return appropriationStore.appropriations.filter((budget) =>
+    budget.description?.toLowerCase().includes('annual'),
+  ).length
 })
 
 const supplementalBudgetCount = computed(() => {
+  // Only count supplemental budgets that have unappropriated amount > 0
+  return appropriationStore.appropriations.filter((budget) => {
+    const isSupplemental = budget.description?.toLowerCase().includes('supplemental')
+    const hasUnappropriated = (budget.unappropriated || 0) > 0
+    return isSupplemental && hasUnappropriated
+  }).length
+})
+
+// Calculate total transferred amount (difference between original and current amounts)
+const totalTransferredAmount = computed(() => {
   return appropriationStore.appropriations
-    .filter(budget => budget.description?.toLowerCase().includes('supplemental'))
-    .length
+    .filter((budget) => budget.description?.toLowerCase().includes('supplemental'))
+    .reduce((total, budget) => {
+      // Calculate how much has been transferred by comparing original amount with current unappropriated
+      const originalAmount = parseFloat(budget.amount) || 0
+      const unappropriatedAmount = parseFloat(budget.unappropriated) || 0
+      const transferredAmount = Math.max(0, originalAmount - unappropriatedAmount)
+      return total + transferredAmount
+    }, 0)
 })
 
 // Transfer functionality computed properties
 const supplementalBudgets = computed(() => {
   return appropriationStore.appropriations
-    .filter(budget => budget.description?.toLowerCase().includes('supplemental'))
-    .map(budget => {
-      // For supplemental budgets, use the unappropriated amount from the appropriation store
-      // The backend now correctly calculates this as the total appropriated amount for supplemental budgets
-      const unappropriatedAmount = budget.unappropriated || 0
+    .filter((budget) => budget.description?.toLowerCase().includes('supplemental'))
+    .filter((budget) => {
+      // Only show supplemental budgets that have unappropriated amount > 0
+      // This will hide budgets that have been fully transferred
+      return (budget.unappropriated || 0) > 0
+    })
+    .map((budget) => {
+      // For supplemental budgets, use the unappropriated amount as available amount
+      // This reflects the actual available amount after any transfers
+      const availableAmount = budget.unappropriated || 0
 
       return {
         ...budget,
-        unused_amount: unappropriatedAmount, // Map unappropriated to unused_amount for the transfer dialog
-        available_amount: unappropriatedAmount
+        unused_amount: availableAmount, // Use unappropriated amount as available for transfer
+        available_amount: availableAmount,
       }
     })
 })
 
 const annualBudgets = computed(() => {
-  return appropriationStore.appropriations
-    .filter(budget => budget.description?.toLowerCase().includes('annual'))
+  return appropriationStore.appropriations.filter((budget) =>
+    budget.description?.toLowerCase().includes('annual'),
+  )
 })
 
 const canTransfer = computed(() => {
-  if (!selectedSupplementalBudget.value || !selectedAnnualBudget.value || !transferAmount.value || transferAmount.value <= 0) {
+  if (
+    !selectedSupplementalBudget.value ||
+    !selectedAnnualBudget.value ||
+    !transferAmount.value ||
+    transferAmount.value <= 0
+  ) {
     return false
   }
 
   // Find the full supplemental budget object
-  const supplementalBudget = supplementalBudgets.value.find(budget => budget.id === selectedSupplementalBudget.value)
+  const supplementalBudget = supplementalBudgets.value.find(
+    (budget) => budget.id === selectedSupplementalBudget.value,
+  )
   if (!supplementalBudget) {
     return false
   }
 
-  return transferAmount.value <= (supplementalBudget.unused_amount || 0)
+  const amount = parseFloat(transferAmount.value)
+  const availableAmount = supplementalBudget.unused_amount || 0
+  
+  return !isNaN(amount) && amount > 0 && amount <= availableAmount
 })
+
+// Enhanced validation functions
+const validateTransferAmount = (value) => {
+  const num = parseFloat(value)
+  if (isNaN(num) || num < 0) {
+    transferAmount.value = 0
+  } else if (num > 10000000) {
+    transferAmount.value = 10000000
+  }
+}
+
+const formatTransferAmount = (event) => {
+  const value = event.target.value
+  const num = parseFloat(value)
+  if (!isNaN(num)) {
+    transferAmount.value = Math.round(num * 100) / 100 // Round to 2 decimal places
+  }
+}
+
+// Transfer validation helper functions
+const getTransferValidationClass = () => {
+  if (!transferAmount.value || !selectedSupplementalBudget.value) return 'bg-grey-1'
+  
+  const amount = parseFloat(transferAmount.value)
+  const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
+  
+  if (isNaN(amount) || amount <= 0) return 'bg-orange-1'
+  if (amount > availableAmount) return 'bg-red-1'
+  if (amount > availableAmount * 0.9) return 'bg-yellow-1'
+  return 'bg-green-1'
+}
+
+const getTransferValidationTextClass = () => {
+  if (!transferAmount.value || !selectedSupplementalBudget.value) return 'text-grey-6'
+  
+  const amount = parseFloat(transferAmount.value)
+  const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
+  
+  if (isNaN(amount) || amount <= 0) return 'text-orange-8'
+  if (amount > availableAmount) return 'text-red-8'
+  if (amount > availableAmount * 0.9) return 'text-yellow-8'
+  return 'text-green-8'
+}
+
+const getTransferValidationMessage = () => {
+  if (!transferAmount.value || !selectedSupplementalBudget.value) return 'Enter transfer amount'
+  
+  const amount = parseFloat(transferAmount.value)
+  const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
+  
+  if (isNaN(amount) || amount <= 0) return 'Please enter a valid amount'
+  if (amount > availableAmount) return `Amount exceeds available balance by ₱${(amount - availableAmount).toLocaleString()}`
+  if (amount > availableAmount * 0.9) return `Transfer will use ${Math.round((amount / availableAmount) * 100)}% of available balance`
+  return `Transfer amount is valid (${Math.round((amount / availableAmount) * 100)}% of available balance)`
+}
+
+const getTransferValidationIcon = () => {
+  if (!transferAmount.value || !selectedSupplementalBudget.value) return 'help'
+  
+  const amount = parseFloat(transferAmount.value)
+  const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
+  
+  if (isNaN(amount) || amount <= 0) return 'warning'
+  if (amount > availableAmount) return 'error'
+  if (amount > availableAmount * 0.9) return 'warning'
+  return 'check_circle'
+}
+
+const getTransferValidationColor = () => {
+  if (!transferAmount.value || !selectedSupplementalBudget.value) return 'grey-6'
+  
+  const amount = parseFloat(transferAmount.value)
+  const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
+  
+  if (isNaN(amount) || amount <= 0) return 'orange-8'
+  if (amount > availableAmount) return 'red-8'
+  if (amount > availableAmount * 0.9) return 'yellow-8'
+  return 'green-8'
+}
 
 const onDateRangeChange = (newRange) => {
   if (newRange && newRange.from && newRange.to) {
@@ -864,14 +1121,13 @@ const onDateRangeClear = () => {
 // Helper function to get selected supplemental budget
 const getSelectedSupplementalBudget = () => {
   if (!selectedSupplementalBudget.value) return null
-  return supplementalBudgets.value.find(budget => budget.id === selectedSupplementalBudget.value)
+  return supplementalBudgets.value.find((budget) => budget.id === selectedSupplementalBudget.value)
 }
 
 // Handle supplemental budget selection change
 const onSupplementalBudgetChange = (value) => {
   selectedSupplementalBudget.value = value
-  // Clear transfer amount when changing supplemental budget
-  transferAmount.value = null
+  // Don't clear transfer amount automatically
 }
 
 const clearAllFilters = () => {
@@ -899,13 +1155,14 @@ const transferDescription = ref('')
 
 // Supplemental budget view dialog
 const showSupplementalViewDialog = ref(false)
+const loadingSupplementalData = ref(false)
 const selectedSupplementalRow = ref({
   id: null,
   description: '',
   amount: 0,
   unappropriated: 0,
   created_at: '',
-  appropriations: []
+  appropriations: [],
 })
 
 const initializeEditDisplayAccounts = () => {
@@ -967,9 +1224,9 @@ const initializeEditDisplayAccounts = () => {
   })
 
   const classArr = Object.values(classMap)
-  classArr.forEach(cls => {
+  classArr.forEach((cls) => {
     cls.children.sort((a, b) => a.id - b.id)
-    cls.children.forEach(type => {
+    cls.children.forEach((type) => {
       if (type.children) {
         type.children.sort((a, b) => a.id - b.id)
       }
@@ -987,7 +1244,12 @@ watch(
       newVal.forEach((expenseClass) => {
         if (expenseClass && Array.isArray(expenseClass.children)) {
           expenseClass.children.forEach((expenseType) => {
-            if (expenseType && expenseType.id && expenseType.children && expenseType.children.length > 0) {
+            if (
+              expenseType &&
+              expenseType.id &&
+              expenseType.children &&
+              expenseType.children.length > 0
+            ) {
               expanded[expenseType.id] = true
             }
           })
@@ -996,13 +1258,13 @@ watch(
       expandedEditTypes.value = expanded
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 const toggleEditType = (typeId) => {
   let hasChildren = false
-  editDisplayAccounts.value.forEach(expenseClass => {
-    const expenseType = expenseClass.children?.find(type => type.id === typeId)
+  editDisplayAccounts.value.forEach((expenseClass) => {
+    const expenseType = expenseClass.children?.find((type) => type.id === typeId)
     if (expenseType && expenseType.children && expenseType.children.length > 0) {
       hasChildren = true
     }
@@ -1019,16 +1281,74 @@ const openAllocationDialog = async (row) => {
 
 const viewDialogRef = ref(null)
 
+// Fetch appropriations data for supplemental budget
+const fetchSupplementalBudgetAppropriations = async (budgetId) => {
+  loadingSupplementalData.value = true
+  try {
+    const authStore = useAuthStore()
+    const endpoint = authStore.admin
+      ? `/api/admin/supplemental-budgets`
+      : `/api/barangay/supplemental-budgets`
+    const token = authStore.admin ? authStore.adminToken : authStore.token
+
+    const params = { year: new Date().getFullYear() }
+
+    // Add barangay filter for admin users
+    if (authStore.admin) {
+      const selectedBarangayId = authStore.getSelectedBarangay()
+      if (selectedBarangayId) {
+        params.barangay_id = selectedBarangayId
+      }
+    }
+
+    const response = await api.get(endpoint, {
+      params: params,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+    })
+
+    const supplementalBudgets = response.data.data || []
+    const targetBudget = supplementalBudgets.find((budget) => budget.id === budgetId)
+
+    if (targetBudget) {
+      selectedSupplementalRow.value = {
+        id: targetBudget.id,
+        description: targetBudget.description,
+        amount: targetBudget.total_amount,
+        unappropriated: targetBudget.unused_amount,
+        created_at: targetBudget.created_at,
+        appropriations: targetBudget.appropriations || [],
+      }
+    } else {
+      // Fallback to current row data if not found in supplemental budgets
+      const currentRow = appropriationStore.appropriations.find((budget) => budget.id === budgetId)
+      selectedSupplementalRow.value = {
+        ...currentRow,
+        appropriations: [],
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch supplemental budget appropriations:', error)
+    // Fallback to current row data
+    const currentRow = appropriationStore.appropriations.find((budget) => budget.id === budgetId)
+    selectedSupplementalRow.value = {
+      ...currentRow,
+      appropriations: [],
+    }
+  } finally {
+    loadingSupplementalData.value = false
+  }
+}
+
 const openViewDialog = async (row) => {
   viewLoading.value[row.id] = true
   try {
     // Check if this is a supplemental budget
     if (row.description?.toLowerCase().includes('supplemental')) {
-      // Open supplemental budget view dialog
-      selectedSupplementalRow.value = {
-        ...row,
-        appropriations: row.appropriations || []
-      }
+      // Fetch appropriations data for supplemental budget
+      await fetchSupplementalBudgetAppropriations(row.id)
       showSupplementalViewDialog.value = true
     } else {
       // Open regular view dialog for annual budgets
@@ -1068,28 +1388,36 @@ watch(selectedBudgetType, (newBudgetType) => {
   appropriationStore.setSelectedBudgetType(newBudgetType)
 })
 
+// Watch for changes in appropriations data to trigger reactive updates
+watch(() => appropriationStore.appropriations, () => {
+  // Force reactivity update for computed properties
+  // This ensures indicators update when data changes
+}, { deep: true })
+
 const openEditAllocationDialog = async (row) => {
   editLoading.value[row.id] = true
   try {
-        // Use different endpoints for admin vs regular users
-    const endpoint = authStore.admin ? `/api/admin/budgets/${row.id}/history` : `/api/barangay/budgets/${row.id}/history`
+    // Use different endpoints for admin vs regular users
+    const endpoint = authStore.admin
+      ? `/api/admin/budgets/${row.id}/history`
+      : `/api/barangay/budgets/${row.id}/history`
     const token = authStore.admin ? authStore.adminToken : authStore.token
 
     const response = await api.get(endpoint, {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/json',
-      }
+      },
     })
     const allHistory = response.data.data?.history || []
 
     // Combine ALL allocations from all history sessions, not just the latest
-    const allAllocations = allHistory.flatMap(session => session.allocations || [])
+    const allAllocations = allHistory.flatMap((session) => session.allocations || [])
 
     // Group by expense hierarchy to combine amounts for the same expense items/types
     const allocationMap = new Map()
 
-    allAllocations.forEach(allocation => {
+    allAllocations.forEach((allocation) => {
       const key = `${allocation.expense_class_id}-${allocation.expense_type_id}-${allocation.expense_item_id || 'null'}`
 
       if (allocationMap.has(key)) {
@@ -1128,7 +1456,7 @@ const closeEditAllocationDialog = () => {
 const openTransferDialog = () => {
   selectedSupplementalBudget.value = null
   selectedAnnualBudget.value = null
-  transferAmount.value = null
+  // Don't clear transfer amount - let user keep their input
   transferDescription.value = ''
   showTransferDialog.value = true
 }
@@ -1137,11 +1465,12 @@ const closeTransferDialog = () => {
   showTransferDialog.value = false
   selectedSupplementalBudget.value = null
   selectedAnnualBudget.value = null
-  transferAmount.value = null
+  // Don't clear transfer amount when dialog closes - only when dialog opens
   transferDescription.value = ''
 }
 
 const executeTransfer = async () => {
+  // Enhanced validation
   if (!canTransfer.value) {
     $q.notify({
       type: 'negative',
@@ -1152,51 +1481,211 @@ const executeTransfer = async () => {
     return
   }
 
+  // Prevent multiple executions
+  if (transferLoading.value) {
+    return
+  }
+
+  // Additional validation before transfer
+  const transferAmountNum = parseFloat(transferAmount.value)
+  if (isNaN(transferAmountNum) || transferAmountNum <= 0) {
+    $q.notify({
+      type: 'negative',
+      message: 'Please enter a valid transfer amount greater than 0',
+      icon: 'error',
+      position: 'top',
+    })
+    return
+  }
+
+  // Validate supplemental budget has sufficient funds
+  const supplementalBudget = getSelectedSupplementalBudget()
+  if (!supplementalBudget || transferAmountNum > (supplementalBudget.unused_amount || 0)) {
+    $q.notify({
+      type: 'negative',
+      message: 'Insufficient funds in selected supplemental budget',
+      icon: 'error',
+      position: 'top',
+    })
+    return
+  }
+
+  // Show confirmation dialog for transfers
+  const fromBudget = supplementalBudgets.value.find(b => b.id === selectedSupplementalBudget.value)
+  const toBudget = annualBudgets.value.find(b => b.id === selectedAnnualBudget.value)
+  
+  const confirmed = await new Promise((resolve) => {
+    $q.dialog({
+      title: 'Confirm Budget Transfer',
+      message: `
+        <div class="q-pa-md">
+          <div class="text-h6 q-mb-md">Transfer Details</div>
+          <div class="q-mb-sm">
+            <strong>From:</strong> ${fromBudget?.description || 'Supplemental Budget'}<br>
+            <strong>To:</strong> ${toBudget?.description || 'Annual Budget'}<br>
+            <strong>Amount:</strong> ₱${transferAmountNum.toLocaleString()}
+          </div>
+          ${transferDescription.value ? `<div class="q-mb-sm"><strong>Description:</strong> ${transferDescription.value}</div>` : ''}
+          <div class="text-caption text-grey-6 q-mt-md">
+            ${transferAmountNum > 100000 ? '⚠️ This is a large transfer amount. Please verify all details before proceeding.' : 'Please verify all details before proceeding.'}
+          </div>
+        </div>
+      `,
+      html: true,
+      persistent: true,
+      ok: {
+        label: 'Confirm Transfer',
+        color: 'primary',
+        icon: 'check_circle'
+      },
+      cancel: {
+        label: 'Cancel',
+        color: 'grey',
+        icon: 'cancel'
+      }
+    }).onOk(() => resolve(true)).onCancel(() => resolve(false))
+  })
+  
+  if (!confirmed) return
+
   transferLoading.value = true
+  
   try {
     const payload = {
       from_budget_id: selectedSupplementalBudget.value,
       to_budget_id: selectedAnnualBudget.value,
-      amount: parseFloat(transferAmount.value),
-
+      amount: transferAmountNum,
+      description: transferDescription.value?.trim() || null,
     }
 
-    // Call the transfer API
+    // Call the transfer API with enhanced error handling
     const authStore = useAuthStore()
-    const endpoint = authStore.admin ? '/api/admin/budget-transfer' : '/api/barangay/budget-transfer'
+    const endpoint = authStore.admin
+      ? '/api/admin/budget-transfer'
+      : '/api/barangay/budget-transfer'
     const token = authStore.admin ? authStore.adminToken : authStore.token
+
+    console.log('Executing transfer with payload:', payload)
 
     const response = await api.post(endpoint, payload, {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/json',
+        'Content-Type': 'application/json',
       },
+      timeout: 30000, // 30 second timeout for large transfers
     })
 
-    if (response.data.status) {
+    if (response.data?.status) {
+      // Success notification with detailed information
+      const fromBudget = supplementalBudgets.value.find(b => b.id === selectedSupplementalBudget.value)
+      const toBudget = annualBudgets.value.find(b => b.id === selectedAnnualBudget.value)
+      
       $q.notify({
         type: 'positive',
-        message: `Successfully transferred ₱${parseFloat(transferAmount.value).toLocaleString()} from supplemental to annual budget`,
+        message: `Successfully transferred ₱${transferAmountNum.toLocaleString()} from "${fromBudget?.description || 'Supplemental Budget'}" to "${toBudget?.description || 'Annual Budget'}"`,
         icon: 'check_circle',
         position: 'top',
+        timeout: 5000,
+        actions: [
+          {
+            label: 'View Details',
+            color: 'white',
+            handler: () => {
+              // Could open a detailed view here
+            }
+          }
+        ]
       })
 
-      // Refresh the budgets list
-      await appropriationStore.fetchBudgets()
+      // Clear form data
+      transferAmount.value = null
+      transferDescription.value = ''
+      
+      // Optimized data refresh with proper error handling
+      await refreshDataAfterTransfer()
+      
       closeTransferDialog()
     } else {
-      throw new Error(response.data.message || 'Transfer failed')
+      throw new Error(response.data?.message || 'Transfer failed - no status returned')
     }
   } catch (error) {
     console.error('Transfer error:', error)
+    console.error('Error response:', error.response?.data)
+
+    let errorMessage = 'Failed to transfer budget'
+    let errorDetails = ''
+
+    if (error.response?.data) {
+      if (error.response.data.message) {
+        errorMessage = error.response.data.message
+      }
+      
+      if (error.response.data.errors) {
+        // Handle validation errors with detailed feedback
+        const errors = error.response.data.errors
+        const errorMessages = Object.entries(errors).map(([field, messages]) => {
+          const fieldName = field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+          return `${fieldName}: ${Array.isArray(messages) ? messages.join(', ') : messages}`
+        })
+        errorDetails = errorMessages.join('\n')
+      }
+    } else if (error.code === 'ECONNABORTED') {
+      errorMessage = 'Transfer request timed out. Please try again.'
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+
+    // Show detailed error notification
     $q.notify({
       type: 'negative',
-      message: error.response?.data?.message || 'Failed to transfer budget',
+      message: errorMessage,
+      caption: errorDetails,
       icon: 'error',
       position: 'top',
+      timeout: 8000,
+      actions: [
+        {
+          label: 'Retry',
+          color: 'white',
+          handler: () => {
+            // Allow user to retry the transfer
+            executeTransfer()
+          }
+        }
+      ]
     })
   } finally {
     transferLoading.value = false
+  }
+}
+
+// Enhanced data refresh function
+const refreshDataAfterTransfer = async () => {
+  try {
+    // Use Promise.allSettled to handle partial failures gracefully
+    const results = await Promise.allSettled([
+      appropriationStore.fetchBudgets(),
+      appropriationStore.fetchAppropriations()
+    ])
+
+    // Check for any failures
+    const failures = results.filter(result => result.status === 'rejected')
+    
+    if (failures.length > 0) {
+      console.warn('Some data refresh operations failed:', failures)
+      // Show warning but don't block the user
+      $q.notify({
+        type: 'warning',
+        message: 'Transfer completed but some data may not be fully updated. Please refresh the page if needed.',
+        icon: 'warning',
+        position: 'top',
+        timeout: 3000
+      })
+    }
+  } catch (error) {
+    console.error('Error refreshing data after transfer:', error)
+    // Don't show error to user as transfer was successful
   }
 }
 
@@ -1204,7 +1693,9 @@ const saveBudget = async () => {
   addLoading.value = true
   try {
     // Only allow annual budget creation
-    const finalDescription = description.value ? `Annual Budget - ${description.value}` : 'Annual Budget'
+    const finalDescription = description.value
+      ? `Annual Budget - ${description.value}`
+      : 'Annual Budget'
 
     const payload = {
       fiscal_year_id: selectedFiscalYear.value,
@@ -1279,12 +1770,14 @@ const saveEditedAllocation = async () => {
             amount: typeAmount,
             expense_class_id: expenseClass.id,
             expense_type_id: expenseType.id,
-            expense_item_id: null
+            expense_item_id: null,
           })
         }
 
         if (!canEditType(expenseType) && parseCurrency(expenseType.amount) > 0) {
-          throw new Error(`Cannot set amount for type "${expenseType.name}" because it has items. Type amount should be the sum of its items.`)
+          throw new Error(
+            `Cannot set amount for type "${expenseType.name}" because it has items. Type amount should be the sum of its items.`,
+          )
         }
 
         if (expenseType.children && Array.isArray(expenseType.children)) {
@@ -1301,7 +1794,7 @@ const saveEditedAllocation = async () => {
               amount: itemAmount,
               expense_class_id: expenseClass.id,
               expense_type_id: expenseType.id,
-              expense_item_id: item.id
+              expense_item_id: item.id,
             })
           })
         }
@@ -1314,23 +1807,27 @@ const saveEditedAllocation = async () => {
       return sum + (allocation.amount || 0)
     }, 0)
 
-    console.log("[v0] Debug - currentUnappropriated:", currentUnappropriated)
-    console.log("[v0] Debug - originalAllocationsTotal:", originalAllocationsTotal)
-    console.log("[v0] Debug - totalAllocated:", totalAllocated)
-    console.log("[v0] Debug - allocations count:", allocations.length)
-    console.log("[v0] Debug - allocations:", allocations)
+    console.log('[v0] Debug - currentUnappropriated:', currentUnappropriated)
+    console.log('[v0] Debug - originalAllocationsTotal:', originalAllocationsTotal)
+    console.log('[v0] Debug - totalAllocated:', totalAllocated)
+    console.log('[v0] Debug - allocations count:', allocations.length)
+    console.log('[v0] Debug - allocations:', allocations)
 
     // Calculate available budget by adding back the original allocations
     const availableBudgetForEdit = currentUnappropriated + originalAllocationsTotal
 
-    console.log("[v0] Debug - availableBudgetForEdit:", availableBudgetForEdit)
+    console.log('[v0] Debug - availableBudgetForEdit:', availableBudgetForEdit)
 
     if (totalAllocated > availableBudgetForEdit) {
-      throw new Error(`Total allocation (₱${totalAllocated.toFixed(2)}) exceeds available budget (₱${availableBudgetForEdit.toFixed(2)})`)
+      throw new Error(
+        `Total allocation (₱${totalAllocated.toFixed(2)}) exceeds available budget (₱${availableBudgetForEdit.toFixed(2)})`,
+      )
     }
 
     // Use the appropriation store's commitAllocation method with background refresh for better performance
-    await appropriationStore.commitAllocation(appropriationStore.selectedRow.id, allocations, { backgroundRefresh: true })
+    await appropriationStore.commitAllocation(appropriationStore.selectedRow.id, allocations, {
+      backgroundRefresh: true,
+    })
 
     // Update the local state instead of refetching all budgets
     if (appropriationStore.selectedRow) {
@@ -1351,7 +1848,12 @@ const saveEditedAllocation = async () => {
     let message = error.message || 'Failed to update allocations'
 
     // Handle backend validation errors specifically
-    if (error.response && error.response.status === 422 && error.response.data && error.response.data.message) {
+    if (
+      error.response &&
+      error.response.status === 422 &&
+      error.response.data &&
+      error.response.data.message
+    ) {
       message = error.response.data.message
       console.log('Backend validation error:', error.response.data)
 
@@ -1361,9 +1863,9 @@ const saveEditedAllocation = async () => {
       }
 
       const errorMap = {}
-      editDisplayAccounts.value.forEach(expenseClass => {
+      editDisplayAccounts.value.forEach((expenseClass) => {
         if (!expenseClass || !Array.isArray(expenseClass.children)) return
-        expenseClass.children.forEach(expenseType => {
+        expenseClass.children.forEach((expenseType) => {
           if (expenseType && expenseType.id) {
             errorMap[expenseType.id] = true
           }
@@ -1387,7 +1889,9 @@ const saveEditedAllocation = async () => {
 
 onMounted(async () => {
   try {
+    // Load both budgets and appropriations to ensure complete data
     await appropriationStore.fetchBudgets()
+    await appropriationStore.fetchAppropriations()
 
     // Log page visit
     const { logPageVisit } = usePageLogging()
@@ -1463,22 +1967,22 @@ const baseColumns = [
 const columns = computed(() => {
   if (selectedBudgetType.value === 'all') {
     // For "All Budgets": Show only Entry date, Budget Type, Description, and Amount
-    return baseColumns.filter(col =>
-      ['startdate', 'budgetType', 'description', 'amount'].includes(col.name)
+    return baseColumns.filter((col) =>
+      ['startdate', 'budgetType', 'description', 'amount'].includes(col.name),
     )
   } else if (selectedBudgetType.value === 'supplemental') {
     // For "Supplemental Budget": Show like SupplementalTran.vue (remove amount, commit, but keep action for view button)
-    return baseColumns.filter(col =>
-      !['amount', 'commit'].includes(col.name)
-    ).map(col => {
-      if (col.name === 'unappropriated') {
-        return {
-          ...col,
-          label: 'Unappropriated Amount'
+    return baseColumns
+      .filter((col) => !['amount', 'commit'].includes(col.name))
+      .map((col) => {
+        if (col.name === 'unappropriated') {
+          return {
+            ...col,
+            label: 'Untransferred Amount',
+          }
         }
-      }
-      return col
-    })
+        return col
+      })
   } else {
     // For "Annual Budget": Show all columns (stay as is)
     return baseColumns
@@ -1529,23 +2033,7 @@ const handleEditAmountBlur = (item, value) => {
   item.amount = formatted
 }
 
-// Transfer amount input handlers
-const handleTransferAmountInput = (value) => {
-  let cleanValue = String(value).replace(/[^\d.]/g, '')
-  const parts = cleanValue.split('.')
-  if (parts.length > 2) {
-    cleanValue = parts[0] + '.' + parts.slice(1).join('')
-  }
-  if (parts.length === 2 && parts[1].length > 2) {
-    cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
-  }
-  transferAmount.value = cleanValue
-}
 
-const handleTransferAmountBlur = (value) => {
-  const formatted = formatToTwoDecimals(value)
-  transferAmount.value = formatted
-}
 
 // Format input value to exactly two decimal places
 const formatToTwoDecimals = (value) => {
@@ -1575,7 +2063,17 @@ const formatToTwoDecimals = (value) => {
 
 const blockNonNumeric = (event) => {
   const key = event.key
-  const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
+  const allowedKeys = [
+    'Backspace',
+    'Delete',
+    'Tab',
+    'Escape',
+    'Enter',
+    'ArrowLeft',
+    'ArrowRight',
+    'ArrowUp',
+    'ArrowDown',
+  ]
 
   if (allowedKeys.includes(key)) {
     return
@@ -1747,6 +2245,10 @@ const getDescriptionOnly = (description) => {
   border-left: 4px solid #9c27b0;
 }
 
+.budget-summary .transfer-summary {
+  border-left: 4px solid #ff9800;
+}
+
 .hierarchical-table {
   border-radius: 4px;
   overflow: hidden;
@@ -1904,113 +2406,113 @@ const getDescriptionOnly = (description) => {
   }
 }
 
-  /* Tablet styles - show desktop layout but stack inputs vertically */
-  @media (min-width: 769px) and (max-width: 1023px) {
-    .budget-type-selection {
-      padding: 14px;
-    }
-
-    .budget-type-card .q-card-section {
-      padding: 14px;
-    }
-
-    .budget-type-card .q-icon {
-      font-size: 1.75rem;
-    }
-
-    .mobile-clear-btn-container,
-    .mobile-action-btn-container {
-      display: none !important;
-    }
-
-    .mobile-clear-btn,
-    .mobile-add-btn,
-    .mobile-transfer-btn {
-      display: none !important;
-    }
-
-    .desktop-clear-btn,
-    .desktop-add-btn {
-      display: block !important;
-    }
-
-    /* Stack search and date range vertically on tablet */
-    .row.items-center.q-gutter-sm {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .row.items-center.q-gutter-sm > * {
-      margin-bottom: 8px;
-      width: 100%;
-    }
-
-    .search-input,
-    .date-input {
-      min-width: 100%;
-    }
-
-    /* Create a separate row for buttons aligned to the right */
-    .row.items-center.q-gutter-sm .desktop-clear-btn,
-    .row.items-center.q-gutter-sm .desktop-add-btn {
-      width: auto;
-      margin-bottom: 0;
-    }
-
-    /* Add a new button container for tablet view */
-    .row.items-center.q-gutter-sm::after {
-      content: '';
-      display: block;
-      height: 0;
-      clear: both;
-    }
-
-    /* Position buttons in a row on the right side */
-    .row.items-center.q-gutter-sm .desktop-clear-btn {
-      float: right;
-      margin-left: 8px;
-    }
-
-    .row.items-center.q-gutter-sm .desktop-add-btn {
-      float: right;
-    }
+/* Tablet styles - show desktop layout but stack inputs vertically */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .budget-type-selection {
+    padding: 14px;
   }
 
-  /* Desktop styles - hide mobile buttons and show full layout */
-  @media (min-width: 1024px) {
-    .mobile-clear-btn-container,
-    .mobile-action-btn-container {
-      display: none !important;
-    }
-
-    .mobile-clear-btn,
-    .mobile-add-btn,
-    .mobile-transfer-btn {
-      display: none !important;
-    }
-
-    .desktop-clear-btn,
-    .desktop-add-btn {
-      display: block !important;
-    }
-
-    /* Reset to horizontal layout for desktop */
-    .row.items-center.q-gutter-sm {
-      flex-direction: row;
-      align-items: center;
-    }
-
-    .row.items-center.q-gutter-sm > * {
-      margin-bottom: 0;
-      width: auto;
-    }
-
-    .search-input {
-      min-width: 400px;
-    }
-
-    .date-input {
-      min-width: 250px;
-    }
+  .budget-type-card .q-card-section {
+    padding: 14px;
   }
+
+  .budget-type-card .q-icon {
+    font-size: 1.75rem;
+  }
+
+  .mobile-clear-btn-container,
+  .mobile-action-btn-container {
+    display: none !important;
+  }
+
+  .mobile-clear-btn,
+  .mobile-add-btn,
+  .mobile-transfer-btn {
+    display: none !important;
+  }
+
+  .desktop-clear-btn,
+  .desktop-add-btn {
+    display: block !important;
+  }
+
+  /* Stack search and date range vertically on tablet */
+  .row.items-center.q-gutter-sm {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .row.items-center.q-gutter-sm > * {
+    margin-bottom: 8px;
+    width: 100%;
+  }
+
+  .search-input,
+  .date-input {
+    min-width: 100%;
+  }
+
+  /* Create a separate row for buttons aligned to the right */
+  .row.items-center.q-gutter-sm .desktop-clear-btn,
+  .row.items-center.q-gutter-sm .desktop-add-btn {
+    width: auto;
+    margin-bottom: 0;
+  }
+
+  /* Add a new button container for tablet view */
+  .row.items-center.q-gutter-sm::after {
+    content: '';
+    display: block;
+    height: 0;
+    clear: both;
+  }
+
+  /* Position buttons in a row on the right side */
+  .row.items-center.q-gutter-sm .desktop-clear-btn {
+    float: right;
+    margin-left: 8px;
+  }
+
+  .row.items-center.q-gutter-sm .desktop-add-btn {
+    float: right;
+  }
+}
+
+/* Desktop styles - hide mobile buttons and show full layout */
+@media (min-width: 1024px) {
+  .mobile-clear-btn-container,
+  .mobile-action-btn-container {
+    display: none !important;
+  }
+
+  .mobile-clear-btn,
+  .mobile-add-btn,
+  .mobile-transfer-btn {
+    display: none !important;
+  }
+
+  .desktop-clear-btn,
+  .desktop-add-btn {
+    display: block !important;
+  }
+
+  /* Reset to horizontal layout for desktop */
+  .row.items-center.q-gutter-sm {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .row.items-center.q-gutter-sm > * {
+    margin-bottom: 0;
+    width: auto;
+  }
+
+  .search-input {
+    min-width: 400px;
+  }
+
+  .date-input {
+    min-width: 250px;
+  }
+}
 </style>

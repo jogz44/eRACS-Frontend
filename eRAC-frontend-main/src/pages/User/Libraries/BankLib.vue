@@ -335,14 +335,16 @@
     <!-- Cheque Details Dialog -->
     <q-dialog v-model="showChequeDialog" persistent>
       <q-card style="min-width: 700px">
-        <q-card-section class="row items-center q-pb-none">
+        <q-card-section class="row items-center q-pb-none ">
           <div class="text-h6">Cheques: {{ selectedBooklet?.booklet_numb }}</div>
           <q-space />
-          <q-btn 
-            icon="picture_as_pdf" 
-            color="red" 
-            flat 
-            dense 
+          <q-btn
+          class="q-mr-sm"
+            icon="picture_as_pdf"
+            color="red"
+            label="Export PDF"
+
+            dense
             @click="exportChequesToPDF"
             title="Export to PDF"
           />
@@ -1062,10 +1064,10 @@ const exportChequesToPDF = () => {
   try {
     // Create a new window for printing
     const printWindow = window.open('', '_blank')
-    
+
     // Get the current date
     const currentDate = new Date().toLocaleDateString()
-    
+
     // Create HTML content for the PDF
     const htmlContent = `
       <!DOCTYPE html>
@@ -1093,7 +1095,7 @@ const exportChequesToPDF = () => {
           <div class="title">Cheques: ${selectedBooklet.value.booklet_numb}</div>
           <div class="date">Generated on: ${currentDate}</div>
         </div>
-        
+
         <table>
           <thead>
             <tr>
@@ -1116,7 +1118,7 @@ const exportChequesToPDF = () => {
             `).join('')}
           </tbody>
         </table>
-        
+
         <div class="summary">
           <div><strong>Total Cheques: ${selectedBooklet.value.cheques.length}</strong></div>
           ${Object.entries(
@@ -1132,17 +1134,17 @@ const exportChequesToPDF = () => {
       </body>
       </html>
     `
-    
+
     // Write content to the new window
     printWindow.document.write(htmlContent)
     printWindow.document.close()
-    
+
     // Wait for content to load, then print
     printWindow.onload = () => {
       printWindow.print()
       printWindow.close()
     }
-    
+
     $q.notify({
       type: 'positive',
       message: 'Cheques exported to PDF successfully!',

@@ -116,6 +116,7 @@ class AppropriationController extends Controller
                     'date' => $budget->created_at->format('Y-m-d'),
                     'description' => $budget->description,
                     'amount' => $totalAvailable,
+                    'current_amount' => (float)$budget->current_amount,
                     'unappropriated' => $unappropriated,
                     'fiscal_year' => $budget->fiscalYear->year,
                     'barangay_name' => $budget->barangay->name ?? null,
@@ -215,6 +216,7 @@ class AppropriationController extends Controller
                     'date' => $budget->created_at->format('Y-m-d'),
                     'description' => $budget->description,
                     'amount' => $totalAvailable,
+                    'current_amount' => (float)$budget->current_amount,
                     'unappropriated' => $unappropriated,
                     'fiscal_year' => $budget->fiscalYear->year,
                     'barangay_name' => $budget->barangay->name ?? null,
@@ -1906,6 +1908,13 @@ class AppropriationController extends Controller
                 'description' => 'nullable|string|max:255'
             ]);
 
+            \Log::info('Budget transfer validation passed:', [
+                'from_budget_id' => $request->from_budget_id,
+                'to_budget_id' => $request->to_budget_id,
+                'amount' => $request->amount,
+                'description' => $request->description
+            ]);
+
             \Log::info('Budget transfer request:', $request->all());
 
             $fromBudget = Budget::findOrFail($request->from_budget_id);
@@ -1944,11 +1953,34 @@ class AppropriationController extends Controller
             \DB::beginTransaction();
 
             try {
-                // Reduce from budget's original amount
-                $fromBudget->decrement('original_amount', $request->amount);
+                // For supplemental budgets, we need to reduce the appropriations, not just current_amount
+                // This ensures the unappropriated calculation reflects the transfer
+                
+                // Find appropriations to reduce proportionally
+                $totalAppropriated = $fromBudget->tranAppropriations->sum('amount');
+                $remainingAmount = $request->amount;
+                
+                foreach ($fromBudget->tranAppropriations as $appropriation) {
+                    if ($remainingAmount <= 0) break;
+                    
+                    // Calculate proportional reduction
+                    $proportionalAmount = min($remainingAmount, $appropriation->amount);
+                    
+                    // Reduce the appropriation amount
+                    $appropriation->decrement('amount', $proportionalAmount);
+                    $remainingAmount -= $proportionalAmount;
+                    
+                    \Log::info('Reduced appropriation for transfer:', [
+                        'appropriation_id' => $appropriation->id,
+                        'reduced_amount' => $proportionalAmount,
+                        'remaining_appropriation' => $appropriation->fresh()->amount
+                    ]);
+                }
+
+                // Also reduce current_amount to reflect the transfer
                 $fromBudget->decrement('current_amount', $request->amount);
 
-                // Increase to budget's original amount
+                // Increase to budget's amounts
                 $toBudget->increment('original_amount', $request->amount);
                 $toBudget->increment('current_amount', $request->amount);
 
@@ -1966,8 +1998,10 @@ class AppropriationController extends Controller
                     'from_budget_id' => $fromBudget->id,
                     'to_budget_id' => $toBudget->id,
                     'amount' => $request->amount,
-                    'from_remaining' => $fromBudget->fresh()->original_amount,
-                    'to_new_total' => $toBudget->fresh()->original_amount
+                    'from_original_amount' => $fromBudget->fresh()->original_amount,
+                    'from_current_amount' => $fromBudget->fresh()->current_amount,
+                    'to_original_amount' => $toBudget->fresh()->original_amount,
+                    'to_current_amount' => $toBudget->fresh()->current_amount
                 ]);
 
                 return response()->json([
@@ -1998,6 +2032,9 @@ class AppropriationController extends Controller
         } catch (\Exception $e) {
             \Log::error('Budget transfer error:', [
                 'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
                 'request' => $request->all()
             ]);
             return response()->json([
