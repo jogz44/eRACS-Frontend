@@ -167,7 +167,7 @@ const viewAllocationData = ref(null)
 const viewAllocations = ref([])
 const allHistoryData = ref([])
 const expandedTypes = ref({})
-const expandedItems = ref({})
+// const expandedItems = ref({})
 
 const displayAccounts = computed(() => {
   if (!viewAllocations.value || viewAllocations.value.length === 0) return []
@@ -439,16 +439,7 @@ const getItemClass = (expenseItem) => {
   return expenseItem.children?.length > 0 ? 'text-weight-bold' : 'text-weight-regular'
 }
 
-const toggleItem = (itemId) => {
-  expandedItems.value[itemId] = !expandedItems.value[itemId]
-}
 
-const calculateItemTotal = (expenseItem) => {
-  // Sum the item's own amount plus the subitems under this item
-  const itemAmount = expenseItem.amount || 0
-  const subItemsAmount = expenseItem.children?.reduce((sum, subItem) => sum + (subItem.amount || 0), 0) || 0
-  return itemAmount + subItemsAmount
-}
 
 defineExpose({
   openDialog,

@@ -355,7 +355,7 @@ const searchQuery = ref('')
 const $q = useQuasar()
 
 // State for managing expanded items
-const expandedItems = ref({})
+// const expandedItems = ref({})
 
 // Utility function to safely parse currency values
 const parseCurrency = (value) => {
@@ -565,13 +565,6 @@ const getTypeClass = (expenseType) => {
   return expenseType.children?.length > 0 ? 'text-weight-bold' : 'text-weight-regular'
 }
 
-const getItemClass = (expenseItem) => {
-  return expenseItem.children?.length > 0 ? 'text-weight-bold' : 'text-weight-regular'
-}
-
-const toggleItem = (itemId) => {
-  expandedItems.value[itemId] = !expandedItems.value[itemId]
-}
 
 const calculateClassTotal = (expenseClass) => {
   let total = 0

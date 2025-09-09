@@ -209,9 +209,9 @@ const { logPageVisit } = usePageLogging()
 // Utility function for currency formatting
 const formatCurrency = (amount) => {
   if (typeof amount !== 'number' || isNaN(amount)) return '₱0.00'
-  return `₱${amount.toLocaleString('en-US', { 
-    minimumFractionDigits: 2, 
-    maximumFractionDigits: 2 
+  return `₱${amount.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   })}`
 }
 
@@ -219,7 +219,7 @@ const formatCurrency = (amount) => {
 const getAugmentationsData = () => {
   // Try multiple ways to access the data
   let data = null
-  
+
   if (store.augmentation?.value) {
     data = store.augmentation.value
   } else if (store.augmentation) {
@@ -227,14 +227,14 @@ const getAugmentationsData = () => {
   } else if (store.filteredAugmentations) {
     data = store.filteredAugmentations
   }
-  
+
   console.log('Getting augmentations data:', {
     'store.augmentation': store.augmentation,
     'store.augmentation?.value': store.augmentation?.value,
     'store.filteredAugmentations': store.filteredAugmentations,
     'result': data
   })
-  
+
   return Array.isArray(data) ? data : []
 }
 
@@ -288,7 +288,7 @@ const totalAmount = computed(() => {
     console.log('Augmentation amount:', augmentation.ref_number || augmentation.id, amount)
     return sum + amount
   }, 0)
-  
+
   console.log('Total amount computed:', total, 'from', augmentations.length, 'augmentations')
   return total
 })
@@ -305,10 +305,10 @@ const refreshData = async (showNotification = true) => {
   try {
     await store.fetchAugmentations()
     lastRefreshTime.value = new Date()
-    
+
     // Force reactivity update after data fetch
     await nextTick()
-    
+
     if (showNotification) {
       $q.notify({
         type: 'positive',
@@ -320,7 +320,7 @@ const refreshData = async (showNotification = true) => {
     }
   } catch (error) {
     console.error('Error refreshing augmentations:', error)
-    
+
     if (showNotification) {
       $q.notify({
         type: 'negative',
@@ -342,16 +342,16 @@ const forceUpdateIndicators = () => {
   console.log('Store augmentation:', store.augmentation)
   console.log('Store filteredAugmentations:', store.filteredAugmentations)
   console.log('Store loadingAugmentations:', store.loadingAugmentations)
-  
+
   const data = getAugmentationsData()
   console.log('Augmentations data:', data)
   console.log('Data length:', data.length)
-  
+
   if (data.length > 0) {
     console.log('First augmentation:', data[0])
     console.log('Total amount of first:', data[0].total_amount)
   }
-  
+
   // Force reactivity by accessing the computed properties
   console.log('Total augmentations:', totalAugmentations.value)
   console.log('Total amount:', totalAmount.value)
@@ -378,7 +378,7 @@ const onDateRangeChange = (newRange) => {
   if (newRange && newRange.from && newRange.to) {
     const fromDate = new Date(newRange.from)
     const toDate = new Date(newRange.to)
-    
+
     // Validate date range
     if (fromDate > toDate) {
       $q.notify({
@@ -389,7 +389,7 @@ const onDateRangeChange = (newRange) => {
       })
       return
     }
-    
+
     store.dateFrom = fromDate.toLocaleDateString('en-GB')
     store.dateTo = toDate.toLocaleDateString('en-GB')
   } else {
@@ -416,7 +416,7 @@ const clearAllFilters = () => {
   store.searchQuery = ''
   store.dateFrom = ''
   store.dateTo = ''
-  
+
   $q.notify({
     type: 'info',
     message: 'All filters cleared',
@@ -437,7 +437,7 @@ const openAddDialog = () => {
     })
     return
   }
-  
+
   store.openDialog('augmentation')
 }
 

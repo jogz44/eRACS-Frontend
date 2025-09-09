@@ -36,14 +36,7 @@ export const useChartDataStore = defineStore('chartData', {
         trend: 'down',
         change: '0%',
       },
-      {
-        label: 'Total Unappropriated',
-        value: '₱0.00',
-        icon: 'unappropriated',
-        color: 'secondary',
-        trend: 'up',
-        change: '0%',
-      },
+
       {
         label: 'Total Balance',
         value: '₱0.00',
@@ -362,14 +355,7 @@ export const useChartDataStore = defineStore('chartData', {
             trend: 'down',
             change: '1.2%',
           },
-          {
-            label: 'Total Unappropriated',
-            value: this.formatCurrency(totalBalance),
-            icon: 'unappropriated',
-            color: 'secondary',
-            trend: 'up',
-            change: '3.8%',
-          },
+
           {
             label: 'Total Balance',
             value: this.formatCurrency(totalBalance),
@@ -552,14 +538,7 @@ export const useChartDataStore = defineStore('chartData', {
           trend: 'down',
           change: '1.2%',
         },
-        {
-          label: 'Total Unappropriated',
-          value: this.formatCurrency(0),
-          icon: 'unappropriated',
-          color: 'secondary',
-          trend: 'up',
-          change: '3.8%',
-        },
+
         {
           label: 'Total Balance',
           value: this.formatCurrency(0),
