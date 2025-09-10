@@ -432,6 +432,8 @@ const navigateTo = (link) => {
   }
 
   router.push(link)
+  // Close the panel after navigation
+  closePanel()
   if ($q.screen.lt.md) {
     leftDrawerOpen.value = false
   }

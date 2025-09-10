@@ -902,7 +902,7 @@ const loadAppropriation = async () => {
 
     // Check for any failures
     const failures = results.filter(result => result.status === 'rejected')
-    
+
     if (failures.length === 0) {
       $q.notify({
         type: 'positive',
@@ -1048,7 +1048,7 @@ const canTransfer = computed(() => {
 
   const amount = parseFloat(transferAmount.value)
   const availableAmount = supplementalBudget.unused_amount || 0
-  
+
   return !isNaN(amount) && amount > 0 && amount <= availableAmount
 })
 
@@ -1073,10 +1073,10 @@ const formatTransferAmount = (event) => {
 // Transfer validation helper functions
 const getTransferValidationClass = () => {
   if (!transferAmount.value || !selectedSupplementalBudget.value) return 'bg-grey-1'
-  
+
   const amount = parseFloat(transferAmount.value)
   const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
-  
+
   if (isNaN(amount) || amount <= 0) return 'bg-orange-1'
   if (amount > availableAmount) return 'bg-red-1'
   if (amount > availableAmount * 0.9) return 'bg-yellow-1'
@@ -1085,10 +1085,10 @@ const getTransferValidationClass = () => {
 
 const getTransferValidationTextClass = () => {
   if (!transferAmount.value || !selectedSupplementalBudget.value) return 'text-grey-6'
-  
+
   const amount = parseFloat(transferAmount.value)
   const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
-  
+
   if (isNaN(amount) || amount <= 0) return 'text-orange-8'
   if (amount > availableAmount) return 'text-red-8'
   if (amount > availableAmount * 0.9) return 'text-yellow-8'
@@ -1097,10 +1097,10 @@ const getTransferValidationTextClass = () => {
 
 const getTransferValidationMessage = () => {
   if (!transferAmount.value || !selectedSupplementalBudget.value) return 'Enter transfer amount'
-  
+
   const amount = parseFloat(transferAmount.value)
   const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
-  
+
   if (isNaN(amount) || amount <= 0) return 'Please enter a valid amount'
   if (amount > availableAmount) return `Amount exceeds available balance by ₱${(amount - availableAmount).toLocaleString()}`
   if (amount > availableAmount * 0.9) return `Transfer will use ${Math.round((amount / availableAmount) * 100)}% of available balance`
@@ -1109,10 +1109,10 @@ const getTransferValidationMessage = () => {
 
 const getTransferValidationIcon = () => {
   if (!transferAmount.value || !selectedSupplementalBudget.value) return 'help'
-  
+
   const amount = parseFloat(transferAmount.value)
   const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
-  
+
   if (isNaN(amount) || amount <= 0) return 'warning'
   if (amount > availableAmount) return 'error'
   if (amount > availableAmount * 0.9) return 'warning'
@@ -1121,10 +1121,10 @@ const getTransferValidationIcon = () => {
 
 const getTransferValidationColor = () => {
   if (!transferAmount.value || !selectedSupplementalBudget.value) return 'grey-6'
-  
+
   const amount = parseFloat(transferAmount.value)
   const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
-  
+
   if (isNaN(amount) || amount <= 0) return 'orange-8'
   if (amount > availableAmount) return 'red-8'
   if (amount > availableAmount * 0.9) return 'yellow-8'
@@ -1248,7 +1248,7 @@ const initializeEditDisplayAccounts = () => {
       } else {
         type.amount = 0
       }
-      
+
       // Check if this is a sub-item allocation
       if (subItemId) {
         // Handle sub-item allocation
@@ -1584,7 +1584,7 @@ const executeTransfer = async () => {
   // Show confirmation dialog for transfers
   const fromBudget = supplementalBudgets.value.find(b => b.id === selectedSupplementalBudget.value)
   const toBudget = annualBudgets.value.find(b => b.id === selectedAnnualBudget.value)
-  
+
   const confirmed = await new Promise((resolve) => {
     $q.dialog({
       title: 'Confirm Budget Transfer',
@@ -1616,11 +1616,11 @@ const executeTransfer = async () => {
       }
     }).onOk(() => resolve(true)).onCancel(() => resolve(false))
   })
-  
+
   if (!confirmed) return
 
   transferLoading.value = true
-  
+
   try {
     const payload = {
       from_budget_id: selectedSupplementalBudget.value,
@@ -1651,7 +1651,7 @@ const executeTransfer = async () => {
       // Success notification with detailed information
       const fromBudget = supplementalBudgets.value.find(b => b.id === selectedSupplementalBudget.value)
       const toBudget = annualBudgets.value.find(b => b.id === selectedAnnualBudget.value)
-      
+
       $q.notify({
         type: 'positive',
         message: `Successfully transferred ₱${transferAmountNum.toLocaleString()} from "${fromBudget?.description || 'Supplemental Budget'}" to "${toBudget?.description || 'Annual Budget'}"`,
@@ -1672,10 +1672,10 @@ const executeTransfer = async () => {
       // Clear form data
       transferAmount.value = null
       transferDescription.value = ''
-      
+
       // Optimized data refresh with proper error handling
       await refreshDataAfterTransfer()
-      
+
       closeTransferDialog()
     } else {
       throw new Error(response.data?.message || 'Transfer failed - no status returned')
@@ -1691,7 +1691,7 @@ const executeTransfer = async () => {
       if (error.response.data.message) {
         errorMessage = error.response.data.message
       }
-      
+
       if (error.response.data.errors) {
         // Handle validation errors with detailed feedback
         const errors = error.response.data.errors
@@ -1742,7 +1742,7 @@ const refreshDataAfterTransfer = async () => {
 
     // Check for any failures
     const failures = results.filter(result => result.status === 'rejected')
-    
+
     if (failures.length > 0) {
       console.warn('Some data refresh operations failed:', failures)
       // Show warning but don't block the user
@@ -2316,23 +2316,23 @@ const getDescriptionOnly = (description) => {
 }
 
 .budget-type-card:hover {
-  border-color: #4caf50;
-  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.15);
+  border-color: #2e7d32;
+  box-shadow: 0 2px 8px rgba(46, 125, 50, 0.2);
   transform: translateY(-2px);
 }
 
 .budget-type-card.selected {
-  border-color: #4caf50;
-  background: linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+  border-color: #2e7d32;
+  background: linear-gradient(135deg, #c8e6c9 0%, #e8f5e9 100%);
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.25);
 }
 
 .budget-type-card.selected .q-icon {
-  color: #4caf50;
+  color: #2e7d32;
 }
 
 .budget-type-card.selected .text-subtitle2 {
-  color: #4caf50;
+  color: #2e7d32;
   font-weight: 600;
 }
 

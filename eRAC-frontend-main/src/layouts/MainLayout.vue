@@ -377,7 +377,8 @@ const navigateToSearch = (link) => {
 
 const navigateTo = (link) => {
   router.push(link)
-  // Don't close panel when navigating - keep it open
+  // Close the panel after navigation
+  closePanel()
   if ($q.screen.lt.md) {
     leftDrawerOpen.value = false
   }
