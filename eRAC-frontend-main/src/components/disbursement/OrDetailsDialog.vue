@@ -109,117 +109,138 @@
             </span>
           </div>
           <q-space />
+          <q-btn color="green" icon="add" label="Add OR" flat @click="addOrDetail" />
         </div>
 
-          <!-- OR Details (All Editable) -->
-          <div v-if="store.currentLiquidation?.orDetails?.length > 0" class="q-mb-lg">
-            <div
-              v-for="(orDetail, index) in store.currentLiquidation.orDetails"
-              :key="orDetail.id || `new-or-${index}`"
-              class="q-mb-md"
-            >
-              <div class="row items-center q-col-gutter-md">
-                <div class="col row q-col-gutter-md no-wrap">
-                  <!-- OR Date -->
-                  <div class="col">
-                    <div class="text-bold q-mb-xs">OR Date:</div>
-                    <q-input
-                      filled
-                      unelaveted
-                      outlined
-                      v-model="orDetail.orDate"
-                      placeholder="Select Date"
-                    >
-                      <template v-slot:append>
-                        <q-icon name="event" class="cursor-pointer">
-                          <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                            <q-date
-                              v-model="orDetail.orDate"
-                              mask="DD/MM/YYYY"
-                              @update:model-value="(val) => handleDateChange(val, index)"
-                            />
-                          </q-popup-proxy>
-                        </q-icon>
-                      </template>
-                    </q-input>
-                  </div>
+        <!-- OR Details (All Editable) -->
+        <div v-if="store.currentLiquidation?.orDetails?.length > 0" class="q-mb-lg">
+          <div
+            v-for="(orDetail, index) in store.currentLiquidation.orDetails"
+            :key="orDetail.id || `new-or-${index}`"
+            class="q-mb-md"
+          >
+            <div class="row items-center q-col-gutter-md">
+              <!-- Remove Button -->
+              <div class="col-auto" v-if="store.currentLiquidation.orDetails.length > 1">
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="remove"
+                  color="red"
+                  @click="removeOrDetail(index)"
+                  title="Remove this OR"
+                />
+              </div>
 
-                  <!-- OR Number -->
-                  <div class="col">
-                    <div class="text-bold q-mb-xs">OR Number:</div>
-                    <q-input
-                      filled
-                      unelaveted
-                      outlined
-                      v-model="orDetail.orNumber"
-                      placeholder="OR Number"
+              <div class="col row q-col-gutter-md no-wrap">
+                <!-- OR Date -->
+                <div class="col">
+                  <div class="text-bold q-mb-xs">OR Date:</div>
+                  <q-input
+                    filled
+                    unelaveted
+                    outlined
+                    v-model="orDetail.orDate"
+                    placeholder="Select Date"
+                  >
+                    <template v-slot:append>
+                      <q-icon name="event" class="cursor-pointer">
+                        <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                          <q-date
+                            v-model="orDetail.orDate"
+                            mask="DD/MM/YYYY"
+                            @update:model-value="(val) => handleDateChange(val, index)"
+                          />
+                        </q-popup-proxy>
+                      </q-icon>
+                    </template>
+                  </q-input>
+                </div>
+
+                <!-- OR Number -->
+                <div class="col">
+                  <div class="text-bold q-mb-xs">OR Number:</div>
+                  <q-input
+                    filled
+                    unelaveted
+                    outlined
+                    v-model="orDetail.orNumber"
+                    placeholder="OR Number"
+                  />
+                </div>
+
+                <!-- OR Amount -->
+                <div class="col">
+                  <div class="text-bold q-mb-xs">OR Amount:</div>
+                  <q-input
+                    filled
+                    unelaveted
+                    outlined
+                    v-model="orDetail.orAmount"
+                    prefix="₱"
+                    inputmode="decimal"
+                    @keypress="blockNonNumeric"
+                    @paste.prevent="handlePasteNumeric"
+                    @input="calculateTotals"
+                  />
+                  <!-- Over-liquidation warning -->
+                  <div v-if="actualReturnAmount < 0" class="text-negative q-mt-xs text-caption">
+                    Exceeds DV amount by ₱{{ formatCurrency(Math.abs(actualReturnAmount)) }}
+                  </div>
+                </div>
+
+                <!-- OR Image -->
+                <div class="col">
+                  <div class="text-bold q-mb-xs" style="display: flex; align-items: center">
+                    OR Image:
+                    <q-btn
+                      v-if="orDetail.orPhotoUrl"
+                      flat
+                      dense
+                      round
+                      icon="delete"
+                      color="red"
+                      @click="removeOrImage(index)"
+                      style="margin-left: 8px"
                     />
                   </div>
-
-                  <!-- OR Amount -->
-                  <div class="col">
-                    <div class="text-bold q-mb-xs">OR Amount:</div>
-                    <q-input
-                      filled
-                      unelaveted
-                      outlined
-                      v-model="orDetail.orAmount"
-                      prefix="₱"
-                      inputmode="decimal"
-                      @keypress="blockNonNumeric"
-                      @paste.prevent="handlePasteNumeric"
-                      @input="calculateTotals"
+                  <div
+                    style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px"
+                  >
+                    <q-btn
+                      v-if="!orDetail.orPhotoUrl"
+                      flat
+                      dense
+                      color="primary"
+                      icon="upload"
+                      label="Upload"
+                      @click="triggerOrFileInput(index)"
+                      style="min-width: 100px"
                     />
-                    <!-- Over-liquidation warning -->
-                    <div v-if="actualReturnAmount < 0" class="text-negative q-mt-xs text-caption">
-                      Exceeds DV amount by ₱{{ formatCurrency(Math.abs(actualReturnAmount)) }}
-                    </div>
-                  </div>
-
-                  <!-- OR Image -->
-                  <div class="col">
-                    <div class="text-bold q-mb-xs" style="display: flex; align-items: center;">
-                      OR Image:
-                      <q-btn
-                        v-if="orDetail.orPhotoUrl"
-                        flat
-                        dense
-                        round
-                        icon="delete"
-                        color="red"
-                        @click="removeOrImage(index)"
-                        style="margin-left: 8px;"
-                      />
-                    </div>
-                    <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px;">
-                      <q-btn
-                        v-if="!orDetail.orPhotoUrl"
-                        flat
-                        dense
-                        color="primary"
-                        icon="upload"
-                        label="Upload"
-                        @click="triggerOrFileInput(index)"
-                        style="min-width: 100px;"
-                      />
-                      <q-img
-                        v-if="orDetail.orPhotoUrl"
-                        :src="orDetail.orPhotoUrl"
-                        style="max-width: 100%; max-height: 100px; border-radius: 4px; border: 1px solid #eee;"
-                      />
-                    </div>
-                    <input
-                      :ref="setOrImageInputRef(index)"
-                      type="file"
-                      accept=".jpg,.jpeg,.png"
-                      style="display: none"
-                      @change="(e) => onOrImageChange(e, index)"
+                    <q-img
+                      v-if="orDetail.orPhotoUrl"
+                      :src="orDetail.orPhotoUrl"
+                      style="
+                        max-width: 100%;
+                        max-height: 100px;
+                        border-radius: 4px;
+                        border: 1px solid #eee;
+                      "
                     />
                   </div>
+                  <input
+                    :ref="setOrImageInputRef(index)"
+                    type="file"
+                    accept=".jpg,.jpeg,.png"
+                    style="display: none"
+                    @change="(e) => onOrImageChange(e, index)"
+                  />
                 </div>
               </div>
             </div>
           </div>
+        </div>
       </q-card-section>
 
       <q-card-actions align="right" class="custom-actions">
@@ -254,7 +275,8 @@
       <q-card-section class="text-left">
         <div class="text-h6 q-mb-md">Confirm Liquidation</div>
         <div v-if="parseFloat(totalReturnAmount) > 0" class="text-body1 text-negative q-mb-md">
-          There's still an amount to return to appropriation: <strong>₱{{ totalReturnAmount }}</strong>
+          There's still an amount to return to appropriation:
+          <strong>₱{{ totalReturnAmount }}</strong>
         </div>
         <div class="text-body1 q-mb-md">
           Are you sure you want to submit this liquidation? This action cannot be undone.
@@ -273,7 +295,9 @@
   <q-dialog v-model="showReimbursementDialog" persistent>
     <q-card style="min-width: 1000px">
       <q-card-section class="q-pb-none">
-        <div class="text-h6">Reimbursement for Disbursement #{{ store.currentLiquidation.dvNumber }}</div>
+        <div class="text-h6">
+          Reimbursement for Disbursement #{{ store.currentLiquidation.dvNumber }}
+        </div>
       </q-card-section>
 
       <q-card-section>
@@ -337,13 +361,7 @@
           <!-- Cheque Number Field -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">Cheque Number:</q-item-label>
-            <q-input
-              filled
-              outlined
-              dense
-              v-model="reimbursementChequeNumber"
-              :disable="true"
-            />
+            <q-input filled outlined dense v-model="reimbursementChequeNumber" :disable="true" />
           </div>
 
           <!-- Payee Field -->
@@ -396,7 +414,7 @@
                   pattern="\\d*\\.?\\d{0,2}"
                   @keypress="blockNonNumeric"
                   @paste.prevent="handlePasteNumeric"
-                  style="width: 120px;"
+                  style="width: 120px"
                 />
               </div>
             </q-td>
@@ -404,13 +422,20 @@
         </q-table>
 
         <!-- Total Amount Display -->
-        <div class="q-mt-md q-pa-md" style="background-color: #f5f5f5; border-radius: 8px;">
+        <div class="q-mt-md q-pa-md" style="background-color: #f5f5f5; border-radius: 8px">
           <div class="text-body2">
             <strong>Total Selected: ₱{{ formatCurrency(totalSelectedExpenseAmount) }}</strong>
-            <span class="text-grey-7 q-ml-md">of ₱{{ formatCurrency(reimbursementAmount) }} needed</span>
+            <span class="text-grey-7 q-ml-md"
+              >of ₱{{ formatCurrency(reimbursementAmount) }} needed</span
+            >
           </div>
-          <div v-if="totalSelectedExpenseAmount > reimbursementAmount" class="text-negative text-caption q-mt-xs">
-            Total exceeds reimbursement amount by ₱{{ formatCurrency(totalSelectedExpenseAmount - reimbursementAmount) }}
+          <div
+            v-if="totalSelectedExpenseAmount > reimbursementAmount"
+            class="text-negative text-caption q-mt-xs"
+          >
+            Total exceeds reimbursement amount by ₱{{
+              formatCurrency(totalSelectedExpenseAmount - reimbursementAmount)
+            }}
           </div>
         </div>
       </q-card-section>
@@ -449,7 +474,7 @@
                   pattern="\\d*\\.?\\d{0,2}"
                   @keypress="blockNonNumeric"
                   @paste.prevent="handlePasteNumeric"
-                  style="width: 120px;"
+                  style="width: 120px"
                 />
               </div>
             </q-td>
@@ -457,12 +482,17 @@
         </q-table>
 
         <!-- Total OR Amount Display -->
-        <div class="q-mt-md q-pa-md" style="background-color: #f5f5f5; border-radius: 8px;">
+        <div class="q-mt-md q-pa-md" style="background-color: #f5f5f5; border-radius: 8px">
           <div class="text-body2">
             <strong>Total OR Amount: ₱{{ formatCurrency(totalSelectedOrAmount) }}</strong>
-            <span class="text-grey-7 q-ml-md">of ₱{{ formatCurrency(reimbursementAmount) }} needed</span>
+            <span class="text-grey-7 q-ml-md"
+              >of ₱{{ formatCurrency(reimbursementAmount) }} needed</span
+            >
           </div>
-          <div v-if="totalSelectedOrAmount !== reimbursementAmount" class="text-negative text-caption q-mt-xs">
+          <div
+            v-if="totalSelectedOrAmount !== reimbursementAmount"
+            class="text-negative text-caption q-mt-xs"
+          >
             Total must exactly match reimbursement amount
           </div>
         </div>
@@ -487,13 +517,22 @@
       <q-card-section class="q-pb-none">
         <div class="text-h6">Select Expense Account</div>
         <div class="text-caption text-grey-6 q-mt-sm">
-          Select accounts to fund the reimbursement (₱{{ formatCurrency(reimbursementAmount) }} needed)
+          Select accounts to fund the reimbursement (₱{{
+            formatCurrency(reimbursementAmount)
+          }}
+          needed)
         </div>
       </q-card-section>
 
       <q-card-section>
-        <q-input outlined dense placeholder="Search expense account..." v-model="store.expenseSearch"
-          class="q-mb-sm" style="width: 300px">
+        <q-input
+          outlined
+          dense
+          placeholder="Search expense account..."
+          v-model="store.expenseSearch"
+          class="q-mb-sm"
+          style="width: 300px"
+        >
           <template v-slot:append>
             <q-icon name="search" />
           </template>
@@ -522,8 +561,11 @@
           </template>
           <template v-slot:body-cell-budget_source="props">
             <q-td :props="props">
-              <q-badge :color="getBudgetSourceColor(props.row.budget_source)"
-                :label="getBudgetSourceLabel(props.row.budget_source)" class="budget-source-badge" />
+              <q-badge
+                :color="getBudgetSourceColor(props.row.budget_source)"
+                :label="getBudgetSourceLabel(props.row.budget_source)"
+                class="budget-source-badge"
+              />
             </q-td>
           </template>
           <template v-slot:body-cell-action="props">
@@ -539,7 +581,6 @@
       </q-card-actions>
     </q-card>
   </q-dialog>
-
 </template>
 
 <script setup>
@@ -580,15 +621,17 @@ function initializeOrDetails() {
     const yyyy = today.getFullYear()
     const todayFormatted = `${dd}/${mm}/${yyyy}`
 
-    store.currentLiquidation.orDetails = [{
-      orNumber: '',
-      orAmount: '',
-      orDate: todayFormatted,
-      orImage: null,
-      orPhotoUrl: null,
-      serverPhotoPath: null,
-      remarks: '',
-    }]
+    store.currentLiquidation.orDetails = [
+      {
+        orNumber: '',
+        orAmount: '',
+        orDate: todayFormatted,
+        orImage: null,
+        orPhotoUrl: null,
+        serverPhotoPath: null,
+        remarks: '',
+      },
+    ]
   }
   // Don't add additional rows automatically - let users add them as needed
 }
@@ -615,7 +658,7 @@ watch(
       store.currentLiquidation.remarks = newRemarks
     }
   },
-  { deep: true }
+  { deep: true },
 )
 
 // Watch reimbursement dialog open to initialize defaults
@@ -642,9 +685,9 @@ watch(
 
       // Load available OR numbers from the current disbursement
       if (store.currentLiquidation?.orDetails?.length > 0) {
-        availableOrNumbers.value = store.currentLiquidation.orDetails.map(or => ({
+        availableOrNumbers.value = store.currentLiquidation.orDetails.map((or) => ({
           orNumber: or.orNumber,
-          orDate: or.orDate
+          orDate: or.orDate,
         }))
       }
 
@@ -679,15 +722,15 @@ watch(
       }
 
       // Populate selected ORs with all OR details
-      selectedReimbursementOrs.value = store.currentLiquidation.orDetails.map(or => ({
+      selectedReimbursementOrs.value = store.currentLiquidation.orDetails.map((or) => ({
         ...or,
-        reimbAmount: ''
+        reimbAmount: '',
       }))
     } else {
       // Reset form when dialog closes
       resetReimbursementForm()
     }
-  }
+  },
 )
 
 const totalActualExpense = computed(() => {
@@ -728,7 +771,7 @@ const orDetailsCount = computed(() => {
 // Reimbursement computed properties
 const currentReimbursementBankLabel = computed(() => {
   if (selectedReimbursementBank.value) {
-    const selectedBank = bankStore.banks.find(b => b.id === selectedReimbursementBank.value)
+    const selectedBank = bankStore.banks.find((b) => b.id === selectedReimbursementBank.value)
     return selectedBank ? selectedBank.name : 'Select Bank'
   }
   return 'Select Bank'
@@ -752,7 +795,10 @@ const selectedExpenseAccountColumns = computed(() => [
 ])
 
 const totalSelectedExpenseAmount = computed(() => {
-  return selectedReimbursementExpenseAccounts.value.reduce((sum, account) => sum + (parseFloat(account.amount) || 0), 0)
+  return selectedReimbursementExpenseAccounts.value.reduce(
+    (sum, account) => sum + (parseFloat(account.amount) || 0),
+    0,
+  )
 })
 
 const selectedOrColumns = computed(() => [
@@ -776,7 +822,8 @@ const selectedOrColumns = computed(() => [
     field: 'orAmount',
     align: 'right',
     sortable: true,
-    format: (val) => `₱${Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    format: (val) =>
+      `₱${Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
   },
   {
     name: 'orAmount',
@@ -788,15 +835,19 @@ const selectedOrColumns = computed(() => [
 ])
 
 const totalSelectedOrAmount = computed(() => {
-  return selectedReimbursementOrs.value.reduce((sum, or) => sum + (parseFloat(or.reimbAmount) || 0), 0)
+  return selectedReimbursementOrs.value.reduce(
+    (sum, or) => sum + (parseFloat(or.reimbAmount) || 0),
+    0,
+  )
 })
 
-
 const canSubmitReimbursement = computed(() => {
-  return selectedReimbursementBank.value &&
-         selectedReimbursementExpenseAccounts.value.length > 0 &&
-         selectedReimbursementOrs.value.length > 0 &&
-         totalSelectedExpenseAmount.value === reimbursementAmount.value
+  return (
+    selectedReimbursementBank.value &&
+    selectedReimbursementExpenseAccounts.value.length > 0 &&
+    selectedReimbursementOrs.value.length > 0 &&
+    totalSelectedExpenseAmount.value === reimbursementAmount.value
+  )
 })
 
 // Budget source helper functions
@@ -827,7 +878,8 @@ const handleReimbursementBankSelection = async (bankId) => {
       // Fetch available cheque for the selected bank
       const response = await api.get(`/api/barangay/banks/${bankId}/available-cheques`, authConfig)
       const data = response.data.data || []
-      reimbursementChequeNumber.value = data.cheque && data.cheque[0] ? data.cheque[0].cheque_number : ''
+      reimbursementChequeNumber.value =
+        data.cheque && data.cheque[0] ? data.cheque[0].cheque_number : ''
     } catch (error) {
       console.error('Error fetching cheque number for bank:', error)
       reimbursementChequeNumber.value = ''
@@ -837,19 +889,117 @@ const handleReimbursementBankSelection = async (bankId) => {
   }
 }
 
-
-
-
-
 const calculateTotals = () => {
   // Computed properties will update automatically
 }
 
+const addOrDetail = () => {
+  if (!store.currentLiquidation.orDetails) {
+    store.currentLiquidation.orDetails = []
+  }
 
+  // Get today's date in DD/MM/YYYY format
+  const today = new Date()
+  const dd = String(today.getDate()).padStart(2, '0')
+  const mm = String(today.getMonth() + 1).padStart(2, '0')
+  const yyyy = today.getFullYear()
+  const todayFormatted = `${dd}/${mm}/${yyyy}`
 
+  store.currentLiquidation.orDetails.push({
+    orNumber: '',
+    orAmount: '',
+    orDate: todayFormatted,
+    orImage: null,
+    orPhotoUrl: null,
+    serverPhotoPath: null,
+    remarks: '',
+  })
+}
 
+// Remove OR detail (unified function)
+const removeOrDetail = async (index) => {
+  console.log('Removing OR detail at index:', index)
+  console.log(
+    'Current OR details before removal:',
+    JSON.parse(JSON.stringify(store.currentLiquidation.orDetails)),
+  )
 
+  if (store.currentLiquidation.orDetails && store.currentLiquidation.orDetails.length > 0) {
+    // Ensure we don't go below minimum rows
+    if (store.currentLiquidation.orDetails.length <= 1) {
+      $q.notify({
+        type: 'warning',
+        message: 'Cannot remove the last OR detail. At least one row is required.',
+        icon: 'warning',
+        position: 'top',
+      })
+      return
+    }
 
+    const orDetail = store.currentLiquidation.orDetails[index]
+    console.log('Removing OR detail:', orDetail)
+
+    // If it's an existing OR detail (has ID), delete it from backend first
+    if (orDetail.id) {
+      try {
+        const result = await store.deleteOrDetail(store.currentLiquidation.id, orDetail.id)
+        if (result.success) {
+          // Find the correct index again in case the array changed
+          const currentIndex = store.currentLiquidation.orDetails.findIndex(
+            (detail) => detail.id === orDetail.id,
+          )
+          if (currentIndex !== -1) {
+            store.currentLiquidation.orDetails.splice(currentIndex, 1)
+            console.log('OR detail removed from backend and local array at index:', currentIndex)
+          } else {
+            console.warn('OR detail not found in array after backend deletion')
+          }
+          $q.notify({
+            type: 'positive',
+            message: 'OR Detail removed successfully!',
+            icon: 'check_circle',
+            position: 'top',
+          })
+        } else {
+          $q.notify({
+            type: 'negative',
+            message: result.message || 'Failed to remove OR Detail',
+            icon: 'error',
+            position: 'top',
+          })
+        }
+      } catch (error) {
+        console.error('Error removing OR detail:', error)
+        $q.notify({
+          type: 'negative',
+          message: 'An error occurred while removing OR Detail',
+          icon: 'error',
+          position: 'top',
+        })
+      }
+    } else {
+      // If it's a new OR detail (no ID), find it by comparing the object reference
+      const currentIndex = store.currentLiquidation.orDetails.findIndex(
+        (detail) =>
+          detail === orDetail ||
+          (detail.orNumber === orDetail.orNumber &&
+            detail.orAmount === orDetail.orAmount &&
+            detail.orDate === orDetail.orDate),
+      )
+      if (currentIndex !== -1) {
+        store.currentLiquidation.orDetails.splice(currentIndex, 1)
+        console.log('New OR detail removed from local array at index:', currentIndex)
+      } else {
+        console.warn('New OR detail not found in array')
+      }
+    }
+
+    console.log(
+      'OR details after removal:',
+      JSON.parse(JSON.stringify(store.currentLiquidation.orDetails)),
+    )
+  }
+}
 
 // Unified OR detail image functions
 const orImageInputs = ref([])
@@ -900,10 +1050,6 @@ const removeOrImage = (index) => {
   if (input) input.value = ''
 }
 
-
-
-
-
 // function saveOrDetails() {
 //   // Example: pass orImageFile.value to store action for upload
 //   // store.saveOrDetails({ ...fields, orImage: orImageFile.value })
@@ -918,9 +1064,7 @@ const isValid = computed(() => {
   if (allDetails.length === 0) return false
 
   // Validate all details
-  return allDetails.every((or) =>
-    or.orNumber && or.orAmount && or.orDate && or.orPhotoUrl
-  )
+  return allDetails.every((or) => or.orNumber && or.orAmount && or.orDate && or.orPhotoUrl)
 })
 
 // Filter expense accounts to only show those with valid expense_item_id
@@ -939,22 +1083,24 @@ const validExpenseAccounts = computed(() => {
       id: store.filteredExpenseAccounts[0]?.id,
       expense_item_id: store.filteredExpenseAccounts[0]?.expense_item_id,
       account: store.filteredExpenseAccounts[0]?.account,
-      expenseItem: store.filteredExpenseAccounts[0]?.expenseItem
+      expenseItem: store.filteredExpenseAccounts[0]?.expenseItem,
     })
   }
 
   // Check what we're filtering for
-  const accountsWithExpenseItemId = store.filteredExpenseAccounts?.filter(account =>
-    account.expense_item_id && account.expense_item_id !== null
-  ) || []
+  const accountsWithExpenseItemId =
+    store.filteredExpenseAccounts?.filter(
+      (account) => account.expense_item_id && account.expense_item_id !== null,
+    ) || []
 
   console.log('Accounts with expense_item_id:', accountsWithExpenseItemId.length)
   console.log('Sample valid account:', accountsWithExpenseItemId[0])
 
   // Also check for accounts without expense_item_id
-  const accountsWithoutExpenseItemId = store.filteredExpenseAccounts?.filter(account =>
-    !account.expense_item_id || account.expense_item_id === null
-  ) || []
+  const accountsWithoutExpenseItemId =
+    store.filteredExpenseAccounts?.filter(
+      (account) => !account.expense_item_id || account.expense_item_id === null,
+    ) || []
 
   console.log('Accounts without expense_item_id:', accountsWithoutExpenseItemId.length)
   if (accountsWithoutExpenseItemId.length > 0) {
@@ -995,8 +1141,6 @@ const handleDateChange = (date, index) => {
   store.currentLiquidation.orDetails[index].orDate = date
   calculateTotals()
 }
-
-
 
 const handleRemarksChange = (newRemarks) => {
   // Ensure remarks are properly updated in the store
@@ -1089,18 +1233,16 @@ const handleReimbursement = () => {
 // Reimbursement functions
 const addExpenseAccount = (account) => {
   // Check if account is already selected
-  const existing = selectedReimbursementExpenseAccounts.value.find(acc => acc.id === account.id)
+  const existing = selectedReimbursementExpenseAccounts.value.find((acc) => acc.id === account.id)
   if (!existing) {
     selectedReimbursementExpenseAccounts.value.push({
       ...account,
       accountName: `${account.account}${account.expenseType ? ` > ${account.expenseType}` : ''}${account.expenseItem ? ` > ${account.expenseItem}` : ''}`,
-      amount: ''
+      amount: '',
     })
   }
   showExpenseAccountDialog.value = false
 }
-
-
 
 const handleSubmitReimbursement = async () => {
   savingReimbursement.value = true
@@ -1171,7 +1313,10 @@ const handleSubmitReimbursement = async () => {
     // }
 
     // Validate that total expense amounts match reimbursement amount
-    const totalExpenseAmount = selectedReimbursementExpenseAccounts.value.reduce((sum, acc) => sum + (acc.amount || 0), 0)
+    const totalExpenseAmount = selectedReimbursementExpenseAccounts.value.reduce(
+      (sum, acc) => sum + (acc.amount || 0),
+      0,
+    )
     if (Math.abs(totalExpenseAmount - reimbursementAmount.value) > 0.01) {
       $q.notify({
         type: 'negative',
@@ -1183,7 +1328,10 @@ const handleSubmitReimbursement = async () => {
     }
 
     // Validate that total OR amounts match reimbursement amount
-    const totalOrAmount = selectedReimbursementOrs.value.reduce((sum, or) => sum + (or.orAmount || 0), 0)
+    const totalOrAmount = selectedReimbursementOrs.value.reduce(
+      (sum, or) => sum + (or.orAmount || 0),
+      0,
+    )
     if (Math.abs(totalOrAmount - reimbursementAmount.value) > 0.01) {
       $q.notify({
         type: 'negative',
@@ -1197,7 +1345,7 @@ const handleSubmitReimbursement = async () => {
     // Prepare reimbursement data - use the first expense account as the primary account
     const primaryExpenseAccount = selectedReimbursementExpenseAccounts.value[0]
     const primaryOr = selectedReimbursementOrs.value[0]
-    console.error('-==============================================',primaryOr)
+    console.error('-==============================================', primaryOr)
 
     const reimbursementData = {
       ref_dv_number: store.currentLiquidation.dvNumber,
@@ -1217,7 +1365,7 @@ const handleSubmitReimbursement = async () => {
       or_date: primaryOr.orDate,
     }
 
-    console.log('Reimbursement data being submitted:', JSON.stringify(reimbursementData, null, 2));
+    console.log('Reimbursement data being submitted:', JSON.stringify(reimbursementData, null, 2))
 
     // Call store method to submit reimbursement
     const result = await store.submitReimbursement(reimbursementData)
