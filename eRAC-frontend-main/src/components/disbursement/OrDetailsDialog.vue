@@ -1230,6 +1230,8 @@ const handleSubmitReimbursement = async () => {
         position: 'top',
       })
       showReimbursementDialog.value = false
+      // Close the parent Liquidation Details dialog as well
+      store.closeDialog('orDetails')
       // Reset reimbursement form
       resetReimbursementForm()
     } else {
