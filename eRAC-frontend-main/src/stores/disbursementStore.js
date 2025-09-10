@@ -687,7 +687,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           console.log('Fetching expense accounts for admin user...')
           await this.fetchExpenseTypesFromAccountsLib()
           console.log('Expense types loaded for admin:', this.expenseTypes?.length || 0)
-          
+
           // Create mock expense data structure for admin users
           // This allows them to see expense accounts for reimbursement purposes
           this.expenseData = this.createMockExpenseDataForAdmin()
@@ -695,7 +695,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         } else {
           // For regular users, use the normal flow
           const appropriationStore = useAppropriationStore()
-          
+
           if (this.selectedBudgetSource && this.selectedBudgetSource !== 'all') {
             appropriationStore.setSelectedBudgetType(this.selectedBudgetSource)
           }
@@ -721,10 +721,10 @@ export const useDisbursementStore = defineStore('disbursement', {
     async getDefaultBookletId(bankId) {
       try {
         console.log('Fetching booklet ID for bank:', bankId)
-        
+
         // Try multiple API endpoints to find booklets
         let booklets = []
-        
+
         // Try the main booklets endpoint
         try {
           const response = await api.get(`/api/barangay/banks/${bankId}/booklets`, this.getAuthConfig())
@@ -733,7 +733,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         } catch (error) {
           console.warn('Main booklets endpoint failed:', error.message)
         }
-        
+
         // If no booklets found, try alternative endpoint
         if (booklets.length === 0) {
           try {
@@ -744,7 +744,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             console.warn('Alternative booklets endpoint failed:', error.message)
           }
         }
-        
+
         // If still no booklets, try to get any booklet for this bank
         if (booklets.length === 0) {
           try {
@@ -756,13 +756,13 @@ export const useDisbursementStore = defineStore('disbursement', {
             console.warn('All booklets endpoint failed:', error.message)
           }
         }
-        
+
         if (booklets.length > 0) {
           const selectedBooklet = booklets[0]
           console.log('Selected booklet:', selectedBooklet)
           return selectedBooklet.id
         }
-        
+
         // Last resort: try to find any booklet in the system
         try {
           const response = await api.get('/api/barangay/booklets', this.getAuthConfig())
@@ -774,7 +774,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         } catch (error) {
           console.warn('Failed to get any booklets:', error.message)
         }
-        
+
         // Ultimate fallback
         console.warn('No booklets found anywhere, using default ID 1')
         return 1
@@ -790,7 +790,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       // We'll use the expense types from the accounts library
       console.log('Creating mock expense data for admin...')
       console.log('Available expense types:', this.expenseTypes?.length || 0)
-      
+
       if (!this.expenseTypes || this.expenseTypes.length === 0) {
         console.log('No expense types available for admin mock data')
         return []
@@ -800,7 +800,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       const groupedByClass = {}
       this.expenseTypes.forEach(type => {
         console.log('Processing expense type:', type)
-        
+
         if (!groupedByClass[type.expense_class_id]) {
           groupedByClass[type.expense_class_id] = {
             id: type.expense_class_id,
@@ -808,7 +808,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             children: []
           }
         }
-        
+
         groupedByClass[type.expense_class_id].children.push({
           id: type.expense_type_id,
           name: type.expense_type_name,
@@ -824,7 +824,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       const result = Object.values(groupedByClass)
       console.log('Mock expense data created:', result.length, 'classes')
       console.log('Sample mock data:', result[0])
-      
+
       return result
     },
 
@@ -1137,7 +1137,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             payee: disbursement.payee,
             // Add other fields as needed
           };
-          
+
           // Set the autoCheque and autoBookletID fields for display in the UI
           this.autoCheque = disbursement.cheque_number;
           this.autoBookletID = disbursement.booklet_id;
@@ -2680,7 +2680,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         if (!reimbursementData.ref_dv_number) {
           throw new Error('Reference DV number is required');
         }
-        
+
         if (!reimbursementData.dvNumber) {
           throw new Error('DV number is required');
         }
@@ -2726,10 +2726,10 @@ export const useDisbursementStore = defineStore('disbursement', {
         const mm = String(today.getMonth() + 1).padStart(2, '0');
         const yyyy = today.getFullYear();
         const formattedDate = `${dd}/${mm}/${yyyy}`;
-        
+
         // Generate unique DV number for reimbursement using proper sequence
         // Try to get the next available DV number from the backend
-        
+
         // Get booklet ID with comprehensive fallback
         const bookletId = reimbursementData.cheque_booklet || await this.getDefaultBookletId(reimbursementData.bank_id)
         console.log('Using booklet ID:', bookletId)
@@ -2738,7 +2738,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         const totalActualExpense = this.currentLiquidation.orDetails?.reduce(
           (sum, or) => sum + (parseFloat(or.orAmount) || 0), 0
         ) || 0
-        
+
         const payload = {
           // Required fields for disbursements table
           date: formattedDate,
@@ -2748,7 +2748,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           payee: this.currentLiquidation.payee, // Default payee for reimbursements
           dv_amount: parseFloat(reimbursementData.dv_amount),
           ref_dv_number: reimbursementData.ref_dv_number, // Reference to original DV
-          
+
           // Additional fields
           expenses: [{
             accountId: reimbursementData.expense_account.id,
@@ -2758,22 +2758,23 @@ export const useDisbursementStore = defineStore('disbursement', {
             expense_type_id: reimbursementData.expense_account.expense_type_id,
             expense_item_id: reimbursementData.expense_account.expense_item_id,
           }],
-          
-          orDetails: this.currentLiquidation.orDetails.map(or => ({
-            id: or.id || null, // Include ID for existing OR details
-            orNumber: or.orNumber,
-            orAmount: or.orAmount,
-            orDate: or.orDate || '',
-            remarks: `${this.currentLiquidation.remarks || ''} (₱${or.orAmount} disbursed and ₱${reimbursementData.or_amount} reimbursed.)`, // Use single remarks for all OR details
-            orPhotoUrl: 'or-photos/sample.png',
-          })),
-          liquidatedAmount: totalActualExpense,
 
-          ref_orDetails: [{
-            ref_orNumber: reimbursementData.or_number,
-            ref_orAmount: parseFloat(reimbursementData.or_amount),
-            ref_orDate: reimbursementData.or_date, // Keep original format for OR date
-          }],
+          orDetails: this.currentLiquidation.orDetails
+            .filter(or => or.id !== null) // Exclude reimbursement entries with null id
+            .map(or => ({
+              id: or.id,
+              orNumber: or.orNumber,
+              orAmount: or.orNumber === reimbursementData.or_number
+                ? (parseFloat(or.orAmount) - parseFloat(reimbursementData.or_amount)).toFixed(2)
+                : or.orAmount, // Only deduct from matching OR
+              orRefAmount: or.orNumber === reimbursementData.or_number
+                ? parseFloat(reimbursementData.or_amount)
+                : 0, // Set reimbursement amount only for matching OR
+              orDate: or.orDate || '',
+              remarks: or.remarks, // Keep original remarks
+              orPhotoUrl: 'or-photos/sample.png',
+            })),
+          liquidatedAmount: totalActualExpense,
         };
 
         console.log('Submitting reimbursement with payload:', JSON.stringify(payload, null, 2));
@@ -2809,10 +2810,10 @@ export const useDisbursementStore = defineStore('disbursement', {
       } catch (error) {
         console.error('Failed to submit reimbursement:', error);
         console.error('Error response:', error.response?.data);
-        
+
         // Provide more specific error messages
         let errorMessage = 'Failed to submit reimbursement';
-        
+
         if (error.response?.status === 422) {
           // Handle validation errors specifically
           if (error.response.data?.errors) {
@@ -2829,7 +2830,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         } else if (error.response?.data?.message) {
           errorMessage = error.response.data.message;
         }
-        
+
         return {
           success: false,
           error: errorMessage
