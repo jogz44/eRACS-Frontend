@@ -1,6 +1,6 @@
 <template>
   <q-dialog v-model="appropriationStore.showAllocationDialog" persistent>
-    <q-card class="allocation-card" style="min-width: 1050px; height: 800px; font-size: medium;">
+    <q-card class="allocation-card" style="min-width: 1050px; max-height: 90vh; font-size: medium;">
       <!-- Header with reduced padding -->
       <q-card-section class="q-pb-sm q-pt-sm" >
         <div class="row items-center justify-between">
@@ -81,7 +81,7 @@
           </div>
 
           <!-- Table Body -->
-          <div class="hierarchical-body" style="max-height: 300px; overflow-y: auto">
+          <div class="hierarchical-body" style="max-height: calc(70vh - 200px); overflow-y: auto">
             <template v-for="expenseClass in displayAccounts" :key="'class-' + expenseClass.id">
               <!-- Expense Class Row -->
               <div
@@ -308,10 +308,10 @@
         <div class="text-body1 q-mb-md">
           The following expense types have amounts allocated at the type level, but you've also allocated amounts to items within these types:
         </div>
-        
+
         <div class="confirmation-list q-mb-md">
-          <div 
-            v-for="conflict in typeAllocationConflicts" 
+          <div
+            v-for="conflict in typeAllocationConflicts"
             :key="conflict.typeId"
             class="conflict-item q-pa-sm q-mb-sm"
             style="border: 1px solid #e0e0e0; border-radius: 4px; background-color: #f8f9fa;"
@@ -333,9 +333,9 @@
 
       <q-card-actions align="right" class="q-pa-md">
         <q-btn flat label="Cancel" color="secondary" @click="showConfirmationDialog = false" />
-        <q-btn 
-          label="Confirm & Save" 
-          color="primary" 
+        <q-btn
+          label="Confirm & Save"
+          color="primary"
           @click="confirmAndSubmitAllocation"
           :loading="appropriationStore.loading"
         />
@@ -488,7 +488,7 @@ const newAllocationsTotal = computed(() => {
               total += currentAmount
             }
           }
-          
+
           // Include subitems
           if (item.children && item.children.length > 0) {
             item.children.forEach((subItem) => {
@@ -663,7 +663,7 @@ const submitAllocation = async () => {
                 hasValidAllocation = true
               }
             }
-            
+
             // Handle subitems
             if (item.children && item.children.length > 0) {
               item.children.forEach((subItem) => {
@@ -946,12 +946,12 @@ const confirmAndSubmitAllocation = async () => {
   try {
     // Close confirmation dialog first
     showConfirmationDialog.value = false
-    
+
     // Clear type-level allocations from input cache to ensure they're not sent
     typeAllocationConflicts.value.forEach(conflict => {
       appropriationStore.updateAllocationAmount(`type-${conflict.typeId}`, '')
     })
-    
+
     // Now submit the allocation (this will only include item-level allocations)
     await submitAllocation()
   } catch (error) {
@@ -968,6 +968,28 @@ const confirmAndSubmitAllocation = async () => {
 </script>
 
 <style scoped>
+.allocation-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.q-card-section {
+  flex: none;
+}
+
+.hierarchical-table {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.hierarchical-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 200px;
+}
+
 .hierarchical-table .row {
   border-bottom: 1px solid #e0e0e0;
   display: flex;
@@ -996,16 +1018,41 @@ const confirmAndSubmitAllocation = async () => {
   min-width: 180px;
 }
 
-/* Responsive adjustments for currency inputs */
+/* Responsive adjustments */
 @media (max-width: 1200px) {
+  .allocation-card {
+    min-width: 90vw !important;
+  }
+
   .q-input[style*="max-width: 230px"] {
     min-width: 150px;
+  }
+
+  .hierarchical-body {
+    max-height: calc(80vh - 200px);
   }
 }
 
 @media (max-width: 900px) {
+  .allocation-card {
+    min-width: 95vw !important;
+  }
+
   .q-input[style*="max-width: 230px"] {
     min-width: 120px;
+  }
+
+  .hierarchical-body {
+    max-height: calc(85vh - 200px);
+  }
+
+  /* Make summary section more compact on mobile */
+  .row.q-mb-sm {
+    gap: 8px;
+  }
+
+  .col-md-6.col-12 {
+    margin-bottom: 8px !important;
   }
 }
 
@@ -1124,11 +1171,11 @@ const confirmAndSubmitAllocation = async () => {
   .subitem-row {
     margin-left: 16px !important;
   }
-  
+
   .subitem-name-column {
     padding-left: 32px !important;
   }
-  
+
   .item-name-column {
     padding-left: 32px !important;
   }
