@@ -22,7 +22,13 @@ export const useBankStore = defineStore('bank', {
         label: 'Status',
         field: 'status',
         align: 'center',
-        format: (val) => (val === 'Available' ? 'Available' : 'Consumed'),
+        format: (val) => {
+          const s = (val || '').toString().toLowerCase()
+          if (s === 'available') return 'Available'
+          if (s === 'unavailable') return 'Unavailable'
+          if (s === 'consumed') return 'Consumed'
+          return val
+        },
       },
       { name: 'view', label: 'Cheques', field: 'view', align: 'center', sortable: false },
       { name: 'actions', label: 'Actions', align: 'center' },
@@ -310,7 +316,7 @@ export const useBankStore = defineStore('bank', {
         const response = await api.get(`/api/barangay/banks/${bankId}/booklets`, config)
 
         // Extract booklets from the correct path
-        const apiBooklets = response.data?.data?.booklets || []
+        const apiBooklets = response.data?.booklets || response.data?.data?.booklets || []
 
         // Process the booklets to match your table columns
         const processedBooklets = apiBooklets.map((booklet) => ({
@@ -405,8 +411,6 @@ export const useBankStore = defineStore('bank', {
 
         // Handle different response structures
         const rawCheques =
-          response.data?.data?.booklets ||
-          response.data?.booklets ||
           response.data?.data ||
           response.data?.cheques ||
           []

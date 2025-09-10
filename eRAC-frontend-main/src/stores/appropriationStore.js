@@ -557,10 +557,23 @@ export const useAppropriationStore = defineStore("appropriation", {
       const doBackground = options?.backgroundRefresh === true
       if (!doBackground) this.loading = true
       try {
-        const cleanedAllocations = allocations.map((allocation) => ({
-          ...allocation,
-          amount: parseCurrency(allocation.amount),
-        }))
+        const cleanedAllocations = allocations.map((allocation) => {
+          const normalizedType = allocation.type === 'subitem' ? 'sub-item' : allocation.type
+          const expenseSubItemId =
+            allocation.expense_sub_item_id ??
+            allocation.expense_subitem_id ??
+            allocation.expenseSubItemId ??
+            null
+
+          return {
+            amount: parseCurrency(allocation.amount),
+            type: normalizedType,
+            expense_class_id: allocation.expense_class_id ?? null,
+            expense_type_id: allocation.expense_type_id ?? null,
+            expense_item_id: allocation.expense_item_id ?? null,
+            expense_sub_item_id: expenseSubItemId,
+          }
+        })
 
         // Admin users cannot commit allocations - only view
         if (this.authStore.admin) {

@@ -72,6 +72,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       orDetails: false,
       viewOrDetails: false,
       void: false, // Added for void dialog
+      editRequest: false, // Added for edit request dialog
     },
 
     // Loading states
@@ -84,6 +85,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     loadingEditDisbursement: null, // Loading state for edit disbursement (stores the ID of the disbursement being loaded)
     loadingDisbursements: false, // Loading state for fetching disbursements
     voidingDisbursement: false, // Loading state for voiding disbursement
+    requestingEdit: false, // Loading state for edit request
 
     // Form data
     forms: {
@@ -109,6 +111,12 @@ export const useDisbursementStore = defineStore('disbursement', {
         receivedBy: '',
       },
       void: { // Added for void form
+        disbursementId: null,
+        remarks: '',
+        requestedBy: null,
+        requestedAt: null,
+      },
+      edit: { // Added for edit request form
         disbursementId: null,
         remarks: '',
         requestedBy: null,
@@ -2492,6 +2500,64 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.forms.void.remarks = '';
       this.forms.void.requestedBy = null;
       this.forms.void.requestedAt = null;
+    },
+
+    // Edit-request related methods
+    openEditRequestDialog(disbursement) {
+      this.forms.edit.disbursementId = disbursement.id;
+      this.forms.edit.remarks = '';
+      this.forms.edit.requestedBy = null;
+      this.forms.edit.requestedAt = null;
+      this.dialogs.editRequest = true;
+    },
+
+    closeEditRequestDialog() {
+      this.dialogs.editRequest = false;
+      this.forms.edit.disbursementId = null;
+      this.forms.edit.remarks = '';
+      this.forms.edit.requestedBy = null;
+      this.forms.edit.requestedAt = null;
+    },
+
+    async submitEditRequest() {
+      if (!this.forms.edit.remarks || this.forms.edit.remarks.trim() === '') {
+        throw new Error('Remarks are required for edit requests');
+      }
+
+      this.requestingEdit = true;
+      try {
+        const authStore = useAuthStore();
+        const token = authStore.admin ? authStore.adminToken : authStore.token;
+
+        // Reuse backend pattern similar to void-request; adjust endpoint name
+        const response = await api.post(`/api/barangay/disbursements/${this.forms.edit.disbursementId}/edit-request`, {
+          remarks: this.forms.edit.remarks.trim(),
+        }, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+
+        if (response.data.status) {
+          const idx = this.disbursements.findIndex(d => d.id === this.forms.edit.disbursementId);
+          if (idx !== -1) {
+            this.disbursements[idx].status = 'Edit Requested';
+            this.disbursements[idx].remarks = this.forms.edit.remarks.trim();
+            this.disbursements[idx].edit_requested_at = new Date().toISOString();
+          }
+
+          this.closeEditRequestDialog();
+          return { success: true, message: response.data.message };
+        } else {
+          return { success: false, message: response.data.message };
+        }
+      } catch (error) {
+        console.error('Failed to submit edit request:', error);
+        throw new Error(error.response?.data?.message || 'Failed to submit edit request');
+      } finally {
+        this.requestingEdit = false;
+      }
     },
 
     async submitVoidRequest() {

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use App\Models\Concerns\ScopesBarangay as BarangayScope;
 
 class TranAppropriation extends Model
 {
@@ -27,6 +28,11 @@ class TranAppropriation extends Model
         'transaction_date' => 'date',
         'amount' => 'decimal:2'
     ];
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new BarangayScope);
+    }
 
     
     public function barangay(): BelongsTo

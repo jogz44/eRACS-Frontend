@@ -422,43 +422,66 @@ const displayAccounts = computed(() => {
 })
 
 const filterBySearchQuery = (allocations, query) => {
-  const lowerQuery = query.toLowerCase()
+  const lowerQuery = String(query || '').toLowerCase()
 
-  return allocations.filter((expenseClass) => {
-    if (expenseClass.name.toLowerCase().includes(lowerQuery)) {
-      return true
+  const matchText = (text) => String(text || '').toLowerCase().includes(lowerQuery)
+
+  const filterType = (expenseType) => {
+    const typeMatches = matchText(expenseType.name)
+
+    let filteredItems = []
+    if (Array.isArray(expenseType.children)) {
+      filteredItems = expenseType.children
+        .map(filterItem)
+        .filter(Boolean)
     }
 
-    const filteredChildren = expenseClass.children?.filter((expenseType) => {
-      if (expenseType.name.toLowerCase().includes(lowerQuery)) {
-        return true
+    if (typeMatches || filteredItems.length > 0) {
+      return {
+        ...expenseType,
+        children: filteredItems
+      }
+    }
+    return null
+  }
+
+  const filterItem = (item) => {
+    const itemMatches = matchText(item.name)
+
+    let filteredSubItems = []
+    if (Array.isArray(item.children)) {
+      filteredSubItems = item.children.filter((sub) => matchText(sub.name))
+    }
+
+    if (itemMatches || filteredSubItems.length > 0) {
+      return {
+        ...item,
+        children: filteredSubItems
+      }
+    }
+    return null
+  }
+
+  return allocations
+    .map((expenseClass) => {
+      const classMatches = matchText(expenseClass.name)
+
+      let filteredTypes = []
+      if (Array.isArray(expenseClass.children)) {
+        filteredTypes = expenseClass.children
+          .map(filterType)
+          .filter(Boolean)
       }
 
-      if (expenseType.children) {
-        expenseType.children = expenseType.children.filter((item) => {
-          if (item.name.toLowerCase().includes(lowerQuery)) {
-            return true
-          }
-
-          if (item.children) {
-            item.children = item.children.filter((subItem) =>
-              subItem.name.toLowerCase().includes(lowerQuery),
-            )
-            return item.children.length > 0
-          }
-          return false
-        })
-        return expenseType.children.length > 0
+      if (classMatches || filteredTypes.length > 0) {
+        return {
+          ...expenseClass,
+          children: filteredTypes
+        }
       }
-      return false
+      return null
     })
-
-    if (filteredChildren && filteredChildren.length > 0) {
-      expenseClass.children = filteredChildren
-      return true
-    }
-    return false
-  })
+    .filter(Boolean)
 }
 
 // Calculate only NEW allocations (non-zero input values)
@@ -474,7 +497,7 @@ const newAllocationsTotal = computed(() => {
       if (expenseType.children?.length) {
         expenseType.children.forEach((item) => {
           if (item.children?.length) {
-            // For items with sub-items, only count sub-item amounts
+            // Items with sub-items: only count sub-item amounts (avoid double-counting item level)
             item.children.forEach((subItem) => {
               const currentAmount = parseCurrency(subItem.amount)
               if (currentAmount > 0) {
@@ -482,21 +505,11 @@ const newAllocationsTotal = computed(() => {
               }
             })
           } else {
-            // For items without sub-items, count the item amount
+            // Items without sub-items: count the item amount
             const currentAmount = parseCurrency(item.amount)
             if (currentAmount > 0) {
               total += currentAmount
             }
-          }
-
-          // Include subitems
-          if (item.children && item.children.length > 0) {
-            item.children.forEach((subItem) => {
-              const subAmount = parseCurrency(subItem.amount)
-              if (subAmount > 0) {
-                total += subAmount
-              }
-            })
           }
         })
       } else {
@@ -570,23 +583,23 @@ const calculateClassTotal = (expenseClass) => {
   let total = 0
 
   expenseClass.children?.forEach((expenseType) => {
+    // Include type amount only when there are no items under it
     if ((!expenseType.children || expenseType.children.length === 0) && expenseType.amount) {
       total += parseCurrency(expenseType.amount)
     }
 
     expenseType.children?.forEach((item) => {
-      if (item.amount) {
+      if (item.children && item.children.length > 0) {
+        // When there are sub-items, include only sub-item amounts
+        item.children.forEach((subItem) => {
+          if (subItem.amount) {
+            total += parseCurrency(subItem.amount)
+          }
+        })
+      } else if (item.amount) {
+        // Items without sub-items: include the item's own amount
         total += parseCurrency(item.amount)
       }
-
-
-      // Include sub-items
-      item.children?.forEach((subItem) => {
-        if (subItem.amount) {
-          total += parseCurrency(subItem.amount)
-        }
-      })
-
     })
   })
 
@@ -596,17 +609,16 @@ const calculateClassTotal = (expenseClass) => {
 const calculateItemTotal = (expenseItem) => {
   let total = 0
 
-  // Include the item's own amount if it exists
-  if (expenseItem.amount) {
+  if (expenseItem.children && expenseItem.children.length > 0) {
+    // Only sum sub-items when present
+    expenseItem.children.forEach((subItem) => {
+      if (subItem.amount) {
+        total += parseCurrency(subItem.amount)
+      }
+    })
+  } else if (expenseItem.amount) {
     total += parseCurrency(expenseItem.amount)
   }
-
-  // Include all sub-item amounts
-  expenseItem.children?.forEach((subItem) => {
-    if (subItem.amount) {
-      total += parseCurrency(subItem.amount)
-    }
-  })
 
   return Math.round(total * 100) / 100
 }
@@ -633,7 +645,7 @@ const submitAllocation = async () => {
         if (expenseType.children?.length) {
           expenseType.children.forEach((item) => {
             if (item.children?.length) {
-              // For items with sub-items, only allocate to sub-items
+              // Items with sub-items: only send sub-item allocations (no duplicate pushes)
               item.children.forEach((subItem) => {
                 const amount = parseCurrency(subItem.amount)
                 if (amount > 0) {
@@ -649,7 +661,7 @@ const submitAllocation = async () => {
                 }
               })
             } else {
-              // For items without sub-items, allocate to the item
+              // Items without sub-items: send item allocation
               const amount = parseCurrency(item.amount)
               if (amount > 0) {
                 allocations.push({
@@ -663,31 +675,11 @@ const submitAllocation = async () => {
                 hasValidAllocation = true
               }
             }
-
-            // Handle subitems
-            if (item.children && item.children.length > 0) {
-              item.children.forEach((subItem) => {
-                const subAmount = parseCurrency(subItem.amount)
-                if (subAmount > 0) {
-                  allocations.push({
-                    id: subItem.id,
-                    type: 'subitem',
-                    amount: subAmount,
-                    expense_class_id: expenseClass.id,
-                    expense_type_id: expenseType.id,
-                    expense_item_id: item.id,
-                    expense_subitem_id: subItem.id
-                  })
-                  hasValidAllocation = true
-                }
-              })
-            }
           })
         } else {
           const amount = parseCurrency(expenseType.amount)
           if (amount > 0) {
             allocations.push({
-              id: expenseType.id,
               type: 'type',
               amount: amount,
               expense_class_id: expenseClass.id,

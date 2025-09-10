@@ -54,13 +54,13 @@
         :columns="bankStore.columns"
         row-key="id"
         flat
-        :loading="bankStore.isLoading"
+        :loading="bankStore.loading"
       >
         <template v-slot:body-cell-status="props">
           <q-td :props="props">
             <q-badge
-              :color="props.row.status === 'Available' ? 'green' : 'orange'"
-              :label="props.row.status === 'Available' ? 'Available' : 'Consumed'"
+              :color="props.row.status?.toLowerCase() === 'available' ? 'green' : props.row.status?.toLowerCase() === 'unavailable' ? 'grey' : 'orange'"
+              :label="props.row.status?.toLowerCase() === 'available' ? 'Available' : props.row.status?.toLowerCase() === 'unavailable' ? 'Unavailable' : 'Consumed'"
             />
           </q-td>
         </template>
@@ -123,6 +123,7 @@
           <q-btn
             label="Save"
             color="primary"
+            @click="handleAddBankEnterKey"
 
             :disable="!newBankName || newBankName.length < 3 || bankStore.isLoading"
             :loading="bankStore.isLoading"
@@ -396,10 +397,10 @@
               @keydown.enter="handleAddChequeEnterKey"
               :rules="[
                 (val) => !!val || 'Cheque number is required',
-                (val) => val.length === 6 || 'Must be exactly 6 digits',
+                (val) => val.length === 8 || 'Must be exactly 8 digits',
               ]"
-              maxlength="6"
-              mask="######"
+              maxlength="8"
+              mask="########"
             />
 
             <q-input
@@ -982,10 +983,10 @@ const validateAddCheque = () => {
     })
     return false
   }
-  if (newCheque.value.chequeNo.length !== 6) {
+  if (newCheque.value.chequeNo.length !== 8) {
     $q.notify({
       type: 'negative',
-      message: 'Cheque number must be exactly 6 digits',
+      message: 'Cheque number must be exactly 8 digits',
       position: 'top',
     })
     return false

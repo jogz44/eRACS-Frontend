@@ -45,7 +45,7 @@
           </div>
 
           <div class="hierarchical-body" style="max-height: 400px; overflow-y: auto">
-            <template v-for="expenseClass in displayAccounts" :key="'class-' + expenseClass.id">
+            <template v-for="expenseClass in filteredAccounts" :key="'class-' + expenseClass.id">
               <!-- Expense Class Row -->
               <div
                 class="row bg-grey-3 text-weight-bold"
@@ -105,10 +105,9 @@
                         <span :class="expenseItem.children && expenseItem.children.length > 0 ? 'text-weight-bold' : 'text-weight-regular'">{{ expenseItem.name }}</span>
                       </div>
                       <div class="col-6 text-right">
-                        <!-- Show item amount if no sub-items, otherwise show calculated total (bold if has sub-items) -->
-                        <span :class="expenseItem.children && expenseItem.children.length > 0 ? 'text-weight-bold' : 'text-weight-regular'"
-                          >{{ appropriationStore.formatCurrency(expenseItem.children && expenseItem.children.length > 0 ? calculateItemTotal(expenseItem) : expenseItem.amount) }}
-
+                        <!-- Always use calculated total which avoids double-counting when sub-items exist -->
+                        <span :class="expenseItem.children && expenseItem.children.length > 0 ? 'text-weight-bold' : 'text-weight-regular'">
+                          {{ appropriationStore.formatCurrency(calculateItemTotal(expenseItem)) }}
                         </span>
                       </div>
                     </div>
@@ -280,6 +279,52 @@ const displayAccounts = computed(() => {
   return classArr
 })
 
+// Non-mutating recursive filter for search
+const filteredAccounts = computed(() => {
+  const query = String(searchQuery.value || '').toLowerCase()
+  if (!query) return displayAccounts.value
+
+  const matches = (text) => String(text || '').toLowerCase().includes(query)
+
+  const filterItem = (item) => {
+    const itemMatches = matches(item.name)
+    let subItems = []
+    if (Array.isArray(item.children)) {
+      subItems = item.children.filter((s) => matches(s.name))
+    }
+    if (itemMatches || subItems.length > 0) {
+      return { ...item, children: subItems }
+    }
+    return null
+  }
+
+  const filterType = (type) => {
+    const typeMatches = matches(type.name)
+    let items = []
+    if (Array.isArray(type.children)) {
+      items = type.children.map(filterItem).filter(Boolean)
+    }
+    if (typeMatches || items.length > 0) {
+      return { ...type, children: items }
+    }
+    return null
+  }
+
+  return (displayAccounts.value || [])
+    .map((cls) => {
+      const classMatches = matches(cls.name)
+      let types = []
+      if (Array.isArray(cls.children)) {
+        types = cls.children.map(filterType).filter(Boolean)
+      }
+      if (classMatches || types.length > 0) {
+        return { ...cls, children: types }
+      }
+      return null
+    })
+    .filter(Boolean)
+})
+
 // Expand types with children by default when displayAccounts changes
 watch(
   () => displayAccounts.value,
@@ -406,17 +451,16 @@ const calculateClassTotal = (expenseClass) => {
 const calculateItemTotal = (expenseItem) => {
   let total = 0
 
-  // Include the item's own amount if it exists
-  if (expenseItem.amount) {
+  if (expenseItem.children && expenseItem.children.length > 0) {
+    // Only sum sub-items when present to avoid double counting
+    expenseItem.children.forEach((subItem) => {
+      if (subItem.amount) {
+        total += parseCurrency(subItem.amount)
+      }
+    })
+  } else if (expenseItem.amount) {
     total += parseCurrency(expenseItem.amount)
   }
-
-  // Include all sub-item amounts
-  expenseItem.children?.forEach((subItem) => {
-    if (subItem.amount) {
-      total += parseCurrency(subItem.amount)
-    }
-  })
 
   return Math.round(total * 100) / 100
 }

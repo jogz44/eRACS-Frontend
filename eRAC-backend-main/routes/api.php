@@ -153,6 +153,10 @@ Route::prefix('barangay')->group(function () {
         Route::post('disbursements/{id}/void-approve', [DisbursementController::class, 'approveVoid']);
         Route::post('disbursements/{id}/void-reject', [DisbursementController::class, 'rejectVoid']);
         Route::post('disbursements/{id}/void-direct', [DisbursementController::class, 'voidDirect']);
+        // Edit workflow (mirrors void workflow)
+        Route::post('disbursements/{id}/edit-request', [DisbursementController::class, 'requestEdit']);
+        Route::post('disbursements/{id}/edit-approve', [DisbursementController::class, 'approveEdit']);
+        Route::post('disbursements/{id}/edit-reject', [DisbursementController::class, 'rejectEdit']);
         // Fetch OR Details for a disbursement
         Route::get('disbursements/{id}/or-details', [DisbursementController::class, 'getOrDetails']);
         // Save OR Details for a disbursement

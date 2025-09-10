@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use App\Models\Concerns\ScopesBarangay as BarangayScope;
 
 class BudgetAugmentation extends Model
 {
@@ -23,6 +24,11 @@ class BudgetAugmentation extends Model
         'augmentation_date' => 'date',
         'total_amount' => 'decimal:2'
     ];
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new BarangayScope);
+    }
 
     public function barangay(): BelongsTo
     {

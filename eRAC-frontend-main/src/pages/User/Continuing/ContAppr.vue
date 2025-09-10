@@ -534,9 +534,15 @@ const filteredDialogAccounts = computed(() => {
     return accountYear === 2024 || accountYear === lastYear
   })
 
-  if (!dialogSearchQuery.value) return yearFilteredAccounts
+  // Only allow accounts that are CAPITAL OUTLAY (in any segment)
+  const capitalOutlayFiltered = yearFilteredAccounts.filter((account) => {
+    const name = String(account.accountName || '').toLowerCase()
+    return name.includes('capital outlay')
+  })
 
-  return yearFilteredAccounts.filter((account) =>
+  if (!dialogSearchQuery.value) return capitalOutlayFiltered
+
+  return capitalOutlayFiltered.filter((account) =>
     Object.values(account).join(' ').toLowerCase().includes(dialogSearchQuery.value.toLowerCase()),
   )
 })
@@ -683,10 +689,8 @@ const continueSelected = async () => {
   const totalAmount = selectedAccounts.value.reduce((sum, acc) => sum + acc.balance, 0)
   const currentDate = new Date().toISOString().split('T')[0] // Format as YYYY-MM-DD for database
 
-  // Get the expense class from the first selected account
-  // The accountName format is "expenseClass > expenseType > expenseItem"
-  const firstAccount = selectedAccounts.value[0]
-  const expenseClass = firstAccount.accountName.split(' > ')[0] || 'CAPITAL OUTLAYS'
+  // Force expense class to CAPITAL OUTLAY for continued accounts
+  const expenseClass = 'CAPITAL OUTLAY'
 
   try {
     const data = {

@@ -153,16 +153,12 @@ class DisbursementController extends Controller
 
         try {
             $user = $request->user();
+            $adminUser = $request->user('admin');
 
-            // Determine barangay_id based on user type
-            $barangayId = null;
-            if ($request->barangay_id) {
-                // Admin user providing barangay_id
-                $barangayId = $request->barangay_id;
-            } else {
-                // Regular user - use their barangay_id
-                $barangayId = $user->barangay_id;
-            }
+            // Determine barangay_id based on user type (only honor request for admin)
+            $barangayId = $adminUser && $request->filled('barangay_id')
+                ? $request->barangay_id
+                : $user->barangay_id;
 
             // Convert date from DD/MM/YYYY to YYYY-MM-DD
             $dateParts = explode('/', $request->date);
@@ -314,16 +310,12 @@ class DisbursementController extends Controller
 
         try{
             $user = $request->user();
+            $adminUser = $request->user('admin');
 
-            // Determine barangay_id based on user type
-            $barangayId = null;
-            if ($request->barangay_id) {
-                // Admin user providing barangay_id
-                $barangayId = $request->barangay_id;
-            } else {
-                // Regular user - use their barangay_id
-                $barangayId = $user->barangay_id;
-            }
+            // Determine barangay_id based on user type (only honor request for admin)
+            $barangayId = $adminUser && $request->filled('barangay_id')
+                ? $request->barangay_id
+                : $user->barangay_id;
 
             // Find the disbursement
             $disbursement = Disbursement::where('id', $id)
@@ -1435,6 +1427,169 @@ class DisbursementController extends Controller
         }
     }
 
+    // POST /api/barangay/disbursements/{id}/edit-request
+    public function requestEdit(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+
+            $request->validate([
+                'remarks' => 'required|string|max:500'
+            ]);
+
+            // Any authenticated barangay user can request edit
+            $disbursement = Disbursement::where('id', $id)
+                ->where('barangay_id', $user->barangay_id)
+                ->firstOrFail();
+
+            // Only allow request when Unliquidated or Partial (same as void)
+            if (!in_array($disbursement->status, ['Unliquidated', 'Partial'])) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Only Unliquidated or Partial disbursements can be edit requested'
+                ], 400);
+            }
+
+            $disbursement->status = 'Edit Requested';
+            $disbursement->remarks = $request->remarks;
+            $disbursement->save();
+
+            AdminAuthController::logUserAction(
+                $user,
+                'Requested Edit',
+                sprintf('#%s requested edit', $disbursement->dv_number)
+            );
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Edit request submitted',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error requesting edit: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to submit edit request',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // POST /api/barangay/disbursements/{id}/edit-approve
+    public function approveEdit(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+
+            $positionName = $user->position ? $user->position->name : '';
+            $position = strtolower($positionName);
+
+            $canApprove = strpos($position, 'captain') !== false ||
+                          strpos($position, 'chairperson') !== false ||
+                          strpos($position, 'barangay captain') !== false ||
+                          strpos($position, 'sk chairperson') !== false;
+
+            if (!$canApprove) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Only Captain/Chairperson can approve edit requests'
+                ], 403);
+            }
+
+            $disbursement = Disbursement::where('id', $id)
+                ->where('barangay_id', $user->barangay_id)
+                ->firstOrFail();
+
+            if ($disbursement->status !== 'Edit Requested') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Only disbursements with status "Edit Requested" can be approved'
+                ], 400);
+            }
+
+            // Approval means returning to editable state (Unliquidated)
+            $disbursement->status = 'Unliquidated';
+            $disbursement->save();
+
+            AdminAuthController::logUserAction(
+                $user,
+                'Approved Edit Request',
+                sprintf('#%s edit request approved', $disbursement->dv_number)
+            );
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Edit request approved',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error approving edit request: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to approve edit request',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // POST /api/barangay/disbursements/{id}/edit-reject
+    public function rejectEdit(Request $request, $id)
+    {
+        try {
+            $user = $request->user();
+
+            $request->validate([
+                'remarks' => 'required|string|max:500'
+            ]);
+
+            $positionName = $user->position ? $user->position->name : '';
+            $position = strtolower($positionName);
+
+            $canReject = strpos($position, 'captain') !== false ||
+                         strpos($position, 'chairperson') !== false ||
+                         strpos($position, 'barangay captain') !== false ||
+                         strpos($position, 'sk chairperson') !== false;
+
+            if (!$canReject) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Only Captain/Chairperson can reject edit requests'
+                ], 403);
+            }
+
+            $disbursement = Disbursement::where('id', $id)
+                ->where('barangay_id', $user->barangay_id)
+                ->firstOrFail();
+
+            if ($disbursement->status !== 'Edit Requested') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Only disbursements with status "Edit Requested" can be rejected'
+                ], 400);
+            }
+
+            // On reject, keep it Unliquidated and save rejection remarks
+            $disbursement->status = 'Unliquidated';
+            $disbursement->rejection_remarks = $request->remarks;
+            $disbursement->save();
+
+            AdminAuthController::logUserAction(
+                $user,
+                'Rejected Edit Request',
+                sprintf('#%s edit request rejected', $disbursement->dv_number)
+            );
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Edit request rejected',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error rejecting edit request: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to reject edit request',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
     // GET /api/barangay/expense-details
     public function getExpenseDetails(Request $request)
     {
