@@ -279,6 +279,244 @@ class DisbursementController extends Controller
         }
     }
 
+    // POST /api/barangay/disbursements
+    public function storeReimbursement(Request $request, $id)
+    {
+        $request->validate([
+            'date' => 'required|string|regex:/^\d{2}\/\d{2}\/\d{4}$/',
+            'dv_number' => 'required|string|unique:disbursements,dv_number',
+            'ref_dv_number' => 'required|string|exists:disbursements,dv_number',
+            'cheque_number' => 'required|string',
+            'bank_id' => 'required|exists:lib_banks,id',
+            'payee' => 'required|string',
+            'dv_amount' => 'required|numeric|min:0',
+
+            'expenses' => 'array',
+            'expenses.*.accountId' => 'required|integer',
+            'expenses.*.amount' => 'required|numeric|min:0',
+            'expenses.*.particular' => 'nullable|string',
+            'expenses.*.expense_class_id' => 'nullable|exists:lib_expense_classes,id',
+            'expenses.*.expense_type_id' => 'nullable|exists:lib_expense_types,id',
+            'expenses.*.expense_item_id' => 'nullable|exists:lib_expense_items,id',
+
+            'orDetails' => 'required|array',
+            'orDetails.*.id' => 'nullable|integer|exists:disbursement_or_details,id',
+            'orDetails.*.orNumber' => 'required|string',
+            'orDetails.*.orAmount' => 'required|numeric|min:0',
+            'orDetails.*.orDate' => 'required|string|regex:/^\d{2}\/\d{2}\/\d{4}$/',
+            'orDetails.*.orPhotoUrl' => 'required|string',
+            'orDetails.*.remarks' => 'nullable|string',
+            'liquidatedAmount' => 'required|numeric|min:0',
+
+            'barangay_id' => 'nullable|exists:barangays,id', // Added for admin
+
+            'ref_orDetails' => 'required|array',
+            'ref_orDetails.*.ref_orNumber' => 'required|string',
+            'ref_orDetails.*.ref_orAmount' => 'required|numeric|min:0',
+            'ref_orDetails.*.ref_orDate' => 'required|string|regex:/^\d{2}\/\d{2}\/\d{4}$/',
+        ]);
+
+        try{
+            $user = $request->user();
+
+            // Determine barangay_id based on user type
+            $barangayId = null;
+            if ($request->barangay_id) {
+                // Admin user providing barangay_id
+                $barangayId = $request->barangay_id;
+            } else {
+                // Regular user - use their barangay_id
+                $barangayId = $user->barangay_id;
+            }
+
+            // Find the disbursement
+            $disbursement = Disbursement::where('id', $id)
+                ->where('barangay_id', $user->barangay_id)
+                ->firstOrFail();
+
+            // Check if this is a continuation of partial liquidation
+            $isContinuation = $disbursement->status === 'Partial';
+
+            if (!$isContinuation) {
+                // Delete existing OR details only if not continuing partial liquidation
+                DisbursementOrDetail::where('disbursement_id', $id)->delete();
+            }
+
+            // Process OR details - update existing ones or create new ones
+            foreach ($request->orDetails as $orDetail) {
+                // Convert date from DD/MM/YYYY to YYYY-MM-DD if provided
+                $orDate = null;
+                if (!empty($orDetail['orDate'])) {
+                    $dateParts = explode('/', $orDetail['orDate']);
+                    if (count($dateParts) === 3) {
+                        $orDate = $dateParts[2] . '-' . $dateParts[1] . '-' . $dateParts[0];
+                    }
+                }
+
+                if ($isContinuation && isset($orDetail['id']) && $orDetail['id']) {
+                    // Update existing OR detail by ID
+                    $existingOrDetail = DisbursementOrDetail::where('id', $orDetail['id'])
+                        ->where('disbursement_id', $id)
+                        ->first();
+
+                    if ($existingOrDetail) {
+                        $existingOrDetail->update([
+                            'or_date' => $orDate,
+                            'or_number' => $orDetail['orNumber'],
+                            'or_amount' => $orDetail['orAmount'],
+                            'remarks' => $orDetail['remarks'] ?? '',
+                            'or_photo' => $orDetail['orPhotoUrl'] ?? null,
+                        ]);
+                    }
+                } else {
+                    // Create new OR detail
+                    DisbursementOrDetail::create([
+                        'disbursement_id' => $id,
+                        'or_date' => $orDate,
+                        'or_number' => $orDetail['orNumber'],
+                        'or_amount' => $orDetail['orAmount'],
+                        'remarks' => $orDetail['remarks'] ?? '',
+                        'or_photo' => $orDetail['orPhotoUrl'] ?? null,
+                    ]);
+                }
+            }
+
+            // Update disbursement status based on whether it's partial or full liquidation
+            $isPartial = $request->has('isPartial') && ($request->isPartial === true || $request->isPartial === 'true' || $request->isPartial === 1);
+            $status = $isPartial ? 'Partial' : 'Liquidated';
+            $disbursement->update([
+                'status' => $status,
+                'liquidated_amount' => $request->liquidatedAmount,
+                'liquidated_at' => now(),
+            ]);
+
+            // Log liquidation action
+            AdminAuthController::logUserAction(
+                $user,
+                $isPartial ? 'Partial Liquidation' : 'Liquidated Disbursement',
+                sprintf(
+                    '#%s %s amount ₱%s',
+                    $disbursement->dv_number,
+                    $isPartial ? 'partialized' : 'liquidated',
+                    number_format((float)$request->liquidatedAmount, 2)
+                )
+            );
+
+            // Convert date from DD/MM/YYYY to YYYY-MM-DD
+            $dateParts = explode('/', $request->date);
+            $formattedDate = $dateParts[2] . '-' . $dateParts[1] . '-' . $dateParts[0];
+
+            $disbursement = Disbursement::create([
+                'barangay_id' => $barangayId,
+                'date' => $formattedDate,
+                'dv_number' => $request->dv_number,
+                'ref_dv_number' => $request->ref_dv_number,
+                'cheque_number' => $request->cheque_number,
+                'bank_id' => $request->bank_id,
+                'payee' => $request->payee,
+                'dv_amount' => $request->dv_amount,
+                'status' => 'Liquidated',
+            ]);
+
+            // update the selected lib_cheque_numbers status to 'Used'
+            $chequeNumber = $request->cheque_number;
+            $cheque = LibCheque::where('cheque_number', $chequeNumber)
+                ->where('status', 'unused')
+                ->firstorFail();
+
+            $cheque->update([
+                'status' => 'used',
+                'disbursement_id' => $disbursement->id,
+            ]);
+
+
+            // Save expense details to tran_expense_details table
+            $logExpenseLines = [];
+            if ($request->has('expenses') && is_array($request->expenses)) {
+                foreach ($request->expenses as $expense) {
+                    // Find the appropriate appropriation based on expense hierarchy
+                    $appropriationQuery = TranAppropriation::where('barangay_id', $barangayId)
+                        ->where('status', 'committed');
+
+                    if (isset($expense['expense_item_id'])) {
+                        $appropriationQuery->where('expense_item_id', $expense['expense_item_id']);
+                    } elseif (isset($expense['expense_type_id'])) {
+                        $appropriationQuery->whereNull('expense_item_id')
+                            ->where('expense_type_id', $expense['expense_type_id']);
+                    } elseif (isset($expense['expense_class_id'])) {
+                        $appropriationQuery->whereNull('expense_item_id')
+                            ->whereNull('expense_type_id')
+                            ->where('expense_class_id', $expense['expense_class_id']);
+                    }
+
+                    $appropriation = $appropriationQuery->first();
+
+                    if ($appropriation) {
+                        // Create expense detail with the disbursement ID
+                        TranExpenseDetail::create([
+                            'disbursement_id' => $disbursement->id,
+                            'appropriation_id' => $appropriation->id,
+                            'amount' => $expense['amount'],
+                            'particulars' => $expense['particular'] ?? '',
+                        ]);
+
+                        // Prepare log line per expense
+                        $accountName = $this->getAccountNameFromAppropriationId($appropriation->id);
+                        $logExpenseLines[] = sprintf(
+                            'Disbursed Expense %s with the amount ₱%s%s',
+                            $accountName,
+                            number_format((float)$expense['amount'], 2),
+                            isset($expense['particular']) && $expense['particular'] !== '' ? ' for "' . $expense['particular'] . '"' : ''
+                        );
+                    }
+                }
+            }
+
+            // Log created disbursement
+            try {
+                $disbursement->load('bank');
+                $topLine = sprintf(
+                    '#%s for Payee "%s" with the amount ₱%s. Uses %s with the cheque: %s',
+                    $disbursement->dv_number,
+                    $disbursement->payee,
+                    number_format((float)$disbursement->dv_amount, 2),
+                    $disbursement->bank ? '(' . $disbursement->bank->bank_name . ')' : '(bank)',
+                    $disbursement->cheque_number
+                );
+                // Header log
+                AdminAuthController::logUserAction(
+                    $user,
+                    'Created Disbursement',
+                    $topLine
+                );
+                // Detail logs per expense (kept concise to avoid length limits)
+                foreach ($logExpenseLines as $line) {
+                    AdminAuthController::logUserAction(
+                        $user,
+                        'Reimbursement Expense',
+                        sprintf('#%s | %s', $disbursement->dv_number, $line)
+                    );
+                }
+            } catch (\Throwable $logEx) {
+                \Log::warning('Failed to write reimbursement logs: ' . $logEx->getMessage());
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Reimbursement created successfully',
+                'data' => $disbursement
+            ], 201);
+
+        } catch (\Exception $e) {
+            \Log::error('Error saving OR details: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to save OR details',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     // GET /api/barangay/disbursements/{id}/or-details
     public function getOrDetails($id)
     {
