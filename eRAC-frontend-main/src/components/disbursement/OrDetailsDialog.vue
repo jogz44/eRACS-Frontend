@@ -1419,14 +1419,15 @@ const handleSubmitReimbursement = async () => {
     // Prepare reimbursement data - use the first expense account as the primary account
     const primaryExpenseAccount = selectedReimbursementExpenseAccounts.value[0]
     const primaryOr = selectedReimbursementOrs.value[0]
+    console.error('-==============================================',primaryOr)
 
     const reimbursementData = {
       ref_dv_number: store.currentLiquidation.dvNumber,
       dv_amount: reimbursementAmount.value,
       bank_id: selectedReimbursementBank.value,
-      // dv_number will be auto-generated in the store
+      dvNumber: reimbursementDvNumber.value,
       cheque_number: reimbursementChequeNumber.value,
-      // cheque_booklet will be fetched automatically in the store
+      payee: reimbursementPayee.value,
       expense_account: {
         id: primaryExpenseAccount.id,
         expense_class_id: primaryExpenseAccount.expense_class_id,
@@ -1436,7 +1437,6 @@ const handleSubmitReimbursement = async () => {
       or_number: primaryOr.orNumber,
       or_amount: primaryOr.orAmount,
       or_date: primaryOr.orDate,
-      remarks: `Reimbursement for DV ${store.currentLiquidation.dvNumber}`,
     }
 
     console.log('Reimbursement data being submitted:', JSON.stringify(reimbursementData, null, 2));

@@ -138,6 +138,8 @@ Route::prefix('barangay')->group(function () {
         Route::get('disbursements', [DisbursementController::class, 'index']);
         // Create new disbursement
         Route::post('disbursements', [DisbursementController::class, 'store']);
+        // Create new Reimbursement by Dan Steve<3
+        Route::post('reimbursements/{id}', [DisbursementController::class, 'storeReimbursement']);
         // Update disbursement
         Route::put('disbursements/{id}', [DisbursementController::class, 'update']);
         // Get single disbursement

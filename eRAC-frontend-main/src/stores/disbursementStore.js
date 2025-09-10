@@ -2662,6 +2662,12 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
     // Submit reimbursement
     async submitReimbursement(reimbursementData) {
+
+      if (!this.currentLiquidation) {
+        console.warn('currentLiquidation is not available')
+        return
+      }
+
       try {
         const authStore = useAuthStore();
         const token = authStore.admin ? authStore.adminToken : authStore.token;
@@ -2674,6 +2680,10 @@ export const useDisbursementStore = defineStore('disbursement', {
         if (!reimbursementData.ref_dv_number) {
           throw new Error('Reference DV number is required');
         }
+        
+        if (!reimbursementData.dvNumber) {
+          throw new Error('DV number is required');
+        }
 
         if (!reimbursementData.dv_amount || reimbursementData.dv_amount <= 0) {
           throw new Error('Valid DV amount is required');
@@ -2682,11 +2692,6 @@ export const useDisbursementStore = defineStore('disbursement', {
         if (!reimbursementData.bank_id) {
           throw new Error('Bank selection is required');
         }
-
-        // DV number is auto-generated for reimbursements, so no validation needed
-        // if (!reimbursementData.dv_number || reimbursementData.dv_number.trim() === '') {
-        //   throw new Error('DV number is required');
-        // }
 
         if (!reimbursementData.cheque_number || reimbursementData.cheque_number.trim() === '') {
           throw new Error('Cheque number is required');
@@ -2724,32 +2729,25 @@ export const useDisbursementStore = defineStore('disbursement', {
         
         // Generate unique DV number for reimbursement using proper sequence
         // Try to get the next available DV number from the backend
-        let uniqueDvNumber
-        try {
-          const response = await api.get('/api/barangay/generate-dvnumber', this.getAuthConfig())
-          uniqueDvNumber = response.data.data.dv_number || `REIMB-${Date.now()}`
-        } catch (error) {
-          console.warn('Failed to generate DV number from backend, using fallback:', error)
-          // Fallback to timestamp-based generation
-          const timestamp = Date.now()
-          const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
-          uniqueDvNumber = `REIMB-${timestamp}-${randomSuffix}`
-        }
         
         // Get booklet ID with comprehensive fallback
         const bookletId = reimbursementData.cheque_booklet || await this.getDefaultBookletId(reimbursementData.bank_id)
         console.log('Using booklet ID:', bookletId)
+
+        // Calculate total actual expense from OR details
+        const totalActualExpense = this.currentLiquidation.orDetails?.reduce(
+          (sum, or) => sum + (parseFloat(or.orAmount) || 0), 0
+        ) || 0
         
         const payload = {
           // Required fields for disbursements table
           date: formattedDate,
-          dv_number: uniqueDvNumber, // Use unique DV number for reimbursements
-          cheque_number: reimbursementData.cheque_number || `CHQ-REIMB-${Date.now()}`,
+          dv_number: reimbursementData.dvNumber,
+          cheque_number: reimbursementData.cheque_number,
           bank_id: reimbursementData.bank_id,
-          payee: 'Reimbursement', // Default payee for reimbursements
+          payee: this.currentLiquidation.payee, // Default payee for reimbursements
           dv_amount: parseFloat(reimbursementData.dv_amount),
           ref_dv_number: reimbursementData.ref_dv_number, // Reference to original DV
-          cheque_booklet: bookletId, // Use the fetched booklet ID
           
           // Additional fields
           expenses: [{
@@ -2760,13 +2758,22 @@ export const useDisbursementStore = defineStore('disbursement', {
             expense_type_id: reimbursementData.expense_account.expense_type_id,
             expense_item_id: reimbursementData.expense_account.expense_item_id,
           }],
-          orDetails: [{
-            orNumber: reimbursementData.or_number,
-            orAmount: parseFloat(reimbursementData.or_amount),
-            orDate: reimbursementData.or_date, // Keep original format for OR date
-            remarks: reimbursementData.remarks || '',
+          
+          orDetails: this.currentLiquidation.orDetails.map(or => ({
+            id: or.id || null, // Include ID for existing OR details
+            orNumber: or.orNumber,
+            orAmount: or.orAmount,
+            orDate: or.orDate || '',
+            remarks: `${this.currentLiquidation.remarks || ''} (₱${or.orAmount} disbursed and ₱${reimbursementData.or_amount} reimbursed.)`, // Use single remarks for all OR details
+            orPhotoUrl: 'or-photos/sample.png',
+          })),
+          liquidatedAmount: totalActualExpense,
+
+          ref_orDetails: [{
+            ref_orNumber: reimbursementData.or_number,
+            ref_orAmount: parseFloat(reimbursementData.or_amount),
+            ref_orDate: reimbursementData.or_date, // Keep original format for OR date
           }],
-          is_reimbursement: true, // Flag to indicate this is a reimbursement
         };
 
         console.log('Submitting reimbursement with payload:', JSON.stringify(payload, null, 2));
@@ -2780,7 +2787,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         }
 
         // Use different endpoints for admin vs regular users
-        const endpoint = authStore.admin ? "/api/admin/disbursements/create" : "/api/barangay/disbursements";
+        const endpoint = authStore.admin ? `/api/admin/reimbursements/${this.currentLiquidation.id}` : `/api/barangay/reimbursements/${this.currentLiquidation.id}`;
 
         let response
         try {
@@ -2791,73 +2798,8 @@ export const useDisbursementStore = defineStore('disbursement', {
             },
           });
         } catch (error) {
-          // If the error is related to LibCheque, try a different approach
-          if (error.response?.data?.error?.includes('LibCheque') || 
-              error.response?.data?.message?.includes('LibCheque')) {
-            console.log('LibCheque error detected, trying alternative approach...')
-            
-            try {
-              // Try to find an existing cheque with the same number but different booklet
-              const existingChequeResponse = await api.get(`/api/barangay/cheques?cheque_number=${payload.cheque_number}`, {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  Accept: 'application/json',
-                },
-              })
-              
-              const existingCheques = existingChequeResponse.data.data || []
-              if (existingCheques.length > 0) {
-                // Use the existing cheque's booklet ID
-                const existingCheque = existingCheques[0]
-                payload.cheque_booklet = existingCheque.booklet_id
-                console.log('Using existing cheque booklet ID:', existingCheque.booklet_id)
-                
-                // Retry with the existing booklet ID
-                response = await api.post(endpoint, payload, {
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                    Accept: 'application/json',
-                  },
-                });
-              } else {
-                // If no existing cheque found, try with multiple booklet IDs
-                console.log('No existing cheque found, trying with multiple booklet IDs...')
-                
-                const bookletIdsToTry = [1, 2, 3, 4, 5] // Try common booklet IDs
-                let success = false
-                
-                for (const testBookletId of bookletIdsToTry) {
-                  try {
-                    console.log(`Trying booklet ID: ${testBookletId}`)
-                    payload.cheque_booklet = testBookletId
-                    
-                    response = await api.post(endpoint, payload, {
-                      headers: {
-                        Authorization: `Bearer ${token}`,
-                        Accept: 'application/json',
-                      },
-                    });
-                    
-                    console.log(`Success with booklet ID: ${testBookletId}`)
-                    success = true
-                    break
-                  } catch (testError) {
-                    console.log(`Failed with booklet ID ${testBookletId}:`, testError.response?.data?.error || testError.message)
-                    continue
-                  }
-                }
-                
-                if (!success) {
-                  throw new Error('Failed to find valid booklet ID for reimbursement')
-                }
-              }
-            } catch (retryError) {
-              console.error('Failed to retry with alternative approach:', retryError)
-              throw error // Re-throw original error
-            }
-          } else {
-            throw error // Re-throw if it's not a LibCheque error
-          }
+            console.error('Failed to submit reimbursement:', error);
+            console.error('Error response:', error.response?.data);
         }
 
         // Refresh the disbursements list
