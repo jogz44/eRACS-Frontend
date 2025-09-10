@@ -271,7 +271,7 @@
           <template v-slot:body-cell-action="props">
             <q-td :props="props">
               <div class="row q-gutter-xs items-center justify-center">
-                <q-btn dense icon="edit" :color="props.row.status === 'Unliquidated' || props.row.status === 'Partial'
+                <q-btn v-if="isApprover || authStore.admin" dense icon="edit" :color="props.row.status === 'Unliquidated' || props.row.status === 'Partial'
                   ? 'orange'
                   : 'grey'
                   " :disable="props.row.status !== 'Unliquidated' && props.row.status !== 'Partial'"
@@ -279,6 +279,14 @@
                   v-permission="'edit'" />
                 <q-btn dense icon="visibility" color="blue" @click="handleViewDisbursement(props.row)"
                   :loading="viewLoading[props.row.id]" :disable="viewLoading[props.row.id]" v-permission="'view'" />
+
+                <!-- Treasurer: Request edit -->
+                <q-btn dense icon="edit_note" color="deep-orange" v-if="
+                  isTreasurer &&
+                  (props.row.status === 'Unliquidated' || props.row.status === 'Partial') &&
+                  props.row.status !== 'Stale' &&
+                  props.row.status !== 'Edit Requested'
+                " @click.stop="() => handleEditRequest(props.row)" v-permission="'edit'" />
 
                 <!-- Treasurer: Request void -->
                 <q-btn dense icon="block" color="red" v-if="
@@ -358,6 +366,31 @@
         </q-card>
       </q-dialog>
 
+      <!-- Edit Request Dialog (for Treasurers) -->
+      <q-dialog v-model="store.dialogs.editRequest" persistent>
+        <q-card style="min-width: 500px; max-width: 90vw">
+          <q-card-section class="q-pb-none">
+            <div class="text-h6">Request Edit</div>
+          </q-card-section>
+
+          <q-card-section>
+            <div class="text-body1 q-mb-md">Please provide remarks for this edit request. The request will be sent to
+              the Barangay Captain or SK Chairperson for approval.</div>
+
+            <q-input outlined v-model="store.forms.edit.remarks" label="Remarks (Required)" type="textarea" rows="3"
+              :rules="[(val) => (!!val && val.trim() !== '') || 'Remarks are required']"
+              hint="Reason for requesting to edit this disbursement" />
+          </q-card-section>
+
+          <q-card-actions align="right" class="q-pa-md">
+            <q-btn flat label="Cancel" @click="handleDialogClose('editRequest')" />
+            <q-btn label="Submit Edit Request" color="deep-orange" :loading="store.requestingEdit"
+              :disable="!store.forms.edit.remarks || store.forms.edit.remarks.trim() === ''"
+              @click="handleSubmitEditRequest" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
+
       <!-- Remarks Dialog -->
       <q-dialog v-model="remarksDialog" persistent>
         <q-card style="min-width: 500px; max-width: 90vw">
@@ -429,6 +462,7 @@ const statusOptions = [
   { label: 'Unliquidated', value: 'Unliquidated' },
   { label: 'Partial', value: 'Partial' },
   { label: 'Liquidated', value: 'Liquidated' },
+  { label: 'Edit Requested', value: 'Edit Requested' },
   { label: 'Void Requested', value: 'Void Requested' },
   { label: 'Voided', value: 'Voided' },
   { label: 'Stale', value: 'Stale' },
@@ -634,6 +668,8 @@ const getStatusColor = (status) => {
       return 'amber'
     case 'Liquidated':
       return 'green'
+    case 'Edit Requested':
+      return 'deep-purple'
     case 'Void Requested':
       return 'deep-orange'
     case 'Voided':
@@ -650,6 +686,7 @@ const getStatusTextColor = (status) => {
     case 'Unliquidated':
     case 'Partial':
     case 'Liquidated':
+    case 'Edit Requested':
     case 'Void Requested':
     case 'Voided':
     case 'Stale':
@@ -1182,6 +1219,9 @@ const handleDialogClose = (dialogName) => {
   } else if (dialogName === 'void') {
     // Clear void form when closing void dialog
     store.resetForm('void')
+  } else if (dialogName === 'editRequest') {
+    // Close edit request dialog via store method
+    store.closeEditRequestDialog()
   }
   
   store.closeDialog(dialogName)
@@ -1190,6 +1230,11 @@ const handleDialogClose = (dialogName) => {
 // Open void dialog for treasurer
 const handleVoidDisbursement = (row) => {
   store.openVoidDialog(row)
+}
+
+// Open edit request dialog for treasurer
+const handleEditRequest = (row) => {
+  store.openEditRequestDialog(row)
 }
 
 // Submit void request from dialog
@@ -1336,6 +1381,7 @@ const handleLiquidateDisbursement = async (row) => {
 // Remarks dialog methods
 const hasRemarks = (row) => {
   return (row.status === 'Void Requested' && row.remarks) ||
+    (row.status === 'Edit Requested' && row.remarks) ||
     (row.status === 'Voided' && row.remarks) ||
     row.rejection_remarks
 }
@@ -1349,6 +1395,51 @@ const openRemarksDialog = (row) => {
 const closeRemarksDialog = () => {
   remarksDialog.value = false
   selectedRemarksData.value = null
+}
+
+// Submit edit request from dialog
+const handleSubmitEditRequest = async () => {
+  if (!store.forms.edit.remarks || store.forms.edit.remarks.trim() === '') {
+    $q.notify({
+      type: 'negative',
+      message: 'Please provide remarks for the edit request',
+      icon: 'warning',
+      position: 'top',
+      timeout: 3000,
+    })
+    return
+  }
+
+  try {
+    const result = await store.submitEditRequest()
+    if (result.success) {
+      $q.notify({
+        type: 'positive',
+        message: 'Edit request submitted successfully!',
+        icon: 'check_circle',
+        position: 'top',
+        timeout: 3000,
+      })
+      await refreshData()
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: result.message || 'Failed to submit edit request',
+        icon: 'error',
+        position: 'top',
+        timeout: 5000,
+      })
+    }
+  } catch (error) {
+    console.error('Error submitting edit request:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to submit edit request',
+      icon: 'error',
+      position: 'top',
+      timeout: 5000,
+    })
+  }
 }
 
 </script>

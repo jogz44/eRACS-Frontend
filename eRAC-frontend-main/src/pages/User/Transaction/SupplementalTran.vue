@@ -39,8 +39,9 @@
             <div class="summary-footer">
               <q-linear-progress
                 :value="unusedFundsProgress"
-                color="grey-6"
-                size="3px"
+                color="positive"
+                size="6px"
+                track-color="positive-1"
                 rounded
                 class="q-mt-sm"
               />
@@ -69,8 +70,9 @@
             <div class="summary-footer">
               <q-linear-progress
                 :value="supplementalBudgetProgress"
-                color="grey-6"
-                size="3px"
+                color="positive"
+                size="6px"
+                track-color="positive-1"
                 rounded
                 class="q-mt-sm"
               />
@@ -99,8 +101,9 @@
             <div class="summary-footer">
               <q-linear-progress
                 :value="transferredProgress"
-                color="grey-6"
-                size="3px"
+                color="positive"
+                size="6px"
+                track-color="positive-1"
                 rounded
                 class="q-mt-sm"
               />
@@ -213,9 +216,9 @@
       <q-tabs
         v-model="activeTab"
         dense
-        class="text-grey"
-        active-color="primary"
-        indicator-color="primary"
+        class="text-grey tabs-green-highlight"
+        active-color="positive"
+        indicator-color="positive"
         align="justify"
         narrow-indicator
       >
@@ -1220,8 +1223,8 @@ defineExpose({
 }
 
 .summary-footer .q-linear-progress {
-  border-radius: 2px;
-  opacity: 0.6;
+  border-radius: 4px;
+  opacity: 1;
 }
 
 .hierarchical-table {
@@ -1315,6 +1318,18 @@ defineExpose({
 
 .q-tab-panel {
   padding: 0;
+}
+
+/* Highlight active tab with green background and text */
+.tabs-green-highlight :deep(.q-tab--active) {
+  background-color: rgba(76, 175, 80, 0.12); /* subtle green */
+  border-radius: 6px;
+}
+
+.tabs-green-highlight :deep(.q-tab--active .q-tab__label),
+.tabs-green-highlight :deep(.q-tab--active .q-icon) {
+  color: #2e7d32 !important; /* dark green text/icon */
+  font-weight: 600;
 }
 
 /* Table styling */

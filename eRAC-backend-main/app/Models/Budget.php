@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\LibFiscalYear;
+use App\Models\Concerns\ScopesBarangay as BarangayScope;
 
 class Budget extends Model
 {
@@ -31,6 +32,11 @@ class Budget extends Model
         'augmentation' => 'decimal:2',
         'return_amount' => 'decimal:2'
     ];
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new BarangayScope);
+    }
 
     public function tranAppropriations(): HasMany
     {

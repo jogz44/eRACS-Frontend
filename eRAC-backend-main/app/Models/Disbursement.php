@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use App\Models\Concerns\ScopesBarangay as BarangayScope;
 
 class Disbursement extends Model
 {
@@ -28,6 +29,11 @@ class Disbursement extends Model
         'is_continuing',
         'user_id',
     ];
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new BarangayScope);
+    }
 
     public function barangay()
     {
