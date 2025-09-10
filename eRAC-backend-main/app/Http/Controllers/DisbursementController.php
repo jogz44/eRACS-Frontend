@@ -303,17 +303,13 @@ class DisbursementController extends Controller
             'orDetails.*.id' => 'nullable|integer|exists:disbursement_or_details,id',
             'orDetails.*.orNumber' => 'required|string',
             'orDetails.*.orAmount' => 'required|numeric|min:0',
+            'orDetails.*.orRefAmount' => 'nullable|numeric|min:0',
             'orDetails.*.orDate' => 'required|string|regex:/^\d{2}\/\d{2}\/\d{4}$/',
             'orDetails.*.orPhotoUrl' => 'required|string',
             'orDetails.*.remarks' => 'nullable|string',
             'liquidatedAmount' => 'required|numeric|min:0',
 
             'barangay_id' => 'nullable|exists:barangays,id', // Added for admin
-
-            'ref_orDetails' => 'required|array',
-            'ref_orDetails.*.ref_orNumber' => 'required|string',
-            'ref_orDetails.*.ref_orAmount' => 'required|numeric|min:0',
-            'ref_orDetails.*.ref_orDate' => 'required|string|regex:/^\d{2}\/\d{2}\/\d{4}$/',
         ]);
 
         try{
@@ -364,6 +360,7 @@ class DisbursementController extends Controller
                             'or_date' => $orDate,
                             'or_number' => $orDetail['orNumber'],
                             'or_amount' => $orDetail['orAmount'],
+                            'ref_or_amount' => $orDetail['orRefAmount'] ?? null,
                             'remarks' => $orDetail['remarks'] ?? '',
                             'or_photo' => $orDetail['orPhotoUrl'] ?? null,
                         ]);
