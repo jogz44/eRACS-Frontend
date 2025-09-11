@@ -1321,9 +1321,18 @@ class AppropriationController extends Controller
     public function getDashboardSummary(Request $request)
     {
         try {
-            \Log::info('Dashboard summary requested for user: ' . $request->user()->id);
+            $user = $request->user();
+            if (!$user) {
+                \Log::error('Dashboard summary: No authenticated user');
+                return response()->json([
+                    'status' => false,
+                    'message' => 'User not authenticated'
+                ], 401);
+            }
+            
+            \Log::info('Dashboard summary requested for user: ' . $user->id);
 
-            $barangayId = $request->user()->barangay_id;
+            $barangayId = $user->barangay_id;
             $year = $request->input('year', now()->year); // Default to current year if not specified
             
             \Log::info('Barangay ID: ' . $barangayId . ', Year: ' . $year);
@@ -1640,8 +1649,15 @@ class AppropriationController extends Controller
     public function getDashboardDebug(Request $request)
     {
         try {
-            $user = $request->user();
-            $barangayId = $user->barangay_id;
+        $user = $request->user();
+        if (!$user) {
+            \Log::error('Dashboard summary: No authenticated user');
+            return response()->json([
+                'status' => false,
+                'message' => 'User not authenticated'
+            ], 401);
+        }
+        $barangayId = $user->barangay_id;
             
             \Log::info('Dashboard debug requested for user: ' . $user->id . ', barangay: ' . $barangayId);
             
