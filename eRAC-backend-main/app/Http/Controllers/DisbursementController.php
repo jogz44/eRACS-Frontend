@@ -364,6 +364,7 @@ class DisbursementController extends Controller
                         'or_date' => $orDate,
                         'or_number' => $orDetail['orNumber'],
                         'or_amount' => $orDetail['orAmount'],
+                        'ref_or_amount' => $orDetail['orRefAmount'] ?? null,
                         'remarks' => $orDetail['remarks'] ?? '',
                         'or_photo' => $orDetail['orPhotoUrl'] ?? null,
                     ]);
@@ -1935,14 +1936,10 @@ class DisbursementController extends Controller
         $mm = str_pad($today->month, 2, '0', STR_PAD_LEFT);
         $yyyy = $today->year;
 
-        $user = $request->user();
-        $barangayId = $user->barangay_id;
+        $likePattern = 'DV-'.substr($yyyy, -2).'-'.$mm.'-%';
 
-        $likePattern = 'DV-%'.substr($yyyy, -2).'-'.$mm.'-%';
-
-        $lastDisbursement = Disbursement::where('dv_number', 'like', $likePattern)
-            ->orderByDesc('dv_number')
-            ->first();
+        $lastDisbursements = Disbursement::withoutGlobalScopes();
+        $lastDisbursement=$lastDisbursements->where('dv_number', 'like', $likePattern)->orderByDesc('dv_number')->first();
 
         $lastSequence = 0;
         if ($lastDisbursement) {

@@ -132,8 +132,6 @@ const handleSACBPrint = () => {
     })
     return
   }
-  
-  console.log('Printing report for date range:', dateRangeDisplay.value)
   $q.notify({
     type: 'positive',
     message: 'Report sent to printer successfully!',

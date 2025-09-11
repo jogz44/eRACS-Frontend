@@ -178,7 +178,6 @@ const getExpenseClassColor = (expenseClass) => {
 // Computed property for total amount to ensure reactivity
 const totalAmount = computed(() => {
   const total = store.totalExpensesAmount || 0
-  console.log('Component totalAmount computed:', total)
   return total
 })
 

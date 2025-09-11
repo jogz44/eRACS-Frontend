@@ -269,21 +269,29 @@
         <template v-slot:body-cell-amount_to_use="props">
           <q-td :props="props">
             <q-input
-              v-model.number="props.row.amount_to_use"
-              type="number"
-              :max="props.row.unused_amount"
-              :min="0"
-              step="0.01"
+              :model-value="formatInputValue(props.row.amount_to_use)"
+              @update:model-value="(val) => handleAmountToUseInput(props.row, val)"
+              @blur="(event) => handleAmountToUseBlur(props.row, event.target.value)"
+              @keypress="blockNonNumeric"
+              @paste.prevent="handlePasteNumeric"
               dense
               outlined
               :disable="!selectedExpenses.some(exp => exp.id === props.row.id)"
               :rules="[
-                val => val >= 0 || 'Amount cannot be negative',
-                val => val <= (props.row.unused_amount || 0) || `Amount cannot exceed ${supplementalBudgetStore.formatCurrency(props.row.unused_amount || 0)}`
+                val => {
+                  const num = parseCurrency(val)
+                  return num >= 0 || 'Amount cannot be negative'
+                },
+                val => {
+                  const num = parseCurrency(val)
+                  return num <= (props.row.unused_amount || 0) || `Amount cannot exceed ${supplementalBudgetStore.formatCurrency(props.row.unused_amount || 0)}`
+                }
               ]"
               @focus="ensureSelected(props.row)"
-              @blur="validateAmount(props.row)"
-              @input="validateAmount(props.row)"
+              prefix="₱"
+              placeholder="0.00"
+              inputmode="decimal"
+              pattern="\\d*\\.?\\d{0,2}"
             />
           </q-td>
         </template>
@@ -880,6 +888,7 @@ const ensureSelected = (expense) => {
   }
 }
 
+// === Validation (from Arbiter02) ===
 const validateAmount = (expense) => {
   // Only validate if amount_to_use is defined and not empty
   if (expense.amount_to_use !== undefined && expense.amount_to_use !== null && expense.amount_to_use !== '') {
@@ -891,6 +900,102 @@ const validateAmount = (expense) => {
     }
   }
 }
+
+// === Currency & Input Handling (from main) ===
+const parseCurrency = (value) => {
+  if (!value && value !== 0) return 0
+  const cleanValue = String(value).replace(/[₱,\s]/g, '')
+  const parsed = parseFloat(cleanValue)
+  return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100
+}
+
+// Real-time input formatting: typing = commas only, blur = two decimals
+const formatInputValue = (value) => {
+  if (!value && value !== 0) return ''
+  const isNumber = typeof value === 'number'
+  const cleanValue = String(value).replace(/,/g, '')
+  const num = parseFloat(cleanValue)
+  if (isNaN(num)) return ''
+  return isNumber
+    ? num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : num.toLocaleString('en-US')
+}
+
+// Handle amount input while typing (string) – sanitized
+const handleAmountToUseInput = (expense, value) => {
+  let cleanValue = String(value).replace(/[^\d.]/g, '')
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    cleanValue = parts[0] + '.' + parts.slice(1).join('')
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
+  }
+  expense.amount_to_use = cleanValue
+  validateAmount(expense) // 🔹 run business rule check after input
+}
+
+// Handle input blur – format to two decimals
+const handleAmountToUseBlur = (expense, value) => {
+  const formatted = formatToTwoDecimals(value)
+  expense.amount_to_use = formatted
+  validateAmount(expense) // 🔹 enforce limits
+}
+
+// Force exactly two decimals
+const formatToTwoDecimals = (value) => {
+  const cleanValue = String(value).replace(/[₱,\s]/g, '')
+  if (cleanValue === '') return ''
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    const collapsed = parts[0] + '.' + parts.slice(1).join('')
+    return formatToTwoDecimals(collapsed)
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    parts[1] = parts[1].substring(0, 2)
+  }
+  const num = parseFloat(parts.join('.'))
+  if (isNaN(num)) return ''
+  return Math.round(num * 100) / 100
+}
+
+// Block invalid keypresses
+const blockNonNumeric = (event) => {
+  const key = event.key
+  const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
+  if (allowedKeys.includes(key)) return
+  if (key === '.' && !event.target.value.includes('.')) return
+  if (!/^\d$/.test(key)) {
+    event.preventDefault()
+  }
+}
+
+// Sanitize pasted content
+const handlePasteNumeric = (event) => {
+  const paste = (event.clipboardData || window.clipboardData).getData('text')
+  const cleanPaste = paste.replace(/[^\d.]/g, '')
+
+  if (cleanPaste !== paste) {
+    event.preventDefault()
+    const target = event.target
+    const start = target.selectionStart
+    const end = target.selectionEnd
+    const currentValue = target.value
+    const newValue = currentValue.substring(0, start) + cleanPaste + currentValue.substring(end)
+
+    // Find the expense row and update it
+    const tableRow = target.closest('tr')
+    if (tableRow) {
+      const rowIndex = Array.from(tableRow.parentNode.children).indexOf(tableRow)
+      const expense = filteredExpenses.value[rowIndex]
+      if (expense) {
+        handleAmountToUseInput(expense, newValue)
+        validateAmount(expense) // 🔹 enforce rules after paste
+      }
+    }
+  }
+}
+
 
 const syncLocalExpenses = () => {
   // Create a map of existing local expenses by ID to preserve amount_to_use values

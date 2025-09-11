@@ -209,7 +209,6 @@ const handleEnterKey = (event) => {
     event.preventDefault()
     event.stopPropagation()
   }
-  console.log('Enter key pressed - triggering login')
   handleLogin()
 }
 
@@ -224,7 +223,6 @@ const closeInactivityDialog = () => {
 // Global keyboard event handler
 const handleGlobalKeydown = (event) => {
   if (event.key === 'Enter') {
-    console.log('Global Enter key detected')
     event.preventDefault()
     event.stopPropagation()
     handleLogin()
@@ -234,7 +232,6 @@ const handleGlobalKeydown = (event) => {
 // Add and remove global event listeners
 onMounted(() => {
   document.addEventListener('keydown', handleGlobalKeydown)
-  console.log('Global keyboard listener added')
 
   // Check if user was logged out due to inactivity
   if (localStorage.getItem('inactivity_logout')) {
@@ -245,7 +242,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleGlobalKeydown)
-  console.log('Global keyboard listener removed')
 })
 
 const goToForgotPassword = () => router.push('/forgotpage')
@@ -276,7 +272,6 @@ const goToAdmin = () => router.push('/admin/login')
 // }
 
 // const onImageError = (error) => {
-//   console.log('Logo image failed to load:', error)
 //   // Try alternative path
 //   const imgElement = error.target
 //   if (imgElement && imgElement.src.includes('~/assets/')) {

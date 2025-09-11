@@ -34,14 +34,32 @@
 
 
           <div class="col-12 col-sm-6 col-md-4">
-            <q-select outlined dense v-model="expenseSelectedCurrent" label="Expense Category"
-              :options="reportStore.expenseOptionsCurrent" map-options option-label="name" option-value="id"
-              :loading="loading" />
+            <q-select 
+              outlined 
+              dense 
+              v-model="expenseSelectedCurrent" 
+              label="Expense Category"
+              :options="reportStore.expenseOptionsCurrent" 
+              map-options 
+              option-label="name" 
+              option-value="id"
+              :loading="loading"
+              :disable="!isBarangaySelected"
+            />
           </div>
 
           <div class="col-12 col-sm-6 col-md-4">
-            <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-              @click="openRACModal('current-rac')" :loading="loading" />
+            <q-btn 
+              color="primary" 
+              icon="settings" 
+              label="Generate Report" 
+              class="full-width"
+              :disable="!isBarangaySelected"
+              @click="openRACModal('current-rac')" 
+              :loading="loading"
+            >
+              <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
+            </q-btn>
           </div>
         </div>
       </q-card-section>
@@ -71,8 +89,17 @@
 
 
           <div class="col-12 col-sm-6 col-md-6">
-            <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-              @click="openSACBModal('current-sacb')" :loading="loading" />
+            <q-btn 
+              color="primary" 
+              icon="settings" 
+              label="Generate Report" 
+              class="full-width"
+              :disable="!isBarangaySelected"
+              @click="openSACBModal('current-sacb')" 
+              :loading="loading"
+            >
+              <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
+            </q-btn>
           </div>
         </div>
       </q-card-section>
@@ -107,14 +134,32 @@
           </div>
 
           <div class="col-12 col-sm-6 col-md-4">
-            <q-select outlined dense v-model="expenseSelectedContinuing" label="Expense Category" map-options
-              :options="reportStore.expenseOptionsContinuing" :loading="loading" option-value="id"
-              option-label="name" />
+            <q-select 
+              outlined 
+              dense 
+              v-model="expenseSelectedContinuing" 
+              label="Expense Category" 
+              map-options
+              :options="reportStore.expenseOptionsContinuing" 
+              :loading="loading" 
+              option-value="id"
+              option-label="name"
+              :disable="!isBarangaySelected"
+            />
           </div>
 
           <div class="col-12 col-sm-6 col-md-4">
-            <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-              @click="openRACModal('continuing-rac')" :loading="loading" />
+            <q-btn 
+              color="primary" 
+              icon="settings" 
+              label="Generate Report" 
+              class="full-width"
+              :disable="!isBarangaySelected"
+              @click="openRACModal('continuing-rac')" 
+              :loading="loading"
+            >
+              <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
+            </q-btn>
           </div>
         </div>
       </q-card-section>
@@ -144,8 +189,17 @@
           </div>
 
           <div class="col-12 col-sm-6 col-md-6">
-            <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-              @click="openSACBModal('continuing-sacb')" :loading="loading" />
+            <q-btn 
+              color="primary" 
+              icon="settings" 
+              label="Generate Report" 
+              class="full-width"
+              :disable="!isBarangaySelected"
+              @click="openSACBModal('continuing-sacb')" 
+              :loading="loading"
+            >
+              <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
+            </q-btn>
           </div>
         </div>
       </q-card-section>
@@ -904,6 +958,10 @@ const loadAllData = async () => {
 }
 
 const openSACBModal = (type) => {
+  if (!isBarangaySelected.value) {
+    return notifyError('Please select a barangay first to generate reports.')
+  }
+  
   if (type === 'current-sacb') {
     if (!currentSacbDateRange.value.from || !currentSacbDateRange.value.to) {
       return notifyError('Please select a valid current SACB date range.')
@@ -942,6 +1000,10 @@ const openSACBModal = (type) => {
 const closeSACBModal = () => { SACBModal.show = false }
 
 const openRACModal = (type) => {
+  if (!isBarangaySelected.value) {
+    return notifyError('Please select a barangay first to generate reports.')
+  }
+  
   if (type === 'current-rac') {
     if (!dateRange.value.from || !dateRange.value.to) {
       return notifyError('Please select a valid current RAC date range.')
@@ -1005,14 +1067,12 @@ const handleSACBPrint = () => {
   if (dateRange.value.from === '' || dateRange.value.to === '') {
     return notifyError('Please select a valid date range.')
   }
-  console.log('Printing report:', SACBModal.reportType)
   logAdminActivity('Report Printed', `Printed ${SACBModal.reportType} report`)
   closeSACBModal()
   notifySuccess('Report sent to printer successfully!')
 }
 
 const handleRACPrint = () => {
-  console.log('Printing report:', RACModal.reportType)
   logAdminActivity('Report Printed', `Printed ${RACModal.reportType} report`)
   closeRACModal()
   notifySuccess('Report sent to printer successfully!')
@@ -1055,6 +1115,11 @@ const notifyError = (msg) => $q.notify({ type: 'negative', message: msg, positio
 const notifySuccess = (msg) => $q.notify({ type: 'positive', message: msg, position: 'top' })
 
 /* -------------------- COMPUTED -------------------- */
+// Check if barangay is selected
+const isBarangaySelected = computed(() => {
+  return authStore.getSelectedBarangay() !== null && authStore.getSelectedBarangay() !== undefined
+})
+
 const sacbColumns = computed(() => [
   { name: 'ppa', label: 'Account Title', field: 'ppa', align: 'left', sortable: true },
   { name: 'appropriation', label: 'Appropriation', field: 'appropriation', align: 'right', sortable: true, format: val => val?.toLocaleString() },
@@ -1092,8 +1157,6 @@ const continuingSacbDateRangeDisplay = computed(() => {
 
 // Computed property for dynamic columns count
 const dynamicColumnsCount = computed(() => {
-  console.log('Dynamic columns:', reportStore.dynamicAccountColumns)
-  console.log('Report RAC:', reportStore.reportRAC)
   return reportStore.dynamicAccountColumns.length
 })
 

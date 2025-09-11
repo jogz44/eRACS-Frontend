@@ -3,8 +3,8 @@
 # Accept: application/json
 
 
-GET http://localhost:8000/api/barangay/expense-hierarchy
-Authorization: Bearer 4|lM8jKKO3We4oDIXzxNHVZeTSwQFvdeETPAxGIHx2619f561e
+GET http://localhost:8000/api/barangay/generate-dvnumber
+Authorization: Bearer 1|WrNnGAiHauH2qeUuOP5EQE9TxdbMnWuxpuKzOfen5578616e
 Accept: application/json
 
 # GET http://localhost:8000/api/user
