@@ -3,7 +3,6 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -12,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('disbursements', function (Blueprint $table) {
-            $table->bigIncrements('id');
+        Schema::create('cont_disbursement', function (Blueprint $table) {
+            $table->id();
             $table->unsignedBigInteger('barangay_id');
             $table->date('date');
             $table->string('dv_number');
@@ -23,8 +22,7 @@ return new class extends Migration
             $table->string('payee');
             $table->decimal('dv_amount', 15, 2);
             $table->decimal('liquidated_amount', 15, 2)->nullable();
-            // For MySQL/Postgres enum works fine
-            $table->enum('status', ['Unliquidated', 'Partial', 'Liquidated', 'Void Requested', 'Voided', 'Stale', 'Edit Requested'])->default('Unliquidated');
+            $table->enum('status', ['Unliquidated', 'Partial', 'Liquidated', 'Void Requested', 'Voided', 'Stale'])->default('Unliquidated');
             $table->unsignedBigInteger('user_id')->nullable();
             $table->timestamp('liquidated_at')->nullable();
             $table->text('remarks')->nullable();
@@ -34,8 +32,10 @@ return new class extends Migration
             $table->foreign('user_id')->references('id')->on('barangay_users')->onDelete('set null');
             $table->foreign('barangay_id')->references('id')->on('barangays')->onDelete('cascade');
             $table->foreign('bank_id')->references('id')->on('lib_banks')->onDelete('NO ACTION');
-        });
 
+            $table->index(['barangay_id', 'status']);
+            $table->index(['date']);
+        });
     }
 
     /**
@@ -43,11 +43,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        if (DB::getDriverName() === 'sqlsrv') {
-            // Drop SQL Server constraint first
-            DB::statement("ALTER TABLE disbursements DROP CONSTRAINT CK_disbursements_status");
-        }
-
-        Schema::dropIfExists('disbursements');
+        Schema::dropIfExists('cont_disbursement');
     }
 };

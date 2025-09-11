@@ -7,11 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use App\Models\Concerns\ScopesBarangay as BarangayScope;
 
-class Disbursement extends Model
+class ContDisbursement extends Model
 {
     use HasFactory;
 
-    protected $table = 'disbursements';
+    protected $table = 'cont_disbursement';
 
     protected $fillable = [
         'barangay_id',
@@ -41,7 +41,7 @@ class Disbursement extends Model
 
     public function orDetails()
     {
-        return $this->hasMany(DisbursementOrDetail::class);
+        return $this->hasMany(ContDisbursementOrDetail::class, 'cont_disbursement_id');
     }
 
     public function bank()
@@ -51,7 +51,7 @@ class Disbursement extends Model
 
     public function expenseDetails()
     {
-        return $this->hasMany(TranExpenseDetail::class, 'disbursement_id');
+        return $this->hasMany(ContTranExpenseDetail::class, 'cont_disbursement_id');
     }
 
     public function cheque()
