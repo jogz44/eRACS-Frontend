@@ -212,6 +212,13 @@ Route::prefix('barangay')->group(function () {
         Route::put('/continuing-disbursements/{id}', [ContinuingDisbursementController::class, 'update']);
         Route::delete('/continuing-disbursements/{id}', [ContinuingDisbursementController::class, 'destroy']);
 
+        // Continuing Disbursement OR Details
+        Route::get('/continuing-disbursements/{id}/or-details', [ContinuingDisbursementController::class, 'getOrDetails']);
+        Route::post('/continuing-disbursements/{id}/or-details', [ContinuingDisbursementController::class, 'saveOrDetails']);
+        Route::delete('/continuing-disbursements/{id}/or-details/{orDetailId}', [ContinuingDisbursementController::class, 'deleteOrDetail']);
+        // Continuing Disbursement OR Photo Upload
+        Route::post('/continuing-disbursements/or-photo/upload', [ContinuingDisbursementController::class, 'uploadOrPhoto']);
+
 
     });
 
