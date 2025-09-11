@@ -1059,17 +1059,20 @@ class AppropriationController extends Controller
     // In your AppropriationController.php
     public function getBudgetAllocations($budgetId)
     {
-        $allocations = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem'])
+        $allocations = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem', 'expenseSubItem'])
             ->where('budget_id', $budgetId)
             ->get()
             ->map(function($alloc) {
                 return [
+                    'id' => $alloc->id,
                     'expense_item_id' => $alloc->expense_item_id,
                     'expense_type_id' => $alloc->expense_type_id,
                     'expense_class_id' => $alloc->expense_class_id,
+                    'expense_sub_item_id' => $alloc->expense_sub_item_id,
                     'expense_class_name' => $alloc->expenseClass->name ?? null,
                     'expense_type_name' => $alloc->expenseType->name ?? null,
                     'expense_item_name' => $alloc->expenseItem->name ?? null,
+                    'expense_sub_item_name' => $alloc->expenseSubItem->name ?? null,
                     'amount' => (float)$alloc->amount
                 ];
             });

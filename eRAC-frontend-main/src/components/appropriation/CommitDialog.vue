@@ -369,7 +369,11 @@ const parseCurrency = (value) => {
 
 // Available budget from the selected row (unappropriated amount)
 const availableBudget = computed(() => {
-  return parseCurrency(appropriationStore.selectedRow?.unappropriated || 0)
+  // Use the remainingUnappropriated getter which calculates based on existingAllocationsTotal
+  const result = appropriationStore.remainingUnappropriated
+  
+  
+  return result
 })
 
 // Transform allocations for display
@@ -733,6 +737,9 @@ const submitAllocation = async () => {
     // Trigger background refresh so we can close immediately
     await appropriationStore.commitAllocation(appropriationStore.selectedRow.id, allocations, { backgroundRefresh: true })
 
+    // Clear input cache and reset state after successful allocation
+    appropriationStore.resetAllocationState()
+    
     // Close dialog immediately after successful allocation
     // Next-tick hide to avoid any repaint timing issues
     appropriationStore.showAllocationDialog = false
