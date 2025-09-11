@@ -254,7 +254,7 @@
 
       <!-- Results Summary -->
       <div v-if="filteredDisbursements.length > 0" class="q-mb-sm">
-        <q-chip 
+        <q-chip
           :color="filteredDisbursements.length === store.disbursements.length ? 'grey-6' : 'primary'"
           :text-color="filteredDisbursements.length === store.disbursements.length ? 'white' : 'white'"
           dense
@@ -862,8 +862,8 @@ const filteredDisbursements = computed(() => {
         disbursement.barangay_name,
         disbursement.status
       ]
-      
-      return searchableFields.some(field => 
+
+      return searchableFields.some(field =>
         field && field.toString().toLowerCase().includes(query)
       )
     })
@@ -903,7 +903,7 @@ const filteredDisbursements = computed(() => {
     if (dateA.getTime() !== dateB.getTime()) {
       return dateB.getTime() - dateA.getTime() // Newest first
     }
-    
+
     // Then sort by DV number
     return (b.dvNumber || '').localeCompare(a.dvNumber || '')
   })
@@ -917,9 +917,9 @@ const handleBankSelection = async (bankId) => {
       // Clear previous auto-generated values
       store.autoCheque = null
       store.autoBookletID = null
-      
+
       await store.selectBank(bankId)
-      
+
       // Auto-generate cheque number after bank selection
       if (store.autoCheque && store.autoBookletID) {
         $q.notify({
@@ -958,10 +958,10 @@ const validateAndSave = () => {
     const form = store.forms.disbursement
     const hasRequiredFields = form.date && form.bank_id && form.dvNumber && form.payee
     const hasExpenses = store.expenses && store.expenses.length > 0
-    const hasValidAmounts = store.expenses.every(expense => 
+    const hasValidAmounts = store.expenses.every(expense =>
       expense.amount && parseFloat(expense.amount) > 0
     )
-    
+
     if (!hasRequiredFields) {
       $q.notify({
         type: 'negative',
@@ -972,7 +972,7 @@ const validateAndSave = () => {
       })
       return false
     }
-    
+
     if (!hasExpenses) {
       $q.notify({
         type: 'negative',
@@ -983,7 +983,7 @@ const validateAndSave = () => {
       })
       return false
     }
-    
+
     if (!hasValidAmounts) {
       $q.notify({
         type: 'negative',
@@ -994,11 +994,11 @@ const validateAndSave = () => {
       })
       return false
     }
-    
+
     if (store.savingDisbursement) {
       return false // Prevent multiple saves
     }
-    
+
     return true
   }
   return false
@@ -1015,7 +1015,7 @@ const handleSaveClick = async () => {
   if (!validateAndSave()) {
     return // Validation failed, don't proceed
   }
-  
+
   try {
     const result = await store.saveDisbursement()
     if (result.success) {
@@ -1079,7 +1079,7 @@ const handleAddExpense = async () => {
 const handleSaveExpense = async () => {
   // Validate expense before saving
   const expense = store.forms.expense
-  
+
   if (!expense.account) {
     $q.notify({
       type: 'negative',
@@ -1090,7 +1090,7 @@ const handleSaveExpense = async () => {
     })
     return
   }
-  
+
   if (!expense.amount || parseFloat(expense.amount) <= 0) {
     $q.notify({
       type: 'negative',
@@ -1101,7 +1101,7 @@ const handleSaveExpense = async () => {
     })
     return
   }
-  
+
   if (parseFloat(expense.amount) > expense.balance) {
     $q.notify({
       type: 'negative',
@@ -1112,7 +1112,7 @@ const handleSaveExpense = async () => {
     })
     return
   }
-  
+
   try {
     await store.saveExpense()
     $q.notify({
@@ -1223,7 +1223,7 @@ const handleDialogClose = (dialogName) => {
     // Close edit request dialog via store method
     store.closeEditRequestDialog()
   }
-  
+
   store.closeDialog(dialogName)
 }
 
@@ -1239,7 +1239,6 @@ const handleEditRequest = (row) => {
 
 // Submit void request from dialog
 const handleSubmitVoidRequest = async () => {
-
   if (!store.forms.void.remarks || store.forms.void.remarks.trim() === '') {
     $q.notify({
       type: 'negative',
@@ -1276,13 +1275,12 @@ const handleSubmitVoidRequest = async () => {
     console.error('Error submitting void request:', error)
     $q.notify({
       type: 'negative',
-
       message: error.message || 'Failed to submit void request',
-        icon: 'error',
-        position: 'top',
+      icon: 'error',
+      position: 'top',
       timeout: 5000,
-      })
-    }
+    })
+  }
 }
 
 // Approver actions - now handled in ViewOrDetails component

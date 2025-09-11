@@ -819,13 +819,13 @@
             :disable="transferLoading"
           />
           <q-btn
-            label="Transfer"
+
             color="secondary"
             @click="executeTransfer"
             :loading="transferLoading"
             :disable="!canTransfer || transferLoading"
             :class="{ 'q-btn--loading': transferLoading }"
-            icon="swap_horiz"
+
           >
             <template v-if="!transferLoading">
               <q-icon name="swap_horiz" class="q-mr-xs" />
