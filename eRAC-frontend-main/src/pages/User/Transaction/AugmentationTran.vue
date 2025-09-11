@@ -77,7 +77,7 @@
                 <div class="text-h6 text-grey-8">Expense Classes</div>
               </div>
               <div class="summary-amount">
-                <div class="text-h4 text-weight-bold text-info">
+                <div class="text-h4 text-weight-bold text-info text-black">
                   {{ totalExpenseClasses }}
                 </div>
                 <div class="text-caption text-grey-6 q-mt-xs">
