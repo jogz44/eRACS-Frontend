@@ -1337,6 +1337,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           const response = await api.get('/api/barangay/generate-dvnumber',getAuthConfig());
           const newDVNumber = response.data.data.dv_number || ''
           this.forms.disbursement.dvNumber= newDVNumber
+          console.error('dvnum=================',newDVNumber)
         } catch (error) {
           console.error('Failed to generate new DV number:', error)
           this.forms.disbursement.dvNumber= ''
