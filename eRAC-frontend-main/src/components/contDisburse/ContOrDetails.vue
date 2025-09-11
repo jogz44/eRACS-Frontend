@@ -405,16 +405,10 @@ const triggerOrFileInput = (index) => {
 
 const onOrImageChange = (e, index) => {
   const file = e.target.files && e.target.files[0]
-  console.log('File selected for index:', index, 'File:', file)
-  console.log('File type:', typeof file)
-  console.log('File instanceof File:', file instanceof File)
-  console.log('File name:', file?.name)
-  console.log('File size:', file?.size)
   
   if (file) {
     // Store the file for later upload
     store.currentLiquidation.orDetails[index].orImage = file
-    console.log('File stored in orDetails:', store.currentLiquidation.orDetails[index].orImage)
 
     // Create local file path for preview
     const localPath = URL.createObjectURL(file)
@@ -479,11 +473,6 @@ const handlePartialLiquidation = async () => {
       const orDetail = store.currentLiquidation.orDetails[i]
       if (orDetail.orImage && !orDetail.serverPhotoPath) {
         try {
-          console.log('Uploading photo for OR detail:', i, 'File:', orDetail.orImage)
-          console.log('File type:', typeof orDetail.orImage)
-          console.log('File instanceof File:', orDetail.orImage instanceof File)
-          console.log('File name:', orDetail.orImage?.name)
-          console.log('File size:', orDetail.orImage?.size)
           
           // Check if the file is valid
           if (!orDetail.orImage || !(orDetail.orImage instanceof File)) {
@@ -491,7 +480,6 @@ const handlePartialLiquidation = async () => {
           }
           
           const uploadResult = await store.uploadOrPhoto(orDetail.orImage)
-          console.log('Upload result:', uploadResult)
           
           if (uploadResult.success) {
             store.currentLiquidation.orDetails[i].serverPhotoPath = uploadResult.path
@@ -543,24 +531,20 @@ const handlePartialLiquidation = async () => {
 }
 
 const showSubmitConfirmation = () => {
-  console.log('Showing confirmation dialog...')
   showConfirmationDialog.value = true
 }
 
 const handleConfirmationSubmit = () => {
   showConfirmationDialog.value = false
-  console.log('User confirmed liquidation, proceeding...')
   handleSaveOrDetails()
 }
 
 const handleConfirmationPartial = () => {
   showConfirmationDialog.value = false
-  console.log('User chose partial liquidation...')
   handlePartialLiquidation()
 }
 
 const handleSaveOrDetails = async () => {
-  console.log('handleSaveOrDetails called - starting liquidation process...')
   savingSubmit.value = true
   try {
     // First, upload all photos that haven't been uploaded yet
@@ -568,11 +552,6 @@ const handleSaveOrDetails = async () => {
       const orDetail = store.currentLiquidation.orDetails[i]
       if (orDetail.orImage && !orDetail.serverPhotoPath) {
         try {
-          console.log('Uploading photo for OR detail:', i, 'File:', orDetail.orImage)
-          console.log('File type:', typeof orDetail.orImage)
-          console.log('File instanceof File:', orDetail.orImage instanceof File)
-          console.log('File name:', orDetail.orImage?.name)
-          console.log('File size:', orDetail.orImage?.size)
           
           // Check if the file is valid
           if (!orDetail.orImage || !(orDetail.orImage instanceof File)) {
@@ -580,7 +559,6 @@ const handleSaveOrDetails = async () => {
           }
           
           const uploadResult = await store.uploadOrPhoto(orDetail.orImage)
-          console.log('Upload result:', uploadResult)
           
           if (uploadResult.success) {
             store.currentLiquidation.orDetails[i].serverPhotoPath = uploadResult.path

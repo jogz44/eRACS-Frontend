@@ -369,7 +369,11 @@ const parseCurrency = (value) => {
 
 // Available budget from the selected row (unappropriated amount)
 const availableBudget = computed(() => {
-  return parseCurrency(appropriationStore.selectedRow?.unappropriated || 0)
+  // Use the remainingUnappropriated getter which calculates based on existingAllocationsTotal
+  const result = appropriationStore.remainingUnappropriated
+  
+  
+  return result
 })
 
 // Transform allocations for display
@@ -530,12 +534,6 @@ const netChange = computed(() => {
   const newTotal = newAllocationsTotal.value
   const netChange = Math.round((newTotal - existingTotal) * 100) / 100
 
-  // Debug logging
-  console.log('[DEBUG] Net Change Calculation:', {
-    newAllocations: newTotal,
-    existingTotal: existingTotal,
-    netChange: netChange
-  })
 
   return netChange
 })
@@ -545,12 +543,6 @@ const remainingAfterChanges = computed(() => {
   // Remaining = Available budget - Net change
   const remaining = Math.round((availableBudget.value - netChange.value) * 100) / 100
 
-  // Debug logging
-  console.log('[DEBUG] Remaining After Changes Calculation:', {
-    availableBudget: availableBudget.value,
-    netChange: netChange.value,
-    remaining: remaining
-  })
 
   return remaining
 })
@@ -560,15 +552,6 @@ const canSave = computed(() => {
   const hasValidAllocation = newAllocationsTotal.value > 0
   const withinBudget = netChange.value <= (availableBudget.value + 0.01) // Small tolerance
   const hasValidAmounts = newAllocationsTotal.value >= 0
-
-  console.log('[DEBUG] canSave calculation:', {
-    hasValidAllocation,
-    withinBudget,
-    hasValidAmounts,
-    newAllocationsTotal: newAllocationsTotal.value,
-    netChange: netChange.value,
-    availableBudget: availableBudget.value
-  })
 
   return hasValidAllocation && withinBudget && hasValidAmounts
 })
@@ -706,14 +689,6 @@ const submitAllocation = async () => {
     // Calculate the actual amount being allocated (new allocations - existing allocations)
     const actualAllocationAmount = totalNewAllocation - existingTotal
 
-    console.log('=== ALLOCATION VALIDATION ===')
-    console.log('Available Budget:', availableBudget.value)
-    console.log('Total New Allocation:', totalNewAllocation)
-    console.log('Existing Allocations Total:', existingTotal)
-    console.log('Actual Allocation Amount:', actualAllocationAmount)
-    console.log('Will Exceed:', actualAllocationAmount > availableBudget.value)
-    console.log('============================')
-
     // Validate that the actual allocation amount doesn't exceed available budget
     const tolerance = 0.01 // Small tolerance for floating-point precision
     if (actualAllocationAmount > (availableBudget.value + tolerance)) {
@@ -728,11 +703,12 @@ const submitAllocation = async () => {
       throw new Error(errorMsg)
     }
 
-    // Submit allocation
-    console.log('Submitting allocation to backend...')
     // Trigger background refresh so we can close immediately
     await appropriationStore.commitAllocation(appropriationStore.selectedRow.id, allocations, { backgroundRefresh: true })
 
+    // Clear input cache and reset state after successful allocation
+    appropriationStore.resetAllocationState()
+    
     // Close dialog immediately after successful allocation
     // Next-tick hide to avoid any repaint timing issues
     appropriationStore.showAllocationDialog = false
@@ -750,7 +726,6 @@ const submitAllocation = async () => {
     if (error.response && error.response.status === 422) {
       const backendMessage = error.response.data.message || error.response.data.error
       message = `Backend Error: ${backendMessage}`
-      console.log('Backend response:', error.response.data)
     }
 
     $q.notify({
@@ -883,7 +858,6 @@ const checkAndSubmitAllocation = () => {
   const conflicts = []
 
   displayAccounts.value.forEach(expenseClass => {
-    console.log('Checking expense class:', expenseClass.name)
     expenseClass.children?.forEach(expenseType => {
       // Read directly from input cache for current values
       const typeAmount = parseCurrency(appropriationStore.inputCache[`type-${expenseType.id}`] || '')
@@ -896,7 +870,6 @@ const checkAndSubmitAllocation = () => {
           if (item.children && item.children.length > 0) {
             item.children.forEach(subItem => {
               const subItemAmount = parseCurrency(appropriationStore.inputCache[`subitem-${subItem.id}`] || '')
-              console.log(`      Sub-item: ${subItem.name}, Amount: ${subItemAmount}, Raw: ${appropriationStore.inputCache[`subitem-${subItem.id}`]}`)
               if (subItemAmount > 0) {
                 totalItemsAmount += subItemAmount
               }
@@ -904,7 +877,6 @@ const checkAndSubmitAllocation = () => {
           } else {
             // For items without sub-items, use item amount
             const itemAmount = parseCurrency(appropriationStore.inputCache[`item-${item.id}`] || '')
-            console.log(`    Item: ${item.name}, Amount: ${itemAmount}, Raw: ${appropriationStore.inputCache[`item-${item.id}`]}`)
             if (itemAmount > 0) {
               totalItemsAmount += itemAmount
             }
@@ -912,7 +884,6 @@ const checkAndSubmitAllocation = () => {
         })
 
         if (totalItemsAmount > 0) {
-          console.log(`    CONFLICT DETECTED! Type: ${typeAmount}, Items: ${totalItemsAmount}`)
           conflicts.push({
             typeId: typeId,
             typeName: expenseType.name,
@@ -927,9 +898,7 @@ const checkAndSubmitAllocation = () => {
   if (conflicts.length > 0) {
     typeAllocationConflicts.value = conflicts
     showConfirmationDialog.value = true
-    console.log('Showing confirmation dialog')
   } else {
-    console.log('No conflicts, proceeding with submitAllocation')
     submitAllocation()
   }
 }

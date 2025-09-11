@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Laravel\Sanctum\PersonalAccessToken;
+use Illuminate\Support\Facades\Auth;
 
 class AuthTokenValid
 {
@@ -58,7 +59,13 @@ class AuthTokenValid
         // 5. Update last used timestamp
         $accessToken->update(['last_used_at' => now()]);
 
-        // 6. Continue request
+        // 6. Set the authenticated user
+        $user = $accessToken->tokenable;
+        if ($user) {
+            Auth::setUser($user);
+        }
+
+        // 7. Continue request
         $response = $next($request);
 
         // 7. Wrap JSON response

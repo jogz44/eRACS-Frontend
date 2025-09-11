@@ -48,7 +48,14 @@ class DisbursementController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $query = Disbursement::with('bank');
+        if (!$user) {
+            \Log::error('Disbursement index: No authenticated user');
+            return response()->json([
+                'status' => false,
+                'message' => 'User not authenticated'
+            ], 401);
+        }
+        $query = Disbursement::with(['bank', 'barangay']);
 
         // If user is authenticated and has barangay_id, filter by it
         if ($user && isset($user->barangay_id)) {
@@ -78,6 +85,7 @@ class DisbursementController extends Controller
                 'status' => $d->status,
                 'remarks' => $d->remarks,
                 'rejection_remarks' => $d->rejection_remarks,
+                'barangay_name' => $d->barangay ? $d->barangay->name : 'Unknown',
                 'created_at' => $d->created_at,
                 'updated_at' => $d->updated_at,
             ];
@@ -364,6 +372,7 @@ class DisbursementController extends Controller
                         'or_date' => $orDate,
                         'or_number' => $orDetail['orNumber'],
                         'or_amount' => $orDetail['orAmount'],
+                        'ref_or_amount' => $orDetail['orRefAmount'] ?? null,
                         'remarks' => $orDetail['remarks'] ?? '',
                         'or_photo' => $orDetail['orPhotoUrl'] ?? null,
                     ]);
@@ -1935,14 +1944,10 @@ class DisbursementController extends Controller
         $mm = str_pad($today->month, 2, '0', STR_PAD_LEFT);
         $yyyy = $today->year;
 
-        $user = $request->user();
-        $barangayId = $user->barangay_id;
+        $likePattern = 'DV-'.substr($yyyy, -2).'-'.$mm.'-%';
 
-        $likePattern = 'DV-%'.substr($yyyy, -2).'-'.$mm.'-%';
-
-        $lastDisbursement = Disbursement::where('dv_number', 'like', $likePattern)
-            ->orderByDesc('dv_number')
-            ->first();
+        $lastDisbursements = Disbursement::withoutGlobalScopes();
+        $lastDisbursement=$lastDisbursements->where('dv_number', 'like', $likePattern)->orderByDesc('dv_number')->first();
 
         $lastSequence = 0;
         if ($lastDisbursement) {

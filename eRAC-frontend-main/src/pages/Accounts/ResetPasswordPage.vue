@@ -117,12 +117,6 @@ const route = useRoute()
 const authStore = useAuthStore()
 const $q = useQuasar()
 
-console.log('=== RESET PASSWORD PAGE LOADING ===')
-console.log('Route object:', route)
-console.log('Route path:', route.path)
-console.log('Route params:', route.params)
-console.log('Route query:', route.query)
-
 const email = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
@@ -147,17 +141,12 @@ const getConfirmPasswordErrorMessage = () => {
 }
 
 onMounted(() => {
-  console.log('ResetPasswordPage mounted')
-  console.log('Route params:', route.params)
-  console.log('Route query:', route.query)
 
   // Get email from route params or query
   email.value = route.params.email || route.query.email || ''
-  console.log('Email value:', email.value)
 
   // Temporarily comment out the redirect to see if the component renders
   // if (!email.value) {
-  //   console.log('No email found, redirecting to forgot page')
   //   $q.notify({
   //     type: 'negative',
   //     message: 'Email is required for password reset',
@@ -165,19 +154,15 @@ onMounted(() => {
   //   })
   //   router.push('/forgotpage')
   // } else {
-  //   console.log('Email found, staying on reset page')
   // }
 
   if (!email.value) {
-    console.log('No email found, redirecting to forgot page')
     $q.notify({
       type: 'negative',
       message: 'Email is required for password reset',
       position: 'top',
     })
     router.push('/forgotpage')
-  } else {
-    console.log('Email found, staying on reset page')
   }
 })
 

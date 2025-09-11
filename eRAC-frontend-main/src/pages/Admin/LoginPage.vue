@@ -249,7 +249,6 @@ const handleEnterKey = (event) => {
     event.preventDefault()
     event.stopPropagation()
   }
-  console.log('Enter key pressed - triggering admin login')
   handleLogin()
 }
 
@@ -264,7 +263,6 @@ const closeInactivityDialog = () => {
 // Global keyboard event handler
 const handleGlobalKeydown = (event) => {
   if (event.key === 'Enter') {
-    console.log('Global Enter key detected for admin login')
     event.preventDefault()
     event.stopPropagation()
     handleLogin()
@@ -281,7 +279,6 @@ onMounted(() => {
   }
 
   document.addEventListener('keydown', handleGlobalKeydown)
-  console.log('Global keyboard listener added for admin login')
 
   // Check if user was logged out due to inactivity
   if (localStorage.getItem('inactivity_logout')) {
@@ -292,7 +289,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleGlobalKeydown)
-  console.log('Global keyboard listener removed for admin login')
 })
 </script>
 

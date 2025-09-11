@@ -514,7 +514,6 @@ const testBackend = async () => {
     if (response.ok) {
       const data = await response.json()
       backendDebugData.value = data.data
-      console.log('Backend debug data:', data.data)
 
       $q.notify({
         type: 'positive',
@@ -545,7 +544,6 @@ const testBackend = async () => {
 // Year filter methods
 const onYearChange = async (newYear) => {
   try {
-    console.log('Year changed to:', newYear)
 
     // Set year changing state
     isYearChanging.value = true
@@ -674,18 +672,11 @@ const chartOptions = computed(() => ({
 // Load dashboard data
 const loadDashboardData = async () => {
   try {
-    console.log('Loading dashboard data for year:', chartStore.selectedYear)
     await chartStore.loadDashboardData()
-    console.log('Dashboard data loaded successfully')
 
     // Also fetch disbursement overview data
-    console.log('Fetching disbursement overview...')
     await chartStore.fetchDisbursementOverview()
-    console.log('Disbursement overview loaded successfully')
 
-    // Log final data state
-    console.log('Final pie chart data:', chartStore.pieChartData)
-    console.log('Final disbursement rows:', chartStore.disbursementOverviewRows.length)
   } catch (error) {
     console.error('Error loading dashboard data:', error)
     unliquidatedocationError.value = 'Failed to load dashboard data. Please try again.'
@@ -696,12 +687,6 @@ const loadDashboardData = async () => {
 watch(
   () => chartStore.pieChartData,
   (newVal) => {
-    // newVal.labels.push("NEW FUND")
-    // newVal.datasets[0].data.push(123456)
-    // newVal.datasets[0].backgroundColor.push("#FF5722")
-    console.log('Updated pie chart data:', newVal)
-    console.log('Pie chart labels:', newVal.labels)
-    console.log('Pie chart data:', newVal.datasets?.[0]?.data)
 
     // Validate chart data structure
     if (!newVal || !newVal.labels || !newVal.datasets || !newVal.datasets[0] || !newVal.datasets[0].data) {
@@ -741,7 +726,6 @@ onMounted(async () => {
 
   // Set fallback pie chart data if none available
   if (!chartStore.pieChartData.labels || chartStore.pieChartData.labels.length === 0) {
-    console.log('Setting fallback pie chart data')
     chartStore.setTestData()
   }
 
@@ -751,7 +735,6 @@ onMounted(async () => {
       // User returned to the dashboard tab, refresh years to catch any newly added fiscal years
       try {
         await chartStore.fetchAvailableYears()
-        console.log('Years refreshed due to page visibility change')
       } catch (error) {
         console.error('Error refreshing years on visibility change:', error)
       }

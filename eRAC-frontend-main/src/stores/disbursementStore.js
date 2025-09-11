@@ -28,8 +28,7 @@ const getAuthConfig = () => {
 
 export const useDisbursementStore = defineStore('disbursement', {
   state: () => ({
-    particulars: [
-    ],
+    particulars: [],
 
     // Main data collections
     expenseData: [], // This will hold our complete expense hierarchy
@@ -48,7 +47,6 @@ export const useDisbursementStore = defineStore('disbursement', {
     selectedBooklet: null,
     selectedChequeNumber: null,
     disbursements: [], // <-- Remove static data, will be loaded from API
-
 
     // Track cancelled cheques in frontend
     cancelledCheques: new Set(), // Store cancelled cheque numbers
@@ -86,6 +84,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     loadingDisbursements: false, // Loading state for fetching disbursements
     voidingDisbursement: false, // Loading state for voiding disbursement
     requestingEdit: false, // Loading state for edit request
+    editActionLoading: false, // Loading state for edit approval/rejection actions
 
     // Form data
     forms: {
@@ -110,13 +109,15 @@ export const useDisbursementStore = defineStore('disbursement', {
         paymentFor: '',
         receivedBy: '',
       },
-      void: { // Added for void form
+      void: {
+        // Added for void form
         disbursementId: null,
         remarks: '',
         requestedBy: null,
         requestedAt: null,
       },
-      edit: { // Added for edit request form
+      edit: {
+        // Added for edit request form
         disbursementId: null,
         remarks: '',
         requestedBy: null,
@@ -136,19 +137,49 @@ export const useDisbursementStore = defineStore('disbursement', {
         chequeNumber: 'CHQ000001',
         bank: 'Bank A',
         payee: 'John Doe',
-        dvAmount: 1000.00,
+        dvAmount: 1000.0,
         status: 'Unliquidated',
         aging: '30 days',
         expenses: [
-          { id: 1, accountId: 1, accountName: 'Expense Class A > Expense Type A > Expense Item A', amount: 100.00, particular: 'Particular 1' },
-          { id: 2, accountId: 2, accountName: 'Expense Class B > Expense Type B', amount: 200.00, particular: 'Particular 2' },
+          {
+            id: 1,
+            accountId: 1,
+            accountName: 'Expense Class A > Expense Type A > Expense Item A',
+            amount: 100.0,
+            particular: 'Particular 1',
+          },
+          {
+            id: 2,
+            accountId: 2,
+            accountName: 'Expense Class B > Expense Type B',
+            amount: 200.0,
+            particular: 'Particular 2',
+          },
         ],
         orDetails: [
-          { id: 1, orNumber: 'OR001', orAmount: 100.00, orDate: '2023-01-10', orImage: null, orPhotoUrl: null, serverPhotoPath: null, remarks: 'Remarks 1' },
-          { id: 2, orNumber: 'OR002', orAmount: 200.00, orDate: '2023-01-15', orImage: null, orPhotoUrl: null, serverPhotoPath: null, remarks: 'Remarks 2' },
+          {
+            id: 1,
+            orNumber: 'OR001',
+            orAmount: 100.0,
+            orDate: '2023-01-10',
+            orImage: null,
+            orPhotoUrl: null,
+            serverPhotoPath: null,
+            remarks: 'Remarks 1',
+          },
+          {
+            id: 2,
+            orNumber: 'OR002',
+            orAmount: 200.0,
+            orDate: '2023-01-15',
+            orImage: null,
+            orPhotoUrl: null,
+            serverPhotoPath: null,
+            remarks: 'Remarks 2',
+          },
         ],
-        actualExpense: 300.00,
-        returnAmount: 700.00,
+        actualExpense: 300.0,
+        returnAmount: 700.0,
         remarks: null,
         void_requested_at: null,
         void_approved_at: null,
@@ -162,19 +193,49 @@ export const useDisbursementStore = defineStore('disbursement', {
         chequeNumber: 'CHQ000002',
         bank: 'Bank B',
         payee: 'Jane Smith',
-        dvAmount: 2000.00,
+        dvAmount: 2000.0,
         status: 'Liquidated',
         aging: '0 days',
         expenses: [
-          { id: 3, accountId: 1, accountName: 'Expense Class A > Expense Type A > Expense Item A', amount: 50.00, particular: 'Particular 3' },
-          { id: 4, accountId: 2, accountName: 'Expense Class B > Expense Type B', amount: 100.00, particular: 'Particular 4' },
+          {
+            id: 3,
+            accountId: 1,
+            accountName: 'Expense Class A > Expense Type A > Expense Item A',
+            amount: 50.0,
+            particular: 'Particular 3',
+          },
+          {
+            id: 4,
+            accountId: 2,
+            accountName: 'Expense Class B > Expense Type B',
+            amount: 100.0,
+            particular: 'Particular 4',
+          },
         ],
         orDetails: [
-          { id: 3, orNumber: 'OR003', orAmount: 50.00, orDate: '2023-02-05', orImage: null, orPhotoUrl: null, serverPhotoPath: null, remarks: 'Remarks 3' },
-          { id: 4, orNumber: 'OR004', orAmount: 100.00, orDate: '2023-02-10', orImage: null, orPhotoUrl: null, serverPhotoPath: null, remarks: 'Remarks 4' },
+          {
+            id: 3,
+            orNumber: 'OR003',
+            orAmount: 50.0,
+            orDate: '2023-02-05',
+            orImage: null,
+            orPhotoUrl: null,
+            serverPhotoPath: null,
+            remarks: 'Remarks 3',
+          },
+          {
+            id: 4,
+            orNumber: 'OR004',
+            orAmount: 100.0,
+            orDate: '2023-02-10',
+            orImage: null,
+            orPhotoUrl: null,
+            serverPhotoPath: null,
+            remarks: 'Remarks 4',
+          },
         ],
-        actualExpense: 150.00,
-        returnAmount: 1850.00,
+        actualExpense: 150.0,
+        returnAmount: 1850.0,
         remarks: null,
         void_requested_at: null,
         void_approved_at: null,
@@ -208,8 +269,9 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         expenseClass.children.forEach((expenseType) => {
           // Check if this expense type has any expense items with balance > 0
-          const hasExpenseItemsWithBalance = expenseType.children &&
-            expenseType.children.some(item => item.amount && item.amount > 0);
+          const hasExpenseItemsWithBalance =
+            expenseType.children &&
+            expenseType.children.some((item) => item.amount && item.amount > 0)
 
           if (hasExpenseItemsWithBalance) {
             // If expense type has items with balance, only show the items (not the type)
@@ -219,7 +281,7 @@ export const useDisbursementStore = defineStore('disbursement', {
                 const remainingBalance = this.calculateRemainingBalance(
                   expenseItem.id,
                   expenseItem.amount,
-                  'item'
+                  'item',
                 )
 
                 if (remainingBalance > 0) {
@@ -233,7 +295,11 @@ export const useDisbursementStore = defineStore('disbursement', {
                     expense_class_id: expenseClass.id,
                     expense_type_id: expenseType.id,
                     expense_item_id: expenseItem.id,
-                    budget_source: expenseItem.budget_source || expenseType.budget_source || expenseClass.budget_source || 'Annual Budget', // Add budget source information
+                    budget_source:
+                      expenseItem.budget_source ||
+                      expenseType.budget_source ||
+                      expenseClass.budget_source ||
+                      'Annual Budget', // Add budget source information
                   }
                   acc.push(expenseItemEntry)
                 }
@@ -246,7 +312,7 @@ export const useDisbursementStore = defineStore('disbursement', {
               const remainingBalance = this.calculateRemainingBalance(
                 expenseType.id,
                 expenseType.amount,
-                'type'
+                'type',
               )
 
               if (remainingBalance > 0) {
@@ -260,7 +326,8 @@ export const useDisbursementStore = defineStore('disbursement', {
                   expense_class_id: expenseClass.id,
                   expense_type_id: expenseType.id,
                   expense_item_id: null, // This identifies it as an expense type
-                  budget_source: expenseType.budget_source || expenseClass.budget_source || 'Annual Budget', // Add budget source information
+                  budget_source:
+                    expenseType.budget_source || expenseClass.budget_source || 'Annual Budget', // Add budget source information
                 }
                 acc.push(expenseTypeEntry)
               }
@@ -275,9 +342,8 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     disbursementColumns: () => [
-
       { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
-        { name: 'status', label: 'Status', field: 'status', align: 'center', sortable: true },
+      { name: 'status', label: 'Status', field: 'status', align: 'center', sortable: true },
       { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
       { name: 'dvNumber', label: 'DV Number', field: 'dvNumber', align: 'left', sortable: true },
       {
@@ -312,12 +378,12 @@ export const useDisbursementStore = defineStore('disbursement', {
             return '-'
           }
           return val
-        }
+        },
       },
 
       { name: 'action', label: 'Action', field: '', align: 'center' },
       { name: 'liquidate', label: 'Liquidate', field: '', align: 'center' },
-       { name: 'remarks', label: 'Remarks', field: '', align: 'center' },
+      { name: 'remarks', label: 'Remarks', field: '', align: 'center' },
     ],
 
     expenseColumns: () => [
@@ -428,13 +494,20 @@ export const useDisbursementStore = defineStore('disbursement', {
       return state.disbursements.filter((d) => {
         // Search across key fields
         const haystacks = [d.payee, d.dvNumber, d.chequeNumber, d.bank, d.status]
-        const matchesSearch = !query || haystacks.some((h) => String(h || '').toLowerCase().includes(query))
+        const matchesSearch =
+          !query ||
+          haystacks.some((h) =>
+            String(h || '')
+              .toLowerCase()
+              .includes(query),
+          )
 
         // Inclusive date range
         const dt = parseFlexibleDate(d.date)
-        const matchesDate = !fromStart && !toEnd
-          ? true
-          : (dt && (!fromStart || dt >= fromStart) && (!toEnd || dt <= toEnd))
+        const matchesDate =
+          !fromStart && !toEnd
+            ? true
+            : dt && (!fromStart || dt >= fromStart) && (!toEnd || dt <= toEnd)
 
         return matchesSearch && matchesDate
       })
@@ -453,13 +526,13 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     filteredExpenseAccounts(state) {
       // Build a set of accountIds already added to prevent duplicates
-      const addedIds = new Set((state.expenses || []).map(e => String(e.accountId)))
+      const addedIds = new Set((state.expenses || []).map((e) => String(e.accountId)))
 
-      let base = this.expenseAccounts.filter(item => !addedIds.has(String(item.id)))
+      let base = this.expenseAccounts.filter((item) => !addedIds.has(String(item.id)))
 
       // Filter by budget source if selected - use description-based filtering like other stores
       if (state.selectedBudgetSource && state.selectedBudgetSource !== 'all') {
-        base = base.filter(account => {
+        base = base.filter((account) => {
           // Check if account has budget_source field first, then fall back to description
           const budgetSource = account.budget_source || account.description || ''
           const budgetSourceLower = budgetSource.toLowerCase()
@@ -499,7 +572,6 @@ export const useDisbursementStore = defineStore('disbursement', {
   },
 
   actions: {
-
     getAuthConfig() {
       const authStore = useAuthStore()
 
@@ -521,8 +593,8 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Calculate remaining balance by deducting expenses from tran_expense_details table
     calculateRemainingBalance(expenseId, originalAmount, expenseLevel) {
       try {
-        let totalDisbursed = 0;
-        let totalReturned = 0;
+        let totalDisbursed = 0
+        let totalReturned = 0
 
         // Determine current editing disbursement id (if any)
         const currentDisbursementId = this.currentItem?.id ? String(this.currentItem.id) : null
@@ -530,11 +602,10 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Get all expense details from the database for this expense account
         if (this.expenseDetailsData && this.expenseDetailsData.length > 0) {
           // Only show first few expense details to avoid clutter
-          const relevantDetails = this.expenseDetailsData.filter(ed => {
-            const matchesLevel = (
+          const relevantDetails = this.expenseDetailsData.filter((ed) => {
+            const matchesLevel =
               (expenseLevel === 'item' && String(ed.expense_item_id) === String(expenseId)) ||
               (expenseLevel === 'type' && String(ed.expense_type_id) === String(expenseId))
-            )
 
             if (!matchesLevel) return false
 
@@ -547,37 +618,36 @@ export const useDisbursementStore = defineStore('disbursement', {
             return true
           })
 
-          relevantDetails.forEach(expenseDetail => {
+          relevantDetails.forEach((expenseDetail) => {
             // Include expense details from other disbursements in the calculation
-            totalDisbursed += parseFloat(expenseDetail.amount) || 0;
-          });
+            totalDisbursed += parseFloat(expenseDetail.amount) || 0
+          })
         }
 
         // Add current frontend expenses for this account (includes the one being edited)
         if (this.expenses && this.expenses.length > 0) {
-          const relevantFrontendExpenses = this.expenses.filter(expense => {
-            if (expenseLevel === 'item') return String(expense.expense_item_id) === String(expenseId)
-            if (expenseLevel === 'type') return String(expense.expense_type_id) === String(expenseId)
+          const relevantFrontendExpenses = this.expenses.filter((expense) => {
+            if (expenseLevel === 'item')
+              return String(expense.expense_item_id) === String(expenseId)
+            if (expenseLevel === 'type')
+              return String(expense.expense_type_id) === String(expenseId)
             return false
           })
 
-          relevantFrontendExpenses.forEach(expense => {
-            totalDisbursed += parseFloat(expense.amount) || 0;
-          });
+          relevantFrontendExpenses.forEach((expense) => {
+            totalDisbursed += parseFloat(expense.amount) || 0
+          })
         }
 
         // Compute remaining balance
-        const remainingBalance = Math.max(0, originalAmount - totalDisbursed + totalReturned);
+        const remainingBalance = Math.max(0, originalAmount - totalDisbursed + totalReturned)
 
-        return remainingBalance;
-
+        return remainingBalance
       } catch (error) {
-        console.error('Error calculating remaining balance:', error);
-        return originalAmount; // Return original amount if calculation fails
+        console.error('Error calculating remaining balance:', error)
+        return originalAmount // Return original amount if calculation fails
       }
     },
-
-
 
     // Fetch all expense details from tran_expense_details table
     async fetchExpenseDetails() {
@@ -631,7 +701,6 @@ export const useDisbursementStore = defineStore('disbursement', {
         this.expenseData = [...this.expenseData]
 
         return Promise.resolve()
-
       } catch (error) {
         console.error('Failed to refresh expense accounts with balances:', error)
         return Promise.reject(error)
@@ -642,8 +711,6 @@ export const useDisbursementStore = defineStore('disbursement', {
     setBudgetSourceFilter(budgetSource) {
       this.selectedBudgetSource = budgetSource
     },
-
-
 
     // Fetch expense hierarchy from appropriation store and accounts library store
     async fetchExpenseAccounts() {
@@ -672,10 +739,9 @@ export const useDisbursementStore = defineStore('disbursement', {
         this.expenseData = appropriationStore.allocations || []
 
         // Fetch expense types from accounts library store (non-blocking)
-        this.fetchExpenseTypesFromAccountsLib().catch(error => {
+        this.fetchExpenseTypesFromAccountsLib().catch((error) => {
           console.warn('Failed to fetch expense types:', error)
         })
-
       } catch (error) {
         console.error('Error fetching expense accounts:', error)
         this.expenseData = []
@@ -713,10 +779,9 @@ export const useDisbursementStore = defineStore('disbursement', {
         }
 
         // Fetch expense types from accounts library store (non-blocking)
-        this.fetchExpenseTypesFromAccountsLib().catch(error => {
+        this.fetchExpenseTypesFromAccountsLib().catch((error) => {
           console.warn('Failed to fetch expense types:', error)
         })
-
       } catch (error) {
         console.error('Error fetching expense accounts for reimbursement:', error)
         this.expenseData = []
@@ -735,7 +800,10 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Try the main booklets endpoint
         try {
-          const response = await api.get(`/api/barangay/banks/${bankId}/booklets`, this.getAuthConfig())
+          const response = await api.get(
+            `/api/barangay/banks/${bankId}/booklets`,
+            this.getAuthConfig(),
+          )
           booklets = response.data.data || []
           console.log('Found booklets via main endpoint:', booklets.length)
         } catch (error) {
@@ -745,7 +813,10 @@ export const useDisbursementStore = defineStore('disbursement', {
         // If no booklets found, try alternative endpoint
         if (booklets.length === 0) {
           try {
-            const response = await api.get(`/api/barangay/booklets?bank_id=${bankId}`, this.getAuthConfig())
+            const response = await api.get(
+              `/api/barangay/booklets?bank_id=${bankId}`,
+              this.getAuthConfig(),
+            )
             booklets = response.data.data || []
             console.log('Found booklets via alternative endpoint:', booklets.length)
           } catch (error) {
@@ -758,7 +829,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           try {
             const response = await api.get('/api/barangay/booklets', this.getAuthConfig())
             const allBooklets = response.data.data || []
-            booklets = allBooklets.filter(booklet => booklet.bank_id === bankId)
+            booklets = allBooklets.filter((booklet) => booklet.bank_id === bankId)
             console.log('Found booklets via all booklets endpoint:', booklets.length)
           } catch (error) {
             console.warn('All booklets endpoint failed:', error.message)
@@ -806,26 +877,28 @@ export const useDisbursementStore = defineStore('disbursement', {
 
       // Group expense types by class
       const groupedByClass = {}
-      this.expenseTypes.forEach(type => {
+      this.expenseTypes.forEach((type) => {
         console.log('Processing expense type:', type)
 
         if (!groupedByClass[type.expense_class_id]) {
           groupedByClass[type.expense_class_id] = {
             id: type.expense_class_id,
             name: type.expense_class_name,
-            children: []
+            children: [],
           }
         }
 
         groupedByClass[type.expense_class_id].children.push({
           id: type.expense_type_id,
           name: type.expense_type_name,
-          children: [{
-            id: type.expense_item_id,
-            name: type.expense_item_name,
-            amount: 1000000, // Mock amount for admin users
-            budget_source: 'Annual Budget'
-          }]
+          children: [
+            {
+              id: type.expense_item_id,
+              name: type.expense_item_name,
+              amount: 1000000, // Mock amount for admin users
+              budget_source: 'Annual Budget',
+            },
+          ],
         })
       })
 
@@ -876,12 +949,11 @@ export const useDisbursementStore = defineStore('disbursement', {
         }
 
         // Fetch expense types from accounts library store (non-blocking)
-        this.fetchExpenseTypesFromAccountsLib().catch(error => {
+        this.fetchExpenseTypesFromAccountsLib().catch((error) => {
           console.warn('Failed to fetch expense types in background:', error)
         })
 
         return Promise.resolve()
-
       } catch (error) {
         console.warn('Failed to refresh expense accounts in background:', error)
         return Promise.reject(error)
@@ -954,13 +1026,13 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Create a map of expense classes by name for easier lookup
         const classMap = new Map()
-        this.expenseData.forEach(expenseClass => {
+        this.expenseData.forEach((expenseClass) => {
           classMap.set(expenseClass.name, expenseClass)
         })
 
         // Group expense types by class
         const typesByClass = new Map()
-        accountsStore.expenseTypes.forEach(type => {
+        accountsStore.expenseTypes.forEach((type) => {
           const classId = type.expense_class_id
           if (!typesByClass.has(classId)) {
             typesByClass.set(classId, [])
@@ -970,11 +1042,10 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Integrate types into existing expenseData
         typesByClass.forEach((types, classId) => {
-          const expenseClass = accountsStore.expenseClasses.find(c => c.id == classId)
+          const expenseClass = accountsStore.expenseClasses.find((c) => c.id == classId)
           if (expenseClass) {
-
             // Find corresponding class in expenseData
-            const existingClass = this.expenseData.find(c => c.name === expenseClass.name)
+            const existingClass = this.expenseData.find((c) => c.name === expenseClass.name)
 
             if (existingClass) {
               // Add types to existing class
@@ -982,9 +1053,9 @@ export const useDisbursementStore = defineStore('disbursement', {
                 existingClass.children = []
               }
 
-              types.forEach(type => {
+              types.forEach((type) => {
                 // Check if type already exists
-                const existingType = existingClass.children.find(t => t.id === type.id)
+                const existingType = existingClass.children.find((t) => t.id === type.id)
                 if (!existingType) {
                   existingClass.children.push({
                     id: type.id,
@@ -992,7 +1063,7 @@ export const useDisbursementStore = defineStore('disbursement', {
                     expense_class_id: type.expense_class_id,
                     order: type.order || 0,
                     amount: 0, // Will be populated from appropriation data if available
-                    children: [] // Initialize empty children array for items
+                    children: [], // Initialize empty children array for items
                   })
                 }
               })
@@ -1002,20 +1073,19 @@ export const useDisbursementStore = defineStore('disbursement', {
                 id: expenseClass.id,
                 name: expenseClass.name,
                 fiscal_year_id: expenseClass.fiscal_year_id,
-                children: types.map(type => ({
+                children: types.map((type) => ({
                   id: type.id,
                   name: type.name,
                   expense_class_id: type.expense_class_id,
                   order: type.order || 0,
                   amount: 0,
-                  children: []
-                }))
+                  children: [],
+                })),
               }
               this.expenseData.push(newClass)
             }
           }
         })
-
       } catch (error) {
         console.error('Error integrating expense types:', error)
         throw error
@@ -1026,11 +1096,12 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.loadingDisbursements = true
       this.isCancelCheque = false
       try {
-
         const authStore = useAuthStore()
 
         // Use different endpoints and tokens for admin vs regular users
-        const endpoint = authStore.admin ? "/api/admin/disbursements" : "/api/barangay/disbursements"
+        const endpoint = authStore.admin
+          ? '/api/admin/disbursements'
+          : '/api/barangay/disbursements'
         const token = authStore.admin ? authStore.adminToken : authStore.token
 
         // Add barangay_id parameter for admin users if selected
@@ -1053,27 +1124,32 @@ export const useDisbursementStore = defineStore('disbursement', {
               Authorization: `Bearer ${token}`,
               Accept: 'application/json',
             },
-            params: params
+            params: params,
           }),
           api.get(authStore.admin ? '/api/admin/particulars' : '/api/barangay/particulars', {
             headers: {
               Authorization: `Bearer ${token}`,
               Accept: 'application/json',
             },
-          })
+          }),
         ])
 
-
         // Process particulars data
-        const pData = Array.isArray(particularsResponse.data?.data) ? particularsResponse.data.data : (Array.isArray(particularsResponse.data) ? particularsResponse.data : [])
-        this.particulars = pData.map(item => ({ label: item.particulars }))
+        const pData = Array.isArray(particularsResponse.data?.data)
+          ? particularsResponse.data.data
+          : Array.isArray(particularsResponse.data)
+            ? particularsResponse.data
+            : []
+        this.particulars = pData.map((item) => ({ label: item.particulars }))
 
         // console.error('=-=-------------------------------------------------------------------------===============',this.particulars);
         // Map backend fields to frontend fields if needed
         // Derive selected barangay name for admin context as fallback
-        const selectedBarangayName = authStore.admin ? (authStore.getSelectedBarangayName && authStore.getSelectedBarangayName()) : null
+        const selectedBarangayName = authStore.admin
+          ? authStore.getSelectedBarangayName && authStore.getSelectedBarangayName()
+          : null
 
-        this.disbursements = (disbursementsResponse.data.data || []).map(d => {
+        this.disbursements = (disbursementsResponse.data.data || []).map((d) => {
           const disbursement = {
             id: d.id,
             date: d.date,
@@ -1086,7 +1162,12 @@ export const useDisbursementStore = defineStore('disbursement', {
             remarks: d.remarks,
             rejection_remarks: d.rejection_remarks,
             // Normalize barangay name across possible backend shapes; fallback to selected name for admin context
-            barangay_name: d.barangay_name || d.barangayName || (typeof d.barangay === 'string' ? d.barangay : (d.barangay?.name)) || selectedBarangayName || '',
+            barangay_name:
+              d.barangay_name ||
+              d.barangayName ||
+              (typeof d.barangay === 'string' ? d.barangay : d.barangay?.name) ||
+              selectedBarangayName ||
+              '',
             aging: calculateAging(d.date),
             expenses: d.expenses || [],
           }
@@ -1101,13 +1182,20 @@ export const useDisbursementStore = defineStore('disbursement', {
           return disbursement
         })
 
+        // Debug logging for void requests
+        console.log('Debug - fetchDisbursements completed')
+        console.log('Debug - Total disbursements loaded:', this.disbursements.length)
+        console.log('Debug - User barangay_name:', authStore.user?.barangay_name)
+        console.log('Debug - Disbursements with Void Requested status:', this.disbursements.filter(d => d.status === 'Void Requested'))
+        console.log('Debug - All disbursement statuses:', [...new Set(this.disbursements.map(d => d.status))])
+        console.log('Debug - All barangay names:', [...new Set(this.disbursements.map(d => d.barangay_name))])
+
         // Only fetch expense details if we don't have any (for admin users, this is not essential)
         if (!this.expenseDetailsData.length && !authStore.admin) {
-          this.fetchExpenseDetails().catch(error => {
+          this.fetchExpenseDetails().catch((error) => {
             console.warn('Failed to fetch expense details:', error)
           })
         }
-
       } catch (error) {
         console.error('Failed to fetch disbursements:', error)
         this.disbursements = []
@@ -1116,26 +1204,20 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
-
-
-
-
-
-
     async fetchDisbursementById(id) {
-      this.isChequeCancel=false
+      this.isChequeCancel = false
       try {
-        const authStore = useAuthStore();
+        const authStore = useAuthStore()
         // Use barangay user token for barangay endpoints
-        const token = authStore.token;
+        const token = authStore.token
         const response = await api.get(`/api/barangay/disbursements/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',
           },
-        });
+        })
         // Get the disbursement data
-        const disbursement = response.data.data;
+        const disbursement = response.data.data
         if (disbursement) {
           this.forms.disbursement = {
             date: formatDateForForm(disbursement.date),
@@ -1144,28 +1226,27 @@ export const useDisbursementStore = defineStore('disbursement', {
             bank_id: disbursement.bank_id ? Number(disbursement.bank_id) : '',
             payee: disbursement.payee,
             // Add other fields as needed
-          };
+          }
 
           // Set the autoCheque and autoBookletID fields for display in the UI
-          this.autoCheque = disbursement.cheque_number;
-          this.autoBookletID = disbursement.booklet_id;
+          this.autoCheque = disbursement.cheque_number
+          this.autoBookletID = disbursement.booklet_id
 
           function formatDateForForm(dateStr) {
-            if (!dateStr) return '';
+            if (!dateStr) return ''
             if (dateStr.includes('-')) {
               // 'YYYY-MM-DD'
-              const [yyyy, mm, dd] = dateStr.split('-');
-              return `${dd}/${mm}/${yyyy}`;
+              const [yyyy, mm, dd] = dateStr.split('-')
+              return `${dd}/${mm}/${yyyy}`
+            } else if (dateStr.includes('/')) {
+              return dateStr
             }
-            else if (dateStr.includes('/')) {
-              return dateStr;
-            }
-            return dateStr;
+            return dateStr
           }
 
           // Load existing expenses from the disbursement
           if (disbursement.expenses && disbursement.expenses.length > 0) {
-            this.expenses = disbursement.expenses.map(expense => ({
+            this.expenses = disbursement.expenses.map((expense) => ({
               id: expense.id, // Use the actual database ID from tran_expense_details
               accountId: expense.accountId,
               accountName: expense.account_name || 'Unknown Account', // Use particular as fallback
@@ -1174,9 +1255,9 @@ export const useDisbursementStore = defineStore('disbursement', {
               expense_class_id: expense.expense_class_id,
               expense_type_id: expense.expense_type_id,
               expense_item_id: expense.expense_item_id,
-            }));
+            }))
           } else {
-            this.expenses = [];
+            this.expenses = []
           }
 
           this.currentItem = { ...disbursement }
@@ -1184,45 +1265,45 @@ export const useDisbursementStore = defineStore('disbursement', {
           this.lockedTotalAmount = parseFloat(disbursement.dv_amount) || 0
           this.dialogs.editDisbursement = true
         }
-        return disbursement;
+        return disbursement
       } catch (error) {
-        console.error('Failed to fetch disbursement:', error);
-        return null;
+        console.error('Failed to fetch disbursement:', error)
+        return null
       }
     },
 
     // Fetch disbursement data for viewing only (doesn't modify form data or open dialogs)
     async fetchDisbursementForView(id) {
       try {
-        const authStore = useAuthStore();
+        const authStore = useAuthStore()
         // Use barangay user token for barangay endpoints
-        const token = authStore.token;
+        const token = authStore.token
         const response = await api.get(`/api/barangay/disbursements/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',
           },
-        });
+        })
 
         // Get the disbursement data
-        const disbursement = response.data.data;
-        console.log('Raw disbursement data from API:', disbursement);
-        console.log('Raw expenses from API:', disbursement?.expenses);
+        const disbursement = response.data.data
+        console.log('Raw disbursement data from API:', disbursement)
+        console.log('Raw expenses from API:', disbursement?.expenses)
 
         if (disbursement) {
           // Map expenses to ensure proper field names
-          const mappedExpenses = (disbursement.expenses || []).map(expense => ({
+          const mappedExpenses = (disbursement.expenses || []).map((expense) => ({
             id: expense.id,
-            accountName: expense.account_name  || 'Unknown Account',
+            accountName: expense.account_name || 'Unknown Account',
             amount: expense.amount,
             particular: expense.particular,
             accountId: expense.accountId,
             expense_class_id: expense.expense_class_id,
             expense_type_id: expense.expense_type_id,
             expense_item_id: expense.expense_item_id,
-          }));
+          }))
 
-          console.log('Mapped expenses for view:', mappedExpenses);
+          console.log('Mapped expenses for view:', mappedExpenses)
 
           return {
             id: disbursement.id,
@@ -1233,40 +1314,41 @@ export const useDisbursementStore = defineStore('disbursement', {
             payee: disbursement.payee,
             dvAmount: disbursement.dv_amount,
             expenses: mappedExpenses,
-          };
+          }
         }
-        return null;
+        return null
       } catch (error) {
-        console.error('Error fetching disbursement for view:', error);
-        return null;
+        console.error('Error fetching disbursement for view:', error)
+        return null
       }
     },
 
     async liquidateDisbursement(id, liquidatedAmount) {
       try {
-        const authStore = useAuthStore();
-        const token = authStore.admin ? authStore.adminToken : authStore.token;
-        const response = await api.patch(`/api/barangay/disbursements/${id}/liquidate`,
+        const authStore = useAuthStore()
+        const token = authStore.admin ? authStore.adminToken : authStore.token
+        const response = await api.patch(
+          `/api/barangay/disbursements/${id}/liquidate`,
           { liquidated_amount: liquidatedAmount },
           {
             headers: {
               Authorization: `Bearer ${token}`,
               Accept: 'application/json',
             },
-          }
-        );
+          },
+        )
         // Update the local disbursement
-        const updated = response.data.data;
-        const idx = this.disbursements.findIndex(d => d.id === id);
+        const updated = response.data.data
+        const idx = this.disbursements.findIndex((d) => d.id === id)
         if (idx !== -1) {
-          this.disbursements[idx].status = updated.status;
-          this.disbursements[idx].liquidated_amount = updated.liquidated_amount;
-          this.disbursements[idx].aging = calculateAging(updated.date);
+          this.disbursements[idx].status = updated.status
+          this.disbursements[idx].liquidated_amount = updated.liquidated_amount
+          this.disbursements[idx].aging = calculateAging(updated.date)
         }
-        return true;
+        return true
       } catch (error) {
-        console.error('Failed to liquidate disbursement:', error);
-        return false;
+        console.error('Failed to liquidate disbursement:', error)
+        return false
       }
     },
 
@@ -1275,7 +1357,6 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.selectedBooklet = range
       this.selectedChequeNumber = null
       this.forms.disbursement.chequeNumber = null
-
     },
 
     // New method to handle bank selection
@@ -1288,26 +1369,23 @@ export const useDisbursementStore = defineStore('disbursement', {
 
       if (bankId) {
         try {
-
           // Fetch booklets for the selected bank
-          const authStore = useAuthStore();
-          const token = authStore.admin ? authStore.adminToken : authStore.token;
+          const authStore = useAuthStore()
+          const token = authStore.admin ? authStore.adminToken : authStore.token
           const bankData = await api.get(`/api/barangay/banks/${bankId}/available-cheques`, {
             headers: {
               Authorization: `Bearer ${token}`,
               Accept: 'application/json',
             },
-          });
-          const data = bankData.data.data || [];
-          console.error('Fetched booklets data:', data);
-          console.error('Fetched booklets data:', data.booklet_numb);
-          console.error('Fetched booklets data:', data.cheque[0].cheque_number);
+          })
+          const data = bankData.data.data || []
+          console.error('Fetched booklets data:', data)
+          console.error('Fetched booklets data:', data.booklet_numb)
+          console.error('Fetched booklets data:', data.cheque[0].cheque_number)
 
           this.autoBookletID = data.id || null
           this.autoCheque = data.cheque[0].cheque_number || null
           this.forms.disbursement.chequeNumber = 0
-
-
         } catch (error) {
           console.error('Error fetching booklets for bank:', error)
           // Reset bank selection on error
@@ -1334,12 +1412,13 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
         try {
-          const response = await api.get('/api/barangay/generate-dvnumber',getAuthConfig());
+          const response = await api.get('/api/barangay/generate-dvnumber', getAuthConfig())
           const newDVNumber = response.data.data.dv_number || ''
-          this.forms.disbursement.dvNumber= newDVNumber
+          this.forms.disbursement.dvNumber = newDVNumber
+          console.error('dvnum=================', newDVNumber)
         } catch (error) {
           console.error('Failed to generate new DV number:', error)
-          this.forms.disbursement.dvNumber= ''
+          this.forms.disbursement.dvNumber = ''
         }
 
         // Generate cheque number (separate logic)
@@ -1375,13 +1454,11 @@ export const useDisbursementStore = defineStore('disbursement', {
       try {
         // Since expenses are now only stored in frontend, just clear the local array
         if (this.expenses.length > 0) {
-
           // Clear local expenses array
           this.expenses = []
 
           // Refresh expense account balances to show original amounts
           this.refreshExpenseAccountsWithBalances()
-
         }
       } catch (error) {
         console.error('Failed to rollback unsaved expenses:', error)
@@ -1389,20 +1466,20 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     async openOrDetailsDialog(item) {
-      this.currentLiquidation = JSON.parse(JSON.stringify(item));
+      this.currentLiquidation = JSON.parse(JSON.stringify(item))
 
       // Fetch existing OR Details from backend if this is a partial liquidation
       if (item.id && item.status === 'Partial') {
         try {
-          const res = await api.get(`/api/barangay/disbursements/${item.id}/or-details`);
-          const backendUrl = 'http://localhost:8000';
-          this.currentLiquidation.orDetails = res.data.data.map(or => {
+          const res = await api.get(`/api/barangay/disbursements/${item.id}/or-details`)
+          const backendUrl = 'http://localhost:8000'
+          this.currentLiquidation.orDetails = res.data.data.map((or) => {
             // Convert YYYY-MM-DD to DD/MM/YYYY format
-            let formattedDate = '';
+            let formattedDate = ''
             if (or.or_date) {
-              const dateParts = or.or_date.split('-');
+              const dateParts = or.or_date.split('-')
               if (dateParts.length === 3) {
-                formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+                formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`
               }
             }
 
@@ -1415,24 +1492,24 @@ export const useDisbursementStore = defineStore('disbursement', {
               orPhotoUrl: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
               serverPhotoPath: or.or_photo,
               isExisting: true, // Flag to identify existing OR details
-            };
-          });
+            }
+          })
 
           // Set single remarks from the latest OR detail (most recent one)
           if (res.data.data.length > 0) {
             // Get the latest OR detail (last in the array) for remarks
-            const latestOrDetail = res.data.data[res.data.data.length - 1];
-            this.currentLiquidation.remarks = latestOrDetail.remarks || '';
+            const latestOrDetail = res.data.data[res.data.data.length - 1]
+            this.currentLiquidation.remarks = latestOrDetail.remarks || ''
           }
         } catch {
-          this.currentLiquidation.orDetails = [];
+          this.currentLiquidation.orDetails = []
         }
       } else {
         // For new liquidations, initialize empty - component will add initial row
-        this.currentLiquidation.orDetails = [];
+        this.currentLiquidation.orDetails = []
       }
 
-      this.dialogs.orDetails = true;
+      this.dialogs.orDetails = true
     },
 
     // In your disbursementStore.js actions
@@ -1440,28 +1517,28 @@ export const useDisbursementStore = defineStore('disbursement', {
     // For viewing only (read-only)
     async openViewOrDetails(row) {
       // Close any other dialogs that might be open
-      this.dialogs.editDisbursement = false;
-      this.dialogs.orDetails = false;
-      this.dialogs.disbursement = false;
+      this.dialogs.editDisbursement = false
+      this.dialogs.orDetails = false
+      this.dialogs.disbursement = false
 
-      this.currentLiquidation = JSON.parse(JSON.stringify(row));
-      console.log('Opening view OR details for:', row);
-      console.log('Row expenses:', row.expenses);
+      this.currentLiquidation = JSON.parse(JSON.stringify(row))
+      console.log('Opening view OR details for:', row)
+      console.log('Row expenses:', row.expenses)
 
       // Initialize orDetails as empty array
-      this.currentLiquidation.orDetails = [];
+      this.currentLiquidation.orDetails = []
 
       // Ensure expenses are available
       if (!this.currentLiquidation.expenses || this.currentLiquidation.expenses.length === 0) {
-        console.log('No expenses found in row, attempting to fetch disbursement details');
+        console.log('No expenses found in row, attempting to fetch disbursement details')
         try {
-          const disbursement = await this.fetchDisbursementForView(row.id);
+          const disbursement = await this.fetchDisbursementForView(row.id)
           if (disbursement && disbursement.expenses) {
-            this.currentLiquidation.expenses = disbursement.expenses;
-            console.log('Loaded expenses from fetchDisbursementForView:', disbursement.expenses);
+            this.currentLiquidation.expenses = disbursement.expenses
+            console.log('Loaded expenses from fetchDisbursementForView:', disbursement.expenses)
           }
         } catch (error) {
-          console.error('Error fetching disbursement details:', error);
+          console.error('Error fetching disbursement details:', error)
         }
       }
 
@@ -1469,50 +1546,57 @@ export const useDisbursementStore = defineStore('disbursement', {
       if (row.id) {
         try {
           // Get auth store instance
-          const authStore = useAuthStore();
+          const authStore = useAuthStore()
 
           // Validate auth store
           if (!authStore) {
-            throw new Error('Auth store not available');
+            throw new Error('Auth store not available')
           }
 
-          console.log('Auth store:', authStore);
-          console.log('Is admin:', authStore.admin);
-          console.log('Admin token:', authStore.adminToken);
-          console.log('Regular token:', authStore.token);
+          console.log('Auth store:', authStore)
+          console.log('Is admin:', authStore.admin)
+          console.log('Admin token:', authStore.adminToken)
+          console.log('Regular token:', authStore.token)
 
           // Use different endpoints for admin vs regular users
-          const endpoint = authStore.admin ? `/api/admin/disbursements/${row.id}/or-details` : `/api/barangay/disbursements/${row.id}/or-details`
+          const endpoint = authStore.admin
+            ? `/api/admin/disbursements/${row.id}/or-details`
+            : `/api/barangay/disbursements/${row.id}/or-details`
           const token = authStore.admin ? authStore.adminToken : authStore.token
 
           if (!token) {
-            throw new Error('No authentication token available');
+            throw new Error('No authentication token available')
           }
 
-          console.log('Fetching OR details from:', endpoint);
+          console.log('Fetching OR details from:', endpoint)
           const res = await api.get(endpoint, {
             headers: {
               Authorization: `Bearer ${token}`,
               Accept: 'application/json',
-            }
-          });
+            },
+          })
 
-          console.log('OR Details response:', res.data);
-          console.log('Response data structure:', res.data);
-          console.log('Data array:', res.data.data);
+          console.log('OR Details response:', res.data)
+          console.log('Response data structure:', res.data)
+          console.log('Data array:', res.data.data)
 
           // Check if we have data and it's an array
-          if (res.data && res.data.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
-            const backendUrl = 'http://localhost:8000'; // Change if your backend runs elsewhere
+          if (
+            res.data &&
+            res.data.data &&
+            Array.isArray(res.data.data) &&
+            res.data.data.length > 0
+          ) {
+            const backendUrl = 'http://localhost:8000' // Change if your backend runs elsewhere
             this.currentLiquidation.orDetails = res.data.data.map((or, index) => {
-              console.log(`Processing OR detail ${index}:`, or);
+              console.log(`Processing OR detail ${index}:`, or)
 
               // Convert YYYY-MM-DD to DD/MM/YYYY format
-              let formattedDate = '';
+              let formattedDate = ''
               if (or.or_date) {
-                const dateParts = or.or_date.split('-');
+                const dateParts = or.or_date.split('-')
                 if (dateParts.length === 3) {
-                  formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+                  formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`
                 }
               }
 
@@ -1526,37 +1610,37 @@ export const useDisbursementStore = defineStore('disbursement', {
                 orPhotoUrl: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
                 serverPhotoPath: or.or_photo,
                 remarks: or.remarks || '',
-                isExisting: true // Flag to identify existing OR details
-              };
+                isExisting: true, // Flag to identify existing OR details
+              }
 
-              console.log(`Mapped OR detail ${index}:`, mappedOr);
-              return mappedOr;
-            });
+              console.log(`Mapped OR detail ${index}:`, mappedOr)
+              return mappedOr
+            })
 
-            console.log('Final mapped OR Details:', this.currentLiquidation.orDetails);
+            console.log('Final mapped OR Details:', this.currentLiquidation.orDetails)
 
             // Set single remarks from the latest OR detail (most recent one)
             if (res.data.data.length > 0) {
               // Get the latest OR detail (last in the array) for remarks
-              const latestOrDetail = res.data.data[res.data.data.length - 1];
-              this.currentLiquidation.remarks = latestOrDetail.remarks || '';
+              const latestOrDetail = res.data.data[res.data.data.length - 1]
+              this.currentLiquidation.remarks = latestOrDetail.remarks || ''
             }
           } else {
-            console.log('No OR details found in response or empty array');
-            this.currentLiquidation.orDetails = [];
+            console.log('No OR details found in response or empty array')
+            this.currentLiquidation.orDetails = []
           }
         } catch (error) {
-          console.error('Error fetching OR details:', error);
-          console.error('Error details:', error.response?.data);
-          this.currentLiquidation.orDetails = [];
+          console.error('Error fetching OR details:', error)
+          console.error('Error details:', error.response?.data)
+          this.currentLiquidation.orDetails = []
         }
       } else {
-        console.log('No row ID provided, initializing empty orDetails');
-        this.currentLiquidation.orDetails = [];
+        console.log('No row ID provided, initializing empty orDetails')
+        this.currentLiquidation.orDetails = []
       }
 
-      console.log('Final currentLiquidation.orDetails:', this.currentLiquidation.orDetails);
-      this.dialogs.viewOrDetails = true;
+      console.log('Final currentLiquidation.orDetails:', this.currentLiquidation.orDetails)
+      this.dialogs.viewOrDetails = true
     },
 
     // Update openExpenseDetail to match your current structure
@@ -1606,7 +1690,9 @@ export const useDisbursementStore = defineStore('disbursement', {
             // If item-level
             if (existingExpense.expense_item_id) {
               if (expenseType?.children) {
-                const matchedItem = (expenseType.children || []).find(ci => String(ci.id) === String(existingExpense.expense_item_id))
+                const matchedItem = (expenseType.children || []).find(
+                  (ci) => String(ci.id) === String(existingExpense.expense_item_id),
+                )
                 if (matchedItem) {
                   originalAllocatedAmount = parseFloat(matchedItem.amount) || 0
                   expenseLevel = 'item'
@@ -1638,14 +1724,14 @@ export const useDisbursementStore = defineStore('disbursement', {
       let remainingBalance = this.calculateRemainingBalance(
         balanceKeyId || existingExpense.accountId,
         originalAllocatedAmount,
-        expenseLevel
+        expenseLevel,
       )
 
       // If the current expense is already persisted in DB for this disbursement and account,
       // add it back to compute the editable available balance
       let includeCurrentAmountBack = false
       try {
-        includeCurrentAmountBack = (this.expenseDetailsData || []).some(ed => {
+        includeCurrentAmountBack = (this.expenseDetailsData || []).some((ed) => {
           const sameDisbursement = String(ed.disbursement_id) === String(this.currentItem?.id)
           if (!sameDisbursement) return false
           const isItemLevel = Boolean(existingExpense.expense_item_id)
@@ -1653,13 +1739,17 @@ export const useDisbursementStore = defineStore('disbursement', {
             return String(ed.expense_item_id) === String(existingExpense.expense_item_id)
           }
           // Type-level: ensure it's a type record (no item) and matches type id
-          return (ed.expense_item_id == null) && String(ed.expense_type_id) === String(existingExpense.expense_type_id)
+          return (
+            ed.expense_item_id == null &&
+            String(ed.expense_type_id) === String(existingExpense.expense_type_id)
+          )
         })
       } catch {
         includeCurrentAmountBack = false
       }
 
-      const availableBalance = remainingBalance + (includeCurrentAmountBack ? (parseFloat(existingExpense.amount) || 0) : 0)
+      const availableBalance =
+        remainingBalance + (includeCurrentAmountBack ? parseFloat(existingExpense.amount) || 0 : 0)
 
       this.forms.expense = {
         account: existingExpense.accountName,
@@ -1682,7 +1772,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Disbursement Actions
     // Update your saveDisbursement action in the Pinia store
     async saveDisbursement() {
-      this.savingDisbursement = true; // Start loading
+      this.savingDisbursement = true // Start loading
       try {
         const authStore = useAuthStore()
         const token = authStore.admin ? authStore.adminToken : authStore.token
@@ -1702,19 +1792,19 @@ export const useDisbursementStore = defineStore('disbursement', {
         const payload = {
           date: this.forms.disbursement.date,
           dv_number: this.forms.disbursement.dvNumber,
-          cheque_number: this.autoCheque ,
+          cheque_number: this.autoCheque,
           cheque_booklet: this.autoBookletID,
           bank_id: this.forms.disbursement.bank_id,
           payee: this.forms.disbursement.payee,
           dv_amount: this.totalExpensesAmount,
-          expenses: this.expenses.map(expense => ({
+          expenses: this.expenses.map((expense) => ({
             accountId: expense.accountId,
             amount: expense.amount,
             particular: expense.particular,
             expense_class_id: expense.expense_class_id,
             expense_type_id: expense.expense_type_id,
             expense_item_id: expense.expense_item_id,
-          }))
+          })),
         }
 
         // Add barangay_id for admin users if selected
@@ -1726,7 +1816,9 @@ export const useDisbursementStore = defineStore('disbursement', {
         }
 
         // Use different endpoints for admin vs regular users
-        const endpoint = authStore.admin ? "/api/admin/disbursements/create" : "/api/barangay/disbursements"
+        const endpoint = authStore.admin
+          ? '/api/admin/disbursements/create'
+          : '/api/barangay/disbursements'
         const response = await api.post(endpoint, payload, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -1751,7 +1843,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
 
           try {
-            const response = await api.get('/api/barangay/generate-dvnumber', getAuthConfig());
+            const response = await api.get('/api/barangay/generate-dvnumber', getAuthConfig())
             const newDVNumber = response.data.data.dv_number || ''
             this.forms.disbursement.dvNumber = newDVNumber
           } catch (error) {
@@ -1761,7 +1853,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         }, 350) // match Quasar default transition
 
         // Do data refreshes in background (non-blocking)
-        this.refreshDataInBackground().catch(error => {
+        this.refreshDataInBackground().catch((error) => {
           console.warn('Background refresh failed:', error)
         })
 
@@ -1778,10 +1870,10 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         return {
           success: false,
-          error: error.response?.data?.message || error.message || 'Failed to save disbursement'
+          error: error.response?.data?.message || error.message || 'Failed to save disbursement',
         }
       } finally {
-        this.savingDisbursement = false; // End loading
+        this.savingDisbursement = false // End loading
       }
     },
 
@@ -1805,24 +1897,22 @@ export const useDisbursementStore = defineStore('disbursement', {
           this.expenseData = [] // Clear to force refresh
           await this.fetchExpenseAccounts()
         }
-
       } catch (error) {
         console.error('Background refresh failed:', error)
         // Don't show error to user since this is background operation
       }
     },
 
-
-          // Generate next available incremental ID for expenses
+    // Generate next available incremental ID for expenses
     getNextExpenseId() {
       // Get all existing IDs from current expenses array
-      const currentExpenseIds = this.expenses.map(exp => exp.id)
+      const currentExpenseIds = this.expenses.map((exp) => exp.id)
 
       // Get all existing IDs from database expense details
-      const databaseExpenseIds = this.expenseDetailsData.map(exp => exp.id)
+      const databaseExpenseIds = this.expenseDetailsData.map((exp) => exp.id)
 
       // Combine all IDs and filter out negative ones
-      const allIds = [...currentExpenseIds, ...databaseExpenseIds].filter(id => id > 0)
+      const allIds = [...currentExpenseIds, ...databaseExpenseIds].filter((id) => id > 0)
 
       if (allIds.length === 0) {
         // No existing IDs found, start from 1
@@ -1837,34 +1927,38 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Helper method to get expense account name from IDs
     getExpenseAccountName(expenseClassId, expenseTypeId, expenseItemId) {
       try {
-        let accountName = '';
+        let accountName = ''
 
         // Find expense class - convert IDs to strings for comparison
-        const expenseClass = this.expenseData.find(ec => String(ec.id) === String(expenseClassId));
+        const expenseClass = this.expenseData.find((ec) => String(ec.id) === String(expenseClassId))
         if (expenseClass) {
-          accountName = expenseClass.name;
+          accountName = expenseClass.name
 
           // Find expense type
           if (expenseTypeId && expenseClass.children) {
-            const expenseType = expenseClass.children.find(et => String(et.id) === String(expenseTypeId));
+            const expenseType = expenseClass.children.find(
+              (et) => String(et.id) === String(expenseTypeId),
+            )
             if (expenseType) {
-              accountName += ` > ${expenseType.name}`;
+              accountName += ` > ${expenseType.name}`
 
               // Find expense item
               if (expenseItemId && expenseType.children) {
-                const expenseItem = expenseType.children.find(ei => String(ei.id) === String(expenseItemId));
+                const expenseItem = expenseType.children.find(
+                  (ei) => String(ei.id) === String(expenseItemId),
+                )
                 if (expenseItem) {
-                  accountName += ` > ${expenseItem.name}`;
+                  accountName += ` > ${expenseItem.name}`
                 }
               }
             }
           }
         }
 
-        return accountName || 'Unknown Account';
+        return accountName || 'Unknown Account'
       } catch (error) {
-        console.error('Error getting expense account name:', error);
-        return 'Unknown Account';
+        console.error('Error getting expense account name:', error)
+        return 'Unknown Account'
       }
     },
 
@@ -1888,7 +1982,9 @@ export const useDisbursementStore = defineStore('disbursement', {
 
       // Validate that the requested amount doesn't exceed the current available balance
       if (amount > currentAvailableBalance) {
-        throw new Error(`Amount exceeds available balance. Available: ₱${currentAvailableBalance.toLocaleString()}, Requested: ₱${amount.toLocaleString()}`)
+        throw new Error(
+          `Amount exceeds available balance. Available: ₱${currentAvailableBalance.toLocaleString()}, Requested: ₱${amount.toLocaleString()}`,
+        )
       }
 
       // Check if we're in edit mode and validate against locked total amount
@@ -1903,9 +1999,11 @@ export const useDisbursementStore = defineStore('disbursement', {
         }, 0)
 
         const newTotal = currentTotal + amount
-        if(!this.isChequeCancel){
+        if (!this.isChequeCancel) {
           if (newTotal > this.lockedTotalAmount) {
-            throw new Error(`Total amount cannot exceed the original DV amount of ₱${this.lockedTotalAmount.toLocaleString()}. Current total would be ₱${newTotal.toLocaleString()}`)
+            throw new Error(
+              `Total amount cannot exceed the original DV amount of ₱${this.lockedTotalAmount.toLocaleString()}. Current total would be ₱${newTotal.toLocaleString()}`,
+            )
           }
         }
       }
@@ -1913,7 +2011,9 @@ export const useDisbursementStore = defineStore('disbursement', {
       // Check if this is an edit operation
       if (this.forms.expense.isEditing && this.forms.expense.editingExpenseId) {
         // Update existing expense - keep the existing database ID
-        const existingExpenseIndex = this.expenses.findIndex(exp => exp.id === this.forms.expense.editingExpenseId)
+        const existingExpenseIndex = this.expenses.findIndex(
+          (exp) => exp.id === this.forms.expense.editingExpenseId,
+        )
         if (existingExpenseIndex !== -1) {
           this.expenses[existingExpenseIndex] = {
             ...this.expenses[existingExpenseIndex],
@@ -1946,7 +2046,6 @@ export const useDisbursementStore = defineStore('disbursement', {
 
       this.closeDialog('expenseDetail')
       this.resetForm('expense')
-
     },
     // Similarly update editExpense and deleteExpense
     editExpense(row) {
@@ -1961,7 +2060,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     async deleteExpense(id) {
-      const expense = this.expenses.find(e => e.id === id)
+      const expense = this.expenses.find((e) => e.id === id)
 
       if (expense) {
         // Remove from local array (frontend only)
@@ -1975,7 +2074,7 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     // Alias functions for EditDisbursement component
     editItem(row) {
-      this.isChequeCancel=false
+      this.isChequeCancel = false
       this.openExpenseDetailForEdit(row)
     },
 
@@ -1985,16 +2084,15 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     // Helper function to format date
     formatDateForForm(dateStr) {
-      if (!dateStr) return '';
+      if (!dateStr) return ''
       if (dateStr.includes('-')) {
         // 'YYYY-MM-DD'
-        const [yyyy, mm, dd] = dateStr.split('-');
-        return `${dd}/${mm}/${yyyy}`;
+        const [yyyy, mm, dd] = dateStr.split('-')
+        return `${dd}/${mm}/${yyyy}`
+      } else if (dateStr.includes('/')) {
+        return dateStr
       }
-      else if (dateStr.includes('/')) {
-        return dateStr;
-      }
-      return dateStr;
+      return dateStr
     },
 
     // Form Actions
@@ -2033,14 +2131,14 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     async openEditDisbursement(row) {
       // Set loading state for this specific disbursement
-      this.loadingEditDisbursement = row.id;
+      this.loadingEditDisbursement = row.id
 
       // Set a timeout to clear loading state if something goes wrong
       const loadingTimeout = setTimeout(() => {
         if (this.loadingEditDisbursement === row.id) {
-          this.loadingEditDisbursement = null;
+          this.loadingEditDisbursement = null
         }
-      }, 30000); // 30 second timeout
+      }, 30000) // 30 second timeout
 
       try {
         // Ensure expense details are loaded for correct balance calculations
@@ -2049,46 +2147,47 @@ export const useDisbursementStore = defineStore('disbursement', {
         }
 
         // First fetch expense accounts to ensure we have the data for account names
-        await this.fetchExpenseAccounts();
+        await this.fetchExpenseAccounts()
 
         // Then fetch the disbursement with its expenses
-        await this.fetchDisbursementById(row.id);
+        await this.fetchDisbursementById(row.id)
 
         // Now update the account names for existing expenses using the loaded expense data
         if (this.expenses.length > 0) {
-          this.expenses = this.expenses.map(expense => {
-            const accountName = this.getExpenseAccountName(expense.expense_class_id, expense.expense_type_id, expense.expense_item_id);
+          this.expenses = this.expenses.map((expense) => {
+            const accountName = this.getExpenseAccountName(
+              expense.expense_class_id,
+              expense.expense_type_id,
+              expense.expense_item_id,
+            )
             return {
               ...expense,
-              accountName: accountName
-            };
-          });
+              accountName: accountName,
+            }
+          })
         }
 
         // Refresh balances to reflect current editing context (exclude current disbursement's DB expenses)
         this.refreshExpenseAccountsWithBalances()
-
       } catch (error) {
-        console.error('Error in openEditDisbursement:', error);
+        console.error('Error in openEditDisbursement:', error)
         // Re-throw the error so the calling component can handle it
-        throw error;
+        throw error
       } finally {
         // Clear the timeout
-        clearTimeout(loadingTimeout);
+        clearTimeout(loadingTimeout)
         // Always clear loading state when done (either success or error)
-        this.loadingEditDisbursement = null;
+        this.loadingEditDisbursement = null
       }
     },
 
-
     async saveEditedDisbursement() {
-
       if (!this.currentItem) return
 
       if (!this.expenses || this.expenses.length === 0) {
         return {
           success: false,
-          error: 'At least one expense is required to save the disbursement'
+          error: 'At least one expense is required to save the disbursement',
         }
       }
 
@@ -2104,8 +2203,8 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Existing DB ids for this disbursement
         const existingIdsForCurrent = new Set(
           (this.expenseDetailsData || [])
-            .filter(ed => String(ed.disbursement_id) === String(this.currentItem.id))
-            .map(ed => Number(ed.id))
+            .filter((ed) => String(ed.disbursement_id) === String(this.currentItem.id))
+            .map((ed) => Number(ed.id)),
         )
 
         // Pre-create new expenses so we get real DB ids for the update delete-keep logic
@@ -2136,7 +2235,6 @@ export const useDisbursementStore = defineStore('disbursement', {
           }
         }
 
-
         // Prepare the payload with ids for all expenses so backend keeps them
         const payload = {
           cancel: this.isChequeCancel,
@@ -2147,9 +2245,9 @@ export const useDisbursementStore = defineStore('disbursement', {
           date: this.forms.disbursement.date,
           dv_number: this.forms.disbursement.dvNumber,
           dv_amount: !this.cancelledCheques
-            ? (this.lockedTotalAmount || 0)
+            ? this.lockedTotalAmount || 0
             : this.totalExpensesAmount,
-          expenses: this.expenses.map(expense => ({
+          expenses: this.expenses.map((expense) => ({
             id: Number(expense.id) || undefined,
             accountId: expense.accountId,
             amount: expense.amount,
@@ -2157,15 +2255,19 @@ export const useDisbursementStore = defineStore('disbursement', {
             expense_class_id: expense.expense_class_id,
             expense_type_id: expense.expense_type_id,
             expense_item_id: expense.expense_item_id,
-          }))
+          })),
         }
 
-        const response = await api.put(`/api/barangay/disbursements/${this.currentItem.id}`, payload, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
+        const response = await api.put(
+          `/api/barangay/disbursements/${this.currentItem.id}`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
           },
-        })
+        )
 
         // Refresh lists/details
         await this.fetchDisbursements()
@@ -2181,7 +2283,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         console.error('Failed to update disbursement:', error)
         return {
           success: false,
-          error: error.response?.data?.message || 'Failed to update disbursement'
+          error: error.response?.data?.message || 'Failed to update disbursement',
         }
       }
     },
@@ -2220,8 +2322,8 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
 
       // Check if all OR details are complete
-      const allOrDetailsComplete = this.currentLiquidation.orDetails?.every(or =>
-        or.orNumber && or.orAmount && or.orDate && or.orPhotoUrl
+      const allOrDetailsComplete = this.currentLiquidation.orDetails?.every(
+        (or) => or.orNumber && or.orAmount && or.orDate && or.orPhotoUrl,
       )
 
       if (!allOrDetailsComplete) {
@@ -2234,13 +2336,15 @@ export const useDisbursementStore = defineStore('disbursement', {
         const token = authStore.admin ? authStore.adminToken : authStore.token
 
         // Calculate total actual expense from OR details
-        const totalActualExpense = this.currentLiquidation.orDetails?.reduce(
-          (sum, or) => sum + (parseFloat(or.orAmount) || 0), 0
-        ) || 0
+        const totalActualExpense =
+          this.currentLiquidation.orDetails?.reduce(
+            (sum, or) => sum + (parseFloat(or.orAmount) || 0),
+            0,
+          ) || 0
 
         // Prepare the payload
         const payload = {
-          orDetails: this.currentLiquidation.orDetails.map(or => ({
+          orDetails: this.currentLiquidation.orDetails.map((or) => ({
             id: or.id || null, // Include ID for existing OR details
             orNumber: or.orNumber,
             orAmount: or.orAmount,
@@ -2251,12 +2355,16 @@ export const useDisbursementStore = defineStore('disbursement', {
           liquidatedAmount: totalActualExpense,
         }
 
-        const response = await api.post(`/api/barangay/disbursements/${this.currentLiquidation.id}/or-details`, payload, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
+        const response = await api.post(
+          `/api/barangay/disbursements/${this.currentLiquidation.id}/or-details`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
           },
-        })
+        )
 
         // Refresh the disbursements list
         await this.fetchDisbursements()
@@ -2269,7 +2377,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         console.error('Failed to save OR details:', error)
         return {
           success: false,
-          error: error.response?.data?.message || 'Failed to save OR details'
+          error: error.response?.data?.message || 'Failed to save OR details',
         }
       }
     },
@@ -2281,8 +2389,8 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
 
       // Check if all OR details are complete
-      const allOrDetailsComplete = this.currentLiquidation.orDetails?.every(or =>
-        or.orNumber && or.orAmount && or.orDate && or.orPhotoUrl
+      const allOrDetailsComplete = this.currentLiquidation.orDetails?.every(
+        (or) => or.orNumber && or.orAmount && or.orDate && or.orPhotoUrl,
       )
 
       if (!allOrDetailsComplete) {
@@ -2295,13 +2403,15 @@ export const useDisbursementStore = defineStore('disbursement', {
         const token = authStore.admin ? authStore.adminToken : authStore.token
 
         // Calculate total actual expense from OR details
-        const totalActualExpense = this.currentLiquidation.orDetails?.reduce(
-          (sum, or) => sum + (parseFloat(or.orAmount) || 0), 0
-        ) || 0
+        const totalActualExpense =
+          this.currentLiquidation.orDetails?.reduce(
+            (sum, or) => sum + (parseFloat(or.orAmount) || 0),
+            0,
+          ) || 0
 
         // Prepare the payload for partial liquidation
         const payload = {
-          orDetails: this.currentLiquidation.orDetails.map(or => ({
+          orDetails: this.currentLiquidation.orDetails.map((or) => ({
             id: or.id || null, // Include ID for existing OR details
             orNumber: or.orNumber,
             orAmount: or.orAmount,
@@ -2313,12 +2423,16 @@ export const useDisbursementStore = defineStore('disbursement', {
           isPartial: true, // Flag to indicate partial liquidation
         }
 
-        const response = await api.post(`/api/barangay/disbursements/${this.currentLiquidation.id}/or-details`, payload, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
+        const response = await api.post(
+          `/api/barangay/disbursements/${this.currentLiquidation.id}/or-details`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
           },
-        })
+        )
 
         // Refresh the disbursements list
         await this.fetchDisbursements()
@@ -2331,7 +2445,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         console.error('Failed to save partial OR details:', error)
         return {
           success: false,
-          error: error.response?.data?.message || 'Failed to save partial OR details'
+          error: error.response?.data?.message || 'Failed to save partial OR details',
         }
       }
     },
@@ -2386,26 +2500,26 @@ export const useDisbursementStore = defineStore('disbursement', {
         const authStore = useAuthStore()
         const token = authStore.admin ? authStore.adminToken : authStore.token
 
-        const formData = new FormData();
-        formData.append('photo', file, file.name);
+        const formData = new FormData()
+        formData.append('photo', file, file.name)
         const response = await api.post('/api/barangay/disbursements/or-photo/upload', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
-        });
-        return { success: true, path: response.data.path };
+        })
+        return { success: true, path: response.data.path }
       } catch (error) {
-        return { success: false, error: error.message };
+        return { success: false, error: error.message }
       }
     },
 
     async deleteOrPhoto(path) {
       try {
-        await api.delete('/api/barangay/disbursements/or-photo/delete', { data: { path } });
-        return { success: true };
+        await api.delete('/api/barangay/disbursements/or-photo/delete', { data: { path } })
+        return { success: true }
       } catch (error) {
-        return { success: false, error: error.message };
+        return { success: false, error: error.message }
       }
     },
 
@@ -2414,18 +2528,21 @@ export const useDisbursementStore = defineStore('disbursement', {
         const authStore = useAuthStore()
         const token = authStore.admin ? authStore.adminToken : authStore.token
 
-        const response = await api.delete(`/api/barangay/disbursements/${disbursementId}/or-details/${orDetailId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
+        const response = await api.delete(
+          `/api/barangay/disbursements/${disbursementId}/or-details/${orDetailId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
           },
-        })
+        )
 
         if (response.data.status) {
           // Remove the OR detail from the local array
           if (this.currentLiquidation?.orDetails) {
             this.currentLiquidation.orDetails = this.currentLiquidation.orDetails.filter(
-              or => or.id !== orDetailId
+              (or) => or.id !== orDetailId,
             )
           }
 
@@ -2437,338 +2554,445 @@ export const useDisbursementStore = defineStore('disbursement', {
         console.error('Failed to delete OR detail:', error)
         return {
           success: false,
-          message: error.response?.data?.message || 'Failed to delete OR detail'
+          message: error.response?.data?.message || 'Failed to delete OR detail',
         }
       }
     },
 
     async deleteDisbursement(id) {
       try {
-        const authStore = useAuthStore();
-        const token = authStore.admin ? authStore.adminToken : authStore.token;
+        const authStore = useAuthStore()
+        const token = authStore.admin ? authStore.adminToken : authStore.token
 
         const response = await api.delete(`/api/barangay/disbursements/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',
           },
-        });
+        })
 
         if (response.data.status) {
           // Remove the disbursement from the local array
-          this.disbursements = this.disbursements.filter(d => d.id !== id);
+          this.disbursements = this.disbursements.filter((d) => d.id !== id)
 
           // Refresh expense details for balance calculations
-          await this.fetchExpenseDetails();
+          await this.fetchExpenseDetails()
 
           // Refresh expense accounts with updated balances
-          this.refreshExpenseAccountsWithBalances();
+          this.refreshExpenseAccountsWithBalances()
 
           // Refresh expense accounts in background to ensure latest data
-          this.refreshExpenseAccountsInBackground();
+          this.refreshExpenseAccountsInBackground()
 
-          return { success: true, message: response.data.message };
+          return { success: true, message: response.data.message }
         } else {
-          return { success: false, message: response.data.message };
+          return { success: false, message: response.data.message }
         }
       } catch (error) {
-        console.error('Failed to delete disbursement:', error);
+        console.error('Failed to delete disbursement:', error)
         return {
           success: false,
-          message: error.response?.data?.message || 'Failed to delete disbursement'
-        };
+          message: error.response?.data?.message || 'Failed to delete disbursement',
+        }
       }
     },
 
     // Load test data for development - remove in production
     loadTestData() {
-      this.disbursements = [...this.testDisbursements];
+      this.disbursements = [...this.testDisbursements]
     },
 
     // Void-related methods
     openVoidDialog(disbursement) {
-      this.forms.void.disbursementId = disbursement.id;
-      this.forms.void.remarks = '';
-      this.forms.void.requestedBy = null;
-      this.forms.void.requestedAt = null;
-      this.dialogs.void = true;
+      this.forms.void.disbursementId = disbursement.id
+      this.forms.void.remarks = ''
+      this.forms.void.requestedBy = null
+      this.forms.void.requestedAt = null
+      this.dialogs.void = true
     },
 
     closeVoidDialog() {
-      this.dialogs.void = false;
-      this.forms.void.disbursementId = null;
-      this.forms.void.remarks = '';
-      this.forms.void.requestedBy = null;
-      this.forms.void.requestedAt = null;
+      this.dialogs.void = false
+      this.forms.void.disbursementId = null
+      this.forms.void.remarks = ''
+      this.forms.void.requestedBy = null
+      this.forms.void.requestedAt = null
     },
 
     // Edit-request related methods
     openEditRequestDialog(disbursement) {
-      this.forms.edit.disbursementId = disbursement.id;
-      this.forms.edit.remarks = '';
-      this.forms.edit.requestedBy = null;
-      this.forms.edit.requestedAt = null;
-      this.dialogs.editRequest = true;
+      this.forms.edit.disbursementId = disbursement.id
+      this.forms.edit.remarks = ''
+      this.forms.edit.requestedBy = null
+      this.forms.edit.requestedAt = null
+      this.dialogs.editRequest = true
     },
 
     closeEditRequestDialog() {
-      this.dialogs.editRequest = false;
-      this.forms.edit.disbursementId = null;
-      this.forms.edit.remarks = '';
-      this.forms.edit.requestedBy = null;
-      this.forms.edit.requestedAt = null;
+      this.dialogs.editRequest = false
+      this.forms.edit.disbursementId = null
+      this.forms.edit.remarks = ''
+      this.forms.edit.requestedBy = null
+      this.forms.edit.requestedAt = null
+    },
+    async fetchVoidRequests() {
+      try {
+        const barangayId = this.authStore?.user?.barangay_id
+        const { data } = await api.get(`/void-requests?barangay_id=${barangayId}`)
+        this.voidRequests = data
+      } catch (error) {
+        console.error('Error fetching void requests:', error)
+        this.voidRequests = []
+      }
     },
 
     async submitEditRequest() {
       if (!this.forms.edit.remarks || this.forms.edit.remarks.trim() === '') {
-        throw new Error('Remarks are required for edit requests');
+        throw new Error('Remarks are required for edit requests')
       }
 
-      this.requestingEdit = true;
+      this.requestingEdit = true
       try {
-        const authStore = useAuthStore();
-        const token = authStore.admin ? authStore.adminToken : authStore.token;
+        const authStore = useAuthStore()
+        const token = authStore.admin ? authStore.adminToken : authStore.token
 
         // Reuse backend pattern similar to void-request; adjust endpoint name
-        const response = await api.post(`/api/barangay/disbursements/${this.forms.edit.disbursementId}/edit-request`, {
-          remarks: this.forms.edit.remarks.trim(),
-        }, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
+        const response = await api.post(
+          `/api/barangay/disbursements/${this.forms.edit.disbursementId}/edit-request`,
+          {
+            remarks: this.forms.edit.remarks.trim(),
           },
-        });
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
+          },
+        )
 
         if (response.data.status) {
-          const idx = this.disbursements.findIndex(d => d.id === this.forms.edit.disbursementId);
+          const idx = this.disbursements.findIndex((d) => d.id === this.forms.edit.disbursementId)
           if (idx !== -1) {
-            this.disbursements[idx].status = 'Edit Requested';
-            this.disbursements[idx].remarks = this.forms.edit.remarks.trim();
-            this.disbursements[idx].edit_requested_at = new Date().toISOString();
+            this.disbursements[idx].status = 'Edit Requested'
+            this.disbursements[idx].remarks = this.forms.edit.remarks.trim()
+            this.disbursements[idx].edit_requested_at = new Date().toISOString()
           }
 
-          this.closeEditRequestDialog();
-          return { success: true, message: response.data.message };
+          this.closeEditRequestDialog()
+          return { success: true, message: response.data.message }
         } else {
-          return { success: false, message: response.data.message };
+          return { success: false, message: response.data.message }
         }
       } catch (error) {
-        console.error('Failed to submit edit request:', error);
-        throw new Error(error.response?.data?.message || 'Failed to submit edit request');
+        console.error('Failed to submit edit request:', error)
+        throw new Error(error.response?.data?.message || 'Failed to submit edit request')
       } finally {
-        this.requestingEdit = false;
+        this.requestingEdit = false
       }
     },
 
-    async submitVoidRequest() {
-      if (!this.forms.void.remarks || this.forms.void.remarks.trim() === '') {
-        throw new Error('Remarks are required for void requests');
-      }
-
-      this.voidingDisbursement = true;
+    // Approve edit request
+    async approveEditRequest(disbursementId) {
+      this.editActionLoading = true
       try {
-        const authStore = useAuthStore();
-        const token = authStore.admin ? authStore.adminToken : authStore.token;
+        const authStore = useAuthStore()
+        const token = authStore.admin ? authStore.adminToken : authStore.token
 
-        const response = await api.post(`/api/barangay/disbursements/${this.forms.void.disbursementId}/void-request`, {
-          remarks: this.forms.void.remarks.trim(),
-        }, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
+        const response = await api.post(
+          `/api/barangay/disbursements/${disbursementId}/edit-approve`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
           },
-        });
+        )
 
         if (response.data.status) {
-          // Update the disbursement status in the local array
-          const disbursementIndex = this.disbursements.findIndex(d => d.id === this.forms.void.disbursementId);
-          if (disbursementIndex !== -1) {
-            this.disbursements[disbursementIndex].status = 'Void Requested';
-            this.disbursements[disbursementIndex].remarks = this.forms.void.remarks.trim();
-            this.disbursements[disbursementIndex].void_requested_at = new Date().toISOString();
+          // Update the disbursement status in the list
+          const idx = this.disbursements.findIndex((d) => d.id === disbursementId)
+          if (idx !== -1) {
+            this.disbursements[idx].status = 'Unliquidated'
+            this.disbursements[idx].remarks = null
+            this.disbursements[idx].edit_requested_at = null
           }
-
-          this.closeVoidDialog();
-          return { success: true, message: response.data.message };
+          return { success: true, message: response.data.message }
         } else {
-          return { success: false, message: response.data.message };
+          return { success: false, message: response.data.message }
         }
       } catch (error) {
-        console.error('Failed to submit void request:', error);
-        throw new Error(error.response?.data?.message || 'Failed to submit void request');
+        console.error('Failed to approve edit request:', error)
+        throw new Error(error.response?.data?.message || 'Failed to approve edit request')
       } finally {
-        this.voidingDisbursement = false;
+        this.editActionLoading = false
       }
     },
 
+    // Reject edit request
+    async rejectEditRequest(disbursementId, remarks) {
+      this.editActionLoading = true
+      try {
+        const authStore = useAuthStore()
+        const token = authStore.admin ? authStore.adminToken : authStore.token
+
+        const response = await api.post(
+          `/api/barangay/disbursements/${disbursementId}/edit-reject`,
+          {
+            remarks: remarks.trim(),
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
+          },
+        )
+
+        if (response.data.status) {
+          // Update the disbursement status in the list
+          const idx = this.disbursements.findIndex((d) => d.id === disbursementId)
+          if (idx !== -1) {
+            this.disbursements[idx].status = 'Unliquidated'
+            this.disbursements[idx].rejection_remarks = remarks.trim()
+            this.disbursements[idx].edit_requested_at = null
+          }
+          return { success: true, message: response.data.message }
+        } else {
+          return { success: false, message: response.data.message }
+        }
+      } catch (error) {
+        console.error('Failed to reject edit request:', error)
+        throw new Error(error.response?.data?.message || 'Failed to reject edit request')
+      } finally {
+        this.editActionLoading = false
+      }
+    },
+
+   // In your submitVoidRequest method, use the correct endpoint:
+async submitVoidRequest() {
+  if (!this.forms.void.remarks || this.forms.void.remarks.trim() === '') {
+    throw new Error('Remarks are required for void requests')
+  }
+
+  this.voidingDisbursement = true
+  try {
+    const authStore = useAuthStore()
+    const token = authStore.admin ? authStore.adminToken : authStore.token
+
+    // Use the correct endpoint for void requests
+    const response = await api.post(
+      `/api/barangay/disbursements/${this.forms.void.disbursementId}/void-request`,
+      {
+        remarks: this.forms.void.remarks.trim(),
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+      }
+    )
+
+    if (response.data.status) {
+      const idx = this.disbursements.findIndex((d) => d.id === this.forms.void.disbursementId)
+      if (idx !== -1) {
+        this.disbursements[idx].status = 'Void Requested'
+        this.disbursements[idx].remarks = this.forms.void.remarks.trim()
+        this.disbursements[idx].void_requested_at = new Date().toISOString()
+      }
+
+      this.closeVoidDialog()
+      return { success: true, message: response.data.message }
+    } else {
+      return { success: false, message: response.data.message }
+    }
+  } catch (error) {
+    console.error('Failed to submit void request:', error)
+    throw new Error(error.response?.data?.message || 'Failed to submit void request')
+  } finally {
+    this.voidingDisbursement = false
+  }
+},
     async approveVoidRequest(disbursementId) {
       try {
-        const authStore = useAuthStore();
+        const authStore = useAuthStore()
         // Use barangay user token for barangay endpoints
-        const token = authStore.token;
+        const token = authStore.token
 
-        const response = await api.post(`/api/barangay/disbursements/${disbursementId}/void-approve`, {}, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
+        const response = await api.post(
+          `/api/barangay/disbursements/${disbursementId}/void-approve`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
           },
-        });
+        )
 
         if (response.data.status) {
           // Update the disbursement status in the local array
-          const disbursementIndex = this.disbursements.findIndex(d => d.id === disbursementId);
+          const disbursementIndex = this.disbursements.findIndex((d) => d.id === disbursementId)
           if (disbursementIndex !== -1) {
-            this.disbursements[disbursementIndex].status = 'Voided';
-            this.disbursements[disbursementIndex].void_approved_at = new Date().toISOString();
+            this.disbursements[disbursementIndex].status = 'Voided'
+            this.disbursements[disbursementIndex].void_approved_at = new Date().toISOString()
           }
 
           // Refresh bank library data to reflect voided cheque status
           try {
-            const { useBankStore } = await import('./bankStore');
-            const bankStore = useBankStore();
-            await bankStore.fetchBanks();
+            const { useBankStore } = await import('./bankStore')
+            const bankStore = useBankStore()
+            await bankStore.fetchBanks()
           } catch (bankError) {
-            console.warn('Failed to refresh bank data after void approval:', bankError);
+            console.warn('Failed to refresh bank data after void approval:', bankError)
             // Don't throw error here as the main operation succeeded
           }
 
-          return { success: true, message: response.data.message };
+          return { success: true, message: response.data.message }
         } else {
-          return { success: false, message: response.data.message };
+          return { success: false, message: response.data.message }
         }
       } catch (error) {
-        console.error('Failed to approve void request:', error);
-        throw new Error(error.response?.data?.message || 'Failed to approve void request');
+        console.error('Failed to approve void request:', error)
+        throw new Error(error.response?.data?.message || 'Failed to approve void request')
       }
     },
 
     async rejectVoidRequest(disbursementId, rejectionRemarks) {
       try {
-        const authStore = useAuthStore();
+        const authStore = useAuthStore()
         // Use barangay user token for barangay endpoints
-        const token = authStore.token;
+        const token = authStore.token
 
-        const response = await api.post(`/api/barangay/disbursements/${disbursementId}/void-reject`, {
-          remarks: rejectionRemarks,
-        }, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
+        const response = await api.post(
+          `/api/barangay/disbursements/${disbursementId}/void-reject`,
+          {
+            remarks: rejectionRemarks,
           },
-        });
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
+          },
+        )
 
         if (response.data.status) {
           // Update the disbursement status in the local array
-          const disbursementIndex = this.disbursements.findIndex(d => d.id === disbursementId);
+          const disbursementIndex = this.disbursements.findIndex((d) => d.id === disbursementId)
           if (disbursementIndex !== -1) {
-            this.disbursements[disbursementIndex].status = 'Unliquidated';
-            this.disbursements[disbursementIndex].rejection_remarks = rejectionRemarks;
-            this.disbursements[disbursementIndex].void_rejected_at = new Date().toISOString();
+            this.disbursements[disbursementIndex].status = 'Unliquidated'
+            this.disbursements[disbursementIndex].rejection_remarks = rejectionRemarks
+            this.disbursements[disbursementIndex].void_rejected_at = new Date().toISOString()
           }
 
-          return { success: true, message: response.data.message };
+          return { success: true, message: response.data.message }
         } else {
-          return { success: false, message: response.data.message };
+          return { success: false, message: response.data.message }
         }
       } catch (error) {
-        console.error('Failed to reject void request:', error);
-        throw new Error(error.response?.data?.message || 'Failed to reject void request');
+        console.error('Failed to reject void request:', error)
+        throw new Error(error.response?.data?.message || 'Failed to reject void request')
       }
     },
 
     // Direct void method for captains and SK chairpersons (no request needed)
     async voidDisbursementDirectly(disbursementId, remarks) {
       if (!remarks || remarks.trim() === '') {
-        throw new Error('Remarks are required for voiding disbursements');
+        throw new Error('Remarks are required for voiding disbursements')
       }
 
-      this.voidingDisbursement = true;
+      this.voidingDisbursement = true
       try {
-        const authStore = useAuthStore();
-        const token = authStore.admin ? authStore.adminToken : authStore.token;
+        const authStore = useAuthStore()
+        const token = authStore.admin ? authStore.adminToken : authStore.token
 
-        const response = await api.post(`/api/barangay/disbursements/${disbursementId}/void-direct`, {
-          remarks: remarks.trim(),
-        }, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
+        const response = await api.post(
+          `/api/barangay/disbursements/${disbursementId}/void-direct`,
+          {
+            remarks: remarks.trim(),
           },
-        });
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
+          },
+        )
 
         if (response.data.status) {
           // Update the disbursement status in the local array
-          const disbursementIndex = this.disbursements.findIndex(d => d.id === disbursementId);
+          const disbursementIndex = this.disbursements.findIndex((d) => d.id === disbursementId)
           if (disbursementIndex !== -1) {
-            this.disbursements[disbursementIndex].status = 'Voided';
-            this.disbursements[disbursementIndex].remarks = remarks.trim();
-            this.disbursements[disbursementIndex].voided_at = new Date().toISOString();
+            this.disbursements[disbursementIndex].status = 'Voided'
+            this.disbursements[disbursementIndex].remarks = remarks.trim()
+            this.disbursements[disbursementIndex].voided_at = new Date().toISOString()
           }
 
           // Refresh bank library data to reflect voided cheque status
           try {
-            const { useBankStore } = await import('./bankStore');
-            const bankStore = useBankStore();
-            await bankStore.fetchBanks();
+            const { useBankStore } = await import('./bankStore')
+            const bankStore = useBankStore()
+            await bankStore.fetchBanks()
           } catch (bankError) {
-            console.warn('Failed to refresh bank data after direct void:', bankError);
+            console.warn('Failed to refresh bank data after direct void:', bankError)
             // Don't throw error here as the main operation succeeded
           }
 
-          return { success: true, message: response.data.message };
+          return { success: true, message: response.data.message }
         } else {
-          return { success: false, message: response.data.message };
+          return { success: false, message: response.data.message }
         }
       } catch (error) {
-        console.error('Failed to void disbursement directly:', error);
-        throw new Error(error.response?.data?.message || 'Failed to void disbursement');
+        console.error('Failed to void disbursement directly:', error)
+        throw new Error(error.response?.data?.message || 'Failed to void disbursement')
       } finally {
-        this.voidingDisbursement = false;
+        this.voidingDisbursement = false
       }
     },
     // Submit reimbursement
     async submitReimbursement(reimbursementData) {
-
       if (!this.currentLiquidation) {
         console.warn('currentLiquidation is not available')
         return
       }
 
       try {
-        const authStore = useAuthStore();
-        const token = authStore.admin ? authStore.adminToken : authStore.token;
+        const authStore = useAuthStore()
+        const token = authStore.admin ? authStore.adminToken : authStore.token
 
         // Validate required reimbursement data
         if (!reimbursementData) {
-          throw new Error('Reimbursement data is required');
+          throw new Error('Reimbursement data is required')
         }
 
         if (!reimbursementData.ref_dv_number) {
-          throw new Error('Reference DV number is required');
+          throw new Error('Reference DV number is required')
         }
 
         if (!reimbursementData.dvNumber) {
-          throw new Error('DV number is required');
+          throw new Error('DV number is required')
         }
 
         if (!reimbursementData.dv_amount || reimbursementData.dv_amount <= 0) {
-          throw new Error('Valid DV amount is required');
+          throw new Error('Valid DV amount is required')
         }
 
         if (!reimbursementData.bank_id) {
-          throw new Error('Bank selection is required');
+          throw new Error('Bank selection is required')
         }
 
         if (!reimbursementData.cheque_number || reimbursementData.cheque_number.trim() === '') {
-          throw new Error('Cheque number is required');
+          throw new Error('Cheque number is required')
         }
 
         if (!reimbursementData.expense_account) {
-          throw new Error('Expense account is required');
+          throw new Error('Expense account is required')
         }
 
         if (!reimbursementData.expense_account.id) {
-          throw new Error('Expense account ID is required');
+          throw new Error('Expense account ID is required')
         }
 
         // Validate expense item ID - it might be required
@@ -2778,32 +3002,36 @@ export const useDisbursementStore = defineStore('disbursement', {
         // }
 
         if (!reimbursementData.or_number) {
-          throw new Error('OR number is required');
+          throw new Error('OR number is required')
         }
 
         if (!reimbursementData.or_amount || reimbursementData.or_amount <= 0) {
-          throw new Error('Valid OR amount is required');
+          throw new Error('Valid OR amount is required')
         }
 
         // Prepare the payload for reimbursement
-        const today = new Date();
+        const today = new Date()
         // Format date as DD/MM/YYYY to match the expected format
-        const dd = String(today.getDate()).padStart(2, '0');
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const yyyy = today.getFullYear();
-        const formattedDate = `${dd}/${mm}/${yyyy}`;
+        const dd = String(today.getDate()).padStart(2, '0')
+        const mm = String(today.getMonth() + 1).padStart(2, '0')
+        const yyyy = today.getFullYear()
+        const formattedDate = `${dd}/${mm}/${yyyy}`
 
         // Generate unique DV number for reimbursement using proper sequence
         // Try to get the next available DV number from the backend
 
         // Get booklet ID with comprehensive fallback
-        const bookletId = reimbursementData.cheque_booklet || await this.getDefaultBookletId(reimbursementData.bank_id)
+        const bookletId =
+          reimbursementData.cheque_booklet ||
+          (await this.getDefaultBookletId(reimbursementData.bank_id))
         console.log('Using booklet ID:', bookletId)
 
         // Calculate total actual expense from OR details
-        const totalActualExpense = this.currentLiquidation.orDetails?.reduce(
-          (sum, or) => sum + (parseFloat(or.orAmount) || 0), 0
-        ) || 0
+        const totalActualExpense =
+          this.currentLiquidation.orDetails?.reduce(
+            (sum, or) => sum + (parseFloat(or.orAmount) || 0),
+            0,
+          ) || 0
 
         const payload = {
           // Required fields for disbursements table
@@ -2816,45 +3044,51 @@ export const useDisbursementStore = defineStore('disbursement', {
           ref_dv_number: reimbursementData.ref_dv_number, // Reference to original DV
 
           // Additional fields
-          expenses: [{
-            accountId: reimbursementData.expense_account.id,
-            amount: parseFloat(reimbursementData.dv_amount),
-            particular: `Reimbursement for DV ${reimbursementData.ref_dv_number}`,
-            expense_class_id: reimbursementData.expense_account.expense_class_id,
-            expense_type_id: reimbursementData.expense_account.expense_type_id,
-            expense_item_id: reimbursementData.expense_account.expense_item_id,
-          }],
+          expenses: [
+            {
+              accountId: reimbursementData.expense_account.id,
+              amount: parseFloat(reimbursementData.dv_amount),
+              particular: `Reimbursement for DV ${reimbursementData.ref_dv_number}`,
+              expense_class_id: reimbursementData.expense_account.expense_class_id,
+              expense_type_id: reimbursementData.expense_account.expense_type_id,
+              expense_item_id: reimbursementData.expense_account.expense_item_id,
+            },
+          ],
 
           orDetails: this.currentLiquidation.orDetails
-            .filter(or => or.id !== null) // Exclude reimbursement entries with null id
-            .map(or => ({
+            .filter((or) => or.id !== null) // Exclude reimbursement entries with null id
+            .map((or) => ({
               id: or.id,
               orNumber: or.orNumber,
-              orAmount: or.orNumber === reimbursementData.or_number
-                ? (parseFloat(or.orAmount) - parseFloat(reimbursementData.or_amount)).toFixed(2)
-                : or.orAmount, // Only deduct from matching OR
-              orRefAmount: or.orNumber === reimbursementData.or_number
-                ? parseFloat(reimbursementData.or_amount)
-                : 0, // Set reimbursement amount only for matching OR
+              orAmount:
+                or.orNumber === reimbursementData.or_number
+                  ? (parseFloat(or.orAmount) - parseFloat(reimbursementData.or_amount)).toFixed(2)
+                  : or.orAmount, // Only deduct from matching OR
+              orRefAmount:
+                or.orNumber === reimbursementData.or_number
+                  ? parseFloat(reimbursementData.or_amount)
+                  : 0, // Set reimbursement amount only for matching OR
               orDate: or.orDate || '',
               remarks: or.remarks, // Keep original remarks
               orPhotoUrl: 'or-photos/sample.png',
             })),
           liquidatedAmount: totalActualExpense,
-        };
+        }
 
-        console.log('Submitting reimbursement with payload:', JSON.stringify(payload, null, 2));
+        console.log('Submitting reimbursement with payload:', JSON.stringify(payload, null, 2))
 
         // Add barangay_id for admin users if selected
         if (authStore.admin) {
-          const selectedBarangay = authStore.getSelectedBarangay();
+          const selectedBarangay = authStore.getSelectedBarangay()
           if (selectedBarangay) {
-            payload.barangay_id = selectedBarangay;
+            payload.barangay_id = selectedBarangay
           }
         }
 
         // Use different endpoints for admin vs regular users
-        const endpoint = authStore.admin ? `/api/admin/reimbursements/${this.currentLiquidation.id}` : `/api/barangay/reimbursements/${this.currentLiquidation.id}`;
+        const endpoint = authStore.admin
+          ? `/api/admin/reimbursements/${this.currentLiquidation.id}`
+          : `/api/barangay/reimbursements/${this.currentLiquidation.id}`
 
         let response
         try {
@@ -2863,49 +3097,48 @@ export const useDisbursementStore = defineStore('disbursement', {
               Authorization: `Bearer ${token}`,
               Accept: 'application/json',
             },
-          });
+          })
         } catch (error) {
-            console.error('Failed to submit reimbursement:', error);
-            console.error('Error response:', error.response?.data);
+          console.error('Failed to submit reimbursement:', error)
+          console.error('Error response:', error.response?.data)
         }
 
         // Refresh the disbursements list
-        await this.fetchDisbursements();
+        await this.fetchDisbursements()
 
-        return { success: true, data: response.data.data };
+        return { success: true, data: response.data.data }
       } catch (error) {
-        console.error('Failed to submit reimbursement:', error);
-        console.error('Error response:', error.response?.data);
+        console.error('Failed to submit reimbursement:', error)
+        console.error('Error response:', error.response?.data)
 
         // Provide more specific error messages
-        let errorMessage = 'Failed to submit reimbursement';
+        let errorMessage = 'Failed to submit reimbursement'
 
         if (error.response?.status === 422) {
           // Handle validation errors specifically
           if (error.response.data?.errors) {
-            const errors = error.response.data.errors;
-            const errorMessages = Object.values(errors).flat();
-            errorMessage = `Validation errors: ${errorMessages.join(', ')}`;
+            const errors = error.response.data.errors
+            const errorMessages = Object.values(errors).flat()
+            errorMessage = `Validation errors: ${errorMessages.join(', ')}`
           } else if (error.response.data?.message) {
-            errorMessage = `Validation error: ${error.response.data.message}`;
+            errorMessage = `Validation error: ${error.response.data.message}`
           } else {
-            errorMessage = 'Validation failed. Please check all required fields.';
+            errorMessage = 'Validation failed. Please check all required fields.'
           }
         } else if (error.message) {
-          errorMessage = error.message;
+          errorMessage = error.message
         } else if (error.response?.data?.message) {
-          errorMessage = error.response.data.message;
+          errorMessage = error.response.data.message
         }
 
         return {
           success: false,
-          error: errorMessage
-        };
+          error: errorMessage,
+        }
       }
     },
-    async cancelCheque(){
+    async cancelCheque() {
       try {
-
         const config = this.getAuthConfig()
         // Use admin banks endpoint when admin is logged in
         const authStore = useAuthStore()
@@ -2928,31 +3161,32 @@ export const useDisbursementStore = defineStore('disbursement', {
         //============================================================================
         //============================================================================
         //============================================================================
-
       } catch (error) {
         console.error('Failed to cancel cheque:', error)
         return {
           success: false,
-          error: error.response?.data?.message || 'Failed to cancel cheque'
+          error: error.response?.data?.message || 'Failed to cancel cheque',
         }
       }
     },
-    async submitCancelCheque(){
+    async submitCancelCheque() {
       try {
-
         const config = this.getAuthConfig()
-        console.error('Fsksdghisdgh', this.cancelBank);
-        const bankData = await api.get(`/api/barangay/banks/${this.cancelBank.id}/available-cheques`, config);
-        const data = bankData.data.data || [];
-        console.error('Fetched booklets data:', data.booklet_numb);
-        console.error('Fetched booklets data:', data.cheque[0].cheque_number);
+        console.error('Fsksdghisdgh', this.cancelBank)
+        const bankData = await api.get(
+          `/api/barangay/banks/${this.cancelBank.id}/available-cheques`,
+          config,
+        )
+        const data = bankData.data.data || []
+        console.error('Fetched booklets data:', data.booklet_numb)
+        console.error('Fetched booklets data:', data.cheque[0].cheque_number)
 
         this.cancelChequed = data.cheque[0].cheque_number || null
       } catch (error) {
         console.error('Failed to submit cancel cheque:', error)
         return {
           success: false,
-          error: error.response?.data?.message || 'Failed to submit cancel cheque'
+          error: error.response?.data?.message || 'Failed to submit cancel cheque',
         }
       }
     },
@@ -2982,7 +3216,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         const data = response.data.data || []
         if (data.cheque && data.cheque.length > 0) {
           // Filter out cancelled cheques (both from backend status and frontend tracking)
-          const availableCheques = data.cheque.filter(cheque => {
+          const availableCheques = data.cheque.filter((cheque) => {
             const chequeNumber = cheque.cheque_number || cheque.chequeNo
             const backendStatus = (cheque.status || '').toLowerCase()
             const isFrontendCancelled = this.cancelledCheques.has(chequeNumber)
@@ -2995,25 +3229,26 @@ export const useDisbursementStore = defineStore('disbursement', {
             return {
               success: true,
               chequeNumber: availableCheque.cheque_number || availableCheque.chequeNo,
-              message: 'Available cheque found'
+              message: 'Available cheque found',
             }
           } else {
             return {
               success: false,
-              message: 'No available cheques found for this bank (all cheques are cancelled or used)'
+              message:
+                'No available cheques found for this bank (all cheques are cancelled or used)',
             }
           }
         } else {
           return {
             success: false,
-            message: 'No available cheques found for this bank'
+            message: 'No available cheques found for this bank',
           }
         }
       } catch (error) {
         console.error('Failed to get available cheque:', error)
         return {
           success: false,
-          message: error.response?.data?.message || 'Failed to get available cheque'
+          message: error.response?.data?.message || 'Failed to get available cheque',
         }
       }
     },
@@ -3046,16 +3281,20 @@ export const useDisbursementStore = defineStore('disbursement', {
         const authStore = useAuthStore()
         const token = authStore.admin ? authStore.adminToken : authStore.token
 
-        const response = await api.patch(`/api/barangay/disbursements/${disbursementId}/mark-stale`, {}, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
+        const response = await api.patch(
+          `/api/barangay/disbursements/${disbursementId}/mark-stale`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
           },
-        })
+        )
 
         if (response.data.status) {
           // Update the local disbursement status
-          const disbursementIndex = this.disbursements.findIndex(d => d.id === disbursementId)
+          const disbursementIndex = this.disbursements.findIndex((d) => d.id === disbursementId)
           if (disbursementIndex !== -1) {
             this.disbursements[disbursementIndex].status = 'Stale'
           }
@@ -3076,7 +3315,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         console.error('Failed to update disbursement to stale:', error)
         return {
           success: false,
-          message: error.response?.data?.message || 'Failed to update disbursement to stale'
+          message: error.response?.data?.message || 'Failed to update disbursement to stale',
         }
       }
     },
@@ -3085,7 +3324,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     async updateChequeToStale(disbursementId) {
       try {
         // Find the disbursement to get the cheque number
-        const disbursement = this.disbursements.find(d => d.id === disbursementId)
+        const disbursement = this.disbursements.find((d) => d.id === disbursementId)
         if (!disbursement || !disbursement.chequeNumber) {
           return { success: false, message: 'Disbursement or cheque number not found' }
         }
@@ -3098,7 +3337,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         console.error('Failed to update cheque to stale:', error)
         return {
           success: false,
-          message: error.message || 'Failed to update cheque to stale'
+          message: error.message || 'Failed to update cheque to stale',
         }
       }
     },
@@ -3107,22 +3346,24 @@ export const useDisbursementStore = defineStore('disbursement', {
     updateChequeStatusToStale(chequeNumber) {
       try {
         // Import bank store and update cheque status
-        import('./bankStore').then(({ useBankStore }) => {
-          const bankStore = useBankStore()
+        import('./bankStore')
+          .then(({ useBankStore }) => {
+            const bankStore = useBankStore()
 
-          // Find the bank that contains this cheque and update its status
-          for (const bank of bankStore.banks) {
-            if (bank.cheques) {
-              const cheque = bank.cheques.find(c => c.chequeNo === chequeNumber)
-              if (cheque) {
-                cheque.status = 'stale'
-                break
+            // Find the bank that contains this cheque and update its status
+            for (const bank of bankStore.banks) {
+              if (bank.cheques) {
+                const cheque = bank.cheques.find((c) => c.chequeNo === chequeNumber)
+                if (cheque) {
+                  cheque.status = 'stale'
+                  break
+                }
               }
             }
-          }
-        }).catch(error => {
-          console.warn('Failed to update cheque status in bank store:', error)
-        })
+          })
+          .catch((error) => {
+            console.warn('Failed to update cheque status in bank store:', error)
+          })
       } catch (error) {
         console.warn('Failed to update cheque status:', error)
       }
@@ -3131,8 +3372,8 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Method to check and update stale disbursements
     async checkAndUpdateStaleDisbursements() {
       try {
-        const staleDisbursements = this.disbursements.filter(disbursement =>
-          shouldBeStale(disbursement) && disbursement.status !== 'Stale'
+        const staleDisbursements = this.disbursements.filter(
+          (disbursement) => shouldBeStale(disbursement) && disbursement.status !== 'Stale',
         )
 
         if (staleDisbursements.length === 0) {
@@ -3140,19 +3381,23 @@ export const useDisbursementStore = defineStore('disbursement', {
         }
 
         // Update each stale disbursement and its cheque in the backend
-        const updatePromises = staleDisbursements.map(async disbursement => {
+        const updatePromises = staleDisbursements.map(async (disbursement) => {
           const disbursementResult = await this.updateDisbursementToStale(disbursement.id)
           const chequeResult = await this.updateChequeToStale(disbursement.id)
           return {
             disbursement: disbursementResult,
             cheque: chequeResult,
-            success: disbursementResult.success && chequeResult.success
+            success: disbursementResult.success && chequeResult.success,
           }
         })
 
         const results = await Promise.allSettled(updatePromises)
-        const successful = results.filter(result => result.status === 'fulfilled' && result.value.success).length
-        const failed = results.filter(result => result.status === 'rejected' || !result.value.success).length
+        const successful = results.filter(
+          (result) => result.status === 'fulfilled' && result.value.success,
+        ).length
+        const failed = results.filter(
+          (result) => result.status === 'rejected' || !result.value.success,
+        ).length
 
         // Refresh bank data to reflect cheque status changes
         if (successful > 0) {
@@ -3170,66 +3415,66 @@ export const useDisbursementStore = defineStore('disbursement', {
           success: true,
           message: `Updated ${successful} disbursements and their cheques to stale status. ${failed} failed.`,
           updated: successful,
-          failed: failed
+          failed: failed,
         }
       } catch (error) {
         console.error('Failed to check and update stale disbursements:', error)
         return {
           success: false,
-          message: error.message || 'Failed to check and update stale disbursements'
+          message: error.message || 'Failed to check and update stale disbursements',
         }
       }
-    }
-  }
+    },
+  },
 })
 
 function calculateAging(dateString) {
   // Accepts 'YYYY-MM-DD' or 'YYYY/MM/DD'
-  if (!dateString) return '0 days';
-  const parts = dateString.includes('-') ? dateString.split('-') : dateString.split('/');
-  let yyyy, mm, dd;
+  if (!dateString) return '0 days'
+  const parts = dateString.includes('-') ? dateString.split('-') : dateString.split('/')
+  let yyyy, mm, dd
   if (parts[0].length === 4) {
     // 'YYYY-MM-DD'
-    [yyyy, mm, dd] = parts;
+    ;[yyyy, mm, dd] = parts
   } else {
     // 'DD/MM/YYYY'
-    [dd, mm, yyyy] = parts;
+    ;[dd, mm, yyyy] = parts
   }
-  const disbDate = new Date(`${yyyy}-${mm}-${dd}`);
-  const today = new Date();
-  const diffTime = today - disbDate;
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  return `${diffDays} days`;
+  const disbDate = new Date(`${yyyy}-${mm}-${dd}`)
+  const today = new Date()
+  const diffTime = today - disbDate
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+  return `${diffDays} days`
 }
 
 function calculateAgingDays(dateString) {
   // Helper function to get just the number of days for stale checking
-  if (!dateString) return 0;
-  const parts = dateString.includes('-') ? dateString.split('-') : dateString.split('/');
-  let yyyy, mm, dd;
+  if (!dateString) return 0
+  const parts = dateString.includes('-') ? dateString.split('-') : dateString.split('/')
+  let yyyy, mm, dd
   if (parts[0].length === 4) {
     // 'YYYY-MM-DD'
-    [yyyy, mm, dd] = parts;
+    ;[yyyy, mm, dd] = parts
   } else {
     // 'DD/MM/YYYY'
-    [dd, mm, yyyy] = parts;
+    ;[dd, mm, yyyy] = parts
   }
-  const disbDate = new Date(`${yyyy}-${mm}-${dd}`);
-  const today = new Date();
-  const diffTime = today - disbDate;
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
+  const disbDate = new Date(`${yyyy}-${mm}-${dd}`)
+  const today = new Date()
+  const diffTime = today - disbDate
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+  return diffDays
 }
 
 function shouldBeStale(disbursement) {
   // Check if disbursement should be marked as stale based on aging
-  if (!disbursement.date) return false;
+  if (!disbursement.date) return false
 
   // Don't mark as stale if already liquidated, voided, or already stale
   if (['Liquidated', 'Voided', 'Stale'].includes(disbursement.status)) {
-    return false;
+    return false
   }
 
-  const agingDays = calculateAgingDays(disbursement.date);
-  return agingDays >= 180;
+  const agingDays = calculateAgingDays(disbursement.date)
+  return agingDays >= 180
 }

@@ -153,16 +153,11 @@ const handleSearch = async () => {
 
 }
 const goToResetPassword = () => {
-  console.log('=== DEBUGGING NAVIGATION ===')
-  console.log('Email value:', email.value)
-  console.log('Current route before navigation:', router.currentRoute.value)
 
   // Use the correct reset-password route
   const targetPath = `/reset-password?email=${encodeURIComponent(email.value)}`
-  console.log('Target path:', targetPath)
 
   router.push(targetPath).then(() => {
-    console.log('Navigation successful, new route:', router.currentRoute.value)
   }).catch((error) => {
     console.error('Navigation failed:', error)
     // Fallback to login
@@ -174,7 +169,6 @@ const handleGlobalEnterKey = (event) => {
     event.preventDefault()
     event.stopPropagation()
   }
-  console.log('Enter key pressed - triggering search')
   handleSearch()
 }
 
@@ -185,7 +179,6 @@ const handleSearchClick = () => {
 // Global keyboard event handler
 const handleGlobalKeydown = (event) => {
   if (event.key === 'Enter') {
-    console.log('Global Enter key detected for forgot password')
     event.preventDefault()
     event.stopPropagation()
     handleSearch()
@@ -195,12 +188,10 @@ const handleGlobalKeydown = (event) => {
 // Add and remove global event listeners
 onMounted(() => {
   document.addEventListener('keydown', handleGlobalKeydown)
-  console.log('Global keyboard listener added for forgot password')
 })
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleGlobalKeydown)
-  console.log('Global keyboard listener removed for forgot password')
 })
 
 const goToLogin = () => router.push('/')

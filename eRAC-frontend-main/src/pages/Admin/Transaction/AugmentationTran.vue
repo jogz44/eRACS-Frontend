@@ -28,7 +28,6 @@
 import { ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAugmentationStore } from 'stores/augmentation'
-import { useAuthStore } from 'stores/auth'
 import AugmentationTable from 'components/augmentation/AugmentationTable.vue'
 import SearchFilters from 'components/augmentation/SearchFilters.vue'
 import AugmentationDialog from 'components/augmentation/AugmentationDialog.vue'
@@ -36,18 +35,12 @@ import { usePageLogging } from '../../../composables/usePageLogging'
 
 const $q = useQuasar()
 const store = useAugmentationStore()
-const authStore = useAuthStore()
 const loading = ref(false)
 const { logPageVisit } = usePageLogging()
 
 const loadPendingUsers = async () => {
   loading.value = true
   try {
-    console.log('Refreshing augmentations for admin user')
-    console.log('Current admin state:', {
-      isAdmin: authStore.admin,
-      hasAdminToken: !!authStore.adminToken
-    })
     
     await store.fetchAugmentations()
     $q.notify({

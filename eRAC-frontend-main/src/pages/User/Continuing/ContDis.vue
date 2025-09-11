@@ -708,11 +708,9 @@ const handleBankSelection = async (bankId) => {
 }
 
 const handleAddExpense = async () => {
-  console.log('Add button clicked, starting to open expense dialog...')
 
   try {
     await store.openDialog('expense')
-    console.log('Expense dialog opened successfully')
   } catch (error) {
     console.error('Error opening expense dialog:', error)
     $q.notify({

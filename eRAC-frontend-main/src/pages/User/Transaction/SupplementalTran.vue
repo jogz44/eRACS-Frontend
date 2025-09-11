@@ -25,11 +25,11 @@
         <q-card class="summary-card available-funds-card" :class="{ 'loading-state': loading }">
           <q-card-section class="text-center">
             <div class="summary-header">
-              <q-icon name="account_balance_wallet" size="24px" class="q-mr-sm" />
-              <div class="text-h6 text-grey-8">Available Unused Funds</div>
+              <q-icon name="account_balance_wallet" size="24px" class="q-mr-sm" style="color:green;" />
+              <div class="text-h6 text-green-5">Available Unused Funds</div>
             </div>
             <div class="summary-amount">
-              <div class="text-h4 text-weight-bold text-grey-8">
+              <div class="text-h4 text-weight-bold text-black">
                 {{ supplementalBudgetStore.formatCurrency(supplementalBudgetStore.totalAvailableUnused) }}
               </div>
               <div class="text-caption text-grey-6 q-mt-xs">
@@ -56,11 +56,11 @@
         <q-card class="summary-card supplemental-budget-card" :class="{ 'loading-state': loading }">
           <q-card-section class="text-center">
             <div class="summary-header">
-              <q-icon name="swap_horiz" size="24px" class="q-mr-sm" />
-              <div class="text-h6 text-grey-8">Total Supplemental Budgets</div>
+              <q-icon name="swap_horiz" size="24px" class="q-mr-sm" style="color:green;" />
+              <div class="text-h6 text-green">Total Supplemental Budgets</div>
             </div>
             <div class="summary-amount">
-              <div class="text-h4 text-weight-bold text-grey-8">
+              <div class="text-h4 text-weight-bold text-black">
                 {{ supplementalBudgetStore.formatCurrency(supplementalBudgetStore.totalSupplementalAmount) }}
               </div>
               <div class="text-caption text-grey-6 q-mt-xs">
@@ -87,11 +87,11 @@
         <q-card class="summary-card transfer-card" :class="{ 'loading-state': loading }">
           <q-card-section class="text-center">
             <div class="summary-header">
-              <q-icon name="swap_horiz" size="24px" class="q-mr-sm" />
-              <div class="text-h6 text-grey-8">Transferred to Annual Budget</div>
+              <q-icon name="swap_horiz" size="24px" class="q-mr-sm"   style="color:green;"/>
+              <div class="text-h6 text-green">Transferred to Annual Budget</div>
             </div>
             <div class="summary-amount">
-              <div class="text-h4 text-weight-bold text-grey-8">
+              <div class="text-h4 text-weight-bold text-black">
                 {{ supplementalBudgetStore.formatCurrency(transferredToAnnualAmount) }}
               </div>
               <div class="text-caption text-grey-6 q-mt-xs">
@@ -203,13 +203,7 @@
       </q-card-section>
     </q-card>
 
-    <!-- Main Table -->
-    <q-card flat bordered>
 
-
-      <!-- Added supplemental budget controls below main table -->
-
-    </q-card>
 
     <!-- Tabs for Unused Expenses and Supplemental Budgets -->
     <q-card flat bordered>
@@ -255,14 +249,14 @@
 
         <template v-slot:body-cell-account_name="props">
           <q-td :props="props">
-            <div class="text-weight-medium">{{ props.row.account_name }}</div>
+            <div class="text-weight-medium ">{{ props.row.account_name }}</div>
             <div class="text-caption text-grey-6">{{ props.row.budget_description }}</div>
           </q-td>
         </template>
 
         <template v-slot:body-cell-unused_amount="props">
           <q-td :props="props">
-            <div class="text-weight-medium text-green">
+            <div class="text-weight-medium text-green-7  text-h6">
               {{ supplementalBudgetStore.formatCurrency(props.row.unused_amount) }}
             </div>
             <div class="text-caption text-grey-6">
@@ -275,21 +269,29 @@
         <template v-slot:body-cell-amount_to_use="props">
           <q-td :props="props">
             <q-input
-              v-model.number="props.row.amount_to_use"
-              type="number"
-              :max="props.row.unused_amount"
-              :min="0"
-              step="0.01"
+              :model-value="formatInputValue(props.row.amount_to_use)"
+              @update:model-value="(val) => handleAmountToUseInput(props.row, val)"
+              @blur="(event) => handleAmountToUseBlur(props.row, event.target.value)"
+              @keypress="blockNonNumeric"
+              @paste.prevent="handlePasteNumeric"
               dense
               outlined
               :disable="!selectedExpenses.some(exp => exp.id === props.row.id)"
               :rules="[
-                val => val >= 0 || 'Amount cannot be negative',
-                val => val <= (props.row.unused_amount || 0) || `Amount cannot exceed ${supplementalBudgetStore.formatCurrency(props.row.unused_amount || 0)}`
+                val => {
+                  const num = parseCurrency(val)
+                  return num >= 0 || 'Amount cannot be negative'
+                },
+                val => {
+                  const num = parseCurrency(val)
+                  return num <= (props.row.unused_amount || 0) || `Amount cannot exceed ${supplementalBudgetStore.formatCurrency(props.row.unused_amount || 0)}`
+                }
               ]"
               @focus="ensureSelected(props.row)"
-              @blur="validateAmount(props.row)"
-              @input="validateAmount(props.row)"
+              prefix="₱"
+              placeholder="0.00"
+              inputmode="decimal"
+              pattern="\\d*\\.?\\d{0,2}"
             />
           </q-td>
         </template>
@@ -545,6 +547,7 @@ const selectedYear = ref(new Date().getFullYear())
 const activeTab = ref('unused')
 const selectedExpenses = ref([])
 const supplementalDescription = ref('')
+const localExpenses = ref([])
 const pagination = ref({
   sortBy: 'desc',
   descending: false,
@@ -691,10 +694,10 @@ const yearOptions = computed(() => {
 const filteredExpenses = computed(() => {
   const query = searchQuery.value.toLowerCase().trim()
   if (!query) {
-    return supplementalBudgetStore.filteredUnusedExpenses
+    return localExpenses.value
   }
 
-  return supplementalBudgetStore.filteredUnusedExpenses.filter(expense =>
+  return localExpenses.value.filter(expense =>
     (expense.account_name || '').toLowerCase().includes(query) ||
     (expense.expense_class || '').toLowerCase().includes(query) ||
     (expense.budget_description || '').toLowerCase().includes(query)
@@ -808,6 +811,14 @@ const loadData = async (showNotification = true) => {
     const failures = results.filter(result => result.status === 'rejected')
 
     if (failures.length === 0) {
+      // Debug: Log the data from the store
+      console.log('Store data after refresh:', {
+        unusedExpenses: supplementalBudgetStore.availableUnusedExpenses,
+        filteredUnused: supplementalBudgetStore.filteredUnusedExpenses
+      })
+
+      // Sync local expenses after successful data load
+      syncLocalExpenses()
       if (showNotification) {
         $q.notify({
           type: 'positive',
@@ -865,29 +876,157 @@ const ensureSelected = (expense) => {
   if (existingIndex === -1) {
     selectedExpenses.value.push({
       ...expense,
-      amount_to_use: expense.unused_amount || 0
+      amount_to_use: expense.amount_to_use || undefined
     })
   } else {
-    // Update existing selection with current expense data
+    // Update existing selection with current expense data but preserve existing amount_to_use
+    const existingAmount = selectedExpenses.value[existingIndex].amount_to_use
     selectedExpenses.value[existingIndex] = {
       ...expense,
-      amount_to_use: selectedExpenses.value[existingIndex].amount_to_use || expense.unused_amount || 0
+      amount_to_use: existingAmount !== undefined ? existingAmount : (expense.amount_to_use || undefined)
     }
   }
 }
 
+// === Validation (from Arbiter02) ===
 const validateAmount = (expense) => {
-  if (!expense.amount_to_use || expense.amount_to_use < 0) {
-    expense.amount_to_use = 0
+  // Only validate if amount_to_use is defined and not empty
+  if (expense.amount_to_use !== undefined && expense.amount_to_use !== null && expense.amount_to_use !== '') {
+    if (expense.amount_to_use < 0) {
+      expense.amount_to_use = 0
+    }
+    if (expense.amount_to_use > (expense.unused_amount || 0)) {
+      expense.amount_to_use = expense.unused_amount || 0
+    }
   }
-  if (expense.amount_to_use > (expense.unused_amount || 0)) {
-    expense.amount_to_use = expense.unused_amount || 0
+}
+
+// === Currency & Input Handling (from main) ===
+const parseCurrency = (value) => {
+  if (!value && value !== 0) return 0
+  const cleanValue = String(value).replace(/[₱,\s]/g, '')
+  const parsed = parseFloat(cleanValue)
+  return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100
+}
+
+// Real-time input formatting: typing = commas only, blur = two decimals
+const formatInputValue = (value) => {
+  if (!value && value !== 0) return ''
+  const isNumber = typeof value === 'number'
+  const cleanValue = String(value).replace(/,/g, '')
+  const num = parseFloat(cleanValue)
+  if (isNaN(num)) return ''
+  return isNumber
+    ? num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : num.toLocaleString('en-US')
+}
+
+// Handle amount input while typing (string) – sanitized
+const handleAmountToUseInput = (expense, value) => {
+  let cleanValue = String(value).replace(/[^\d.]/g, '')
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    cleanValue = parts[0] + '.' + parts.slice(1).join('')
   }
+  if (parts.length === 2 && parts[1].length > 2) {
+    cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
+  }
+  expense.amount_to_use = cleanValue
+  validateAmount(expense) // 🔹 run business rule check after input
+}
+
+// Handle input blur – format to two decimals
+const handleAmountToUseBlur = (expense, value) => {
+  const formatted = formatToTwoDecimals(value)
+  expense.amount_to_use = formatted
+  validateAmount(expense) // 🔹 enforce limits
+}
+
+// Force exactly two decimals
+const formatToTwoDecimals = (value) => {
+  const cleanValue = String(value).replace(/[₱,\s]/g, '')
+  if (cleanValue === '') return ''
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    const collapsed = parts[0] + '.' + parts.slice(1).join('')
+    return formatToTwoDecimals(collapsed)
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    parts[1] = parts[1].substring(0, 2)
+  }
+  const num = parseFloat(parts.join('.'))
+  if (isNaN(num)) return ''
+  return Math.round(num * 100) / 100
+}
+
+// Block invalid keypresses
+const blockNonNumeric = (event) => {
+  const key = event.key
+  const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
+  if (allowedKeys.includes(key)) return
+  if (key === '.' && !event.target.value.includes('.')) return
+  if (!/^\d$/.test(key)) {
+    event.preventDefault()
+  }
+}
+
+// Sanitize pasted content
+const handlePasteNumeric = (event) => {
+  const paste = (event.clipboardData || window.clipboardData).getData('text')
+  const cleanPaste = paste.replace(/[^\d.]/g, '')
+
+  if (cleanPaste !== paste) {
+    event.preventDefault()
+    const target = event.target
+    const start = target.selectionStart
+    const end = target.selectionEnd
+    const currentValue = target.value
+    const newValue = currentValue.substring(0, start) + cleanPaste + currentValue.substring(end)
+
+    // Find the expense row and update it
+    const tableRow = target.closest('tr')
+    if (tableRow) {
+      const rowIndex = Array.from(tableRow.parentNode.children).indexOf(tableRow)
+      const expense = filteredExpenses.value[rowIndex]
+      if (expense) {
+        handleAmountToUseInput(expense, newValue)
+        validateAmount(expense) // 🔹 enforce rules after paste
+      }
+    }
+  }
+}
+
+
+const syncLocalExpenses = () => {
+  // Create a map of existing local expenses by ID to preserve amount_to_use values
+  const existingExpensesMap = new Map()
+  localExpenses.value.forEach(expense => {
+    existingExpensesMap.set(expense.id, expense.amount_to_use)
+  })
+
+  // Update local expenses with fresh data from store, preserving amount_to_use values
+  localExpenses.value = supplementalBudgetStore.filteredUnusedExpenses.map(expense => {
+    const existingAmount = existingExpensesMap.get(expense.id)
+    // If we have an existing amount and it's less than or equal to the new unused amount, preserve it
+    // Otherwise, start with empty value (no preloaded amount)
+    const amountToUse = (existingAmount !== undefined && existingAmount <= expense.unused_amount)
+      ? existingAmount
+      : undefined
+
+    return {
+      ...expense,
+      amount_to_use: amountToUse
+    }
+  })
 }
 
 const clearSelection = () => {
   selectedExpenses.value = []
   supplementalDescription.value = ''
+  // Reset amount_to_use values in local expenses to undefined (empty)
+  localExpenses.value.forEach(expense => {
+    expense.amount_to_use = undefined
+  })
 }
 
 const openCreateDialog = () => {
@@ -992,6 +1131,8 @@ const createSupplementalBudget = async () => {
     }
 
     console.log('Creating supplemental budget with data:', data)
+    console.log('Valid selected expenses:', validSelectedExpenses.value)
+    console.log('Selected expenses total:', selectedExpensesTotal.value)
 
     const result = await supplementalBudgetStore.createSupplementalBudget(data)
 
@@ -1066,6 +1207,9 @@ onMounted(async () => {
     // Load data
     await loadData(false) // Don't show notification on initial load
 
+    // Sync local expenses after initial load
+    syncLocalExpenses()
+
     // Log page visit
     await logPageVisit('Supplemental Budget')
   } catch (error) {
@@ -1113,15 +1257,48 @@ watch(() => supplementalBudgetStore.supplementalBudgets, () => {
   // Force reactivity update for computed properties
 }, { deep: true })
 
-// Watch for selected expenses changes to validate amounts
+// Watch for selected expenses changes to validate amounts and sync with localExpenses
 watch(selectedExpenses, (newExpenses) => {
   // Validate amounts when expenses change
   newExpenses.forEach(expense => {
-    if (expense.amount_to_use > (expense.unused_amount || 0)) {
-      expense.amount_to_use = expense.unused_amount || 0
+    if (expense.amount_to_use !== undefined && expense.amount_to_use !== null && expense.amount_to_use !== '') {
+      if (expense.amount_to_use > (expense.unused_amount || 0)) {
+        expense.amount_to_use = expense.unused_amount || 0
+      }
+      if (expense.amount_to_use < 0) {
+        expense.amount_to_use = 0
+      }
     }
-    if (expense.amount_to_use < 0) {
-      expense.amount_to_use = 0
+  })
+
+  // Sync selectedExpenses with amounts from localExpenses when selection changes
+  newExpenses.forEach(selectedExp => {
+    const localExp = localExpenses.value.find(exp => exp.id === selectedExp.id)
+    if (localExp && localExp.amount_to_use !== undefined) {
+      selectedExp.amount_to_use = localExp.amount_to_use
+    }
+  })
+}, { deep: true })
+
+// Watch for local expenses changes to validate amounts and sync with selectedExpenses
+watch(localExpenses, (newExpenses) => {
+  // Validate amounts when local expenses change
+  newExpenses.forEach(expense => {
+    if (expense.amount_to_use !== undefined && expense.amount_to_use !== null && expense.amount_to_use !== '') {
+      if (expense.amount_to_use > (expense.unused_amount || 0)) {
+        expense.amount_to_use = expense.unused_amount || 0
+      }
+      if (expense.amount_to_use < 0) {
+        expense.amount_to_use = 0
+      }
+    }
+  })
+
+  // Sync selectedExpenses with updated amounts from localExpenses
+  selectedExpenses.value.forEach(selectedExp => {
+    const localExp = newExpenses.find(exp => exp.id === selectedExp.id)
+    if (localExp) {
+      selectedExp.amount_to_use = localExp.amount_to_use
     }
   })
 }, { deep: true })

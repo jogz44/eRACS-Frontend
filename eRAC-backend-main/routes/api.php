@@ -49,7 +49,7 @@ Route::prefix('barangay')->group(function () {
     Route::post('/check-email', [AuthController::class, 'checkEmailExists']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
-    Route::middleware(['auth:sanctum', 'auth.barangay'])->group(function () {
+    Route::middleware(['auth.barangay'])->group(function () {
         // Route::middleware(['check.role'])->group(function () {
                     Route::post('/setlogs', [AdminAuthController::class, 'logUserActionRequest']);
         Route::get('/getlogs', [AuthController::class, 'getBarangayLogs']);

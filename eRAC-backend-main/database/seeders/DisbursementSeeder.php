@@ -39,7 +39,7 @@ class DisbursementSeeder extends Seeder
                 if ($appropriations->isEmpty()) continue;
 
 
-                $likePattern = 'DV-%'.substr($year, -2).'-'.$now->month.'-%';
+                $likePattern = 'DV-'.substr($year, -2).'-'.str_pad(now()->month, 2, '0', STR_PAD_LEFT).'-%';
 
                 $lastDisbursement = Disbursement::where('dv_number', 'like', $likePattern)
                     ->orderByDesc('dv_number')
