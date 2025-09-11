@@ -1328,10 +1328,7 @@ const handleSubmitReimbursement = async () => {
     }
 
     // Validate that total OR amounts match reimbursement amount
-    //const totalOrAmount = selectedReimbursementOrs.value.reduce((sum, or) => sum + (or.orAmount || 0),0,)
     const totalOrAmount = selectedReimbursementOrs.value.reduce((sum, or) => sum + (or.reimbAmount || 0), 0)
-    console.log('ddfsdfsdfdsfs',selectedReimbursementOrs);
-    console.log('ddfsdfsdfdsfs',totalOrAmount,'=============',reimbursementAmount.value);
     if (Math.abs(totalOrAmount - reimbursementAmount.value) > 0.01) {
       $q.notify({
         type: 'negative',
@@ -1345,7 +1342,6 @@ const handleSubmitReimbursement = async () => {
     // Prepare reimbursement data - use the first expense account as the primary account
     const primaryExpenseAccount = selectedReimbursementExpenseAccounts.value[0]
     const primaryOr = selectedReimbursementOrs.value[0]
-    console.error('-==============================================', primaryOr)
 
     const reimbursementData = {
       ref_dv_number: store.currentLiquidation.dvNumber,

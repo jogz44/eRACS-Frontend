@@ -998,22 +998,10 @@ const saveExpenseType = async () => {
     }
 
     const fiscalYear = accountsStore.years.find((y) => y.id == selectedYear.value)
-    console.log('Found fiscal year:', fiscalYear)
 
     if (!fiscalYear) {
       throw new Error('Selected year not found in database')
     }
-
-    const upperCaseName = newExpenseType.value.name.toUpperCase()
-
-    const newType = await accountsStore.createExpenseType({
-      name: upperCaseName,
-      expenseClassId: currentParentClass.value.id,
-      fiscalYearId: fiscalYear.id,
-      year: fiscalYear.year.toString(),
-    })
-
-    console.log('Successfully created type:', newType)
 
     // Force refresh types to ensure the new one is displayed
     await accountsStore.fetchExpenseTypes(currentParentClass.value.id)
@@ -1083,11 +1071,6 @@ const resetItemForm = () => {
 }
 
 const showAddItemDialogForType = (expenseType) => {
-  console.log('Setting parent type for new item:', {
-    typeId: expenseType.id,
-    typeName: expenseType.name,
-    classId: expenseType.expense_class_id,
-  })
 
   currentParentType.value = expenseType
   newExpenseItem.value = {
@@ -1203,12 +1186,6 @@ const resetSubItemForm = () => {
 }
 
 const showAddSubItemDialogForItem = (expenseItem) => {
-  console.log('Setting parent item for new sub-item:', {
-    itemId: expenseItem.id,
-    itemName: expenseItem.name,
-    typeId: expenseItem.expense_type_id,
-    classId: expenseItem.expense_class_id,
-  })
 
   currentParentItem.value = expenseItem
   newExpenseSubItem.value = {
@@ -1347,14 +1324,12 @@ const getExpenseTypesForClass = computed(() => (classId) => {
 
 const getExpenseItemsForType = (typeId) => {
   if (!selectedYear.value) {
-    console.log('No year selected - returning empty items list')
     return []
   }
 
   const fiscalYear = accountsStore.years.find((y) => y.id == selectedYear.value)
   const yearValue = fiscalYear?.year?.toString()
 
-  console.log(`Filtering items for type ${typeId} and year ${yearValue}`)
 
   return accountsStore.expenseItems
     .filter((item) => item.expense_type_id == typeId && item.year == yearValue)
@@ -1363,7 +1338,6 @@ const getExpenseItemsForType = (typeId) => {
 
 const getExpenseSubItemsForItem = (itemId) => {
   if (!selectedYear.value) {
-    console.log('No year selected - returning empty sub-items list')
     return []
   }
 
@@ -1377,10 +1351,6 @@ const getExpenseSubItemsForItem = (itemId) => {
     return []
   }
 
-  console.log(`Filtering sub-items for item ${itemId} and year ${yearValue}`)
-  console.log('Parent item:', parentItem)
-  console.log('All sub-items in store:', accountsStore.expenseSubItems)
-
   const filteredSubItems = accountsStore.expenseSubItems
     .filter((subItem) => {
       const matches =
@@ -1388,15 +1358,9 @@ const getExpenseSubItemsForItem = (itemId) => {
         subItem.expense_type_id == parentItem.expense_type_id &&
         subItem.expense_class_id == parentItem.expense_class_id &&
         subItem.year == yearValue
-
-      if (matches) {
-        console.log('Found matching sub-item:', subItem)
-      }
       return matches
     })
     .sort((a, b) => (a.order || 0) - (b.order || 0))
-
-  console.log('Filtered sub-items:', filteredSubItems)
   return filteredSubItems
 }
 
@@ -1431,13 +1395,6 @@ const copyClassesToYear = async () => {
     if (!copyTargetYear.value || selectedClassesToCopy.value.length === 0) {
       throw new Error('Please select a target year and at least one class')
     }
-
-    console.log('Starting copy process', {
-      sourceYearId: selectedYear.value,
-      targetYearId: copyTargetYear.value,
-      classes: selectedClassesToCopy.value,
-      allYears: accountsStore.years,
-    })
 
     $q.notify({
       type: 'positive',
@@ -1750,8 +1707,6 @@ const initSubItemContainer = (el, itemId) => {
 }
 
 const toggleExpansion = async (classId) => {
-  console.log('Toggling expansion for class:', classId)
-  console.log('Current selected year:', selectedYear.value)
 
   const newExpanded = { ...expandedClasses.value }
 
@@ -1763,7 +1718,6 @@ const toggleExpansion = async (classId) => {
 
     try {
       if (selectedYear.value) {
-        console.log('Fetching types for class:', classId)
         await accountsStore.fetchExpenseTypes(classId)
 
         if (accountsStore.expenseTypes.length > 0) {
@@ -1785,10 +1739,7 @@ const toggleExpansion = async (classId) => {
             )
 
             if (!alreadyFetchedItems) {
-              console.log('Fetching items for type:', type.id)
               await accountsStore.fetchExpenseItems(classId, type.id)
-            } else {
-              console.log('Expense items already loaded for type:', type.id)
             }
           }
 
@@ -1807,7 +1758,6 @@ const toggleExpansion = async (classId) => {
             )
 
             if (!alreadyFetchedSubItems) {
-              console.log('Fetching sub-items for item:', item.id)
               try {
                 await accountsStore.fetchExpenseSubItems(
                   classId,
@@ -1819,8 +1769,6 @@ const toggleExpansion = async (classId) => {
                 console.warn('Failed to fetch sub-items for item:', item.id, error)
                 // Don't throw error here, just log it and continue
               }
-            } else {
-              console.log('Sub-items already loaded for item:', item.id)
             }
           }
         }
@@ -1850,8 +1798,6 @@ const toggleExpansion = async (classId) => {
 }
 
 const toggleItemExpansion = async (item, forceState = null) => {
-  console.log('Toggling expansion for item:', item.id, 'Force state:', forceState)
-
   try {
     // Determine the new expansion state
     const currentlyExpanded = expandedItems.value[item.id] || false
@@ -1861,7 +1807,6 @@ const toggleItemExpansion = async (item, forceState = null) => {
     if (shouldExpand) {
       // Fetch sub-items if we're expanding
       if (selectedYear.value) {
-        console.log('Fetching sub-items for item:', item.id)
         await accountsStore.fetchExpenseSubItems(
           item.expense_class_id,
           item.expense_type_id,
@@ -1974,24 +1919,19 @@ watch(
   { deep: true },
 )
 
-watch(selectedYear, (newVal) => {
-  console.log('Selected year changed to:', newVal)
-  console.log('Available years:', accountsStore.years)
-  console.log('Current expanded class:', expandedClasses.value)
+watch(selectedYear, () => {
 })
 
 watch(
   currentParentClass,
-  (newVal) => {
-    console.log('Current parent class changed:', newVal)
+  () => {
   },
   { deep: true },
 )
 
 watch(
   () => accountsStore.expenseTypes,
-  (newTypes) => {
-    console.log('Expense types updated:', newTypes)
+  () => {
   },
   { deep: true },
 )

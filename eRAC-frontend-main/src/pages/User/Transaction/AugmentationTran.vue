@@ -228,13 +228,6 @@ const getAugmentationsData = () => {
     data = store.filteredAugmentations
   }
 
-  console.log('Getting augmentations data:', {
-    'store.augmentation': store.augmentation,
-    'store.augmentation?.value': store.augmentation?.value,
-    'store.filteredAugmentations': store.filteredAugmentations,
-    'result': data
-  })
-
   return Array.isArray(data) ? data : []
 }
 
@@ -243,7 +236,6 @@ const totalAugmentations = computed(() => {
   // Force reactivity by accessing store properties
   store.augmentation // Access store property for reactivity
   const augmentations = getAugmentationsData()
-  console.log('Total augmentations computed:', augmentations.length, augmentations)
   return augmentations.length
 })
 
@@ -273,7 +265,6 @@ const totalExpenseClasses = computed(() => {
       })
     }
   })
-  console.log('Total expense classes computed:', expenseClasses.size, Array.from(expenseClasses))
   return expenseClasses.size
 })
 
@@ -285,11 +276,8 @@ const totalAmount = computed(() => {
 
   const total = augmentations.reduce((sum, augmentation) => {
     const amount = Number(augmentation.total_amount) || 0
-    console.log('Augmentation amount:', augmentation.ref_number || augmentation.id, amount)
     return sum + amount
   }, 0)
-
-  console.log('Total amount computed:', total, 'from', augmentations.length, 'augmentations')
   return total
 })
 
