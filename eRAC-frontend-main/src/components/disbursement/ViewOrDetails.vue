@@ -15,77 +15,41 @@
           <!-- Date Field -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">Date:</q-item-label>
-            <q-input
-              filled
-              outlined
-              dense
-              :model-value="store.currentLiquidation.date"
-              :readonly="true"
-              :disable="true"
-            />
+            <q-input filled outlined dense :model-value="store.currentLiquidation.date" :readonly="true"
+              :disable="true" />
           </div>
 
           <!-- DV Number Field -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">DV Number:</q-item-label>
-            <q-input 
-              filled 
-              outlined 
-              dense 
-              :model-value="store.currentLiquidation.dvNumber"
-              :disable="true"
-            />
+            <q-input filled outlined dense :model-value="store.currentLiquidation.dvNumber" :disable="true" />
           </div>
 
           <!-- DV Amount Field -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">DV Amount:</q-item-label>
-            <q-input
-              filled
-              outlined
-              dense
-              :model-value="formatCurrency(store.currentLiquidation.dvAmount || 0)"
-              prefix="₱"
-              :disable="true"
-            />
+            <q-input filled outlined dense :model-value="formatCurrency(store.currentLiquidation.dvAmount || 0)"
+              prefix="₱" :disable="true" />
           </div>
 
           <!-- Actual Expense Field -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">Actual Expense:</q-item-label>
-            <q-input
-              filled
-              outlined
-              dense
-              :model-value="formatCurrency(totalActualExpense)"
-              prefix="₱"
-              :disable="true"
-            />
+            <q-input filled outlined dense :model-value="formatCurrency(totalActualExpense)" prefix="₱"
+              :disable="true" />
           </div>
 
           <!-- Amount to Return Field -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">Amount to Return to Appropriation:</q-item-label>
-            <q-input
-              filled
-              outlined
-              dense
-              :model-value="formatCurrency(totalReturnAmount)"
-              prefix="₱"
-              :disable="true"
-            />
+            <q-input filled outlined dense :model-value="formatCurrency(totalReturnAmount)" prefix="₱"
+              :disable="true" />
           </div>
 
           <!-- Remarks Field -->
           <div class="col-md-4 col-sm-12">
             <q-item-label class="q-mb-xs">Remarks:</q-item-label>
-            <q-input
-              filled
-              outlined
-              dense
-              :model-value="store.currentLiquidation.remarks || ''"
-              :disable="true"
-            />
+            <q-input filled outlined dense :model-value="store.currentLiquidation.remarks || ''" :disable="true" />
           </div>
         </div>
       </q-card-section>
@@ -95,16 +59,10 @@
         <div class="text-subtitle1 q-mb-md">
           <strong>Expense Accounts:</strong>
         </div>
-        
+
         <!-- Expense Accounts Table -->
-        <q-table
-          :rows="store.currentLiquidation.expenses"
-          :columns="expenseAccountColumns"
-          row-key="id"
-          :pagination="{ rowsPerPage: 5 }"
-          flat
-          bordered
-        >
+        <q-table :rows="store.currentLiquidation.expenses" :columns="expenseAccountColumns" row-key="id"
+          :pagination="{ rowsPerPage: 5 }" flat bordered>
           <template v-slot:body-cell-amount="props">
             <q-td :props="props">
               {{ formatCurrency(props.value) }}
@@ -112,6 +70,79 @@
           </template>
         </q-table>
       </q-card-section>
+
+      <!-- Reimbursement Details Section -->
+      <div>
+        <q-card-section>
+          <div class="text-h6">
+            View Reimbursement Details for Disbursement #{{ store.currentLiquidation.dvNumber }}
+          </div>
+          <div class="text-caption text-grey-6 q-mt-sm">
+            View liquidation details and official receipt information
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <div class="row q-col-gutter-md">
+            <!-- Date Field -->
+            <div class="col-md-4 col-sm-6">
+              <q-item-label class="q-mb-xs">Date:</q-item-label>
+              <q-input filled outlined dense :model-value="store.currentLiquidation.date" :readonly="true"
+                :disable="true" />
+            </div>
+
+            <!-- DV Number Field -->
+            <div class="col-md-4 col-sm-6">
+              <q-item-label class="q-mb-xs">DV Number:</q-item-label>
+              <q-input filled outlined dense :model-value="store.currentLiquidation.dvNumber" :disable="true" />
+            </div>
+
+            <!-- DV Amount Field -->
+            <div class="col-md-4 col-sm-6">
+              <q-item-label class="q-mb-xs">DV Amount:</q-item-label>
+              <q-input filled outlined dense :model-value="formatCurrency(store.currentLiquidation.dvAmount || 0)"
+                prefix="₱" :disable="true" />
+            </div>
+
+            <!-- Actual Expense Field -->
+            <div class="col-md-4 col-sm-6">
+              <q-item-label class="q-mb-xs">Actual Expense:</q-item-label>
+              <q-input filled outlined dense :model-value="formatCurrency(totalActualExpense)" prefix="₱"
+                :disable="true" />
+            </div>
+
+            <!-- Amount to Return Field -->
+            <div class="col-md-4 col-sm-6">
+              <q-item-label class="q-mb-xs">Amount to Return to Appropriation:</q-item-label>
+              <q-input filled outlined dense :model-value="formatCurrency(totalReturnAmount)" prefix="₱"
+                :disable="true" />
+            </div>
+
+            <!-- Remarks Field -->
+            <div class="col-md-4 col-sm-12">
+              <q-item-label class="q-mb-xs">Remarks:</q-item-label>
+              <q-input filled outlined dense :model-value="store.currentLiquidation.remarks || ''" :disable="true" />
+            </div>
+          </div>
+        </q-card-section>
+
+        <!-- Expense Accounts Section -->
+        <q-card-section v-if="store.currentLiquidation?.expenses?.length > 0">
+          <div class="text-subtitle1 q-mb-md">
+            <strong>Expense Accounts:</strong>
+          </div>
+
+          <!-- Expense Accounts Table -->
+          <q-table :rows="store.currentLiquidation.expenses" :columns="expenseAccountColumns" row-key="id"
+            :pagination="{ rowsPerPage: 5 }" flat bordered>
+            <template v-slot:body-cell-amount="props">
+              <q-td :props="props">
+                {{ formatCurrency(props.value) }}
+              </q-td>
+            </template>
+          </q-table>
+        </q-card-section>
+      </div>
 
       <!-- Liquidation Details Section -->
       <q-card-section>
@@ -123,39 +154,20 @@
             </span>
           </div>
           <q-space />
-          <q-btn
-            flat
-            dense
-            icon="refresh"
-            color="primary"
-            @click="reloadOrDetails"
-            title="Reload OR Details"
-          />
+          <q-btn flat dense icon="refresh" color="primary" @click="reloadOrDetails" title="Reload OR Details" />
         </div>
 
         <!-- OR Details Table -->
-        <q-table
-          :rows="store.currentLiquidation?.orDetails || []"
-          :columns="orDetailsColumns"
-          row-key="id"
-          :pagination="{ rowsPerPage: 10 }"
-          flat
-          bordered
-          :loading="loadingOrDetails"
-        >
+        <q-table :rows="store.currentLiquidation?.orDetails || []" :columns="orDetailsColumns" row-key="id"
+          :pagination="{ rowsPerPage: 10 }" flat bordered :loading="loadingOrDetails">
           <template v-slot:body-cell-orPhotoUrl="props">
             <q-td :props="props">
-              <q-img
-                v-if="props.value"
-                :src="props.value"
-                style="max-width: 100px; max-height: 100px"
-                class="cursor-pointer"
-                @click="viewImage(props.value)"
-              />
+              <q-img v-if="props.value" :src="props.value" style="max-width: 100px; max-height: 100px"
+                class="cursor-pointer" @click="viewImage(props.value)" />
               <div v-else class="text-grey">No image</div>
             </q-td>
           </template>
-          
+
           <template v-slot:no-data>
             <div class="full-width row flex-center text-grey q-gutter-sm">
               <q-icon size="2em" name="inbox" />
@@ -167,63 +179,51 @@
 
       <q-card-actions align="right" class="custom-actions">
         <!-- Void Request Action Buttons (only for approvers) -->
-        <div v-if="isApprover && store.currentLiquidation?.status === 'Void Requested'" class="q-mr-auto void-action-buttons">
+        <div v-if="isApprover && store.currentLiquidation?.status === 'Void Requested'"
+          class="q-mr-auto void-action-buttons">
           <div class="void-request-indicator">
             <q-icon name="pending_actions" color="orange" size="20px" class="q-mr-sm" />
             <span class="void-request-text">Void Request Pending</span>
           </div>
-          <q-btn
-            unelevated
-            label="Approve Void"
-            color="green"
-            icon="check_circle"
-            @click="handleApproveVoid"
-            :loading="voidActionLoading"
-            class="void-approve-btn"
-          />
-          <q-btn
-            unelevated
-            label="Reject Void"
-            color="red"
-            icon="cancel"
-            @click="handleRejectVoid"
-            :loading="voidActionLoading"
-            class="void-reject-btn"
-          />
+          <q-btn unelevated label="Approve Void" color="green" icon="check_circle" @click="handleApproveVoid"
+            :loading="voidActionLoading" class="void-approve-btn" />
+          <q-btn unelevated label="Reject Void" color="red" icon="cancel" @click="handleRejectVoid"
+            :loading="voidActionLoading" class="void-reject-btn" />
         </div>
+<div
+  v-if="isApprover && store.currentLiquidation?.status === 'Edit Requested'"
+  class="q-mr-auto edit-action-buttons"
+>
+  <div class="edit-request-indicator">
+    <q-icon name="edit_note" color="deep-orange" size="20px" class="q-mr-sm" />
+    <span class="edit-request-text">Edit Request Pending</span>
+  </div>
+  <q-btn
+    unelevated
+    label="Approve Edit"
+    color="green"
+    icon="check_circle"
+    @click="handleApproveEdit"
+    :loading="editActionLoading"
+    class="edit-approve-btn"
+  />
+  <q-btn
+    unelevated
+    label="Reject Edit"
+    color="red"
+    icon="cancel"
+    @click="handleRejectEdit"
+    :loading="editActionLoading"
+    class="edit-reject-btn"
+  />
+</div>
 
-        <!-- Edit Request Action Buttons (only for approvers) -->
-        <div v-if="isApprover && store.currentLiquidation?.status === 'Edit Requested'" class="q-mr-auto edit-action-buttons">
-          <div class="edit-request-indicator">
-            <q-icon name="edit_note" color="deep-orange" size="20px" class="q-mr-sm" />
-            <span class="edit-request-text">Edit Request Pending</span>
-          </div>
-          <q-btn
-            unelevated
-            label="Approve Edit"
-            color="green"
-            icon="check_circle"
-            @click="handleApproveEdit"
-            :loading="editActionLoading"
-            class="edit-approve-btn"
-          />
-          <q-btn
-            unelevated
-            label="Reject Edit"
-            color="red"
-            icon="cancel"
-            @click="handleRejectEdit"
-            :loading="editActionLoading"
-            class="edit-reject-btn"
-          />
-        </div>
-        
-        <q-btn
-          flat
-          label="Close"
-          class="modal-cancel-btn"
-          @click="store.closeDialog('viewOrDetails')"
-        />
+<q-btn
+  flat
+  label="Close"
+  class="modal-cancel-btn"
+  @click="store.closeDialog('viewOrDetails')"
+/>
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -329,10 +329,10 @@ const orDetailsCount = computed(() => {
 // Check if user is an approver (Captain/SK Chairperson)
 const isApprover = computed(() => {
   const userPosition = authStore.user?.position_name?.toLowerCase().trim() || ''
-  return userPosition.includes('captain') || 
-         userPosition.includes('chairperson') || 
-         userPosition.includes('barangay captain') || 
-         userPosition.includes('sk chairperson')
+  return userPosition.includes('captain') ||
+    userPosition.includes('chairperson') ||
+    userPosition.includes('barangay captain') ||
+    userPosition.includes('sk chairperson')
 })
 
 // Method to manually reload OR details if needed
@@ -361,7 +361,7 @@ const formatCurrency = (value) => {
 // Handle void approval
 const handleApproveVoid = async () => {
   if (!store.currentLiquidation?.id) return
-  
+
   voidActionLoading.value = true
   try {
     await store.approveVoidRequest(store.currentLiquidation.id)
@@ -391,7 +391,7 @@ const handleApproveVoid = async () => {
 // Handle void rejection
 const handleRejectVoid = () => {
   if (!store.currentLiquidation?.id) return
-  
+
   $q.dialog({
     title: 'Reject Void Request',
     message: 'Please provide rejection remarks:',
@@ -633,9 +633,11 @@ const handleRejectEdit = () => {
   0% {
     box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4);
   }
+
   70% {
     box-shadow: 0 0 0 6px rgba(255, 193, 7, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
   }
