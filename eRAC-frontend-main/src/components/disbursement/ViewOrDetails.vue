@@ -190,8 +190,40 @@
           <q-btn unelevated label="Reject Void" color="red" icon="cancel" @click="handleRejectVoid"
             :loading="voidActionLoading" class="void-reject-btn" />
         </div>
+<div
+  v-if="isApprover && store.currentLiquidation?.status === 'Edit Requested'"
+  class="q-mr-auto edit-action-buttons"
+>
+  <div class="edit-request-indicator">
+    <q-icon name="edit_note" color="deep-orange" size="20px" class="q-mr-sm" />
+    <span class="edit-request-text">Edit Request Pending</span>
+  </div>
+  <q-btn
+    unelevated
+    label="Approve Edit"
+    color="green"
+    icon="check_circle"
+    @click="handleApproveEdit"
+    :loading="editActionLoading"
+    class="edit-approve-btn"
+  />
+  <q-btn
+    unelevated
+    label="Reject Edit"
+    color="red"
+    icon="cancel"
+    @click="handleRejectEdit"
+    :loading="editActionLoading"
+    class="edit-reject-btn"
+  />
+</div>
 
-        <q-btn flat label="Close" class="modal-cancel-btn" @click="store.closeDialog('viewOrDetails')" />
+<q-btn
+  flat
+  label="Close"
+  class="modal-cancel-btn"
+  @click="store.closeDialog('viewOrDetails')"
+/>
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -208,6 +240,7 @@ const authStore = useAuthStore()
 const $q = useQuasar()
 const loadingOrDetails = ref(false)
 const voidActionLoading = ref(false)
+const editActionLoading = ref(false)
 
 // Table columns for Expense Accounts - matching the image structure
 const expenseAccountColumns = [
@@ -396,6 +429,78 @@ const handleRejectVoid = () => {
     }
   })
 }
+
+// Handle edit approval
+const handleApproveEdit = async () => {
+  if (!store.currentLiquidation?.id) return
+  
+  editActionLoading.value = true
+  try {
+    await store.approveEditRequest(store.currentLiquidation.id)
+    $q.notify({
+      type: 'positive',
+      message: 'Edit request approved successfully!',
+      icon: 'check_circle',
+      position: 'top',
+      timeout: 3000,
+    })
+    // Close the dialog after successful approval
+    store.closeDialog('viewOrDetails')
+  } catch (error) {
+    console.error('Error approving edit request:', error)
+    $q.notify({
+      type: 'negative',
+      message: error.message || 'Failed to approve edit request',
+      icon: 'error',
+      position: 'top',
+      timeout: 5000,
+    })
+  } finally {
+    editActionLoading.value = false
+  }
+}
+
+// Handle edit rejection
+const handleRejectEdit = () => {
+  if (!store.currentLiquidation?.id) return
+  
+  $q.dialog({
+    title: 'Reject Edit Request',
+    message: 'Please provide rejection remarks:',
+    prompt: {
+      model: '',
+      type: 'textarea',
+      isValid: (val) => val && val.trim() !== '',
+    },
+    cancel: true,
+    persistent: true,
+  }).onOk(async (remarks) => {
+    editActionLoading.value = true
+    try {
+      await store.rejectEditRequest(store.currentLiquidation.id, remarks?.trim?.() || '')
+      $q.notify({
+        type: 'positive',
+        message: 'Edit request rejected successfully!',
+        icon: 'check_circle',
+        position: 'top',
+        timeout: 3000,
+      })
+      // Close the dialog after successful rejection
+      store.closeDialog('viewOrDetails')
+    } catch (error) {
+      console.error('Error rejecting edit request:', error)
+      $q.notify({
+        type: 'negative',
+        message: error.message || 'Failed to reject edit request',
+        icon: 'error',
+        position: 'top',
+        timeout: 5000,
+      })
+    } finally {
+      editActionLoading.value = false
+    }
+  })
+}
 </script>
 
 <style scoped>
@@ -454,6 +559,54 @@ const handleRejectVoid = () => {
 }
 
 .void-reject-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
+}
+
+/* Edit action buttons styling */
+.edit-action-buttons {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: #fff3e0;
+  border-radius: 8px;
+  border: 1px solid #ffcc02;
+  margin-right: 16px;
+}
+
+.edit-request-indicator {
+  display: flex;
+  align-items: center;
+  color: #ff5722;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.edit-approve-btn {
+  font-weight: 600;
+  text-transform: none;
+  padding: 8px 16px;
+  min-width: 120px;
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
+  transition: all 0.2s ease;
+}
+
+.edit-approve-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+}
+
+.edit-reject-btn {
+  font-weight: 600;
+  text-transform: none;
+  padding: 8px 16px;
+  min-width: 120px;
+  box-shadow: 0 2px 4px rgba(244, 67, 54, 0.2);
+  transition: all 0.2s ease;
+}
+
+.edit-reject-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
 }

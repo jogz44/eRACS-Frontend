@@ -48,7 +48,14 @@ class DisbursementController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $query = Disbursement::with('bank');
+        if (!$user) {
+            \Log::error('Disbursement index: No authenticated user');
+            return response()->json([
+                'status' => false,
+                'message' => 'User not authenticated'
+            ], 401);
+        }
+        $query = Disbursement::with(['bank', 'barangay']);
 
         // If user is authenticated and has barangay_id, filter by it
         if ($user && isset($user->barangay_id)) {
@@ -78,6 +85,7 @@ class DisbursementController extends Controller
                 'status' => $d->status,
                 'remarks' => $d->remarks,
                 'rejection_remarks' => $d->rejection_remarks,
+                'barangay_name' => $d->barangay ? $d->barangay->name : 'Unknown',
                 'created_at' => $d->created_at,
                 'updated_at' => $d->updated_at,
             ];

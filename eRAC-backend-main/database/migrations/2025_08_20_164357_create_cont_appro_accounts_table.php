@@ -15,7 +15,8 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('contAppropriation_id');
             $table->unsignedBigInteger('tranAppropriation_id');
-            $table->decimal('remainingBalance', 15, 2);
+            $table->decimal('original_amount', 15, 2); // Original appropriation amount
+            $table->decimal('current_amount', 15, 2); // Current remaining balance (renamed from remainingBalance)
             $table->string('continuingYear', 4);
             $table->enum('status', ['active', 'inactive'])->default('active');
             $table->foreignId('user_id')->constrained('barangay_users');

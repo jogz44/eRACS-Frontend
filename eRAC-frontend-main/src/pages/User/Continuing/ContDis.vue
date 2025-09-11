@@ -884,13 +884,9 @@ const handleEditSave = async (result) => {
 // Handle liquidate save result
 const handleLiquidateSave = async (result) => {
   if (result.success) {
-    $q.notify({
-      type: 'positive',
-      message: 'Disbursement liquidated successfully!',
-      icon: 'check_circle',
-      position: 'top',
-      timeout: 3000,
-    })
+    // Success message is already handled by ContOrDetails.vue component
+    // Just refresh the data
+    await store.fetchDisbursements()
   } else {
     $q.notify({
       type: 'negative',

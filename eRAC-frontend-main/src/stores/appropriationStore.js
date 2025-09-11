@@ -104,7 +104,10 @@ export const useAppropriationStore = defineStore("appropriation", {
       const total = parseCurrency(state.selectedRow?.total || 0)
       // Use existingAllocationsTotal instead of totalAllocated for accurate calculation
       const existingAllocated = state.existingAllocationsTotal || 0
-      return Math.round((total - existingAllocated) * 100) / 100
+      const result = Math.round((total - existingAllocated) * 100) / 100
+      
+      
+      return result
     },
 
     filteredAppropriations(state) {
@@ -462,6 +465,7 @@ export const useAppropriationStore = defineStore("appropriation", {
 
         const allocations = response.data.data || []
 
+
         // Clear previous state
         this.inputCache = {}
         this.allocationInputs = {}
@@ -518,6 +522,7 @@ export const useAppropriationStore = defineStore("appropriation", {
         })
 
         this.existingAllocationsTotal = lowestLevel.reduce((sum, amount) => sum + amount, 0)
+
 
         // Calculate item totals from sub-items if not already set
         const itemTotals = {}
@@ -604,6 +609,11 @@ export const useAppropriationStore = defineStore("appropriation", {
             this.appropriations[budgetIndex].unappropriated = parseCurrency(response.data.budget.current_amount)
           }
         }
+
+        // Update existingAllocationsTotal to reflect the new allocations
+        // This prevents negative net change calculations after saving
+        const totalNewAllocation = cleanedAllocations.reduce((sum, allocation) => sum + allocation.amount, 0)
+        this.existingAllocationsTotal = totalNewAllocation
 
         // Optionally refresh in the background so UI can close immediately
         if (doBackground) {
@@ -886,6 +896,14 @@ export const useAppropriationStore = defineStore("appropriation", {
     // Set selected fiscal year for filtering
     setSelectedFiscalYear(year) {
       this.selectedFiscalYear = year
+    },
+
+    // Reset allocation state after successful commit
+    resetAllocationState() {
+      this.inputCache = {}
+      this.allocationInputs = {}
+      this.originalAllocations = {}
+      this.existingAllocationsTotal = 0
     },
 
     // Fetch available fiscal years

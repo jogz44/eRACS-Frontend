@@ -49,7 +49,7 @@ Route::prefix('barangay')->group(function () {
     Route::post('/check-email', [AuthController::class, 'checkEmailExists']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
-    Route::middleware(['auth:sanctum', 'auth.barangay'])->group(function () {
+    Route::middleware(['auth.barangay'])->group(function () {
         // Route::middleware(['check.role'])->group(function () {
                     Route::post('/setlogs', [AdminAuthController::class, 'logUserActionRequest']);
         Route::get('/getlogs', [AuthController::class, 'getBarangayLogs']);
@@ -211,6 +211,13 @@ Route::prefix('barangay')->group(function () {
         Route::get('/continuing-disbursements/{id}', [ContinuingDisbursementController::class, 'show']);
         Route::put('/continuing-disbursements/{id}', [ContinuingDisbursementController::class, 'update']);
         Route::delete('/continuing-disbursements/{id}', [ContinuingDisbursementController::class, 'destroy']);
+
+        // Continuing Disbursement OR Details
+        Route::get('/continuing-disbursements/{id}/or-details', [ContinuingDisbursementController::class, 'getOrDetails']);
+        Route::post('/continuing-disbursements/{id}/or-details', [ContinuingDisbursementController::class, 'saveOrDetails']);
+        Route::delete('/continuing-disbursements/{id}/or-details/{orDetailId}', [ContinuingDisbursementController::class, 'deleteOrDetail']);
+        // Continuing Disbursement OR Photo Upload
+        Route::post('/continuing-disbursements/or-photo/upload', [ContinuingDisbursementController::class, 'uploadOrPhoto']);
 
 
     });

@@ -187,7 +187,7 @@
           <div class="col-auto" v-if="selectedBudgetType !== 'supplemental'">
             <q-btn
               label="Add"
-              color="primary"
+              color="secondary"
               icon="add"
               @click="addBudget"
               :loading="addLoading"
@@ -325,7 +325,7 @@
             <q-btn
               dense
               label="Commit"
-              :color="props.row.unappropriated <= 0 ? 'grey' : 'primary'"
+              :color="props.row.unappropriated <= 0 ? 'grey' : 'secondary'"
               @click="openAllocationDialog(props.row)"
               :disable="props.row.unappropriated <= 0"
               v-permission="'add'"
@@ -758,7 +758,9 @@
 
           <q-input
             outlined
-            v-model.number="transferAmount"
+            :model-value="formatInputValue(transferAmount)"
+            @update:model-value="handleTransferAmountInput"
+            @blur="handleTransferAmountBlur"
             label="Transfer Amount"
             prefix="₱"
             placeholder="0.00"
@@ -767,18 +769,21 @@
             step="0.01"
             min="0"
             :rules="[
-              (val) => !!val || 'Transfer amount is required',
               (val) => {
-                const num = parseFloat(val)
+                const cleanVal = val ? String(val).replace(/[₱,\s]/g, '') : ''
+                if (!cleanVal || cleanVal === '') return 'Transfer amount is required'
+                const num = parseCurrency(val)
                 return !isNaN(num) && num > 0 || 'Amount must be greater than 0'
               },
               (val) => {
+                const cleanVal = val ? String(val).replace(/[₱,\s]/g, '') : ''
+                if (!cleanVal || cleanVal === '') return true
                 if (!selectedSupplementalBudget) return true
                 const supplementalBudget = supplementalBudgets.find(
                   (b) => b.id === selectedSupplementalBudget,
                 )
                 const availableAmount = supplementalBudget?.unused_amount || 0
-                const requestedAmount = parseFloat(val) || 0
+                const requestedAmount = parseCurrency(val) || 0
                 return (
                   !supplementalBudget ||
                   requestedAmount <= availableAmount ||
@@ -786,12 +791,15 @@
                 )
               },
               (val) => {
-                const num = parseFloat(val)
+                const cleanVal = val ? String(val).replace(/[₱,\s]/g, '') : ''
+                if (!cleanVal || cleanVal === '') return true
+                const num = parseCurrency(val)
                 return num <= 10000000 || 'Amount cannot exceed ₱10,000,000'
               }
             ]"
-            @input="validateTransferAmount"
-            @blur="formatTransferAmount"
+            @keypress="blockNonNumeric"
+            @paste.prevent="handlePasteNumeric"
+            reactive-rules
           />
 
           <q-input
@@ -811,17 +819,17 @@
             :disable="transferLoading"
           />
           <q-btn
-            label="Transfer"
+
             color="secondary"
             @click="executeTransfer"
             :loading="transferLoading"
             :disable="!canTransfer || transferLoading"
             :class="{ 'q-btn--loading': transferLoading }"
-            icon="swap_horiz"
+
           >
             <template v-if="!transferLoading">
               <q-icon name="swap_horiz" class="q-mr-xs" />
-              Transfer ₱{{ transferAmount ? parseFloat(transferAmount).toLocaleString() : '0' }}
+              Transfer ₱{{ transferAmount ? parseCurrency(transferAmount).toLocaleString() : '0' }}
             </template>
             <template v-else>
               <q-spinner size="16px" class="q-mr-xs" />
@@ -849,7 +857,7 @@
       v-if="selectedBudgetType !== 'supplemental'"
       round
       dense
-      color="primary"
+      color="secondary"
       icon="add"
       class="mobile-add-btn"
       @click="addBudget"
@@ -1033,7 +1041,7 @@ const canTransfer = computed(() => {
     !selectedSupplementalBudget.value ||
     !selectedAnnualBudget.value ||
     !transferAmount.value ||
-    transferAmount.value <= 0
+    transferAmount.value === ''
   ) {
     return false
   }
@@ -1046,35 +1054,19 @@ const canTransfer = computed(() => {
     return false
   }
 
-  const amount = parseFloat(transferAmount.value)
+  const amount = parseCurrency(transferAmount.value)
   const availableAmount = supplementalBudget.unused_amount || 0
 
   return !isNaN(amount) && amount > 0 && amount <= availableAmount
 })
 
-// Enhanced validation functions
-const validateTransferAmount = (value) => {
-  const num = parseFloat(value)
-  if (isNaN(num) || num < 0) {
-    transferAmount.value = 0
-  } else if (num > 10000000) {
-    transferAmount.value = 10000000
-  }
-}
 
-const formatTransferAmount = (event) => {
-  const value = event.target.value
-  const num = parseFloat(value)
-  if (!isNaN(num)) {
-    transferAmount.value = Math.round(num * 100) / 100 // Round to 2 decimal places
-  }
-}
 
 // Transfer validation helper functions
 const getTransferValidationClass = () => {
   if (!transferAmount.value || !selectedSupplementalBudget.value) return 'bg-grey-1'
 
-  const amount = parseFloat(transferAmount.value)
+  const amount = parseCurrency(transferAmount.value)
   const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
 
   if (isNaN(amount) || amount <= 0) return 'bg-orange-1'
@@ -1086,7 +1078,7 @@ const getTransferValidationClass = () => {
 const getTransferValidationTextClass = () => {
   if (!transferAmount.value || !selectedSupplementalBudget.value) return 'text-grey-6'
 
-  const amount = parseFloat(transferAmount.value)
+  const amount = parseCurrency(transferAmount.value)
   const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
 
   if (isNaN(amount) || amount <= 0) return 'text-orange-8'
@@ -1098,7 +1090,7 @@ const getTransferValidationTextClass = () => {
 const getTransferValidationMessage = () => {
   if (!transferAmount.value || !selectedSupplementalBudget.value) return 'Enter transfer amount'
 
-  const amount = parseFloat(transferAmount.value)
+  const amount = parseCurrency(transferAmount.value)
   const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
 
   if (isNaN(amount) || amount <= 0) return 'Please enter a valid amount'
@@ -1110,7 +1102,7 @@ const getTransferValidationMessage = () => {
 const getTransferValidationIcon = () => {
   if (!transferAmount.value || !selectedSupplementalBudget.value) return 'help'
 
-  const amount = parseFloat(transferAmount.value)
+  const amount = parseCurrency(transferAmount.value)
   const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
 
   if (isNaN(amount) || amount <= 0) return 'warning'
@@ -1122,7 +1114,7 @@ const getTransferValidationIcon = () => {
 const getTransferValidationColor = () => {
   if (!transferAmount.value || !selectedSupplementalBudget.value) return 'grey-6'
 
-  const amount = parseFloat(transferAmount.value)
+  const amount = parseCurrency(transferAmount.value)
   const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
 
   if (isNaN(amount) || amount <= 0) return 'orange-8'
@@ -1181,7 +1173,7 @@ const showTransferDialog = ref(false)
 const transferLoading = ref(false)
 const selectedSupplementalBudget = ref(null)
 const selectedAnnualBudget = ref(null)
-const transferAmount = ref(null)
+const transferAmount = ref('')
 const transferDescription = ref('')
 
 // Supplemental budget view dialog
@@ -1527,7 +1519,7 @@ const closeEditAllocationDialog = () => {
 const openTransferDialog = () => {
   selectedSupplementalBudget.value = null
   selectedAnnualBudget.value = null
-  // Don't clear transfer amount - let user keep their input
+  transferAmount.value = ''
   transferDescription.value = ''
   showTransferDialog.value = true
 }
@@ -1536,7 +1528,7 @@ const closeTransferDialog = () => {
   showTransferDialog.value = false
   selectedSupplementalBudget.value = null
   selectedAnnualBudget.value = null
-  // Don't clear transfer amount when dialog closes - only when dialog opens
+  transferAmount.value = ''
   transferDescription.value = ''
 }
 
@@ -1558,7 +1550,17 @@ const executeTransfer = async () => {
   }
 
   // Additional validation before transfer
-  const transferAmountNum = parseFloat(transferAmount.value)
+  if (!transferAmount.value || transferAmount.value === '') {
+    $q.notify({
+      type: 'negative',
+      message: 'Please enter a transfer amount',
+      icon: 'error',
+      position: 'top',
+    })
+    return
+  }
+
+  const transferAmountNum = parseCurrency(transferAmount.value)
   if (isNaN(transferAmountNum) || transferAmountNum <= 0) {
     $q.notify({
       type: 'negative',
@@ -1619,15 +1621,32 @@ const executeTransfer = async () => {
 
   if (!confirmed) return
 
+  // Snapshot current selections BEFORE closing (closing clears refs)
+  const snapshotFromBudgetId = selectedSupplementalBudget.value
+  const snapshotToBudgetId = selectedAnnualBudget.value
+  const snapshotAmount = transferAmountNum
+  const snapshotDescription = transferDescription.value?.trim() || null
+  const snapshotFromBudget = supplementalBudgets.value.find(b => b.id === snapshotFromBudgetId)
+  const snapshotToBudget = annualBudgets.value.find(b => b.id === snapshotToBudgetId)
+
+  // Close dialog immediately after confirmation
+  closeTransferDialog()
+
   transferLoading.value = true
 
   try {
     const payload = {
-      from_budget_id: selectedSupplementalBudget.value,
-      to_budget_id: selectedAnnualBudget.value,
-      amount: transferAmountNum,
-      description: transferDescription.value?.trim() || null,
+      from_budget_id: snapshotFromBudgetId,
+      to_budget_id: snapshotToBudgetId,
+      amount: snapshotAmount,
+      description: snapshotDescription,
     }
+
+    // Debug logging
+    console.log('Transfer payload:', payload)
+    console.log('Selected supplemental budget:', snapshotFromBudgetId)
+    console.log('Selected annual budget:', snapshotToBudgetId)
+    console.log('Transfer amount:', snapshotAmount)
 
     // Call the transfer API with enhanced error handling
     const authStore = useAuthStore()
@@ -1635,6 +1654,9 @@ const executeTransfer = async () => {
       ? '/api/admin/budget-transfer'
       : '/api/barangay/budget-transfer'
     const token = authStore.admin ? authStore.adminToken : authStore.token
+
+    console.log('API endpoint:', endpoint)
+    console.log('Auth token exists:', !!token)
 
     const response = await api.post(endpoint, payload, {
       headers: {
@@ -1646,13 +1668,13 @@ const executeTransfer = async () => {
     })
 
     if (response.data?.status) {
-      // Success notification with detailed information
-      const fromBudget = supplementalBudgets.value.find(b => b.id === selectedSupplementalBudget.value)
-      const toBudget = annualBudgets.value.find(b => b.id === selectedAnnualBudget.value)
+      // Success notification with detailed information (use snapshots)
+      const fromBudget = snapshotFromBudget
+      const toBudget = snapshotToBudget
 
       $q.notify({
         type: 'positive',
-        message: `Successfully transferred ₱${transferAmountNum.toLocaleString()} from "${fromBudget?.description || 'Supplemental Budget'}" to "${toBudget?.description || 'Annual Budget'}"`,
+        message: `Successfully transferred ₱${snapshotAmount.toLocaleString()} from "${fromBudget?.description || 'Supplemental Budget'}" to "${toBudget?.description || 'Annual Budget'}"`,
         icon: 'check_circle',
         position: 'top',
         timeout: 5000,
@@ -1667,25 +1689,23 @@ const executeTransfer = async () => {
         ]
       })
 
-      // Clear form data
-      transferAmount.value = null
-      transferDescription.value = ''
-
-      // Optimized data refresh with proper error handling
-      await refreshDataAfterTransfer()
-
-      closeTransferDialog()
+      // Refresh data in background
+      refreshDataAfterTransfer()
     } else {
       throw new Error(response.data?.message || 'Transfer failed - no status returned')
     }
   } catch (error) {
     console.error('Transfer error:', error)
     console.error('Error response:', error.response?.data)
+    console.error('Error status:', error.response?.status)
+    console.error('Error headers:', error.response?.headers)
 
     let errorMessage = 'Failed to transfer budget'
     let errorDetails = ''
 
     if (error.response?.data) {
+      console.log('Full error response data:', JSON.stringify(error.response.data, null, 2))
+      
       if (error.response.data.message) {
         errorMessage = error.response.data.message
       }
@@ -1693,6 +1713,7 @@ const executeTransfer = async () => {
       if (error.response.data.errors) {
         // Handle validation errors with detailed feedback
         const errors = error.response.data.errors
+        console.log('Validation errors:', errors)
         const errorMessages = Object.entries(errors).map(([field, messages]) => {
           const fieldName = field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
           return `${fieldName}: ${Array.isArray(messages) ? messages.join(', ') : messages}`
@@ -2140,6 +2161,44 @@ const handleEditAmountInput = (item, value) => {
 const handleEditAmountBlur = (item, value) => {
   const formatted = formatToTwoDecimals(value)
   item.amount = formatted
+}
+
+// Transfer amount input handlers
+const handleTransferAmountInput = (value) => {
+  let cleanValue = String(value).replace(/[^\d.]/g, '')
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    cleanValue = parts[0] + '.' + parts.slice(1).join('')
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
+  }
+  transferAmount.value = cleanValue
+  console.log('Transfer amount input:', { value, cleanValue, transferAmount: transferAmount.value })
+}
+
+const handleTransferAmountBlur = (event) => {
+  const value = event.target.value
+  const formatted = formatToTwoDecimals(value)
+  transferAmount.value = formatted
+}
+
+const handlePasteNumeric = (event) => {
+  event.preventDefault()
+  const pastedText = event.clipboardData.getData('text')
+  let cleanText = pastedText.replace(/[^\d.]/g, '')
+  const parts = cleanText.split('.')
+  if (parts.length > 2) {
+    cleanText = parts[0] + '.' + parts.slice(1).join('')
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    parts[1] = parts[1].substring(0, 2)
+    cleanText = parts[0] + '.' + parts[1]
+  }
+  const num = parseFloat(cleanText)
+  if (!isNaN(num)) {
+    transferAmount.value = cleanText
+  }
 }
 
 
@@ -2624,4 +2683,5 @@ const getDescriptionOnly = (description) => {
     min-width: 250px;
   }
 }
+
 </style>

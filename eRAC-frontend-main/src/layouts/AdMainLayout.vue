@@ -89,11 +89,13 @@
               v-for="favorite in favorites"
               :key="favorite.title"
               class="favorite-item"
+              :class="{ 'disabled': favorite.title === 'Reports' && !isBarangaySelected }"
               @click="favorite.type === 'panel' ? togglePanel(favorite.panelType) : navigateToFavorite(favorite.link)"
             >
               <q-icon :name="favorite.icon" size="16px" />
               <span class="favorite-title">{{ favorite.title }}</span>
               <q-icon v-if="favorite.type === 'panel'" name="chevron_right" size="14px" class="panel-indicator" />
+              <q-icon v-if="favorite.title === 'Reports' && !isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
             </div>
           </div>
         </div>
@@ -388,6 +390,23 @@ const savedSearches = ref([
 ])
 
 const navigateToFavorite = (link) => {
+  // Check if trying to access reports page without barangay selected
+  if (link === '/admin/reportPage' && !isBarangaySelected.value) {
+    $q.notify({
+      type: 'info',
+      message: 'Please select a barangay first to access reports',
+      position: 'top',
+      timeout: 5000,
+      icon: 'info',
+      color: 'blue',
+      textColor: 'white',
+      actions: [
+        { label: 'Got it', color: 'white', handler: () => {} }
+      ]
+    })
+    return
+  }
+  
   router.push(link)
   closePanel()
 }
@@ -724,6 +743,22 @@ watch(
 
 .favorite-item:hover {
   background-color: #0E780E;
+}
+
+.favorite-item.disabled {
+  background-color: #666464 !important;
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: 0 2px 4px rgba(158, 158, 158, 0.3);
+}
+
+.favorite-item.disabled:hover {
+  background-color: #9e9e9e !important;
+  transform: none;
+}
+
+.favorite-item.disabled .favorite-title {
+  color: #e0e0e0 !important;
 }
 
 .favorite-title {

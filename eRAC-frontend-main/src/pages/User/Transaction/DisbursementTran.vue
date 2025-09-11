@@ -6,15 +6,21 @@
           <div class="text-h6 text-weight-medium">Disbursement Transaction</div>
           <div class="text-caption text-grey-6">
             Showing transactions for fiscal year {{ currentFiscalYear }}
+          </div>
         </div>
-        </div>
-        <q-btn icon="refresh" color="primary" flat dense @click="refreshData"
-          :loading="loading" title="Refresh disbursements" />
+        <q-btn
+          icon="refresh"
+          color="primary"
+          flat
+          dense
+          @click="refreshData"
+          :loading="loading"
+          title="Refresh disbursements"
+        />
       </div>
     </div>
 
     <!-- Status Summary Cards -->
-
 
     <!-- Filters Section -->
     <q-card flat bordered class="q-mb-md filters-section">
@@ -23,21 +29,39 @@
           <!-- Status Filter -->
           <div class="col-md-2 col-sm-6 col-xs-12">
             <q-item-label class="q-mb-xs text-weight-medium">Status:</q-item-label>
-            <q-select outlined dense v-model="selectedStatus" :options="statusOptions" option-label="label"
-              option-value="value" emit-value map-options :label="currentStatusLabel" clearable
-              @update:model-value="handleStatusChange" />
+            <q-select
+              outlined
+              dense
+              v-model="selectedStatus"
+              :options="statusOptions"
+              option-label="label"
+              option-value="value"
+              emit-value
+              map-options
+              :label="currentStatusLabel"
+              clearable
+              @update:model-value="handleStatusChange"
+            />
           </div>
-
 
           <!-- Search Input -->
           <div class="col-md-2 col-sm-6 col-xs-12">
             <q-item-label class="q-mb-xs text-weight-medium">Search:</q-item-label>
-            <q-input outlined dense v-model="searchQuery" placeholder="Search payee, DV number..." clearable>
+            <q-input
+              outlined
+              dense
+              v-model="searchQuery"
+              placeholder="Search payee, DV number..."
+              clearable
+            >
               <template v-slot:append>
                 <q-icon name="search" />
               </template>
               <template v-slot:hint v-if="searchQuery">
-                {{ filteredDisbursements.length }} result{{ filteredDisbursements.length !== 1 ? 's' : '' }} found
+                {{ filteredDisbursements.length }} result{{
+                  filteredDisbursements.length !== 1 ? 's' : ''
+                }}
+                found
               </template>
             </q-input>
           </div>
@@ -45,8 +69,15 @@
           <!-- Date Range Filter -->
           <div class="col-md-2 col-sm-6 col-xs-12">
             <q-item-label class="q-mb-xs text-weight-medium">Date Range:</q-item-label>
-            <q-input outlined dense v-model="dateRangeDisplay" placeholder="Select date range..." readonly clearable
-              @clear="onDateRangeClear">
+            <q-input
+              outlined
+              dense
+              v-model="dateRangeDisplay"
+              placeholder="Select date range..."
+              readonly
+              clearable
+              @clear="onDateRangeClear"
+            >
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
@@ -63,17 +94,30 @@
 
           <!-- Clear Button -->
           <div class="col-md-1 col-sm-6 col-xs-12">
-            <q-btn dense outlined color="red-10" icon="clear_all" label="Clear" @click="clearAllFilters"
-              class="full-width" />
+            <q-btn
+              dense
+              outlined
+              color="red-10"
+              icon="clear_all"
+              label="Clear"
+              @click="clearAllFilters"
+              class="full-width"
+            />
           </div>
 
           <!-- Spacer to push Add button to the right -->
-          <div class="col-md-2 col-sm-0 col-xs-0"></div>
+          <div class="col"></div>
 
           <!-- Add Button -->
           <div class="col-md-1 col-sm-6 col-xs-12">
-            <q-btn label="Add" color="primary" icon="add" @click="store.openDialog('disbursement')" class="full-width"
-              v-permission="'add'" />
+            <q-btn
+              label="Add"
+              color="primary"
+              icon="add"
+              @click="store.openDialog('disbursement')"
+              class="full-width"
+              v-permission="'add'"
+            />
           </div>
         </div>
       </q-card-section>
@@ -94,8 +138,13 @@
               <!-- Date Field -->
               <div class="col-md-4 col-sm-6">
                 <q-item-label class="q-mb-xs">Date:</q-item-label>
-                <q-input outlined dense v-model="store.forms.disbursement.date" mask="##/##/####"
-                  @keydown.enter="handleEnterKey">
+                <q-input
+                  outlined
+                  dense
+                  v-model="store.forms.disbursement.date"
+                  mask="##/##/####"
+                  @keydown.enter="handleEnterKey"
+                >
                   <template v-slot:append>
                     <q-icon name="event" class="cursor-not-allowed" />
                   </template>
@@ -105,31 +154,56 @@
               <!-- Bank Field -->
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Bank:</q-item-label>
-                <q-select outlined dense v-model="store.forms.disbursement.bank_id" :options="bankStore.availableBanks"
-                  option-label="name" option-value="id" emit-value map-options :label="currentBankLabel"
-                  :loading="store.bankLoading" @update:model-value="handleBankSelection"
-                  @keydown.enter="handleEnterKey" />
+                <q-select
+                  outlined
+                  dense
+                  v-model="store.forms.disbursement.bank_id"
+                  :options="bankStore.availableBanks"
+                  option-label="name"
+                  option-value="id"
+                  emit-value
+                  map-options
+                  :label="currentBankLabel"
+                  :loading="store.bankLoading"
+                  @update:model-value="handleBankSelection"
+                  @keydown.enter="handleEnterKey"
+                />
               </div>
 
               <!-- Check Number Field -->
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Cheque Number:</q-item-label>
 
-                <q-input outlined dense v-model="store.autoCheque" :disable="true"
-                  @keydown.enter="handleEnterKey"></q-input>
+                <q-input
+                  outlined
+                  dense
+                  v-model="store.autoCheque"
+                  :disable="true"
+                  @keydown.enter="handleEnterKey"
+                ></q-input>
               </div>
 
               <!-- DV Number Field -->
               <div class="col-md-4 col-sm-6">
                 <q-item-label class="q-mb-xs">DV Number:</q-item-label>
-                <q-input outlined dense :disable="true" v-model="store.forms.disbursement.dvNumber"
-                  @keydown.enter="handleEnterKey" />
+                <q-input
+                  outlined
+                  dense
+                  :disable="true"
+                  v-model="store.forms.disbursement.dvNumber"
+                  @keydown.enter="handleEnterKey"
+                />
               </div>
 
               <!-- Payee Field -->
               <div class="col-md-4 col-sm-12">
                 <q-item-label class="q-mb-xs">Payee:</q-item-label>
-                <q-input outlined dense v-model="store.forms.disbursement.payee" @keydown.enter="handleEnterKey" />
+                <q-input
+                  outlined
+                  dense
+                  v-model="store.forms.disbursement.payee"
+                  @keydown.enter="handleEnterKey"
+                />
               </div>
             </div>
           </q-card-section>
@@ -137,19 +211,43 @@
           <!-- Add Expense Button -->
           <q-card-section>
             <div class="row justify-end q-mb-md">
-              <q-btn label="Add" color="primary" icon="add" @click="handleAddExpense"
-                @mouseenter="preloadExpenseAccounts" :loading="addingExpense || store.expenseTypeLoading"
-                v-permission="'add'" />
+              <q-btn
+                label="Add"
+                color="primary"
+                icon="add"
+                @click="handleAddExpense"
+                @mouseenter="preloadExpenseAccounts"
+                :loading="addingExpense || store.expenseTypeLoading"
+                v-permission="'add'"
+              />
             </div>
 
             <!-- Expense Table -->
-            <q-table :rows="store.expenses" :columns="store.expenseColumns" row-key="id"
-              :pagination="{ rowsPerPage: 5 }" flat bordered>
+            <q-table
+              :rows="store.expenses"
+              :columns="store.expenseColumns"
+              row-key="id"
+              :pagination="{ rowsPerPage: 5 }"
+              flat
+              bordered
+            >
               <template v-slot:body-cell-action="props">
                 <q-td :props="props">
                   <div class="q-gutter-xs">
-                    <q-btn size="sm" dense icon="edit" color="orange" @click="store.editItem(props.row)" />
-                    <q-btn size="sm" dense icon="delete" color="red" @click="handleDeleteExpense(props.row)" />
+                    <q-btn
+                      size="sm"
+                      dense
+                      icon="edit"
+                      color="orange"
+                      @click="store.editItem(props.row)"
+                    />
+                    <q-btn
+                      size="sm"
+                      dense
+                      icon="delete"
+                      color="red"
+                      @click="handleDeleteExpense(props.row)"
+                    />
                   </div>
                 </q-td>
               </template>
@@ -158,16 +256,26 @@
             <!-- Amount Display -->
             <div class="q-mt-md">
               <q-item-label class="q-mb-xs">Amount:</q-item-label>
-              <q-input outlined dense
+              <q-input
+                outlined
+                dense
                 :model-value="`₱${(store.totalExpensesAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`"
-                style="width: 300px" readonly />
+                style="width: 300px"
+                readonly
+              />
             </div>
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md">
             <q-btn flat label="Cancel" @click="handleDialogClose('disbursement')" />
-            <q-btn label="Disburse" color="primary" @click="handleSaveClick" v-permission="'add'"
-              :loading="store.savingDisbursement" :disable="store.savingDisbursement" />
+            <q-btn
+              label="Disburse"
+              color="primary"
+              @click="handleSaveClick"
+              v-permission="'add'"
+              :loading="store.savingDisbursement"
+              :disable="store.savingDisbursement"
+            />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -180,18 +288,36 @@
           </q-card-section>
 
           <q-card-section>
-            <q-input outlined dense placeholder="Search expense account..." v-model="store.expenseSearch"
-              class="q-mb-sm" style="width: 300px">
+            <q-input
+              outlined
+              dense
+              placeholder="Search expense account..."
+              v-model="store.expenseSearch"
+              class="q-mb-sm"
+              style="width: 300px"
+            >
               <template v-slot:append>
                 <q-icon name="search" />
               </template>
             </q-input>
 
-            <q-table :rows="store.filteredExpenseAccounts" :columns="store.expenseAccountColumns" row-key="id"
-              :loading="store.loading || store.expenseTypeLoading" :filter="store.expenseSearch" flat bordered>
+            <q-table
+              :rows="store.filteredExpenseAccounts"
+              :columns="store.expenseAccountColumns"
+              row-key="id"
+              :loading="store.loading || store.expenseTypeLoading"
+              :filter="store.expenseSearch"
+              flat
+              bordered
+            >
               <template v-slot:body-cell-action="props">
                 <q-td :props="props">
-                  <q-btn dense label="Select" color="primary" @click="store.openExpenseDetail(props.row)" />
+                  <q-btn
+                    dense
+                    label="Select"
+                    color="primary"
+                    @click="store.openExpenseDetail(props.row)"
+                  />
                 </q-td>
               </template>
             </q-table>
@@ -220,43 +346,55 @@
             <!-- <q-select outlined dense v-model="store.forms.expense.particulars" :options="filteredParticulars"
               label="Particulars" use-input fill-input hide-selected new-value-mode="add-unique" @filter="filterFn" /> -->
             <q-select
-  outlined
-  dense
-  v-model="store.forms.expense.particulars"
-  :options="filteredParticulars"
-  label="Particulars"
-  use-input
-  fill-input
-  hide-selected
-  new-value-mode="add-unique"
-  option-label="label"
-  option-value="label"
-  map-options
-  emit-value
-  @filter="filterFn"
-/>
+              outlined
+              dense
+              v-model="store.forms.expense.particulars"
+              :options="filteredParticulars"
+              label="Particulars"
+              use-input
+              fill-input
+              hide-selected
+              new-value-mode="add-unique"
+              option-label="label"
+              option-value="label"
+              map-options
+              emit-value
+              @filter="filterFn"
+            />
 
-            <q-input outlined dense :model-value="formatInputValue(store.forms.expense.amount)"
+            <q-input
+              outlined
+              dense
+              :model-value="formatInputValue(store.forms.expense.amount)"
               @update:model-value="(val) => (store.forms.expense.amount = handleAmountInput(val))"
-              @blur="(e) => (store.forms.expense.amount = formatToTwoDecimals(e.target.value))" label="Amount"
-              class="q-mb-md" prefix="₱" inputmode="decimal" pattern="\\d*\\.?\\d{0,2}" @keypress="blockNonNumeric"
-              @paste.prevent="handlePasteNumeric" placeholder="0.00" />
+              @blur="(e) => (store.forms.expense.amount = formatToTwoDecimals(e.target.value))"
+              label="Amount"
+              class="q-mb-md"
+              prefix="₱"
+              inputmode="decimal"
+              pattern="\\d*\\.?\\d{0,2}"
+              @keypress="blockNonNumeric"
+              @paste.prevent="handlePasteNumeric"
+              placeholder="0.00"
+            />
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md">
-
             <q-btn flat label="Cancel" @click="handleDialogClose('expenseDetail')" />
             <q-btn label="Save" @click="handleSaveExpense" color="primary" />
-
           </q-card-actions>
         </q-card>
       </q-dialog>
 
       <!-- Results Summary -->
       <div v-if="filteredDisbursements.length > 0" class="q-mb-sm">
-        <q-chip 
-          :color="filteredDisbursements.length === store.disbursements.length ? 'grey-6' : 'primary'"
-          :text-color="filteredDisbursements.length === store.disbursements.length ? 'white' : 'white'"
+        <q-chip
+          :color="
+            filteredDisbursements.length === store.disbursements.length ? 'grey-6' : 'primary'
+          "
+          :text-color="
+            filteredDisbursements.length === store.disbursements.length ? 'white' : 'white'
+          "
           dense
         >
           {{ filteredDisbursements.length }} of {{ store.disbursements.length }} disbursements
@@ -266,42 +404,89 @@
 
       <!-- Main Data Table -->
       <q-card flat bordered>
-        <q-table :rows="filteredDisbursements" :columns="store.disbursementColumns" row-key="id"
-          :pagination="store.pagination" :loading="store.loadingDisbursements" flat>
+        <q-table
+          :rows="filteredDisbursements"
+          :columns="store.disbursementColumns"
+          row-key="id"
+          :pagination="store.pagination"
+          :loading="store.loadingDisbursements"
+          flat
+        >
           <template v-slot:body-cell-action="props">
-            <q-td :props="props">
-              <div class="row q-gutter-xs items-center justify-center">
-                <q-btn v-if="isApprover || authStore.admin" dense icon="edit" :color="props.row.status === 'Unliquidated' || props.row.status === 'Partial'
-                  ? 'orange'
-                  : 'grey'
-                  " :disable="props.row.status !== 'Unliquidated' && props.row.status !== 'Partial'"
-                  :loading="store.loadingEditDisbursement === props.row.id" @click="handleEditDisbursement(props.row)"
-                  v-permission="'edit'" />
-                <q-btn dense icon="visibility" color="blue" @click="handleViewDisbursement(props.row)"
-                  :loading="viewLoading[props.row.id]" :disable="viewLoading[props.row.id]" v-permission="'view'" />
+            <q-td :props="props" >
+              <div class="row q-gutter-xs items-center justify-center ">
+                <q-btn
+                  v-if="
+                    isApprover ||
+                    authStore.admin ||
+                    (isTreasurer && props.row.edit_approved === true)
+                  "
+                  dense
+                  icon="edit"
+                  :color="
+                    props.row.status === 'Unliquidated' || props.row.status === 'Partial'
+                      ? 'orange'
+                      : 'grey'
+                  "
+                  :disable="props.row.status !== 'Unliquidated' && props.row.status !== 'Partial'"
+                  :loading="store.loadingEditDisbursement === props.row.id"
+                  @click="handleEditDisbursement(props.row)"
+                  v-permission="'edit'"
+                />
+                <q-btn
+                  dense
+                  icon="visibility"
+                  color="blue"
+                  @click="handleViewDisbursement(props.row)"
+                  :loading="viewLoading[props.row.id]"
+                  :disable="viewLoading[props.row.id]"
+                  v-permission="'view'"
+                />
 
                 <!-- Treasurer: Request edit -->
-                <q-btn dense icon="edit_note" color="deep-orange" v-if="
-                  isTreasurer &&
-                  (props.row.status === 'Unliquidated' || props.row.status === 'Partial') &&
-                  props.row.status !== 'Stale' &&
-                  props.row.status !== 'Edit Requested'
-                " @click.stop="() => handleEditRequest(props.row)" v-permission="'edit'" />
+                <q-btn
+                  dense
+                  icon="edit_note"
+                  color="deep-orange"
+                  v-if="
+                    isTreasurer &&
+                    (props.row.status === 'Unliquidated' || props.row.status === 'Partial') &&
+                    props.row.status !== 'Stale' &&
+                    props.row.status !== 'Edit Requested' &&
+                    props.row.edit_approved !== true
+                  "
+                  @click.stop="() => handleEditRequest(props.row)"
+                  v-permission="'edit'"
+                />
 
                 <!-- Treasurer: Request void -->
-                <q-btn dense icon="block" color="red" v-if="
-                  isTreasurer &&
-                  (props.row.status === 'Unliquidated' || props.row.status === 'Partial') &&
-                  canVoid(props.row) &&
-                  props.row.status !== 'Stale'
-                " @click.stop="() => handleVoidDisbursement(props.row)" v-permission="'delete'" />
+                <q-btn
+                  dense
+                  icon="block"
+                  color="red"
+                  v-if="
+                    isTreasurer &&
+                    (props.row.status === 'Unliquidated' || props.row.status === 'Partial') &&
+                    canVoid(props.row) &&
+                    props.row.status !== 'Stale'
+                  "
+                  @click.stop="() => handleVoidDisbursement(props.row)"
+                  v-permission="'delete'"
+                />
                 <!-- Captain/SK Chairperson: Direct void -->
-                <q-btn dense icon="block" color="red" v-if="
-                  isApprover &&
-                  (props.row.status === 'Unliquidated' || props.row.status === 'Partial') &&
-                  canVoid(props.row) &&
-                  props.row.status !== 'Stale'
-                " @click.stop="() => handleDirectVoidDisbursement(props.row)" v-permission="'delete'" />
+                <q-btn
+                  dense
+                  icon="block"
+                  color="red"
+                  v-if="
+                    isApprover &&
+                    (props.row.status === 'Unliquidated' || props.row.status === 'Partial') &&
+                    canVoid(props.row) &&
+                    props.row.status !== 'Stale'
+                  "
+                  @click.stop="() => handleDirectVoidDisbursement(props.row)"
+                  v-permission="'delete'"
+                />
                 <!-- Approver: Handle void requests - now handled in ViewOrDetails -->
                 <!-- Void approval/rejection buttons removed - now handled in ViewOrDetails component -->
               </div>
@@ -309,17 +494,27 @@
           </template>
 
           <template v-slot:body-cell-status="props">
-             <q-td :props="props">
-              <q-chip :color="getStatusColor(props.row.status)" :text-color="getStatusTextColor(props.row.status)" dense
-                :label="props.row.status" />
-             </q-td>
-           </template>
+            <q-td :props="props" >
+              <q-chip
+                :color="getStatusColor(props.row.status)"
+                :text-color="getStatusTextColor(props.row.status)"
+                dense
+                :label="props.row.status"
+              />
+            </q-td>
+          </template>
 
           <template v-slot:body-cell-remarks="props">
             <q-td :props="props">
               <div v-if="hasRemarks(props.row)" class="row items-center justify-center">
-                <q-icon name="visibility" color="blue" size="md" class="cursor-pointer"
-                  @click="openRemarksDialog(props.row)" title="View remarks" />
+                <q-icon
+                  name="visibility"
+                  color="blue"
+                  size="md"
+                  class="cursor-pointer"
+                  @click="openRemarksDialog(props.row)"
+                  title="View remarks"
+                />
               </div>
               <div v-else class="text-grey-6 text-center">-</div>
             </q-td>
@@ -327,10 +522,16 @@
 
           <template v-slot:body-cell-liquidate="props">
             <q-td :props="props">
-              <q-btn dense label="Liquidate" color="primary"
+              <q-btn
+                dense
+                label="Liquidate"
+                color="primary"
                 v-if="props.row.status === 'Unliquidated' || props.row.status === 'Partial'"
-                @click="handleLiquidateDisbursement(props.row)" :loading="liquidateLoading[props.row.id]"
-                :disable="liquidateLoading[props.row.id] || props.row.status === 'Stale'" v-permission="'add'" />
+                @click="handleLiquidateDisbursement(props.row)"
+                :loading="liquidateLoading[props.row.id]"
+                :disable="liquidateLoading[props.row.id] || props.row.status === 'Stale'"
+                v-permission="'add'"
+              />
             </q-td>
           </template>
         </q-table>
@@ -348,20 +549,31 @@
           </q-card-section>
 
           <q-card-section>
-            <div class="text-body1 q-mb-md">Please provide remarks for this void request. The request will be sent to
-              the
-              Barangay Captain or SK Chairperson for approval.</div>
+            <div class="text-body1 q-mb-md">
+              Please provide remarks for this void request. The request will be sent to the Barangay
+              Captain or SK Chairperson for approval.
+            </div>
 
-            <q-input outlined v-model="store.forms.void.remarks" label="Remarks (Required)" type="textarea" rows="3"
+            <q-input
+              outlined
+              v-model="store.forms.void.remarks"
+              label="Remarks (Required)"
+              type="textarea"
+              rows="3"
               :rules="[(val) => (!!val && val.trim() !== '') || 'Remarks are required']"
-              hint="Reason for requesting to void this disbursement" />
+              hint="Reason for requesting to void this disbursement"
+            />
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md">
             <q-btn flat label="Cancel" @click="handleDialogClose('void')" />
-            <q-btn label="Submit Void Request" color="red" :loading="store.voidingDisbursement"
+            <q-btn
+              label="Submit Void Request"
+              color="red"
+              :loading="store.voidingDisbursement"
               :disable="!store.forms.void.remarks || store.forms.void.remarks.trim() === ''"
-              @click="handleSubmitVoidRequest" />
+              @click="handleSubmitVoidRequest"
+            />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -374,19 +586,31 @@
           </q-card-section>
 
           <q-card-section>
-            <div class="text-body1 q-mb-md">Please provide remarks for this edit request. The request will be sent to
-              the Barangay Captain or SK Chairperson for approval.</div>
+            <div class="text-body1 q-mb-md">
+              Please provide remarks for this edit request. The request will be sent to the Barangay
+              Captain or SK Chairperson for approval.
+            </div>
 
-            <q-input outlined v-model="store.forms.edit.remarks" label="Remarks (Required)" type="textarea" rows="3"
+            <q-input
+              outlined
+              v-model="store.forms.edit.remarks"
+              label="Remarks (Required)"
+              type="textarea"
+              rows="3"
               :rules="[(val) => (!!val && val.trim() !== '') || 'Remarks are required']"
-              hint="Reason for requesting to edit this disbursement" />
+              hint="Reason for requesting to edit this disbursement"
+            />
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md">
             <q-btn flat label="Cancel" @click="handleDialogClose('editRequest')" />
-            <q-btn label="Submit Edit Request" color="deep-orange" :loading="store.requestingEdit"
+            <q-btn
+              label="Submit Edit Request"
+              color="deep-orange"
+              :loading="store.requestingEdit"
               :disable="!store.forms.edit.remarks || store.forms.edit.remarks.trim() === ''"
-              @click="handleSubmitEditRequest" />
+              @click="handleSubmitEditRequest"
+            />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -407,25 +631,29 @@
             </div>
             <div class="text-body1 q-mb-md">
               <strong>Status:</strong>
-              <q-chip :color="getStatusColor(selectedRemarksData?.status)"
-                :text-color="getStatusTextColor(selectedRemarksData?.status)" dense :label="selectedRemarksData?.status"
-                class="q-ml-sm" />
+              <q-chip
+                :color="getStatusColor(selectedRemarksData?.status)"
+                :text-color="getStatusTextColor(selectedRemarksData?.status)"
+                dense
+                :label="selectedRemarksData?.status"
+                class="q-ml-sm"
+              />
             </div>
 
             <q-separator class="q-mb-md" />
 
             <div class="text-subtitle1 q-mb-sm text-weight-medium">Remarks:</div>
-            <div class="remarks-content q-pa-md"
-              style="background-color: #f5f5f5; border-radius: 8px; min-height: 100px;">
+            <div
+              class="remarks-content q-pa-md"
+              style="background-color: #f5f5f5; border-radius: 8px; min-height: 100px"
+            >
               <div v-if="selectedRemarksData?.remarks" class="text-body1">
                 {{ selectedRemarksData.remarks }}
               </div>
               <div v-else-if="selectedRemarksData?.rejection_remarks" class="text-body1">
                 {{ selectedRemarksData.rejection_remarks }}
               </div>
-              <div v-else class="text-grey-6 text-italic">
-                No remarks available
-              </div>
+              <div v-else class="text-grey-6 text-italic">No remarks available</div>
             </div>
           </q-card-section>
 
@@ -454,7 +682,6 @@ const store = useDisbursementStore()
 const bankStore = useBankStore()
 const authStore = useAuthStore()
 
-
 // Status filtering
 const selectedStatus = ref(null)
 const statusOptions = [
@@ -473,7 +700,7 @@ const searchQuery = ref('')
 
 const filteredParticulars = ref(store.particulars)
 
-function filterFn (val, update) {
+function filterFn(val, update) {
   console.log('[filterFn] input value:', val)
 
   if (val === '') {
@@ -486,9 +713,7 @@ function filterFn (val, update) {
 
   update(() => {
     const needle = val.toLowerCase()
-    const results = store.particulars.filter(opt =>
-      opt.label.toLowerCase().includes(needle)
-    )
+    const results = store.particulars.filter((opt) => opt.label.toLowerCase().includes(needle))
     console.log('[filterFn] matches:', results.length, 'items')
     filteredParticulars.value = results
   })
@@ -502,7 +727,9 @@ watch(filteredParticulars, (val) => {
 const formatInputValue = (value) => {
   if (value === '' || value === null || value === undefined) return ''
   const isNumber = typeof value === 'number'
-  const cleanValue = String(value).replace(/[₱,\s]/g, '').replace(/,/g, '')
+  const cleanValue = String(value)
+    .replace(/[₱,\s]/g, '')
+    .replace(/,/g, '')
   const num = parseFloat(cleanValue)
   if (isNaN(num)) return ''
   return isNumber
@@ -541,7 +768,17 @@ const formatToTwoDecimals = (value) => {
 
 const blockNonNumeric = (event) => {
   const key = event.key
-  const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
+  const allowedKeys = [
+    'Backspace',
+    'Delete',
+    'Tab',
+    'Escape',
+    'Enter',
+    'ArrowLeft',
+    'ArrowRight',
+    'ArrowUp',
+    'ArrowDown',
+  ]
   if (allowedKeys.includes(key)) return
   if (key === '.' && !event.target.value.includes('.')) return
   if (!/^\d$/.test(key)) event.preventDefault()
@@ -562,7 +799,6 @@ const handlePasteNumeric = (event) => {
 function canVoid(row) {
   // Can only void if unliquidated or partial
   if (!(row.status === 'Unliquidated' || row.status === 'Partial')) return false
-
 
   return true
 }
@@ -753,9 +989,12 @@ const loadDataWithRetry = async (retryCount = 0, maxRetries = 3) => {
   } catch (error) {
     if (retryCount < maxRetries) {
       console.warn(`Data loading failed, retrying... (${retryCount + 1}/${maxRetries})`)
-      setTimeout(() => {
-        loadDataWithRetry(retryCount + 1, maxRetries)
-      }, 1000 * (retryCount + 1)) // Exponential backoff
+      setTimeout(
+        () => {
+          loadDataWithRetry(retryCount + 1, maxRetries)
+        },
+        1000 * (retryCount + 1),
+      ) // Exponential backoff
     } else {
       console.error('Data loading failed after all retries:', error)
       $q.notify({
@@ -768,9 +1007,9 @@ const loadDataWithRetry = async (retryCount = 0, maxRetries = 3) => {
           {
             label: 'Retry',
             color: 'white',
-            handler: () => loadDataWithRetry()
-          }
-        ]
+            handler: () => loadDataWithRetry(),
+          },
+        ],
       })
     }
   }
@@ -809,7 +1048,6 @@ watch(
   },
 )
 
-
 const $q = useQuasar()
 const loading = ref(false)
 const addingExpense = ref(false)
@@ -831,14 +1069,12 @@ const currentBankLabel = computed(() => {
   return 'Select Bank'
 })
 
-
 const currentStatusLabel = computed(() => {
   const option = statusOptions.find((opt) => opt.value === selectedStatus.value)
   return option ? option.label : 'All Status'
 })
 
 // Status counts for summary cards
-
 
 // Enhanced filtered disbursements with better search and filtering
 const filteredDisbursements = computed(() => {
@@ -860,11 +1096,11 @@ const filteredDisbursements = computed(() => {
         disbursement.chequeNumber,
         disbursement.bank,
         disbursement.barangay_name,
-        disbursement.status
+        disbursement.status,
       ]
-      
-      return searchableFields.some(field => 
-        field && field.toString().toLowerCase().includes(query)
+
+      return searchableFields.some(
+        (field) => field && field.toString().toLowerCase().includes(query),
       )
     })
   }
@@ -903,7 +1139,7 @@ const filteredDisbursements = computed(() => {
     if (dateA.getTime() !== dateB.getTime()) {
       return dateB.getTime() - dateA.getTime() // Newest first
     }
-    
+
     // Then sort by DV number
     return (b.dvNumber || '').localeCompare(a.dvNumber || '')
   })
@@ -917,9 +1153,9 @@ const handleBankSelection = async (bankId) => {
       // Clear previous auto-generated values
       store.autoCheque = null
       store.autoBookletID = null
-      
+
       await store.selectBank(bankId)
-      
+
       // Auto-generate cheque number after bank selection
       if (store.autoCheque && store.autoBookletID) {
         $q.notify({
@@ -947,7 +1183,6 @@ const handleBankSelection = async (bankId) => {
   }
 }
 
-
 const handleStatusChange = () => {
   // Status filtering is handled by the computed property
   // No additional logic needed as it's reactive
@@ -958,10 +1193,10 @@ const validateAndSave = () => {
     const form = store.forms.disbursement
     const hasRequiredFields = form.date && form.bank_id && form.dvNumber && form.payee
     const hasExpenses = store.expenses && store.expenses.length > 0
-    const hasValidAmounts = store.expenses.every(expense => 
-      expense.amount && parseFloat(expense.amount) > 0
+    const hasValidAmounts = store.expenses.every(
+      (expense) => expense.amount && parseFloat(expense.amount) > 0,
     )
-    
+
     if (!hasRequiredFields) {
       $q.notify({
         type: 'negative',
@@ -972,7 +1207,7 @@ const validateAndSave = () => {
       })
       return false
     }
-    
+
     if (!hasExpenses) {
       $q.notify({
         type: 'negative',
@@ -983,7 +1218,7 @@ const validateAndSave = () => {
       })
       return false
     }
-    
+
     if (!hasValidAmounts) {
       $q.notify({
         type: 'negative',
@@ -994,11 +1229,11 @@ const validateAndSave = () => {
       })
       return false
     }
-    
+
     if (store.savingDisbursement) {
       return false // Prevent multiple saves
     }
-    
+
     return true
   }
   return false
@@ -1015,7 +1250,7 @@ const handleSaveClick = async () => {
   if (!validateAndSave()) {
     return // Validation failed, don't proceed
   }
-  
+
   try {
     const result = await store.saveDisbursement()
     if (result.success) {
@@ -1079,7 +1314,7 @@ const handleAddExpense = async () => {
 const handleSaveExpense = async () => {
   // Validate expense before saving
   const expense = store.forms.expense
-  
+
   if (!expense.account) {
     $q.notify({
       type: 'negative',
@@ -1090,7 +1325,7 @@ const handleSaveExpense = async () => {
     })
     return
   }
-  
+
   if (!expense.amount || parseFloat(expense.amount) <= 0) {
     $q.notify({
       type: 'negative',
@@ -1101,7 +1336,7 @@ const handleSaveExpense = async () => {
     })
     return
   }
-  
+
   if (parseFloat(expense.amount) > expense.balance) {
     $q.notify({
       type: 'negative',
@@ -1112,7 +1347,7 @@ const handleSaveExpense = async () => {
     })
     return
   }
-  
+
   try {
     await store.saveExpense()
     $q.notify({
@@ -1223,7 +1458,7 @@ const handleDialogClose = (dialogName) => {
     // Close edit request dialog via store method
     store.closeEditRequestDialog()
   }
-  
+
   store.closeDialog(dialogName)
 }
 
@@ -1239,7 +1474,6 @@ const handleEditRequest = (row) => {
 
 // Submit void request from dialog
 const handleSubmitVoidRequest = async () => {
-
   if (!store.forms.void.remarks || store.forms.void.remarks.trim() === '') {
     $q.notify({
       type: 'negative',
@@ -1276,13 +1510,12 @@ const handleSubmitVoidRequest = async () => {
     console.error('Error submitting void request:', error)
     $q.notify({
       type: 'negative',
-
       message: error.message || 'Failed to submit void request',
-        icon: 'error',
-        position: 'top',
+      icon: 'error',
+      position: 'top',
       timeout: 5000,
-      })
-    }
+    })
+  }
 }
 
 // Approver actions - now handled in ViewOrDetails component
@@ -1342,7 +1575,6 @@ const handleLiquidateDisbursement = async (row) => {
   }
 }
 
-
 // Handle manual stale status check
 // const handleCheckStaleStatus = async () => {
 //   checkingStaleStatus.value = true
@@ -1380,12 +1612,13 @@ const handleLiquidateDisbursement = async (row) => {
 
 // Remarks dialog methods
 const hasRemarks = (row) => {
-  return (row.status === 'Void Requested' && row.remarks) ||
+  return (
+    (row.status === 'Void Requested' && row.remarks) ||
     (row.status === 'Edit Requested' && row.remarks) ||
     (row.status === 'Voided' && row.remarks) ||
     row.rejection_remarks
+  )
 }
-
 
 const openRemarksDialog = (row) => {
   selectedRemarksData.value = row
@@ -1441,7 +1674,6 @@ const handleSubmitEditRequest = async () => {
     })
   }
 }
-
 </script>
 
 <style scoped>
@@ -1488,7 +1720,6 @@ const handleSubmitEditRequest = async () => {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
-
 
 /* Filter Section Styling */
 .q-card .q-card-section {
