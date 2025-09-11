@@ -758,7 +758,9 @@
 
           <q-input
             outlined
-            v-model.number="transferAmount"
+            :model-value="formatInputValue(transferAmount)"
+            @update:model-value="handleTransferAmountInput"
+            @blur="handleTransferAmountBlur"
             label="Transfer Amount"
             prefix="₱"
             placeholder="0.00"
@@ -767,18 +769,21 @@
             step="0.01"
             min="0"
             :rules="[
-              (val) => !!val || 'Transfer amount is required',
               (val) => {
-                const num = parseFloat(val)
+                const cleanVal = val ? String(val).replace(/[₱,\s]/g, '') : ''
+                if (!cleanVal || cleanVal === '') return 'Transfer amount is required'
+                const num = parseCurrency(val)
                 return !isNaN(num) && num > 0 || 'Amount must be greater than 0'
               },
               (val) => {
+                const cleanVal = val ? String(val).replace(/[₱,\s]/g, '') : ''
+                if (!cleanVal || cleanVal === '') return true
                 if (!selectedSupplementalBudget) return true
                 const supplementalBudget = supplementalBudgets.find(
                   (b) => b.id === selectedSupplementalBudget,
                 )
                 const availableAmount = supplementalBudget?.unused_amount || 0
-                const requestedAmount = parseFloat(val) || 0
+                const requestedAmount = parseCurrency(val) || 0
                 return (
                   !supplementalBudget ||
                   requestedAmount <= availableAmount ||
@@ -786,12 +791,15 @@
                 )
               },
               (val) => {
-                const num = parseFloat(val)
+                const cleanVal = val ? String(val).replace(/[₱,\s]/g, '') : ''
+                if (!cleanVal || cleanVal === '') return true
+                const num = parseCurrency(val)
                 return num <= 10000000 || 'Amount cannot exceed ₱10,000,000'
               }
             ]"
-            @input="validateTransferAmount"
-            @blur="formatTransferAmount"
+            @keypress="blockNonNumeric"
+            @paste.prevent="handlePasteNumeric"
+            reactive-rules
           />
 
           <q-input
@@ -821,7 +829,7 @@
           >
             <template v-if="!transferLoading">
               <q-icon name="swap_horiz" class="q-mr-xs" />
-              Transfer ₱{{ transferAmount ? parseFloat(transferAmount).toLocaleString() : '0' }}
+              Transfer ₱{{ transferAmount ? parseCurrency(transferAmount).toLocaleString() : '0' }}
             </template>
             <template v-else>
               <q-spinner size="16px" class="q-mr-xs" />
@@ -1033,7 +1041,7 @@ const canTransfer = computed(() => {
     !selectedSupplementalBudget.value ||
     !selectedAnnualBudget.value ||
     !transferAmount.value ||
-    transferAmount.value <= 0
+    transferAmount.value === ''
   ) {
     return false
   }
@@ -1046,35 +1054,19 @@ const canTransfer = computed(() => {
     return false
   }
 
-  const amount = parseFloat(transferAmount.value)
+  const amount = parseCurrency(transferAmount.value)
   const availableAmount = supplementalBudget.unused_amount || 0
 
   return !isNaN(amount) && amount > 0 && amount <= availableAmount
 })
 
-// Enhanced validation functions
-const validateTransferAmount = (value) => {
-  const num = parseFloat(value)
-  if (isNaN(num) || num < 0) {
-    transferAmount.value = 0
-  } else if (num > 10000000) {
-    transferAmount.value = 10000000
-  }
-}
 
-const formatTransferAmount = (event) => {
-  const value = event.target.value
-  const num = parseFloat(value)
-  if (!isNaN(num)) {
-    transferAmount.value = Math.round(num * 100) / 100 // Round to 2 decimal places
-  }
-}
 
 // Transfer validation helper functions
 const getTransferValidationClass = () => {
   if (!transferAmount.value || !selectedSupplementalBudget.value) return 'bg-grey-1'
 
-  const amount = parseFloat(transferAmount.value)
+  const amount = parseCurrency(transferAmount.value)
   const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
 
   if (isNaN(amount) || amount <= 0) return 'bg-orange-1'
@@ -1086,7 +1078,7 @@ const getTransferValidationClass = () => {
 const getTransferValidationTextClass = () => {
   if (!transferAmount.value || !selectedSupplementalBudget.value) return 'text-grey-6'
 
-  const amount = parseFloat(transferAmount.value)
+  const amount = parseCurrency(transferAmount.value)
   const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
 
   if (isNaN(amount) || amount <= 0) return 'text-orange-8'
@@ -1098,7 +1090,7 @@ const getTransferValidationTextClass = () => {
 const getTransferValidationMessage = () => {
   if (!transferAmount.value || !selectedSupplementalBudget.value) return 'Enter transfer amount'
 
-  const amount = parseFloat(transferAmount.value)
+  const amount = parseCurrency(transferAmount.value)
   const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
 
   if (isNaN(amount) || amount <= 0) return 'Please enter a valid amount'
@@ -1110,7 +1102,7 @@ const getTransferValidationMessage = () => {
 const getTransferValidationIcon = () => {
   if (!transferAmount.value || !selectedSupplementalBudget.value) return 'help'
 
-  const amount = parseFloat(transferAmount.value)
+  const amount = parseCurrency(transferAmount.value)
   const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
 
   if (isNaN(amount) || amount <= 0) return 'warning'
@@ -1122,7 +1114,7 @@ const getTransferValidationIcon = () => {
 const getTransferValidationColor = () => {
   if (!transferAmount.value || !selectedSupplementalBudget.value) return 'grey-6'
 
-  const amount = parseFloat(transferAmount.value)
+  const amount = parseCurrency(transferAmount.value)
   const availableAmount = getSelectedSupplementalBudget()?.unused_amount || 0
 
   if (isNaN(amount) || amount <= 0) return 'orange-8'
@@ -1181,7 +1173,7 @@ const showTransferDialog = ref(false)
 const transferLoading = ref(false)
 const selectedSupplementalBudget = ref(null)
 const selectedAnnualBudget = ref(null)
-const transferAmount = ref(null)
+const transferAmount = ref('')
 const transferDescription = ref('')
 
 // Supplemental budget view dialog
@@ -1527,7 +1519,7 @@ const closeEditAllocationDialog = () => {
 const openTransferDialog = () => {
   selectedSupplementalBudget.value = null
   selectedAnnualBudget.value = null
-  // Don't clear transfer amount - let user keep their input
+  transferAmount.value = ''
   transferDescription.value = ''
   showTransferDialog.value = true
 }
@@ -1536,7 +1528,7 @@ const closeTransferDialog = () => {
   showTransferDialog.value = false
   selectedSupplementalBudget.value = null
   selectedAnnualBudget.value = null
-  // Don't clear transfer amount when dialog closes - only when dialog opens
+  transferAmount.value = ''
   transferDescription.value = ''
 }
 
@@ -1558,7 +1550,17 @@ const executeTransfer = async () => {
   }
 
   // Additional validation before transfer
-  const transferAmountNum = parseFloat(transferAmount.value)
+  if (!transferAmount.value || transferAmount.value === '') {
+    $q.notify({
+      type: 'negative',
+      message: 'Please enter a transfer amount',
+      icon: 'error',
+      position: 'top',
+    })
+    return
+  }
+
+  const transferAmountNum = parseCurrency(transferAmount.value)
   if (isNaN(transferAmountNum) || transferAmountNum <= 0) {
     $q.notify({
       type: 'negative',
@@ -1668,7 +1670,7 @@ const executeTransfer = async () => {
       })
 
       // Clear form data
-      transferAmount.value = null
+      transferAmount.value = ''
       transferDescription.value = ''
 
       // Optimized data refresh with proper error handling
@@ -2140,6 +2142,44 @@ const handleEditAmountInput = (item, value) => {
 const handleEditAmountBlur = (item, value) => {
   const formatted = formatToTwoDecimals(value)
   item.amount = formatted
+}
+
+// Transfer amount input handlers
+const handleTransferAmountInput = (value) => {
+  let cleanValue = String(value).replace(/[^\d.]/g, '')
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    cleanValue = parts[0] + '.' + parts.slice(1).join('')
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
+  }
+  transferAmount.value = cleanValue
+  console.log('Transfer amount input:', { value, cleanValue, transferAmount: transferAmount.value })
+}
+
+const handleTransferAmountBlur = (event) => {
+  const value = event.target.value
+  const formatted = formatToTwoDecimals(value)
+  transferAmount.value = formatted
+}
+
+const handlePasteNumeric = (event) => {
+  event.preventDefault()
+  const pastedText = event.clipboardData.getData('text')
+  let cleanText = pastedText.replace(/[^\d.]/g, '')
+  const parts = cleanText.split('.')
+  if (parts.length > 2) {
+    cleanText = parts[0] + '.' + parts.slice(1).join('')
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    parts[1] = parts[1].substring(0, 2)
+    cleanText = parts[0] + '.' + parts[1]
+  }
+  const num = parseFloat(cleanText)
+  if (!isNaN(num)) {
+    transferAmount.value = cleanText
+  }
 }
 
 
