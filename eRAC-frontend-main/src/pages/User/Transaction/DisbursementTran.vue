@@ -68,7 +68,7 @@
           </div>
 
           <!-- Spacer to push Add button to the right -->
-          <div class="col-md-2 col-sm-0 col-xs-0"></div>
+       <div class="col"></div>
 
           <!-- Add Button -->
           <div class="col-md-1 col-sm-6 col-xs-12">
