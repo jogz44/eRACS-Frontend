@@ -304,21 +304,14 @@ export default {
 
         const response = await api.get('/api/barangay/users', config)
 
-        console.log('API Response:', response)
-        console.log('Response data:', response.data)
-        console.log('Response data type:', typeof response.data)
-        console.log('Is array?', Array.isArray(response.data))
-
         // Check if response.data.data is an array (nested response structure)
         if (Array.isArray(response.data.data)) {
           this.users = response.data.data
           localStorage.setItem('acceptedUsers', JSON.stringify(this.users))
-          console.log('Users loaded successfully:', this.users.length, 'users')
         } else if (Array.isArray(response.data)) {
           // Fallback: direct array response
           this.users = response.data
           localStorage.setItem('acceptedUsers', JSON.stringify(this.users))
-          console.log('Users loaded successfully (direct array):', this.users.length, 'users')
         } else {
           console.warn('API response is not an array:', response.data)
           this.users = []
@@ -447,11 +440,6 @@ export default {
           },
           config,
         )
-
-        console.log('Save permissions response:', response)
-        console.log('Response data:', response.data)
-        console.log('Response status:', response.data.status)
-        console.log('Response success:', response.data.success)
 
         // Check for the specific response format from our backend
         if (

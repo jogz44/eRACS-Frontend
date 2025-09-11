@@ -1005,14 +1005,12 @@ const handleSACBPrint = () => {
   if (dateRange.value.from === '' || dateRange.value.to === '') {
     return notifyError('Please select a valid date range.')
   }
-  console.log('Printing report:', SACBModal.reportType)
   logAdminActivity('Report Printed', `Printed ${SACBModal.reportType} report`)
   closeSACBModal()
   notifySuccess('Report sent to printer successfully!')
 }
 
 const handleRACPrint = () => {
-  console.log('Printing report:', RACModal.reportType)
   logAdminActivity('Report Printed', `Printed ${RACModal.reportType} report`)
   closeRACModal()
   notifySuccess('Report sent to printer successfully!')
@@ -1092,8 +1090,6 @@ const continuingSacbDateRangeDisplay = computed(() => {
 
 // Computed property for dynamic columns count
 const dynamicColumnsCount = computed(() => {
-  console.log('Dynamic columns:', reportStore.dynamicAccountColumns)
-  console.log('Report RAC:', reportStore.reportRAC)
   return reportStore.dynamicAccountColumns.length
 })
 

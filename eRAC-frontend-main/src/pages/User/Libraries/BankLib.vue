@@ -475,10 +475,7 @@ const tableRefreshKey = ref(0)
 
 onMounted(async () => {
   try {
-    console.log('Columns:', bankStore.columns)
-    console.log('Fetching banks...')
     await bankStore.fetchBanks()
-    console.log('Banks after fetch:', bankStore.banks)
 
     // Log page visit
     await logPageVisit('Bank Library')
@@ -648,10 +645,6 @@ const showBookletDetails = async (bank) => {
 
     selectedBank.value.booklets = [...booklets]
 
-    console.log(
-      'Final booklets to display:',
-      JSON.parse(JSON.stringify(selectedBank.value.booklets)),
-    )
     showBookletDialog.value = true
   } catch (error) {
     console.error('Error loading booklets:', error)
@@ -755,7 +748,6 @@ const filteredBooklets = computed(() => {
 // Cheque Actions
 const showChequeDetails = async (booklet) => {
   try {
-    console.log('Booklet object received:', booklet)
 
     if (!booklet?.id) {
       throw new Error(`Invalid booklet data: ${JSON.stringify(booklet)}`)
@@ -767,7 +759,6 @@ const showChequeDetails = async (booklet) => {
       cheques: [],
     }
 
-    console.log('Fetching cheques for booklet ID:', selectedBooklet.value.id)
     const response = await bankStore.fetchBookletCheques(selectedBooklet.value.id)
 
     selectedBooklet.value.cheques = response.cheques || response.data || []
@@ -828,8 +819,7 @@ const resetChequeForm = () => {
 
 watch(
   () => bankStore.banks,
-  (newVal) => {
-    console.log('Banks changed:', newVal)
+  () => {
   },
   { deep: true },
 )

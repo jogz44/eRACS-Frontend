@@ -234,13 +234,6 @@ export default {
     const { logPageVisit } = usePageLogging()
     await logPageVisit('User Control')
     
-    // Test API connectivity
-    try {
-      const testResponse = await api.get('/api/admin/users/accepted')
-      console.log('API connectivity test successful:', testResponse.status)
-    } catch (error) {
-      console.error('API connectivity test failed:', error)
-    }
     
     const cached = localStorage.getItem('acceptedUsers');
     if (cached) {
@@ -370,24 +363,6 @@ export default {
           print: true,
         }
         
-        // Validate permissions structure
-        console.log('Permissions structure validation:', {
-          hasView: 'view' in permissions,
-          hasAdd: 'add' in permissions,
-          hasEdit: 'edit' in permissions,
-          hasDelete: 'delete' in permissions,
-          hasPrint: 'print' in permissions,
-          allValuesAreBoolean: Object.values(permissions).every(val => typeof val === 'boolean')
-        })
-
-        console.log('Sending permissions data:', {
-          userId: userId,
-          permissions: permissions
-        })
-        
-        // Log current auth headers
-        console.log('Current auth headers:', api.defaults.headers.common['Authorization'])
-        console.log('Admin token from store:', useAuthStore().adminToken)
 
         const response = await api.post(`/api/admin/user-access/${userId}`, {
           permissions
@@ -398,8 +373,6 @@ export default {
             'Accept': 'application/json'
           }
         })
-
-        console.log('Response received:', response.data)
 
         if (response.data.status === 'success') {
           this.$q.notify({

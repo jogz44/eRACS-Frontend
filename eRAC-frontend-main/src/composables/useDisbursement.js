@@ -143,11 +143,12 @@ export function useDisbursement() {
   }
 
   // Other CRUD methods
-  const editItem = (row) => console.log('Editing:', row)
-  const deleteItem = (row) => console.log('Deleting:', row)
-  const editDisbursement = (row) => console.log('Editing disbursement:', row)
-  const deleteDisbursement = (row) => console.log('Deleting disbursement:', row)
-  const viewDisbursementDialog = (row) => console.log('Viewing disbursement:', row)
+  const editItem = () => {}
+  const deleteItem = () => {}
+  const editDisbursement = () => {}
+  const deleteDisbursement = () => {}
+  const viewDisbursementDialog = () => {}
+
 
   return {
     // Data

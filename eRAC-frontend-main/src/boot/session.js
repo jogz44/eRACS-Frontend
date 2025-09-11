@@ -8,7 +8,7 @@ export default defineBoot(({ app }) => {
   let lastActivityAt = Date.now()
   let isMonitoring = false
   
-  const INACTIVITY_TIMEOUT = 5 * 60 * 1000 // 5 minutes in milliseconds
+  const INACTIVITY_TIMEOUT = 50 * 60 * 1000 // 50 minutes in milliseconds
   const HEARTBEAT_INTERVAL = 2 * 60 * 1000 // Send heartbeat every 2 minutes
   const MONITOR_INTERVAL = 10 * 1000 // Check inactivity every 10s
 
