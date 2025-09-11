@@ -1636,8 +1636,6 @@ const executeTransfer = async () => {
       : '/api/barangay/budget-transfer'
     const token = authStore.admin ? authStore.adminToken : authStore.token
 
-    console.log('Executing transfer with payload:', payload)
-
     const response = await api.post(endpoint, payload, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -1927,16 +1925,8 @@ const saveEditedAllocation = async () => {
       return sum + (allocation.amount || 0)
     }, 0)
 
-    console.log('[v0] Debug - currentUnappropriated:', currentUnappropriated)
-    console.log('[v0] Debug - originalAllocationsTotal:', originalAllocationsTotal)
-    console.log('[v0] Debug - totalAllocated:', totalAllocated)
-    console.log('[v0] Debug - allocations count:', allocations.length)
-    console.log('[v0] Debug - allocations:', allocations)
-
     // Calculate available budget by adding back the original allocations
     const availableBudgetForEdit = currentUnappropriated + originalAllocationsTotal
-
-    console.log('[v0] Debug - availableBudgetForEdit:', availableBudgetForEdit)
 
     if (totalAllocated > availableBudgetForEdit) {
       throw new Error(
@@ -1975,7 +1965,6 @@ const saveEditedAllocation = async () => {
       error.response.data.message
     ) {
       message = error.response.data.message
-      console.log('Backend validation error:', error.response.data)
 
       // If it's a disbursement validation error, show it clearly
       if (message.includes('disbursed amount')) {

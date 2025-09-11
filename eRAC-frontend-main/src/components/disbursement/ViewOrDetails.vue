@@ -204,7 +204,7 @@
 </template>
 
 <script setup>
-import { computed, watch, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useDisbursementStore } from 'stores/disbursementStore'
 import { useAuthStore } from 'stores/auth'
 import { useQuasar } from 'quasar'
@@ -280,45 +280,6 @@ const orDetailsColumns = [
   }
 ]
 
-// Debug: log liquidation data when dialog opens
-watch(
-  () => store.dialogs.viewOrDetails,
-  (isOpen) => {
-    if (isOpen) {
-      console.log('=== ViewOrDetails dialog opened ===')
-      console.log('Current liquidation:', store.currentLiquidation)
-      console.log('OR Details array:', store.currentLiquidation?.orDetails)
-      console.log('OR Details length:', store.currentLiquidation?.orDetails?.length)
-      console.log('OR Details type:', typeof store.currentLiquidation?.orDetails)
-      console.log('Is array:', Array.isArray(store.currentLiquidation?.orDetails))
-      console.log('Expenses array:', store.currentLiquidation?.expenses)
-      console.log('Expenses length:', store.currentLiquidation?.expenses?.length)
-      console.log('Expense count:', expenseCount.value)
-      
-      // Debug expense structure
-      if (store.currentLiquidation?.expenses && store.currentLiquidation.expenses.length > 0) {
-        console.log('First expense structure:', store.currentLiquidation.expenses[0])
-        console.log('All expense account names:', store.currentLiquidation.expenses.map(e => e.accountName))
-        console.log('All expense particulars:', store.currentLiquidation.expenses.map(e => e.particular))
-        console.log('All expense fields:', Object.keys(store.currentLiquidation.expenses[0] || {}))
-      }
-      
-      if (store.currentLiquidation && store.currentLiquidation.orDetails) {
-        console.log('Processing OR details:')
-        store.currentLiquidation.orDetails.forEach((orDetail, idx) => {
-          console.log(`OR Detail [${idx}]:`, orDetail)
-          console.log(`  - orDate: ${orDetail.orDate}`)
-          console.log(`  - orNumber: ${orDetail.orNumber}`)
-          console.log(`  - orAmount: ${orDetail.orAmount}`)
-          console.log(`  - orPhotoUrl: ${orDetail.orPhotoUrl}`)
-        })
-      } else {
-        console.log('No OR details found or currentLiquidation is null')
-      }
-      console.log('=== End ViewOrDetails debug ===')
-    }
-  }
-)
 
 const totalActualExpense = computed(() => {
   if (!store.currentLiquidation?.orDetails) return 0
@@ -337,10 +298,6 @@ const orDetailsCount = computed(() => {
   return store.currentLiquidation?.orDetails?.length || 0
 })
 
-// Debug: log expense data when dialog opens
-const expenseCount = computed(() => {
-  return store.currentLiquidation?.expenses?.length || 0
-})
 
 // Check if user is an approver (Captain/SK Chairperson)
 const isApprover = computed(() => {
@@ -354,7 +311,6 @@ const isApprover = computed(() => {
 // Method to manually reload OR details if needed
 const reloadOrDetails = async () => {
   if (store.currentLiquidation?.id) {
-    console.log('Manually reloading OR details for ID:', store.currentLiquidation.id)
     await store.openViewOrDetails(store.currentLiquidation)
   }
 }

@@ -572,7 +572,6 @@ export default {
     // Global keyboard event handler
     const handleGlobalKeydown = (event) => {
       if (event.key === 'Enter') {
-        console.log('Global Enter key detected for signup')
         event.preventDefault()
         event.stopPropagation()
 
@@ -601,12 +600,10 @@ export default {
     // Add and remove global event listeners
     onMounted(() => {
       document.addEventListener('keydown', handleGlobalKeydown)
-      console.log('Global keyboard listener added for signup')
     })
 
     onUnmounted(() => {
       document.removeEventListener('keydown', handleGlobalKeydown)
-      console.log('Global keyboard listener removed for signup')
     })
 
     return {

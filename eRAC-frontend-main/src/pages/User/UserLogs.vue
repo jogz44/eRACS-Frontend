@@ -108,7 +108,6 @@ import { usePageLogging } from '../../composables/usePageLogging'
 
 const authStore = useAuthStore()
 const getAuthConfig = () => {
-  console.log('Current auth token:', authStore.token ? 'Token exists' : 'No token')
 
   if (!authStore.token) {
     console.warn('No authentication token found')
@@ -239,7 +238,6 @@ export default {
         const response = await api.get(`/api/barangay/getlogs`, getAuthConfig())
         // Backend returns an array directly
         this.logs = Array.isArray(response.data) ? response.data : response.data?.data || []
-        console.log('Loaded logs:', this.logs)
       } catch (error) {
         console.error('Error loading logs:', error)
         this.$q.notify({

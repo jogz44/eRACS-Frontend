@@ -364,6 +364,7 @@ class DisbursementController extends Controller
                         'or_date' => $orDate,
                         'or_number' => $orDetail['orNumber'],
                         'or_amount' => $orDetail['orAmount'],
+                        'ref_or_amount' => $orDetail['orRefAmount'] ?? null,
                         'remarks' => $orDetail['remarks'] ?? '',
                         'or_photo' => $orDetail['orPhotoUrl'] ?? null,
                     ]);

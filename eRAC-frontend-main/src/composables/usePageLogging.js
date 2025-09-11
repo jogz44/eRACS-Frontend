@@ -34,7 +34,6 @@ export function usePageLogging() {
           Accept: 'application/json',
         },
       })
-      console.log(`Page visit logged: ${pageName}`)
     } catch (error) {
       console.error('Error logging page visit:', error)
       // Don't throw error to avoid breaking page functionality

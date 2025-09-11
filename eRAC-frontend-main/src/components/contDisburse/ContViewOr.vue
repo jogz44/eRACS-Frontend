@@ -271,7 +271,6 @@ const orDetailsCount = computed(() => {
 // Method to manually reload OR details if needed
 const reloadOrDetails = async () => {
   if (store.currentLiquidation?.id) {
-    console.log('Manually reloading OR details for ID:', store.currentLiquidation.id)
     await store.openViewOrDetails(store.currentLiquidation)
   }
 }

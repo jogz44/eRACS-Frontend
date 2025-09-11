@@ -328,8 +328,6 @@ const selectedAccounts = ref([])
 const searchQuery = ref('')
 const dateFrom = ref('')
 const dateTo = ref('')
-const returnAmount = ref(0)
-const augmentationAmount = ref(0)
 
 const { continueAccounts } = storeToRefs(appropriationStore)
 
@@ -474,8 +472,7 @@ const formatCurrency = (value) => {
   }).format(value)
 }
 
-const viewDetails = (row) => {
-  console.log('Viewing details of row:', row)
+const viewDetails = () => {
 }
 
 const selectedRow = ref({
@@ -569,15 +566,6 @@ const handleAllocationSaveClick = () => {
 }
 
 const saveAllocation = () => {
-  const allocationData = {
-    budgetId: selectedRow.value.id,
-    returnAmount: returnAmount.value,
-    augmentationAmount: augmentationAmount.value,
-    allocations: displayAccounts.value,
-    totalAllocated: totalAllocated.value,
-  }
-
-  console.log('Saving allocation:', allocationData)
 
   const rowIndex = mergedAppropriations.value.findIndex((r) => r.id === selectedRow.value.id)
   if (rowIndex !== -1) {
