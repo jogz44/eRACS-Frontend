@@ -142,7 +142,7 @@
                   {{ authStore.user?.first_name || 'Guest' }}
                 </span>
                 <span class="position-text text-caption text-white text-weight-medium text-h5">
-                  {{ authStore.user.position_name }}
+                  {{ authStore.user?.position_name || 'User' }}
                 </span>
               </div>
               <q-space />
@@ -176,6 +176,9 @@
             @click="handleVoidRequestClick()"
             :loading="false"
           >
+            <q-tooltip>
+              Click to open void request details for approval
+            </q-tooltip>
             <div class="void-request-content">
               <div class="void-request-header">
                 <q-icon name="pending_actions" color="white" size="24px" class="void-icon" />
@@ -183,7 +186,7 @@
                   <div class="void-request-count">
                     {{ voidRequestCount }} VOID REQUEST{{ voidRequestCount > 1 ? 'S' : '' }}
                   </div>
-                  <div class="void-request-subtitle">CLICK TO VIEW DETAILS</div>
+                  <div class="void-request-subtitle">CLICK TO OPEN VOID REQUEST</div>
                 </div>
                 <q-btn
                   flat
@@ -199,6 +202,24 @@
                 </q-btn>
               </div>
             </div>
+          </q-btn>
+        </div>
+
+        <!-- Debug info for troubleshooting - only show if there are void requests but count is 0 -->
+        <div v-if="voidRequestCount === 0 && 
+                   authStore.user?.position_name?.toLowerCase().includes('captain') && 
+                   disbursementStore.disbursements.some(d => d.status === 'Void Requested')" 
+             class="debug-info">
+          <q-btn
+            flat
+            dense
+            size="sm"
+            color="grey"
+            icon="refresh"
+            @click="refreshVoidRequestCount"
+            class="debug-refresh-btn"
+          >
+            <q-tooltip>Manual refresh - Check console for debug info</q-tooltip>
           </q-btn>
         </div>
 
@@ -322,10 +343,24 @@ const voidRequestCount = computed(() => {
 
   if (!canApproveVoid) return 0
 
+  // Additional security check: ensure user has barangay_name
+  if (!authStore.user?.barangay_name) {
+    console.warn('User does not have barangay_name, cannot show void request count')
+    return 0
+  }
+
   // Count disbursements with 'Void Requested' status
+  // Note: disbursementStore.disbursements is already filtered by barangay_id in fetchDisbursements()
   const voidCount = disbursementStore.disbursements.filter(
     (d) => d.status === 'Void Requested',
   ).length
+  
+  // Debug logging for security verification
+  console.log(`Debug - User barangay_name: ${authStore.user.barangay_name}`)
+  console.log(`Debug - Total disbursements: ${disbursementStore.disbursements.length}`)
+  console.log(`Debug - Disbursements with status 'Void Requested':`, disbursementStore.disbursements.filter(d => d.status === 'Void Requested'))
+  console.log(`Debug - Void request count for barangay ${authStore.user.barangay_name}: ${voidCount}`)
+  
   return voidCount
 })
 
@@ -392,7 +427,7 @@ const togglePanel = (panelType) => {
     nextTick(() => {
       // Ensure panel is properly positioned for middle-left animation
       const panel = document.querySelector('.sliding-panel.panel-open')
-      if (panel) {
+      if (panel && panel.style) {
         panel.style.transform = 'translate(0, -50%)'
       }
     })
@@ -401,7 +436,7 @@ const togglePanel = (panelType) => {
 
 const closePanel = () => {
   const panel = document.querySelector('.sliding-panel.panel-open')
-  if (panel) {
+  if (panel && panel.style) {
     panel.style.transform = 'translate(-100%, -50%)'
     setTimeout(() => {
       activePanel.value = null
@@ -413,27 +448,91 @@ const closePanel = () => {
 
 // Method to refresh void request count
 const refreshVoidRequestCount = async () => {
-  if (authStore.user?.barangay_id) {
+  if (authStore.user?.barangay_name) {
+    console.log('Manually refreshing disbursements...')
+    $q.notify({
+      type: 'info',
+      message: 'Refreshing data...',
+      icon: 'refresh',
+      position: 'top',
+      timeout: 1000,
+    })
     await disbursementStore.fetchDisbursements()
+    console.log('Refresh completed. Check console for debug info.')
   }
 }
 
 // Method to handle void request click - navigate to disbursement page and open first void request
 const handleVoidRequestClick = async () => {
+  // Security check: ensure user has barangay_name
+  if (!authStore.user?.barangay_name) {
+    $q.notify({
+      type: 'negative',
+      message: 'Access denied: Invalid user context',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000,
+    })
+    return
+  }
+
   // Close the panel first
   closePanel()
+
+  // Show loading notification
+  $q.notify({
+    type: 'info',
+    message: 'Opening void request details...',
+    icon: 'pending_actions',
+    position: 'top',
+    timeout: 2000,
+  })
 
   // Navigate to disbursement page
   await router.push('/home/transactions/disbursement')
 
-  // Find the first void requested disbursement
+  // Small delay to ensure navigation completes
+  await new Promise(resolve => setTimeout(resolve, 500))
+
+  // Find the first void requested disbursement for current barangay
   const voidRequestedDisbursement = disbursementStore.disbursements.find(
-    d => d.status === 'Void Requested'
+    d => d.status === 'Void Requested' && d.barangay_name === authStore.user.barangay_name
   )
 
   if (voidRequestedDisbursement) {
+    // Additional security check: verify barangay_name matches
+    if (voidRequestedDisbursement.barangay_name !== authStore.user.barangay_name) {
+      console.error('Security violation: Void request barangay_name mismatch')
+      $q.notify({
+        type: 'negative',
+        message: 'Access denied: Invalid void request',
+        icon: 'error',
+        position: 'top',
+        timeout: 3000,
+      })
+      return
+    }
+
     // Open the ViewOrDetails dialog for the void requested disbursement
     await disbursementStore.openViewOrDetails(voidRequestedDisbursement)
+    
+    // Show success notification
+    $q.notify({
+      type: 'positive',
+      message: 'Void request details opened',
+      icon: 'check_circle',
+      position: 'top',
+      timeout: 2000,
+    })
+  } else {
+    // Show warning if no void requests found
+    $q.notify({
+      type: 'warning',
+      message: 'No void requests found for your barangay',
+      icon: 'warning',
+      position: 'top',
+      timeout: 3000,
+    })
   }
 }
 
@@ -469,15 +568,16 @@ onMounted(async () => {
   document.addEventListener('keydown', handleKeydown)
 
   // Load disbursements to get void request count
-  if (authStore.user?.barangay_id) {
+  if (authStore.user?.barangay_name) {
     await disbursementStore.fetchDisbursements()
 
-    // Set up periodic refresh for void request count (every 30 seconds)
+    // Set up periodic refresh for void request count (every 10 seconds)
     const refreshInterval = setInterval(async () => {
-      if (authStore.user?.barangay_id) {
+      if (authStore.user?.barangay_name) {
+        console.log('Auto-refreshing disbursements for void request count...')
         await disbursementStore.fetchDisbursements()
       }
-    }, 30000)
+    }, 10000)
 
     // Clean up interval on component unmount
     onUnmounted(() => {
@@ -492,7 +592,7 @@ watch(
     imageLoadingFailed.value = false
 
     // Refresh disbursements when user changes to update void request count
-    if (newUser?.barangay_id) {
+    if (newUser?.barangay_name) {
       await disbursementStore.fetchDisbursements()
     }
   },
@@ -927,7 +1027,8 @@ watch(
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(255, 152, 0, 0.2);
   transition: all 0.3s ease;
-  animation: voidRequestPulse 3s infinite;
+  animation: voidRequestPulse 2s infinite;
+  border: 2px solid rgba(255, 152, 0, 0.3);
 }
 
 .void-request-container:hover {
@@ -1055,6 +1156,26 @@ watch(
 
 .panel-item {
   position: relative;
+}
+
+/* Debug info styling */
+.debug-info {
+  margin: 8px;
+  text-align: center;
+  padding: 8px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+}
+
+.debug-refresh-btn {
+  opacity: 0.7;
+  transition: all 0.2s ease;
+}
+
+.debug-refresh-btn:hover {
+  opacity: 1;
+  transform: rotate(180deg);
 }
 
 /* End of Panel */

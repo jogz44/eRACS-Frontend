@@ -181,6 +181,9 @@ export const useSupplementalBudgetStore = defineStore('supplementalBudget', {
       } catch (error) {
         console.error('Error creating supplemental budget:', error)
         console.error('Error response:', error.response?.data)
+        console.error('Error status:', error.response?.status)
+        console.error('Error message:', error.message)
+        console.error('Full error object:', error)
         throw error
       } finally {
         this.loading = false
