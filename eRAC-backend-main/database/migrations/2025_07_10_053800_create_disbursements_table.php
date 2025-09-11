@@ -24,14 +24,14 @@ return new class extends Migration
             $table->decimal('dv_amount', 15, 2);
             $table->decimal('liquidated_amount', 15, 2)->nullable();
             // For MySQL/Postgres enum works fine
-            $table->enum('status', ['Unliquidated', 'Partial', 'Liquidated', 'Void Requested', 'Voided', 'Stale'])->default('Unliquidated');
+            $table->enum('status', ['Unliquidated', 'Partial', 'Liquidated', 'Void Requested', 'Voided', 'Stale', 'Edit Requested'])->default('Unliquidated');
             $table->boolean('is_continuing')->default(false);
             $table->unsignedBigInteger('user_id')->nullable();
             $table->timestamp('liquidated_at')->nullable();
             $table->text('remarks')->nullable();
             $table->text('rejection_remarks')->nullable();
             $table->timestamps();
-            
+
             $table->foreign('user_id')->references('id')->on('barangay_users')->onDelete('set null');
             $table->foreign('barangay_id')->references('id')->on('barangays')->onDelete('cascade');
             $table->foreign('bank_id')->references('id')->on('lib_banks')->onDelete('NO ACTION');
