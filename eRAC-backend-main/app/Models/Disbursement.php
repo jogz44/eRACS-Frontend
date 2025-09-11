@@ -17,6 +17,7 @@ class Disbursement extends Model
         'barangay_id',
         'date',
         'dv_number',
+        'ref_dv_number',
         'cheque_number',
         'bank_id',
         'payee',

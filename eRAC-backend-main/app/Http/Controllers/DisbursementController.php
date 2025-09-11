@@ -396,7 +396,7 @@ class DisbursementController extends Controller
             $dateParts = explode('/', $request->date);
             $formattedDate = $dateParts[2] . '-' . $dateParts[1] . '-' . $dateParts[0];
 
-            $disbursement = Disbursement::create([
+            $reimbursement = Disbursement::create([
                 'barangay_id' => $barangayId,
                 'date' => $formattedDate,
                 'dv_number' => $request->dv_number,
@@ -416,7 +416,7 @@ class DisbursementController extends Controller
 
             $cheque->update([
                 'status' => 'used',
-                'disbursement_id' => $disbursement->id,
+                'disbursement_id' => $reimbursement->id,
             ]);
 
 
@@ -444,7 +444,7 @@ class DisbursementController extends Controller
                     if ($appropriation) {
                         // Create expense detail with the disbursement ID
                         TranExpenseDetail::create([
-                            'disbursement_id' => $disbursement->id,
+                            'disbursement_id' => $reimbursement->id,
                             'appropriation_id' => $appropriation->id,
                             'amount' => $expense['amount'],
                             'particulars' => $expense['particular'] ?? '',
@@ -464,14 +464,14 @@ class DisbursementController extends Controller
 
             // Log created disbursement
             try {
-                $disbursement->load('bank');
+                $reimbursement->load('bank');
                 $topLine = sprintf(
                     '#%s for Payee "%s" with the amount ₱%s. Uses %s with the cheque: %s',
-                    $disbursement->dv_number,
-                    $disbursement->payee,
-                    number_format((float)$disbursement->dv_amount, 2),
-                    $disbursement->bank ? '(' . $disbursement->bank->bank_name . ')' : '(bank)',
-                    $disbursement->cheque_number
+                    $reimbursement->dv_number,
+                    $reimbursement->payee,
+                    number_format((float)$reimbursement->dv_amount, 2),
+                    $reimbursement->bank ? '(' . $reimbursement->bank->bank_name . ')' : '(bank)',
+                    $reimbursement->cheque_number
                 );
                 // Header log
                 AdminAuthController::logUserAction(
@@ -484,7 +484,7 @@ class DisbursementController extends Controller
                     AdminAuthController::logUserAction(
                         $user,
                         'Reimbursement Expense',
-                        sprintf('#%s | %s', $disbursement->dv_number, $line)
+                        sprintf('#%s | %s', $reimbursement->dv_number, $line)
                     );
                 }
             } catch (\Throwable $logEx) {
@@ -494,7 +494,7 @@ class DisbursementController extends Controller
             return response()->json([
                 'status' => true,
                 'message' => 'Reimbursement created successfully',
-                'data' => $disbursement
+                'data' => $reimbursement
             ], 201);
 
         } catch (\Exception $e) {
@@ -507,10 +507,13 @@ class DisbursementController extends Controller
         }
     }
 
+
     // GET /api/barangay/disbursements/{id}/or-details
     public function getOrDetails($id)
     {
         $orDetails = DisbursementOrDetail::where('disbursement_id', $id)->get();
+
+
         return response()->json(['status' => true, 'data' => $orDetails]);
     }
 
@@ -716,7 +719,41 @@ class DisbursementController extends Controller
                 $query->where('barangay_id', $user->barangay_id);
             }
             $query->orderByDesc('created_at');
+
+
             $disbursement = $query->find($id);
+            $reimbursement = null;
+
+            if (!$disbursement) {
+                return response()->json(['error' => 'Disbursement not found'], 404);
+            }
+
+            // Case 1: this record is a reimbursement (it has a ref_dv_number)
+            if ($disbursement->ref_dv_number) {
+                $original = Disbursement::with(['bank', 'cheque.booklet', 'expenseDetails.appropriation'])
+                    ->when($user && isset($user->barangay_id), function ($q) use ($user) {
+                        $q->where('barangay_id', $user->barangay_id);
+                    })
+                    ->where('dv_number', $disbursement->ref_dv_number)
+                    ->first();
+
+                if ($original) {
+                    $reimbursement = $disbursement; // current one is reimbursement
+                    $disbursement  = $original;     // swap to the original
+                }
+            }
+            // Case 2: this record is the original (another record references it)
+            elseif (
+                $linked = Disbursement::with(['bank', 'cheque.booklet', 'expenseDetails.appropriation'])
+                    ->when($user && isset($user->barangay_id), function ($q) use ($user) {
+                        $q->where('barangay_id', $user->barangay_id);
+                    })
+                    ->where('ref_dv_number', $disbursement->dv_number)
+                    ->first()
+            ) {
+                $reimbursement = $linked; // that linked record is the reimbursement
+                // $disbursement stays as is
+            }
 
             if (!$disbursement) {
                 \Log::warning("Disbursement not found with ID: " . $id);
@@ -725,12 +762,12 @@ class DisbursementController extends Controller
 
             \Log::info("Found disbursement: ", ['id' => $disbursement->id, 'dv_number' => $disbursement->dv_number]);
 
-            return response()->json([
-                'status' => true,
-                'data' => [
+
+            $data = [
                 'id' => $disbursement->id,
                 'date' => $disbursement->date,
                 'dv_number' => $disbursement->dv_number,
+                'ref_dv_number' => $disbursement->ref_dv_number ?? null,
                 'cheque_number' => $disbursement->cheque_number,
                 'bank_id' => $disbursement->bank_id,
                 'bank_name' => $disbursement->bank ? $disbursement->bank->bank_name : null,
@@ -738,7 +775,7 @@ class DisbursementController extends Controller
                 'payee' => $disbursement->payee,
                 'dv_amount' => $disbursement->dv_amount,
                 'status' => $disbursement->status,
-                'expenses' => $disbursement->expenseDetails->map(function($detail) {
+                'expenses' => $disbursement->expenseDetails->map(function ($detail) {
                     return [
                         'id' => $detail->id,
                         'accountId' => $detail->appropriation_id,
@@ -754,11 +791,51 @@ class DisbursementController extends Controller
                 }),
                 'created_at' => $disbursement->created_at,
                 'updated_at' => $disbursement->updated_at,
-                ]
+            ];
+
+            // If this disbursement has a reimbursement (linked either way)
+            if ($reimbursement) {
+                // Pick whichever exists
+
+                $data['reimbursement'] = [
+                    'id' => $reimbursement->id,
+                    'date' => $reimbursement->date,
+                    'dv_number' => $reimbursement->dv_number,
+                    'ref_dv_number' => $reimbursement->ref_dv_number ?? null,
+                    'cheque_number' => $reimbursement->cheque_number,
+                    'bank_id' => $reimbursement->bank_id,
+                    'bank_name' => $reimbursement->bank ? $reimbursement->bank->bank_name : null,
+                    'booklet_id' => $reimbursement->cheque ? $reimbursement->cheque->booklet_id : null,
+                    'payee' => $reimbursement->payee,
+                    'dv_amount' => $reimbursement->dv_amount,
+                    'status' => $reimbursement->status,
+                    'expenses' => $reimbursement->expenseDetails->map(function ($detail) {
+                        return [
+                            'id' => $detail->id,
+                            'accountId' => $detail->appropriation_id,
+                            'account_name' => '' . $detail->appropriation->expenseClass->name
+                                . ($detail->appropriation->expenseType ? ' > ' . $detail->appropriation->expenseType->name : '')
+                                . ($detail->appropriation->expenseItem ? ' > ' . $detail->appropriation->expenseItem->name : ''),
+                            'amount' => $detail->amount,
+                            'particular' => $detail->particulars,
+                            'expense_class_id' => $detail->appropriation->expense_class_id ?? null,
+                            'expense_type_id' => $detail->appropriation->expense_type_id ?? null,
+                            'expense_item_id' => $detail->appropriation->expense_item_id ?? null,
+                        ];
+                    }),
+                    'created_at' => $reimbursement->created_at,
+                    'updated_at' => $reimbursement->updated_at,
+                ];
+            }
+
+            return response()->json([
+                'status' => true,
+                'data' => $data
             ]);
+
         } catch (\Exception $e) {
             \Log::error("Error fetching disbursement: " . $e->getMessage());
-            return response()->json(['error' => 'Internal server error'], 500);
+            return response()->json(['error' => 'Internal server error'. $e->getMessage()], 500);
         }
     }
 

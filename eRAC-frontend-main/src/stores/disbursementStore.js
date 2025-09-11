@@ -1206,8 +1206,7 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Get the disbursement data
         const disbursement = response.data.data;
-        console.log('Raw disbursement data from API:', disbursement);
-        console.log('Raw expenses from API:', disbursement?.expenses);
+        console.log('=============================================>>>>>>>>:', disbursement);
 
         if (disbursement) {
           // Map expenses to ensure proper field names
@@ -1233,6 +1232,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             payee: disbursement.payee,
             dvAmount: disbursement.dv_amount,
             expenses: mappedExpenses,
+            reimbursement: disbursement.reimbursement ?? null
           };
         }
         return null;
@@ -1337,7 +1337,6 @@ export const useDisbursementStore = defineStore('disbursement', {
           const response = await api.get('/api/barangay/generate-dvnumber',getAuthConfig());
           const newDVNumber = response.data.data.dv_number || ''
           this.forms.disbursement.dvNumber= newDVNumber
-          console.error('dvnum=================',newDVNumber)
         } catch (error) {
           console.error('Failed to generate new DV number:', error)
           this.forms.disbursement.dvNumber= ''
@@ -1446,8 +1445,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.dialogs.disbursement = false;
 
       this.currentLiquidation = JSON.parse(JSON.stringify(row));
-      console.log('Opening view OR details for:', row);
-      console.log('Row expenses:', row.expenses);
+      console.error('ksdafkjaisdhkasj=========================:', this.currentLiquidation);
 
       // Initialize orDetails as empty array
       this.currentLiquidation.orDetails = [];
@@ -1460,6 +1458,8 @@ export const useDisbursementStore = defineStore('disbursement', {
           if (disbursement && disbursement.expenses) {
             this.currentLiquidation.expenses = disbursement.expenses;
             console.log('Loaded expenses from fetchDisbursementForView:', disbursement.expenses);
+            console.error('Lohjkhjgiew:', disbursement);
+            console.error('LoadghjghjorView:', this.currentLiquidation);
           }
         } catch (error) {
           console.error('Error fetching disbursement details:', error);
@@ -2839,7 +2839,7 @@ export const useDisbursementStore = defineStore('disbursement', {
                 : 0, // Set reimbursement amount only for matching OR
               orDate: or.orDate || '',
               remarks: or.remarks, // Keep original remarks
-              orPhotoUrl: 'or-photos/sample.png',
+              orPhotoUrl: 'or-photos/samplejaskd.png',
             })),
           liquidatedAmount: totalActualExpense,
         };
@@ -2872,7 +2872,6 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Refresh the disbursements list
         await this.fetchDisbursements();
-
         return { success: true, data: response.data.data };
       } catch (error) {
         console.error('Failed to submit reimbursement:', error);
