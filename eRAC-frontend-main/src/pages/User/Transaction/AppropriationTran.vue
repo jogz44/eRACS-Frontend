@@ -1621,15 +1621,32 @@ const executeTransfer = async () => {
 
   if (!confirmed) return
 
+  // Snapshot current selections BEFORE closing (closing clears refs)
+  const snapshotFromBudgetId = selectedSupplementalBudget.value
+  const snapshotToBudgetId = selectedAnnualBudget.value
+  const snapshotAmount = transferAmountNum
+  const snapshotDescription = transferDescription.value?.trim() || null
+  const snapshotFromBudget = supplementalBudgets.value.find(b => b.id === snapshotFromBudgetId)
+  const snapshotToBudget = annualBudgets.value.find(b => b.id === snapshotToBudgetId)
+
+  // Close dialog immediately after confirmation
+  closeTransferDialog()
+
   transferLoading.value = true
 
   try {
     const payload = {
-      from_budget_id: selectedSupplementalBudget.value,
-      to_budget_id: selectedAnnualBudget.value,
-      amount: transferAmountNum,
-      description: transferDescription.value?.trim() || null,
+      from_budget_id: snapshotFromBudgetId,
+      to_budget_id: snapshotToBudgetId,
+      amount: snapshotAmount,
+      description: snapshotDescription,
     }
+
+    // Debug logging
+    console.log('Transfer payload:', payload)
+    console.log('Selected supplemental budget:', snapshotFromBudgetId)
+    console.log('Selected annual budget:', snapshotToBudgetId)
+    console.log('Transfer amount:', snapshotAmount)
 
     // Call the transfer API with enhanced error handling
     const authStore = useAuthStore()
@@ -1637,6 +1654,9 @@ const executeTransfer = async () => {
       ? '/api/admin/budget-transfer'
       : '/api/barangay/budget-transfer'
     const token = authStore.admin ? authStore.adminToken : authStore.token
+
+    console.log('API endpoint:', endpoint)
+    console.log('Auth token exists:', !!token)
 
     const response = await api.post(endpoint, payload, {
       headers: {
@@ -1648,13 +1668,13 @@ const executeTransfer = async () => {
     })
 
     if (response.data?.status) {
-      // Success notification with detailed information
-      const fromBudget = supplementalBudgets.value.find(b => b.id === selectedSupplementalBudget.value)
-      const toBudget = annualBudgets.value.find(b => b.id === selectedAnnualBudget.value)
+      // Success notification with detailed information (use snapshots)
+      const fromBudget = snapshotFromBudget
+      const toBudget = snapshotToBudget
 
       $q.notify({
         type: 'positive',
-        message: `Successfully transferred ₱${transferAmountNum.toLocaleString()} from "${fromBudget?.description || 'Supplemental Budget'}" to "${toBudget?.description || 'Annual Budget'}"`,
+        message: `Successfully transferred ₱${snapshotAmount.toLocaleString()} from "${fromBudget?.description || 'Supplemental Budget'}" to "${toBudget?.description || 'Annual Budget'}"`,
         icon: 'check_circle',
         position: 'top',
         timeout: 5000,
@@ -1669,25 +1689,23 @@ const executeTransfer = async () => {
         ]
       })
 
-      // Clear form data
-      transferAmount.value = ''
-      transferDescription.value = ''
-
-      // Optimized data refresh with proper error handling
-      await refreshDataAfterTransfer()
-
-      closeTransferDialog()
+      // Refresh data in background
+      refreshDataAfterTransfer()
     } else {
       throw new Error(response.data?.message || 'Transfer failed - no status returned')
     }
   } catch (error) {
     console.error('Transfer error:', error)
     console.error('Error response:', error.response?.data)
+    console.error('Error status:', error.response?.status)
+    console.error('Error headers:', error.response?.headers)
 
     let errorMessage = 'Failed to transfer budget'
     let errorDetails = ''
 
     if (error.response?.data) {
+      console.log('Full error response data:', JSON.stringify(error.response.data, null, 2))
+      
       if (error.response.data.message) {
         errorMessage = error.response.data.message
       }
@@ -1695,6 +1713,7 @@ const executeTransfer = async () => {
       if (error.response.data.errors) {
         // Handle validation errors with detailed feedback
         const errors = error.response.data.errors
+        console.log('Validation errors:', errors)
         const errorMessages = Object.entries(errors).map(([field, messages]) => {
           const fieldName = field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
           return `${fieldName}: ${Array.isArray(messages) ? messages.join(', ') : messages}`
