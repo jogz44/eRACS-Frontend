@@ -187,7 +187,7 @@
           <div class="col-auto" v-if="selectedBudgetType !== 'supplemental'">
             <q-btn
               label="Add"
-              color="primary"
+              color="secondary"
               icon="add"
               @click="addBudget"
               :loading="addLoading"
@@ -325,7 +325,7 @@
             <q-btn
               dense
               label="Commit"
-              :color="props.row.unappropriated <= 0 ? 'grey' : 'primary'"
+              :color="props.row.unappropriated <= 0 ? 'grey' : 'secondary'"
               @click="openAllocationDialog(props.row)"
               :disable="props.row.unappropriated <= 0"
               v-permission="'add'"
@@ -857,7 +857,7 @@
       v-if="selectedBudgetType !== 'supplemental'"
       round
       dense
-      color="primary"
+      color="secondary"
       icon="add"
       class="mobile-add-btn"
       @click="addBudget"
@@ -2683,4 +2683,5 @@ const getDescriptionOnly = (description) => {
     min-width: 250px;
   }
 }
+
 </style>
