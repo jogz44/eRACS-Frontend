@@ -177,9 +177,13 @@
                     filled
                     unelaveted
                     outlined
-                    v-model="orDetail.orAmount"
+                    :model-value="formatInputValue(orDetail.orAmount)"
+                    @update:model-value="(val) => handleOrAmountInput(orDetail, val)"
+                    @blur="(e) => handleOrAmountBlur(orDetail, e.target.value)"
                     prefix="₱"
+                    placeholder="0.00"
                     inputmode="decimal"
+                    pattern="\\d*\\.?\\d{0,2}"
                     @keypress="blockNonNumeric"
                     @paste.prevent="handlePasteNumeric"
                     @input="calculateTotals"
@@ -1479,6 +1483,63 @@ const formatCurrency = (value) => {
   return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+// Real-time input formatting function: strings (typing) show commas only; numbers (after blur) show two decimals
+const formatInputValue = (value) => {
+  if (!value && value !== 0) return ''
+  const isNumber = typeof value === 'number'
+  const cleanValue = String(value).replace(/,/g, '')
+  const num = parseFloat(cleanValue)
+  if (isNaN(num)) return ''
+  return isNumber
+    ? num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : num.toLocaleString('en-US')
+}
+
+// Handle OR amount input while typing: keep cleaned STRING, prevent >2 decimals
+const handleOrAmountInput = (orDetail, value) => {
+  let cleanValue = String(value).replace(/[^\d.]/g, '')
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    cleanValue = parts[0] + '.' + parts.slice(1).join('')
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
+  }
+  orDetail.orAmount = cleanValue
+}
+
+// Handle OR amount input on blur: format to two decimals
+const handleOrAmountBlur = (orDetail, value) => {
+  const formatted = formatToTwoDecimals(value)
+  orDetail.orAmount = formatted
+}
+
+// Format input value to exactly two decimal places
+const formatToTwoDecimals = (value) => {
+  // Remove peso sign, commas, and spaces
+  const cleanValue = String(value).replace(/[₱,\s]/g, '')
+
+  if (cleanValue === '') return ''
+
+  // Handle multiple decimal points
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    const collapsed = parts[0] + '.' + parts.slice(1).join('')
+    return formatToTwoDecimals(collapsed)
+  }
+
+  // Limit decimal places to 2
+  if (parts.length === 2 && parts[1].length > 2) {
+    parts[1] = parts[1].substring(0, 2)
+  }
+
+  const num = parseFloat(parts.join('.'))
+  if (isNaN(num)) return ''
+
+  // Return numeric value with two decimals
+  return Math.round(num * 100) / 100
+}
+
 const blockNonNumeric = (event) => {
   const key = event.key
   const isControl = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter'].includes(key)
@@ -1495,23 +1556,22 @@ const blockNonNumeric = (event) => {
 }
 
 const handlePasteNumeric = (event) => {
-  const text = (event.clipboardData || window.clipboardData).getData('text')
-  let clean = String(text).replace(/[^\d.]/g, '')
-  const parts = clean.split('.')
-  if (parts.length > 2) {
-    clean = parts[0] + '.' + parts.slice(1).join('')
+  event.preventDefault()
+  const pastedText = event.clipboardData.getData('text')
+  const cleanText = pastedText.replace(/[^\d.]/g, '')
+  const parts = cleanText.split('.')
+  let finalText = parts[0]
+  if (parts.length > 1) {
+    finalText += '.' + parts.slice(1).join('').substring(0, 2)
   }
-  if (parts.length >= 2) {
-    parts[1] = parts[1].slice(0, 2)
-    clean = parts[0] + '.' + parts[1]
+  event.target.value = finalText
+  
+  // Find the OR detail that this input belongs to and update it
+  const inputElement = event.target
+  const orDetailIndex = Array.from(inputElement.closest('.q-card-section').querySelectorAll('input[prefix="₱"]')).indexOf(inputElement)
+  if (orDetailIndex >= 0 && store.currentLiquidation.orDetails[orDetailIndex]) {
+    store.currentLiquidation.orDetails[orDetailIndex].orAmount = finalText
   }
-  const input = event.target
-  const start = input.selectionStart
-  const end = input.selectionEnd
-  const current = input.value
-  input.value = current.slice(0, start) + clean + current.slice(end)
-  const e = new Event('input', { bubbles: true })
-  input.dispatchEvent(e)
 }
 </script>
 
