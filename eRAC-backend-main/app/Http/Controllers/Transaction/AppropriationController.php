@@ -1869,7 +1869,14 @@ class AppropriationController extends Controller
             'appropriation_ids' => $appropriations->pluck('id')->toArray(),
             'budget_descriptions' => $appropriations->map(function($appr) {
                 return $appr->budget ? $appr->budget->description : 'No Budget';
-            })->unique()->values()->toArray()
+            })->unique()->values()->toArray(),
+            'individual_amounts' => $appropriations->map(function($appr) {
+                return [
+                    'id' => $appr->id,
+                    'amount' => $appr->amount,
+                    'budget_description' => $appr->budget ? $appr->budget->description : 'No Budget'
+                ];
+            })->toArray()
         ]);
 
         // Group by expense hierarchy and calculate unused amounts
@@ -1980,17 +1987,28 @@ class AppropriationController extends Controller
                 'message' => 'Validation failed',
                 'errors' => $e->errors()
             ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Unexpected error in createSupplementalBudget:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+            return response()->json([
+                'status' => false,
+                'message' => 'An unexpected error occurred: ' . $e->getMessage()
+            ], 500);
         }
 
         return DB::transaction(function () use ($request) {
-            // Determine barangay_id
-            $barangayId = null;
-            if ($request->barangay_id) {
-                $barangayId = $request->barangay_id;
-            } else {
-                $user = $request->user('barangay');
-                $barangayId = $user->barangay_id;
-            }
+            try {
+                // Determine barangay_id
+                $barangayId = null;
+                if ($request->barangay_id) {
+                    $barangayId = $request->barangay_id;
+                } else {
+                    $user = $request->user('barangay');
+                    $barangayId = $user->barangay_id;
+                }
 
             // Get fiscal year ID from year
             $fiscalYear = LibFiscalYear::where('year', $request->year)
@@ -2059,7 +2077,8 @@ class AppropriationController extends Controller
                 // Log after reduction
                 \Log::info('After reducing source appropriation:', [
                     'source_id' => $sourceAppropriation->id,
-                    'new_amount' => $sourceAppropriation->fresh()->amount
+                    'new_amount' => $sourceAppropriation->fresh()->amount,
+                    'reduction_amount' => $source['amount']
                 ]);
 
                 // Create new appropriation for supplemental budget - this will be unappropriated
@@ -2100,6 +2119,13 @@ class AppropriationController extends Controller
                 )
             );
 
+            \Log::info('Supplemental budget creation completed successfully:', [
+                'budget_id' => $budget->id,
+                'total_amount' => $totalAmount,
+                'created_appropriations' => count($createdAppropriations),
+                'transaction_committed' => true
+            ]);
+
             return response()->json([
                 'status' => true,
                 'message' => 'Supplemental budget created successfully',
@@ -2108,6 +2134,14 @@ class AppropriationController extends Controller
                     'appropriations' => $createdAppropriations
                 ]
             ], 201);
+            } catch (\Exception $e) {
+                \Log::error('Error in supplemental budget transaction:', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                    'request_data' => $request->all()
+                ]);
+                throw $e; // Re-throw to trigger transaction rollback
+            }
         });
     }
 

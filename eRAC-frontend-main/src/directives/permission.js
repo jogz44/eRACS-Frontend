@@ -14,6 +14,11 @@ export const vPermission = {
 }
 
 function applyPermission(el, binding) {
+  // Check if element exists before proceeding
+  if (!el) {
+    return
+  }
+  
   const permissionsStore = usePermissionsStore()
   const { value, modifiers } = binding
 
@@ -75,6 +80,10 @@ function blockEvent(e) {
 }
 
 function addBlockHandlers(el) {
+  if (!el) {
+    return
+  }
+  
   el.__permHandlers = el.__permHandlers || []
   const events = ['click', 'mousedown', 'mouseup', 'keydown', 'keyup', 'touchstart', 'touchend']
   events.forEach(evt => {
@@ -86,6 +95,10 @@ function addBlockHandlers(el) {
 }
 
 function removeBlockHandlers(el) {
+  if (!el) {
+    return
+  }
+  
   if (el.__permHandlers) {
     el.__permHandlers.forEach(({ evt, handler }) => {
       el.removeEventListener(evt, handler, true)

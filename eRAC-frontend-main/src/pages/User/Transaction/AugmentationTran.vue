@@ -8,25 +8,15 @@
             Transfer budget allocations between expense classes
           </div>
         </div>
-        <div class="q-gutter-xs">
-          <q-btn
-            icon="refresh"
-            color="primary"
-            flat
-            dense
-            @click="refreshData"
-            :loading="isRefreshing"
-            title="Refresh Data"
-          />
-          <q-btn
-            icon="bug_report"
-            color="orange"
-            flat
-            dense
-            @click="forceUpdateIndicators"
-            title="Debug Indicators"
-          />
-        </div>
+        <q-btn
+          icon="refresh"
+          color="primary"
+          flat
+          dense
+          @click="refreshData"
+          :loading="isRefreshing"
+          title="Refresh Data"
+        />
       </div>
     </div>
 
@@ -228,12 +218,6 @@ const getAugmentationsData = () => {
     data = store.filteredAugmentations
   }
 
-  console.log('Getting augmentations data:', {
-    'store.augmentation': store.augmentation,
-    'store.augmentation?.value': store.augmentation?.value,
-    'store.filteredAugmentations': store.filteredAugmentations,
-    'result': data
-  })
 
   return Array.isArray(data) ? data : []
 }
@@ -243,7 +227,6 @@ const totalAugmentations = computed(() => {
   // Force reactivity by accessing store properties
   store.augmentation // Access store property for reactivity
   const augmentations = getAugmentationsData()
-  console.log('Total augmentations computed:', augmentations.length, augmentations)
   return augmentations.length
 })
 
@@ -273,7 +256,6 @@ const totalExpenseClasses = computed(() => {
       })
     }
   })
-  console.log('Total expense classes computed:', expenseClasses.size, Array.from(expenseClasses))
   return expenseClasses.size
 })
 
@@ -285,11 +267,9 @@ const totalAmount = computed(() => {
 
   const total = augmentations.reduce((sum, augmentation) => {
     const amount = Number(augmentation.total_amount) || 0
-    console.log('Augmentation amount:', augmentation.ref_number || augmentation.id, amount)
     return sum + amount
   }, 0)
 
-  console.log('Total amount computed:', total, 'from', augmentations.length, 'augmentations')
   return total
 })
 
@@ -335,29 +315,6 @@ const refreshData = async (showNotification = true) => {
   }
 }
 
-// Force update computed properties
-const forceUpdateIndicators = () => {
-  console.log('=== DEBUGGING INDICATORS ===')
-  console.log('Store object:', store)
-  console.log('Store augmentation:', store.augmentation)
-  console.log('Store filteredAugmentations:', store.filteredAugmentations)
-  console.log('Store loadingAugmentations:', store.loadingAugmentations)
-
-  const data = getAugmentationsData()
-  console.log('Augmentations data:', data)
-  console.log('Data length:', data.length)
-
-  if (data.length > 0) {
-    console.log('First augmentation:', data[0])
-    console.log('Total amount of first:', data[0].total_amount)
-  }
-
-  // Force reactivity by accessing the computed properties
-  console.log('Total augmentations:', totalAugmentations.value)
-  console.log('Total amount:', totalAmount.value)
-  console.log('Total expense classes:', totalExpenseClasses.value)
-  console.log('=== END DEBUG ===')
-}
 
 // Date range display formatting
 const dateRangeDisplay = computed(() => {
@@ -446,24 +403,6 @@ watch(searchQuery, (newQuery) => {
   store.searchQuery = newQuery
 }, { debounce: 300 })
 
-// Watch for store data changes to trigger reactive updates
-watch(() => store.augmentation, (newData) => {
-  console.log('Store augmentation data changed:', newData)
-}, { deep: true })
-
-// Force reactivity update when store data changes
-watch(() => store.filteredAugmentations, (newData) => {
-  console.log('Store filtered augmentations changed:', newData)
-}, { deep: true })
-
-// Debug watcher to see what's in the store
-watch(() => store, (newStore) => {
-  console.log('Store state:', {
-    augmentation: newStore.augmentation,
-    filteredAugmentations: newStore.filteredAugmentations,
-    loadingAugmentations: newStore.loadingAugmentations
-  })
-}, { deep: true, immediate: true })
 
 // Enhanced onMounted with better error handling
 onMounted(async () => {
@@ -474,9 +413,8 @@ onMounted(async () => {
       store.fetchExpenseAccounts()
     ])
 
-    // Force update indicators after data is loaded
+    // Force reactivity update after data is loaded
     await nextTick()
-    forceUpdateIndicators()
 
     // Log page visit
     await logPageVisit('Expense Class Augmentation')
