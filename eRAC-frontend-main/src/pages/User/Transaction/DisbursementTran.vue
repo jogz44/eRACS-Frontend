@@ -509,8 +509,8 @@
             <q-td :props="props">
               <div v-if="hasRemarks(props.row)" class="row items-center justify-center">
                 <q-icon
-                  name="visibility"
-                  color="blue"
+                  name="edit_note"
+                  color="primary"
                   size="md"
                   class="cursor-pointer"
                   @click="openRemarksDialog(props.row)"
@@ -579,7 +579,7 @@
         </q-card>
       </q-dialog>
 
-      <!-- Edit Request Dialog (for Treasurers) -->
+      <!-- Dialog (for Treasurers) -->
       <q-dialog v-model="store.dialogs.editRequest" persistent>
         <q-card style="min-width: 500px; max-width: 90vw">
           <q-card-section class="q-pb-none">
@@ -1024,33 +1024,33 @@ const loadDataWithRetry = async (retryCount = 0, maxRetries = 3) => {
 // Apply navigation parameters from dashboard
 const applyNavigationFilters = () => {
   const query = route.query
-  
+
   if (query.search) {
     searchQuery.value = query.search
     store.searchQuery = query.search
   }
-  
+
   if (query.status) {
     selectedStatus.value = query.status
   }
-  
+
   if (query.dateFrom && query.dateTo) {
     // Convert date format for the date range picker
     const fromDate = new Date(query.dateFrom)
     const toDate = new Date(query.dateTo)
-    
+
     if (!isNaN(fromDate.getTime()) && !isNaN(toDate.getTime())) {
       dateRange.value = {
         from: fromDate.toISOString().split('T')[0],
         to: toDate.toISOString().split('T')[0]
       }
-      
+
       // Apply to store
       store.dateFrom = fromDate.toLocaleDateString('en-GB')
       store.dateTo = toDate.toLocaleDateString('en-GB')
     }
   }
-  
+
   // Show notification if filters were applied
   // Filters applied from dashboard navigation - no notification needed
 }
@@ -1059,7 +1059,7 @@ onMounted(async () => {
   try {
     // Apply navigation filters first
     applyNavigationFilters()
-    
+
     // Use enhanced data loading with retry mechanism
     await loadDataWithRetry()
 

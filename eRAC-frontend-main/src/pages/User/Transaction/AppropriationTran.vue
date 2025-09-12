@@ -341,12 +341,12 @@
                 v-if="selectedBudgetType !== 'supplemental'"
                 dense
                 icon="edit"
-                color="orange"
+                :color="editLoading[props.row.id] || props.row.unappropriated <= 0 ? 'grey' : 'orange'"
                 @click="openEditAllocationDialog(props.row)"
                 :disable="
                   !props.row.allocations ||
                   props.row.allocations.length === 0 ||
-                  editLoading[props.row.id]
+                  editLoading[props.row.id] || props.row.unappropriated <= 0
                 "
                 :loading="editLoading[props.row.id]"
                 v-permission="'edit'"
@@ -1707,7 +1707,7 @@ const executeTransfer = async () => {
 
     if (error.response?.data) {
       console.log('Full error response data:', JSON.stringify(error.response.data, null, 2))
-      
+
       if (error.response.data.message) {
         errorMessage = error.response.data.message
       }
@@ -2022,7 +2022,7 @@ const saveEditedAllocation = async () => {
 // Apply navigation parameters from dashboard
 const applyNavigationFilters = () => {
   const query = route.query
-  
+
   if (query.budgetType) {
     selectedBudgetType.value = query.budgetType
   }
@@ -2032,7 +2032,7 @@ onMounted(async () => {
   try {
     // Apply navigation filters first
     applyNavigationFilters()
-    
+
     // Load both budgets and appropriations to ensure complete data
     await appropriationStore.fetchBudgets()
     await appropriationStore.fetchAppropriations()

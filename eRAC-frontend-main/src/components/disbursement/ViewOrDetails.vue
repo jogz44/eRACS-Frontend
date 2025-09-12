@@ -209,10 +209,7 @@
         <!-- Void Request Action Buttons (only for approvers) -->
         <div v-if="isApprover && store.currentLiquidation?.status === 'Void Requested'"
           class="q-mr-auto void-action-buttons">
-          <div class="void-request-indicator">
-            <q-icon name="pending_actions" color="orange" size="20px" class="q-mr-sm" />
-            <span class="void-request-text">Void Request Pending</span>
-          </div>
+
           <q-btn unelevated label="Approve Void" color="green" icon="check_circle" @click="handleApproveVoid"
             :loading="voidActionLoading" class="void-approve-btn" />
           <q-btn unelevated label="Reject Void" color="red" icon="cancel" @click="handleRejectVoid"
@@ -220,10 +217,7 @@
         </div>
         <div v-if="isApprover && store.currentLiquidation?.status === 'Edit Requested'"
           class="q-mr-auto edit-action-buttons">
-          <div class="edit-request-indicator">
-            <q-icon name="edit_note" color="deep-orange" size="20px" class="q-mr-sm" />
-            <span class="edit-request-text">Edit Request Pending</span>
-          </div>
+
           <q-btn unelevated label="Approve Edit" color="green" icon="check_circle" @click="handleApproveEdit"
             :loading="editActionLoading" class="edit-approve-btn" />
           <q-btn unelevated label="Reject Edit" color="red" icon="cancel" @click="handleRejectEdit"
@@ -543,13 +537,13 @@ const handleRejectEdit = () => {
 
 /* Void action buttons styling */
 .void-action-buttons {
-  display: flex;
+   display: flex;
   gap: 12px;
   align-items: center;
   padding: 8px 16px;
-  background-color: #f8f9fa;
+  background-color: #fff3e0;
   border-radius: 8px;
-  border: 1px solid #e9ecef;
+  border: 1px solid #ffcc02;
   margin-right: 16px;
 }
 
