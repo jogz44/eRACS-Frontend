@@ -513,7 +513,12 @@
                 :key="'class-' + expenseClass.id"
               >
                 <div class="row q-pa-sm bg-grey-1 text-weight-medium">
-                  <div class="col-12">{{ expenseClass.name }}</div>
+                  <div class="col-6">{{ expenseClass.name }}</div>
+                  <div class="col-6 text-right">
+                    <template v-if="calculateClassTotal(expenseClass) > 0">
+                      {{ appropriationStore.formatCurrency(calculateClassTotal(expenseClass)) }}
+                    </template>
+                  </div>
                 </div>
 
                 <template
@@ -558,9 +563,13 @@
                         prefix="₱"
                         placeholder="0.00"
                       />
-                      <div v-else class="text-weight-medium">
-                        {{ appropriationStore.formatCurrency(calculateTypeTotal(expenseType)) }}
-                      </div>
+                      <template v-else>
+                        <template v-if="calculateTypeTotal(expenseType) > 0">
+                          <div class="text-weight-medium">
+                            {{ appropriationStore.formatCurrency(calculateTypeTotal(expenseType)) }}
+                          </div>
+                        </template>
+                      </template>
                     </div>
                   </div>
 
@@ -600,7 +609,9 @@
                           </template>
                           <!-- Show amount display if item has sub-items -->
                           <template v-else>
-                            <span class="text-weight-regular">{{ appropriationStore.formatCurrency(calculateItemTotal(expenseItem)) }}</span>
+                            <template v-if="calculateItemTotal(expenseItem) > 0">
+                              <span class="text-weight-regular">{{ appropriationStore.formatCurrency(calculateItemTotal(expenseItem)) }}</span>
+                            </template>
                           </template>
                         </div>
                       </div>
@@ -1833,31 +1844,38 @@ const parseCurrency = (value) => {
 }
 
 const calculateTypeTotal = (type) => {
-  if (!type || !type.children) return 0
-
-  let total = 0
-
-  type.children.forEach((item) => {
-    // Use the item total which includes the item's own amount plus all of its sub-items
-    total += calculateItemTotal(item)
-  })
-
-  return Math.round(total * 100) / 100
+  // Only show the type's own direct allocation amount, not children amounts
+  return type.amount || 0
 }
 
 const calculateItemTotal = (expenseItem) => {
+  // Only show the item's own direct allocation amount, not children amounts
+  return expenseItem.amount || 0
+}
+
+const calculateClassTotal = (expenseClass) => {
+  // Class should show the sum of ALL allocations under it
   let total = 0
 
-  // Include the item's own amount if it exists
-  if (expenseItem.amount) {
-    total += parseCurrency(expenseItem.amount)
-  }
-
-  // Include all sub-item amounts
-  expenseItem.children?.forEach((subItem) => {
-    if (subItem.amount) {
-      total += parseCurrency(subItem.amount)
+  expenseClass.children?.forEach((expenseType) => {
+    // Include type amount only when there are no items under it
+    if ((!expenseType.children || expenseType.children.length === 0) && expenseType.amount) {
+      total += parseCurrency(expenseType.amount)
     }
+
+    expenseType.children?.forEach((item) => {
+      if (item.children && item.children.length > 0) {
+        // When there are sub-items, include only sub-item amounts
+        item.children.forEach((subItem) => {
+          if (subItem.amount) {
+            total += parseCurrency(subItem.amount)
+          }
+        })
+      } else if (item.amount) {
+        // Items without sub-items: include the item's own amount
+        total += parseCurrency(item.amount)
+      }
+    })
   })
 
   return Math.round(total * 100) / 100

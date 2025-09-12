@@ -251,15 +251,49 @@
       <q-card-section>
         <div class="row items-center q-mb-md">
           <div class="text-subtitle1">
-            <strong>Select Expense Account for Reimbursement:</strong>
+            <strong>Expense Account for Reimbursement:</strong>
           </div>
           <q-space />
-          <q-btn color="primary" icon="add" label="Add" flat @click="showExpenseAccountDialog = true" />
+          <q-btn 
+            color="primary" 
+            icon="add" 
+            label="Change Account" 
+            flat 
+            @click="showExpenseAccountDialog = true"
+            v-if="selectedReimbursementExpenseAccounts.length > 0"
+          />
+          <q-btn 
+            color="primary" 
+            icon="add" 
+            label="Add" 
+            flat 
+            @click="showExpenseAccountDialog = true"
+            v-else
+          />
+        </div>
+        
+        <!-- Auto-selection notification -->
+        <div v-if="selectedReimbursementExpenseAccounts.length > 0" class="q-mb-md">
+          <q-banner class="bg-blue-1 text-blue-8" rounded>
+            <template v-slot:avatar>
+              <q-icon name="auto_awesome" color="blue" />
+            </template>
+            <div class="text-body2">
+              <strong>Account automatically selected</strong> from the original disbursement
+            </div>
+          </q-banner>
         </div>
 
         <!-- Selected Expense Accounts Table -->
         <q-table :rows="selectedReimbursementExpenseAccounts" :columns="selectedExpenseAccountColumns" row-key="id"
           :pagination="{ rowsPerPage: 0 }" flat bordered>
+          <template v-slot:body-cell-account="props">
+            <q-td :props="props">
+              <div class="expense-account-hierarchy">
+                {{ props.row.accountName }}
+              </div>
+            </q-td>
+          </template>
           <template v-slot:body-cell-amount="props">
             <q-td :props="props" class="text-right">
               <div class="flex justify-end">
@@ -413,6 +447,14 @@ const selectedReimbursementOrs = ref([])
 const availableOrNumbers = ref([])
 const showExpenseAccountDialog = ref(false)
 
+// Debug watcher for selectedReimbursementExpenseAccounts
+watch(selectedReimbursementExpenseAccounts, (newVal, oldVal) => {
+  console.log('=== selectedReimbursementExpenseAccounts CHANGED ===')
+  console.log('Old value:', oldVal)
+  console.log('New value:', newVal)
+  console.log('New length:', newVal?.length || 0)
+}, { deep: true })
+
 
 const store = useDisbursementStore()
 const bankStore = useBankStore()
@@ -542,14 +584,26 @@ watch(
         console.log('Expense accounts after balance refresh:', store.expenseAccounts.length)
       }
 
+      // AUTO-SELECT ACCOUNT: Automatically select the same account from the original disbursement
+      // Add a small delay to ensure expense accounts are fully loaded
+      console.log('=== SCHEDULING AUTO-SELECTION ===')
+      console.log('Current time:', new Date().toISOString())
+      setTimeout(async () => {
+        console.log('=== AUTO-SELECTION TIMEOUT TRIGGERED ===')
+        console.log('Current time:', new Date().toISOString())
+        await autoSelectOriginalAccount()
+      }, 500)
+
       // Populate selected ORs with all OR details
       selectedReimbursementOrs.value = store.currentLiquidation.orDetails.map((or) => ({
         ...or,
         reimbAmount: '',
       }))
     } else {
-      // Reset form when dialog closes
-      resetReimbursementForm()
+      // Reset form when dialog closes - add a small delay to avoid race conditions
+      setTimeout(() => {
+        resetReimbursementForm()
+      }, 100)
     }
   },
 )
@@ -624,11 +678,33 @@ const expenseAccountColumns = computed(() => [
     sortable: true,
   },
   {
-    name: 'accountName',
-    label: 'Account Name',
-    field: 'accountName',
+    name: 'account',
+    label: 'Expense Class',
+    field: 'account',
     align: 'left',
     sortable: true,
+  },
+  {
+    name: 'expenseType',
+    label: 'Expense Type',
+    field: 'expenseType',
+    align: 'left',
+    sortable: true,
+  },
+  {
+    name: 'expenseItem',
+    label: 'Expense Item',
+    field: 'expenseItem',
+    align: 'left',
+    sortable: true,
+  },
+  {
+    name: 'expenseSubItem',
+    label: 'Sub Item',
+    field: 'expenseSubItem',
+    align: 'left',
+    sortable: true,
+    format: (val) => val || '-',
   },
   {
     name: 'amount',
@@ -670,7 +746,12 @@ const expenseAccountDetails = computed(() => {
     id: expense.id || index + 1,
     accountName: expense.accountName || expense.account_name || 'N/A',
     amount: expense.amount || 0,
-    particular: expense.particular || 'N/A'
+    particular: expense.particular || 'N/A',
+    // Add fields for multi-column display
+    account: expense.account || expense.expense_class_name || '',
+    expenseType: expense.expenseType || expense.expense_type_name || '',
+    expenseItem: expense.expenseItem || expense.expense_item_name || '',
+    expenseSubItem: expense.expenseSubItem || expense.expense_sub_item_name || '',
   }))
   
   console.log('Mapped expenses:', mappedExpenses)
@@ -1251,12 +1332,23 @@ const handleSubmitReimbursement = async () => {
       // Reset reimbursement form
       resetReimbursementForm()
     } else {
-      $q.notify({
-        type: 'negative',
-        message: result.error || 'Failed to submit reimbursement',
-        icon: 'error',
-        position: 'top',
-      })
+      // Handle specific budget validation error
+      if (result.error === 'Insufficient budget' || result.message?.includes('No more budget')) {
+        $q.notify({
+          type: 'negative',
+          message: 'No more budget for this account. Please commit again.',
+          icon: 'warning',
+          position: 'top',
+          timeout: 5000,
+        })
+      } else {
+        $q.notify({
+          type: 'negative',
+          message: result.error || result.message || 'Failed to submit reimbursement',
+          icon: 'error',
+          position: 'top',
+        })
+      }
     }
   } catch (error) {
     console.error('Error submitting reimbursement:', error)
@@ -1272,12 +1364,327 @@ const handleSubmitReimbursement = async () => {
 }
 
 const resetReimbursementForm = () => {
+  console.log('=== RESETTING REIMBURSEMENT FORM ===')
+  console.log('Current selectedReimbursementExpenseAccounts before reset:', selectedReimbursementExpenseAccounts.value)
+  
   selectedReimbursementBank.value = null
   reimbursementChequeNumber.value = ''
   reimbursementPayee.value = ''
   reimbursementDvNumber.value = ''
   selectedReimbursementExpenseAccounts.value = []
   selectedReimbursementOrs.value = []
+  
+  console.log('Form reset completed')
+}
+
+// Auto-select the same account from the original disbursement
+const autoSelectOriginalAccount = async () => {
+  try {
+    console.log('=== AUTO-SELECTING ORIGINAL ACCOUNT FUNCTION CALLED ===')
+    console.log('Function called at:', new Date().toISOString())
+    console.log('=== AUTO-SELECTING ORIGINAL ACCOUNT ===')
+    console.log('Current liquidation expenses:', store.currentLiquidation?.expenses)
+    console.log('Available expense accounts:', store.expenseAccounts?.length || 0)
+    
+    if (!store.currentLiquidation?.expenses || store.currentLiquidation.expenses.length === 0) {
+      console.log('No expenses found in original disbursement')
+      return
+    }
+
+    if (!store.expenseAccounts || store.expenseAccounts.length === 0) {
+      console.log('No expense accounts available for matching')
+      $q.notify({
+        type: 'warning',
+        message: 'No expense accounts available. Please refresh and try again.',
+        icon: 'warning',
+        position: 'top',
+        timeout: 3000,
+      })
+      return
+    }
+
+    // Get the first expense from the original disbursement
+    // For now, we'll use the first expense. In the future, this could be enhanced
+    // to handle multiple expense accounts by allowing user selection
+    const originalExpense = store.currentLiquidation.expenses[0]
+    console.log('Original expense:', originalExpense)
+
+    if (!originalExpense) {
+      console.log('No original expense found')
+      return
+    }
+
+    // If there are multiple expenses, show a warning
+    if (store.currentLiquidation.expenses.length > 1) {
+      console.log('Multiple expenses found in original disbursement, using the first one')
+      $q.notify({
+        type: 'warning',
+        message: `Multiple expense accounts found. Using the first account: ${originalExpense.account_name || 'Unknown'}`,
+        icon: 'warning',
+        position: 'top',
+        timeout: 4000,
+      })
+    }
+
+    // Find matching expense account in the available accounts
+    console.log('Available expense accounts:', store.expenseAccounts)
+    console.log('Original expense full object:', JSON.stringify(originalExpense, null, 2))
+    console.log('Looking for account with IDs:', {
+      expense_class_id: originalExpense.expense_class_id,
+      expense_type_id: originalExpense.expense_type_id,
+      expense_item_id: originalExpense.expense_item_id,
+      expense_sub_item_id: originalExpense.expense_sub_item_id
+    })
+
+    const matchingAccount = store.expenseAccounts.find(account => {
+      // Match by expense hierarchy IDs - convert to numbers for comparison
+      const classMatch = parseInt(account.expense_class_id) === parseInt(originalExpense.expense_class_id)
+      const typeMatch = parseInt(account.expense_type_id) === parseInt(originalExpense.expense_type_id)
+      const itemMatch = parseInt(account.expense_item_id) === parseInt(originalExpense.expense_item_id)
+      const subItemMatch = parseInt(account.expense_sub_item_id) === parseInt(originalExpense.expense_sub_item_id)
+
+      console.log('Checking account:', {
+        id: account.id,
+        account: account.account,
+        expenseType: account.expenseType,
+        expenseItem: account.expenseItem,
+        expenseSubItem: account.expenseSubItem,
+        expense_class_id: account.expense_class_id,
+        expense_type_id: account.expense_type_id,
+        expense_item_id: account.expense_item_id,
+        expense_sub_item_id: account.expense_sub_item_id,
+        matches: { classMatch, typeMatch, itemMatch, subItemMatch }
+      })
+      
+      // Also log the full account object for debugging
+      console.log('Full account object:', JSON.stringify(account, null, 2))
+
+      return classMatch && typeMatch && itemMatch && subItemMatch
+    })
+
+    if (matchingAccount) {
+      console.log('Found matching account:', matchingAccount)
+      
+      // Check if account has sufficient budget
+      const requiredAmount = parseFloat(reimbursementAmount.value)
+      const availableBalance = parseFloat(matchingAccount.balance || 0)
+      
+      console.log('Required amount:', requiredAmount)
+      console.log('Available balance:', availableBalance)
+      
+      if (availableBalance >= requiredAmount) {
+        // Auto-select the account with the reimbursement amount
+        const autoSelectedAccount = {
+          ...matchingAccount,
+          amount: requiredAmount.toString(),
+          accountName: `${matchingAccount.account}${matchingAccount.expenseType ? ` > ${matchingAccount.expenseType}` : ''}${matchingAccount.expenseItem ? ` > ${matchingAccount.expenseItem}` : ''}${matchingAccount.expenseSubItem ? ` > ${matchingAccount.expenseSubItem}` : ''}`
+        }
+        
+        selectedReimbursementExpenseAccounts.value = [autoSelectedAccount]
+        
+        console.log('=== AUTO-SELECTION SUCCESS (EXACT MATCH) ===')
+        console.log('Auto-selected account:', autoSelectedAccount)
+        console.log('selectedReimbursementExpenseAccounts.value:', selectedReimbursementExpenseAccounts.value)
+        console.log('Array length:', selectedReimbursementExpenseAccounts.value.length)
+        
+        $q.notify({
+          type: 'positive',
+          message: `Automatically selected account: ${autoSelectedAccount.accountName}`,
+          icon: 'check_circle',
+          position: 'top',
+          timeout: 3000,
+        })
+      } else {
+        // Show budget validation error
+        $q.notify({
+          type: 'negative',
+          message: 'No more budget for this account. Please commit again.',
+          icon: 'warning',
+          position: 'top',
+          timeout: 5000,
+        })
+        
+        console.log('Insufficient budget for auto-selection')
+      }
+    } else {
+      console.log('No exact matching account found, trying fallback matching...')
+      
+      // Fallback: Try multiple matching strategies with priority scoring
+      const fallbackMatches = store.expenseAccounts.map(account => {
+        // Strategy 1: Try matching by account name (the full hierarchy string) - HIGHEST PRIORITY
+        const accountNameMatch = account.account && originalExpense.account_name && 
+          account.account.toLowerCase().includes(originalExpense.account_name.toLowerCase().split(' > ')[0])
+        
+        // Strategy 2: Try matching by exact expense item ID - HIGH PRIORITY
+        const exactItemMatch = parseInt(account.expense_item_id) === parseInt(originalExpense.expense_item_id)
+        
+        // Strategy 3: Try matching by partial hierarchy (class and type) - MEDIUM PRIORITY
+        const partialMatch = parseInt(account.expense_class_id) === parseInt(originalExpense.expense_class_id) &&
+          parseInt(account.expense_type_id) === parseInt(originalExpense.expense_type_id)
+        
+        // Strategy 4: Try matching by just the expense class - LOW PRIORITY
+        const classOnlyMatch = parseInt(account.expense_class_id) === parseInt(originalExpense.expense_class_id)
+        
+        // Strategy 5: Try matching by account name parts - MEDIUM PRIORITY
+        const namePartsMatch = originalExpense.account_name && account.account && 
+          originalExpense.account_name.toLowerCase().includes(account.account.toLowerCase())
+        
+        // Strategy 6: Try reverse matching (account name in original) - MEDIUM PRIORITY
+        const reverseNameMatch = originalExpense.account_name && account.account && 
+          account.account.toLowerCase().includes(originalExpense.account_name.toLowerCase())
+        
+        // Calculate priority score (higher is better)
+        let priorityScore = 0
+        if (exactItemMatch) priorityScore += 100  // Highest priority for exact item match
+        if (accountNameMatch) priorityScore += 80
+        if (namePartsMatch) priorityScore += 60
+        if (reverseNameMatch) priorityScore += 60
+        if (partialMatch) priorityScore += 40
+        if (classOnlyMatch) priorityScore += 20
+        
+        console.log('Fallback matching for account:', {
+          id: account.id,
+          account: account.account,
+          expenseItem: account.expenseItem,
+          exactItemMatch,
+          accountNameMatch,
+          partialMatch,
+          classOnlyMatch,
+          namePartsMatch,
+          reverseNameMatch,
+          priorityScore,
+          originalExpenseItemId: originalExpense.expense_item_id,
+          accountExpenseItemId: account.expense_item_id
+        })
+        
+        return {
+          account,
+          priorityScore,
+          exactItemMatch,
+          accountNameMatch,
+          partialMatch,
+          classOnlyMatch,
+          namePartsMatch,
+          reverseNameMatch
+        }
+      }).filter(match => match.priorityScore > 0) // Only include accounts that have some match
+      
+      // Sort by priority score (highest first) and take the best match
+      const sortedMatches = fallbackMatches.sort((a, b) => b.priorityScore - a.priorityScore)
+      const bestMatch = sortedMatches.length > 0 ? sortedMatches[0] : null
+      const fallbackMatch = bestMatch ? bestMatch.account : null
+      
+      console.log('Fallback matching results:', {
+        totalMatches: fallbackMatches.length,
+        sortedMatches: sortedMatches.map(m => ({
+          id: m.account.id,
+          account: m.account.account,
+          expenseItem: m.account.expenseItem,
+          priorityScore: m.priorityScore,
+          exactItemMatch: m.exactItemMatch
+        })),
+        bestMatch: bestMatch ? {
+          id: bestMatch.account.id,
+          account: bestMatch.account.account,
+          expenseItem: bestMatch.account.expenseItem,
+          priorityScore: bestMatch.priorityScore,
+          exactItemMatch: bestMatch.exactItemMatch
+        } : null
+      })
+      
+      if (fallbackMatch) {
+        console.log('Found fallback matching account:', fallbackMatch)
+        
+        // Check if account has sufficient budget
+        const requiredAmount = parseFloat(reimbursementAmount.value)
+        const availableBalance = parseFloat(fallbackMatch.balance || 0)
+        
+        if (availableBalance >= requiredAmount) {
+          // Auto-select the account with the reimbursement amount
+          const autoSelectedAccount = {
+            ...fallbackMatch,
+            amount: requiredAmount.toString(),
+            accountName: `${fallbackMatch.account}${fallbackMatch.expenseType ? ` > ${fallbackMatch.expenseType}` : ''}${fallbackMatch.expenseItem ? ` > ${fallbackMatch.expenseItem}` : ''}${fallbackMatch.expenseSubItem ? ` > ${fallbackMatch.expenseSubItem}` : ''}`
+          }
+          
+          selectedReimbursementExpenseAccounts.value = [autoSelectedAccount]
+          
+          console.log('=== AUTO-SELECTION SUCCESS (FALLBACK MATCH) ===')
+          console.log('Auto-selected account:', autoSelectedAccount)
+          console.log('selectedReimbursementExpenseAccounts.value:', selectedReimbursementExpenseAccounts.value)
+          console.log('Array length:', selectedReimbursementExpenseAccounts.value.length)
+          console.log('First item in array:', selectedReimbursementExpenseAccounts.value[0])
+          console.log('First item accountName:', selectedReimbursementExpenseAccounts.value[0]?.accountName)
+          console.log('First item amount:', selectedReimbursementExpenseAccounts.value[0]?.amount)
+          console.log('First item id:', selectedReimbursementExpenseAccounts.value[0]?.id)
+          
+          // Force reactivity update
+          await nextTick()
+          console.log('After nextTick - Array length:', selectedReimbursementExpenseAccounts.value.length)
+          
+          $q.notify({
+            type: 'positive',
+            message: `Automatically selected account (fallback match): ${autoSelectedAccount.accountName}`,
+            icon: 'check_circle',
+            position: 'top',
+            timeout: 4000,
+          })
+          
+          // Show additional info about the fallback match
+          $q.notify({
+            type: 'info',
+            message: 'Note: Selected account has same fund and type as original, but different item/sub-item.',
+            icon: 'info',
+            position: 'top',
+            timeout: 5000,
+          })
+        } else {
+          // Show budget validation error
+          $q.notify({
+            type: 'negative',
+            message: 'No more budget for this account. Please commit again.',
+            icon: 'warning',
+            position: 'top',
+            timeout: 5000,
+          })
+        }
+      } else {
+        console.log('No matching account found in available accounts')
+        console.log('=== DEBUGGING INFO ===')
+        console.log('Original expense:', originalExpense)
+        console.log('All available accounts:', store.expenseAccounts.map(acc => ({
+          id: acc.id,
+          account: acc.account,
+          expenseType: acc.expenseType,
+          expenseItem: acc.expenseItem,
+          expenseSubItem: acc.expenseSubItem,
+          expense_class_id: acc.expense_class_id,
+          expense_type_id: acc.expense_type_id,
+          expense_item_id: acc.expense_item_id,
+          expense_sub_item_id: acc.expense_sub_item_id,
+          balance: acc.balance
+        })))
+        console.log('=== END DEBUGGING INFO ===')
+        
+        $q.notify({
+          type: 'warning',
+          message: 'Could not find matching account. Please select manually.',
+          icon: 'warning',
+          position: 'top',
+          timeout: 5000,
+        })
+      }
+    }
+  } catch (error) {
+    console.error('Error in auto-select original account:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error auto-selecting account. Please select manually.',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000,
+    })
+  }
 }
 
 const handleSaveOrDetails = async () => {
@@ -1437,6 +1844,7 @@ const handlePasteNumeric = (event) => {
     store.currentLiquidation.orDetails[orDetailIndex].orAmount = finalText
   }
 }
+
 </script>
 
 <style scoped>
@@ -1454,10 +1862,23 @@ const handlePasteNumeric = (event) => {
   color: #666;
 }
 
+/* Expense account hierarchy styling */
+.expense-account-hierarchy {
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: break-word;
+  max-width: 400px;
+}
+
 /* Responsive design for mobile */
 @media (max-width: 768px) {
   .q-card {
     min-width: 95vw !important;
+  }
+
+  .expense-account-hierarchy {
+    font-size: 11px;
+    max-width: 250px;
   }
 }
 </style>

@@ -86,6 +86,13 @@
             flat
             bordered
           >
+            <template v-slot:body-cell-account="props">
+              <q-td :props="props">
+                <div class="expense-account-hierarchy">
+                  {{ props.row.accountName || `${props.row.account}${props.row.expenseType ? ` > ${props.row.expenseType}` : ''}${props.row.expenseItem ? ` > ${props.row.expenseItem}` : ''}${props.row.expenseSubItem ? ` > ${props.row.expenseSubItem}` : ''}` }}
+                </div>
+              </q-td>
+            </template>
             <template v-slot:body-cell-amount="props">
               <q-td :props="props">
                 {{ formatCurrency(props.value) }}
@@ -181,6 +188,13 @@
             flat
             bordered
           >
+            <template v-slot:body-cell-account="props">
+              <q-td :props="props">
+                <div class="expense-account-hierarchy">
+                  {{ props.row.accountName || props.row.account_name || `${props.row.account}${props.row.expenseType ? ` > ${props.row.expenseType}` : ''}${props.row.expenseItem ? ` > ${props.row.expenseItem}` : ''}${props.row.expenseSubItem ? ` > ${props.row.expenseSubItem}` : ''}` }}
+                </div>
+              </q-td>
+            </template>
             <template v-slot:body-cell-amount="props">
               <q-td :props="props">
                 {{ formatCurrency(props.value) }}
@@ -315,7 +329,7 @@ const loadingOrDetails = ref(false)
 const voidActionLoading = ref(false)
 const editActionLoading = ref(false)
 
-// Table columns for Expense Accounts - matching the image structure
+// Table columns for Expense Accounts - using single account column to avoid overlapping
 const expenseAccountColumns = [
   {
     name: 'id',
@@ -323,13 +337,15 @@ const expenseAccountColumns = [
     field: 'id',
     align: 'left',
     sortable: true,
+    style: 'width: 60px;',
   },
   {
-    name: 'accountName',
-    label: 'Account Name',
-    field: 'accountName',
+    name: 'account',
+    label: 'Expense Account',
+    field: 'account',
     align: 'left',
     sortable: true,
+    style: 'min-width: 400px;',
   },
   {
     name: 'amount',
@@ -337,6 +353,7 @@ const expenseAccountColumns = [
     field: 'amount',
     align: 'right',
     sortable: true,
+    style: 'width: 120px;',
   },
   {
     name: 'particular',
@@ -344,6 +361,7 @@ const expenseAccountColumns = [
     field: 'particular',
     align: 'left',
     sortable: true,
+    style: 'min-width: 200px;',
   },
 ]
 
@@ -444,6 +462,7 @@ const formatCurrency = (value) => {
   const num = Number(String(value).replace(/[,\s]/g, '')) || 0
   return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
+
 
 // Handle void approval
 const handleApproveVoid = async () => {
@@ -735,6 +754,30 @@ const handleRejectEdit = () => {
   font-weight: 600;
 }
 
+/* Expense account hierarchy styling */
+.expense-account-hierarchy {
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: break-word;
+  white-space: normal;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+/* Table styling to prevent overlapping */
+.q-table .q-td {
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  padding: 8px 12px !important;
+}
+
+.q-table .q-th {
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  padding: 8px 12px !important;
+}
+
 /* Responsive design for mobile */
 @media (max-width: 768px) {
   .q-card {
@@ -743,6 +786,11 @@ const handleRejectEdit = () => {
 
   .q-table {
     font-size: 12px;
+  }
+
+  .expense-account-hierarchy {
+    font-size: 11px;
+    max-width: 250px;
   }
 
   .void-action-buttons {

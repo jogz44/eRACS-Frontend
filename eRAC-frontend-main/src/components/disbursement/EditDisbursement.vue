@@ -537,6 +537,7 @@ const handleAddExpense = async () => {
   }
 }
 
+
 // Watch for changes in the expense detail dialog
 watch(
   () => store.dialogs.expenseDetail,
@@ -583,6 +584,14 @@ watch(
   color: #21ba45 !important;
 }
 
+/* Expense account hierarchy styling */
+.expense-account-hierarchy {
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: break-word;
+  max-width: 400px;
+}
+
 /* Responsive design for mobile */
 @media (max-width: 768px) {
   .q-card {
@@ -596,6 +605,11 @@ watch(
   .button-group .q-btn {
     min-width: 28px;
     padding: 4px;
+  }
+
+  .expense-account-hierarchy {
+    font-size: 11px;
+    max-width: 250px;
   }
 }
 </style>

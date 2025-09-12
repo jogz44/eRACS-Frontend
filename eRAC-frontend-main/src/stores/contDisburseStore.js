@@ -104,7 +104,9 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
 
         const disbursedAmount = state.expenseDetailsData
           .filter(detail => {
-            if (type === 'item') {
+            if (type === 'subitem') {
+              return detail.expense_sub_item_id === accountId
+            } else if (type === 'item') {
               return detail.expense_item_id === accountId
             } else if (type === 'type') {
               return detail.expense_type_id === accountId
@@ -206,7 +208,9 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
 
         const disbursedAmount = state.expenseDetailsData
           .filter(detail => {
-            if (type === 'item') {
+            if (type === 'subitem') {
+              return detail.expense_sub_item_id === accountId
+            } else if (type === 'item') {
               return detail.expense_item_id === accountId
             } else if (type === 'type') {
               return detail.expense_type_id === accountId
@@ -459,7 +463,9 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
 
       const disbursedAmount = this.expenseDetailsData
         .filter(detail => {
-          if (type === 'item') {
+          if (type === 'subitem') {
+            return detail.expense_sub_item_id === accountId
+          } else if (type === 'item') {
             return detail.expense_item_id === accountId
           } else if (type === 'type') {
             return detail.expense_type_id === accountId

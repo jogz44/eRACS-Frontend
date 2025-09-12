@@ -442,6 +442,7 @@ class ContinuingAppropriationController extends Controller
                         'expense_class_id' => $allocation['expense_class_id'] ?? null,
                         'expense_type_id' => $allocation['expense_type_id'] ?? null,
                         'expense_item_id' => $allocation['expense_item_id'] ?? null,
+                        'expense_sub_item_id' => $allocation['expense_sub_item_id'] ?? null,
                         'amount' => $allocation['amount'],
                         'transaction_date' => now(),
                         'status' => 'committed',
@@ -668,7 +669,8 @@ class ContinuingAppropriationController extends Controller
                 'user_id' => $request->user()->id,
                 'expense_class_id' => $allocation['expense_class_id'] ?? null,
                 'expense_type_id' => $allocation['expense_type_id'] ?? null,
-                'expense_item_id' => $allocation['expense_item_id'] ?? null
+                'expense_item_id' => $allocation['expense_item_id'] ?? null,
+                'expense_sub_item_id' => $allocation['expense_sub_item_id'] ?? null
             ];
 
             $appropriations[] = TranAppropriation::create($appropriationData);

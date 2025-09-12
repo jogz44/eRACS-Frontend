@@ -274,34 +274,77 @@ export const useDisbursementStore = defineStore('disbursement', {
             expenseType.children.some((item) => item.amount && item.amount > 0)
 
           if (hasExpenseItemsWithBalance) {
-            // If expense type has items with balance, only show the items (not the type)
+            // If expense type has items with balance, show items and their subitems
             expenseType.children.forEach((expenseItem) => {
               if (expenseItem.amount && expenseItem.amount > 0) {
-                // Calculate remaining balance by deducting disbursements
-                const remainingBalance = this.calculateRemainingBalance(
-                  expenseItem.id,
-                  expenseItem.amount,
-                  'item',
-                )
+                // Check if this item has subitems with allocations
+                const hasSubitemsWithBalance = expenseItem.children &&
+                  expenseItem.children.some((subItem) => subItem.amount && subItem.amount > 0)
 
-                if (remainingBalance > 0) {
-                  const expenseItemEntry = {
-                    id: expenseItem.id,
-                    account: expenseClass.name,
-                    expenseType: expenseType.name,
-                    expenseItem: expenseItem.name,
-                    balance: remainingBalance, // Use remaining balance instead of original amount
-                    originalBalance: expenseItem.amount, // Keep original amount for reference
-                    expense_class_id: expenseClass.id,
-                    expense_type_id: expenseType.id,
-                    expense_item_id: expenseItem.id,
-                    budget_source:
-                      expenseItem.budget_source ||
-                      expenseType.budget_source ||
-                      expenseClass.budget_source ||
-                      'Annual Budget', // Add budget source information
+                if (hasSubitemsWithBalance) {
+                  // Show subitems that have allocations
+                  expenseItem.children.forEach((expenseSubItem) => {
+                    if (expenseSubItem.amount && expenseSubItem.amount > 0) {
+                      // Calculate remaining balance by deducting disbursements
+                      const remainingBalance = this.calculateRemainingBalance(
+                        expenseSubItem.id,
+                        expenseSubItem.amount,
+                        'subitem',
+                      )
+
+                      if (remainingBalance > 0) {
+                        const expenseSubItemEntry = {
+                          id: expenseSubItem.id,
+                          account: expenseClass.name,
+                          expenseType: expenseType.name,
+                          expenseItem: expenseItem.name,
+                          expenseSubItem: expenseSubItem.name,
+                          balance: remainingBalance,
+                          originalBalance: expenseSubItem.amount,
+                          expense_class_id: expenseClass.id,
+                          expense_type_id: expenseType.id,
+                          expense_item_id: expenseItem.id,
+                          expense_sub_item_id: expenseSubItem.id,
+                          budget_source:
+                            expenseSubItem.budget_source ||
+                            expenseItem.budget_source ||
+                            expenseType.budget_source ||
+                            expenseClass.budget_source ||
+                            'Annual Budget',
+                        }
+                        acc.push(expenseSubItemEntry)
+                      }
+                    }
+                  })
+                } else {
+                  // Show the item itself if it has no subitems with allocations
+                  const remainingBalance = this.calculateRemainingBalance(
+                    expenseItem.id,
+                    expenseItem.amount,
+                    'item',
+                  )
+
+                  if (remainingBalance > 0) {
+                    const expenseItemEntry = {
+                      id: expenseItem.id,
+                      account: expenseClass.name,
+                      expenseType: expenseType.name,
+                      expenseItem: expenseItem.name,
+                      expenseSubItem: null,
+                      balance: remainingBalance,
+                      originalBalance: expenseItem.amount,
+                      expense_class_id: expenseClass.id,
+                      expense_type_id: expenseType.id,
+                      expense_item_id: expenseItem.id,
+                      expense_sub_item_id: null,
+                      budget_source:
+                        expenseItem.budget_source ||
+                        expenseType.budget_source ||
+                        expenseClass.budget_source ||
+                        'Annual Budget',
+                    }
+                    acc.push(expenseItemEntry)
                   }
-                  acc.push(expenseItemEntry)
                 }
               }
             })
@@ -321,13 +364,15 @@ export const useDisbursementStore = defineStore('disbursement', {
                   account: expenseClass.name,
                   expenseType: expenseType.name,
                   expenseItem: null,
-                  balance: remainingBalance, // Use remaining balance instead of original amount
-                  originalBalance: expenseType.amount, // Keep original amount for reference
+                  expenseSubItem: null,
+                  balance: remainingBalance,
+                  originalBalance: expenseType.amount,
                   expense_class_id: expenseClass.id,
                   expense_type_id: expenseType.id,
-                  expense_item_id: null, // This identifies it as an expense type
+                  expense_item_id: null,
+                  expense_sub_item_id: null,
                   budget_source:
-                    expenseType.budget_source || expenseClass.budget_source || 'Annual Budget', // Add budget source information
+                    expenseType.budget_source || expenseClass.budget_source || 'Annual Budget',
                 }
                 acc.push(expenseTypeEntry)
               }
@@ -438,6 +483,14 @@ export const useDisbursementStore = defineStore('disbursement', {
         field: 'expenseItem',
         align: 'left',
         sortable: true,
+      },
+      {
+        name: 'expenseSubItem',
+        label: 'Sub Item',
+        field: 'expenseSubItem',
+        align: 'left',
+        sortable: true,
+        format: (val) => val || '-',
       },
       {
         name: 'budget_source',
@@ -600,13 +653,17 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Determine current editing disbursement id (if any)
         const currentDisbursementId = this.currentItem?.id ? String(this.currentItem.id) : null
 
+
+
         // Get all expense details from the database for this expense account
         if (this.expenseDetailsData && this.expenseDetailsData.length > 0) {
           // Only show first few expense details to avoid clutter
           const relevantDetails = this.expenseDetailsData.filter((ed) => {
             const matchesLevel =
+              (expenseLevel === 'subitem' && String(ed.expense_sub_item_id) === String(expenseId)) ||
               (expenseLevel === 'item' && String(ed.expense_item_id) === String(expenseId)) ||
               (expenseLevel === 'type' && String(ed.expense_type_id) === String(expenseId))
+
 
             if (!matchesLevel) return false
 
@@ -619,6 +676,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             return true
           })
 
+
           relevantDetails.forEach((expenseDetail) => {
             // Include expense details from other disbursements in the calculation
             totalDisbursed += parseFloat(expenseDetail.amount) || 0
@@ -628,6 +686,8 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Add current frontend expenses for this account (includes the one being edited)
         if (this.expenses && this.expenses.length > 0) {
           const relevantFrontendExpenses = this.expenses.filter((expense) => {
+            if (expenseLevel === 'subitem')
+              return String(expense.expense_sub_item_id) === String(expenseId)
             if (expenseLevel === 'item')
               return String(expense.expense_item_id) === String(expenseId)
             if (expenseLevel === 'type')
@@ -642,6 +702,8 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Compute remaining balance
         const remainingBalance = Math.max(0, originalAmount - totalDisbursed + totalReturned)
+
+
 
         return remainingBalance
       } catch (error) {
@@ -697,6 +759,9 @@ export const useDisbursementStore = defineStore('disbursement', {
           return Promise.resolve()
         }
 
+        // Fetch updated expense details to get latest disbursement history
+        await this.fetchExpenseDetails()
+
         // Force a refresh of the expense accounts to recalculate balances
         // This will trigger the getter to recalculate with current frontend expenses
         this.expenseData = [...this.expenseData]
@@ -738,6 +803,9 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         await appropriationStore.fetchExpenseHierarchy()
         this.expenseData = appropriationStore.allocations || []
+
+        // Fetch expense details for balance calculations
+        await this.fetchExpenseDetails()
 
         // Fetch expense types from accounts library store (non-blocking)
         this.fetchExpenseTypesFromAccountsLib().catch((error) => {
@@ -1183,7 +1251,6 @@ export const useDisbursementStore = defineStore('disbursement', {
           return disbursement
         })
 
-        // Debug logging for void requests
 
         // Only fetch expense details if we don't have any (for admin users, this is not essential)
         if (!this.expenseDetailsData.length && !authStore.admin) {
@@ -1242,16 +1309,51 @@ export const useDisbursementStore = defineStore('disbursement', {
 
           // Load existing expenses from the disbursement
           if (disbursement.expenses && disbursement.expenses.length > 0) {
-            this.expenses = disbursement.expenses.map((expense) => ({
-              id: expense.id, // Use the actual database ID from tran_expense_details
-              accountId: expense.accountId,
-              accountName: expense.account_name || 'Unknown Account', // Use particular as fallback
-              amount: expense.amount,
-              particular: expense.particular,
-              expense_class_id: expense.expense_class_id,
-              expense_type_id: expense.expense_type_id,
-              expense_item_id: expense.expense_item_id,
-            }))
+            this.expenses = disbursement.expenses.map((expense) => {
+              // Use the account_name from backend (which now includes subitem) or fallback to lookup
+              const fullAccountName = expense.account_name || this.getExpenseAccountName(
+                expense.expense_class_id,
+                expense.expense_type_id,
+                expense.expense_item_id,
+                expense.expense_sub_item_id
+              )
+
+              console.log('Backend account_name (fetchDisbursementById):', expense.account_name)
+              console.log('Expense IDs (fetchDisbursementById):', {
+                class: expense.expense_class_id,
+                type: expense.expense_type_id,
+                item: expense.expense_item_id,
+                subitem: expense.expense_sub_item_id
+              })
+
+              // Parse the full account name to extract individual components
+              const parts = fullAccountName.split(' > ')
+              const account = parts[0] || ''
+              const expenseType = parts[1] || ''
+              const expenseItem = parts[2] || ''
+              const expenseSubItem = parts[3] || ''
+
+              return {
+                id: expense.id, // Use the actual database ID from tran_expense_details
+                accountId: expense.accountId,
+                accountName: expense.account_name || fullAccountName, // Use particular as fallback
+                amount: expense.amount,
+                particular: expense.particular,
+                expense_class_id: expense.expense_class_id,
+                expense_type_id: expense.expense_type_id,
+                expense_item_id: expense.expense_item_id,
+                expense_sub_item_id: expense.expense_sub_item_id,
+                expense_class_name: parts[0] || '',
+                expense_type_name: parts[1] || '',
+                expense_item_name: parts[2] || '',
+                expense_sub_item_name: parts[3] || '',
+                // Add fields for multi-column display
+                account: account,
+                expenseType: expenseType,
+                expenseItem: expenseItem,
+                expenseSubItem: expenseSubItem,
+              }
+            })
           } else {
             this.expenses = []
           }
@@ -1274,6 +1376,13 @@ export const useDisbursementStore = defineStore('disbursement', {
         const authStore = useAuthStore()
         // Use barangay user token for barangay endpoints
         const token = authStore.token
+
+        // Ensure expense data is loaded first
+        if (!this.expenseData || this.expenseData.length === 0) {
+          console.log('Loading expense data for account name lookup...')
+          await this.fetchExpenseAccounts()
+        }
+
         const response = await api.get(`/api/barangay/disbursements/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -1284,19 +1393,62 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Get the disbursement data
         const disbursement = response.data.data;
         console.log('=============================================>>>>>>>>:', disbursement);
+        console.log('Expenses from backend:', disbursement.expenses);
+        if (disbursement.expenses && disbursement.expenses.length > 0) {
+          console.log('First expense structure:', disbursement.expenses[0]);
+          console.log('First expense keys:', Object.keys(disbursement.expenses[0]));
+        }
 
         if (disbursement) {
           // Map expenses to ensure proper field names
-          const mappedExpenses = (disbursement.expenses || []).map((expense) => ({
-            id: expense.id,
-            accountName: expense.account_name || 'Unknown Account',
-            amount: expense.amount,
-            particular: expense.particular,
-            accountId: expense.accountId,
-            expense_class_id: expense.expense_class_id,
-            expense_type_id: expense.expense_type_id,
-            expense_item_id: expense.expense_item_id,
-          }))
+          const mappedExpenses = (disbursement.expenses || []).map((expense) => {
+            // Use the account_name from backend (which now includes subitem) or fallback to lookup
+            const fullAccountName = expense.account_name || this.getExpenseAccountName(
+              expense.expense_class_id,
+              expense.expense_type_id,
+              expense.expense_item_id,
+              expense.expense_sub_item_id
+            )
+
+            console.log('Backend account_name:', expense.account_name)
+            console.log('Full account name for expense', expense.id, ':', fullAccountName)
+            console.log('Expense IDs:', {
+              class: expense.expense_class_id,
+              type: expense.expense_type_id,
+              item: expense.expense_item_id,
+              subitem: expense.expense_sub_item_id
+            })
+
+            // Parse the full account name to extract individual components
+            const parts = fullAccountName.split(' > ')
+            const account = parts[0] || ''
+            const expenseType = parts[1] || ''
+            const expenseItem = parts[2] || ''
+            const expenseSubItem = parts[3] || ''
+
+            console.log('Parsed parts:', { account, expenseType, expenseItem, expenseSubItem })
+
+            return {
+              id: expense.id,
+              accountName: expense.account_name || fullAccountName,
+              amount: expense.amount,
+              particular: expense.particular,
+              accountId: expense.accountId,
+              expense_class_id: expense.expense_class_id,
+              expense_type_id: expense.expense_type_id,
+              expense_item_id: expense.expense_item_id,
+              expense_sub_item_id: expense.expense_sub_item_id,
+              expense_class_name: parts[0] || '',
+              expense_type_name: parts[1] || '',
+              expense_item_name: parts[2] || '',
+              expense_sub_item_name: parts[3] || '',
+              // Add fields for multi-column display
+              account: account,
+              expenseType: expenseType,
+              expenseItem: expenseItem,
+              expenseSubItem: expenseSubItem,
+            }
+          })
 
           console.log('Mapped expenses for view:', mappedExpenses)
 
@@ -1671,6 +1823,9 @@ export const useDisbursementStore = defineStore('disbursement', {
       if (item.expenseItem) {
         accountDisplay += ` > ${item.expenseItem}`
       }
+      if (item.expenseSubItem) {
+        accountDisplay += ` > ${item.expenseSubItem}`
+      }
 
       // Use the balance that's already calculated and displayed in the selection table
       // DO NOT recalculate - this prevents double counting
@@ -1688,6 +1843,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         expense_class_id: item.expense_class_id,
         expense_type_id: item.expense_type_id,
         expense_item_id: item.expense_item_id,
+        expense_sub_item_id: item.expense_sub_item_id,
       }
       this.dialogs.expense = false
       this.dialogs.expenseDetail = true
@@ -1943,12 +2099,17 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     // Helper method to get expense account name from IDs
-    getExpenseAccountName(expenseClassId, expenseTypeId, expenseItemId) {
+    getExpenseAccountName(expenseClassId, expenseTypeId, expenseItemId, expenseSubItemId = null) {
       try {
+        console.log('getExpenseAccountName called with:', { expenseClassId, expenseTypeId, expenseItemId, expenseSubItemId });
+        console.log('Available expenseData:', this.expenseData?.length || 0);
+
         let accountName = ''
 
         // Find expense class - convert IDs to strings for comparison
         const expenseClass = this.expenseData.find((ec) => String(ec.id) === String(expenseClassId))
+        console.log('Found expense class:', expenseClass);
+
         if (expenseClass) {
           accountName = expenseClass.name
 
@@ -1957,6 +2118,8 @@ export const useDisbursementStore = defineStore('disbursement', {
             const expenseType = expenseClass.children.find(
               (et) => String(et.id) === String(expenseTypeId),
             )
+            console.log('Found expense type:', expenseType);
+
             if (expenseType) {
               accountName += ` > ${expenseType.name}`
 
@@ -1965,14 +2128,36 @@ export const useDisbursementStore = defineStore('disbursement', {
                 const expenseItem = expenseType.children.find(
                   (ei) => String(ei.id) === String(expenseItemId),
                 )
+                console.log('Found expense item:', expenseItem);
+
                 if (expenseItem) {
                   accountName += ` > ${expenseItem.name}`
+
+                  // Find expense subitem
+                  if (expenseSubItemId && expenseItem.children) {
+                    console.log('Looking for subitem with ID:', expenseSubItemId);
+                    console.log('Available subitems:', expenseItem.children);
+
+                    const expenseSubItem = expenseItem.children.find(
+                      (esi) => String(esi.id) === String(expenseSubItemId),
+                    )
+                    console.log('Found expense subitem:', expenseSubItem);
+
+                    if (expenseSubItem) {
+                      accountName += ` > ${expenseSubItem.name}`
+                    } else {
+                      console.log('Subitem not found in children');
+                    }
+                  } else {
+                    console.log('No subitem ID provided or no children available');
+                  }
                 }
               }
             }
           }
         }
 
+        console.log('Final account name:', accountName);
         return accountName || 'Unknown Account'
       } catch (error) {
         console.error('Error getting expense account name:', error)
@@ -2051,6 +2236,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           expense_class_id: this.forms.expense.expense_class_id,
           expense_type_id: this.forms.expense.expense_type_id,
           expense_item_id: this.forms.expense.expense_item_id,
+          expense_sub_item_id: this.forms.expense.expense_sub_item_id,
           // Note: No dbId until disbursement is saved
         }
 
@@ -2177,6 +2363,7 @@ export const useDisbursementStore = defineStore('disbursement', {
               expense.expense_class_id,
               expense.expense_type_id,
               expense.expense_item_id,
+              expense.expense_sub_item_id,
             )
             return {
               ...expense,
@@ -3119,11 +3306,32 @@ async submitVoidRequest() {
         } catch (error) {
           console.error('Failed to submit reimbursement:', error)
           console.error('Error response:', error.response?.data)
+
+          // Handle budget validation error specifically
+          if (error.response?.status === 400 && error.response?.data?.error === 'Insufficient budget') {
+            return {
+              success: false,
+              error: 'Insufficient budget',
+              message: error.response.data.message || 'No more budget for this account. Please commit again.'
+            }
+          }
+
+          // Re-throw other errors to be handled by the outer catch block
+          throw error
         }
 
-        // Refresh the disbursements list
-        await this.fetchDisbursements();
-        return { success: true, data: response.data.data };
+        // Check if the response indicates success
+        if (response.data.status) {
+          // Refresh the disbursements list
+          await this.fetchDisbursements();
+          return { success: true, data: response.data.data };
+        } else {
+          return {
+            success: false,
+            error: response.data.error || response.data.message || 'Failed to submit reimbursement',
+            message: response.data.message
+          };
+        }
       } catch (error) {
         console.error('Failed to submit reimbursement:', error)
         console.error('Error response:', error.response?.data)
