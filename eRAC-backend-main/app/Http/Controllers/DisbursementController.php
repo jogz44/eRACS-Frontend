@@ -720,7 +720,7 @@ class DisbursementController extends Controller
             $user = request()->user();
             \Log::info("User: ", ['user_id' => $user ? $user->id : 'null', 'barangay_id' => $user ? $user->barangay_id : 'null']);
 
-            $query = Disbursement::with(['bank', 'cheque.booklet', 'expenseDetails.appropriation']);
+            $query = Disbursement::with(['bank', 'cheque.booklet', 'expenseDetails.appropriation.expenseClass', 'expenseDetails.appropriation.expenseType', 'expenseDetails.appropriation.expenseItem', 'expenseDetails.appropriation.expenseSubItem']);
 
             // If user is authenticated and has barangay_id, filter by it
             if ($user && isset($user->barangay_id)) {
@@ -738,7 +738,7 @@ class DisbursementController extends Controller
 
             // Case 1: this record is a reimbursement (it has a ref_dv_number)
             if ($disbursement->ref_dv_number) {
-                $original = Disbursement::with(['bank', 'cheque.booklet', 'expenseDetails.appropriation'])
+                $original = Disbursement::with(['bank', 'cheque.booklet', 'expenseDetails.appropriation.expenseClass', 'expenseDetails.appropriation.expenseType', 'expenseDetails.appropriation.expenseItem', 'expenseDetails.appropriation.expenseSubItem'])
                     ->when($user && isset($user->barangay_id), function ($q) use ($user) {
                         $q->where('barangay_id', $user->barangay_id);
                     })
@@ -752,7 +752,7 @@ class DisbursementController extends Controller
             }
             // Case 2: this record is the original (another record references it)
             elseif (
-                $linked = Disbursement::with(['bank', 'cheque.booklet', 'expenseDetails.appropriation'])
+                $linked = Disbursement::with(['bank', 'cheque.booklet', 'expenseDetails.appropriation.expenseClass', 'expenseDetails.appropriation.expenseType', 'expenseDetails.appropriation.expenseItem', 'expenseDetails.appropriation.expenseSubItem'])
                     ->when($user && isset($user->barangay_id), function ($q) use ($user) {
                         $q->where('barangay_id', $user->barangay_id);
                     })
@@ -789,12 +789,14 @@ class DisbursementController extends Controller
                         'accountId' => $detail->appropriation_id,
                         'account_name' => '' . $detail->appropriation->expenseClass->name
                             . ($detail->appropriation->expenseType ? ' > ' . $detail->appropriation->expenseType->name : '')
-                            . ($detail->appropriation->expenseItem ? ' > ' . $detail->appropriation->expenseItem->name : ''),
+                            . ($detail->appropriation->expenseItem ? ' > ' . $detail->appropriation->expenseItem->name : '')
+                            . ($detail->appropriation->expenseSubItem ? ' > ' . $detail->appropriation->expenseSubItem->name : ''),
                         'amount' => $detail->amount,
                         'particular' => $detail->particulars,
                         'expense_class_id' => $detail->appropriation->expense_class_id ?? null,
                         'expense_type_id' => $detail->appropriation->expense_type_id ?? null,
                         'expense_item_id' => $detail->appropriation->expense_item_id ?? null,
+                        'expense_sub_item_id' => $detail->appropriation->expense_sub_item_id ?? null,
                     ];
                 }),
                 'created_at' => $disbursement->created_at,
@@ -823,12 +825,14 @@ class DisbursementController extends Controller
                             'accountId' => $detail->appropriation_id,
                             'account_name' => '' . $detail->appropriation->expenseClass->name
                                 . ($detail->appropriation->expenseType ? ' > ' . $detail->appropriation->expenseType->name : '')
-                                . ($detail->appropriation->expenseItem ? ' > ' . $detail->appropriation->expenseItem->name : ''),
+                                . ($detail->appropriation->expenseItem ? ' > ' . $detail->appropriation->expenseItem->name : '')
+                                . ($detail->appropriation->expenseSubItem ? ' > ' . $detail->appropriation->expenseSubItem->name : ''),
                             'amount' => $detail->amount,
                             'particular' => $detail->particulars,
                             'expense_class_id' => $detail->appropriation->expense_class_id ?? null,
                             'expense_type_id' => $detail->appropriation->expense_type_id ?? null,
                             'expense_item_id' => $detail->appropriation->expense_item_id ?? null,
+                            'expense_sub_item_id' => $detail->appropriation->expense_sub_item_id ?? null,
                         ];
                     }),
                     'created_at' => $reimbursement->created_at,

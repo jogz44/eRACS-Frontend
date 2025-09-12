@@ -374,8 +374,8 @@ const parseCurrency = (value) => {
 const availableBudget = computed(() => {
   // Use the remainingUnappropriated getter which calculates based on existingAllocationsTotal
   const result = appropriationStore.remainingUnappropriated
-  
-  
+
+
   return result
 })
 
@@ -593,10 +593,6 @@ const calculateClassTotal = (expenseClass) => {
   return Math.round(total * 100) / 100
 }
 
-const calculateItemTotal = (expenseItem) => {
-  // Only show the item's own direct allocation amount, not children amounts
-  return expenseItem.amount || 0
-}
 
 const validateAmountRule = (val) => {
   if (!val) return true
@@ -700,7 +696,7 @@ const submitAllocation = async () => {
 
     // Clear input cache and reset state after successful allocation
     appropriationStore.resetAllocationState()
-    
+
     // Close dialog immediately after successful allocation
     // Next-tick hide to avoid any repaint timing issues
     appropriationStore.showAllocationDialog = false
