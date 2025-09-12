@@ -59,7 +59,12 @@
     <!-- Summary Cards Row -->
     <div class="row q-col-gutter-lg q-mb-lg">
       <div v-for="(card, index) in chartStore.summaryCards" :key="index" class="col-xs-12 col-sm-6 col-md-4 q-mb-md">
-        <q-card class="summary-card" :class="`card-${index}`">
+        <q-card 
+          class="summary-card" 
+          :class="`card-${index}`"
+          :clickable="isClickableCard(card.label)"
+          @click="handleSummaryCardClick(card.label)"
+        >
           <q-card-section class="row items-center justify-evenly q-pa-md" style="height: 100%">
             <div class="row items-center" style="max-width: 90%">
               <q-avatar :icon="card.icon" size="45px" :color="card.color || 'primary'" text-color="white"
@@ -157,7 +162,7 @@
 
             <q-table v-else :rows="filteredDisbursementRows" :columns="disbursementTableColumns" row-key="id" flat
               bordered :pagination="{ rowsPerPage: 5 }" class="disbursement-table responsive-table"
-              style="height: 100%">
+              style="height: 100%" @row-click="handleDisbursementRowClick">
               <!-- Status column with color coding -->
               <template v-slot:body-cell-status="props">
                 <q-td :props="props">
@@ -269,11 +274,13 @@ import PieChart from 'components/PieChart.vue'
 import { useAuthStore } from 'stores/auth'
 import { useQuasar } from 'quasar'
 import { usePageLogging } from '../../composables/usePageLogging'
+import { useRouter } from 'vue-router'
 const chartStore = useChartDataStore()
 const unliquidatedocationError = ref('')
 const authStore = useAuthStore()
 const $q = useQuasar()
 const { logPageVisit } = usePageLogging()
+const router = useRouter()
 
 // Year change state
 const isYearChanging = ref(false)
@@ -696,6 +703,100 @@ watch(
   { deep: true },
 )
 
+// Handle summary card clicks
+const isClickableCard = (cardLabel) => {
+  return cardLabel === 'Total Budget' || cardLabel === 'Total Obligation' || cardLabel === 'Total Balance'
+}
+
+const handleSummaryCardClick = (cardLabel) => {
+  if (cardLabel === 'Total Budget') {
+    // Navigate to Appropriation Transaction (all budgets)
+    router.push({
+      name: 'Appropriation'
+    })
+    
+    $q.notify({
+      type: 'positive',
+      message: 'Viewing Appropriation Transaction',
+      caption: 'Showing all budget types',
+      icon: 'account_balance',
+      position: 'top',
+      timeout: 3000,
+    })
+  } else if (cardLabel === 'Total Obligation') {
+    // Navigate to Appropriation Transaction with Annual Budget filter
+    router.push({
+      name: 'Appropriation',
+      query: {
+        budgetType: 'annual'
+      }
+    })
+    
+    $q.notify({
+      type: 'positive',
+      message: 'Viewing Annual Budget in Appropriation Transaction',
+      caption: 'Filtered to show only Annual Budget entries',
+      icon: 'assignment',
+      position: 'top',
+      timeout: 3000,
+    })
+  } else if (cardLabel === 'Total Balance') {
+    // Navigate to Disbursement Transaction
+    router.push({
+      name: 'Disbursement'
+    })
+    
+    $q.notify({
+      type: 'positive',
+      message: 'Viewing Disbursement Transaction',
+      caption: 'Showing all disbursement records',
+      icon: 'balance',
+      position: 'top',
+      timeout: 3000,
+    })
+  }
+}
+
+// Handle disbursement row click to navigate to disbursement transaction page
+const handleDisbursementRowClick = (evt, row) => {
+  // Prevent navigation if clicking on action buttons or other interactive elements
+  if (evt.target.closest('.q-btn') || evt.target.closest('.q-chip')) {
+    return
+  }
+
+  // Build query parameters for filtering
+  const queryParams = {
+    // Filter by the specific disbursement's DV number
+    search: row.dv_number,
+    // Set status to null to show "All Status" so the disbursement appears regardless of status
+    status: null,
+    // Filter by date range around the disbursement date
+    dateFrom: row.date,
+    dateTo: row.date
+  }
+
+  // Remove null/undefined values
+  const cleanParams = Object.fromEntries(
+    Object.entries(queryParams).filter(([, value]) => value !== null && value !== undefined)
+  )
+
+  // Navigate to disbursement transaction page with filters
+  router.push({
+    name: 'Disbursement',
+    query: cleanParams
+  })
+
+  // Show notification with more specific information
+  $q.notify({
+    type: 'positive',
+    message: `Viewing disbursement ${row.dv_number} in transaction page`,
+    caption: `Searching by DV number | Amount: ${chartStore.formatCurrency(row.dv_amount)}`,
+    icon: 'arrow_forward',
+    position: 'top',
+    timeout: 3000,
+  })
+}
+
 // Load data when component mounts
 onMounted(async () => {
   try {
@@ -834,6 +935,22 @@ onMounted(async () => {
   &:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 20px rgba(88, 178, 101, 0.321);
+  }
+
+  /* Clickable card styles */
+  &.q-card--clickable {
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 12px 24px rgba(88, 178, 101, 0.4);
+      background-color: #b8f5b8;
+    }
+
+    &:active {
+      transform: translateY(-2px);
+    }
   }
 
   &.card-0 {
@@ -1148,6 +1265,32 @@ onMounted(async () => {
 
   .q-table__bottom {
     padding: 8px 16px;
+  }
+
+  /* Make table rows clickable */
+  :deep(.q-table__body) {
+    .q-tr {
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+
+      &:hover {
+        background-color: rgba(25, 118, 210, 0.08);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(25, 118, 210, 0.15);
+      }
+
+      /* Add a subtle border on hover */
+      &:hover::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        height: 2px;
+        background: linear-gradient(90deg, #1976d2, #42a5f5);
+      }
+    }
   }
 }
 

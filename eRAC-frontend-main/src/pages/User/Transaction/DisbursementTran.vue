@@ -669,6 +669,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
+import { useRoute } from 'vue-router'
 
 import OrDetailsDialog from 'components/disbursement/OrDetailsDialog.vue'
 import ViewOrDetails from 'components/disbursement/ViewOrDetails.vue'
@@ -681,6 +682,7 @@ import { usePageLogging } from '../../../composables/usePageLogging'
 const store = useDisbursementStore()
 const bankStore = useBankStore()
 const authStore = useAuthStore()
+const route = useRoute()
 
 // Status filtering
 const selectedStatus = ref(null)
@@ -1018,8 +1020,45 @@ const loadDataWithRetry = async (retryCount = 0, maxRetries = 3) => {
 // Set up periodic refresh for expense accounts
 // Removed to reduce excessive API calls
 
+// Apply navigation parameters from dashboard
+const applyNavigationFilters = () => {
+  const query = route.query
+  
+  if (query.search) {
+    searchQuery.value = query.search
+    store.searchQuery = query.search
+  }
+  
+  if (query.status) {
+    selectedStatus.value = query.status
+  }
+  
+  if (query.dateFrom && query.dateTo) {
+    // Convert date format for the date range picker
+    const fromDate = new Date(query.dateFrom)
+    const toDate = new Date(query.dateTo)
+    
+    if (!isNaN(fromDate.getTime()) && !isNaN(toDate.getTime())) {
+      dateRange.value = {
+        from: fromDate.toISOString().split('T')[0],
+        to: toDate.toISOString().split('T')[0]
+      }
+      
+      // Apply to store
+      store.dateFrom = fromDate.toLocaleDateString('en-GB')
+      store.dateTo = toDate.toLocaleDateString('en-GB')
+    }
+  }
+  
+  // Show notification if filters were applied
+  // Filters applied from dashboard navigation - no notification needed
+}
+
 onMounted(async () => {
   try {
+    // Apply navigation filters first
+    applyNavigationFilters()
+    
     // Use enhanced data loading with retry mechanism
     await loadDataWithRetry()
 

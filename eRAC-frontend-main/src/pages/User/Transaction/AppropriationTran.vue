@@ -871,6 +871,7 @@
 <script setup>
 import { ref, watch, onMounted, computed } from 'vue'
 import { useQuasar } from 'quasar'
+import { useRoute } from 'vue-router'
 import CommitDialog from 'components/appropriation/CommitDialog.vue'
 import ViewCommitDialog from 'components/appropriation/ViewCommitDialog.vue'
 import { useAppropriationStore } from 'stores/appropriationStore'
@@ -883,6 +884,7 @@ const $q = useQuasar()
 const accountLibraryStore = useAccountsLibraryStore()
 const appropriationStore = useAppropriationStore()
 const authStore = useAuthStore()
+const route = useRoute()
 
 const showDialog = ref(false)
 const selectedFiscalYear = ref(null)
@@ -2017,8 +2019,20 @@ const saveEditedAllocation = async () => {
   }
 }
 
+// Apply navigation parameters from dashboard
+const applyNavigationFilters = () => {
+  const query = route.query
+  
+  if (query.budgetType) {
+    selectedBudgetType.value = query.budgetType
+  }
+}
+
 onMounted(async () => {
   try {
+    // Apply navigation filters first
+    applyNavigationFilters()
+    
     // Load both budgets and appropriations to ensure complete data
     await appropriationStore.fetchBudgets()
     await appropriationStore.fetchAppropriations()
