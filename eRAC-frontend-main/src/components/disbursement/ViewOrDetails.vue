@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-model="store.dialogs.viewOrDetails" persistent>
+  <q-dialog v-model="store.dialogs.viewOrDetails">
     <q-card style="min-width: 1100px">
       <q-card-section>
         <div class="text-h6">

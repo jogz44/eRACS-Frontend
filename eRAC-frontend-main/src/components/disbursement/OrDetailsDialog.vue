@@ -38,11 +38,11 @@
 
           <!-- Actual Expense Field -->
           <div class="col-md-4 col-sm-6"> <q-item-label class="q-mb-xs">Actual Expense:</q-item-label> <q-input filled
-              outlined dense :model-value="formatCurrency(totalActualExpense)" prefix="₱" :disable="true" /> </div>
+              outlined dense :model-value="formatCurrency(totalActualExpense)" prefix="₱" readonly="true" /> </div>
           <!-- Amount to Return Field -->
           <div class="col-md-4 col-sm-6"> <q-item-label class="q-mb-xs">Amount to Return to
               Appropriation:</q-item-label> <q-input filled outlined dense
-              :model-value="formatCurrency(totalReturnAmount)" prefix="₱" :disable="true"
+              :model-value="formatCurrency(totalReturnAmount)" prefix="₱" readonly="true"
               :color="actualReturnAmount < 0 ? 'negative' : undefined" /> </div> <!-- Remarks Field -->
           <div class="col-md-4 col-sm-12"> <q-item-label class="q-mb-xs">Remarks:</q-item-label> <q-input filled
               outlined dense v-model="store.currentLiquidation.remarks" placeholder="Enter remarks"

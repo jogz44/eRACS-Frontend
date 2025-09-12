@@ -415,7 +415,7 @@
         >
           <template v-slot:body-cell-action="props">
             <q-td :props="props" >
-              <div class="row q-gutter-xs items-center justify-center ">
+              <div class="row q-gutter-xs items-left left ">
                 <q-btn
                   v-if="
                     isApprover ||
