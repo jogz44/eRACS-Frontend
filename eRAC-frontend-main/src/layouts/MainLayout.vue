@@ -259,27 +259,6 @@
       <div class="panel-content">
         <!-- Void Request Summary Header -->
 
-        <!-- Debug info for troubleshooting - only show if there are void requests but count is 0 -->
-        <div
-          v-if="
-            voidRequestCount === 0 &&
-            authStore.user?.position_name?.toLowerCase().includes('captain') &&
-            disbursementStore.disbursements.some((d) => d.status === 'Void Requested')
-          "
-          class="debug-info"
-        >
-          <q-btn
-            flat
-            dense
-            size="sm"
-            color="grey"
-            icon="refresh"
-            @click="refreshVoidRequestCount"
-            class="debug-refresh-btn"
-          >
-            <q-tooltip>Manual refresh - Check console for debug info</q-tooltip>
-          </q-btn>
-        </div>
 
         <!-- Current Transactions -->
         <div class="panel-section">
@@ -406,7 +385,6 @@ const voidRequestCount = computed(() => {
 
   // Ensure disbursements are loaded
   if (!disbursementStore.disbursements || disbursementStore.disbursements.length === 0) {
-    console.log('Debug - No disbursements loaded yet')
     return 0
   }
 
@@ -416,38 +394,10 @@ const voidRequestCount = computed(() => {
     const hasVoidRequestedStatus = d.status === 'Void Requested'
     const matchesBarangay = d.barangay_name === authStore.user.barangay_name
 
-    // Debug each disbursement
-    if (hasVoidRequestedStatus) {
-      console.log(`Debug - Found void requested disbursement:`, {
-        id: d.id,
-        status: d.status,
-        barangay_name: d.barangay_name,
-        user_barangay: authStore.user.barangay_name,
-        matches: matchesBarangay,
-      })
-    }
 
     return hasVoidRequestedStatus && matchesBarangay
   }).length
 
-  // Debug logging for security verification
-  console.log(`Debug - User barangay_name: ${authStore.user.barangay_name}`)
-  console.log(`Debug - Total disbursements: ${disbursementStore.disbursements.length}`)
-  console.log(
-    `Debug - All disbursements:`,
-    disbursementStore.disbursements.map((d) => ({
-      id: d.id,
-      status: d.status,
-      barangay_name: d.barangay_name,
-    })),
-  )
-  console.log(
-    `Debug - Disbursements with status 'Void Requested':`,
-    disbursementStore.disbursements.filter((d) => d.status === 'Void Requested'),
-  )
-  console.log(
-    `Debug - Void request count for barangay ${authStore.user.barangay_name}: ${voidCount}`,
-  )
 
   return voidCount
 })
@@ -477,7 +427,6 @@ const editRequestCount = computed(() => {
 
   // Ensure disbursements are loaded
   if (!disbursementStore.disbursements || disbursementStore.disbursements.length === 0) {
-    console.log('Debug - No disbursements loaded yet for edit requests')
     return 0
   }
 
@@ -487,24 +436,10 @@ const editRequestCount = computed(() => {
     const hasEditRequestedStatus = d.status === 'Edit Requested'
     const matchesBarangay = d.barangay_name === authStore.user.barangay_name
 
-    // Debug each disbursement
-    if (hasEditRequestedStatus) {
-      console.log(`Debug - Found edit requested disbursement:`, {
-        id: d.id,
-        status: d.status,
-        barangay_name: d.barangay_name,
-        user_barangay: authStore.user.barangay_name,
-        matches: matchesBarangay,
-      })
-    }
 
     return hasEditRequestedStatus && matchesBarangay
   }).length
 
-  // Debug logging for security verification
-  console.log(
-    `Debug - Edit request count for barangay ${authStore.user.barangay_name}: ${editCount}`,
-  )
 
   return editCount
 })
@@ -615,7 +550,6 @@ const closePanel = () => {
 // Method to refresh void request count
 const refreshVoidRequestCount = async () => {
   if (authStore.user?.barangay_name) {
-    console.log('Manually refreshing disbursements...')
     $q.notify({
       type: 'info',
       message: 'Refreshing data...',
@@ -626,7 +560,6 @@ const refreshVoidRequestCount = async () => {
 
     // Use the existing fetchDisbursements method
     await disbursementStore.fetchDisbursements()
-    console.log('Refresh completed. Check console for debug info.')
 
     // Force reactivity update
     await nextTick()
@@ -636,7 +569,6 @@ const refreshVoidRequestCount = async () => {
 // Method to refresh edit request count
 const refreshEditRequestCount = async () => {
   if (authStore.user?.barangay_name) {
-    console.log('Manually refreshing disbursements for edit requests...')
     $q.notify({
       type: 'info',
       message: 'Refreshing data...',
@@ -647,7 +579,6 @@ const refreshEditRequestCount = async () => {
 
     // Use the existing fetchDisbursements method
     await disbursementStore.fetchDisbursements()
-    console.log('Refresh completed. Check console for debug info.')
 
     // Force reactivity update
     await nextTick()
@@ -668,14 +599,6 @@ const handleVoidRequestClick = async () => {
     return
   }
 
-  // Debug: Log current state
-  console.log('Debug - handleVoidRequestClick called')
-  console.log('Debug - User barangay_name:', authStore.user.barangay_name)
-  console.log('Debug - Total disbursements:', disbursementStore.disbursements.length)
-  console.log(
-    'Debug - Void requested disbursements:',
-    disbursementStore.disbursements.filter((d) => d.status === 'Void Requested'),
-  )
 
   // Close the panel first
   closePanel()
@@ -693,9 +616,6 @@ const handleVoidRequestClick = async () => {
   })
 
   // Check if there are any void requests for this barangay
-  const voidRequestsForThisBarangay = disbursementStore.disbursements.filter(
-    (d) => d.status === 'Void Requested' && d.barangay_name === authStore.user.barangay_name,
-  )
 
   // Refresh disbursement data before navigation to ensure we have the latest data
   await disbursementStore.fetchDisbursements()
@@ -723,13 +643,11 @@ const handleVoidRequestClick = async () => {
   } else {
     // Navigate to disbursement page anyway but show warning
     await router.push('/home/transactions/disbursement')
-    
+
     // Show warning if no void requests found for this barangay
     const allVoidRequests = disbursementStore.disbursements.filter(
       (d) => d.status === 'Void Requested',
     )
-    console.log('Debug - All void requests found:', allVoidRequests)
-    console.log('Debug - Void requests for this barangay:', voidRequestsForThisBarangay)
 
     $q.notify({
       type: 'warning',
@@ -755,14 +673,6 @@ const handleEditRequestClick = async () => {
     return
   }
 
-  // Debug: Log current state
-  console.log('Debug - handleEditRequestClick called')
-  console.log('Debug - User barangay_name:', authStore.user.barangay_name)
-  console.log('Debug - Total disbursements:', disbursementStore.disbursements.length)
-  console.log(
-    'Debug - Edit requested disbursements:',
-    disbursementStore.disbursements.filter((d) => d.status === 'Edit Requested'),
-  )
 
   // Close the panel first
   closePanel()
@@ -780,9 +690,7 @@ const handleEditRequestClick = async () => {
   })
 
   // Check if there are any edit requests for this barangay
-  const editRequestsForThisBarangay = disbursementStore.disbursements.filter(
-    (d) => d.status === 'Edit Requested' && d.barangay_name === authStore.user.barangay_name,
-  )
+
 
   // Refresh disbursement data before navigation to ensure we have the latest data
   await disbursementStore.fetchDisbursements()
@@ -810,13 +718,11 @@ const handleEditRequestClick = async () => {
   } else {
     // Navigate to disbursement page anyway but show warning
     await router.push('/home/transactions/disbursement')
-    
+
     // Show warning if no edit requests found for this barangay
     const allEditRequests = disbursementStore.disbursements.filter(
       (d) => d.status === 'Edit Requested',
     )
-    console.log('Debug - All edit requests found:', allEditRequests)
-    console.log('Debug - Edit requests for this barangay:', editRequestsForThisBarangay)
 
     $q.notify({
       type: 'warning',
@@ -870,7 +776,6 @@ onMounted(async () => {
     // Force refresh void request count after initial load
     setTimeout(async () => {
       if (authStore.user?.barangay_name) {
-        console.log('Force refreshing void request count after initial load...')
         await disbursementStore.fetchDisbursements()
       }
     }, 1000)
@@ -878,7 +783,6 @@ onMounted(async () => {
     // Set up periodic refresh for void request count (every 10 seconds)
     const refreshInterval = setInterval(async () => {
       if (authStore.user?.barangay_name) {
-        console.log('Auto-refreshing disbursements for void request count...')
         await disbursementStore.fetchDisbursements()
       }
     }, 10000)
@@ -903,19 +807,6 @@ watch(
   { deep: true },
 )
 
-// Watch disbursements changes to update void request count
-watch(
-  () => disbursementStore.disbursements,
-  (newDisbursements) => {
-    console.log('Debug - Disbursements changed, updating void request count')
-    console.log('Debug - New disbursements count:', newDisbursements?.length || 0)
-    console.log(
-      'Debug - Void requested count:',
-      newDisbursements?.filter((d) => d.status === 'Void Requested').length || 0,
-    )
-  },
-  { deep: true },
-)
 
 watch(
   () => route.meta.title,
@@ -1666,25 +1557,6 @@ watch(
   position: relative;
 }
 
-/* Debug info styling */
-.debug-info {
-  margin: 8px;
-  text-align: center;
-  padding: 8px;
-  background-color: rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  border: 1px dashed rgba(255, 255, 255, 0.3);
-}
-
-.debug-refresh-btn {
-  opacity: 0.7;
-  transition: all 0.2s ease;
-}
-
-.debug-refresh-btn:hover {
-  opacity: 1;
-  transform: rotate(180deg);
-}
 
 /* End of Panel */
 
