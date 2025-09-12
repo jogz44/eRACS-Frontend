@@ -59,8 +59,8 @@
     <!-- Summary Cards Row -->
     <div class="row q-col-gutter-lg q-mb-lg">
       <div v-for="(card, index) in chartStore.summaryCards" :key="index" class="col-xs-12 col-sm-6 col-md-4 q-mb-md">
-        <q-card 
-          class="summary-card" 
+        <q-card
+          class="summary-card"
           :class="`card-${index}`"
           :clickable="isClickableCard(card.label)"
           @click="handleSummaryCardClick(card.label)"
@@ -237,33 +237,7 @@
     </q-inner-loading>
 
     <!-- Debug Panel (remove in production) -->
-    <div v-if="showDebugPanel" class="q-mt-lg">
-      <q-card class="debug-card">
-        <q-card-section>
-          <div class="row items-center justify-between q-mb-md">
-            <div class="text-h6">Debug Information</div>
-            <q-btn label="Test Backend" color="secondary" size="sm" @click="testBackend" :loading="testingBackend" />
-          </div>
-          <div class="row q-col-gutter-md">
-            <div class="col-12 col-md-6">
-              <div class="text-subtitle2">Chart Data:</div>
-              <pre class="debug-text">{{ JSON.stringify(chartStore.pieChartData, null, 2) }}</pre>
-            </div>
-            <div class="col-12 col-md-6">
-              <div class="text-subtitle2">Disbursements:</div>
-              <div>Total: {{ chartStore.disbursementOverviewRows.length }}</div>
-              <div>Filtered: {{ filteredDisbursementRows.length }}</div>
-              <div>Selected Filter: {{ selectedDisbursementFilter }}</div>
-              <div class="q-mt-md">
-                <div class="text-subtitle2">Backend Debug:</div>
-                <pre v-if="backendDebugData" class="debug-text">{{ JSON.stringify(backendDebugData, null, 2) }}</pre>
-                <div v-else class="text-caption text-grey-5">Click "Test Backend" to check data</div>
-              </div>
-            </div>
-          </div>
-        </q-card-section>
-      </q-card>
-    </div>
+
   </q-page>
 </template>
 
@@ -292,18 +266,15 @@ let visibilityChangeHandler = null
 // let debugKeyHandler = null
 
 // Debug panel toggle (set to true to show debug info)
-const showDebugPanel = ref(false)
 
 // Backend debug data
-const backendDebugData = ref(null)
-const testingBackend = ref(false)
+
 
 // Disbursement filtering
 const selectedDisbursementFilter = ref('unliquidated')
 
 const disbursementFilters = ref([
   { label: 'Unliquidated', value: 'unliquidated' },
-
   { label: 'Partial', value: 'Partial' },
   { label: 'Liquidated', value: 'Liquidated' },
 ])
@@ -507,46 +478,7 @@ const validateChartData = (data) => {
   return true
 }
 
-// Test backend data
-const testBackend = async () => {
-  try {
-    testingBackend.value = true
-    const response = await fetch('/api/barangay/dashboard/debug', {
-      headers: {
-        'Authorization': `Bearer ${authStore.token || authStore.adminToken}`,
-        'Content-Type': 'application/json'
-      }
-    })
 
-    if (response.ok) {
-      const data = await response.json()
-      backendDebugData.value = data.data
-
-      $q.notify({
-        type: 'positive',
-        message: 'Backend data retrieved successfully',
-        icon: 'check_circle',
-        position: 'top',
-        timeout: 2000,
-      })
-    } else {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-  } catch (error) {
-    console.error('Error testing backend:', error)
-    backendDebugData.value = { error: error.message }
-
-    $q.notify({
-      type: 'negative',
-      message: 'Failed to test backend: ' + error.message,
-      icon: 'error',
-      position: 'top',
-      timeout: 3000,
-    })
-  } finally {
-    testingBackend.value = false
-  }
-}
 
 // Year filter methods
 const onYearChange = async (newYear) => {
@@ -714,7 +646,7 @@ const handleSummaryCardClick = (cardLabel) => {
     router.push({
       name: 'Appropriation'
     })
-    
+
     $q.notify({
       type: 'positive',
       message: 'Viewing Appropriation Transaction',
@@ -731,7 +663,7 @@ const handleSummaryCardClick = (cardLabel) => {
         budgetType: 'annual'
       }
     })
-    
+
     $q.notify({
       type: 'positive',
       message: 'Viewing Annual Budget in Appropriation Transaction',
@@ -745,7 +677,7 @@ const handleSummaryCardClick = (cardLabel) => {
     router.push({
       name: 'Disbursement'
     })
-    
+
     $q.notify({
       type: 'positive',
       message: 'Viewing Disbursement Transaction',
