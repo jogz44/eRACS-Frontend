@@ -187,7 +187,7 @@ export default {
         selectedUser: null,
         saving: false,
         permissions: {
-          view: { label: 'Access View:', value: false },
+          view: { label: 'Access View:', value: true },
           add: { label: 'Access Add:', value: false },
           edit: { label: 'Access Edit:', value: false },
           delete: { label: 'Access Delete:', value: false },
@@ -354,10 +354,10 @@ export default {
 
       const permissions = user.permissions || {
         view: true,
-        add: true,
-        edit: true,
+        add: false,
+        edit: false,
         delete: false,
-        print: true,
+        print: false,
       }
 
       this.accessModal.permissions.view.value = permissions.view

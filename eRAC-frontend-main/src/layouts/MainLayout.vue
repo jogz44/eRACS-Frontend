@@ -654,7 +654,7 @@ const refreshEditRequestCount = async () => {
   }
 }
 
-// Method to handle void request click - navigate to disbursement page and open first void request
+// Method to handle void request click - navigate to disbursement page with void request filter
 const handleVoidRequestClick = async () => {
   // Security check: ensure user has barangay_name
   if (!authStore.user?.barangay_name) {
@@ -686,59 +686,47 @@ const handleVoidRequestClick = async () => {
     color: 'lightgreen',
     textColor: 'white',
     bgcolor: 'lightgreen',
-    message: 'Opening void request details...',
+    message: 'Opening void requests...',
     icon: 'pending_actions',
     position: 'top',
     timeout: 2000,
   })
 
-  // Navigate to disbursement page
-  await router.push('/home/transactions/disbursement')
-
-  // Small delay to ensure navigation completes
-  await new Promise((resolve) => setTimeout(resolve, 500))
-
-  // Find the first void requested disbursement for current barangay
-  const voidRequestedDisbursement = disbursementStore.disbursements.find(
+  // Check if there are any void requests for this barangay
+  const voidRequestsForThisBarangay = disbursementStore.disbursements.filter(
     (d) => d.status === 'Void Requested' && d.barangay_name === authStore.user.barangay_name,
   )
 
-  console.log('Debug - Found void requested disbursement:', voidRequestedDisbursement)
+  // Refresh disbursement data before navigation to ensure we have the latest data
+  await disbursementStore.fetchDisbursements()
 
-  if (voidRequestedDisbursement) {
-    // Additional security check: verify barangay_name matches
-    if (voidRequestedDisbursement.barangay_name !== authStore.user.barangay_name) {
-      console.error('Security violation: Void request barangay_name mismatch')
-      $q.notify({
-        type: 'negative',
-        message: 'Access denied: Invalid void request',
-        icon: 'error',
-        position: 'top',
-        timeout: 3000,
-      })
-      return
-    }
+  // Re-check void requests after refresh
+  const updatedVoidRequestsForThisBarangay = disbursementStore.disbursements.filter(
+    (d) => d.status === 'Void Requested' && d.barangay_name === authStore.user.barangay_name,
+  )
 
-    console.log('Debug - Opening void request:', voidRequestedDisbursement.id)
-
-    // Open the ViewOrDetails dialog for the void requested disbursement
-    await disbursementStore.openViewOrDetails(voidRequestedDisbursement)
+  if (updatedVoidRequestsForThisBarangay.length > 0) {
+    // Navigate to disbursement page with void request status filter
+    await router.push({
+      path: '/home/transactions/disbursement',
+      query: { status: 'Void Requested' }
+    })
 
     // Show success notification
     $q.notify({
       type: 'positive',
-      message: 'Void request details opened',
+      message: `Showing ${updatedVoidRequestsForThisBarangay.length} void request(s) for your barangay`,
       icon: 'check_circle',
       position: 'top',
-      timeout: 2000,
+      timeout: 3000,
     })
   } else {
+    // Navigate to disbursement page anyway but show warning
+    await router.push('/home/transactions/disbursement')
+    
     // Show warning if no void requests found for this barangay
     const allVoidRequests = disbursementStore.disbursements.filter(
       (d) => d.status === 'Void Requested',
-    )
-    const voidRequestsForThisBarangay = disbursementStore.disbursements.filter(
-      (d) => d.status === 'Void Requested' && d.barangay_name === authStore.user.barangay_name,
     )
     console.log('Debug - All void requests found:', allVoidRequests)
     console.log('Debug - Void requests for this barangay:', voidRequestsForThisBarangay)
@@ -753,7 +741,7 @@ const handleVoidRequestClick = async () => {
   }
 }
 
-// Method to handle edit request click - navigate to disbursement page and open first edit request
+// Method to handle edit request click - navigate to disbursement page with edit request filter
 const handleEditRequestClick = async () => {
   // Security check: ensure user has barangay_name
   if (!authStore.user?.barangay_name) {
@@ -785,59 +773,47 @@ const handleEditRequestClick = async () => {
     color: 'lightgreen',
     textColor: 'white',
     bgcolor: 'lightgreen',
-    message: 'Opening edit request details...',
+    message: 'Opening edit requests...',
     icon: 'edit_note',
     position: 'top',
     timeout: 2000,
   })
 
-  // Navigate to disbursement page
-  await router.push('/home/transactions/disbursement')
-
-  // Small delay to ensure navigation completes
-  await new Promise((resolve) => setTimeout(resolve, 500))
-
-  // Find the first edit requested disbursement for current barangay
-  const editRequestedDisbursement = disbursementStore.disbursements.find(
+  // Check if there are any edit requests for this barangay
+  const editRequestsForThisBarangay = disbursementStore.disbursements.filter(
     (d) => d.status === 'Edit Requested' && d.barangay_name === authStore.user.barangay_name,
   )
 
-  console.log('Debug - Found edit requested disbursement:', editRequestedDisbursement)
+  // Refresh disbursement data before navigation to ensure we have the latest data
+  await disbursementStore.fetchDisbursements()
 
-  if (editRequestedDisbursement) {
-    // Additional security check: verify barangay_name matches
-    if (editRequestedDisbursement.barangay_name !== authStore.user.barangay_name) {
-      console.error('Security violation: Edit request barangay_name mismatch')
-      $q.notify({
-        type: 'negative',
-        message: 'Access denied: Invalid edit request',
-        icon: 'error',
-        position: 'top',
-        timeout: 3000,
-      })
-      return
-    }
+  // Re-check edit requests after refresh
+  const updatedEditRequestsForThisBarangay = disbursementStore.disbursements.filter(
+    (d) => d.status === 'Edit Requested' && d.barangay_name === authStore.user.barangay_name,
+  )
 
-    console.log('Debug - Opening edit request:', editRequestedDisbursement.id)
-
-    // Open the ViewOrDetails dialog for the edit requested disbursement
-    await disbursementStore.openViewOrDetails(editRequestedDisbursement)
+  if (updatedEditRequestsForThisBarangay.length > 0) {
+    // Navigate to disbursement page with edit request status filter
+    await router.push({
+      path: '/home/transactions/disbursement',
+      query: { status: 'Edit Requested' }
+    })
 
     // Show success notification
     $q.notify({
       type: 'positive',
-      message: 'Edit request details opened',
+      message: `Showing ${updatedEditRequestsForThisBarangay.length} edit request(s) for your barangay`,
       icon: 'check_circle',
       position: 'top',
-      timeout: 2000,
+      timeout: 3000,
     })
   } else {
+    // Navigate to disbursement page anyway but show warning
+    await router.push('/home/transactions/disbursement')
+    
     // Show warning if no edit requests found for this barangay
     const allEditRequests = disbursementStore.disbursements.filter(
       (d) => d.status === 'Edit Requested',
-    )
-    const editRequestsForThisBarangay = disbursementStore.disbursements.filter(
-      (d) => d.status === 'Edit Requested' && d.barangay_name === authStore.user.barangay_name,
     )
     console.log('Debug - All edit requests found:', allEditRequests)
     console.log('Debug - Edit requests for this barangay:', editRequestsForThisBarangay)
@@ -859,6 +835,10 @@ const userPhoto = computed(() => {
     (authStore.user.photo_path ? `/storage/${authStore.user.photo_path}` : 'src/assets/user.png')
   )
 })
+
+const goToSettings = () => {
+  router.push('/home/profile-settings')
+}
 
 const handleLogout = async () => {
   $q.dialog({

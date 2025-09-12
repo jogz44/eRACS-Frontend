@@ -1523,7 +1523,26 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.dialogs.orDetails = false
       this.dialogs.disbursement = false
 
-      this.currentLiquidation = JSON.parse(JSON.stringify(row));
+      // Safely clone the row data
+      try {
+        this.currentLiquidation = JSON.parse(JSON.stringify(row));
+      } catch (error) {
+        console.error('Error cloning row data:', error);
+        // Fallback: create a new object with the essential properties
+        this.currentLiquidation = {
+          id: row.id,
+          dvNumber: row.dvNumber,
+          payee: row.payee,
+          date: row.date,
+          dvAmount: row.dvAmount,
+          status: row.status,
+          remarks: row.remarks,
+          rejection_remarks: row.rejection_remarks,
+          expenses: row.expenses || [],
+          orDetails: []
+        };
+      }
+      
       console.error('ksdafkjaisdhkasj=========================:', this.currentLiquidation);
 
       // Initialize orDetails as empty array

@@ -660,6 +660,12 @@
 
           <q-card-actions align="right" class="q-pa-md">
             <q-btn flat label="Close" @click="closeRemarksDialog" color="primary" />
+            <q-btn 
+              label="View Details" 
+              @click="openViewOrDetailsFromRemarks" 
+              color="primary" 
+              unelevated
+            />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -1077,6 +1083,18 @@ onMounted(async () => {
     })
   }
 })
+
+// Watch for route changes to update filters when navigating from notifications
+watch(
+  () => route.query,
+  (newQuery, oldQuery) => {
+    // Only apply filters if the query actually changed
+    if (JSON.stringify(newQuery) !== JSON.stringify(oldQuery)) {
+      applyNavigationFilters()
+    }
+  },
+  { deep: true }
+)
 
 // Auto-refresh expense accounts when the expense dialog is opened
 watch(
@@ -1581,7 +1599,14 @@ const handleEditDisbursement = async (row) => {
 const handleViewDisbursement = async (row) => {
   viewLoading.value[row.id] = true
   try {
-    await store.openViewOrDetails(row)
+    // Check if there are remarks (void request or edit request) first
+    if (hasRemarks(row)) {
+      // Show remarks dialog first
+      openRemarksDialog(row)
+    } else {
+      // No remarks, directly open ViewOrDetails
+      await store.openViewOrDetails(row)
+    }
   } catch (error) {
     console.error('Error opening view disbursement:', error)
     $q.notify({
@@ -1668,6 +1693,50 @@ const openRemarksDialog = (row) => {
 const closeRemarksDialog = () => {
   remarksDialog.value = false
   selectedRemarksData.value = null
+}
+
+const openViewOrDetailsFromRemarks = async () => {
+  if (selectedRemarksData.value && selectedRemarksData.value.id) {
+    // Store the data before closing the dialog
+    const disbursementData = { ...selectedRemarksData.value }
+    
+    // Ensure we have the required fields
+    if (!disbursementData.id) {
+      $q.notify({
+        type: 'negative',
+        message: 'Invalid disbursement data',
+        icon: 'error',
+        position: 'top',
+        timeout: 3000,
+      })
+      return
+    }
+    
+    // Close remarks dialog first
+    closeRemarksDialog()
+    
+    // Then open ViewOrDetails with the stored data
+    try {
+      await store.openViewOrDetails(disbursementData)
+    } catch (error) {
+      console.error('Error opening view disbursement from remarks:', error)
+      $q.notify({
+        type: 'negative',
+        message: 'Failed to open view disbursement',
+        icon: 'error',
+        position: 'top',
+        timeout: 3000,
+      })
+    }
+  } else {
+    $q.notify({
+      type: 'negative',
+      message: 'No disbursement data available',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000,
+    })
+  }
 }
 
 // Submit edit request from dialog

@@ -145,6 +145,13 @@ const routes = [
         component: () => import('../pages/User/UserLogs.vue'),
         meta: { title: 'Logs' },
       },
+      // Profile Settings
+      {
+        path: 'profile-settings',
+        name: 'ProfileSettings',
+        component: () => import('../pages/User/ProfileSettings.vue'),
+        meta: { title: 'Profile Settings' },
+      },
     ],
   },
 

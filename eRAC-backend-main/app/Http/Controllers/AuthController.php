@@ -379,6 +379,114 @@ public function resetPassword(Request $request)
     ]);
 }
 
+    /**
+     * Update user profile
+     */
+    public function updateProfile(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            
+            if (!$user) {
+                return response()->json([
+                    'message' => 'Unauthorized'
+                ], 401);
+            }
+
+            $validated = $request->validate([
+                'first_name' => 'required|string|max:255',
+                'middle_name' => 'nullable|string|max:255',
+                'last_name' => 'required|string|max:255',
+                'suffix' => 'nullable|string|max:255',
+                'email' => 'required|string|email|max:255|unique:barangay_users,email,' . $user->id,
+                'username' => 'required|string|max:255|unique:barangay_users,username,' . $user->id,
+                'photo_path' => 'nullable|string',
+            ]);
+
+            // Update user profile
+            $user->update([
+                'first_name' => $validated['first_name'],
+                'middle_name' => $validated['middle_name'],
+                'last_name' => $validated['last_name'],
+                'suffix' => $validated['suffix'],
+                'email' => $validated['email'],
+                'username' => $validated['username'],
+                'photo_path' => $validated['photo_path'] ?? $user->photo_path,
+            ]);
+
+            // Log the profile update
+            AdminAuthController::logUserAction(
+                $user, 
+                'Updated Profile', 
+                'User updated their profile information'
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profile updated successfully',
+                'user' => $user->load(['barangay', 'position'])
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update profile',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Change user password
+     */
+    public function changePassword(Request $request)
+    {
+        try {
+            $user = Auth::user();
+            
+            if (!$user) {
+                return response()->json([
+                    'message' => 'Unauthorized'
+                ], 401);
+            }
+
+            $validated = $request->validate([
+                'current_password' => 'required|string',
+                'new_password' => 'required|string|min:8|confirmed',
+            ]);
+
+            // Verify current password
+            if (!Hash::check($validated['current_password'], $user->password)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Current password is incorrect'
+                ], 400);
+            }
+
+            // Update password
+            $user->update([
+                'password' => Hash::make($validated['new_password'])
+            ]);
+
+            // Log the password change
+            AdminAuthController::logUserAction(
+                $user, 
+                'Changed Password', 
+                'User changed their account password'
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password changed successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to change password',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function getBarangayLogs() {
         $logs = DB::table('logs')
             ->join('barangay_users', 'logs.user_id', '=', 'barangay_users.id')
