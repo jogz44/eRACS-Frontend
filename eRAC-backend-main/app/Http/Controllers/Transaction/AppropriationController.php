@@ -2104,6 +2104,7 @@ class AppropriationController extends Controller
                     'expense_class_id' => $sourceAppropriation->expense_class_id,
                     'expense_type_id' => $sourceAppropriation->expense_type_id,
                     'expense_item_id' => $sourceAppropriation->expense_item_id,
+                    'expense_sub_item_id' => $sourceAppropriation->expense_sub_item_id,
                     'amount' => $source['amount'],
                     'transaction_date' => now(),
                     'status' => 'committed',

@@ -260,6 +260,13 @@
         <!-- Selected Expense Accounts Table -->
         <q-table :rows="selectedReimbursementExpenseAccounts" :columns="selectedExpenseAccountColumns" row-key="id"
           :pagination="{ rowsPerPage: 0 }" flat bordered>
+          <template v-slot:body-cell-account="props">
+            <q-td :props="props">
+              <div class="expense-account-hierarchy">
+                {{ formatExpenseAccountHierarchy(props.row) }}
+              </div>
+            </q-td>
+          </template>
           <template v-slot:body-cell-amount="props">
             <q-td :props="props" class="text-right">
               <div class="flex justify-end">
@@ -624,11 +631,33 @@ const expenseAccountColumns = computed(() => [
     sortable: true,
   },
   {
-    name: 'accountName',
-    label: 'Account Name',
-    field: 'accountName',
+    name: 'account',
+    label: 'Expense Class',
+    field: 'account',
     align: 'left',
     sortable: true,
+  },
+  {
+    name: 'expenseType',
+    label: 'Expense Type',
+    field: 'expenseType',
+    align: 'left',
+    sortable: true,
+  },
+  {
+    name: 'expenseItem',
+    label: 'Expense Item',
+    field: 'expenseItem',
+    align: 'left',
+    sortable: true,
+  },
+  {
+    name: 'expenseSubItem',
+    label: 'Sub Item',
+    field: 'expenseSubItem',
+    align: 'left',
+    sortable: true,
+    format: (val) => val || '-',
   },
   {
     name: 'amount',
@@ -670,7 +699,12 @@ const expenseAccountDetails = computed(() => {
     id: expense.id || index + 1,
     accountName: expense.accountName || expense.account_name || 'N/A',
     amount: expense.amount || 0,
-    particular: expense.particular || 'N/A'
+    particular: expense.particular || 'N/A',
+    // Add fields for multi-column display
+    account: expense.account || expense.expense_class_name || '',
+    expenseType: expense.expenseType || expense.expense_type_name || '',
+    expenseItem: expense.expenseItem || expense.expense_item_name || '',
+    expenseSubItem: expense.expenseSubItem || expense.expense_sub_item_name || '',
   }))
   
   console.log('Mapped expenses:', mappedExpenses)
@@ -1437,6 +1471,7 @@ const handlePasteNumeric = (event) => {
     store.currentLiquidation.orDetails[orDetailIndex].orAmount = finalText
   }
 }
+
 </script>
 
 <style scoped>
@@ -1454,10 +1489,23 @@ const handlePasteNumeric = (event) => {
   color: #666;
 }
 
+/* Expense account hierarchy styling */
+.expense-account-hierarchy {
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: break-word;
+  max-width: 400px;
+}
+
 /* Responsive design for mobile */
 @media (max-width: 768px) {
   .q-card {
     min-width: 95vw !important;
+  }
+
+  .expense-account-hierarchy {
+    font-size: 11px;
+    max-width: 250px;
   }
 }
 </style>

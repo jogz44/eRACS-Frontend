@@ -95,7 +95,9 @@
                   class="col-6 text-right"
                   style="display: flex; align-items: center; justify-content: flex-end"
                 >
-                  {{ appropriationStore.formatCurrency(calculateClassTotal(expenseClass)) }}
+                  <template v-if="calculateClassTotal(expenseClass) > 0">
+                    {{ appropriationStore.formatCurrency(calculateClassTotal(expenseClass)) }}
+                  </template>
                 </div>
               </div>
 
@@ -143,6 +145,7 @@
                       input-class="q-py-xs"
                       placeholder="0.00"
                     />
+                    <!-- Types with children should show NO amount - only their children show amounts -->
                   </div>
                 </div>
 
@@ -205,7 +208,7 @@
                         </template>
                         <!-- Show amount display if item has sub-items -->
                         <template v-else>
-                          <span class="text-weight-regular">{{ appropriationStore.formatCurrency(calculateItemTotal(expenseItem)) }}</span>
+                          <!-- Items with sub-items should show NO amount - only sub-items show amounts -->
                         </template>
                       </div>
                     </div>
@@ -397,7 +400,7 @@ const displayAccounts = computed(() => {
     id: expenseClass.id,
     name: expenseClass.name,
     isMainCategory: expenseClass.isMainCategory,
-    amount: appropriationStore.inputCache[`class-${expenseClass.id}`] || '',
+    amount: '', // Classes don't have direct amounts, but will show calculated totals
     children: Array.isArray(expenseClass.children)
       ? expenseClass.children.map((expenseType) => ({
           id: expenseType.id,
@@ -563,6 +566,7 @@ const getTypeClass = (expenseType) => {
 
 
 const calculateClassTotal = (expenseClass) => {
+  // Class should show the sum of ALL allocations under it
   let total = 0
 
   expenseClass.children?.forEach((expenseType) => {
@@ -590,20 +594,8 @@ const calculateClassTotal = (expenseClass) => {
 }
 
 const calculateItemTotal = (expenseItem) => {
-  let total = 0
-
-  if (expenseItem.children && expenseItem.children.length > 0) {
-    // Only sum sub-items when present
-    expenseItem.children.forEach((subItem) => {
-      if (subItem.amount) {
-        total += parseCurrency(subItem.amount)
-      }
-    })
-  } else if (expenseItem.amount) {
-    total += parseCurrency(expenseItem.amount)
-  }
-
-  return Math.round(total * 100) / 100
+  // Only show the item's own direct allocation amount, not children amounts
+  return expenseItem.amount || 0
 }
 
 const validateAmountRule = (val) => {

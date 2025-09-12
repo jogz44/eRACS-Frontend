@@ -27,7 +27,7 @@
           Barangay {{ authStore.user?.barangay_name }}
         </q-toolbar-title>
         <!--- Bell for notifications-->
-        <q-btn size= 17px round dense flat class="notification-btn">
+        <q-btn style="background-color: grey;" size= 17px round dense flat class="notification-btn">
           <q-icon name="notifications" size="30px" color="white">
             <!-- Show notification -->
             <q-badge v-if="totalNotificationCount > 0" floating color="red" text-color="white">
@@ -91,8 +91,8 @@
         </q-btn>
 
         <!--- User Avatar Menu-->
-        <q-btn round dense flat class="user-menu-btn">
-          <q-avatar size="40px">
+        <q-btn style="background-color: grey;" round dense flat class="user-menu-btn">
+          <q-avatar size="41px">
             <img
               :src="userPhoto"
               @error="handleImageError"

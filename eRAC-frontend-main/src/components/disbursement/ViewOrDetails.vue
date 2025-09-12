@@ -315,7 +315,7 @@ const loadingOrDetails = ref(false)
 const voidActionLoading = ref(false)
 const editActionLoading = ref(false)
 
-// Table columns for Expense Accounts - matching the image structure
+// Table columns for Expense Accounts - using multi-column approach like disbursement dialog
 const expenseAccountColumns = [
   {
     name: 'id',
@@ -325,11 +325,33 @@ const expenseAccountColumns = [
     sortable: true,
   },
   {
-    name: 'accountName',
-    label: 'Account Name',
-    field: 'accountName',
+    name: 'account',
+    label: 'Expense Class',
+    field: 'account',
     align: 'left',
     sortable: true,
+  },
+  {
+    name: 'expenseType',
+    label: 'Expense Type',
+    field: 'expenseType',
+    align: 'left',
+    sortable: true,
+  },
+  {
+    name: 'expenseItem',
+    label: 'Expense Item',
+    field: 'expenseItem',
+    align: 'left',
+    sortable: true,
+  },
+  {
+    name: 'expenseSubItem',
+    label: 'Sub Item',
+    field: 'expenseSubItem',
+    align: 'left',
+    sortable: true,
+    format: (val) => val || '-',
   },
   {
     name: 'amount',
@@ -444,6 +466,7 @@ const formatCurrency = (value) => {
   const num = Number(String(value).replace(/[,\s]/g, '')) || 0
   return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
+
 
 // Handle void approval
 const handleApproveVoid = async () => {
@@ -735,6 +758,14 @@ const handleRejectEdit = () => {
   font-weight: 600;
 }
 
+/* Expense account hierarchy styling */
+.expense-account-hierarchy {
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: break-word;
+  max-width: 400px;
+}
+
 /* Responsive design for mobile */
 @media (max-width: 768px) {
   .q-card {
@@ -743,6 +774,11 @@ const handleRejectEdit = () => {
 
   .q-table {
     font-size: 12px;
+  }
+
+  .expense-account-hierarchy {
+    font-size: 11px;
+    max-width: 250px;
   }
 
   .void-action-buttons {
