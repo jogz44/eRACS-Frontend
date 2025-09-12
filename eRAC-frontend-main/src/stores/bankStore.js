@@ -175,7 +175,7 @@ export const useBankStore = defineStore('bank', {
 
         this.banks = (response.data.data || response.data || []).map((bank) => ({
           id: bank.id,
-          name: bank.bank_name || bank.name,
+          name: bank.name,
           status: bank.status || 'Available',
           booklets_count: bank.booklets_count || 0, // Changed from cheques_count
           booklets: bank.booklets || [], // Changed from cheques

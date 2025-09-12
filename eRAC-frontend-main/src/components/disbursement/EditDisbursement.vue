@@ -33,8 +33,8 @@
           <!-- Bank Field -->
           <div class="col-md-4 col-sm-12">
             <q-item-label class="q-mb-xs">Bank:</q-item-label>
-            <q-select outlined dense v-model="store.forms.disbursement.bank_id" :options="bankStore.availableBanks"
-              option-label="name" option-value="id" emit-value map-options :label="currentBankLabel"
+            <q-select outlined dense :v-model="store.isChequeCancel ? store.forms.disbursement.bank_id : null" :options="bankStore.availableBanks"
+              option-label="name" option-value="id"  :label="currentBankLabel"
               :disable="!isChequeCancelled" @update:model-value="handleBankSelection" />
           </div>
 

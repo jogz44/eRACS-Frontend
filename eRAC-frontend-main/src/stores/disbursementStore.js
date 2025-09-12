@@ -1218,6 +1218,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         })
         // Get the disbursement data
         const disbursement = response.data.data
+        console.log('=---------------------------->',disbursement)
         if (disbursement) {
           this.forms.disbursement = {
             date: formatDateForForm(disbursement.date),
