@@ -434,6 +434,45 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     getUserID() {
-      return this.user.id || null}
+      return this.user.id || null
+    },
+
+    // Profile update methods
+    async updateProfile(profileData) {
+      try {
+        const response = await api.put('/api/barangay/update-profile', profileData)
+        
+        // Update the user data in the store
+        this.user = response.data.user
+        
+        // Update localStorage
+        localStorage.setItem('user_data', JSON.stringify(response.data.user))
+        
+        return {
+          success: true,
+          data: response.data
+        }
+      } catch (error) {
+        return {
+          success: false,
+          error: this._handleError(error, 'Failed to update profile')
+        }
+      }
+    },
+
+    async changePassword(passwordData) {
+      try {
+        const response = await api.put('/api/barangay/change-password', passwordData)
+        return {
+          success: true,
+          data: response.data
+        }
+      } catch (error) {
+        return {
+          success: false,
+          error: this._handleError(error, 'Failed to change password')
+        }
+      }
+    }
   },
 })

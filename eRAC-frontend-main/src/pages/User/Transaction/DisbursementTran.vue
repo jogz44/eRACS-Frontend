@@ -509,8 +509,8 @@
             <q-td :props="props">
               <div v-if="hasRemarks(props.row)" class="row items-center justify-center">
                 <q-icon
-                  name="visibility"
-                  color="blue"
+                  name="edit_note"
+                  color="primary"
                   size="md"
                   class="cursor-pointer"
                   @click="openRemarksDialog(props.row)"
@@ -579,7 +579,7 @@
         </q-card>
       </q-dialog>
 
-      <!-- Edit Request Dialog (for Treasurers) -->
+      <!-- Dialog (for Treasurers) -->
       <q-dialog v-model="store.dialogs.editRequest" persistent>
         <q-card style="min-width: 500px; max-width: 90vw">
           <q-card-section class="q-pb-none">
@@ -660,6 +660,12 @@
 
           <q-card-actions align="right" class="q-pa-md">
             <q-btn flat label="Close" @click="closeRemarksDialog" color="primary" />
+            <q-btn 
+              label="View Details" 
+              @click="openViewOrDetailsFromRemarks" 
+              color="primary" 
+              unelevated
+            />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -1024,33 +1030,33 @@ const loadDataWithRetry = async (retryCount = 0, maxRetries = 3) => {
 // Apply navigation parameters from dashboard
 const applyNavigationFilters = () => {
   const query = route.query
-  
+
   if (query.search) {
     searchQuery.value = query.search
     store.searchQuery = query.search
   }
-  
+
   if (query.status) {
     selectedStatus.value = query.status
   }
-  
+
   if (query.dateFrom && query.dateTo) {
     // Convert date format for the date range picker
     const fromDate = new Date(query.dateFrom)
     const toDate = new Date(query.dateTo)
-    
+
     if (!isNaN(fromDate.getTime()) && !isNaN(toDate.getTime())) {
       dateRange.value = {
         from: fromDate.toISOString().split('T')[0],
         to: toDate.toISOString().split('T')[0]
       }
-      
+
       // Apply to store
       store.dateFrom = fromDate.toLocaleDateString('en-GB')
       store.dateTo = toDate.toLocaleDateString('en-GB')
     }
   }
-  
+
   // Show notification if filters were applied
   // Filters applied from dashboard navigation - no notification needed
 }
@@ -1059,7 +1065,7 @@ onMounted(async () => {
   try {
     // Apply navigation filters first
     applyNavigationFilters()
-    
+
     // Use enhanced data loading with retry mechanism
     await loadDataWithRetry()
 
@@ -1077,6 +1083,18 @@ onMounted(async () => {
     })
   }
 })
+
+// Watch for route changes to update filters when navigating from notifications
+watch(
+  () => route.query,
+  (newQuery, oldQuery) => {
+    // Only apply filters if the query actually changed
+    if (JSON.stringify(newQuery) !== JSON.stringify(oldQuery)) {
+      applyNavigationFilters()
+    }
+  },
+  { deep: true }
+)
 
 // Auto-refresh expense accounts when the expense dialog is opened
 watch(
@@ -1581,7 +1599,14 @@ const handleEditDisbursement = async (row) => {
 const handleViewDisbursement = async (row) => {
   viewLoading.value[row.id] = true
   try {
-    await store.openViewOrDetails(row)
+    // Check if there are remarks (void request or edit request) first
+    if (hasRemarks(row)) {
+      // Show remarks dialog first
+      openRemarksDialog(row)
+    } else {
+      // No remarks, directly open ViewOrDetails
+      await store.openViewOrDetails(row)
+    }
   } catch (error) {
     console.error('Error opening view disbursement:', error)
     $q.notify({
@@ -1668,6 +1693,50 @@ const openRemarksDialog = (row) => {
 const closeRemarksDialog = () => {
   remarksDialog.value = false
   selectedRemarksData.value = null
+}
+
+const openViewOrDetailsFromRemarks = async () => {
+  if (selectedRemarksData.value && selectedRemarksData.value.id) {
+    // Store the data before closing the dialog
+    const disbursementData = { ...selectedRemarksData.value }
+    
+    // Ensure we have the required fields
+    if (!disbursementData.id) {
+      $q.notify({
+        type: 'negative',
+        message: 'Invalid disbursement data',
+        icon: 'error',
+        position: 'top',
+        timeout: 3000,
+      })
+      return
+    }
+    
+    // Close remarks dialog first
+    closeRemarksDialog()
+    
+    // Then open ViewOrDetails with the stored data
+    try {
+      await store.openViewOrDetails(disbursementData)
+    } catch (error) {
+      console.error('Error opening view disbursement from remarks:', error)
+      $q.notify({
+        type: 'negative',
+        message: 'Failed to open view disbursement',
+        icon: 'error',
+        position: 'top',
+        timeout: 3000,
+      })
+    }
+  } else {
+    $q.notify({
+      type: 'negative',
+      message: 'No disbursement data available',
+      icon: 'error',
+      position: 'top',
+      timeout: 3000,
+    })
+  }
 }
 
 // Submit edit request from dialog

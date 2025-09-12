@@ -1,66 +1,73 @@
 <template>
   <q-page class="q-pa-lg dashboard-page">
-    <!-- Header Section -->
-    <div class="page-header q-mb-lg row items-center">
-      <div class="col-12 col-md">
-        <div class="welcome-user text-accent">
-          Welcome Back, {{ authStore.user?.first_name || 'Guest' }}
-          <div class="Custom-caption text-caption text-black">
-            Here's a quick overview of your dashboard
+    <!-- Dashboard Header Card -->
+    <div class="dashboard-card q-mb-md">
+      <div class="row items-center justify-between">
+        <!-- Welcome Section -->
+        <div class="col-12 col-md-8">
+          <div class="welcome-user text-accent">
+            Welcome Back, {{ authStore.user?.first_name || 'Guest' }}
+            <div class="Custom-caption text-caption text-black">
+              Here's a quick overview of your dashboard
+            </div>
+          </div>
+        </div>
+
+        <!-- Year Filter Section - Rightmost -->
+        <div class="col-12 col-md-4">
+          <div class="year-filter-section">
+            <div class="row items-center justify-end q-gutter-sm">
+              <div class="text-subtitle2 text-weight-medium">Year Filter:</div>
+              <q-select 
+                v-model="chartStore.selectedYear" 
+                :options="chartStore.availableYears" 
+                option-value="value"
+                option-label="label" 
+                emit-value 
+                map-options 
+                dense 
+                outlined 
+                style="min-width: 120px"
+                :loading="chartStore.isYearFilterLoading" 
+                :disable="chartStore.isYearFilterLoading"
+                @update:model-value="onYearChange">
+                <template v-slot:prepend>
+                  <q-icon name="calendar_today" />
+                </template>
+                <template v-slot:loading>
+                  <q-spinner color="primary" size="20px" />
+                </template>
+              </q-select>
+
+              <!-- Refresh years button -->
+              <q-btn 
+                icon="refresh" 
+                color="primary" 
+                flat 
+                dense 
+                size="sm" 
+                @click="refreshYears"
+                :loading="chartStore.isYearFilterLoading" 
+                :disable="chartStore.isYearFilterLoading">
+                <q-tooltip>Refresh available years</q-tooltip>
+              </q-btn>
+
+              <!-- Error state for year filter -->
+              <div v-if="chartStore.availableYears.length === 0 && !chartStore.isYearFilterLoading"
+                class="text-caption text-negative">
+                No years available
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Year Filter Section -->
-    <div class="year-filter-section q-mb-lg" style="width: 320px;">
-      <q-card class="filter-card">
-        <q-card-section class="row items-center justify-between q-pa-md">
-          <div class="row items-center q-gutter-md q-mt-sm">
-            <div class="text-subtitle2 text-weight-medium">Year Filter:</div>
-            <q-select v-model="chartStore.selectedYear" :options="chartStore.availableYears" option-value="value"
-              option-label="label" emit-value map-options dense outlined style="min-width: 150px"
-              :loading="chartStore.isYearFilterLoading" :disable="chartStore.isYearFilterLoading"
-              @update:model-value="onYearChange">
-              <template v-slot:prepend>
-                <q-icon name="calendar_today" />
-              </template>
-              <template v-slot:loading>
-                <q-spinner color="primary" size="20px" />
-              </template>
-            </q-select>
-
-            <!-- Refresh years button -->
-            <q-btn icon="refresh" color="primary" flat dense size="sm" @click="refreshYears"
-              :loading="chartStore.isYearFilterLoading" :disable="chartStore.isYearFilterLoading">
-              <q-tooltip>Refresh available years</q-tooltip>
-            </q-btn>
-
-
-
-            <!-- Error state for year filter -->
-            <div v-if="chartStore.availableYears.length === 0 && !chartStore.isYearFilterLoading"
-              class="text-caption text-negative">
-              No years available
-            </div>
-          </div>
-
-          <div class="row items-center q-gutter-sm">
-
-
-
-          </div>
-        </q-card-section>
-
-        <!-- Year Filter Summary -->
-      </q-card>
-    </div>
-
     <!-- Summary Cards Row -->
     <div class="row q-col-gutter-lg q-mb-lg">
       <div v-for="(card, index) in chartStore.summaryCards" :key="index" class="col-xs-12 col-sm-6 col-md-4 q-mb-md">
-        <q-card 
-          class="summary-card" 
+        <q-card
+          class="summary-card"
           :class="`card-${index}`"
           :clickable="isClickableCard(card.label)"
           @click="handleSummaryCardClick(card.label)"
@@ -237,33 +244,7 @@
     </q-inner-loading>
 
     <!-- Debug Panel (remove in production) -->
-    <div v-if="showDebugPanel" class="q-mt-lg">
-      <q-card class="debug-card">
-        <q-card-section>
-          <div class="row items-center justify-between q-mb-md">
-            <div class="text-h6">Debug Information</div>
-            <q-btn label="Test Backend" color="secondary" size="sm" @click="testBackend" :loading="testingBackend" />
-          </div>
-          <div class="row q-col-gutter-md">
-            <div class="col-12 col-md-6">
-              <div class="text-subtitle2">Chart Data:</div>
-              <pre class="debug-text">{{ JSON.stringify(chartStore.pieChartData, null, 2) }}</pre>
-            </div>
-            <div class="col-12 col-md-6">
-              <div class="text-subtitle2">Disbursements:</div>
-              <div>Total: {{ chartStore.disbursementOverviewRows.length }}</div>
-              <div>Filtered: {{ filteredDisbursementRows.length }}</div>
-              <div>Selected Filter: {{ selectedDisbursementFilter }}</div>
-              <div class="q-mt-md">
-                <div class="text-subtitle2">Backend Debug:</div>
-                <pre v-if="backendDebugData" class="debug-text">{{ JSON.stringify(backendDebugData, null, 2) }}</pre>
-                <div v-else class="text-caption text-grey-5">Click "Test Backend" to check data</div>
-              </div>
-            </div>
-          </div>
-        </q-card-section>
-      </q-card>
-    </div>
+
   </q-page>
 </template>
 
@@ -292,18 +273,15 @@ let visibilityChangeHandler = null
 // let debugKeyHandler = null
 
 // Debug panel toggle (set to true to show debug info)
-const showDebugPanel = ref(false)
 
 // Backend debug data
-const backendDebugData = ref(null)
-const testingBackend = ref(false)
+
 
 // Disbursement filtering
 const selectedDisbursementFilter = ref('unliquidated')
 
 const disbursementFilters = ref([
   { label: 'Unliquidated', value: 'unliquidated' },
-
   { label: 'Partial', value: 'Partial' },
   { label: 'Liquidated', value: 'Liquidated' },
 ])
@@ -507,46 +485,7 @@ const validateChartData = (data) => {
   return true
 }
 
-// Test backend data
-const testBackend = async () => {
-  try {
-    testingBackend.value = true
-    const response = await fetch('/api/barangay/dashboard/debug', {
-      headers: {
-        'Authorization': `Bearer ${authStore.token || authStore.adminToken}`,
-        'Content-Type': 'application/json'
-      }
-    })
 
-    if (response.ok) {
-      const data = await response.json()
-      backendDebugData.value = data.data
-
-      $q.notify({
-        type: 'positive',
-        message: 'Backend data retrieved successfully',
-        icon: 'check_circle',
-        position: 'top',
-        timeout: 2000,
-      })
-    } else {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-  } catch (error) {
-    console.error('Error testing backend:', error)
-    backendDebugData.value = { error: error.message }
-
-    $q.notify({
-      type: 'negative',
-      message: 'Failed to test backend: ' + error.message,
-      icon: 'error',
-      position: 'top',
-      timeout: 3000,
-    })
-  } finally {
-    testingBackend.value = false
-  }
-}
 
 // Year filter methods
 const onYearChange = async (newYear) => {
@@ -714,7 +653,7 @@ const handleSummaryCardClick = (cardLabel) => {
     router.push({
       name: 'Appropriation'
     })
-    
+
     $q.notify({
       type: 'positive',
       message: 'Viewing Appropriation Transaction',
@@ -731,7 +670,7 @@ const handleSummaryCardClick = (cardLabel) => {
         budgetType: 'annual'
       }
     })
-    
+
     $q.notify({
       type: 'positive',
       message: 'Viewing Annual Budget in Appropriation Transaction',
@@ -745,7 +684,7 @@ const handleSummaryCardClick = (cardLabel) => {
     router.push({
       name: 'Disbursement'
     })
-    
+
     $q.notify({
       type: 'positive',
       message: 'Viewing Disbursement Transaction',
@@ -858,63 +797,6 @@ onMounted(async () => {
   box-shadow: 0 2px 15px rgba(102, 96, 96, 0.05);
 }
 
-.year-filter-section {
-  .filter-card {
-    background-color: white;
-    border-radius: 12px;
-    transition:
-      transform 0.3s ease,
-      box-shadow 0.3s ease;
-
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 16px rgba(88, 178, 101, 0.15);
-    }
-
-    .q-card__section {
-      padding: 16px 20px;
-
-      &:last-child {
-        padding-top: 0;
-        padding-bottom: 16px;
-        border-top: 1px solid #f0f0f0;
-        background-color: #fafafa;
-        border-radius: 0 0 12px 12px;
-      }
-    }
-  }
-
-  .q-select {
-    .q-field__control {
-      border-radius: 8px;
-    }
-  }
-
-  .q-btn {
-    border-radius: 8px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-  }
-
-  .year-filter-summary {
-    .text-caption {
-      line-height: 1.4;
-
-      .text-weight-medium {
-        color: #424242;
-      }
-
-      .text-positive {
-        font-weight: 500;
-      }
-    }
-  }
-}
 
 .summary-card {
   min-width: unset !important;
@@ -1329,12 +1211,6 @@ onMounted(async () => {
   opacity: 0.7;
 }
 
-.welcome-user {
-  font-weight: bold;
-  color: Black;
-  /* Dark green */
-  margin-top: -10px;
-}
 
 .dashboard-page {
   background: whitesmoke;
@@ -1354,5 +1230,101 @@ onMounted(async () => {
   max-height: 200px;
   overflow-y: auto;
   border: 1px solid #e0e0e0;
+}
+.dashboard-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e0e0e0;
+  min-height: auto;
+  transition: all 0.3s ease;
+}
+
+.dashboard-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+/* Year filter section improvements */
+.year-filter-section {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.year-filter-section .row {
+  align-items: center;
+  gap: 8px;
+}
+
+.year-filter-section .q-select {
+  min-width: 120px;
+}
+
+.year-filter-section .q-btn {
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.year-filter-section .q-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.2);
+}
+
+/* Welcome section improvements */
+.welcome-user {
+  font-weight: 600;
+  color: #1976d2;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.Custom-caption {
+  color: #666;
+  font-size: 14px;
+  margin-top: 4px;
+  opacity: 0.8;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .dashboard-card {
+    padding: 16px 20px;
+  }
+  
+  .year-filter-section {
+    justify-content: center;
+    margin-top: 16px;
+  }
+  
+  .year-filter-section .row {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+  }
+  
+  .welcome-user {
+    text-align: center;
+    margin-bottom: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-card {
+    padding: 12px 16px;
+  }
+  
+  .year-filter-section .q-select {
+    min-width: 100px;
+  }
+  
+  .welcome-user {
+    font-size: 18px;
+  }
+  
+  .Custom-caption {
+    font-size: 12px;
+  }
 }
 </style>

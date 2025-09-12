@@ -26,6 +26,121 @@
         >
           Barangay {{ authStore.user?.barangay_name }}
         </q-toolbar-title>
+        <!--- Bell for notifications-->
+        <q-btn size= 17px round dense flat class="notification-btn">
+          <q-icon name="notifications" size="30px" color="white">
+            <!-- Show notification -->
+            <q-badge v-if="totalNotificationCount > 0" floating color="red" text-color="white">
+              !
+            </q-badge>
+          </q-icon>
+
+          <q-menu anchor="bottom right" self="top right" class="notification-menu">
+            <q-list style="min-width: 300px">
+              <q-item class="notification-header">
+                <q-item-section>
+                  <q-item-label class="text-weight-bold">Notifications</q-item-label>
+                </q-item-section>
+                <q-btn flat round dense icon="refresh" size="sm" @click="refreshAllNotifications">
+                  <q-tooltip>Refresh all notifications</q-tooltip>
+                </q-btn>
+              </q-item>
+
+              <q-separator />
+
+              <!-- Void Requests -->
+              <q-item v-if="voidRequestCount > 0" clickable @click="handleVoidRequestClick" class="notification-item void-notification">
+                <q-item-section avatar>
+                  <q-icon name="pending_actions" color="orange" size="28px" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label class="text-weight-bold">Void Requests</q-item-label>
+                  <q-item-label caption>
+                    {{ voidRequestCount }} pending approval{{ voidRequestCount > 1 ? 's' : '' }}
+                  </q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-icon name="chevron_right" size="20px" />
+                </q-item-section>
+              </q-item>
+
+              <!-- Edit Requests -->
+              <q-item v-if="editRequestCount > 0" clickable @click="handleEditRequestClick" class="notification-item edit-notification">
+                <q-item-section avatar>
+                  <q-icon name="edit_note" color="purple" size="28px" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label class="text-weight-bold">Edit Requests</q-item-label>
+                  <q-item-label caption>
+                    {{ editRequestCount }} pending approval{{ editRequestCount > 1 ? 's' : '' }}
+                  </q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-icon name="chevron_right" size="20px" />
+                </q-item-section>
+              </q-item>
+
+              <!-- No notifications message -->
+              <q-item v-if="totalNotificationCount === 0">
+                <q-item-section class="text-center text-grey q-pa-md">
+                  No new notifications
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
+
+        <!--- User Avatar Menu-->
+        <q-btn round dense flat class="user-menu-btn">
+          <q-avatar size="40px">
+            <img
+              :src="userPhoto"
+              @error="handleImageError"
+              :alt="authStore.user?.first_name"
+            />
+          </q-avatar>
+
+          <q-menu class="user-menu" transition-show="jump-down" transition-hide="jump-up">
+            <q-list style="min-width: 250px">
+              <!-- User Profile Header -->
+              <q-item class="user-profile-header">
+                <q-item-section avatar>
+                  <q-avatar size="72px">
+                    <img :src="userPhoto" @error="handleImageError" />
+                  </q-avatar>
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label class="text-weight-bold text-h6">
+                    {{ authStore.user?.first_name }} {{ authStore.user?.last_name }}
+                  </q-item-label>
+                  <q-item-label caption>
+                    {{ authStore.user?.position_name }}
+                  </q-item-label>
+                  <q-item-label caption>
+                    {{ authStore.user?.barangay_name }}
+                  </q-item-label>
+                </q-item-section>
+              </q-item>
+
+              <q-separator />
+
+              <!-- Menu Items -->
+              <q-item clickable v-ripple @click="goToSettings" class="menu-item">
+                <q-item-section avatar>
+                  <q-icon name="settings" color="primary" />
+                </q-item-section>
+                <q-item-section>Edit Profile</q-item-section>
+              </q-item>
+
+              <q-item clickable v-ripple @click="handleLogout" class="menu-item">
+                <q-item-section avatar>
+                  <q-icon name="logout" color="negative" />
+                </q-item-section>
+                <q-item-section>Log Out</q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
       </q-toolbar>
     </q-header>
 
@@ -74,20 +189,7 @@
             >
               <q-icon :name="favorite.icon" size="16px" />
               <span class="favorite-title">{{ favorite.title }}</span>
-              <!-- Void Request Notification Badge for Transactions -->
-              <div
-                v-if="favorite.title === 'Transactions' && voidRequestCount > 0"
-                class="void-notification-badge"
-              >
-                {{ voidRequestCount }}
-              </div>
-              <!-- Edit Request Notification Badge for Transactions -->
-              <div
-                v-if="favorite.title === 'Transactions' && editRequestCount > 0"
-                class="edit-notification-badge"
-              >
-                {{ editRequestCount }}
-              </div>
+
               <q-icon
                 v-if="favorite.type === 'panel'"
                 name="chevron_right"
@@ -136,27 +238,7 @@
         <!-- Sticky Footer -->
         <div class="drawer-footer q-mt-auto q-pa-xs">
           <div class="text-caption text-grey items-center q-pa-sm footer-avatar">
-            <div class="footer-user q-pa-sm">
-              <q-avatar size="$q.screen.lt.md ? '32px' : '45px'">
-                <img
-                  :src="userPhoto"
-                  @error="handleImageError"
-                  style="max-width: 100%; height: auto"
-                />
-              </q-avatar>
-              <div class="footer-user-info">
-                <span class="Custom-text text-caption text-white text-weight-bold">
-                  {{ authStore.user?.first_name || 'Guest' }}
-                </span>
-                <span class="position-text text-caption text-white text-weight-medium text-h5">
-                  {{ authStore.user?.position_name || 'User' }}
-                </span>
-              </div>
-              <q-space />
-              <q-btn icon="logout" color="white" flat round dense @click="handleLogout">
-                <q-tooltip>Log Out</q-tooltip>
-              </q-btn>
-            </div>
+
           </div>
         </div>
       </div>
@@ -176,96 +258,7 @@
 
       <div class="panel-content">
         <!-- Void Request Summary Header -->
-        <div v-if="voidRequestCount > 0" class="void-request-container">
-          <q-btn
-            unelevated
-            class="void-request-button"
-            @click="handleVoidRequestClick()"
-            :loading="false"
-          >
-            <q-tooltip>
-              Click to open void request details for approval
-            </q-tooltip>
-            <div class="void-request-content">
-              <div class="void-request-header">
-                <q-icon name="pending_actions" color="white" size="24px" class="void-icon" />
-                <div class="void-request-text-container">
-                  <div class="void-request-count">
-                    {{ voidRequestCount }} VOID REQUEST{{ voidRequestCount > 1 ? 'S' : '' }}
-                  </div>
 
-                </div>
-                <q-btn
-                  flat
-                  round
-                  dense
-                  icon="refresh"
-                  size="sm"
-                  color="white"
-                  @click.stop="refreshVoidRequestCount"
-                  class="refresh-void-btn"
-                >
-                  <q-tooltip>Refresh void request count</q-tooltip>
-                </q-btn>
-              </div>
-            </div>
-          </q-btn>
-        </div>
-
-        <!-- Edit Request Summary Header -->
-        <div v-if="editRequestCount > 0" class="edit-request-container">
-          <q-btn
-            unelevated
-            class="edit-request-button"
-            @click="handleEditRequestClick()"
-            :loading="false"
-          >
-            <q-tooltip>
-              Click to open edit request details for approval
-            </q-tooltip>
-            <div class="edit-request-content">
-              <div class="edit-request-header">
-                <q-icon name="edit_note" color="white" size="24px" class="edit-icon" />
-                <div class="edit-request-text-container">
-                  <div class="edit-request-count">
-                    {{ editRequestCount }} EDIT REQUEST{{ editRequestCount > 1 ? 'S' : '' }}
-                  </div>
-
-                </div>
-                <q-btn
-                  flat
-                  round
-                  dense
-                  icon="refresh"
-                  size="sm"
-                  color="white"
-                  @click.stop="refreshEditRequestCount"
-                  class="refresh-edit-btn"
-                >
-                  <q-tooltip>Refresh edit request count</q-tooltip>
-                </q-btn>
-              </div>
-            </div>
-          </q-btn>
-        </div>
-
-        <!-- Debug info for troubleshooting - only show if there are void requests but count is 0 -->
-        <div v-if="voidRequestCount === 0 &&
-                   authStore.user?.position_name?.toLowerCase().includes('captain') &&
-                   disbursementStore.disbursements.some(d => d.status === 'Void Requested')"
-             class="debug-info">
-          <q-btn
-            flat
-            dense
-            size="sm"
-            color="grey"
-            icon="refresh"
-            @click="refreshVoidRequestCount"
-            class="debug-refresh-btn"
-          >
-            <q-tooltip>Manual refresh - Check console for debug info</q-tooltip>
-          </q-btn>
-        </div>
 
         <!-- Current Transactions -->
         <div class="panel-section">
@@ -277,20 +270,13 @@
           <div class="panel-item" @click="navigateTo('/home/transactions/disbursement')">
             <div class="colored-dot dot-red"></div>
             <span>Disbursement</span>
-            <!-- Show void count on disbursement if there are void requests -->
-            <div v-if="voidRequestCount > 0" class="panel-void-badge">
-              {{ voidRequestCount }}
-            </div>
-            <!-- Show edit count on disbursement if there are edit requests -->
-            <div v-if="editRequestCount > 0" class="panel-edit-badge">
-              {{ editRequestCount }}
-            </div>
+
           </div>
           <div class="panel-item" @click="navigateTo('/home/transactions/augmentation')">
             <div class="colored-dot dot-blue"></div>
             <span>Augmentation</span>
           </div>
-           <div class="panel-item" @click="navigateTo('/home/transactions/supplemental')">
+          <div class="panel-item" @click="navigateTo('/home/transactions/supplemental')">
             <div class="colored-dot dot-red"></div>
             <span>Supplemental</span>
           </div>
@@ -399,7 +385,6 @@ const voidRequestCount = computed(() => {
 
   // Ensure disbursements are loaded
   if (!disbursementStore.disbursements || disbursementStore.disbursements.length === 0) {
-    console.log('Debug - No disbursements loaded yet')
     return 0
   }
 
@@ -409,30 +394,10 @@ const voidRequestCount = computed(() => {
     const hasVoidRequestedStatus = d.status === 'Void Requested'
     const matchesBarangay = d.barangay_name === authStore.user.barangay_name
 
-    // Debug each disbursement
-    if (hasVoidRequestedStatus) {
-      console.log(`Debug - Found void requested disbursement:`, {
-        id: d.id,
-        status: d.status,
-        barangay_name: d.barangay_name,
-        user_barangay: authStore.user.barangay_name,
-        matches: matchesBarangay
-      })
-    }
 
     return hasVoidRequestedStatus && matchesBarangay
   }).length
 
-  // Debug logging for security verification
-  console.log(`Debug - User barangay_name: ${authStore.user.barangay_name}`)
-  console.log(`Debug - Total disbursements: ${disbursementStore.disbursements.length}`)
-  console.log(`Debug - All disbursements:`, disbursementStore.disbursements.map(d => ({
-    id: d.id,
-    status: d.status,
-    barangay_name: d.barangay_name
-  })))
-  console.log(`Debug - Disbursements with status 'Void Requested':`, disbursementStore.disbursements.filter(d => d.status === 'Void Requested'))
-  console.log(`Debug - Void request count for barangay ${authStore.user.barangay_name}: ${voidCount}`)
 
   return voidCount
 })
@@ -462,7 +427,6 @@ const editRequestCount = computed(() => {
 
   // Ensure disbursements are loaded
   if (!disbursementStore.disbursements || disbursementStore.disbursements.length === 0) {
-    console.log('Debug - No disbursements loaded yet for edit requests')
     return 0
   }
 
@@ -472,25 +436,34 @@ const editRequestCount = computed(() => {
     const hasEditRequestedStatus = d.status === 'Edit Requested'
     const matchesBarangay = d.barangay_name === authStore.user.barangay_name
 
-    // Debug each disbursement
-    if (hasEditRequestedStatus) {
-      console.log(`Debug - Found edit requested disbursement:`, {
-        id: d.id,
-        status: d.status,
-        barangay_name: d.barangay_name,
-        user_barangay: authStore.user.barangay_name,
-        matches: matchesBarangay
-      })
-    }
 
     return hasEditRequestedStatus && matchesBarangay
   }).length
 
-  // Debug logging for security verification
-  console.log(`Debug - Edit request count for barangay ${authStore.user.barangay_name}: ${editCount}`)
 
   return editCount
 })
+
+// Add this computed property
+const totalNotificationCount = computed(() => {
+  return voidRequestCount.value + editRequestCount.value
+})
+
+// Add this method
+const refreshAllNotifications = async () => {
+  await Promise.all([
+    refreshVoidRequestCount(),
+    refreshEditRequestCount()
+  ])
+
+  $q.notify({
+    type: 'positive',
+    message: 'Notifications refreshed',
+    icon: 'refresh',
+    position: 'top',
+    timeout: 1000
+  })
+}
 
 // Favorites data
 const favorites = ref([
@@ -577,7 +550,6 @@ const closePanel = () => {
 // Method to refresh void request count
 const refreshVoidRequestCount = async () => {
   if (authStore.user?.barangay_name) {
-    console.log('Manually refreshing disbursements...')
     $q.notify({
       type: 'info',
       message: 'Refreshing data...',
@@ -588,7 +560,6 @@ const refreshVoidRequestCount = async () => {
 
     // Use the existing fetchDisbursements method
     await disbursementStore.fetchDisbursements()
-    console.log('Refresh completed. Check console for debug info.')
 
     // Force reactivity update
     await nextTick()
@@ -598,7 +569,6 @@ const refreshVoidRequestCount = async () => {
 // Method to refresh edit request count
 const refreshEditRequestCount = async () => {
   if (authStore.user?.barangay_name) {
-    console.log('Manually refreshing disbursements for edit requests...')
     $q.notify({
       type: 'info',
       message: 'Refreshing data...',
@@ -609,14 +579,13 @@ const refreshEditRequestCount = async () => {
 
     // Use the existing fetchDisbursements method
     await disbursementStore.fetchDisbursements()
-    console.log('Refresh completed. Check console for debug info.')
 
     // Force reactivity update
     await nextTick()
   }
 }
 
-// Method to handle void request click - navigate to disbursement page and open first void request
+// Method to handle void request click - navigate to disbursement page with void request filter
 const handleVoidRequestClick = async () => {
   // Security check: ensure user has barangay_name
   if (!authStore.user?.barangay_name) {
@@ -630,11 +599,6 @@ const handleVoidRequestClick = async () => {
     return
   }
 
-  // Debug: Log current state
-  console.log('Debug - handleVoidRequestClick called')
-  console.log('Debug - User barangay_name:', authStore.user.barangay_name)
-  console.log('Debug - Total disbursements:', disbursementStore.disbursements.length)
-  console.log('Debug - Void requested disbursements:', disbursementStore.disbursements.filter(d => d.status === 'Void Requested'))
 
   // Close the panel first
   closePanel()
@@ -642,63 +606,48 @@ const handleVoidRequestClick = async () => {
   // Show loading notification
   $q.notify({
     type: 'info',
-       color: 'lightgreen',
+    color: 'lightgreen',
     textColor: 'white',
     bgcolor: 'lightgreen',
-    message: 'Opening void request details...',
+    message: 'Opening void requests...',
     icon: 'pending_actions',
     position: 'top',
     timeout: 2000,
   })
 
-  // Navigate to disbursement page
-  await router.push('/home/transactions/disbursement')
+  // Check if there are any void requests for this barangay
 
-  // Small delay to ensure navigation completes
-  await new Promise(resolve => setTimeout(resolve, 500))
+  // Refresh disbursement data before navigation to ensure we have the latest data
+  await disbursementStore.fetchDisbursements()
 
-  // Find the first void requested disbursement for current barangay
-  const voidRequestedDisbursement = disbursementStore.disbursements.find(
-    d => d.status === 'Void Requested' && d.barangay_name === authStore.user.barangay_name
+  // Re-check void requests after refresh
+  const updatedVoidRequestsForThisBarangay = disbursementStore.disbursements.filter(
+    (d) => d.status === 'Void Requested' && d.barangay_name === authStore.user.barangay_name,
   )
 
-  console.log('Debug - Found void requested disbursement:', voidRequestedDisbursement)
-
-  if (voidRequestedDisbursement) {
-    // Additional security check: verify barangay_name matches
-    if (voidRequestedDisbursement.barangay_name !== authStore.user.barangay_name) {
-      console.error('Security violation: Void request barangay_name mismatch')
-      $q.notify({
-        type: 'negative',
-        message: 'Access denied: Invalid void request',
-        icon: 'error',
-        position: 'top',
-        timeout: 3000,
-      })
-      return
-    }
-
-    console.log('Debug - Opening void request:', voidRequestedDisbursement.id)
-
-    // Open the ViewOrDetails dialog for the void requested disbursement
-    await disbursementStore.openViewOrDetails(voidRequestedDisbursement)
+  if (updatedVoidRequestsForThisBarangay.length > 0) {
+    // Navigate to disbursement page with void request status filter
+    await router.push({
+      path: '/home/transactions/disbursement',
+      query: { status: 'Void Requested' }
+    })
 
     // Show success notification
     $q.notify({
       type: 'positive',
-      message: 'Void request details opened',
+      message: `Showing ${updatedVoidRequestsForThisBarangay.length} void request(s) for your barangay`,
       icon: 'check_circle',
       position: 'top',
-      timeout: 2000,
+      timeout: 3000,
     })
   } else {
+    // Navigate to disbursement page anyway but show warning
+    await router.push('/home/transactions/disbursement')
+
     // Show warning if no void requests found for this barangay
-    const allVoidRequests = disbursementStore.disbursements.filter(d => d.status === 'Void Requested')
-    const voidRequestsForThisBarangay = disbursementStore.disbursements.filter(d =>
-      d.status === 'Void Requested' && d.barangay_name === authStore.user.barangay_name
+    const allVoidRequests = disbursementStore.disbursements.filter(
+      (d) => d.status === 'Void Requested',
     )
-    console.log('Debug - All void requests found:', allVoidRequests)
-    console.log('Debug - Void requests for this barangay:', voidRequestsForThisBarangay)
 
     $q.notify({
       type: 'warning',
@@ -710,7 +659,7 @@ const handleVoidRequestClick = async () => {
   }
 }
 
-// Method to handle edit request click - navigate to disbursement page and open first edit request
+// Method to handle edit request click - navigate to disbursement page with edit request filter
 const handleEditRequestClick = async () => {
   // Security check: ensure user has barangay_name
   if (!authStore.user?.barangay_name) {
@@ -724,11 +673,6 @@ const handleEditRequestClick = async () => {
     return
   }
 
-  // Debug: Log current state
-  console.log('Debug - handleEditRequestClick called')
-  console.log('Debug - User barangay_name:', authStore.user.barangay_name)
-  console.log('Debug - Total disbursements:', disbursementStore.disbursements.length)
-  console.log('Debug - Edit requested disbursements:', disbursementStore.disbursements.filter(d => d.status === 'Edit Requested'))
 
   // Close the panel first
   closePanel()
@@ -736,63 +680,49 @@ const handleEditRequestClick = async () => {
   // Show loading notification
   $q.notify({
     type: 'info',
-     color: 'lightgreen',
+    color: 'lightgreen',
     textColor: 'white',
     bgcolor: 'lightgreen',
-    message: 'Opening edit request details...',
+    message: 'Opening edit requests...',
     icon: 'edit_note',
     position: 'top',
     timeout: 2000,
   })
 
-  // Navigate to disbursement page
-  await router.push('/home/transactions/disbursement')
+  // Check if there are any edit requests for this barangay
 
-  // Small delay to ensure navigation completes
-  await new Promise(resolve => setTimeout(resolve, 500))
 
-  // Find the first edit requested disbursement for current barangay
-  const editRequestedDisbursement = disbursementStore.disbursements.find(
-    d => d.status === 'Edit Requested' && d.barangay_name === authStore.user.barangay_name
+  // Refresh disbursement data before navigation to ensure we have the latest data
+  await disbursementStore.fetchDisbursements()
+
+  // Re-check edit requests after refresh
+  const updatedEditRequestsForThisBarangay = disbursementStore.disbursements.filter(
+    (d) => d.status === 'Edit Requested' && d.barangay_name === authStore.user.barangay_name,
   )
 
-  console.log('Debug - Found edit requested disbursement:', editRequestedDisbursement)
-
-  if (editRequestedDisbursement) {
-    // Additional security check: verify barangay_name matches
-    if (editRequestedDisbursement.barangay_name !== authStore.user.barangay_name) {
-      console.error('Security violation: Edit request barangay_name mismatch')
-      $q.notify({
-        type: 'negative',
-        message: 'Access denied: Invalid edit request',
-        icon: 'error',
-        position: 'top',
-        timeout: 3000,
-      })
-      return
-    }
-
-    console.log('Debug - Opening edit request:', editRequestedDisbursement.id)
-
-    // Open the ViewOrDetails dialog for the edit requested disbursement
-    await disbursementStore.openViewOrDetails(editRequestedDisbursement)
+  if (updatedEditRequestsForThisBarangay.length > 0) {
+    // Navigate to disbursement page with edit request status filter
+    await router.push({
+      path: '/home/transactions/disbursement',
+      query: { status: 'Edit Requested' }
+    })
 
     // Show success notification
     $q.notify({
       type: 'positive',
-      message: 'Edit request details opened',
+      message: `Showing ${updatedEditRequestsForThisBarangay.length} edit request(s) for your barangay`,
       icon: 'check_circle',
       position: 'top',
-      timeout: 2000,
+      timeout: 3000,
     })
   } else {
+    // Navigate to disbursement page anyway but show warning
+    await router.push('/home/transactions/disbursement')
+
     // Show warning if no edit requests found for this barangay
-    const allEditRequests = disbursementStore.disbursements.filter(d => d.status === 'Edit Requested')
-    const editRequestsForThisBarangay = disbursementStore.disbursements.filter(d =>
-      d.status === 'Edit Requested' && d.barangay_name === authStore.user.barangay_name
+    const allEditRequests = disbursementStore.disbursements.filter(
+      (d) => d.status === 'Edit Requested',
     )
-    console.log('Debug - All edit requests found:', allEditRequests)
-    console.log('Debug - Edit requests for this barangay:', editRequestsForThisBarangay)
 
     $q.notify({
       type: 'warning',
@@ -811,6 +741,10 @@ const userPhoto = computed(() => {
     (authStore.user.photo_path ? `/storage/${authStore.user.photo_path}` : 'src/assets/user.png')
   )
 })
+
+const goToSettings = () => {
+  router.push('/home/profile-settings')
+}
 
 const handleLogout = async () => {
   $q.dialog({
@@ -842,7 +776,6 @@ onMounted(async () => {
     // Force refresh void request count after initial load
     setTimeout(async () => {
       if (authStore.user?.barangay_name) {
-        console.log('Force refreshing void request count after initial load...')
         await disbursementStore.fetchDisbursements()
       }
     }, 1000)
@@ -850,7 +783,6 @@ onMounted(async () => {
     // Set up periodic refresh for void request count (every 10 seconds)
     const refreshInterval = setInterval(async () => {
       if (authStore.user?.barangay_name) {
-        console.log('Auto-refreshing disbursements for void request count...')
         await disbursementStore.fetchDisbursements()
       }
     }, 10000)
@@ -875,16 +807,6 @@ watch(
   { deep: true },
 )
 
-// Watch disbursements changes to update void request count
-watch(
-  () => disbursementStore.disbursements,
-  (newDisbursements) => {
-    console.log('Debug - Disbursements changed, updating void request count')
-    console.log('Debug - New disbursements count:', newDisbursements?.length || 0)
-    console.log('Debug - Void requested count:', newDisbursements?.filter(d => d.status === 'Void Requested').length || 0)
-  },
-  { deep: true }
-)
 
 watch(
   () => route.meta.title,
@@ -895,6 +817,9 @@ watch(
 </script>
 
 <style>
+.avatar-menu {
+  background: linear-gradient(15deg, #187c19, #e0ffe7, #187c19);
+}
 .custom-card-drawer {
   position: sticky;
   background: linear-gradient(30deg, #187c19, #e0ffe7, #187c19);
@@ -1370,17 +1295,20 @@ watch(
 }
 
 @keyframes voidRequestPulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 4px 12px rgba(255, 152, 0, 0.2);
   }
   50% {
-    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4), 0 0 0 4px rgba(255, 152, 0, 0.1);
+    box-shadow:
+      0 4px 12px rgba(255, 152, 0, 0.4),
+      0 0 0 4px rgba(255, 152, 0, 0.1);
   }
 }
 
 .void-request-button {
-   width: 120%;
-   min-height: 40px;
+  width: 120%;
+  min-height: 40px;
   background: linear-gradient(135deg, #ff9800, #ff5722) !important;
   color: white !important;
   border-radius: 12px;
@@ -1486,17 +1414,20 @@ watch(
 }
 
 @keyframes editRequestPulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 4px 12px rgba(255, 87, 34, 0.2);
   }
   50% {
-    box-shadow: 0 4px 12px rgba(255, 87, 34, 0.4), 0 0 0 4px rgba(255, 87, 34, 0.1);
+    box-shadow:
+      0 4px 12px rgba(255, 87, 34, 0.4),
+      0 0 0 4px rgba(255, 87, 34, 0.1);
   }
 }
 
 .edit-request-button {
   width: 120%;
-   min-height: 40px;
+  min-height: 40px;
   background: linear-gradient(135deg, purple, purple) !important;
   color: white !important;
   border-radius: 12px;
@@ -1626,25 +1557,6 @@ watch(
   position: relative;
 }
 
-/* Debug info styling */
-.debug-info {
-  margin: 8px;
-  text-align: center;
-  padding: 8px;
-  background-color: rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  border: 1px dashed rgba(255, 255, 255, 0.3);
-}
-
-.debug-refresh-btn {
-  opacity: 0.7;
-  transition: all 0.2s ease;
-}
-
-.debug-refresh-btn:hover {
-  opacity: 1;
-  transform: rotate(180deg);
-}
 
 /* End of Panel */
 
@@ -1740,7 +1652,7 @@ watch(
   flex-shrink: 0;
   background-color: #0e780e;
   /* border-top: 1px solid #e0e0e0; */
-  height: 12%;
+  height: 5%;
 }
 
 .avatar-footer {
@@ -1790,5 +1702,77 @@ watch(
   font-style: italic;
   font-size: smaller;
   color: white !important;
+}
+
+/* Add these new styles */
+.notification-btn {
+  margin: 0 8px;
+  position: relative;
+}
+
+.notification-menu {
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.notification-header {
+  padding: 12px 16px;
+  background: linear-gradient(to right, #187c19, #69b31e);
+  color: white;
+  border-radius: 8px 8px 0 0;
+}
+
+.notification-item {
+  padding: 12px 16px;
+  transition: all 0.2s ease;
+}
+
+.notification-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.void-notification:hover {
+  background: rgba(255, 152, 0, 0.1);
+}
+
+.edit-notification:hover {
+  background: rgba(156, 39, 176, 0.1);
+}
+
+.user-menu-btn {
+  margin-left: 8px;
+  transition: transform 0.2s ease;
+}
+
+.user-menu-btn:hover {
+  transform: scale(1.05);
+}
+
+.user-menu {
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.user-profile-header {
+  padding: 20px;
+  background: linear-gradient(135deg, #187c19, #69b31e);
+  color: white;
+  border-radius: 8px 8px 0 0;
+}
+
+.menu-item {
+  padding: 12px 16px;
+  transition: all 0.2s ease;
+}
+
+.menu-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Update existing styles */
+.avatar-menu {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
 }
 </style>

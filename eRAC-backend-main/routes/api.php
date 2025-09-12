@@ -60,6 +60,10 @@ Route::prefix('barangay')->group(function () {
         Route::get('/user', [AuthController::class, 'user']);
         Route::get('/users', [AuthController::class, 'getBarangayUsers']);
         Route::post('/users/{userId}/permissions', [AuthController::class, 'updateUserPermissions']);
+        
+        // Profile management routes
+        Route::put('/update-profile', [AuthController::class, 'updateProfile']);
+        Route::put('/change-password', [AuthController::class, 'changePassword']);
 
         //Accounts Library
 

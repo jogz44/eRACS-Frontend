@@ -1184,12 +1184,6 @@ export const useDisbursementStore = defineStore('disbursement', {
         })
 
         // Debug logging for void requests
-        console.log('Debug - fetchDisbursements completed')
-        console.log('Debug - Total disbursements loaded:', this.disbursements.length)
-        console.log('Debug - User barangay_name:', authStore.user?.barangay_name)
-        console.log('Debug - Disbursements with Void Requested status:', this.disbursements.filter(d => d.status === 'Void Requested'))
-        console.log('Debug - All disbursement statuses:', [...new Set(this.disbursements.map(d => d.status))])
-        console.log('Debug - All barangay names:', [...new Set(this.disbursements.map(d => d.barangay_name))])
 
         // Only fetch expense details if we don't have any (for admin users, this is not essential)
         if (!this.expenseDetailsData.length && !authStore.admin) {
@@ -1523,7 +1517,26 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.dialogs.orDetails = false
       this.dialogs.disbursement = false
 
-      this.currentLiquidation = JSON.parse(JSON.stringify(row));
+      // Safely clone the row data
+      try {
+        this.currentLiquidation = JSON.parse(JSON.stringify(row));
+      } catch (error) {
+        console.error('Error cloning row data:', error);
+        // Fallback: create a new object with the essential properties
+        this.currentLiquidation = {
+          id: row.id,
+          dvNumber: row.dvNumber,
+          payee: row.payee,
+          date: row.date,
+          dvAmount: row.dvAmount,
+          status: row.status,
+          remarks: row.remarks,
+          rejection_remarks: row.rejection_remarks,
+          expenses: row.expenses || [],
+          orDetails: []
+        };
+      }
+
       console.error('ksdafkjaisdhkasj=========================:', this.currentLiquidation);
 
       // Initialize orDetails as empty array
@@ -1534,9 +1547,11 @@ export const useDisbursementStore = defineStore('disbursement', {
         console.log('No expenses found in row, attempting to fetch disbursement details')
         try {
           const disbursement = await this.fetchDisbursementForView(row.id)
-          if (disbursement && disbursement.expenses) {
+          if (disbursement) {
             this.currentLiquidation.expenses = disbursement.expenses;
+            this.currentLiquidation.reimbursement = disbursement.reimbursement;
             console.log('Loaded expenses from fetchDisbursementForView:', disbursement.expenses);
+            console.log('Loaded reimbursement from fetchDisbursementForView:', disbursement.reimbursement);
             console.error('Lohjkhjgiew:', disbursement);
             console.error('LoadghjghjorView:', this.currentLiquidation);
           }
