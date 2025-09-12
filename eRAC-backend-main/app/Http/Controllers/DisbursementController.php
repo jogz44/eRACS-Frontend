@@ -432,6 +432,26 @@ class DisbursementController extends Controller
             $logExpenseLines = [];
             if ($request->has('expenses') && is_array($request->expenses)) {
                 foreach ($request->expenses as $expense) {
+                    // Add debug logging for reimbursement expense lookup
+                    \Log::info('Reimbursement: Looking up appropriation for expense', [
+                        'expense' => $expense,
+                        'barangay_id' => $barangayId
+                    ]);
+
+                    // Log all appropriations for this expense hierarchy to understand the data structure
+                    $allAppropriations = TranAppropriation::where('barangay_id', $barangayId)
+                        ->where('status', 'committed')
+                        ->where('expense_class_id', $expense['expense_class_id'])
+                        ->where('expense_type_id', $expense['expense_type_id'])
+                        ->get(['id', 'expense_class_id', 'expense_type_id', 'expense_item_id', 'expense_sub_item_id', 'amount']);
+                    
+                    \Log::info('Reimbursement: All appropriations for this expense hierarchy', [
+                        'expense_class_id' => $expense['expense_class_id'],
+                        'expense_type_id' => $expense['expense_type_id'],
+                        'expense_item_id' => $expense['expense_item_id'],
+                        'appropriations' => $allAppropriations->toArray()
+                    ]);
+
                     // Find the appropriate appropriation based on expense hierarchy
                     $appropriationQuery = TranAppropriation::where('barangay_id', $barangayId)
                         ->where('status', 'committed');
@@ -448,8 +468,65 @@ class DisbursementController extends Controller
                     }
 
                     $appropriation = $appropriationQuery->first();
+                    
+                    \Log::info('Reimbursement: Appropriation lookup result', [
+                        'appropriation_found' => $appropriation ? true : false,
+                        'appropriation_id' => $appropriation ? $appropriation->id : null,
+                        'appropriation_amount' => $appropriation ? $appropriation->amount : null,
+                        'appropriation_details' => $appropriation ? [
+                            'expense_class_id' => $appropriation->expense_class_id,
+                            'expense_type_id' => $appropriation->expense_type_id,
+                            'expense_item_id' => $appropriation->expense_item_id,
+                            'expense_sub_item_id' => $appropriation->expense_sub_item_id
+                        ] : null
+                    ]);
+                    
+                    // If no appropriation found with expense_item_id, try fallback approach
+                    if (!$appropriation && isset($expense['expense_item_id'])) {
+                        \Log::info('Reimbursement: No appropriation found with expense_item_id, trying fallback approach');
+                        
+                        // Try to find appropriation by matching expense hierarchy more flexibly
+                        $fallbackQuery = TranAppropriation::where('barangay_id', $barangayId)
+                            ->where('status', 'committed');
+                            
+                        if (isset($expense['expense_class_id'])) {
+                            $fallbackQuery->where('expense_class_id', $expense['expense_class_id']);
+                        }
+                        if (isset($expense['expense_type_id'])) {
+                            $fallbackQuery->where('expense_type_id', $expense['expense_type_id']);
+                        }
+                        // Don't filter by expense_item_id in fallback - try type level first
+                        
+                        $appropriation = $fallbackQuery->first();
+                        
+                        \Log::info('Reimbursement: Fallback appropriation lookup result', [
+                            'appropriation_found' => $appropriation ? true : false,
+                            'appropriation_id' => $appropriation ? $appropriation->id : null,
+                            'appropriation_amount' => $appropriation ? $appropriation->amount : null
+                        ]);
+                    }
 
                     if ($appropriation) {
+                        // BUDGET VALIDATION: Check if there's enough budget for reimbursement
+                        $requiredAmount = floatval($expense['amount']);
+                        $availableBudget = $this->calculateAvailableBudget($appropriation->id);
+                        
+                        \Log::info('Reimbursement: Budget validation', [
+                            'appropriation_id' => $appropriation->id,
+                            'required_amount' => $requiredAmount,
+                            'available_budget' => $availableBudget
+                        ]);
+                        
+                        if ($availableBudget < $requiredAmount) {
+                            return response()->json([
+                                'status' => false,
+                                'message' => 'No more budget for this account. Please commit again.',
+                                'error' => 'Insufficient budget',
+                                'available_budget' => $availableBudget,
+                                'required_amount' => $requiredAmount
+                            ], 400);
+                        }
+
                         // Create expense detail with the disbursement ID
                         TranExpenseDetail::create([
                             'disbursement_id' => $reimbursement->id,
@@ -466,6 +543,17 @@ class DisbursementController extends Controller
                             number_format((float)$expense['amount'], 2),
                             isset($expense['particular']) && $expense['particular'] !== '' ? ' for "' . $expense['particular'] . '"' : ''
                         );
+                    } else {
+                        \Log::error('Reimbursement: No appropriation found for expense', [
+                            'expense' => $expense,
+                            'barangay_id' => $barangayId
+                        ]);
+                        
+                        return response()->json([
+                            'status' => false,
+                            'message' => 'No committed appropriation found for the selected expense account.',
+                            'error' => 'Appropriation not found'
+                        ], 422);
                     }
                 }
             }
@@ -2050,5 +2138,43 @@ class DisbursementController extends Controller
             ]
         ]);
 
+    }
+
+    /**
+     * Calculate available budget for a given appropriation
+     */
+    private function calculateAvailableBudget($appropriationId)
+    {
+        try {
+            // Get the appropriation
+            $appropriation = TranAppropriation::find($appropriationId);
+            if (!$appropriation) {
+                \Log::error('Budget calculation: Appropriation not found', ['appropriation_id' => $appropriationId]);
+                return 0;
+            }
+
+            // Get total disbursed amount for this appropriation
+            $totalDisbursed = TranExpenseDetail::where('appropriation_id', $appropriationId)
+                ->sum('amount');
+
+            // Calculate available budget
+            $availableBudget = $appropriation->amount - $totalDisbursed;
+
+            \Log::info('Budget calculation details', [
+                'appropriation_id' => $appropriationId,
+                'appropriation_amount' => $appropriation->amount,
+                'total_disbursed' => $totalDisbursed,
+                'available_budget' => $availableBudget
+            ]);
+
+            return max(0, $availableBudget); // Ensure non-negative
+
+        } catch (\Exception $e) {
+            \Log::error('Error calculating available budget: ' . $e->getMessage(), [
+                'appropriation_id' => $appropriationId,
+                'error' => $e->getMessage()
+            ]);
+            return 0;
+        }
     }
 }

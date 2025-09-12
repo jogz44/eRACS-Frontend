@@ -249,8 +249,27 @@
 
         <template v-slot:body-cell-account_name="props">
           <q-td :props="props">
-            <div class="text-weight-medium ">{{ props.row.account_name }}</div>
+            <div class="text-weight-medium">{{ props.row.account_name }}</div>
             <div class="text-caption text-grey-6">{{ props.row.budget_description }}</div>
+            <!-- Show hierarchy levels -->
+            <div class="hierarchy-levels">
+              <span v-if="props.row.expense_class">
+                <q-icon name="folder" size="12px" />
+                {{ props.row.expense_class }}
+              </span>
+              <span v-if="props.row.expense_type">
+                <q-icon name="folder_open" size="12px" />
+                {{ props.row.expense_type }}
+              </span>
+              <span v-if="props.row.expense_item">
+                <q-icon name="description" size="12px" />
+                {{ props.row.expense_item }}
+              </span>
+              <span v-if="props.row.expense_sub_item">
+                <q-icon name="list" size="12px" />
+                {{ props.row.expense_sub_item }}
+              </span>
+            </div>
           </q-td>
         </template>
 
@@ -700,6 +719,9 @@ const filteredExpenses = computed(() => {
   return localExpenses.value.filter(expense =>
     (expense.account_name || '').toLowerCase().includes(query) ||
     (expense.expense_class || '').toLowerCase().includes(query) ||
+    (expense.expense_type || '').toLowerCase().includes(query) ||
+    (expense.expense_item || '').toLowerCase().includes(query) ||
+    (expense.expense_sub_item || '').toLowerCase().includes(query) ||
     (expense.budget_description || '').toLowerCase().includes(query)
   )
 })
@@ -1523,5 +1545,27 @@ defineExpose({
 .summary-card .text-h6 {
   font-size: 1.1rem;
   font-weight: 600;
+}
+
+/* Hierarchy display styling */
+.hierarchy-levels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.hierarchy-levels span {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  font-size: 11px;
+  color: #666;
+}
+
+.hierarchy-levels .q-icon {
+  margin-right: 2px;
 }
 </style>

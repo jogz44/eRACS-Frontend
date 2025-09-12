@@ -1855,7 +1855,7 @@ class AppropriationController extends Controller
         ]);
 
         // Get base query for appropriations - exclude supplemental budget appropriations
-        $query = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem', 'budget.fiscalYear'])
+        $query = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem', 'expenseSubItem', 'budget.fiscalYear'])
             ->where('status', 'committed')
             ->whereDoesntHave('budget', function($q) {
                 $q->where('description', 'like', '%supplemental%');
@@ -1901,7 +1901,8 @@ class AppropriationController extends Controller
         foreach ($appropriations as $appropriation) {
             $key = $appropriation->expense_class_id . '_' . 
                    ($appropriation->expense_type_id ?? 'null') . '_' . 
-                   ($appropriation->expense_item_id ?? 'null');
+                   ($appropriation->expense_item_id ?? 'null') . '_' . 
+                   ($appropriation->expense_sub_item_id ?? 'null');
             
             if (!isset($groupedExpenses[$key])) {
                 // Build account name
@@ -1915,6 +1916,9 @@ class AppropriationController extends Controller
                 if ($appropriation->expenseItem) {
                     $accountParts[] = $appropriation->expenseItem->name;
                 }
+                if ($appropriation->expenseSubItem) {
+                    $accountParts[] = $appropriation->expenseSubItem->name;
+                }
                 
                 $accountName = implode(' > ', $accountParts);
 
@@ -1922,7 +1926,8 @@ class AppropriationController extends Controller
                 $matchingAppropriations = $appropriations->filter(function($appr) use ($appropriation) {
                     return $appr->expense_class_id === $appropriation->expense_class_id &&
                            $appr->expense_type_id === $appropriation->expense_type_id &&
-                           $appr->expense_item_id === $appropriation->expense_item_id;
+                           $appr->expense_item_id === $appropriation->expense_item_id &&
+                           $appr->expense_sub_item_id === $appropriation->expense_sub_item_id;
                 });
 
                 // Calculate total appropriated amount (current sum of appropriation amounts)
@@ -1958,6 +1963,11 @@ class AppropriationController extends Controller
                         'expense_class' => $appropriation->expenseClass->name ?? '',
                         'expense_type' => $appropriation->expenseType->name ?? '',
                         'expense_item' => $appropriation->expenseItem->name ?? '',
+                        'expense_sub_item' => $appropriation->expenseSubItem->name ?? '',
+                        'expense_class_id' => $appropriation->expense_class_id,
+                        'expense_type_id' => $appropriation->expense_type_id,
+                        'expense_item_id' => $appropriation->expense_item_id,
+                        'expense_sub_item_id' => $appropriation->expense_sub_item_id,
                         'total_appropriated' => (float)$totalAppropriated,
                         'total_disbursed' => (float)$totalDisbursed,
                         'unused_amount' => (float)$unusedAmount,

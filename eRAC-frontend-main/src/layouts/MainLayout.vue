@@ -27,11 +27,17 @@
           Barangay {{ authStore.user?.barangay_name }}
         </q-toolbar-title>
         <!--- Bell for notifications-->
-        <q-btn style="background-color: grey;" size= 17px round dense flat class="notification-btn">
-          <q-icon name="notifications" size="30px" color="white">
+        <q-btn 
+          flat 
+          round 
+          dense 
+          class="notification-btn"
+          size="md"
+        >
+          <q-icon name="notifications" size="24px" color="white">
             <!-- Show notification -->
-            <q-badge v-if="totalNotificationCount > 0" floating color="red" text-color="white">
-              !
+            <q-badge v-if="totalNotificationCount > 0" floating color="red" text-color="white" rounded>
+              {{ totalNotificationCount > 9 ? '9+' : totalNotificationCount }}
             </q-badge>
           </q-icon>
 
@@ -91,14 +97,22 @@
         </q-btn>
 
         <!--- User Avatar Menu-->
-        <q-btn style="background-color: grey;" round dense flat class="user-menu-btn">
-          <q-avatar size="41px">
-            <img
-              :src="userPhoto"
-              @error="handleImageError"
-              :alt="authStore.user?.first_name"
-            />
-          </q-avatar>
+        <q-btn 
+          flat 
+          dense 
+          class="user-menu-btn"
+          size="md"
+        >
+          <div class="user-profile-container">
+            <q-avatar size="32px" class="user-avatar">
+              <img
+                :src="userPhoto"
+                @error="handleImageError"
+                :alt="authStore.user?.first_name"
+              />
+            </q-avatar>
+            <q-icon name="keyboard_arrow_down" size="14px" color="white" class="dropdown-arrow" />
+          </div>
 
           <q-menu class="user-menu" transition-show="jump-down" transition-hide="jump-up">
             <q-list style="min-width: 250px">
@@ -1704,69 +1718,143 @@ watch(
   color: white !important;
 }
 
-/* Add these new styles */
+/* Facebook-style button improvements */
 .notification-btn {
   margin: 0 8px;
   position: relative;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 50% !important;
+  width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.notification-btn:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .notification-menu {
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .notification-header {
-  padding: 12px 16px;
-  background: linear-gradient(to right, #187c19, #69b31e);
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #187c19, #69b31e);
   color: white;
-  border-radius: 8px 8px 0 0;
+  border-radius: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .notification-item {
-  padding: 12px 16px;
+  padding: 16px 20px;
   transition: all 0.2s ease;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  cursor: pointer;
 }
 
 .notification-item:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.03);
+  transform: translateX(2px);
 }
 
 .void-notification:hover {
-  background: rgba(255, 152, 0, 0.1);
+  background: rgba(255, 152, 0, 0.08);
+  border-left: 3px solid #ff9800;
 }
 
 .edit-notification:hover {
-  background: rgba(156, 39, 176, 0.1);
+  background: rgba(156, 39, 176, 0.08);
+  border-left: 3px solid #9c27b0;
 }
 
 .user-menu-btn {
   margin-left: 8px;
-  transition: transform 0.2s ease;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 20px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 8px !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .user-menu-btn:hover {
-  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.2) !important;
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.user-profile-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.user-avatar {
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.2s ease;
+}
+
+.user-menu-btn:hover .user-avatar {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.dropdown-arrow {
+  transition: transform 0.2s ease;
+  opacity: 0.8;
+}
+
+.user-menu-btn:hover .dropdown-arrow {
+  opacity: 1;
+  transform: translateY(1px);
 }
 
 .user-menu {
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .user-profile-header {
   padding: 20px;
   background: linear-gradient(135deg, #187c19, #69b31e);
   color: white;
-  border-radius: 8px 8px 0 0;
+  border-radius: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .menu-item {
-  padding: 12px 16px;
+  padding: 16px 20px;
   transition: all 0.2s ease;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  cursor: pointer;
 }
 
 .menu-item:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.03);
+  transform: translateX(2px);
+}
+
+.menu-item:last-child {
+  border-bottom: none;
 }
 
 /* Update existing styles */

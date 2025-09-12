@@ -278,7 +278,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             expenseType.children.forEach((expenseItem) => {
               if (expenseItem.amount && expenseItem.amount > 0) {
                 // Check if this item has subitems with allocations
-                const hasSubitemsWithBalance = expenseItem.children && 
+                const hasSubitemsWithBalance = expenseItem.children &&
                   expenseItem.children.some((subItem) => subItem.amount && subItem.amount > 0)
 
                 if (hasSubitemsWithBalance) {
@@ -653,11 +653,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Determine current editing disbursement id (if any)
         const currentDisbursementId = this.currentItem?.id ? String(this.currentItem.id) : null
 
-        // Debug logging for sub-items
-        if (expenseLevel === 'subitem') {
-          console.log(`[DEBUG] Calculating balance for sub-item ID: ${expenseId}, Original Amount: ${originalAmount}`)
-          console.log(`[DEBUG] Expense details data length: ${this.expenseDetailsData?.length || 0}`)
-        }
+
 
         // Get all expense details from the database for this expense account
         if (this.expenseDetailsData && this.expenseDetailsData.length > 0) {
@@ -668,16 +664,6 @@ export const useDisbursementStore = defineStore('disbursement', {
               (expenseLevel === 'item' && String(ed.expense_item_id) === String(expenseId)) ||
               (expenseLevel === 'type' && String(ed.expense_type_id) === String(expenseId))
 
-            // Debug logging for sub-items
-            if (expenseLevel === 'subitem') {
-              console.log(`[DEBUG] Checking expense detail:`, {
-                id: ed.id,
-                expense_sub_item_id: ed.expense_sub_item_id,
-                target_expenseId: expenseId,
-                matches: String(ed.expense_sub_item_id) === String(expenseId),
-                amount: ed.amount
-              })
-            }
 
             if (!matchesLevel) return false
 
@@ -690,10 +676,6 @@ export const useDisbursementStore = defineStore('disbursement', {
             return true
           })
 
-          // Debug logging for sub-items
-          if (expenseLevel === 'subitem') {
-            console.log(`[DEBUG] Found ${relevantDetails.length} relevant details for sub-item ${expenseId}`)
-          }
 
           relevantDetails.forEach((expenseDetail) => {
             // Include expense details from other disbursements in the calculation
@@ -721,15 +703,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Compute remaining balance
         const remainingBalance = Math.max(0, originalAmount - totalDisbursed + totalReturned)
 
-        // Debug logging for sub-items
-        if (expenseLevel === 'subitem') {
-          console.log(`[DEBUG] Final calculation for sub-item ${expenseId}:`, {
-            originalAmount,
-            totalDisbursed,
-            totalReturned,
-            remainingBalance
-          })
-        }
+
 
         return remainingBalance
       } catch (error) {
@@ -1277,7 +1251,6 @@ export const useDisbursementStore = defineStore('disbursement', {
           return disbursement
         })
 
-        // Debug logging for void requests
 
         // Only fetch expense details if we don't have any (for admin users, this is not essential)
         if (!this.expenseDetailsData.length && !authStore.admin) {
@@ -1344,7 +1317,7 @@ export const useDisbursementStore = defineStore('disbursement', {
                 expense.expense_item_id,
                 expense.expense_sub_item_id
               )
-              
+
               console.log('Backend account_name (fetchDisbursementById):', expense.account_name)
               console.log('Expense IDs (fetchDisbursementById):', {
                 class: expense.expense_class_id,
@@ -1352,14 +1325,14 @@ export const useDisbursementStore = defineStore('disbursement', {
                 item: expense.expense_item_id,
                 subitem: expense.expense_sub_item_id
               })
-              
+
               // Parse the full account name to extract individual components
               const parts = fullAccountName.split(' > ')
               const account = parts[0] || ''
               const expenseType = parts[1] || ''
               const expenseItem = parts[2] || ''
               const expenseSubItem = parts[3] || ''
-              
+
               return {
                 id: expense.id, // Use the actual database ID from tran_expense_details
                 accountId: expense.accountId,
@@ -1403,13 +1376,13 @@ export const useDisbursementStore = defineStore('disbursement', {
         const authStore = useAuthStore()
         // Use barangay user token for barangay endpoints
         const token = authStore.token
-        
+
         // Ensure expense data is loaded first
         if (!this.expenseData || this.expenseData.length === 0) {
           console.log('Loading expense data for account name lookup...')
           await this.fetchExpenseAccounts()
         }
-        
+
         const response = await api.get(`/api/barangay/disbursements/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -1436,7 +1409,7 @@ export const useDisbursementStore = defineStore('disbursement', {
               expense.expense_item_id,
               expense.expense_sub_item_id
             )
-            
+
             console.log('Backend account_name:', expense.account_name)
             console.log('Full account name for expense', expense.id, ':', fullAccountName)
             console.log('Expense IDs:', {
@@ -1445,16 +1418,16 @@ export const useDisbursementStore = defineStore('disbursement', {
               item: expense.expense_item_id,
               subitem: expense.expense_sub_item_id
             })
-            
+
             // Parse the full account name to extract individual components
             const parts = fullAccountName.split(' > ')
             const account = parts[0] || ''
             const expenseType = parts[1] || ''
             const expenseItem = parts[2] || ''
             const expenseSubItem = parts[3] || ''
-            
+
             console.log('Parsed parts:', { account, expenseType, expenseItem, expenseSubItem })
-            
+
             return {
               id: expense.id,
               accountName: expense.account_name || fullAccountName,
@@ -2130,13 +2103,13 @@ export const useDisbursementStore = defineStore('disbursement', {
       try {
         console.log('getExpenseAccountName called with:', { expenseClassId, expenseTypeId, expenseItemId, expenseSubItemId });
         console.log('Available expenseData:', this.expenseData?.length || 0);
-        
+
         let accountName = ''
 
         // Find expense class - convert IDs to strings for comparison
         const expenseClass = this.expenseData.find((ec) => String(ec.id) === String(expenseClassId))
         console.log('Found expense class:', expenseClass);
-        
+
         if (expenseClass) {
           accountName = expenseClass.name
 
@@ -2146,7 +2119,7 @@ export const useDisbursementStore = defineStore('disbursement', {
               (et) => String(et.id) === String(expenseTypeId),
             )
             console.log('Found expense type:', expenseType);
-            
+
             if (expenseType) {
               accountName += ` > ${expenseType.name}`
 
@@ -2156,7 +2129,7 @@ export const useDisbursementStore = defineStore('disbursement', {
                   (ei) => String(ei.id) === String(expenseItemId),
                 )
                 console.log('Found expense item:', expenseItem);
-                
+
                 if (expenseItem) {
                   accountName += ` > ${expenseItem.name}`
 
@@ -2164,12 +2137,12 @@ export const useDisbursementStore = defineStore('disbursement', {
                   if (expenseSubItemId && expenseItem.children) {
                     console.log('Looking for subitem with ID:', expenseSubItemId);
                     console.log('Available subitems:', expenseItem.children);
-                    
+
                     const expenseSubItem = expenseItem.children.find(
                       (esi) => String(esi.id) === String(expenseSubItemId),
                     )
                     console.log('Found expense subitem:', expenseSubItem);
-                    
+
                     if (expenseSubItem) {
                       accountName += ` > ${expenseSubItem.name}`
                     } else {
@@ -3333,11 +3306,32 @@ async submitVoidRequest() {
         } catch (error) {
           console.error('Failed to submit reimbursement:', error)
           console.error('Error response:', error.response?.data)
+
+          // Handle budget validation error specifically
+          if (error.response?.status === 400 && error.response?.data?.error === 'Insufficient budget') {
+            return {
+              success: false,
+              error: 'Insufficient budget',
+              message: error.response.data.message || 'No more budget for this account. Please commit again.'
+            }
+          }
+
+          // Re-throw other errors to be handled by the outer catch block
+          throw error
         }
 
-        // Refresh the disbursements list
-        await this.fetchDisbursements();
-        return { success: true, data: response.data.data };
+        // Check if the response indicates success
+        if (response.data.status) {
+          // Refresh the disbursements list
+          await this.fetchDisbursements();
+          return { success: true, data: response.data.data };
+        } else {
+          return {
+            success: false,
+            error: response.data.error || response.data.message || 'Failed to submit reimbursement',
+            message: response.data.message
+          };
+        }
       } catch (error) {
         console.error('Failed to submit reimbursement:', error)
         console.error('Error response:', error.response?.data)
