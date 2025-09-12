@@ -1746,7 +1746,7 @@ class AppropriationController extends Controller
         $status = $request->status ?? 'committed';
         $budgetType = $request->input('budget_type', 'all');
 
-        $query = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem', 'budget'])
+        $query = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem', 'expenseSubItem', 'budget'])
             ->where('barangay_id', $barangayId)
             ->where('status', $status);
 
@@ -1785,13 +1785,14 @@ class AppropriationController extends Controller
         $groupedAppropriations = [];
         
         foreach ($appropriations as $appropriation) {
-            // Create a unique key for grouping
+            // Create a unique key for grouping (including subitem)
             $key = $appropriation->expense_class_id . '_' . 
                    ($appropriation->expense_type_id ?? 'null') . '_' . 
-                   ($appropriation->expense_item_id ?? 'null');
+                   ($appropriation->expense_item_id ?? 'null') . '_' .
+                   ($appropriation->expense_sub_item_id ?? 'null');
             
             if (!isset($groupedAppropriations[$key])) {
-                // Build account name
+                // Build account name including subitem
                 $accountParts = [];
                 if ($appropriation->expenseClass) {
                     $accountParts[] = $appropriation->expenseClass->name;
@@ -1802,14 +1803,18 @@ class AppropriationController extends Controller
                 if ($appropriation->expenseItem) {
                     $accountParts[] = $appropriation->expenseItem->name;
                 }
+                if ($appropriation->expenseSubItem) {
+                    $accountParts[] = $appropriation->expenseSubItem->name;
+                }
                 
                 $accountName = implode(' > ', $accountParts);
 
-                // Get all appropriations with the same expense hierarchy
+                // Get all appropriations with the same expense hierarchy (including subitem)
                 $matchingAppropriations = $appropriations->filter(function($appr) use ($appropriation) {
                     return $appr->expense_class_id === $appropriation->expense_class_id &&
                            $appr->expense_type_id === $appropriation->expense_type_id &&
-                           $appr->expense_item_id === $appropriation->expense_item_id;
+                           $appr->expense_item_id === $appropriation->expense_item_id &&
+                           $appr->expense_sub_item_id === $appropriation->expense_sub_item_id;
                 });
 
                 // Calculate total amount and get the first appropriation ID for reference
@@ -1821,8 +1826,13 @@ class AppropriationController extends Controller
                     'account_name' => $accountName,
                     'amount' => (float)$totalAmount,
                     'expense_class_id' => $appropriation->expense_class_id,
+                    'expense_class_name' => $appropriation->expenseClass ? $appropriation->expenseClass->name : null,
                     'expense_type_id' => $appropriation->expense_type_id,
+                    'expense_type_name' => $appropriation->expenseType ? $appropriation->expenseType->name : null,
                     'expense_item_id' => $appropriation->expense_item_id,
+                    'expense_item_name' => $appropriation->expenseItem ? $appropriation->expenseItem->name : null,
+                    'expense_sub_item_id' => $appropriation->expense_sub_item_id,
+                    'expense_sub_item_name' => $appropriation->expenseSubItem ? $appropriation->expenseSubItem->name : null,
                     'budget_id' => $firstAppropriation->budget_id,
                     'budget_description' => $firstAppropriation->budget ? $firstAppropriation->budget->description : 'Unknown Budget',
                     'status' => $appropriation->status,

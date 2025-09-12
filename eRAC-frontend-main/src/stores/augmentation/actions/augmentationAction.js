@@ -206,9 +206,13 @@ export function useAugmentationActions(state) {
           appropriation_id: appropriation.id, // This is now the representative ID
           // Store additional info for debugging
           expense_class_id: expenseClassId,
-          expense_class: expenseClass, // Add expense class mapping
+          expense_class: appropriation.expense_class_name || expenseClass, // Use backend data or fallback
           expense_type_id: appropriation.expense_type_id,
+          expense_type: appropriation.expense_type_name,
           expense_item_id: appropriation.expense_item_id,
+          expense_item: appropriation.expense_item_name,
+          expense_sub_item_id: appropriation.expense_sub_item_id,
+          expense_sub_item_name: appropriation.expense_sub_item_name,
           appropriation_ids: appropriation.appropriation_ids || [appropriation.id], // All IDs in the group
           budget_source: budgetSource, // Properly extracted budget source
           fiscal_year_id: appropriation.fiscal_year_id || currentFiscalYear.id, // Add fiscal year for validation
