@@ -36,8 +36,8 @@ class BudgetSeeder extends Seeder
                 ], [
                     'start_date'      => now()->copy()->setYear($year)->startOfYear(),
                     'end_date'        => now()->copy()->setYear($year)->endOfYear(),
-                    'original_amount' => 2000000,
-                    'current_amount'  => 2000000,
+                    'original_amount' => 4000000,
+                    'current_amount'  => 4000000,
                     'augmentation'    => 0,
                     'return_amount'   => 0,
                     'user_id'         => $user->id,
