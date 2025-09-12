@@ -52,6 +52,25 @@
       </q-card-section>
 
 
+      <!-- Expense Account Details Section -->
+      <q-card-section>
+        <div class="row items-center q-mb-md">
+          <div class="text-subtitle1">
+            <strong>Expense Accounts:</strong>
+          </div>
+        </div>
+
+        <!-- Expense Account Details Table -->
+        <q-table :rows="expenseAccountDetails" :columns="expenseAccountColumns" row-key="id"
+          :pagination="{ rowsPerPage: 5 }" flat bordered>
+          <template v-slot:body-cell-amount="props">
+            <q-td :props="props" class="text-right">
+              ₱{{ formatCurrency(props.row.amount) }}
+            </q-td>
+          </template>
+        </q-table>
+      </q-card-section>
+
       <!-- Liquidation Details Section -->
       <q-card-section>
         <div class="row items-center q-mb-md">
@@ -312,6 +331,7 @@
     </q-card>
   </q-dialog>
 
+
   <!-- Expense Account Selection Dialog -->
   <q-dialog v-model="showExpenseAccountDialog" persistent>
     <q-card style="min-width: 800px; max-width: 90vw">
@@ -393,6 +413,7 @@ const selectedReimbursementOrs = ref([])
 const availableOrNumbers = ref([])
 const showExpenseAccountDialog = ref(false)
 
+
 const store = useDisbursementStore()
 const bankStore = useBankStore()
 
@@ -421,11 +442,26 @@ function initializeOrDetails() {
   // Don't add additional rows automatically - let users add them as needed
 }
 
-// Watch dialog open, fetch OR Details
+// Watch dialog open, fetch OR Details and expense data
 watch(
   () => store.dialogs.orDetails,
-  (isOpen) => {
+  async (isOpen) => {
     if (isOpen) {
+      // Fetch full disbursement data including expenses if not already loaded
+      if (store.currentLiquidation?.id && (!store.currentLiquidation.expenses || store.currentLiquidation.expenses.length === 0)) {
+        try {
+          console.log('Fetching full disbursement data for ID:', store.currentLiquidation.id)
+          const fullDisbursementData = await store.fetchDisbursementForView(store.currentLiquidation.id)
+          if (fullDisbursementData) {
+            // Update currentLiquidation with the full data including expenses
+            store.currentLiquidation = { ...store.currentLiquidation, ...fullDisbursementData }
+            console.log('Updated currentLiquidation with expenses:', store.currentLiquidation.expenses)
+          }
+        } catch (error) {
+          console.error('Error fetching full disbursement data:', error)
+        }
+      }
+      
       // Only initialize if we don't already have OR details
       if (!store.currentLiquidation?.orDetails || store.currentLiquidation.orDetails.length === 0) {
         initializeOrDetails()
@@ -579,11 +615,68 @@ const selectedExpenseAccountColumns = computed(() => [
   },
 ])
 
+const expenseAccountColumns = computed(() => [
+  {
+    name: 'id',
+    label: 'ID',
+    field: 'id',
+    align: 'left',
+    sortable: true,
+  },
+  {
+    name: 'accountName',
+    label: 'Account Name',
+    field: 'accountName',
+    align: 'left',
+    sortable: true,
+  },
+  {
+    name: 'amount',
+    label: 'Amount',
+    field: 'amount',
+    align: 'right',
+    sortable: true,
+  },
+  {
+    name: 'particular',
+    label: 'Particular',
+    field: 'particular',
+    align: 'left',
+    sortable: true,
+  },
+])
+
 const totalSelectedExpenseAmount = computed(() => {
   return selectedReimbursementExpenseAccounts.value.reduce(
     (sum, account) => sum + (parseFloat(account.amount) || 0),
     0,
   )
+})
+
+const expenseAccountDetails = computed(() => {
+  // Debug logging to see what data is available
+  console.log('=== EXPENSE ACCOUNT DEBUG ===')
+  console.log('currentLiquidation:', store.currentLiquidation)
+  console.log('currentLiquidation.expenses:', store.currentLiquidation?.expenses)
+  console.log('currentLiquidation keys:', store.currentLiquidation ? Object.keys(store.currentLiquidation) : 'No currentLiquidation')
+  
+  // Get expense details from the current liquidation
+  if (!store.currentLiquidation?.expenses || store.currentLiquidation.expenses.length === 0) {
+    console.log('No expenses found in currentLiquidation')
+    return []
+  }
+
+  const mappedExpenses = store.currentLiquidation.expenses.map((expense, index) => ({
+    id: expense.id || index + 1,
+    accountName: expense.accountName || expense.account_name || 'N/A',
+    amount: expense.amount || 0,
+    particular: expense.particular || 'N/A'
+  }))
+  
+  console.log('Mapped expenses:', mappedExpenses)
+  console.log('=== END DEBUG ===')
+  
+  return mappedExpenses
 })
 
 const selectedOrColumns = computed(() => [
