@@ -342,10 +342,12 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     disbursementColumns: () => [
-      { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
-      { name: 'status', label: 'Status', field: 'status', align: 'center', sortable: true },
-      { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
+      { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true,
+    classes: 'hidden',
+    headerClasses: 'hidden'},
       { name: 'dvNumber', label: 'DV Number', field: 'dvNumber', align: 'left', sortable: true },
+      { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
+      { name: 'payee', label: 'Payee', field: 'payee', align: 'left', sortable: true },
       {
         name: 'chequeNumber',
         label: 'Cheque Number',
@@ -354,7 +356,6 @@ export const useDisbursementStore = defineStore('disbursement', {
         sortable: true,
       },
       { name: 'bank', label: 'Bank', field: 'bank', align: 'left', sortable: true },
-      { name: 'payee', label: 'Payee', field: 'payee', align: 'left', sortable: true },
       {
         name: 'dvAmount',
         label: 'Amount',
@@ -366,6 +367,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         align: 'left',
         sortable: true,
       },
+      { name: 'status', label: 'Status', field: 'status', align: 'center', sortable: true },
       {
         name: 'aging',
         label: 'Aging',
@@ -380,10 +382,9 @@ export const useDisbursementStore = defineStore('disbursement', {
           return val
         },
       },
-
+      { name: 'remarks', label: 'Remarks', field: '', align: 'center' },
       { name: 'action', label: 'Action', field: '', align: 'center' },
       { name: 'liquidate', label: 'Liquidate', field: '', align: 'center' },
-      { name: 'remarks', label: 'Remarks', field: '', align: 'center' },
     ],
 
     expenseColumns: () => [
@@ -1218,6 +1219,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         })
         // Get the disbursement data
         const disbursement = response.data.data
+        console.log('=---------------------------->',disbursement)
         if (disbursement) {
           this.forms.disbursement = {
             date: formatDateForForm(disbursement.date),

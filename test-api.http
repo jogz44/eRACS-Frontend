@@ -3,8 +3,8 @@
 # Accept: application/json
 
 
-GET http://localhost:8000/api/barangay/disbursements/1211
-Authorization: Bearer 4|I8UPfp60Efy8xcFIdRLhfNpjW4Pg5qdUJj0cm6xH2b529a83
+GET http://localhost:8000/api/barangay/banks
+Authorization: Bearer 7|1GMy4x7OoGMb2oovLtNbgf5ggbVB5MQNYUaXsYiYabfd375c
 Accept: application/json
 
 # GET http://localhost:8000/api/user

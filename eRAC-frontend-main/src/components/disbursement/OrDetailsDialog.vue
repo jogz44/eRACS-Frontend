@@ -9,95 +9,48 @@
           Add official receipt details for liquidation
         </div>
       </q-card-section>
-
       <q-card-section>
         <div class="row q-col-gutter-md">
+
           <!-- Date Field -->
-          <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">Date:</q-item-label>
-            <q-input
-              filled
-              outlined
-              dense
-              v-model="store.currentLiquidation.date"
-              mask="##/##/####"
-            >
-              <template v-slot:append>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="store.currentLiquidation.date" mask="DD/MM/YYYY" />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
+          <div class="col-md-4 col-sm-6 q-mb-md">
+            <div class="text-caption text-grey">Date</div>
+            <div class="text-body1 text-weight-medium">
+              {{ store.currentLiquidation.date }}
+            </div>
           </div>
 
           <!-- DV Number Field -->
-          <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">DV Number:</q-item-label>
-            <q-input
-              filled
-              outlined
-              dense
-              :model-value="store.currentLiquidation.dvNumber"
-              :disable="true"
-            />
+          <div class="col-md-4 col-sm-6 q-mb-md">
+            <div class="text-caption text-grey">DV Number</div>
+            <div class="text-body1 text-weight-medium">
+              {{ store.currentLiquidation.dvNumber }}
+            </div>
           </div>
 
           <!-- DV Amount Field -->
-          <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">DV Amount:</q-item-label>
-            <q-input
-              filled
-              outlined
-              dense
-              :model-value="formatCurrency(store.currentLiquidation.dvAmount || 0)"
-              prefix="₱"
-              :disable="true"
-            />
+          <div class="col-md-4 col-sm-6 q-mb-md">
+            <div class="text-caption text-grey">DV Amount</div>
+            <div class="text-body1 text-weight-medium">
+              ₱ {{ formatCurrency(store.currentLiquidation.dvAmount || 0) }}
+            </div>
           </div>
 
           <!-- Actual Expense Field -->
-          <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">Actual Expense:</q-item-label>
-            <q-input
-              filled
-              outlined
-              dense
-              :model-value="formatCurrency(totalActualExpense)"
-              prefix="₱"
-              :disable="true"
-            />
-          </div>
-
+          <div class="col-md-4 col-sm-6"> <q-item-label class="q-mb-xs">Actual Expense:</q-item-label> <q-input filled
+              outlined dense :model-value="formatCurrency(totalActualExpense)" prefix="₱" readonly="true" /> </div>
           <!-- Amount to Return Field -->
-          <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">Amount to Return to Appropriation:</q-item-label>
-            <q-input
-              filled
-              outlined
-              dense
-              :model-value="formatCurrency(totalReturnAmount)"
-              prefix="₱"
-              :disable="true"
-              :color="actualReturnAmount < 0 ? 'negative' : undefined"
-            />
-          </div>
+          <div class="col-md-4 col-sm-6"> <q-item-label class="q-mb-xs">Amount to Return to
+              Appropriation:</q-item-label> <q-input filled outlined dense
+              :model-value="formatCurrency(totalReturnAmount)" prefix="₱" readonly="true"
+              :color="actualReturnAmount < 0 ? 'negative' : undefined" /> </div> <!-- Remarks Field -->
+          <div class="col-md-4 col-sm-12"> <q-item-label class="q-mb-xs">Remarks:</q-item-label> <q-input filled
+              outlined dense v-model="store.currentLiquidation.remarks" placeholder="Enter remarks"
+              @update:model-value="handleRemarksChange" /> </div>
 
-          <!-- Remarks Field -->
-          <div class="col-md-4 col-sm-12">
-            <q-item-label class="q-mb-xs">Remarks:</q-item-label>
-            <q-input
-              filled
-              outlined
-              dense
-              v-model="store.currentLiquidation.remarks"
-              placeholder="Enter remarks"
-              @update:model-value="handleRemarksChange"
-            />
-          </div>
         </div>
       </q-card-section>
+
 
       <!-- Liquidation Details Section -->
       <q-card-section>
@@ -114,44 +67,25 @@
 
         <!-- OR Details (All Editable) -->
         <div v-if="store.currentLiquidation?.orDetails?.length > 0" class="q-mb-lg">
-          <div
-            v-for="(orDetail, index) in store.currentLiquidation.orDetails"
-            :key="orDetail.id || `new-or-${index}`"
-            class="q-mb-md"
-          >
+          <div v-for="(orDetail, index) in store.currentLiquidation.orDetails" :key="orDetail.id || `new-or-${index}`"
+            class="q-mb-md">
             <div class="row items-center q-col-gutter-md">
               <!-- Remove Button -->
               <div class="col-auto" v-if="store.currentLiquidation.orDetails.length > 1">
-                <q-btn
-                  flat
-                  round
-                  dense
-                  icon="remove"
-                  color="red"
-                  @click="removeOrDetail(index)"
-                  title="Remove this OR"
-                />
+                <q-btn flat round dense icon="remove" color="red" @click="removeOrDetail(index)"
+                  title="Remove this OR" />
               </div>
 
               <div class="col row q-col-gutter-md no-wrap">
                 <!-- OR Date -->
                 <div class="col">
                   <div class="text-bold q-mb-xs">OR Date:</div>
-                  <q-input
-                    filled
-                    unelaveted
-                    outlined
-                    v-model="orDetail.orDate"
-                    placeholder="Select Date"
-                  >
+                  <q-input filled unelaveted outlined v-model="orDetail.orDate" placeholder="Select Date">
                     <template v-slot:append>
                       <q-icon name="event" class="cursor-pointer">
                         <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                          <q-date
-                            v-model="orDetail.orDate"
-                            mask="DD/MM/YYYY"
-                            @update:model-value="(val) => handleDateChange(val, index)"
-                          />
+                          <q-date v-model="orDetail.orDate" mask="DD/MM/YYYY"
+                            @update:model-value="(val) => handleDateChange(val, index)" />
                         </q-popup-proxy>
                       </q-icon>
                     </template>
@@ -161,33 +95,17 @@
                 <!-- OR Number -->
                 <div class="col">
                   <div class="text-bold q-mb-xs">OR Number:</div>
-                  <q-input
-                    filled
-                    unelaveted
-                    outlined
-                    v-model="orDetail.orNumber"
-                    placeholder="OR Number"
-                  />
+                  <q-input filled unelaveted outlined v-model="orDetail.orNumber" placeholder="OR Number" />
                 </div>
 
                 <!-- OR Amount -->
                 <div class="col">
                   <div class="text-bold q-mb-xs">OR Amount:</div>
-                  <q-input
-                    filled
-                    unelaveted
-                    outlined
-                    :model-value="formatInputValue(orDetail.orAmount)"
+                  <q-input filled unelaveted outlined :model-value="formatInputValue(orDetail.orAmount)"
                     @update:model-value="(val) => handleOrAmountInput(orDetail, val)"
-                    @blur="(e) => handleOrAmountBlur(orDetail, e.target.value)"
-                    prefix="₱"
-                    placeholder="0.00"
-                    inputmode="decimal"
-                    pattern="\\d*\\.?\\d{0,2}"
-                    @keypress="blockNonNumeric"
-                    @paste.prevent="handlePasteNumeric"
-                    @input="calculateTotals"
-                  />
+                    @blur="(e) => handleOrAmountBlur(orDetail, e.target.value)" prefix="₱" placeholder="0.00"
+                    inputmode="decimal" pattern="\\d*\\.?\\d{0,2}" @keypress="blockNonNumeric"
+                    @paste.prevent="handlePasteNumeric" @input="calculateTotals" />
                   <!-- Over-liquidation warning -->
                   <div v-if="actualReturnAmount < 0" class="text-negative q-mt-xs text-caption">
                     Exceeds DV amount by ₱{{ formatCurrency(Math.abs(actualReturnAmount)) }}
@@ -198,48 +116,21 @@
                 <div class="col">
                   <div class="text-bold q-mb-xs" style="display: flex; align-items: center">
                     OR Image:
-                    <q-btn
-                      v-if="orDetail.orPhotoUrl"
-                      flat
-                      dense
-                      round
-                      icon="delete"
-                      color="red"
-                      @click="removeOrImage(index)"
-                      style="margin-left: 8px"
-                    />
+                    <q-btn v-if="orDetail.orPhotoUrl" flat dense round icon="delete" color="red"
+                      @click="removeOrImage(index)" style="margin-left: 8px" />
                   </div>
-                  <div
-                    style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px"
-                  >
-                    <q-btn
-                      v-if="!orDetail.orPhotoUrl"
-                      flat
-                      dense
-                      color="primary"
-                      icon="upload"
-                      label="Upload"
-                      @click="triggerOrFileInput(index)"
-                      style="min-width: 100px"
-                    />
-                    <q-img
-                      v-if="orDetail.orPhotoUrl"
-                      :src="orDetail.orPhotoUrl"
-                      style="
+                  <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px">
+                    <q-btn v-if="!orDetail.orPhotoUrl" flat dense color="primary" icon="upload" label="Upload"
+                      @click="triggerOrFileInput(index)" style="min-width: 100px" />
+                    <q-img v-if="orDetail.orPhotoUrl" :src="orDetail.orPhotoUrl" style="
                         max-width: 100%;
                         max-height: 100px;
                         border-radius: 4px;
                         border: 1px solid #eee;
-                      "
-                    />
+                      " />
                   </div>
-                  <input
-                    :ref="setOrImageInputRef(index)"
-                    type="file"
-                    accept=".jpg,.jpeg,.png"
-                    style="display: none"
-                    @change="(e) => onOrImageChange(e, index)"
-                  />
+                  <input :ref="setOrImageInputRef(index)" type="file" accept=".jpg,.jpeg,.png" style="display: none"
+                    @change="(e) => onOrImageChange(e, index)" />
                 </div>
               </div>
             </div>
@@ -248,27 +139,12 @@
       </q-card-section>
 
       <q-card-actions align="right" class="custom-actions">
-        <q-btn
-          flat
-          label="Cancel"
-          class="modal-cancel-btn"
-          @click="store.closeDialog('orDetails')"
-        />
-        <q-btn
-          flat
-          label="Partial"
-          color="warning"
-          @click="handlePartialLiquidation"
-          :disable="!isValid || !canSubmit || savingSubmit"
-          :loading="savingPartial"
-        />
-        <q-btn
-          :label="needsReimbursement ? 'Reimbursement' : 'Submit'"
-          :color="needsReimbursement ? 'orange' : 'green'"
+        <q-btn flat label="Cancel" class="modal-cancel-btn" @click="store.closeDialog('orDetails')" />
+        <q-btn flat label="Partial" color="warning" @click="handlePartialLiquidation"
+          :disable="!isValid || !canSubmit || savingSubmit" :loading="savingPartial" />
+        <q-btn :label="needsReimbursement ? 'Reimbursement' : 'Submit'" :color="needsReimbursement ? 'orange' : 'green'"
           @click="needsReimbursement ? handleReimbursement() : showSubmitConfirmation()"
-          :disable="!isValid || savingPartial"
-          :loading="savingSubmit"
-        />
+          :disable="!isValid || savingPartial" :loading="savingSubmit" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -299,8 +175,13 @@
   <q-dialog v-model="showReimbursementDialog" persistent>
     <q-card style="min-width: 1000px">
       <q-card-section class="q-pb-none">
-        <div class="text-h6">
-          Reimbursement for Disbursement #{{ store.currentLiquidation.dvNumber }}
+        <div class="q-mb-md text-left">
+          <div class="text-h5 text-weight-bold">
+            Reimbursement Transaction
+          </div>
+          <div class="text-subtitle2 text-grey-7">
+            Reference: Disbursement No. {{ store.currentLiquidation.dvNumber }}
+          </div>
         </div>
       </q-card-section>
 
@@ -309,57 +190,28 @@
           <!-- Date Field -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">Date:</q-item-label>
-            <q-input
-              filled
-              outlined
-              dense
-              :model-value="store.currentLiquidation.date"
-              :disable="true"
-            />
+            <q-input filled outlined dense :model-value="store.currentLiquidation.date" :disable="true" />
           </div>
 
           <!-- DV Number Field -->
           <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">DV Number (Auto-generated):</q-item-label>
-            <q-input
-              filled
-              outlined
-              dense
-              v-model="reimbursementDvNumber"
-              :disable="true"
-              hint="DV number will be automatically generated"
-            />
+            <q-item-label class="q-mb-xs">Reimburse DV Number:</q-item-label>
+            <q-input filled outlined dense v-model="reimbursementDvNumber" :disable="true" />
           </div>
 
           <!-- DV Amount Field -->
           <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">REIMB Amount:</q-item-label>
-            <q-input
-              filled
-              outlined
-              dense
-              :model-value="formatCurrency(reimbursementAmount)"
-              prefix="₱"
-              :disable="true"
-            />
+            <q-item-label class="q-mb-xs">Reimburse Amount:</q-item-label>
+            <q-input filled outlined dense :model-value="formatCurrency(reimbursementAmount)" prefix="₱"
+              :disable="true" />
           </div>
 
           <!-- Bank Selection -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">Bank:</q-item-label>
-            <q-select
-              filled
-              outlined
-              dense
-              v-model="selectedReimbursementBank"
-              :options="bankStore.availableBanks"
-              option-label="name"
-              option-value="id"
-              emit-value
-              map-options
-              :label="currentReimbursementBankLabel"
-              @update:model-value="handleReimbursementBankSelection"
-            />
+            <q-select filled outlined dense v-model="selectedReimbursementBank" :options="bankStore.availableBanks"
+              option-label="name" option-value="id" emit-value map-options :label="currentReimbursementBankLabel"
+              @update:model-value="handleReimbursementBankSelection" />
           </div>
 
           <!-- Cheque Number Field -->
@@ -371,13 +223,7 @@
           <!-- Payee Field -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">Payee:</q-item-label>
-            <q-input
-              filled
-              outlined
-              dense
-              :model-value="store.currentLiquidation.payee"
-              :disable="true"
-            />
+            <q-input filled outlined dense :model-value="store.currentLiquidation.payee" :disable="true" />
           </div>
         </div>
       </q-card-section>
@@ -389,37 +235,17 @@
             <strong>Select Expense Account for Reimbursement:</strong>
           </div>
           <q-space />
-          <q-btn
-            color="primary"
-            icon="add"
-            label="Add"
-            flat
-            @click="showExpenseAccountDialog = true"
-          />
+          <q-btn color="primary" icon="add" label="Add" flat @click="showExpenseAccountDialog = true" />
         </div>
 
         <!-- Selected Expense Accounts Table -->
-        <q-table
-          :rows="selectedReimbursementExpenseAccounts"
-          :columns="selectedExpenseAccountColumns"
-          row-key="id"
-          :pagination="{ rowsPerPage: 5 }"
-          flat
-          bordered
-        >
+        <q-table :rows="selectedReimbursementExpenseAccounts" :columns="selectedExpenseAccountColumns" row-key="id"
+          :pagination="{ rowsPerPage: 0 }" flat bordered>
           <template v-slot:body-cell-amount="props">
             <q-td :props="props" class="text-right">
               <div class="flex justify-end">
-                <q-input
-                  dense
-                  v-model="props.row.amount"
-                  prefix="₱"
-                  inputmode="decimal"
-                  pattern="\\d*\\.?\\d{0,2}"
-                  @keypress="blockNonNumeric"
-                  @paste.prevent="handlePasteNumeric"
-                  style="width: 120px"
-                />
+                <q-input dense v-model="props.row.amount" prefix="₱" inputmode="decimal" pattern="\\d*\\.?\\d{0,2}"
+                  @keypress="blockNonNumeric" @paste.prevent="handlePasteNumeric" style="width: 120px" />
               </div>
             </q-td>
           </template>
@@ -429,15 +255,10 @@
         <div class="q-mt-md q-pa-md" style="background-color: #f5f5f5; border-radius: 8px">
           <div class="text-body2">
             <strong>Total Selected: ₱{{ formatCurrency(totalSelectedExpenseAmount) }}</strong>
-            <span class="text-grey-7 q-ml-md"
-              >of ₱{{ formatCurrency(reimbursementAmount) }} needed</span
-            >
+            <span class="text-grey-7 q-ml-md">of ₱{{ formatCurrency(reimbursementAmount) }} needed</span>
           </div>
-          <div
-            v-if="totalSelectedExpenseAmount > reimbursementAmount"
-            class="text-negative text-caption q-mt-xs"
-          >
-            Total exceeds reimbursement amount by ₱{{
+          <div v-if="totalSelectedExpenseAmount > reimbursementAmount" class="text-negative text-caption q-mt-xs">
+            Total exceeds reimburse amount by ₱{{
               formatCurrency(totalSelectedExpenseAmount - reimbursementAmount)
             }}
           </div>
@@ -454,14 +275,8 @@
         </div>
 
         <!-- Selected ORs Table -->
-        <q-table
-          :rows="selectedReimbursementOrs"
-          :columns="selectedOrColumns"
-          row-key="id"
-          :pagination="{ rowsPerPage: 5 }"
-          flat
-          bordered
-        >
+        <q-table :rows="selectedReimbursementOrs" :columns="selectedOrColumns" row-key="id"
+          :pagination="{ rowsPerPage: 0 }" flat bordered>
           <template v-slot:body-cell-dvAmount="props">
             <q-td :props="props" class="text-right">
               {{ formatCurrency(props.row.orAmount || 0) }}
@@ -470,16 +285,8 @@
           <template v-slot:body-cell-orAmount="props">
             <q-td :props="props" class="text-right">
               <div class="flex justify-end">
-                <q-input
-                  dense
-                  v-model="props.row.reimbAmount"
-                  prefix="₱"
-                  inputmode="decimal"
-                  pattern="\\d*\\.?\\d{0,2}"
-                  @keypress="blockNonNumeric"
-                  @paste.prevent="handlePasteNumeric"
-                  style="width: 120px"
-                />
+                <q-input dense v-model="props.row.reimbAmount" prefix="₱" inputmode="decimal" pattern="\\d*\\.?\\d{0,2}"
+                  @keypress="blockNonNumeric" @paste.prevent="handlePasteNumeric" style="width: 120px" />
               </div>
             </q-td>
           </template>
@@ -489,14 +296,9 @@
         <div class="q-mt-md q-pa-md" style="background-color: #f5f5f5; border-radius: 8px">
           <div class="text-body2">
             <strong>Total OR Amount: ₱{{ formatCurrency(totalSelectedOrAmount) }}</strong>
-            <span class="text-grey-7 q-ml-md"
-              >of ₱{{ formatCurrency(reimbursementAmount) }} needed</span
-            >
+            <span class="text-grey-7 q-ml-md">of ₱{{ formatCurrency(reimbursementAmount) }} needed</span>
           </div>
-          <div
-            v-if="totalSelectedOrAmount !== reimbursementAmount"
-            class="text-negative text-caption q-mt-xs"
-          >
+          <div v-if="totalSelectedOrAmount !== reimbursementAmount" class="text-negative text-caption q-mt-xs">
             Total must exactly match reimbursement amount
           </div>
         </div>
@@ -504,13 +306,8 @@
 
       <q-card-actions align="right" class="custom-actions">
         <q-btn flat label="Cancel" @click="showReimbursementDialog = false" />
-        <q-btn
-          label="Submit Reimbursement"
-          color="orange"
-          @click="handleSubmitReimbursement"
-          :loading="savingReimbursement"
-          :disable="!canSubmitReimbursement"
-        />
+        <q-btn label="Submit Reimbursement" color="orange" @click="handleSubmitReimbursement"
+          :loading="savingReimbursement" :disable="!canSubmitReimbursement" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -529,29 +326,16 @@
       </q-card-section>
 
       <q-card-section>
-        <q-input
-          outlined
-          dense
-          placeholder="Search expense account..."
-          v-model="store.expenseSearch"
-          class="q-mb-sm"
-          style="width: 300px"
-        >
+        <q-input outlined dense placeholder="Search expense account..." v-model="store.expenseSearch" class="q-mb-sm"
+          style="width: 300px">
           <template v-slot:append>
             <q-icon name="search" />
           </template>
         </q-input>
 
-        <q-table
-          :rows="validExpenseAccounts"
-          :columns="store.expenseAccountColumns"
-          row-key="id"
-          :pagination="{ rowsPerPage: 5 }"
-          :loading="store.loading || store.expenseTypeLoading"
-          :filter="store.expenseSearch"
-          flat
-          bordered
-        >
+        <q-table :rows="validExpenseAccounts" :columns="store.expenseAccountColumns" row-key="id"
+          :pagination="{ rowsPerPage: 5 }" :loading="store.loading || store.expenseTypeLoading"
+          :filter="store.expenseSearch" flat bordered>
           <template v-slot:no-data>
             <div class="full-width row flex-center text-grey-6 q-gutter-sm">
               <q-icon size="2em" name="inbox" />
@@ -565,11 +349,8 @@
           </template>
           <template v-slot:body-cell-budget_source="props">
             <q-td :props="props">
-              <q-badge
-                :color="getBudgetSourceColor(props.row.budget_source)"
-                :label="getBudgetSourceLabel(props.row.budget_source)"
-                class="budget-source-badge"
-              />
+              <q-badge :color="getBudgetSourceColor(props.row.budget_source)"
+                :label="getBudgetSourceLabel(props.row.budget_source)" class="budget-source-badge" />
             </q-td>
           </template>
           <template v-slot:body-cell-action="props">
@@ -1146,12 +927,6 @@ const handleDateChange = (date, index) => {
   calculateTotals()
 }
 
-const handleRemarksChange = (newRemarks) => {
-  // Ensure remarks are properly updated in the store
-  store.currentLiquidation.remarks = newRemarks
-  console.log('Remarks updated:', newRemarks)
-}
-
 const handlePartialLiquidation = async () => {
   savingPartial.value = true
   try {
@@ -1561,7 +1336,7 @@ const handlePasteNumeric = (event) => {
     finalText += '.' + parts.slice(1).join('').substring(0, 2)
   }
   event.target.value = finalText
-  
+
   // Find the OR detail that this input belongs to and update it
   const inputElement = event.target
   const orDetailIndex = Array.from(inputElement.closest('.q-card-section').querySelectorAll('input[prefix="₱"]')).indexOf(inputElement)

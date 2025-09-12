@@ -15,26 +15,33 @@
 
       <q-card-section>
         <div class="row q-col-gutter-md">
+          
           <!-- Date Field -->
-          <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">Date:</q-item-label>
-            <q-input filled outlined dense v-model="store.forms.disbursement.date" mask="##/##/####" :readonly="true"
-              :disable="true">
-              <template v-slot:append>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="store.forms.disbursement.date" mask="DD/MM/YYYY" />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
+          <div class="col-md-4 col-sm-6 q-mb-md">
+            <div class="text-caption text-grey">Date</div>
+            <div class="text-body1 text-weight-medium">
+              {{ store.currentLiquidation.date }}
+            </div>
           </div>
 
+          <!-- DV Number Field -->
+          <div class="col-md-4 col-sm-6 q-mb-md">
+            <div class="text-caption text-grey">DV Number</div>
+            <div class="text-body1 text-weight-medium">
+              {{ store.currentLiquidation.dvNumber }}
+            </div>
+          </div>
+          
+          <!-- Payee Field -->
+          <div class="col-md-4 col-sm-12">
+            <q-item-label class="q-mb-xs">Payee:</q-item-label>
+            <q-input filled outlined dense v-model="store.forms.disbursement.payee" :disable="!isChequeCancelled" />
+          </div>
           <!-- Bank Field -->
           <div class="col-md-4 col-sm-12">
             <q-item-label class="q-mb-xs">Bank:</q-item-label>
-            <q-select outlined dense v-model="store.forms.disbursement.bank_id" :options="bankStore.availableBanks"
-              option-label="name" option-value="id" emit-value map-options :label="currentBankLabel"
+            <q-select outlined dense :v-model="store.isChequeCancel ? store.forms.disbursement.bank_id : null" :options="bankStore.availableBanks"
+              option-label="name" option-value="id"  :label="currentBankLabel"
               :disable="!isChequeCancelled" @update:model-value="handleBankSelection" />
           </div>
 
@@ -47,17 +54,7 @@
               </div>
             </div>
           </div>
-          <!-- DV Number Field -->
-          <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">DV Number:</q-item-label>
-            <q-input filled outlined dense v-model="store.forms.disbursement.dvNumber" :disable="true" />
-          </div>
 
-          <!-- Payee Field -->
-          <div class="col-md-4 col-sm-12">
-            <q-item-label class="q-mb-xs">Payee:</q-item-label>
-            <q-input filled outlined dense v-model="store.forms.disbursement.payee" :disable="!isChequeCancelled" />
-          </div>
 
           <!-- Cancel Cheque Button -->
           <div v-if="!isChequeCancelled" class="col-md-4 col-sm-12 flex flex-center q-mt-lg">
@@ -86,7 +83,7 @@
                 <div><strong>Payee:</strong> {{ store.forms.disbursement.payee }}</div>
               </div>
               <div class="text-caption text-grey-6 q-mt-sm">
-                After canceling, you can select a different bank and add a new cheque number.
+                After canceling, you may edit the payee, select a different bank for a new cheque, and add expenses.
               </div>
             </q-card-section>
 
@@ -105,7 +102,7 @@
             :loading="addingExpense || store.expenseTypeLoading" v-permission="'add'" />
         </div>
         <!-- Expense Table -->
-        <q-table :rows="store.expenses" :columns="store.expenseColumns" row-key="id" :pagination="{ rowsPerPage: 5 }">
+        <q-table :rows="store.expenses" :columns="store.expenseColumns" row-key="id" :pagination="{ rowsPerPage: 0 }">
           <template v-slot:body-cell-action="props">
             <q-td :props="props">
               <div class="button-group">
@@ -117,7 +114,7 @@
 
         <!-- Amount Display -->
         <div class="q-mt-md">
-          <q-item-label class="q-mb-xs">Total Amount:</q-item-label>
+          <q-item-label class="q-mb-xs">Total Amount(DV Amount):</q-item-label>
           <q-input filled outlined dense
             :model-value="`₱${(store.totalExpensesAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`"
             :class="getTotalAmountClass()" style="width: 40%" readonly />
@@ -455,10 +452,10 @@ const confirmCancelCheque = async () => {
 
       $q.notify({
         type: 'positive',
-        message: 'Cheque cancelled successfully! You can now select a different bank and add a new cheque and expenses',
+        message: 'Cancelling Cheque! Edit details and save to confirm.',
         icon: 'check_circle',
         position: 'top',
-        timeout: 4000
+        timeout: 5000
       })
     } else {
       $q.notify({

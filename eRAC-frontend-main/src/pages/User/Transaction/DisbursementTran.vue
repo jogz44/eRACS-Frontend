@@ -411,10 +411,11 @@
           :pagination="store.pagination"
           :loading="store.loadingDisbursements"
           flat
+          @row-dblclick="(evt, row) => handleViewDisbursement(row)"
         >
           <template v-slot:body-cell-action="props">
             <q-td :props="props" >
-              <div class="row q-gutter-xs items-center justify-center ">
+              <div class="row q-gutter-xs items-left left ">
                 <q-btn
                   v-if="
                     isApprover ||
