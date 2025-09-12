@@ -1686,7 +1686,7 @@ class DisbursementController extends Controller
         try {
             $user = $request->user();
 
-            $query = TranExpenseDetail::with(['appropriation.expenseClass', 'appropriation.expenseType', 'appropriation.expenseItem', 'disbursement']);
+            $query = TranExpenseDetail::with(['appropriation.expenseClass', 'appropriation.expenseType', 'appropriation.expenseItem', 'appropriation.expenseSubItem', 'disbursement']);
 
             // Determine target barangay: allow explicit barangay_id (for admin), else fallback to user's barangay
             $targetBarangayId = $request->input('barangay_id');
@@ -1741,10 +1741,12 @@ class DisbursementController extends Controller
                     'expense_class_id' => $detail->appropriation->expense_class_id ?? null,
                     'expense_type_id' => $detail->appropriation->expense_type_id ?? null,
                     'expense_item_id' => $detail->appropriation->expense_item_id ?? null,
+                    'expense_sub_item_id' => $detail->appropriation->expense_sub_item_id ?? null,
                     'expense_class_name' => $expenseClassName,
                     'expense_class_order' => optional($detail->appropriation->expenseClass)->order,
                     'expense_type_name' => $expenseTypeName,
                     'expense_item_name' => $expenseItemName,
+                    'expense_sub_item_name' => optional($detail->appropriation->expenseSubItem)->name,
                     'date' => optional($detail->disbursement)->date,
                     'dvNumber' => optional($detail->disbursement)->dv_number,
                     'dv_number' => optional($detail->disbursement)->dv_number,

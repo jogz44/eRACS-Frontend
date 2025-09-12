@@ -653,6 +653,12 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Determine current editing disbursement id (if any)
         const currentDisbursementId = this.currentItem?.id ? String(this.currentItem.id) : null
 
+        // Debug logging for sub-items
+        if (expenseLevel === 'subitem') {
+          console.log(`[DEBUG] Calculating balance for sub-item ID: ${expenseId}, Original Amount: ${originalAmount}`)
+          console.log(`[DEBUG] Expense details data length: ${this.expenseDetailsData?.length || 0}`)
+        }
+
         // Get all expense details from the database for this expense account
         if (this.expenseDetailsData && this.expenseDetailsData.length > 0) {
           // Only show first few expense details to avoid clutter
@@ -661,6 +667,17 @@ export const useDisbursementStore = defineStore('disbursement', {
               (expenseLevel === 'subitem' && String(ed.expense_sub_item_id) === String(expenseId)) ||
               (expenseLevel === 'item' && String(ed.expense_item_id) === String(expenseId)) ||
               (expenseLevel === 'type' && String(ed.expense_type_id) === String(expenseId))
+
+            // Debug logging for sub-items
+            if (expenseLevel === 'subitem') {
+              console.log(`[DEBUG] Checking expense detail:`, {
+                id: ed.id,
+                expense_sub_item_id: ed.expense_sub_item_id,
+                target_expenseId: expenseId,
+                matches: String(ed.expense_sub_item_id) === String(expenseId),
+                amount: ed.amount
+              })
+            }
 
             if (!matchesLevel) return false
 
@@ -672,6 +689,11 @@ export const useDisbursementStore = defineStore('disbursement', {
 
             return true
           })
+
+          // Debug logging for sub-items
+          if (expenseLevel === 'subitem') {
+            console.log(`[DEBUG] Found ${relevantDetails.length} relevant details for sub-item ${expenseId}`)
+          }
 
           relevantDetails.forEach((expenseDetail) => {
             // Include expense details from other disbursements in the calculation
@@ -698,6 +720,16 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Compute remaining balance
         const remainingBalance = Math.max(0, originalAmount - totalDisbursed + totalReturned)
+
+        // Debug logging for sub-items
+        if (expenseLevel === 'subitem') {
+          console.log(`[DEBUG] Final calculation for sub-item ${expenseId}:`, {
+            originalAmount,
+            totalDisbursed,
+            totalReturned,
+            remainingBalance
+          })
+        }
 
         return remainingBalance
       } catch (error) {
@@ -753,6 +785,9 @@ export const useDisbursementStore = defineStore('disbursement', {
           return Promise.resolve()
         }
 
+        // Fetch updated expense details to get latest disbursement history
+        await this.fetchExpenseDetails()
+
         // Force a refresh of the expense accounts to recalculate balances
         // This will trigger the getter to recalculate with current frontend expenses
         this.expenseData = [...this.expenseData]
@@ -794,6 +829,9 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         await appropriationStore.fetchExpenseHierarchy()
         this.expenseData = appropriationStore.allocations || []
+
+        // Fetch expense details for balance calculations
+        await this.fetchExpenseDetails()
 
         // Fetch expense types from accounts library store (non-blocking)
         this.fetchExpenseTypesFromAccountsLib().catch((error) => {
