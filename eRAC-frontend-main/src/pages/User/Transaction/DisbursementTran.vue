@@ -660,10 +660,10 @@
 
           <q-card-actions align="right" class="q-pa-md">
             <q-btn flat label="Close" @click="closeRemarksDialog" color="primary" />
-            <q-btn 
-              label="View Details" 
-              @click="openViewOrDetailsFromRemarks" 
-              color="primary" 
+            <q-btn
+              label="View Details"
+              @click="openViewOrDetailsFromRemarks"
+              color="primary"
               unelevated
             />
           </q-card-actions>
@@ -1699,7 +1699,7 @@ const openViewOrDetailsFromRemarks = async () => {
   if (selectedRemarksData.value && selectedRemarksData.value.id) {
     // Store the data before closing the dialog
     const disbursementData = { ...selectedRemarksData.value }
-    
+
     // Ensure we have the required fields
     if (!disbursementData.id) {
       $q.notify({
@@ -1711,10 +1711,10 @@ const openViewOrDetailsFromRemarks = async () => {
       })
       return
     }
-    
+
     // Close remarks dialog first
     closeRemarksDialog()
-    
+
     // Then open ViewOrDetails with the stored data
     try {
       await store.openViewOrDetails(disbursementData)
