@@ -3,7 +3,7 @@
     <q-card style="min-width: 1100px">
       <q-card-section>
         <div class="text-h6">
-          View OR Details for Disbursement #{{ store.currentLiquidation.dvNumber }}
+          Disbursement #{{ store.currentLiquidation.dvNumber }}
         </div>
         <div class="text-caption text-grey-6 q-mt-sm">
           View liquidation details and official receipt information
@@ -12,45 +12,59 @@
 
       <q-card-section>
         <div class="row q-col-gutter-md">
+
           <!-- Date Field -->
-          <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">Date:</q-item-label>
-            <q-input filled outlined dense :model-value="store.currentLiquidation.date" :readonly="true"
-              :disable="true" />
+          <div class="col-md-4 col-sm-6 q-mb-md">
+            <div class="text-caption text-grey">Date</div>
+            <div class="text-body1 text-weight-medium">
+              {{ store.currentLiquidation.date }}
+            </div>
           </div>
 
           <!-- DV Number Field -->
-          <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">DV Number:</q-item-label>
-            <q-input filled outlined dense :model-value="store.currentLiquidation.dvNumber" :disable="true" />
+          <div class="col-md-4 col-sm-6 q-mb-md">
+            <div class="text-caption text-grey">DV Number</div>
+            <div class="row items-center">
+              <div class="text-body1 text-weight-medium">
+                {{ store.currentLiquidation.dvNumber }}
+              </div>
+              <q-btn flat dense round icon="content_copy" class="q-ml-sm"
+                @click="copyToClipboard(store.currentLiquidation.dvNumber)" />
+            </div>
           </div>
 
           <!-- DV Amount Field -->
-          <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">DV Amount:</q-item-label>
-            <q-input filled outlined dense :model-value="formatCurrency(store.currentLiquidation.dvAmount || 0)"
-              prefix="₱" :disable="true" />
+          <div class="col-md-4 col-sm-6 q-mb-md">
+            <div class="text-caption text-grey">DV Amount</div>
+            <div class="text-body1 text-weight-medium">
+              ₱ {{ formatCurrency(store.currentLiquidation.dvAmount || 0) }}
+            </div>
           </div>
 
           <!-- Actual Expense Field -->
-          <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">Actual Expense:</q-item-label>
-            <q-input filled outlined dense :model-value="formatCurrency(totalActualExpense)" prefix="₱"
-              :disable="true" />
+          <div class="col-md-4 col-sm-6 q-mb-md">
+            <div class="text-caption text-grey">Actual Expense</div>
+            <div class="text-body1 text-weight-medium">
+              ₱ {{ formatCurrency(totalActualExpense) }}
+            </div>
           </div>
 
           <!-- Amount to Return Field -->
-          <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">Amount to Return to Appropriation:</q-item-label>
-            <q-input filled outlined dense :model-value="formatCurrency(totalReturnAmount)" prefix="₱"
-              :disable="true" />
+          <div class="col-md-4 col-sm-6 q-mb-md">
+            <div class="text-caption text-grey">Amount to Return to Appropriation</div>
+            <div class="text-body1 text-weight-medium">
+              ₱ {{ formatCurrency(totalReturnAmount) }}
+            </div>
           </div>
 
           <!-- Remarks Field -->
-          <div class="col-md-4 col-sm-12">
-            <q-item-label class="q-mb-xs">Remarks:</q-item-label>
-            <q-input filled outlined dense :model-value="store.currentLiquidation.remarks || ''" :disable="true" />
+          <div class="col-md-4 col-sm-12 q-mb-md">
+            <div class="text-caption text-grey">Remarks</div>
+            <div class="text-body1 text-weight-medium">
+              {{ store.currentLiquidation.remarks || '—' }}
+            </div>
           </div>
+
         </div>
       </q-card-section>
 
@@ -75,54 +89,68 @@
       <div>
         <q-card-section>
           <div class="text-h6">
-            View Reimbursement Details for Disbursement #{{ store.currentLiquidation.dvNumber }}
+            Reimbursement Transaction Details
           </div>
           <div class="text-caption text-grey-6 q-mt-sm">
-            View liquidation details and official receipt information
+            Reference: Disbursement No. {{ store.currentLiquidation.dvNumber }}
           </div>
         </q-card-section>
 
         <q-card-section>
           <div class="row q-col-gutter-md">
+
             <!-- Date Field -->
-            <div class="col-md-4 col-sm-6">
-              <q-item-label class="q-mb-xs">Date:</q-item-label>
-              <q-input filled outlined dense :model-value="store.currentLiquidation.date" :readonly="true"
-                :disable="true" />
+            <div class="col-md-4 col-sm-6 q-mb-md">
+              <div class="text-caption text-grey">Date</div>
+              <div class="text-body1 text-weight-medium">
+                {{ store.currentLiquidation.date }}
+              </div>
             </div>
 
             <!-- DV Number Field -->
-            <div class="col-md-4 col-sm-6">
-              <q-item-label class="q-mb-xs">DV Number:</q-item-label>
-              <q-input filled outlined dense :model-value="store.currentLiquidation.dvNumber" :disable="true" />
+            <div class="col-md-4 col-sm-6 q-mb-md">
+              <div class="text-caption text-grey">DV Number</div>
+              <div class="row items-center">
+                <div class="text-body1 text-weight-medium">
+                  {{ store.currentLiquidation.dvNumber }}
+                </div>
+                <q-btn flat dense round icon="content_copy" class="q-ml-sm"
+                  @click="copyToClipboard(store.currentLiquidation.dvNumber)" />
+              </div>
             </div>
 
             <!-- DV Amount Field -->
-            <div class="col-md-4 col-sm-6">
-              <q-item-label class="q-mb-xs">DV Amount:</q-item-label>
-              <q-input filled outlined dense :model-value="formatCurrency(store.currentLiquidation.dvAmount || 0)"
-                prefix="₱" :disable="true" />
+            <div class="col-md-4 col-sm-6 q-mb-md">
+              <div class="text-caption text-grey">DV Amount</div>
+              <div class="text-body1 text-weight-medium">
+                ₱ {{ formatCurrency(store.currentLiquidation.dvAmount || 0) }}
+              </div>
             </div>
 
             <!-- Actual Expense Field -->
-            <div class="col-md-4 col-sm-6">
-              <q-item-label class="q-mb-xs">Actual Expense:</q-item-label>
-              <q-input filled outlined dense :model-value="formatCurrency(totalActualExpense)" prefix="₱"
-                :disable="true" />
+            <div class="col-md-4 col-sm-6 q-mb-md">
+              <div class="text-caption text-grey">Actual Expense</div>
+              <div class="text-body1 text-weight-medium">
+                ₱ {{ formatCurrency(totalActualExpense) }}
+              </div>
             </div>
 
             <!-- Amount to Return Field -->
-            <div class="col-md-4 col-sm-6">
-              <q-item-label class="q-mb-xs">Amount to Return to Appropriation:</q-item-label>
-              <q-input filled outlined dense :model-value="formatCurrency(totalReturnAmount)" prefix="₱"
-                :disable="true" />
+            <div class="col-md-4 col-sm-6 q-mb-md">
+              <div class="text-caption text-grey">Amount to Return to Appropriation</div>
+              <div class="text-body1 text-weight-medium">
+                ₱ {{ formatCurrency(totalReturnAmount) }}
+              </div>
             </div>
 
             <!-- Remarks Field -->
-            <div class="col-md-4 col-sm-12">
-              <q-item-label class="q-mb-xs">Remarks:</q-item-label>
-              <q-input filled outlined dense :model-value="store.currentLiquidation.remarks || ''" :disable="true" />
+            <div class="col-md-4 col-sm-12 q-mb-md">
+              <div class="text-caption text-grey">Remarks</div>
+              <div class="text-body1 text-weight-medium">
+                {{ store.currentLiquidation.remarks || '—' }}
+              </div>
             </div>
+
           </div>
         </q-card-section>
 
@@ -190,40 +218,19 @@
           <q-btn unelevated label="Reject Void" color="red" icon="cancel" @click="handleRejectVoid"
             :loading="voidActionLoading" class="void-reject-btn" />
         </div>
-<div
-  v-if="isApprover && store.currentLiquidation?.status === 'Edit Requested'"
-  class="q-mr-auto edit-action-buttons"
->
-  <div class="edit-request-indicator">
-    <q-icon name="edit_note" color="deep-orange" size="20px" class="q-mr-sm" />
-    <span class="edit-request-text">Edit Request Pending</span>
-  </div>
-  <q-btn
-    unelevated
-    label="Approve Edit"
-    color="green"
-    icon="check_circle"
-    @click="handleApproveEdit"
-    :loading="editActionLoading"
-    class="edit-approve-btn"
-  />
-  <q-btn
-    unelevated
-    label="Reject Edit"
-    color="red"
-    icon="cancel"
-    @click="handleRejectEdit"
-    :loading="editActionLoading"
-    class="edit-reject-btn"
-  />
-</div>
+        <div v-if="isApprover && store.currentLiquidation?.status === 'Edit Requested'"
+          class="q-mr-auto edit-action-buttons">
+          <div class="edit-request-indicator">
+            <q-icon name="edit_note" color="deep-orange" size="20px" class="q-mr-sm" />
+            <span class="edit-request-text">Edit Request Pending</span>
+          </div>
+          <q-btn unelevated label="Approve Edit" color="green" icon="check_circle" @click="handleApproveEdit"
+            :loading="editActionLoading" class="edit-approve-btn" />
+          <q-btn unelevated label="Reject Edit" color="red" icon="cancel" @click="handleRejectEdit"
+            :loading="editActionLoading" class="edit-reject-btn" />
+        </div>
 
-<q-btn
-  flat
-  label="Close"
-  class="modal-cancel-btn"
-  @click="store.closeDialog('viewOrDetails')"
-/>
+        <q-btn flat label="Close" class="modal-cancel-btn" @click="store.closeDialog('viewOrDetails')" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -307,6 +314,17 @@ const orDetailsColumns = [
   }
 ]
 
+const copyToClipboard = (text) => {
+  navigator.clipboard.writeText(text).then(() => {
+    $q.notify({
+      type: 'positive',
+      message: 'DV Number copied to clipboard',
+      icon: 'content_copy',
+      position: 'top',
+      timeout: 3000,
+    })
+  })
+}
 
 const totalActualExpense = computed(() => {
   if (!store.currentLiquidation?.orDetails) return 0
@@ -433,7 +451,7 @@ const handleRejectVoid = () => {
 // Handle edit approval
 const handleApproveEdit = async () => {
   if (!store.currentLiquidation?.id) return
-  
+
   editActionLoading.value = true
   try {
     await store.approveEditRequest(store.currentLiquidation.id)
@@ -463,7 +481,7 @@ const handleApproveEdit = async () => {
 // Handle edit rejection
 const handleRejectEdit = () => {
   if (!store.currentLiquidation?.id) return
-  
+
   $q.dialog({
     title: 'Reject Edit Request',
     message: 'Please provide rejection remarks:',
