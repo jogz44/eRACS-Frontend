@@ -607,7 +607,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       return result
     },
 
-    // Fetch disbursements
+    // Fetch continuing disbursements
     async fetchDisbursements() {
       this.loadingDisbursements = true
       try {
@@ -735,31 +735,41 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       console.log('Opening OR details dialog for item:', item);
       this.currentLiquidation = JSON.parse(JSON.stringify(item));
 
+      // Ensure date is in DD/MM/YYYY format for the component
+      if (this.currentLiquidation.date) {
+        // If date is in YYYY-MM-DD format, convert to DD/MM/YYYY
+        if (this.currentLiquidation.date.includes('-')) {
+          const dateParts = this.currentLiquidation.date.split('-');
+          if (dateParts.length === 3) {
+            this.currentLiquidation.date = `${dateParts[2].padStart(2, '0')}/${dateParts[1].padStart(2, '0')}/${dateParts[0]}`;
+          }
+        }
+      } else {
+        // If no date, set today's date
+        const today = new Date();
+        const dd = String(today.getDate()).padStart(2, '0');
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const yyyy = today.getFullYear();
+        this.currentLiquidation.date = `${dd}/${mm}/${yyyy}`;
+      }
+
       // Fetch existing OR Details from backend if this is a partial liquidation
       if (item.id && item.status === 'Partial') {
         try {
           const config = getAuthConfig()
-          const res = await api.get(`/api/barangay/disbursements/${item.id}/or-details`, config);
+          const res = await api.get(`/api/barangay/continuing-disbursements/${item.id}/or-details`, config);
           console.log('Fetched existing OR details:', res.data.data);
           const backendUrl = 'http://localhost:8000';
           this.currentLiquidation.orDetails = res.data.data.map(or => {
-            // Convert YYYY-MM-DD to DD/MM/YYYY format
-            let formattedDate = '';
-            if (or.or_date) {
-              const dateParts = or.or_date.split('-');
-              if (dateParts.length === 3) {
-                formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
-              }
-            }
-
+            // Date is already in DD/MM/YYYY format from backend
             return {
               id: or.id, // Keep the original ID for updating
-              orDate: formattedDate,
-              orNumber: or.or_number,
-              orAmount: or.or_amount,
-              orImage: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
-              orPhotoUrl: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
-              serverPhotoPath: or.or_photo,
+              orDate: or.orDate, // Backend already returns in DD/MM/YYYY format
+              orNumber: or.orNumber,
+              orAmount: or.orAmount,
+              orImage: or.orPhotoUrl ? `${backendUrl}/storage/${or.orPhotoUrl}` : null,
+              orPhotoUrl: or.orPhotoUrl ? `${backendUrl}/storage/${or.orPhotoUrl}` : null,
+              serverPhotoPath: or.orPhotoUrl,
               remarks: or.remarks || '',
             };
           });
@@ -789,15 +799,15 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       if (row.id) {
         try {
           const config = getAuthConfig()
-          const res = await api.get(`/api/barangay/disbursements/${row.id}/or-details`, config);
+          const res = await api.get(`/api/barangay/continuing-disbursements/${row.id}/or-details`, config);
 
           const backendUrl = 'http://localhost:8000'; // Change if your backend runs elsewhere
           this.currentLiquidation.orDetails = res.data.data.map(or => ({
-            orDate: or.or_date,
-            orNumber: or.or_number,
-            orAmount: or.or_amount,
-            orImage: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
-            orPhotoUrl: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
+            orDate: or.orDate, // Backend already returns in DD/MM/YYYY format
+            orNumber: or.orNumber,
+            orAmount: or.orAmount,
+            orImage: or.orPhotoUrl ? `${backendUrl}/storage/${or.orPhotoUrl}` : null,
+            orPhotoUrl: or.orPhotoUrl ? `${backendUrl}/storage/${or.orPhotoUrl}` : null,
           }));
 
           // Set single remarks from the latest OR detail (most recent one)
@@ -922,7 +932,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         return Math.max(max, num)
       }, 0)
 
-      const newDVNumber = `CDV-${String(yyyy).slice(-2)}-${mm}-${String(lastDV + 1).padStart(3, '0')}`
+      const newDVNumber = `DV-${String(yyyy).slice(-2)}-${mm}-${String(lastDV + 1).padStart(3, '0')}`
 
       // Update form with new defaults
       this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
@@ -1197,7 +1207,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
           console.log('FormData entry:', key, value);
         }
 
-        const response = await api.post('/api/barangay/disbursements/or-photo/upload', formData, {
+        const response = await api.post('/api/barangay/continuing-disbursements/or-photo/upload', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
             'Authorization': `Bearer ${token}`,
@@ -1262,7 +1272,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
 
         console.log('Sending liquidation payload:', JSON.stringify(payload, null, 2))
         console.log('OR Details being sent:', this.currentLiquidation.orDetails)
-        const response = await api.post(`/api/barangay/disbursements/${this.currentLiquidation.id}/or-details`, payload, config)
+        const response = await api.post(`/api/barangay/continuing-disbursements/${this.currentLiquidation.id}/or-details`, payload, config)
 
         if (response.data?.status) {
           // Update the local disbursement
@@ -1362,7 +1372,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
 
         console.log('Sending liquidation payload:', JSON.stringify(payload, null, 2))
         console.log('OR Details being sent:', this.currentLiquidation.orDetails)
-        const response = await api.post(`/api/barangay/disbursements/${this.currentLiquidation.id}/or-details`, payload, config)
+        const response = await api.post(`/api/barangay/continuing-disbursements/${this.currentLiquidation.id}/or-details`, payload, config)
 
         if (response.data?.status) {
           // Update the local disbursement
@@ -1439,7 +1449,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       try {
         const config = getAuthConfig()
 
-        const response = await api.delete(`/api/barangay/disbursements/${disbursementId}/or-details/${orDetailId}`, config)
+        const response = await api.delete(`/api/barangay/continuing-disbursements/${disbursementId}/or-details/${orDetailId}`, config)
 
         if (response.data.status) {
           // Remove the OR detail from the local array

@@ -193,7 +193,7 @@
                   <div class="void-request-count">
                     {{ voidRequestCount }} VOID REQUEST{{ voidRequestCount > 1 ? 'S' : '' }}
                   </div>
-                  <div class="void-request-subtitle">CLICK TO OPEN VOID REQUEST</div>
+
                 </div>
                 <q-btn
                   flat
@@ -230,7 +230,7 @@
                   <div class="edit-request-count">
                     {{ editRequestCount }} EDIT REQUEST{{ editRequestCount > 1 ? 'S' : '' }}
                   </div>
-                  <div class="edit-request-subtitle">CLICK TO OPEN EDIT REQUEST</div>
+
                 </div>
                 <q-btn
                   flat
@@ -408,7 +408,7 @@ const voidRequestCount = computed(() => {
   const voidCount = disbursementStore.disbursements.filter((d) => {
     const hasVoidRequestedStatus = d.status === 'Void Requested'
     const matchesBarangay = d.barangay_name === authStore.user.barangay_name
-    
+
     // Debug each disbursement
     if (hasVoidRequestedStatus) {
       console.log(`Debug - Found void requested disbursement:`, {
@@ -419,7 +419,7 @@ const voidRequestCount = computed(() => {
         matches: matchesBarangay
       })
     }
-    
+
     return hasVoidRequestedStatus && matchesBarangay
   }).length
 
@@ -471,7 +471,7 @@ const editRequestCount = computed(() => {
   const editCount = disbursementStore.disbursements.filter((d) => {
     const hasEditRequestedStatus = d.status === 'Edit Requested'
     const matchesBarangay = d.barangay_name === authStore.user.barangay_name
-    
+
     // Debug each disbursement
     if (hasEditRequestedStatus) {
       console.log(`Debug - Found edit requested disbursement:`, {
@@ -482,7 +482,7 @@ const editRequestCount = computed(() => {
         matches: matchesBarangay
       })
     }
-    
+
     return hasEditRequestedStatus && matchesBarangay
   }).length
 
@@ -585,11 +585,11 @@ const refreshVoidRequestCount = async () => {
       position: 'top',
       timeout: 1000,
     })
-    
+
     // Use the existing fetchDisbursements method
     await disbursementStore.fetchDisbursements()
     console.log('Refresh completed. Check console for debug info.')
-    
+
     // Force reactivity update
     await nextTick()
   }
@@ -606,11 +606,11 @@ const refreshEditRequestCount = async () => {
       position: 'top',
       timeout: 1000,
     })
-    
+
     // Use the existing fetchDisbursements method
     await disbursementStore.fetchDisbursements()
     console.log('Refresh completed. Check console for debug info.')
-    
+
     // Force reactivity update
     await nextTick()
   }
@@ -642,6 +642,9 @@ const handleVoidRequestClick = async () => {
   // Show loading notification
   $q.notify({
     type: 'info',
+       color: 'lightgreen',
+    textColor: 'white',
+    bgcolor: 'lightgreen',
     message: 'Opening void request details...',
     icon: 'pending_actions',
     position: 'top',
@@ -691,12 +694,12 @@ const handleVoidRequestClick = async () => {
   } else {
     // Show warning if no void requests found for this barangay
     const allVoidRequests = disbursementStore.disbursements.filter(d => d.status === 'Void Requested')
-    const voidRequestsForThisBarangay = disbursementStore.disbursements.filter(d => 
+    const voidRequestsForThisBarangay = disbursementStore.disbursements.filter(d =>
       d.status === 'Void Requested' && d.barangay_name === authStore.user.barangay_name
     )
     console.log('Debug - All void requests found:', allVoidRequests)
     console.log('Debug - Void requests for this barangay:', voidRequestsForThisBarangay)
-    
+
     $q.notify({
       type: 'warning',
       message: `No void requests found for your barangay (${authStore.user.barangay_name}). Found ${allVoidRequests.length} void requests for other barangays.`,
@@ -733,6 +736,9 @@ const handleEditRequestClick = async () => {
   // Show loading notification
   $q.notify({
     type: 'info',
+     color: 'lightgreen',
+    textColor: 'white',
+    bgcolor: 'lightgreen',
     message: 'Opening edit request details...',
     icon: 'edit_note',
     position: 'top',
@@ -782,12 +788,12 @@ const handleEditRequestClick = async () => {
   } else {
     // Show warning if no edit requests found for this barangay
     const allEditRequests = disbursementStore.disbursements.filter(d => d.status === 'Edit Requested')
-    const editRequestsForThisBarangay = disbursementStore.disbursements.filter(d => 
+    const editRequestsForThisBarangay = disbursementStore.disbursements.filter(d =>
       d.status === 'Edit Requested' && d.barangay_name === authStore.user.barangay_name
     )
     console.log('Debug - All edit requests found:', allEditRequests)
     console.log('Debug - Edit requests for this barangay:', editRequestsForThisBarangay)
-    
+
     $q.notify({
       type: 'warning',
       message: `No edit requests found for your barangay (${authStore.user.barangay_name}). Found ${allEditRequests.length} edit requests for other barangays.`,
@@ -1056,7 +1062,7 @@ watch(
   left: 0;
   width: 280px;
   height: auto;
-  max-height: 600px;
+  max-height: 700px;
   /* background:linear-gradient(30deg,#187C19,#E0FFE7,#187C19); */
   background: linear-gradient(30deg, #187c19 0%, #e0ffe7 50%, #187c19 100%);
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
@@ -1327,7 +1333,7 @@ watch(
   position: absolute;
   top: -8px;
   right: 8px;
-  background-color: #ff5722;
+  background-color: purple;
   color: white;
   border-radius: 50%;
   width: 20px;
@@ -1373,12 +1379,13 @@ watch(
 }
 
 .void-request-button {
-  width: 100%;
+   width: 120%;
+   min-height: 40px;
   background: linear-gradient(135deg, #ff9800, #ff5722) !important;
   color: white !important;
   border-radius: 12px;
   padding: 0;
-  min-height: 80px;
+
   text-transform: none;
   font-weight: 600;
   box-shadow: none;
@@ -1488,12 +1495,13 @@ watch(
 }
 
 .edit-request-button {
-  width: 100%;
-  background: linear-gradient(135deg, #ff5722, #d84315) !important;
+  width: 120%;
+   min-height: 40px;
+  background: linear-gradient(135deg, purple, purple) !important;
   color: white !important;
   border-radius: 12px;
   padding: 0;
-  min-height: 80px;
+
   text-transform: none;
   font-weight: 600;
   box-shadow: none;

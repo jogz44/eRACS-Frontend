@@ -10,14 +10,16 @@ class ContApproAccounts extends Model
     protected $fillable = [
         'contAppropriation_id',
         'tranAppropriation_id',
-        'remainingBalance',
+        'original_amount',
+        'current_amount',
         'continuingYear',
         'status',
         'user_id'
     ];
 
     protected $casts = [
-        'remainingBalance' => 'decimal:2'
+        'original_amount' => 'decimal:2',
+        'current_amount' => 'decimal:2'
     ];
 
     public function continuingAppropriation()

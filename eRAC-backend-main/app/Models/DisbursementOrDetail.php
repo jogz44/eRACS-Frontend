@@ -16,6 +16,7 @@ class DisbursementOrDetail extends Model
         'or_date',
         'or_number',
         'or_amount',
+        'ref_or_amount',
         'or_photo',
         'remarks',
     ];

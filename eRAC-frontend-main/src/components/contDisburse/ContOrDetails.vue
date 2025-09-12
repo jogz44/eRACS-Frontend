@@ -139,7 +139,7 @@
                       <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                         <q-date
                           v-model="orDetail.orDate"
-                          mask="YYYY-MM-DD"
+                          mask="DD/MM/YYYY"
                           @update:model-value="calculateTotals"
                         />
                       </q-popup-proxy>
