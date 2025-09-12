@@ -299,8 +299,13 @@
   <q-dialog v-model="showReimbursementDialog" persistent>
     <q-card style="min-width: 1000px">
       <q-card-section class="q-pb-none">
-        <div class="text-h6">
-          Reimbursement for Disbursement #{{ store.currentLiquidation.dvNumber }}
+        <div class="q-mb-md text-left">
+          <div class="text-h5 text-weight-bold">
+            Reimbursement Transaction
+          </div>
+          <div class="text-subtitle2 text-grey-7">
+            Reference: Disbursement No. {{ store.currentLiquidation.dvNumber }}
+          </div>
         </div>
       </q-card-section>
 
@@ -320,20 +325,19 @@
 
           <!-- DV Number Field -->
           <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">DV Number (Auto-generated):</q-item-label>
+            <q-item-label class="q-mb-xs">Reimburse DV Number:</q-item-label>
             <q-input
               filled
               outlined
               dense
               v-model="reimbursementDvNumber"
               :disable="true"
-              hint="DV number will be automatically generated"
             />
           </div>
 
           <!-- DV Amount Field -->
           <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">REIMB Amount:</q-item-label>
+            <q-item-label class="q-mb-xs">Reimburse Amount:</q-item-label>
             <q-input
               filled
               outlined
@@ -403,7 +407,7 @@
           :rows="selectedReimbursementExpenseAccounts"
           :columns="selectedExpenseAccountColumns"
           row-key="id"
-          :pagination="{ rowsPerPage: 5 }"
+          :pagination="{ rowsPerPage: 0 }"
           flat
           bordered
         >
@@ -437,7 +441,7 @@
             v-if="totalSelectedExpenseAmount > reimbursementAmount"
             class="text-negative text-caption q-mt-xs"
           >
-            Total exceeds reimbursement amount by ₱{{
+            Total exceeds reimburse amount by ₱{{
               formatCurrency(totalSelectedExpenseAmount - reimbursementAmount)
             }}
           </div>
@@ -458,7 +462,7 @@
           :rows="selectedReimbursementOrs"
           :columns="selectedOrColumns"
           row-key="id"
-          :pagination="{ rowsPerPage: 5 }"
+          :pagination="{ rowsPerPage: 0 }"
           flat
           bordered
         >

@@ -124,6 +124,13 @@ class DisbursementSeeder extends Seeder
 
     private function seedExpenseDetails($faker, int $disbursementId, $appropriations, int $totalAmount, Carbon $baseDate): void
     {
+        $particularsList = ['Office Supplies', 'Travel Expense', 'Fuel', 'Repairs', 'Meals and Snacks',
+         'Training Fee', 'Honorarium', 'Internet Bill', 'Telephone Bill', 'Electricity Bill', 'Water Bill', 
+         'Stationery', 'Printing Cost', 'Postage', 'Bank Charges', 'Software License', 'Consultancy Fee', 
+         'Legal Services', 'Audit Fee', 'Seminar Expense', 'Insurance Premium', 'Medical Supplies', 'Uniforms',
+          'Cleaning Materials', 'Construction Materials', 'Transportation Cost', 'Miscellaneous', 'Contingency Fund',
+           'Rental Fee', 'Maintenance Cost'];
+
         $remaining = $totalAmount;
         $num = $faker->numberBetween(1, 4);
         $used = [];
@@ -142,7 +149,7 @@ class DisbursementSeeder extends Seeder
                 'disbursement_id'  => $disbursementId,
                 'appropriation_id' => $appr->id,
                 'amount'           => $amount,
-                'particulars'      => $faker->sentence(3),
+                'particulars' => $faker->randomElement($particularsList),
                 'created_at'       => $baseDate,
                 'updated_at'       => $baseDate,
             ]);
