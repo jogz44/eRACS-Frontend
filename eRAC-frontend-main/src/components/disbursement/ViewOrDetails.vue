@@ -1,82 +1,11 @@
 <template>
-  <q-dialog v-model="store.dialogs.viewOrDetails" persistent>
+  <q-dialog v-model="store.dialogs.viewOrDetails">
     <q-card style="min-width: 1100px">
-      <q-card-section>
-        <div class="text-h6">
-          View OR Details for Disbursement #{{ store.currentLiquidation.dvNumber }}
-        </div>
-        <div class="text-caption text-grey-6 q-mt-sm">
-          View liquidation details and official receipt information
-        </div>
-      </q-card-section>
-
-      <q-card-section>
-        <div class="row q-col-gutter-md">
-          <!-- Date Field -->
-          <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">Date:</q-item-label>
-            <q-input filled outlined dense :model-value="store.currentLiquidation.date" :readonly="true"
-              :disable="true" />
-          </div>
-
-          <!-- DV Number Field -->
-          <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">DV Number:</q-item-label>
-            <q-input filled outlined dense :model-value="store.currentLiquidation.dvNumber" :disable="true" />
-          </div>
-
-          <!-- DV Amount Field -->
-          <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">DV Amount:</q-item-label>
-            <q-input filled outlined dense :model-value="formatCurrency(store.currentLiquidation.dvAmount || 0)"
-              prefix="₱" :disable="true" />
-          </div>
-
-          <!-- Actual Expense Field -->
-          <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">Actual Expense:</q-item-label>
-            <q-input filled outlined dense :model-value="formatCurrency(totalActualExpense)" prefix="₱"
-              :disable="true" />
-          </div>
-
-          <!-- Amount to Return Field -->
-          <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">Amount to Return to Appropriation:</q-item-label>
-            <q-input filled outlined dense :model-value="formatCurrency(totalReturnAmount)" prefix="₱"
-              :disable="true" />
-          </div>
-
-          <!-- Remarks Field -->
-          <div class="col-md-4 col-sm-12">
-            <q-item-label class="q-mb-xs">Remarks:</q-item-label>
-            <q-input filled outlined dense :model-value="store.currentLiquidation.remarks || ''" :disable="true" />
-          </div>
-        </div>
-      </q-card-section>
-
-      <!-- Expense Accounts Section -->
-      <q-card-section v-if="store.currentLiquidation?.expenses?.length > 0">
-        <div class="text-subtitle1 q-mb-md">
-          <strong>Expense Accounts:</strong>
-        </div>
-
-        <!-- Expense Accounts Table -->
-        <q-table :rows="store.currentLiquidation.expenses" :columns="expenseAccountColumns" row-key="id"
-          :pagination="{ rowsPerPage: 5 }" flat bordered>
-          <template v-slot:body-cell-amount="props">
-            <q-td :props="props">
-              {{ formatCurrency(props.value) }}
-            </q-td>
-          </template>
-        </q-table>
-      </q-card-section>
-
-      <!-- Reimbursement Details Section -->
-      <div>
+      <!-- Debug data trigger -->
+      <div v-show="false">{{ debugData }}</div>
+      <div class="disbursement-tran">
         <q-card-section>
-          <div class="text-h6">
-            View Reimbursement Details for Disbursement #{{ store.currentLiquidation.dvNumber }}
-          </div>
+          <div class="text-h6">Disbursement #{{ store.currentLiquidation.dvNumber }}</div>
           <div class="text-caption text-grey-6 q-mt-sm">
             View liquidation details and official receipt information
           </div>
@@ -85,43 +14,61 @@
         <q-card-section>
           <div class="row q-col-gutter-md">
             <!-- Date Field -->
-            <div class="col-md-4 col-sm-6">
-              <q-item-label class="q-mb-xs">Date:</q-item-label>
-              <q-input filled outlined dense :model-value="store.currentLiquidation.date" :readonly="true"
-                :disable="true" />
+            <div class="col-md-4 col-sm-6 q-mb-md">
+              <div class="text-caption text-grey">Date</div>
+              <div class="text-body1 text-weight-medium">
+                {{ store.currentLiquidation.date }}
+              </div>
             </div>
 
             <!-- DV Number Field -->
-            <div class="col-md-4 col-sm-6">
-              <q-item-label class="q-mb-xs">DV Number:</q-item-label>
-              <q-input filled outlined dense :model-value="store.currentLiquidation.dvNumber" :disable="true" />
+            <div class="col-md-4 col-sm-6 q-mb-md">
+              <div class="text-caption text-grey">DV Number</div>
+              <div class="row items-center">
+                <div class="text-body1 text-weight-medium">
+                  {{ store.currentLiquidation.dvNumber }}
+                </div>
+                <q-btn
+                  flat
+                  dense
+                  round
+                  icon="content_copy"
+                  class="q-ml-sm"
+                  @click="copyToClipboard(store.currentLiquidation.dvNumber)"
+                />
+              </div>
             </div>
 
             <!-- DV Amount Field -->
-            <div class="col-md-4 col-sm-6">
-              <q-item-label class="q-mb-xs">DV Amount:</q-item-label>
-              <q-input filled outlined dense :model-value="formatCurrency(store.currentLiquidation.dvAmount || 0)"
-                prefix="₱" :disable="true" />
+            <div class="col-md-4 col-sm-6 q-mb-md">
+              <div class="text-caption text-grey">DV Amount</div>
+              <div class="text-body1 text-weight-medium">
+                ₱ {{ formatCurrency(store.currentLiquidation.dvAmount || 0) }}
+              </div>
             </div>
 
             <!-- Actual Expense Field -->
-            <div class="col-md-4 col-sm-6">
-              <q-item-label class="q-mb-xs">Actual Expense:</q-item-label>
-              <q-input filled outlined dense :model-value="formatCurrency(totalActualExpense)" prefix="₱"
-                :disable="true" />
+            <div class="col-md-4 col-sm-6 q-mb-md">
+              <div class="text-caption text-grey">Actual Expense</div>
+              <div class="text-body1 text-weight-medium">
+                ₱ {{ formatCurrency(totalActualExpense) }}
+              </div>
             </div>
 
             <!-- Amount to Return Field -->
-            <div class="col-md-4 col-sm-6">
-              <q-item-label class="q-mb-xs">Amount to Return to Appropriation:</q-item-label>
-              <q-input filled outlined dense :model-value="formatCurrency(totalReturnAmount)" prefix="₱"
-                :disable="true" />
+            <div class="col-md-4 col-sm-6 q-mb-md">
+              <div class="text-caption text-grey">Amount to Return to Appropriation</div>
+              <div class="text-body1 text-weight-medium">
+                ₱ {{ formatCurrency(totalReturnAmount) }}
+              </div>
             </div>
 
             <!-- Remarks Field -->
-            <div class="col-md-4 col-sm-12">
-              <q-item-label class="q-mb-xs">Remarks:</q-item-label>
-              <q-input filled outlined dense :model-value="store.currentLiquidation.remarks || ''" :disable="true" />
+            <div class="col-md-4 col-sm-12 q-mb-md">
+              <div class="text-caption text-grey">Remarks</div>
+              <div class="text-body1 text-weight-medium">
+                {{ store.currentLiquidation.remarks || '—' }}
+              </div>
             </div>
           </div>
         </q-card-section>
@@ -133,8 +80,123 @@
           </div>
 
           <!-- Expense Accounts Table -->
-          <q-table :rows="store.currentLiquidation.expenses" :columns="expenseAccountColumns" row-key="id"
-            :pagination="{ rowsPerPage: 5 }" flat bordered>
+          <q-table
+            :rows="store.currentLiquidation.expenses"
+            :columns="expenseAccountColumns"
+            row-key="id"
+            :pagination="{ rowsPerPage: 5 }"
+            flat
+            bordered
+          >
+            <template v-slot:body-cell-account="props">
+              <q-td :props="props">
+                <div class="expense-account-hierarchy">
+                  {{ props.row.accountName || props.row.account_name || `${props.row.account || ''}${props.row.expenseType ? ` > ${props.row.expenseType}` : ''}${props.row.expenseItem ? ` > ${props.row.expenseItem}` : ''}${props.row.expenseSubItem ? ` > ${props.row.expenseSubItem}` : ''}` }}
+                </div>
+              </q-td>
+            </template>
+            <template v-slot:body-cell-amount="props">
+              <q-td :props="props">
+                {{ formatCurrency(props.value) }}
+              </q-td>
+            </template>
+          </q-table>
+        </q-card-section>
+      </div>
+
+      <!-- Reimbursement Details Section -->
+      <div v-if="store.currentLiquidation?.reimbursement" class="reimbursement-tran">
+        <q-card-section>
+          <div class="text-h6">Reimbursement Transaction Details</div>
+          <div class="text-caption text-grey-6 q-mt-sm">
+            Reference: Disbursement No. {{ store.currentLiquidation.reimbursement.ref_dv_number }}
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <div class="row q-col-gutter-md">
+            <!-- Date Field -->
+            <div class="col-md-4 col-sm-6 q-mb-md">
+              <div class="text-caption text-grey">Date</div>
+              <div class="text-body1 text-weight-medium">
+                {{ store.currentLiquidation.reimbursement.date }}
+              </div>
+            </div>
+
+            <!-- DV Number Field -->
+            <div class="col-md-4 col-sm-6 q-mb-md">
+              <div class="text-caption text-grey">DV Number</div>
+              <div class="row items-center">
+                <div class="text-body1 text-weight-medium">
+                  {{ store.currentLiquidation.reimbursement.dv_number }}
+                </div>
+                <q-btn
+                  flat
+                  dense
+                  round
+                  icon="content_copy"
+                  class="q-ml-sm"
+                  @click="copyToClipboard(store.currentLiquidation.reimbursement.dv_number)"
+                />
+              </div>
+            </div>
+
+            <!-- DV Amount Field -->
+            <div class="col-md-4 col-sm-6 q-mb-md">
+              <div class="text-caption text-grey">DV Amount</div>
+              <div class="text-body1 text-weight-medium">
+                ₱ {{ formatCurrency(store.currentLiquidation.reimbursement.dv_amount || 0) }}
+              </div>
+            </div>
+
+            <!-- Bank Field -->
+            <div class="col-md-4 col-sm-6 q-mb-md">
+              <div class="text-caption text-grey">Bank</div>
+              <div class="text-body1 text-weight-medium">
+                {{ store.currentLiquidation.reimbursement.bank_name }}
+              </div>
+            </div>
+
+            <!-- Cheque Number Field -->
+            <div class="col-md-4 col-sm-6 q-mb-md">
+              <div class="text-caption text-grey">Cheque Number</div>
+              <div class="text-body1 text-weight-medium">
+                {{ store.currentLiquidation.reimbursement.cheque_number }}
+              </div>
+            </div>
+
+            <!-- Status Field -->
+            <div class="col-md-4 col-sm-12 q-mb-md">
+              <div class="text-caption text-grey">Status</div>
+              <div class="text-body1 text-weight-medium">
+                {{ store.currentLiquidation.reimbursement.status }}
+              </div>
+            </div>
+          </div>
+        </q-card-section>
+
+        <!-- Reimbursement Expense Accounts Section -->
+        <q-card-section v-if="store.currentLiquidation?.reimbursement?.expenses?.length > 0">
+          <div class="text-subtitle1 q-mb-md">
+            <strong>Reimbursement Expense Accounts:</strong>
+          </div>
+
+          <!-- Reimbursement Expense Accounts Table -->
+          <q-table
+            :rows="store.currentLiquidation.reimbursement.expenses"
+            :columns="expenseAccountColumns"
+            row-key="id"
+            :pagination="{ rowsPerPage: 5 }"
+            flat
+            bordered
+          >
+            <template v-slot:body-cell-account="props">
+              <q-td :props="props">
+                <div class="expense-account-hierarchy">
+                  {{ props.row.accountName || props.row.account_name || `${props.row.account || ''}${props.row.expenseType ? ` > ${props.row.expenseType}` : ''}${props.row.expenseItem ? ` > ${props.row.expenseItem}` : ''}${props.row.expenseSubItem ? ` > ${props.row.expenseSubItem}` : ''}` }}
+                </div>
+              </q-td>
+            </template>
             <template v-slot:body-cell-amount="props">
               <q-td :props="props">
                 {{ formatCurrency(props.value) }}
@@ -154,16 +216,35 @@
             </span>
           </div>
           <q-space />
-          <q-btn flat dense icon="refresh" color="primary" @click="reloadOrDetails" title="Reload OR Details" />
+          <q-btn
+            flat
+            dense
+            icon="refresh"
+            color="primary"
+            @click="reloadOrDetails"
+            title="Reload OR Details"
+          />
         </div>
 
         <!-- OR Details Table -->
-        <q-table :rows="store.currentLiquidation?.orDetails || []" :columns="orDetailsColumns" row-key="id"
-          :pagination="{ rowsPerPage: 10 }" flat bordered :loading="loadingOrDetails">
+        <q-table
+          :rows="store.currentLiquidation?.orDetails || []"
+          :columns="orDetailsColumns"
+          row-key="id"
+          :pagination="{ rowsPerPage: 10 }"
+          flat
+          bordered
+          :loading="loadingOrDetails"
+        >
           <template v-slot:body-cell-orPhotoUrl="props">
             <q-td :props="props">
-              <q-img v-if="props.value" :src="props.value" style="max-width: 100px; max-height: 100px"
-                class="cursor-pointer" @click="viewImage(props.value)" />
+              <q-img
+                v-if="props.value"
+                :src="props.value"
+                style="max-width: 100px; max-height: 100px"
+                class="cursor-pointer"
+                @click="viewImage(props.value)"
+              />
               <div v-else class="text-grey">No image</div>
             </q-td>
           </template>
@@ -179,51 +260,59 @@
 
       <q-card-actions align="right" class="custom-actions">
         <!-- Void Request Action Buttons (only for approvers) -->
-        <div v-if="isApprover && store.currentLiquidation?.status === 'Void Requested'"
-          class="q-mr-auto void-action-buttons">
-          <div class="void-request-indicator">
-            <q-icon name="pending_actions" color="orange" size="20px" class="q-mr-sm" />
-            <span class="void-request-text">Void Request Pending</span>
-          </div>
-          <q-btn unelevated label="Approve Void" color="green" icon="check_circle" @click="handleApproveVoid"
-            :loading="voidActionLoading" class="void-approve-btn" />
-          <q-btn unelevated label="Reject Void" color="red" icon="cancel" @click="handleRejectVoid"
-            :loading="voidActionLoading" class="void-reject-btn" />
+        <div
+          v-if="isApprover && store.currentLiquidation?.status === 'Void Requested'"
+          class="q-mr-auto void-action-buttons"
+        >
+          <q-btn
+            unelevated
+            label="Approve Void"
+            color="green"
+            icon="check_circle"
+            @click="handleApproveVoid"
+            :loading="voidActionLoading"
+            class="void-approve-btn"
+          />
+          <q-btn
+            unelevated
+            label="Reject Void"
+            color="red"
+            icon="cancel"
+            @click="handleRejectVoid"
+            :loading="voidActionLoading"
+            class="void-reject-btn"
+          />
         </div>
-<div
-  v-if="isApprover && store.currentLiquidation?.status === 'Edit Requested'"
-  class="q-mr-auto edit-action-buttons"
->
-  <div class="edit-request-indicator">
-    <q-icon name="edit_note" color="deep-orange" size="20px" class="q-mr-sm" />
-    <span class="edit-request-text">Edit Request Pending</span>
-  </div>
-  <q-btn
-    unelevated
-    label="Approve Edit"
-    color="green"
-    icon="check_circle"
-    @click="handleApproveEdit"
-    :loading="editActionLoading"
-    class="edit-approve-btn"
-  />
-  <q-btn
-    unelevated
-    label="Reject Edit"
-    color="red"
-    icon="cancel"
-    @click="handleRejectEdit"
-    :loading="editActionLoading"
-    class="edit-reject-btn"
-  />
-</div>
+        <div
+          v-if="isApprover && store.currentLiquidation?.status === 'Edit Requested'"
+          class="q-mr-auto edit-action-buttons"
+        >
+          <q-btn
+            unelevated
+            label="Approve Edit"
+            color="green"
+            icon="check_circle"
+            @click="handleApproveEdit"
+            :loading="editActionLoading"
+            class="edit-approve-btn"
+          />
+          <q-btn
+            unelevated
+            label="Reject Edit"
+            color="red"
+            icon="cancel"
+            @click="handleRejectEdit"
+            :loading="editActionLoading"
+            class="edit-reject-btn"
+          />
+        </div>
 
-<q-btn
-  flat
-  label="Close"
-  class="modal-cancel-btn"
-  @click="store.closeDialog('viewOrDetails')"
-/>
+        <q-btn
+          flat
+          label="Close"
+          class="modal-cancel-btn"
+          @click="store.closeDialog('viewOrDetails')"
+        />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -242,36 +331,40 @@ const loadingOrDetails = ref(false)
 const voidActionLoading = ref(false)
 const editActionLoading = ref(false)
 
-// Table columns for Expense Accounts - matching the image structure
+// Table columns for Expense Accounts - using single account column to avoid overlapping
 const expenseAccountColumns = [
   {
     name: 'id',
     label: 'ID',
     field: 'id',
     align: 'left',
-    sortable: true
+    sortable: true,
+    style: 'width: 60px;',
   },
   {
-    name: 'accountName',
-    label: 'Account Name',
+    name: 'account',
+    label: 'Expense Account',
     field: 'accountName',
     align: 'left',
-    sortable: true
+    sortable: true,
+    style: 'min-width: 400px;',
   },
   {
     name: 'amount',
     label: 'Amount',
     field: 'amount',
     align: 'right',
-    sortable: true
+    sortable: true,
+    style: 'width: 120px;',
   },
   {
     name: 'particular',
     label: 'Particular',
     field: 'particular',
     align: 'left',
-    sortable: true
-  }
+    sortable: true,
+    style: 'min-width: 200px;',
+  },
 ]
 
 // Table columns for OR Details - matching OrDetailsDialog structure
@@ -281,14 +374,14 @@ const orDetailsColumns = [
     label: 'OR Date',
     field: 'orDate',
     align: 'left',
-    sortable: true
+    sortable: true,
   },
   {
     name: 'orNumber',
     label: 'OR Number',
     field: 'orNumber',
     align: 'left',
-    sortable: true
+    sortable: true,
   },
   {
     name: 'orAmount',
@@ -296,43 +389,115 @@ const orDetailsColumns = [
     field: 'orAmount',
     align: 'right',
     sortable: true,
-    format: (val) => formatCurrency(val)
+    format: (val) => formatCurrency(val),
   },
   {
     name: 'orPhotoUrl',
     label: 'OR Image',
     field: 'orPhotoUrl',
     align: 'center',
-    sortable: false
-  }
+    sortable: false,
+  },
 ]
 
+const copyToClipboard = (text) => {
+  navigator.clipboard.writeText(text).then(() => {
+    $q.notify({
+      type: 'positive',
+      message: 'DV Number copied to clipboard',
+      icon: 'content_copy',
+      position: 'top',
+      timeout: 3000,
+    })
+  })
+}
 
 const totalActualExpense = computed(() => {
-  if (!store.currentLiquidation?.orDetails) return 0
-  return store.currentLiquidation.orDetails
-    .reduce((sum, or) => sum + (parseFloat(or.orAmount) || 0), 0)
+  console.log('=== Actual Expense Calculation ===');
+  console.log('Current liquidation data:', store.currentLiquidation);
+  console.log('Has reimbursement:', !!store.currentLiquidation?.reimbursement);
+  
+  // If this disbursement has a reimbursement, we need to show the original liquidation values
+  // The actual expense should be the same as the DV amount (fully liquidated)
+  if (store.currentLiquidation?.reimbursement) {
+    console.log('Disbursement has reimbursement - using DV amount as actual expense');
+    const dvAmount = parseFloat(store.currentLiquidation.dvAmount) || 0;
+    console.log('Using DV amount as actual expense:', dvAmount);
+    return dvAmount;
+  }
+  
+  // For disbursements without reimbursement, calculate from OR details
+  if (!store.currentLiquidation?.orDetails || store.currentLiquidation.orDetails.length === 0) {
+    console.log('No OR details found');
+    return 0;
+  }
+  
+  const total = store.currentLiquidation.orDetails.reduce(
+    (sum, or) => sum + (parseFloat(or.orAmount) || 0),
+    0,
+  )
+  
+  console.log('OR Details:', store.currentLiquidation.orDetails);
+  console.log('OR Details count:', store.currentLiquidation.orDetails.length);
+  console.log('Calculated total actual expense from OR details:', total);
+  console.log('Main disbursement DV amount:', store.currentLiquidation.dvAmount);
+  
+  return total
 })
 
 const totalReturnAmount = computed(() => {
+  // Always use the DV amount from the main disbursement, not from reimbursement
   if (!store.currentLiquidation?.dvAmount) return 0
   const returnAmount = store.currentLiquidation.dvAmount - totalActualExpense.value
   // Prevent negative return amounts - if over-liquidation occurs, show 0
-  return Math.max(0, returnAmount)
+  const finalReturnAmount = Math.max(0, returnAmount)
+  
+  console.log('=== Return Amount Calculation ===');
+  console.log('DV Amount:', store.currentLiquidation.dvAmount);
+  console.log('Actual Expense:', totalActualExpense.value);
+  console.log('Calculated return amount:', finalReturnAmount);
+  
+  return finalReturnAmount
 })
 
 const orDetailsCount = computed(() => {
   return store.currentLiquidation?.orDetails?.length || 0
 })
 
+// Debug computed property to log data structure
+const debugData = computed(() => {
+  console.log('=== ViewOrDetails Debug Data ===')
+  console.log('Current liquidation data:', store.currentLiquidation)
+  console.log('Main disbursement ID:', store.currentLiquidation?.id)
+  console.log('Main disbursement DV Number:', store.currentLiquidation?.dvNumber)
+  console.log('Main disbursement status:', store.currentLiquidation?.status)
+  console.log('Main expenses count:', store.currentLiquidation?.expenses?.length || 0)
+  console.log('Main expenses:', store.currentLiquidation?.expenses)
+  
+  if (store.currentLiquidation?.reimbursement) {
+    console.log('=== Reimbursement Data ===')
+    console.log('Reimbursement ID:', store.currentLiquidation.reimbursement.id)
+    console.log('Reimbursement DV Number:', store.currentLiquidation.reimbursement.dv_number)
+    console.log('Reimbursement reference DV:', store.currentLiquidation.reimbursement.ref_dv_number)
+    console.log('Reimbursement status:', store.currentLiquidation.reimbursement.status)
+    console.log('Reimbursement expenses count:', store.currentLiquidation.reimbursement.expenses?.length || 0)
+    console.log('Reimbursement expenses:', store.currentLiquidation.reimbursement.expenses)
+  } else {
+    console.log('No reimbursement data found')
+  }
+  
+  return store.currentLiquidation
+})
 
 // Check if user is an approver (Captain/SK Chairperson)
 const isApprover = computed(() => {
   const userPosition = authStore.user?.position_name?.toLowerCase().trim() || ''
-  return userPosition.includes('captain') ||
+  return (
+    userPosition.includes('captain') ||
     userPosition.includes('chairperson') ||
     userPosition.includes('barangay captain') ||
     userPosition.includes('sk chairperson')
+  )
 })
 
 // Method to manually reload OR details if needed
@@ -347,8 +512,8 @@ const viewImage = (imageUrl) => {
     component: 'q-img',
     componentProps: {
       src: imageUrl,
-      style: 'max-width: 80vw; max-height: 80vh'
-    }
+      style: 'max-width: 80vw; max-height: 80vh',
+    },
   })
 }
 
@@ -357,6 +522,7 @@ const formatCurrency = (value) => {
   const num = Number(String(value).replace(/[,\s]/g, '')) || 0
   return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
+
 
 // Handle void approval
 const handleApproveVoid = async () => {
@@ -433,7 +599,7 @@ const handleRejectVoid = () => {
 // Handle edit approval
 const handleApproveEdit = async () => {
   if (!store.currentLiquidation?.id) return
-  
+
   editActionLoading.value = true
   try {
     await store.approveEditRequest(store.currentLiquidation.id)
@@ -463,7 +629,7 @@ const handleApproveEdit = async () => {
 // Handle edit rejection
 const handleRejectEdit = () => {
   if (!store.currentLiquidation?.id) return
-  
+
   $q.dialog({
     title: 'Reject Edit Request',
     message: 'Please provide rejection remarks:',
@@ -529,9 +695,9 @@ const handleRejectEdit = () => {
   gap: 12px;
   align-items: center;
   padding: 8px 16px;
-  background-color: #f8f9fa;
+  background-color: #fff3e0;
   border-radius: 8px;
-  border: 1px solid #e9ecef;
+  border: 1px solid #ffcc02;
   margin-right: 16px;
 }
 
@@ -648,6 +814,30 @@ const handleRejectEdit = () => {
   font-weight: 600;
 }
 
+/* Expense account hierarchy styling */
+.expense-account-hierarchy {
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: break-word;
+  white-space: normal;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+/* Table styling to prevent overlapping */
+.q-table .q-td {
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  padding: 8px 12px !important;
+}
+
+.q-table .q-th {
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  padding: 8px 12px !important;
+}
+
 /* Responsive design for mobile */
 @media (max-width: 768px) {
   .q-card {
@@ -656,6 +846,11 @@ const handleRejectEdit = () => {
 
   .q-table {
     font-size: 12px;
+  }
+
+  .expense-account-hierarchy {
+    font-size: 11px;
+    max-width: 250px;
   }
 
   .void-action-buttons {

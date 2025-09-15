@@ -1070,7 +1070,7 @@ const openSACBModal = (type) => {
 
   // Log report generation activity
   const reportType = getReportTypeLabel(type)
-  const dateRange = type === 'current-sacb' 
+  const dateRange = type === 'current-sacb'
     ? `${currentSacbDateRange.value.from} to ${currentSacbDateRange.value.to}`
     : type === 'continuing-sacb'
       ? `${continuingSacbDateRange.value.from} to ${continuingSacbDateRange.value.to}`
@@ -1128,7 +1128,7 @@ const openRACModal = (type) => {
   // Log report generation activity
   const reportType = getReportTypeLabel(type)
   const expenseCategory = reportStore.expenseRacSelected?.name || 'Unknown'
-  const dateRange = type === 'current-rac' 
+  const dateRange = type === 'current-rac'
     ? `${CurrentRacDateRange.value.from} to ${CurrentRacDateRange.value.to}`
     : type === 'continuing-rac'
       ? `${continuingRacDateRange.value.from} to ${continuingRacDateRange.value.to}`

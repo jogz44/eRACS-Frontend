@@ -21,7 +21,7 @@ class LibExpenseClassAndTypeSeeder extends Seeder
             return;
         }
 
-        $years = [2023, 2024, 2025]; // pre-generate fiscal years
+        $years = [2023, 2024]; // pre-generate fiscal years
 
         $classes = [
             ['name' => 'SANGUNIANG KABATAAN (SK) - 10%', 'order' => 0],
@@ -107,7 +107,6 @@ class LibExpenseClassAndTypeSeeder extends Seeder
             ],
         ];
 
-        // Define items per Class > Type similar to typesMap
         $itemsMap = [
             'SANGUNIANG KABATAAN (SK) - 10%' => [
                 'MOOE' => [

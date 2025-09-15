@@ -1396,6 +1396,8 @@ const copyClassesToYear = async () => {
       throw new Error('Please select a target year and at least one class')
     }
 
+    await accountsStore.copyClassesToYear(selectedYear.value,copyTargetYear.value,selectedClassesToCopy.value);
+
     $q.notify({
       type: 'positive',
       message: 'Successfully Copied',

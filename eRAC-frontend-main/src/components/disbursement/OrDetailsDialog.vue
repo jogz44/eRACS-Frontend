@@ -412,12 +412,14 @@
               <div class="flex justify-end">
                 <q-input
                   dense
-                  v-model="props.row.amount"
+                  :model-value="formatInputValue(props.row.amount)"
+                  @update:model-value="(val) => handleExpenseAmountInput(props.row, val)"
+                  @blur="(e) => handleExpenseAmountBlur(props.row, e.target.value)"
                   prefix="₱"
                   inputmode="decimal"
                   pattern="\\d*\\.?\\d{0,2}"
                   @keypress="blockNonNumeric"
-                  @paste.prevent="handlePasteNumeric"
+                  @paste.prevent="(e) => handlePasteToTwoDecimals(e, (val) => (props.row.amount = val))"
                   style="width: 120px"
                 />
               </div>
@@ -472,12 +474,14 @@
               <div class="flex justify-end">
                 <q-input
                   dense
-                  v-model="props.row.reimbAmount"
+                  :model-value="formatInputValue(props.row.reimbAmount)"
+                  @update:model-value="(val) => handleReimbAmountInput(props.row, val)"
+                  @blur="(e) => handleReimbAmountBlur(props.row, e.target.value)"
                   prefix="₱"
                   inputmode="decimal"
                   pattern="\\d*\\.?\\d{0,2}"
                   @keypress="blockNonNumeric"
-                  @paste.prevent="handlePasteNumeric"
+                  @paste.prevent="(e) => handlePasteToTwoDecimals(e, (val) => (props.row.reimbAmount = val))"
                   style="width: 120px"
                 />
               </div>
@@ -1483,7 +1487,7 @@ const formatCurrency = (value) => {
 const formatInputValue = (value) => {
   if (!value && value !== 0) return ''
   const isNumber = typeof value === 'number'
-  const cleanValue = String(value).replace(/,/g, '')
+  const cleanValue = String(value).replace(/[₱,\s]/g, '')
   const num = parseFloat(cleanValue)
   if (isNaN(num)) return ''
   return isNumber
@@ -1508,6 +1512,40 @@ const handleOrAmountInput = (orDetail, value) => {
 const handleOrAmountBlur = (orDetail, value) => {
   const formatted = formatToTwoDecimals(value)
   orDetail.orAmount = formatted
+}
+
+// Expense account amount input handlers
+const handleExpenseAmountInput = (account, value) => {
+  let cleanValue = String(value).replace(/[^\d.]/g, '')
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    cleanValue = parts[0] + '.' + parts.slice(1).join('')
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
+  }
+  account.amount = cleanValue
+}
+
+const handleExpenseAmountBlur = (account, value) => {
+  account.amount = formatToTwoDecimals(value)
+}
+
+// Reimbursement OR amount input handlers
+const handleReimbAmountInput = (row, value) => {
+  let cleanValue = String(value).replace(/[^\d.]/g, '')
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    cleanValue = parts[0] + '.' + parts.slice(1).join('')
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
+  }
+  row.reimbAmount = cleanValue
+}
+
+const handleReimbAmountBlur = (row, value) => {
+  row.reimbAmount = formatToTwoDecimals(value)
 }
 
 // Format input value to exactly two decimal places
@@ -1568,6 +1606,19 @@ const handlePasteNumeric = (event) => {
   if (orDetailIndex >= 0 && store.currentLiquidation.orDetails[orDetailIndex]) {
     store.currentLiquidation.orDetails[orDetailIndex].orAmount = finalText
   }
+}
+
+// Generic paste handler for table inputs where we already know the destination
+const handlePasteToTwoDecimals = (event, applyValue) => {
+  event.preventDefault()
+  const pastedText = event.clipboardData.getData('text')
+  const cleanText = pastedText.replace(/[^\d.]/g, '')
+  const parts = cleanText.split('.')
+  let finalText = parts[0]
+  if (parts.length > 1) {
+    finalText += '.' + parts.slice(1).join('').substring(0, 2)
+  }
+  applyValue(finalText)
 }
 </script>
 

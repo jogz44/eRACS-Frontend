@@ -219,7 +219,6 @@
                 color="green"
                 :error="showStep2Validation && (!email || !isValidEmail(email))"
                 :error-message="getEmailErrorMessage()"
-                @keyup.enter="handleSubmit"
               >
                 <template v-slot:prepend>
                   <q-icon name="mail" />
@@ -236,7 +235,6 @@
                 color="green"
                 :error="showStep2Validation && (!username || username.length < 4)"
                 :error-message="getUsernameErrorMessage()"
-                @keyup.enter="handleSubmit"
               >
                 <template v-slot:prepend>
                   <q-icon name="person" />
@@ -257,7 +255,6 @@
                 color="green"
                 :error="showStep2Validation && (!password || password.length < 8)"
                 :error-message="getPasswordErrorMessage()"
-                @keyup.enter="handleSubmit"
               >
                 <template #append>
                   <q-icon
@@ -283,7 +280,6 @@
                 color="green"
                 :error="showStep2Validation && (!confirmPassword || password !== confirmPassword)"
                 :error-message="getConfirmPasswordErrorMessage()"
-                @keyup.enter="handleSubmit"
               >
                 <template #append>
                   <q-icon
@@ -300,7 +296,65 @@
           </div>
           <q-stepper-navigation class="row justify-between q-mt-md">
             <q-btn flat @click="step = 1" color="green" label="Back" :disable="isLoading" />
+
+            <!-- <q-btn  @click="step = 3" color="green" label="Submit OTP" :disable="isLoading" /> -->
             <q-btn @click="handleSubmit" color="green" label="Submit" :loading="isLoading" :disable="isLoading" />
+
+          </q-stepper-navigation>
+        </q-step>
+        <!-- Step 3: OTP -->
+        <q-step :name="3" title="OTP" icon="verified_user" :done="step > 3">
+          <div class="otp-verification-section">
+            <div class="text-center">
+
+              <div class="text-body2 text-grey-7">
+                We've sent a verification code to:
+              </div>
+              <div class="text-body1 text-weight-medium text-green-8 ">
+                {{ email }}
+              </div>
+            </div>
+
+            <div class="otp-input-container">
+              <div class="text-subtitle2 text-green-8 q-mb-sm text-center">Enter Verification Code</div>
+              <div class="row justify-center q-col-gutter-sm">
+                <div class="col-auto">
+                  <q-input
+                    outlined
+                    dense
+                    bg-color="white"
+                    v-model="otpCode"
+                    label="OTP Code"
+                    color="green"
+                    class="otp-input"
+                    maxlength="6"
+                    @keyup.enter="handleOtpSubmit"
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="lock" />
+                    </template>
+                  </q-input>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-center q-mt-md">
+              <div class="text-caption text-grey-6 q-mb-sm">
+                Didn't receive the code?
+              </div>
+              <q-btn
+                flat
+                color="green"
+                label="Resend Code"
+                @click="resendOtp"
+                class="text-caption"
+              />
+            </div>
+          </div>
+
+          <q-stepper-navigation class="row justify-between q-mt-md">
+            <q-btn flat @click="step = 2" color="green" label="Back" :disable="isLoading" />
+            <q-btn @click="handleOtpSubmit" color="green" label="Verify & Complete" :disable="isLoading" />
           </q-stepper-navigation>
         </q-step>
       </q-stepper>
@@ -352,6 +406,7 @@ export default {
     const positionOptions = ref([])
     const isPasswordVisible = ref(false)
     const isPasswordVisible2 = ref(false)
+    const otpCode = ref('')
 
     // Separate validation states for each step
     const showStep1Validation = ref(false)
@@ -493,6 +548,7 @@ export default {
     }
 
     // Step 2 validation and submission
+    // Final registration submit (called after OTP verification in a real flow)
     const handleSubmit = async () => {
       showStep2Validation.value = true
 
@@ -569,37 +625,68 @@ export default {
       }
     }
 
-    // Global keyboard event handler
-    const handleGlobalKeydown = (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault()
-        event.stopPropagation()
+    // OTP methods
+    const handleOtpSubmit = () => {
+      if (!otpCode.value.trim()) {
+        $q.notify({
+          type: 'negative',
+          message: 'Please enter the verification code',
+          position: 'top',
+        })
+        return
+      }
 
-        if (step.value === 1) {
-          validateStep1()
-        } else if (step.value === 2) {
-          handleSubmit()
-        }
+      // For demo purposes, accept any 6-digit code
+      if (otpCode.value.length === 6) {
+        $q.notify({
+          type: 'positive',
+          message: 'Email verified successfully!',
+          position: 'top',
+        })
+        router.push('/')
+      } else {
+        $q.notify({
+          type: 'negative',
+          message: 'Please enter a valid 6-digit code',
+          position: 'top',
+        })
       }
     }
 
-    // Global Enter key handler for the page
-    const handleGlobalEnterKey = (event) => {
-      if (event) {
-        event.preventDefault()
-        event.stopPropagation()
-      }
+    const resendOtp = () => {
+      $q.notify({
+        type: 'info',
+        message: 'Verification code resent to your email',
+        position: 'top',
+      })
+    }
 
+    // Move from Account Info to OTP by validation; used by global Enter handler
+    const goToOtp = () => {
+      showStep2Validation.value = true
+      if (!email.value.trim() || !isValidEmail(email.value)) return
+      if (!username.value.trim() || username.value.length < 4) return
+      if (!password.value || password.value.length < 8) return
+      if (!confirmPassword.value || password.value !== confirmPassword.value) return
+      step.value = 3
+    }
+
+    // Global keyboard event handler: single source of truth for Enter
+    const handleGlobalKeydown = (event) => {
+      if (event.key !== 'Enter') return
+      event.preventDefault()
+      event.stopPropagation()
       if (step.value === 1) {
         validateStep1()
       } else if (step.value === 2) {
-        handleSubmit()
+        goToOtp()
+      } else if (step.value === 3) {
+        handleOtpSubmit()
       }
     }
 
-    // Add and remove global event listeners
     onMounted(() => {
-      document.addEventListener('keydown', handleGlobalKeydown)
+      document.addEventListener('keydown', handleGlobalKeydown, { passive: false })
     })
 
     onUnmounted(() => {
@@ -624,6 +711,7 @@ export default {
       confirmPassword,
       isPasswordVisible,
       isPasswordVisible2,
+      otpCode,
       isLoading,
       showStep1Validation,
       showStep2Validation,
@@ -632,13 +720,15 @@ export default {
       onFileRejected,
       validateStep1,
       handleSubmit,
+      handleOtpSubmit,
+      resendOtp,
       uploadedFiles,
       isValidEmail,
       getEmailErrorMessage,
       getUsernameErrorMessage,
       getPasswordErrorMessage,
       getConfirmPasswordErrorMessage,
-      handleGlobalEnterKey,
+      goToOtp,
       cardWidth: $q.screen.lt.sm ? '100%' : $q.screen.lt.md ? '80%' : '50%',
     }
   },
@@ -872,6 +962,28 @@ export default {
   color: #e5e5e5;
 }
 
+/* OTP Verification Styles */
+.otp-verification-section {
+  padding: 1rem 0;
+  text-align: center;
+}
+
+.otp-input-container {
+  margin: 2rem 0;
+}
+
+.otp-input {
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.otp-input .q-field__control {
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+
 /* Responsive Design */
 @media (max-width: 1023px) {
   .split-login-page {
@@ -949,6 +1061,19 @@ export default {
     font-size: 0.9rem;
     font-weight: 500;
   }
+
+  /* OTP responsive adjustments */
+  .otp-verification-section {
+    padding: 0.5rem 0;
+  }
+
+  .otp-input-container {
+    margin: 1.5rem 0;
+  }
+
+  .otp-input {
+    max-width: 250px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1015,6 +1140,23 @@ export default {
   .q-stepper__tab-title {
     font-size: 0.8rem;
   }
+
+  /* Mobile OTP adjustments */
+  .otp-verification-section {
+    padding: 0.25rem 0;
+  }
+
+  .otp-input-container {
+    margin: 1rem 0;
+  }
+
+  .otp-input {
+    max-width: 200px;
+  }
+
+  .otp-input .q-field__control {
+    font-size: 1rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1080,6 +1222,23 @@ export default {
 
   .q-stepper__tab-title {
     font-size: 0.75rem;
+  }
+
+  /* Extra small screen OTP adjustments */
+  .otp-verification-section {
+    padding: 0.1rem 0;
+  }
+
+  .otp-input-container {
+    margin: 0.75rem 0;
+  }
+
+  .otp-input {
+    max-width: 180px;
+  }
+
+  .otp-input .q-field__control {
+    font-size: 0.9rem;
   }
 }
 </style>

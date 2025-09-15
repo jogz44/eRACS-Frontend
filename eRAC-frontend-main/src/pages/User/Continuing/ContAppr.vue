@@ -142,6 +142,28 @@
               <q-checkbox color="secondary" v-model="scope.selected" />
             </template>
 
+            <template v-slot:body-cell-accountName="props">
+              <q-td :props="props">
+                <div class="text-weight-medium">
+                  {{ props.row.accountName }}
+                </div>
+                <!-- Show sub-items if they exist -->
+                <template v-if="props.row.subItems && props.row.subItems.length > 0">
+                  <div 
+                    v-for="(subItem, index) in props.row.subItems" 
+                    :key="index"
+                    class="q-pl-md text-caption text-grey-8"
+                  >
+                    <q-icon name="subdirectory_arrow_right" size="xs" class="q-mr-xs" />
+                    {{ subItem.name }}
+                    <span class="text-weight-medium text-grey-7">
+                      ({{ formatCurrency(subItem.amount) }})
+                    </span>
+                  </div>
+                </template>
+              </q-td>
+            </template>
+
             <template v-slot:body-cell-balance="props">
               <q-td :props="props">
                 <div class="text-weight-medium text-green">
@@ -526,12 +548,11 @@ const columns = [
 
 const filteredDialogAccounts = computed(() => {
   const currentYear = new Date().getFullYear()
-  const lastYear = currentYear - 1
 
   // First filter by year (2024 or last year)
   const yearFilteredAccounts = continueAccounts.value.filter((account) => {
     const accountYear = parseInt(account.year)
-    return accountYear === 2024 || accountYear === lastYear
+    return accountYear != currentYear
   })
 
   // Only allow accounts that are CAPITAL OUTLAY (in any segment)
@@ -889,5 +910,21 @@ defineExpose({
   font-size: 14px;
   font-weight: 700;
   line-height: 1;
+}
+
+/* Styles for sub-items in the table */
+.q-table tbody td .sub-item {
+  margin-top: 4px;
+  padding-left: 16px;
+  font-size: 12px;
+  color: #666;
+  display: flex;
+  align-items: center;
+}
+
+.q-table tbody td .sub-item-icon {
+  margin-right: 4px;
+  font-size: 16px;
+  color: #999;
 }
 </style>

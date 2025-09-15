@@ -93,6 +93,27 @@ export function useAugmentationActions(state) {
       })
 
       const appropriations = appropriationResponse.data.data || []
+      
+      // Debug logging
+      console.log('=== AUGMENTATION EXPENSE ACCOUNTS DEBUG ===')
+      console.log('API Response:', appropriationResponse.data)
+      console.log('Appropriations count:', appropriations.length)
+      console.log('Fiscal Year ID:', currentFiscalYear.id)
+      console.log('Budget Source Filter:', state.selectedBudgetSource.value)
+      console.log('Raw appropriations:', appropriations)
+      
+      // Check if no appropriations found
+      if (appropriations.length === 0) {
+        console.warn('No appropriations found. This could be due to:')
+        console.warn('1. No appropriations with status="committed"')
+        console.warn('2. No appropriations for current fiscal year')
+        console.warn('3. No appropriations for current barangay')
+        console.warn('4. Missing expense hierarchy relationships')
+        
+        // Show user-friendly message
+        state.AugexpenseAccounts.value = []
+        return
+      }
 
       const flattened = appropriations.map(appropriation => {
         // Extract budget source from budget_description
@@ -206,9 +227,13 @@ export function useAugmentationActions(state) {
           appropriation_id: appropriation.id, // This is now the representative ID
           // Store additional info for debugging
           expense_class_id: expenseClassId,
-          expense_class: expenseClass, // Add expense class mapping
+          expense_class: appropriation.expense_class_name || expenseClass, // Use backend data or fallback
           expense_type_id: appropriation.expense_type_id,
+          expense_type: appropriation.expense_type_name,
           expense_item_id: appropriation.expense_item_id,
+          expense_item: appropriation.expense_item_name,
+          expense_sub_item_id: appropriation.expense_sub_item_id,
+          expense_sub_item_name: appropriation.expense_sub_item_name,
           appropriation_ids: appropriation.appropriation_ids || [appropriation.id], // All IDs in the group
           budget_source: budgetSource, // Properly extracted budget source
           fiscal_year_id: appropriation.fiscal_year_id || currentFiscalYear.id, // Add fiscal year for validation
@@ -231,8 +256,14 @@ export function useAugmentationActions(state) {
       } else {
         state.AugexpenseAccounts.value = flattened
       }
+      
+      // Debug final result
+      console.log('Final flattened data:', flattened)
+      console.log('Final AugexpenseAccounts.value:', state.AugexpenseAccounts.value)
+      console.log('=== END AUGMENTATION EXPENSE ACCOUNTS DEBUG ===')
     } catch (error) {
       console.error('Failed to fetch expense accounts:', error)
+      console.error('Error details:', error.response?.data || error.message)
       state.AugexpenseAccounts.value = []
     } finally {
       state.expenseAccountsLoading.value = false

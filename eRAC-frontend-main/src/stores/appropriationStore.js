@@ -358,7 +358,7 @@ export const useAppropriationStore = defineStore("appropriation", {
           date: budget.date,
           description: budget.description,
           amount: parseCurrency(budget.amount),
-          current_amount: parseCurrency(budget.current_amount || budget.amount),
+          current_amount: parseCurrency(budget.current_amount !== null && budget.current_amount !== undefined ? budget.current_amount : budget.amount),
           unappropriated: parseCurrency(budget.unappropriated),
           fiscal_year: budget.fiscal_year,
           barangay_name: budget.barangay_name,

@@ -74,20 +74,36 @@ export function useGetters(state) {
 
   const AugexpenseAccountColumns = computed(() => [
     {
-      name: 'account',
-      label: 'Account',
-      field: 'account',
-      align: 'left',
-      sortable: true,
-      style: 'width: 40%; min-width: 250px;'
-    },
-    {
       name: 'expense_class',
       label: 'Expense Class',
       field: 'expense_class',
-      align: 'center',
+      align: 'left',
       sortable: true,
-      style: 'width: 20%; min-width: 120px;'
+      style: 'width: 18%; min-width: 120px;'
+    },
+    {
+      name: 'expense_type',
+      label: 'Expense Type',
+      field: 'expense_type',
+      align: 'left',
+      sortable: true,
+      style: 'width: 18%; min-width: 120px;'
+    },
+    {
+      name: 'expense_item',
+      label: 'Expense Item',
+      field: 'expense_item',
+      align: 'left',
+      sortable: true,
+      style: 'width: 18%; min-width: 120px;'
+    },
+    {
+      name: 'expense_sub_item',
+      label: 'Expense Sub-item',
+      field: 'expense_sub_item_name',
+      align: 'left',
+      sortable: true,
+      style: 'width: 18%; min-width: 120px;'
     },
     {
       name: 'balance',
@@ -96,14 +112,14 @@ export function useGetters(state) {
       format: (val) => `₱${val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       align: 'right',
       sortable: true,
-      style: 'width: 20%; min-width: 120px;'
+      style: 'width: 15%; min-width: 100px;'
     },
     {
       name: 'action',
       label: 'Action',
       field: '',
       align: 'center',
-      style: 'width: 20%; min-width: 100px;'
+      style: 'width: 13%; min-width: 80px;'
     },
   ])
 
@@ -164,8 +180,12 @@ export function useGetters(state) {
   })
 
   const filteredExpenseAccounts = computed(() => {
+    console.log('=== FILTERED EXPENSE ACCOUNTS GETTER ===')
+    console.log('AugexpenseAccounts.value:', state.AugexpenseAccounts.value)
+    console.log('AugexpenseAccounts.value length:', state.AugexpenseAccounts.value?.length)
+    
     if (!state.AugexpenseAccounts.value || state.AugexpenseAccounts.value.length === 0) {
-      console.log('No expense accounts available')
+      console.log('No expense accounts available - returning empty array')
       return []
     }
 
@@ -200,6 +220,8 @@ export function useGetters(state) {
         (item.description && item.description.toLowerCase().includes(query))
     )
     console.log('After search filtering:', searchFiltered.length)
+    console.log('Final filtered results:', searchFiltered)
+    console.log('=== END FILTERED EXPENSE ACCOUNTS GETTER ===')
     return searchFiltered
   })
 

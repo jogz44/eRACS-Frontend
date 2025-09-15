@@ -411,15 +411,16 @@
           :pagination="store.pagination"
           :loading="store.loadingDisbursements"
           flat
+          @row-dblclick="(evt, row) => handleViewDisbursement(row)"
         >
           <template v-slot:body-cell-action="props">
             <q-td :props="props" >
-              <div class="row q-gutter-xs items-center justify-center ">
+              <div class="row q-gutter-xs items-left left ">
                 <q-btn
                   v-if="
                     isApprover ||
                     authStore.admin ||
-                    (isTreasurer && props.row.edit_approved === true)
+                    isTreasurer
                   "
                   dense
                   icon="edit"
@@ -443,7 +444,8 @@
                   v-permission="'view'"
                 />
 
-                <!-- Treasurer: Request edit -->
+                <!-- Treasurer: Request edit - COMMENTED OUT FOR FUTURE REUSE -->
+                <!--
                 <q-btn
                   dense
                   icon="edit_note"
@@ -458,6 +460,7 @@
                   @click.stop="() => handleEditRequest(props.row)"
                   v-permission="'edit'"
                 />
+                -->
 
                 <!-- Treasurer: Request void -->
                 <q-btn
@@ -508,8 +511,8 @@
             <q-td :props="props">
               <div v-if="hasRemarks(props.row)" class="row items-center justify-center">
                 <q-icon
-                  name="visibility"
-                  color="blue"
+                  name="edit_note"
+                  color="primary"
                   size="md"
                   class="cursor-pointer"
                   @click="openRemarksDialog(props.row)"
@@ -578,7 +581,8 @@
         </q-card>
       </q-dialog>
 
-      <!-- Edit Request Dialog (for Treasurers) -->
+      <!-- Dialog (for Treasurers) - COMMENTED OUT FOR FUTURE REUSE -->
+      <!--
       <q-dialog v-model="store.dialogs.editRequest" persistent>
         <q-card style="min-width: 500px; max-width: 90vw">
           <q-card-section class="q-pb-none">
@@ -614,6 +618,7 @@
           </q-card-actions>
         </q-card>
       </q-dialog>
+      -->
 
       <!-- Remarks Dialog -->
       <q-dialog v-model="remarksDialog" persistent>
@@ -659,6 +664,12 @@
 
           <q-card-actions align="right" class="q-pa-md">
             <q-btn flat label="Close" @click="closeRemarksDialog" color="primary" />
+            <q-btn
+              label="View Details"
+              @click="openViewOrDetailsFromRemarks"
+              color="primary"
+              unelevated
+            />
           </q-card-actions>
         </q-card>
       </q-dialog>
@@ -669,6 +680,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
+import { useRoute } from 'vue-router'
 
 import OrDetailsDialog from 'components/disbursement/OrDetailsDialog.vue'
 import ViewOrDetails from 'components/disbursement/ViewOrDetails.vue'
@@ -681,6 +693,7 @@ import { usePageLogging } from '../../../composables/usePageLogging'
 const store = useDisbursementStore()
 const bankStore = useBankStore()
 const authStore = useAuthStore()
+const route = useRoute()
 
 // Status filtering
 const selectedStatus = ref(null)
@@ -689,7 +702,7 @@ const statusOptions = [
   { label: 'Unliquidated', value: 'Unliquidated' },
   { label: 'Partial', value: 'Partial' },
   { label: 'Liquidated', value: 'Liquidated' },
-  { label: 'Edit Requested', value: 'Edit Requested' },
+  // { label: 'Edit Requested', value: 'Edit Requested' }, // COMMENTED OUT FOR FUTURE REUSE
   { label: 'Void Requested', value: 'Void Requested' },
   { label: 'Voided', value: 'Voided' },
   { label: 'Stale', value: 'Stale' },
@@ -904,8 +917,8 @@ const getStatusColor = (status) => {
       return 'amber'
     case 'Liquidated':
       return 'green'
-    case 'Edit Requested':
-      return 'deep-purple'
+    // case 'Edit Requested': // COMMENTED OUT FOR FUTURE REUSE
+    //   return 'deep-purple'
     case 'Void Requested':
       return 'deep-orange'
     case 'Voided':
@@ -922,13 +935,16 @@ const getStatusTextColor = (status) => {
     case 'Unliquidated':
     case 'Partial':
     case 'Liquidated':
-    case 'Edit Requested':
-    case 'Void Requested':
-    case 'Voided':
+       case 'Void Requested':
+           case 'Voided':
     case 'Stale':
       return 'white'
     default:
       return 'black'
+    // case 'Edit Requested': // COMMENTED OUT FOR FUTURE REUSE
+    //   return 'white'
+
+
   }
 }
 
@@ -1018,8 +1034,45 @@ const loadDataWithRetry = async (retryCount = 0, maxRetries = 3) => {
 // Set up periodic refresh for expense accounts
 // Removed to reduce excessive API calls
 
+// Apply navigation parameters from dashboard
+const applyNavigationFilters = () => {
+  const query = route.query
+
+  if (query.search) {
+    searchQuery.value = query.search
+    store.searchQuery = query.search
+  }
+
+  if (query.status) {
+    selectedStatus.value = query.status
+  }
+
+  if (query.dateFrom && query.dateTo) {
+    // Convert date format for the date range picker
+    const fromDate = new Date(query.dateFrom)
+    const toDate = new Date(query.dateTo)
+
+    if (!isNaN(fromDate.getTime()) && !isNaN(toDate.getTime())) {
+      dateRange.value = {
+        from: fromDate.toISOString().split('T')[0],
+        to: toDate.toISOString().split('T')[0]
+      }
+
+      // Apply to store
+      store.dateFrom = fromDate.toLocaleDateString('en-GB')
+      store.dateTo = toDate.toLocaleDateString('en-GB')
+    }
+  }
+
+  // Show notification if filters were applied
+  // Filters applied from dashboard navigation - no notification needed
+}
+
 onMounted(async () => {
   try {
+    // Apply navigation filters first
+    applyNavigationFilters()
+
     // Use enhanced data loading with retry mechanism
     await loadDataWithRetry()
 
@@ -1037,6 +1090,18 @@ onMounted(async () => {
     })
   }
 })
+
+// Watch for route changes to update filters when navigating from notifications
+watch(
+  () => route.query,
+  (newQuery, oldQuery) => {
+    // Only apply filters if the query actually changed
+    if (JSON.stringify(newQuery) !== JSON.stringify(oldQuery)) {
+      applyNavigationFilters()
+    }
+  },
+  { deep: true }
+)
 
 // Auto-refresh expense accounts when the expense dialog is opened
 watch(
@@ -1454,10 +1519,11 @@ const handleDialogClose = (dialogName) => {
   } else if (dialogName === 'void') {
     // Clear void form when closing void dialog
     store.resetForm('void')
-  } else if (dialogName === 'editRequest') {
-    // Close edit request dialog via store method
-    store.closeEditRequestDialog()
   }
+  // } else if (dialogName === 'editRequest') { // COMMENTED OUT FOR FUTURE REUSE
+  //   // Close edit request dialog via store method
+  //   store.closeEditRequestDialog()
+  // }
 
   store.closeDialog(dialogName)
 }
@@ -1467,10 +1533,10 @@ const handleVoidDisbursement = (row) => {
   store.openVoidDialog(row)
 }
 
-// Open edit request dialog for treasurer
-const handleEditRequest = (row) => {
-  store.openEditRequestDialog(row)
-}
+// Open edit request dialog for treasurer - COMMENTED OUT FOR FUTURE REUSE
+// const handleEditRequest = (row) => {
+//   store.openEditRequestDialog(row)
+// }
 
 // Submit void request from dialog
 const handleSubmitVoidRequest = async () => {
@@ -1541,7 +1607,14 @@ const handleEditDisbursement = async (row) => {
 const handleViewDisbursement = async (row) => {
   viewLoading.value[row.id] = true
   try {
-    await store.openViewOrDetails(row)
+    // Check if there are remarks (void request or edit request) first
+    if (hasRemarks(row)) {
+      // Show remarks dialog first
+      openRemarksDialog(row)
+    } else {
+      // No remarks, directly open ViewOrDetails
+      await store.openViewOrDetails(row)
+    }
   } catch (error) {
     console.error('Error opening view disbursement:', error)
     $q.notify({
@@ -1614,7 +1687,7 @@ const handleLiquidateDisbursement = async (row) => {
 const hasRemarks = (row) => {
   return (
     (row.status === 'Void Requested' && row.remarks) ||
-    (row.status === 'Edit Requested' && row.remarks) ||
+    // (row.status === 'Edit Requested' && row.remarks) || // COMMENTED OUT FOR FUTURE REUSE
     (row.status === 'Voided' && row.remarks) ||
     row.rejection_remarks
   )
@@ -1630,50 +1703,94 @@ const closeRemarksDialog = () => {
   selectedRemarksData.value = null
 }
 
-// Submit edit request from dialog
-const handleSubmitEditRequest = async () => {
-  if (!store.forms.edit.remarks || store.forms.edit.remarks.trim() === '') {
-    $q.notify({
-      type: 'negative',
-      message: 'Please provide remarks for the edit request',
-      icon: 'warning',
-      position: 'top',
-      timeout: 3000,
-    })
-    return
-  }
+const openViewOrDetailsFromRemarks = async () => {
+  if (selectedRemarksData.value && selectedRemarksData.value.id) {
+    // Store the data before closing the dialog
+    const disbursementData = { ...selectedRemarksData.value }
 
-  try {
-    const result = await store.submitEditRequest()
-    if (result.success) {
+    // Ensure we have the required fields
+    if (!disbursementData.id) {
       $q.notify({
-        type: 'positive',
-        message: 'Edit request submitted successfully!',
-        icon: 'check_circle',
+        type: 'negative',
+        message: 'Invalid disbursement data',
+        icon: 'error',
         position: 'top',
         timeout: 3000,
       })
-      await refreshData()
-    } else {
+      return
+    }
+
+    // Close remarks dialog first
+    closeRemarksDialog()
+
+    // Then open ViewOrDetails with the stored data
+    try {
+      await store.openViewOrDetails(disbursementData)
+    } catch (error) {
+      console.error('Error opening view disbursement from remarks:', error)
       $q.notify({
         type: 'negative',
-        message: result.message || 'Failed to submit edit request',
+        message: 'Failed to open view disbursement',
         icon: 'error',
         position: 'top',
-        timeout: 5000,
+        timeout: 3000,
       })
     }
-  } catch (error) {
-    console.error('Error submitting edit request:', error)
+  } else {
     $q.notify({
       type: 'negative',
-      message: error.message || 'Failed to submit edit request',
+      message: 'No disbursement data available',
       icon: 'error',
       position: 'top',
-      timeout: 5000,
+      timeout: 3000,
     })
   }
 }
+
+// Submit edit request from dialog - COMMENTED OUT FOR FUTURE REUSE
+// const handleSubmitEditRequest = async () => {
+//   if (!store.forms.edit.remarks || store.forms.edit.remarks.trim() === '') {
+//     $q.notify({
+//       type: 'negative',
+//       message: 'Please provide remarks for the edit request',
+//       icon: 'warning',
+//       position: 'top',
+//       timeout: 3000,
+//     })
+//     return
+//   }
+
+//   try {
+//     const result = await store.submitEditRequest()
+//     if (result.success) {
+//       $q.notify({
+//         type: 'positive',
+//         message: 'Edit request submitted successfully!',
+//         icon: 'check_circle',
+//         position: 'top',
+//         timeout: 3000,
+//       })
+//       await refreshData()
+//     } else {
+//       $q.notify({
+//         type: 'negative',
+//         message: result.message || 'Failed to submit edit request',
+//         icon: 'error',
+//         position: 'top',
+//         timeout: 5000,
+//       })
+//     }
+//   } catch (error) {
+//     console.error('Error submitting edit request:', error)
+//     $q.notify({
+//       type: 'negative',
+//       message: error.message || 'Failed to submit edit request',
+//       icon: 'error',
+//       position: 'top',
+//       timeout: 5000,
+//     })
+//   }
+// }
 </script>
 
 <style scoped>

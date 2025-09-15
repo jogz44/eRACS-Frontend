@@ -16,6 +16,7 @@ use App\Http\Middleware\AuthTokenValid;
 use App\Models\Barangay;
 use App\Models\BarangayPosition;
 use App\Models\Admin;
+use App\Http\Controllers\OtpController;
 use App\Http\Controllers\ReportController;
 
 
@@ -49,6 +50,9 @@ Route::prefix('barangay')->group(function () {
     Route::post('/check-email', [AuthController::class, 'checkEmailExists']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
+    Route::post('/otp/generate', [OtpController::class, 'generate']);
+    Route::post('/otp/verify', [OtpController::class, 'verify']);
+
     Route::middleware(['auth.barangay'])->group(function () {
         // Route::middleware(['check.role'])->group(function () {
                     Route::post('/setlogs', [AdminAuthController::class, 'logUserActionRequest']);
@@ -60,6 +64,10 @@ Route::prefix('barangay')->group(function () {
         Route::get('/user', [AuthController::class, 'user']);
         Route::get('/users', [AuthController::class, 'getBarangayUsers']);
         Route::post('/users/{userId}/permissions', [AuthController::class, 'updateUserPermissions']);
+        
+        // Profile management routes
+        Route::put('/update-profile', [AuthController::class, 'updateProfile']);
+        Route::put('/change-password', [AuthController::class, 'changePassword']);
 
         //Accounts Library
 
@@ -186,8 +194,6 @@ Route::prefix('barangay')->group(function () {
         Route::get('supplemental-budgets', [AppropriationController::class, 'getSupplementalBudgets']);
         Route::get('fiscal-years', [AppropriationController::class, 'getFiscalYears']);
         
-        // Budget Transfer endpoint
-        Route::post('budget-transfer', [AppropriationController::class, 'transferBudget']);
 
         // Report routes aka Preview and PDF download by Dan Steve
         Route::get('/report/rac', [ReportController::class, 'getRacReport']);
@@ -272,8 +278,6 @@ Route::prefix('admin')->group(function () {
         Route::get('/supplemental-budgets', [AppropriationController::class, 'getSupplementalBudgets']);
         Route::get('/fiscal-years', [AppropriationController::class, 'getFiscalYears']);
         
-        // Admin budget transfer endpoint
-        Route::post('/budget-transfer', [AppropriationController::class, 'transferBudget']);
 
         // Admin review endpoints
         Route::post('/reviews', [AdminReviewController::class, 'store']);

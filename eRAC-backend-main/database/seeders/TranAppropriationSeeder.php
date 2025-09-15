@@ -33,12 +33,21 @@ class TranAppropriationSeeder extends Seeder
             foreach ($budgets as $budget) {
                 
                 $yearBudget = (int)LibFiscalYear::where('id', $budget->fiscal_year_id)->value('year');
-                $remaining = $budget->original_amount;
+                $remaining = $budget->current_amount;
                 $totalAllocated = 0;
 
                 $expenseClasses = LibExpenseClass::where('barangay_id', $barangay->id)
-                    ->where('fiscal_year_id', $budget->fiscal_year_id)
-                    ->inRandomOrder()
+                    ->where('fiscal_year_id', $budget->fiscal_year_id);
+
+                if ($yearBudget != 2025) {
+                    $expenseClasses->where(function($q) {
+                        $q->where('order', 0)
+                        ->orWhere('order', 4)
+                        ->orWhere('order', 5);
+                    });
+                }
+
+                $expenseClasses = $expenseClasses->inRandomOrder()
                     ->take(3)
                     ->get();
                 foreach ($expenseClasses as $expenseClass) {
@@ -48,44 +57,46 @@ class TranAppropriationSeeder extends Seeder
                         continue;
                     }
 
-                    if($yearBudget!=2025){
-                        // filter where if order is not 0,4,5, it continue
-                        if(!$expenseClass->where('order', 0)->orWhere('order', 4)->first()){
-                            continue;
-                        }
-                    }
 
-                    $expenseTypes = LibExpenseType::where('expense_class_id', $expenseClass->id)
-                        ->inRandomOrder()
+                    $expenseTypes = LibExpenseType::where('expense_class_id', $expenseClass->id);
+                    if($yearBudget!=2025 && $expenseClass->order===0 ){
+                        $expenseTypes->where(function($q) {
+                            $q->where('order', 1)
+                            ->orWhere('order', 2);
+                        });
+                    }elseif($yearBudget!=2025 && $expenseClass->order===5 ){
+                        $expenseTypes->where(function($q) {
+                            $q->where('order', 0);
+                        });
+                    }
+                    $expenseTypes=$expenseTypes->inRandomOrder()
                         ->take(6)
                         ->get();
                     foreach ($expenseTypes as $expenseType) {
-                        
-                        if($yearBudget!=2025){
-                            if(!$expenseType->where('name', 'like', '%Capital%')->first()){
-                                continue;
-                            }
-                        }
 
-                        if($remaining <= 0) {
+
+                        if($remaining < 0) {
                             \Log::info("Budget {$budget->id} fully allocated.");
-                            continue 2; // exit both loops
-                        }elseif($remaining < 200000) {
-                            $allocationAmount=$remaining;
+                            break;
+                        }elseif($remaining > (int) ($remaining * 0.09)) {
+                            $allocationAmount=$faker->numberBetween(
+                                    (int) ($remaining * 0.05),
+                                    (int) ($remaining * 0.09)
+                            );
                         }else{
                             $allocationAmount = min(
                                 $faker->numberBetween(
-                                    (int) ($remaining * 0.05),
-                                    (int) ($remaining * 0.07)
+                                    (int) ($remaining * 0.01),
+                                    (int) ($remaining * 0.05)
                                 ),
                                 $faker->numberBetween(
-                                    (int) ($remaining * 0.05),
-                                    (int) ($remaining * 0.07)
+                                    (int) ($remaining * 0.01),
+                                    (int) ($remaining * 0.05)
                                 )
                             );
-                            if($remaining < 200000) {
-                                $allocationAmount+=$remaining;
-                            }
+                        }
+                        if($remaining-$allocationAmount < (int) ($remaining * 0.005)) {
+                            $allocationAmount=$remaining;
                         }
                         
                         if (!$expenseType) {
@@ -104,13 +115,25 @@ class TranAppropriationSeeder extends Seeder
 
                         $year = (int) $fiscalYear->year; // ✅ ensure integer
 
+                        if($allocationAmount>$budget->current_amount){
+                            $allocationAmount=$budget->current_amount;
+                        }
+
+                        $expenseItem=LibExpenseItem::where('expense_type_id', $expenseType->id)->where('parent_item_id',null)->inRandomOrder()->first();
+                        $expenseSubItem= null;
+                        if($expenseItem){
+                            $expenseSubItem=LibExpenseItem::where('parent_item_id', $expenseItem->id)
+                                ->inRandomOrder()->first();
+                        }
+                        
 
                         TranAppropriation::create([
                             'barangay_id'      => $barangay->id,
                             'budget_id'        => $budget->id,
                             'expense_class_id' => $expenseClass->id,
                             'expense_type_id'  => $expenseType->id,
-                            'expense_item_id'  => null, // nullable
+                            'expense_item_id'  => $expenseItem->id ?? null, // nullable
+                            'expense_sub_item_id'  => $expenseItem ? ($expenseSubItem->id ?? null) : null, // nullable
                             'amount'           => $allocationAmount,
                             'transaction_date' => $faker->dateTimeBetween(
                                 $now->copy()->setYear($year)->startOfYear(),
@@ -126,9 +149,9 @@ class TranAppropriationSeeder extends Seeder
                             $budget->save();
 
                             \Log::info("Barangay {$barangay->id} | Budget {$budget->id} updated", [
-                                'original_amount'    => $budget->original_amount,
-                                'allocation'         => $allocationAmount,
+                                'sana matira money -> '    => $budget->current_amount - $allocationAmount,
                                 'new_current_amount' => $budget->current_amount,
+                                'allocation'         => $allocationAmount,
                             ]);
                         }
                     }
