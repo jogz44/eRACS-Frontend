@@ -3,9 +3,28 @@
 # Accept: application/json
 
 
-GET http://localhost:8000/api/barangay/banks
-Authorization: Bearer 7|1GMy4x7OoGMb2oovLtNbgf5ggbVB5MQNYUaXsYiYabfd375c
+# GET http://localhost:8000/api/barangay/banks
+# Authorization: Bearer 7|1GMy4x7OoGMb2oovLtNbgf5ggbVB5MQNYUaXsYiYabfd375c
+# Accept: application/json
+
+### Generate OTP
+POST http://localhost:8000/api/barangay/otp/generate
 Accept: application/json
+Content-Type: application/json
+
+{
+  "email": "psihhtuotg6oouz@no.vsmailpro.com"
+}
+
+# ### Verify OTP
+# POST http://localhost:8000/api/otp/verify
+# Accept: application/json
+# Content-Type: application/json
+
+# {
+#   "email": "user@example.com",
+#   "otp": "123456"
+# }
 
 # GET http://localhost:8000/api/user
 # Accept: application/json
