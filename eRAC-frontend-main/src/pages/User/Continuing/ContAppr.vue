@@ -526,12 +526,11 @@ const columns = [
 
 const filteredDialogAccounts = computed(() => {
   const currentYear = new Date().getFullYear()
-  const lastYear = currentYear - 1
 
   // First filter by year (2024 or last year)
   const yearFilteredAccounts = continueAccounts.value.filter((account) => {
     const accountYear = parseInt(account.year)
-    return accountYear === 2024 || accountYear === lastYear
+    return accountYear != currentYear
   })
 
   // Only allow accounts that are CAPITAL OUTLAY (in any segment)
