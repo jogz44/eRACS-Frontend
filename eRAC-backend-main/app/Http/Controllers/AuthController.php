@@ -317,7 +317,11 @@ public function user(Request $request)
         'user' => [
             'id' => $user->id,
             'first_name' => $user->first_name ?? '',
+            'middle_name' => $user->middle_name ?? '',
             'last_name' => $user->last_name ?? '',
+            'suffix' => $user->suffix ?? '',
+            'email' => $user->email ?? '',
+            'username' => $user->username ?? '',
             'barangay_name' => $user->barangay->name ?? '',
             'position_name' => $user->position->name ?? '',
             'photo_path' => $user->photo_path ?? null,
@@ -393,6 +397,11 @@ public function resetPassword(Request $request)
                 ], 401);
             }
 
+            \Log::info('Profile update request for user ' . $user->id, [
+                'request_data' => $request->all(),
+                'user_id' => $user->id
+            ]);
+
             $validated = $request->validate([
                 'first_name' => 'required|string|max:255',
                 'middle_name' => 'nullable|string|max:255',
@@ -402,6 +411,17 @@ public function resetPassword(Request $request)
                 'username' => 'required|string|max:255|unique:barangay_users,username,' . $user->id,
                 'photo_path' => 'nullable|string',
             ]);
+
+            // Store original values for comparison
+            $originalData = [
+                'first_name' => $user->first_name,
+                'middle_name' => $user->middle_name,
+                'last_name' => $user->last_name,
+                'suffix' => $user->suffix,
+                'email' => $user->email,
+                'username' => $user->username,
+                'photo_path' => $user->photo_path,
+            ];
 
             // Update user profile
             $user->update([
@@ -414,19 +434,89 @@ public function resetPassword(Request $request)
                 'photo_path' => $validated['photo_path'] ?? $user->photo_path,
             ]);
 
-            // Log the profile update
+            // Generate detailed change log
+            $changes = [];
+            
+            // Check each field for changes
+            if ($originalData['first_name'] !== $validated['first_name']) {
+                $changes[] = "First Name: {$originalData['first_name']} → {$validated['first_name']}";
+            }
+            
+            if ($originalData['middle_name'] !== $validated['middle_name']) {
+                $originalMiddle = $originalData['middle_name'] ?: 'empty';
+                $newMiddle = $validated['middle_name'] ?: 'empty';
+                $changes[] = "Middle Name: {$originalMiddle} → {$newMiddle}";
+            }
+            
+            if ($originalData['last_name'] !== $validated['last_name']) {
+                $changes[] = "Last Name: {$originalData['last_name']} → {$validated['last_name']}";
+            }
+            
+            if ($originalData['suffix'] !== $validated['suffix']) {
+                $originalSuffix = $originalData['suffix'] ?: 'empty';
+                $newSuffix = $validated['suffix'] ?: 'empty';
+                $changes[] = "Suffix: {$originalSuffix} → {$newSuffix}";
+            }
+            
+            if ($originalData['email'] !== $validated['email']) {
+                $changes[] = "Email: {$originalData['email']} → {$validated['email']}";
+            }
+            
+            if ($originalData['username'] !== $validated['username']) {
+                $changes[] = "Username: {$originalData['username']} → {$validated['username']}";
+            }
+            
+            if ($originalData['photo_path'] !== ($validated['photo_path'] ?? $user->photo_path)) {
+                $changes[] = "Changed picture";
+            }
+
+            // Create detailed log message
+            $logDetails = empty($changes) ? 'No changes detected' : implode(', ', $changes);
+
+            // Log the profile update with detailed changes
             AdminAuthController::logUserAction(
                 $user, 
                 'Updated Profile', 
-                'User updated their profile information'
+                $logDetails
             );
 
+            $user = $user->load(['barangay', 'position']);
+            
             return response()->json([
                 'success' => true,
                 'message' => 'Profile updated successfully',
-                'user' => $user->load(['barangay', 'position'])
+                'user' => [
+                    'id' => $user->id,
+                    'first_name' => $user->first_name ?? '',
+                    'middle_name' => $user->middle_name ?? '',
+                    'last_name' => $user->last_name ?? '',
+                    'suffix' => $user->suffix ?? '',
+                    'email' => $user->email ?? '',
+                    'username' => $user->username ?? '',
+                    'barangay_name' => $user->barangay->name ?? '',
+                    'position_name' => $user->position->name ?? '',
+                    'photo_path' => $user->photo_path ?? null,
+                    'photo_url' => $user->photo_path ? asset("storage/{$user->photo_path}") : null
+                ]
             ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::warning('Profile update validation failed for user ' . ($user->id ?? 'unknown'), [
+                'errors' => $e->errors(),
+                'request_data' => $request->all()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
+            \Log::error('Profile update failed for user ' . ($user->id ?? 'unknown'), [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update profile',
@@ -496,7 +586,7 @@ public function resetPassword(Request $request)
             ->whereNotNull('logs.user_id')
             ->select(
                 'logs.user_id as id',
-                DB::raw("COALESCE(NULLIF(logs.fullname, ''), CONCAT(barangay_users.first_name, ' ', barangay_users.last_name)) as fullname"),
+                DB::raw('(SELECT TOP 1 logs2.fullname FROM logs logs2 WHERE logs2.user_id = logs.user_id AND CAST(logs2.created_at AS DATE) = CAST(logs.created_at AS DATE) ORDER BY logs2.created_at DESC) as fullname'),
                 DB::raw('CAST(logs.created_at AS DATE) as log_date'),
                 DB::raw('COUNT(logs.id) as total_logs'),
                 'barangays.name as barangay',
@@ -504,7 +594,6 @@ public function resetPassword(Request $request)
             )
             ->groupBy(
                 'logs.user_id',
-                DB::raw("COALESCE(NULLIF(logs.fullname, ''), CONCAT(barangay_users.first_name, ' ', barangay_users.last_name))"),
                 DB::raw('CAST(logs.created_at AS DATE)'),
                 'barangays.name',
                 'barangay_positions.name'

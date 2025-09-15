@@ -30,7 +30,7 @@
       </q-card-section>
 
       <q-card-section>
-        <q-form @submit="updateProfile" class="profile-form">
+        <q-form ref="profileFormRef" @submit="updateProfile" class="profile-form">
           <div class="row q-col-gutter-md">
             <div class="col-12 col-md-6">
               <q-input
@@ -104,19 +104,26 @@
           <div class="row items-center q-col-gutter-md">
             <div class="col-auto">
               <div class="photo-upload">
-                <div class="current-photo">
-                  <q-avatar size="120px" class="profile-avatar">
+                <div class="current-photo" @mouseenter="onPhotoHover" @mouseleave="onPhotoLeave">
+                  <q-avatar size="120px" class="profile-avatar" :class="{ 'uploading': isUploadingPhoto, 'has-preview': photoPreview, 'preview-hover': isHoveringPreview }">
                     <img :src="userPhoto" @error="handleImageError" />
+                    <div v-if="isUploadingPhoto" class="upload-overlay">
+                      <q-spinner color="white" size="24px" />
+                    </div>
+                    <div v-if="photoPreview && !isUploadingPhoto" class="preview-badge" @click="removePreview" @mouseenter="onBadgeHover" @mouseleave="onBadgeLeave">
+                      <q-icon :name="isHoveringBadge ? 'close' : 'check'" :color="isHoveringBadge ? 'grey-6' : 'white'" size="16px" />
+                    </div>
                   </q-avatar>
                   <div class="photo-overlay">
                     <q-btn
                       round
                       color="primary"
-                      icon="camera_alt"
+                      :icon="isUploadingPhoto ? 'hourglass_empty' : 'camera_alt'"
                       size="sm"
+                      :loading="isUploadingPhoto"
                       @click="triggerFileUpload"
                     >
-                      <q-tooltip>Change Photo</q-tooltip>
+                      <q-tooltip>{{ isUploadingPhoto ? 'Uploading...' : 'Change Photo' }}</q-tooltip>
                     </q-btn>
                   </div>
                 </div>
@@ -169,7 +176,7 @@
       </q-card-section>
 
       <q-card-section>
-        <q-form @submit="changePassword" class="password-form">
+        <q-form ref="passwordFormRef" :key="passwordFormKey" @submit="changePassword" class="password-form">
           <div class="row q-col-gutter-md">
             <div class="col-12">
               <q-input
@@ -236,7 +243,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'stores/auth'
 
@@ -248,6 +255,13 @@ const authStore = useAuthStore()
 const isUpdating = ref(false)
 const isChangingPassword = ref(false)
 const fileInput = ref(null)
+const photoPreview = ref(null)
+const isUploadingPhoto = ref(false)
+const isHoveringPreview = ref(false)
+const isHoveringBadge = ref(false)
+const passwordFormRef = ref(null)
+const profileFormRef = ref(null)
+const passwordFormKey = ref(0)
 
 // Profile form data
 const profileForm = ref({
@@ -269,11 +283,15 @@ const passwordForm = ref({
 
 // Computed properties
 const userPhoto = computed(() => {
+  // Show preview if available
+  if (photoPreview.value) {
+    return photoPreview.value
+  }
+  
+  // Show current user photo
   if (!authStore.user) return 'src/assets/user.png'
-  return (
-    authStore.user.photo_url ||
+  return authStore.user.photo_url ||
     (authStore.user.photo_path ? `/storage/${authStore.user.photo_path}` : 'src/assets/user.png')
-  )
 })
 
 const isFormValid = computed(() => {
@@ -307,6 +325,35 @@ const triggerFileUpload = () => {
   fileInput.value?.click()
 }
 
+const onPhotoHover = () => {
+  if (photoPreview.value && !isUploadingPhoto.value) {
+    isHoveringPreview.value = true
+  }
+}
+
+const onPhotoLeave = () => {
+  isHoveringPreview.value = false
+}
+
+const onBadgeHover = () => {
+  isHoveringBadge.value = true
+}
+
+const onBadgeLeave = () => {
+  isHoveringBadge.value = false
+}
+
+const removePreview = () => {
+  photoPreview.value = null
+  profileForm.value.photo_path = authStore.user?.photo_path || ''
+  $q.notify({
+    type: 'info',
+    message: 'Photo preview removed',
+    position: 'top',
+    timeout: 2000
+  })
+}
+
 const handleFileUpload = async (event) => {
   const file = event.target.files[0]
   if (!file) return
@@ -331,24 +378,39 @@ const handleFileUpload = async (event) => {
     return
   }
 
+  // Create immediate preview
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    photoPreview.value = e.target.result
+  }
+  reader.readAsDataURL(file)
+
+  isUploadingPhoto.value = true
   try {
     const result = await authStore.uploadPhoto(file)
     if (result.success) {
       profileForm.value.photo_path = result.path
+      // Keep preview visible - don't clear it yet
+      // User can see the preview and decide if they want to update profile
       $q.notify({
         type: 'positive',
-        message: 'Photo uploaded successfully',
-        position: 'top'
+        message: 'Photo uploaded successfully - click "Update Profile" to save changes',
+        position: 'top',
+        timeout: 4000
       })
     } else {
       throw new Error(result.error)
     }
   } catch (error) {
+    // Clear preview on error and revert to original photo
+    photoPreview.value = null
     $q.notify({
       type: 'negative',
       message: error.message || 'Failed to upload photo',
       position: 'top'
     })
+  } finally {
+    isUploadingPhoto.value = false
   }
 }
 
@@ -357,7 +419,10 @@ const updateProfile = async () => {
 
   try {
     const result = await authStore.updateProfile(profileForm.value)
+    
     if (result.success) {
+      // Clear photo preview since profile was successfully updated
+      photoPreview.value = null
       $q.notify({
         type: 'positive',
         message: 'Profile updated successfully',
@@ -369,10 +434,24 @@ const updateProfile = async () => {
       throw new Error(result.error)
     }
   } catch (error) {
+    
+    let errorMessage = 'Failed to update profile'
+    
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.response?.data?.errors) {
+      // Handle validation errors
+      const errors = Object.values(error.response.data.errors).flat()
+      errorMessage = errors.join(', ')
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
     $q.notify({
       type: 'negative',
-      message: error.message || 'Failed to update profile',
-      position: 'top'
+      message: errorMessage,
+      position: 'top',
+      timeout: 5000
     })
   } finally {
     isUpdating.value = false
@@ -395,7 +474,8 @@ const changePassword = async () => {
         message: 'Password changed successfully',
         position: 'top'
       })
-      resetPasswordForm()
+      // Reset form after successful password change
+      await resetPasswordForm()
     } else {
       throw new Error(result.error)
     }
@@ -411,6 +491,9 @@ const changePassword = async () => {
 }
 
 const resetForm = () => {
+  // Clear any photo preview
+  photoPreview.value = null
+  
   if (authStore.user) {
     profileForm.value = {
       first_name: authStore.user.first_name || '',
@@ -421,20 +504,52 @@ const resetForm = () => {
       username: authStore.user.username || '',
       photo_path: authStore.user.photo_path || ''
     }
+  } else {
+    // Reset to empty values if no user data
+    profileForm.value = {
+      first_name: '',
+      middle_name: '',
+      last_name: '',
+      suffix: '',
+      email: '',
+      username: '',
+      photo_path: ''
+    }
+  }
+  
+  // Reset form validation state
+  if (profileFormRef.value) {
+    profileFormRef.value.resetValidation()
   }
 }
 
-const resetPasswordForm = () => {
+const resetPasswordForm = async () => {
+  // Clear form data
   passwordForm.value = {
     current_password: '',
     new_password: '',
     confirm_password: ''
   }
+  
+  // Force form re-render by changing key
+  passwordFormKey.value++
+  
 }
 
 // Initialize form with current user data
-onMounted(() => {
+onMounted(async () => {
+  // Ensure user data is loaded before initializing form
+  if (!authStore.user) {
+    await authStore.initialize()
+  }
   resetForm()
+})
+
+// Cleanup preview URL on unmount
+onUnmounted(() => {
+  if (photoPreview.value) {
+    URL.revokeObjectURL(photoPreview.value)
+  }
 })
 </script>
 
@@ -456,11 +571,64 @@ onMounted(() => {
 .profile-avatar {
   border: 3px solid #e0e0e0;
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .profile-avatar:hover {
   border-color: #1976d2;
   box-shadow: 0 4px 12px rgba(25, 118, 210, 0.2);
+}
+
+.profile-avatar.uploading {
+  border-color: #ff9800;
+  opacity: 0.8;
+}
+
+.profile-avatar.has-preview.preview-hover {
+  border-color: #4caf50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+}
+
+.upload-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #4caf50;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.profile-avatar.has-preview.preview-hover .preview-badge {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.preview-badge:hover {
+  background: #f5f5f5;
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .photo-overlay {

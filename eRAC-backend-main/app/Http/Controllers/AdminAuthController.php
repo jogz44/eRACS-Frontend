@@ -242,7 +242,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
             ->join('barangay_positions', 'barangay_users.position_id', '=', 'barangay_positions.id')
             ->select(
                 'logs.user_id as id',
-                'logs.fullname',
+                DB::raw('(SELECT TOP 1 logs2.fullname FROM logs logs2 WHERE logs2.user_id = logs.user_id AND CAST(logs2.created_at AS DATE) = CAST(logs.created_at AS DATE) ORDER BY logs2.created_at DESC) as fullname'),
                 DB::raw('CAST(logs.created_at AS DATE) as log_date'),
                 DB::raw('COUNT(logs.id) as total_logs'),
                 'barangays.name as barangay',
@@ -255,7 +255,6 @@ class AdminAuthController extends Controller  // <-- This is crucial
             ->where('logs.fullname', '!=', ' ') // Ensure fullname is not just a space
             ->groupBy(
                 'logs.user_id',
-                'logs.fullname',
                 DB::raw('CAST(logs.created_at AS DATE)'),
                 'barangays.name',
                 'barangay_positions.name'
@@ -266,7 +265,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
             ->join('admins', 'admin_logs.admin_id', '=', 'admins.id')
             ->select(
                 'admin_logs.admin_id as id',
-                'admins.name as fullname',
+                DB::raw('(SELECT TOP 1 admin_logs2.fullname FROM admin_logs admin_logs2 WHERE admin_logs2.admin_id = admin_logs.admin_id AND CAST(admin_logs2.created_at AS DATE) = CAST(admin_logs.created_at AS DATE) ORDER BY admin_logs2.created_at DESC) as fullname'),
                 DB::raw('CAST(admin_logs.created_at AS DATE) as log_date'),
                 DB::raw('COUNT(admin_logs.id) as total_logs'),
                 DB::raw("'Admin' as barangay"),
@@ -274,10 +273,11 @@ class AdminAuthController extends Controller  // <-- This is crucial
                 DB::raw("'admin' as user_type"),
                 'admins.role as admin_role'
             )
-            ->whereNotNull('admins.name') // Ensure admin name is not null
+            ->whereNotNull('admin_logs.fullname') // Ensure fullname is not null
+            ->where('admin_logs.fullname', '!=', '') // Ensure fullname is not empty
+            ->where('admin_logs.fullname', '!=', ' ') // Ensure fullname is not just a space
             ->groupBy(
                 'admin_logs.admin_id',
-                'admins.name',
                 DB::raw('CAST(admin_logs.created_at AS DATE)'),
                 'admins.role'
             );
