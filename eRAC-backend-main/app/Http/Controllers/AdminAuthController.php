@@ -71,7 +71,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
     public function logout(Request $request)
     {
         $admin = $request->user('admin');
-        
+
         // Log admin logout to admin_logs table
         if ($admin) {
             DB::table('admin_logs')->insert([
@@ -83,7 +83,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
                 'updated_at' => now(),
             ]);
         }
-        
+
         // Delete ALL tokens for this admin to ensure complete logout
         $admin->tokens()->delete();
         $cookie = Cookie::forget('admin_token');
@@ -206,7 +206,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
     public function updateUserPermissions(Request $request, $id) {
         try {
             $user = BarangayUser::findOrFail($id);
-            
+
             // Validate the permissions data
             $validated = $request->validate([
                 'permissions' => 'required|array',
@@ -216,10 +216,10 @@ class AdminAuthController extends Controller  // <-- This is crucial
                 'permissions.delete' => 'boolean',
                 'permissions.print' => 'boolean',
             ]);
-            
+
             $user->permissions = $validated['permissions'];
             $user->save();
-            
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'User permissions updated successfully'
@@ -294,9 +294,9 @@ class AdminAuthController extends Controller  // <-- This is crucial
     public function getAdminLogs(Request $request) {
         $adminId = $request->query('admin_id');
         $date = $request->query('date');
-        
+
         \Log::info("getAdminLogs called with adminId: {$adminId}, date: {$date}");
-        
+
         $query = DB::table('admin_logs')
             ->join('admins', 'admin_logs.admin_id', '=', 'admins.id')
             ->select(
@@ -306,30 +306,30 @@ class AdminAuthController extends Controller  // <-- This is crucial
                 'admin_logs.created_at',
                 'admin_logs.fullname'
             );
-        
+
         // Filter by admin_id if provided
         if ($adminId) {
             $query->where('admin_logs.admin_id', $adminId);
         }
-        
+
         // Filter by date if provided
         if ($date) {
             $query->whereDate('admin_logs.created_at', $date);
         }
-        
+
         $logs = $query->orderByDesc('admin_logs.created_at')->get();
-        
+
         \Log::info("Admin logs found: " . $logs->count());
-        
+
         return response()->json($logs);
     }
 
     // Get individual user logs
     public function getUserLogs(Request $request, $userId, $day) {
         $userType = $request->query('user_type', 'user'); // Default to user if not specified
-        
+
         \Log::info("getUserLogs called with userId: '{$userId}' (type: " . gettype($userId) . "), day: '{$day}', userType: '{$userType}'");
-        
+
         if ($userType === 'admin') {
             // This is an admin user, get logs from admin_logs table
             $logs = DB::table('admin_logs')
@@ -344,7 +344,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
                 ->whereDate('admin_logs.created_at', $day)
                 ->orderByDesc('admin_logs.created_at')
                 ->get();
-            
+
             \Log::info("Admin logs found: " . $logs->count());
         } else {
             // This is a regular user, get logs from logs table
@@ -360,10 +360,10 @@ class AdminAuthController extends Controller  // <-- This is crucial
                 ->whereDate('logs.created_at', $day)
                 ->orderByDesc('logs.created_at')
                 ->get();
-            
+
             \Log::info("User logs found: " . $logs->count());
         }
-        
+
         return response()->json($logs);
     }
 
@@ -415,17 +415,17 @@ class AdminAuthController extends Controller  // <-- This is crucial
         ]);
 
         $user = $request->user();
-        
+
         // Ensure we have a proper fullname
         $firstName = trim($user->first_name ?? '');
         $lastName = trim($user->last_name ?? '');
         $fullname = trim($firstName . ' ' . $lastName);
-        
+
         // If fullname is empty, try to get it from the user object or use a fallback
         if (empty($fullname)) {
             $fullname = $user->fullname ?? $user->name ?? 'Unknown User';
         }
-        
+
         DB::table('logs')->insert([
             'user_id' => $user->id,
             'fullname' => $fullname,
@@ -451,7 +451,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
         //     ->groupBy('barangays.id', 'barangays.name')
         //     ->orderBy('barangay_name', 'asc')
         //     ->get();
-        
+
         // {
         //     "id": "1",
         //     "barangay_name": "Apokon",
@@ -469,7 +469,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
                 $totalOriginal = $barangay->budget->sum('original_amount');
                 $totalCurrent = $barangay->budget->sum('current_amount');
                 $totalEntries = $barangay->budget->count();
-                
+
                 return [
                     'id' => $barangay->id,
                     'barangay_name' => $barangay->name,
@@ -492,7 +492,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
     {
         try {
             $admin = Auth::user();
-            
+
             if (!$admin) {
                 return response()->json([
                     'message' => 'Unauthorized'
@@ -520,7 +520,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
     {
         try {
             $admin = Auth::user();
-            
+
             if (!$admin) {
                 return response()->json([
                     'message' => 'No authenticated admin found'
@@ -529,7 +529,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
 
             // Delete ALL tokens for this admin
             $admin->tokens()->delete();
-            
+
             // Log the inactivity logout to admin_logs table
             DB::table('admin_logs')->insert([
                 'admin_id' => $admin->id,

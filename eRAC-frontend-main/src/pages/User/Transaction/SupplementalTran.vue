@@ -77,30 +77,30 @@
                 class="q-mt-sm"
               />
               <div class="text-caption text-grey-6 q-mt-xs">
-                {{ supplementalBudgetPercentage }}% of unused funds transferred
+                {{ supplementalBudgetPercentage }}% of total budget available
               </div>
             </div>
           </q-card-section>
         </q-card>
       </div>
       <div class="col-md-4 col-sm-12">
-        <q-card class="summary-card transfer-card" :class="{ 'loading-state': loading }">
+        <q-card class="summary-card allocation-card" :class="{ 'loading-state': loading }">
           <q-card-section class="text-center">
             <div class="summary-header">
-              <q-icon name="swap_horiz" size="24px" class="q-mr-sm"   style="color:green;"/>
-              <div class="text-h6 text-green">Transferred to Annual Budget</div>
+              <q-icon name="account_balance_wallet" size="24px" class="q-mr-sm"   style="color:green;"/>
+              <div class="text-h6 text-green">Total Allocated</div>
             </div>
             <div class="summary-amount">
               <div class="text-h4 text-weight-bold text-black">
-                {{ supplementalBudgetStore.formatCurrency(transferredToAnnualAmount) }}
+                {{ supplementalBudgetStore.formatCurrency(totalAllocatedAmount) }}
               </div>
               <div class="text-caption text-grey-6 q-mt-xs">
-                {{ transferredBudgetsCount }} budget{{ transferredBudgetsCount !== 1 ? 's' : '' }} transferred
+                {{ allocatedBudgetsCount }} budget{{ allocatedBudgetsCount !== 1 ? 's' : '' }} with allocations
               </div>
             </div>
             <div class="summary-footer">
               <q-linear-progress
-                :value="transferredProgress"
+                :value="allocationProgress"
                 color="positive"
                 size="6px"
                 track-color="positive-1"
@@ -108,7 +108,7 @@
                 class="q-mt-sm"
               />
               <div class="text-caption text-grey-6 q-mt-xs">
-                {{ transferredPercentage }}% of supplemental budgets transferred
+                {{ allocationPercentage }}% of supplemental budgets allocated
               </div>
             </div>
           </q-card-section>
@@ -359,7 +359,7 @@
                   {{ supplementalBudgetStore.formatCurrency(props.row.total_appropriated) }}
                 </div>
                 <div class="text-caption text-grey-6">
-                  Transferred from unused expenses
+                  Allocated to expense accounts
                 </div>
               </q-td>
             </template>
@@ -412,18 +412,44 @@
               <strong>{{ supplementalBudgetStore.formatCurrency(selectedRow.total_amount) }}</strong>
             </div>
             <div class="col-12 col-sm-6">
-              <div class="text-caption">Total Transferred:</div>
+              <div class="text-caption">Total Allocated:</div>
               <strong>{{ supplementalBudgetStore.formatCurrency(selectedRow.total_appropriated) }}</strong>
             </div>
           </div>
 
-          <!-- Transferred Funds in this supplemental budget -->
+          <!-- Source Information -->
           <div class="q-mb-md">
             <div class="text-h6 text-weight-medium q-mb-sm">
-              Transferred Funds in this Supplemental Budget
+              Source Information
             </div>
             <div class="text-caption q-mb-sm">
-              These funds were transferred from unused expenses and are available for transfer to annual budgets
+              This supplemental budget was created from unused funds from annual budget allocations
+            </div>
+            <q-card flat bordered class="q-pa-md bg-blue-1">
+              <div class="row q-col-gutter-md">
+                <div class="col-12 col-sm-6">
+                  <div class="text-caption text-grey-7">Source Type:</div>
+                  <div class="text-weight-medium text-primary">
+                    Unused Annual Budget Funds
+                  </div>
+                </div>
+                <div class="col-12 col-sm-6">
+                  <div class="text-caption text-grey-7">Transfer Date:</div>
+                  <div class="text-weight-medium">
+                    {{ selectedRow.created_at || 'N/A' }}
+                  </div>
+                </div>
+              </div>
+            </q-card>
+          </div>
+
+          <!-- Allocated Funds in this supplemental budget -->
+          <div class="q-mb-md">
+            <div class="text-h6 text-weight-medium q-mb-sm">
+              Allocated Funds in this Supplemental Budget
+            </div>
+            <div class="text-caption q-mb-sm">
+              These funds have been allocated to specific expense accounts
             </div>
 
             <div class="hierarchical-table" style="border: 1px solid #e0e0e0">
@@ -442,7 +468,10 @@
                   >
                     <div class="col-6">
                       <div class="text-weight-medium">
-                        {{ appropriation.account_name || 'Unknown Account' }}
+                        {{ appropriation.account_name || 'Unappropriated Funds' }}
+                      </div>
+                      <div class="text-caption text-grey-6" v-if="!appropriation.account_name">
+                        Available for allocation to expense accounts
                       </div>
                     </div>
                     <div class="col-6 text-right">
@@ -460,28 +489,6 @@
             </div>
           </div>
 
-          <!-- Transfer Information -->
-          <div class="q-mb-md">
-            <div class="text-h6 text-weight-medium q-mb-sm">Transfer Information</div>
-            <div class="row q-col-gutter-md">
-              <div class="col-12 col-sm-6">
-                <q-card flat bordered class="q-pa-md">
-                  <div class="text-caption text-grey-7">Purpose</div>
-                  <div class="text-h6 text-primary">
-                    Available for Transfer
-                  </div>
-                </q-card>
-              </div>
-              <div class="col-12 col-sm-6">
-                <q-card flat bordered class="q-pa-md">
-                  <div class="text-caption text-grey-7">Total Transferred</div>
-                  <div class="text-h6 text-secondary">
-                    {{ supplementalBudgetStore.formatCurrency(selectedRow.total_appropriated) }}
-                  </div>
-                </q-card>
-              </div>
-            </div>
-          </div>
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md">
@@ -688,7 +695,7 @@ const supplementalColumns = [
   },
   {
     name: 'total_appropriated',
-    label: 'Untransferred Amount',
+    label: 'Allocated Amount',
     field: 'total_appropriated',
     align: 'right',
     sortable: true,
@@ -786,37 +793,33 @@ const supplementalBudgetPercentage = computed(() => {
   return Math.round((supplementalBudgetStore.totalSupplementalAmount / totalBudget) * 100)
 })
 
-// Transferred to annual budget metrics for the third indicator
-const transferredToAnnualAmount = computed(() => {
-  // Calculate total amount that has been transferred from supplemental budgets to annual budgets
-  // This is the difference between total supplemental amount and untransferred amount
+// Total allocated amount metrics for the third indicator
+const totalAllocatedAmount = computed(() => {
+  // Calculate total amount that has been allocated from supplemental budgets
   return supplementalBudgetStore.supplementalBudgets.reduce((total, budget) => {
-    const untransferred = budget.total_appropriated || 0
-    const totalAmount = budget.total_amount || 0
-    const transferred = totalAmount - untransferred
-    return total + Math.max(0, transferred)
+    const allocated = budget.total_appropriated || 0
+    return total + allocated
   }, 0)
 })
 
-const transferredBudgetsCount = computed(() => {
-  // Count how many supplemental budgets have been fully or partially transferred
+const allocatedBudgetsCount = computed(() => {
+  // Count how many supplemental budgets have allocations
   return supplementalBudgetStore.supplementalBudgets.filter(budget => {
-    const untransferred = budget.total_appropriated || 0
-    const totalAmount = budget.total_amount || 0
-    return totalAmount > untransferred
+    const allocated = budget.total_appropriated || 0
+    return allocated > 0
   }).length
 })
 
-const transferredProgress = computed(() => {
+const allocationProgress = computed(() => {
   const totalSupplementalAmount = supplementalBudgetStore.totalSupplementalAmount
   if (totalSupplementalAmount === 0) return 0
-  return Math.min(transferredToAnnualAmount.value / totalSupplementalAmount, 1)
+  return Math.min(totalAllocatedAmount.value / totalSupplementalAmount, 1)
 })
 
-const transferredPercentage = computed(() => {
+const allocationPercentage = computed(() => {
   const totalSupplementalAmount = supplementalBudgetStore.totalSupplementalAmount
   if (totalSupplementalAmount === 0) return 0
-  return Math.round((transferredToAnnualAmount.value / totalSupplementalAmount) * 100)
+  return Math.round((totalAllocatedAmount.value / totalSupplementalAmount) * 100)
 })
 
 // Methods

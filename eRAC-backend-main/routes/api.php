@@ -194,8 +194,6 @@ Route::prefix('barangay')->group(function () {
         Route::get('supplemental-budgets', [AppropriationController::class, 'getSupplementalBudgets']);
         Route::get('fiscal-years', [AppropriationController::class, 'getFiscalYears']);
         
-        // Budget Transfer endpoint
-        Route::post('budget-transfer', [AppropriationController::class, 'transferBudget']);
 
         // Report routes aka Preview and PDF download by Dan Steve
         Route::get('/report/rac', [ReportController::class, 'getRacReport']);
@@ -280,8 +278,6 @@ Route::prefix('admin')->group(function () {
         Route::get('/supplemental-budgets', [AppropriationController::class, 'getSupplementalBudgets']);
         Route::get('/fiscal-years', [AppropriationController::class, 'getFiscalYears']);
         
-        // Admin budget transfer endpoint
-        Route::post('/budget-transfer', [AppropriationController::class, 'transferBudget']);
 
         // Admin review endpoints
         Route::post('/reviews', [AdminReviewController::class, 'store']);

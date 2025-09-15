@@ -93,6 +93,27 @@ export function useAugmentationActions(state) {
       })
 
       const appropriations = appropriationResponse.data.data || []
+      
+      // Debug logging
+      console.log('=== AUGMENTATION EXPENSE ACCOUNTS DEBUG ===')
+      console.log('API Response:', appropriationResponse.data)
+      console.log('Appropriations count:', appropriations.length)
+      console.log('Fiscal Year ID:', currentFiscalYear.id)
+      console.log('Budget Source Filter:', state.selectedBudgetSource.value)
+      console.log('Raw appropriations:', appropriations)
+      
+      // Check if no appropriations found
+      if (appropriations.length === 0) {
+        console.warn('No appropriations found. This could be due to:')
+        console.warn('1. No appropriations with status="committed"')
+        console.warn('2. No appropriations for current fiscal year')
+        console.warn('3. No appropriations for current barangay')
+        console.warn('4. Missing expense hierarchy relationships')
+        
+        // Show user-friendly message
+        state.AugexpenseAccounts.value = []
+        return
+      }
 
       const flattened = appropriations.map(appropriation => {
         // Extract budget source from budget_description
@@ -235,8 +256,14 @@ export function useAugmentationActions(state) {
       } else {
         state.AugexpenseAccounts.value = flattened
       }
+      
+      // Debug final result
+      console.log('Final flattened data:', flattened)
+      console.log('Final AugexpenseAccounts.value:', state.AugexpenseAccounts.value)
+      console.log('=== END AUGMENTATION EXPENSE ACCOUNTS DEBUG ===')
     } catch (error) {
       console.error('Failed to fetch expense accounts:', error)
+      console.error('Error details:', error.response?.data || error.message)
       state.AugexpenseAccounts.value = []
     } finally {
       state.expenseAccountsLoading.value = false
