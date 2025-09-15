@@ -37,8 +37,17 @@ class TranAppropriationSeeder extends Seeder
                 $totalAllocated = 0;
 
                 $expenseClasses = LibExpenseClass::where('barangay_id', $barangay->id)
-                    ->where('fiscal_year_id', $budget->fiscal_year_id)
-                    ->inRandomOrder()
+                    ->where('fiscal_year_id', $budget->fiscal_year_id);
+
+                if ($yearBudget != 2025) {
+                    $expenseClasses->where(function($q) {
+                        $q->where('order', 0)
+                        ->orWhere('order', 4)
+                        ->orWhere('order', 5);
+                    });
+                }
+
+                $expenseClasses = $expenseClasses->inRandomOrder()
                     ->take(3)
                     ->get();
                 foreach ($expenseClasses as $expenseClass) {
@@ -48,15 +57,19 @@ class TranAppropriationSeeder extends Seeder
                         continue;
                     }
 
-                    if($yearBudget!=2025){
-                        // filter where if order is not 0,4,5, it continue
-                        if(!$expenseClass->where('order', 0)->orWhere('order', 4)->first()){
-                            continue;
-                        }
-                    }
 
-                    $expenseTypes = LibExpenseType::where('expense_class_id', $expenseClass->id)
-                        ->inRandomOrder()
+                    $expenseTypes = LibExpenseType::where('expense_class_id', $expenseClass->id);
+                    if($yearBudget!=2025 && $expenseClass->order===0 ){
+                        $expenseTypes->where(function($q) {
+                            $q->where('order', 1)
+                            ->orWhere('order', 2);
+                        });
+                    }elseif($yearBudget!=2025 && $expenseClass->order===5 ){
+                        $expenseTypes->where(function($q) {
+                            $q->where('order', 0);
+                        });
+                    }
+                    $expenseTypes=$expenseTypes->inRandomOrder()
                         ->take(6)
                         ->get();
                     foreach ($expenseTypes as $expenseType) {
