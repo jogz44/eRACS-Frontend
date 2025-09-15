@@ -16,6 +16,7 @@ use App\Http\Middleware\AuthTokenValid;
 use App\Models\Barangay;
 use App\Models\BarangayPosition;
 use App\Models\Admin;
+use App\Http\Controllers\OtpController;
 use App\Http\Controllers\ReportController;
 
 
@@ -48,6 +49,9 @@ Route::prefix('barangay')->group(function () {
     Route::post('/upload-photo', [AuthController::class, 'uploadPhoto']);
     Route::post('/check-email', [AuthController::class, 'checkEmailExists']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+
+    Route::post('/otp/generate', [OtpController::class, 'generate']);
+    Route::post('/otp/verify', [OtpController::class, 'verify']);
 
     Route::middleware(['auth.barangay'])->group(function () {
         // Route::middleware(['check.role'])->group(function () {

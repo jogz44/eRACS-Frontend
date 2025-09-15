@@ -1092,7 +1092,7 @@ const canSubmit = computed(() => {
   // Cannot submit if return amount is negative (over-liquidation) without sufficient budget
   if (returnAmount < 0) {
     // Check if there's sufficient budget for reimbursement
-    const reimbursementNeeded = Math.abs(returnAmount)
+    //const reimbursementNeeded = Math.abs(returnAmount)
     // For now, we'll allow over-liquidation but show a warning
     // The backend will handle budget validation
     return true
