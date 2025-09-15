@@ -10,7 +10,7 @@ class LibFiscalYearSeeder extends Seeder
 {
     public function run()
     {
-        $years = [2023, 2024, 2025];
+        $years = [2023, 2024];
 
         foreach (Barangay::all() as $barangay) {
             // Ensure all years exist for the barangay
@@ -19,8 +19,6 @@ class LibFiscalYearSeeder extends Seeder
                     [
                         'barangay_id' => $barangay->id,
                         'year' => $year,
-                    ],
-                    [
                         'is_active' => false, // set below
                     ]
                 );

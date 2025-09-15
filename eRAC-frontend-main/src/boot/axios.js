@@ -9,6 +9,7 @@ import axios from 'axios'
 // for each client)
 const api = axios.create({
   baseURL: process.env.API_URL || 'http://localhost:8000',
+  //baseURL: process.env.API_URL || 'http://192.168.150.161:8000',
   withCredentials: true,
   headers: {
     Accept: 'application/json',
