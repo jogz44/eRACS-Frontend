@@ -130,31 +130,68 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
             : false
 
           if (hasExpenseItemsWithBalance) {
-            // If expense type has items with balance, only show the items (not the type)
+            // If expense type has items with balance, show both items and their sub-items
             expenseType.children.forEach((expenseItem) => {
               if (expenseItem.amount && expenseItem.amount > 0) {
-                // Calculate remaining balance by deducting disbursements
-                const remainingBalance = calculateRemainingBalance(
-                  expenseItem.id,
-                  expenseItem.amount,
-                  'item'
-                )
+                // Check if this item has sub-items
+                const hasSubItems = expenseItem.children && expenseItem.children.length > 0
+                
+                if (hasSubItems) {
+                  // If item has sub-items, show each sub-item separately
+                  expenseItem.children.forEach((expenseSubItem) => {
+                    if (expenseSubItem.amount && expenseSubItem.amount > 0) {
+                      const remainingBalance = calculateRemainingBalance(
+                        expenseSubItem.id,
+                        expenseSubItem.amount,
+                        'subitem'
+                      )
 
-                if (remainingBalance > 0) {
-                  const expenseItemEntry = {
-                    id: expenseItem.id,
-                    account: expenseClass.name,
-                    expenseType: expenseType.name,
-                    expenseItem: expenseItem.name,
-                    balance: remainingBalance,
-                    originalBalance: expenseItem.amount,
-                    expense_class_id: expenseClass.id,
-                    expense_type_id: expenseType.id,
-                    expense_item_id: expenseItem.id,
-                    budget_source: expenseItem.budget_source || expenseType.budget_source || expenseClass.budget_source || 'Continuing Appropriation',
-                    description: expenseItem.description || expenseType.description || expenseClass.description,
+                      if (remainingBalance > 0) {
+                        const expenseSubItemEntry = {
+                          id: expenseSubItem.id,
+                          account: expenseClass.name,
+                          expenseType: expenseType.name,
+                          expenseItem: expenseItem.name,
+                          expenseSubItem: expenseSubItem.name,
+                          balance: remainingBalance,
+                          originalBalance: expenseSubItem.amount,
+                          expense_class_id: expenseClass.id,
+                          expense_type_id: expenseType.id,
+                          expense_item_id: expenseItem.id,
+                          expense_sub_item_id: expenseSubItem.id,
+                          budget_source: expenseSubItem.budget_source || expenseItem.budget_source || expenseType.budget_source || expenseClass.budget_source || 'Continuing Appropriation',
+                          description: expenseSubItem.description || expenseItem.description || expenseType.description || expenseClass.description,
+                        }
+                        acc.push(expenseSubItemEntry)
+                      }
+                    }
+                  })
+                } else {
+                  // If item has no sub-items, show the item itself
+                  const remainingBalance = calculateRemainingBalance(
+                    expenseItem.id,
+                    expenseItem.amount,
+                    'item'
+                  )
+
+                  if (remainingBalance > 0) {
+                    const expenseItemEntry = {
+                      id: expenseItem.id,
+                      account: expenseClass.name,
+                      expenseType: expenseType.name,
+                      expenseItem: expenseItem.name,
+                      expenseSubItem: null,
+                      balance: remainingBalance,
+                      originalBalance: expenseItem.amount,
+                      expense_class_id: expenseClass.id,
+                      expense_type_id: expenseType.id,
+                      expense_item_id: expenseItem.id,
+                      expense_sub_item_id: null,
+                      budget_source: expenseItem.budget_source || expenseType.budget_source || expenseClass.budget_source || 'Continuing Appropriation',
+                      description: expenseItem.description || expenseType.description || expenseClass.description,
+                    }
+                    acc.push(expenseItemEntry)
                   }
-                  acc.push(expenseItemEntry)
                 }
               }
             })
@@ -173,11 +210,13 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
                   account: expenseClass.name,
                   expenseType: expenseType.name,
                   expenseItem: null,
+                  expenseSubItem: null,
                   balance: remainingBalance,
                   originalBalance: expenseType.amount,
                   expense_class_id: expenseClass.id,
                   expense_type_id: expenseType.id,
                   expense_item_id: null,
+                  expense_sub_item_id: null,
                   budget_source: expenseType.budget_source || expenseClass.budget_source || 'Continuing Appropriation',
                   description: expenseType.description || expenseClass.description,
                 }
@@ -374,6 +413,13 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         sortable: true,
       },
       {
+        name: 'expenseSubItem',
+        label: 'Expense Sub-Item',
+        field: 'expenseSubItem',
+        align: 'left',
+        sortable: true,
+      },
+      {
         name: 'balance',
         label: 'Balance',
         field: 'balance',
@@ -559,16 +605,11 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         // Process accounts
         appropriation.accounts.forEach(account => {
             console.log('Processing account:', account)
-            // Parse the account name to extract class, type, and item
-            const accountNameParts = account.accountName.split(' > ')
-            if (accountNameParts.length !== 3) {
-              console.warn('Invalid account name format:', account.accountName)
-              return
-            }
-
-            const expenseClass = accountNameParts[0]
-            const expenseType = accountNameParts[1]
-            const expenseItem = accountNameParts[2]
+            
+            // Use the structured data from the API response
+            const expenseClass = account.expenseClass
+            const expenseType = account.expenseType
+            const expenseItem = account.expenseItem
 
             if (!hierarchy[expenseClass]) {
               hierarchy[expenseClass] = {
@@ -590,11 +631,17 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
               hierarchy[expenseClass].children[expenseType].children[expenseItem] = {
                 id: account.id, // Use the continuing account ID
                 name: expenseItem,
-                amount: account.balance || 0,
+                amount: account.remaining_amount || 0,
                 budget_source: 'Continuing Appropriation',
                 description: appropriation.description || `Continued from ${appropriation.year}`,
                 continuingAccountId: account.id,
-                continuingAppropriationId: appropriation.id
+                continuingAppropriationId: appropriation.id,
+                children: account.subItems ? account.subItems.map(subItem => ({
+                  id: subItem.id,
+                  name: subItem.name,
+                  amount: 0, // Sub-items don't have direct allocations in continuing appropriations
+                  order: subItem.order || 0
+                })) : []
               }
             }
           })
@@ -838,13 +885,24 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       console.log('Item ID (accountId):', item.id)
       console.log('Item continuingAccountId:', item.continuingAccountId)
 
+      // Build account name with sub-item if present
+      let accountName = `${item.account} > ${item.expenseType} > ${item.expenseItem}`
+      if (item.expenseSubItem) {
+        accountName += ` > ${item.expenseSubItem}`
+      }
+
       this.forms.expense = {
-        account: `${item.account} > ${item.expenseType} > ${item.expenseItem}`,
+        account: accountName,
         accountId: item.continuingAccountId || item.id, // Use continuingAccountId if available
         balance: item.balance,
         particulars: '',
         amount: '',
         disbursementId: this.currentItem?.id || null,
+        // Store additional IDs for proper tracking
+        expense_class_id: item.expense_class_id,
+        expense_type_id: item.expense_type_id,
+        expense_item_id: item.expense_item_id,
+        expense_sub_item_id: item.expense_sub_item_id,
       }
       console.log('Set forms.expense.accountId to:', this.forms.expense.accountId)
       this.dialogs.expense = false
@@ -869,7 +927,12 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
           expenses: this.expenses.map(expense => ({
             accountId: expense.accountId,
             particulars: expense.particular,
-            amount: expense.amount
+            amount: expense.amount,
+            // Include sub-item information if present
+            expense_class_id: expense.expense_class_id,
+            expense_type_id: expense.expense_type_id,
+            expense_item_id: expense.expense_item_id,
+            expense_sub_item_id: expense.expense_sub_item_id,
           }))
         }
 
@@ -878,7 +941,11 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         console.log('Individual expense details:', this.expenses.map(expense => ({
           accountId: expense.accountId,
           particulars: expense.particular,
-          amount: expense.amount
+          amount: expense.amount,
+          expense_class_id: expense.expense_class_id,
+          expense_type_id: expense.expense_type_id,
+          expense_item_id: expense.expense_item_id,
+          expense_sub_item_id: expense.expense_sub_item_id,
         })))
 
         const response = await api.post('/api/barangay/continuing-disbursements', disbursementData, config)
@@ -1013,6 +1080,11 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         accountName: this.forms.expense.account,
         amount: amount,
         particular: this.forms.expense.particulars,
+        // Store additional IDs for proper tracking
+        expense_class_id: this.forms.expense.expense_class_id,
+        expense_type_id: this.forms.expense.expense_type_id,
+        expense_item_id: this.forms.expense.expense_item_id,
+        expense_sub_item_id: this.forms.expense.expense_sub_item_id,
       })
 
       this.expenses = [...this.expenses]
@@ -1133,7 +1205,12 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
           expenses: this.expenses.map(expense => ({
             accountId: expense.accountId,
             particulars: expense.particular,
-            amount: expense.amount
+            amount: expense.amount,
+            // Include sub-item information if present
+            expense_class_id: expense.expense_class_id,
+            expense_type_id: expense.expense_type_id,
+            expense_item_id: expense.expense_item_id,
+            expense_sub_item_id: expense.expense_sub_item_id,
           }))
         }
 

@@ -236,7 +236,7 @@
                 color="primary"
                 icon="add"
                 @click="handleAddExpense"
-                @mouseenter="preloadExpenseAccounts"
+                @mouseenter="$q.debounce(preloadExpenseAccounts, 300)"
                 :loading="store.loading || store.expenseTypeLoading"
                 v-permission="'add'"
               />
@@ -407,10 +407,10 @@
 
           <q-card-actions align="right" class="q-pa-md">
             <q-btn flat label="Cancel" @click="store.closeDialog('expenseDetail')" />
-            <q-btn 
-              label="Save" 
-              @click="handleSaveExpense" 
-              color="primary" 
+            <q-btn
+              label="Save"
+              @click="handleSaveExpense"
+              color="primary"
               :disable="isAmountExceedingBalance || !store.forms.expense.particulars?.trim()"
             />
           </q-card-actions>
@@ -708,7 +708,7 @@ const handleBankSelection = async (bankId) => {
 }
 
 const handleAddExpense = async () => {
-
+  store.loading = true
   try {
     await store.openDialog('expense')
   } catch (error) {
@@ -720,6 +720,9 @@ const handleAddExpense = async () => {
       position: 'top',
       timeout: 5000,
     })
+  } finally {
+    store.loading = false
+    store.expenseTypeLoading = false
   }
 }
 
@@ -767,13 +770,21 @@ const handleDeleteExpense = async (row) => {
   }
 }
 
-const preloadExpenseAccounts = () => {
-  // Preload expense accounts when user hovers over Add button
-  // Only preload if not already loading and no data exists
-  if (store.expenseData.length === 0 && !store.loading && !store.expenseTypeLoading) {
-    store.refreshExpenseAccountsWithBalances().catch((error) => {
+// Track if preload has been attempted
+const preloadAttempted = ref(false)
+
+const preloadExpenseAccounts = async () => {
+  // Only attempt preload once and only if not already loading
+  if (!preloadAttempted.value && !store.loading && !store.expenseTypeLoading) {
+    preloadAttempted.value = true
+    store.expenseTypeLoading = true
+    try {
+      await store.refreshExpenseAccountsWithBalances()
+    } catch (error) {
       console.warn('Failed to preload expense accounts:', error)
-    })
+    } finally {
+      store.expenseTypeLoading = false
+    }
   }
 }
 
@@ -980,16 +991,16 @@ const formatToTwoDecimals = (value) => {
 const blockNonNumeric = (event) => {
   const key = event.key
   const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
-  
+
   if (allowedKeys.includes(key)) {
     return
   }
-  
+
   // Allow decimal point only if there isn't one already
   if (key === '.' && !event.target.value.includes('.')) {
     return
   }
-  
+
   // Block all other characters except digits
   if (!/^\d$/.test(key)) {
     event.preventDefault()

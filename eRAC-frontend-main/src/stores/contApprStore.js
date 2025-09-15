@@ -46,12 +46,18 @@ export const useContApprStore = defineStore('continuing-appropriation',{
                 this.continueAccounts = rows.map(row => ({
                     id: row.id,
                     year: row.year,
-                    accountName: [row.expenseClass, row.expenseType, row.expenseItem]
+                    accountName: [row.expenseClass, row.expenseType, row.expenseItem, row.expenseSubItem]
                         .filter(Boolean)
                         .join(" > "),
                     total: row.total_amount,
                     details: row.details_amount,
                     balance: row.remaining_amount,
+                    // Add subitems data for proper display
+                    subItems: row.subItems || [],
+                    expenseClass: row.expenseClass,
+                    expenseType: row.expenseType,
+                    expenseItem: row.expenseItem,
+                    expenseSubItem: row.expenseSubItem,
                 }))
                 console.log('Mapped Continuing Appropriations:', this.continueAccounts)
                 return this.continueAccounts
@@ -103,7 +109,17 @@ export const useContApprStore = defineStore('continuing-appropriation',{
                 const response = await api.get('/api/barangay/continuing-appropriations/list', config)
 
                 if (response.data.status) {
-                    this.continuingAppropriations = response.data.data || []
+                    // Process the data to include subitems information
+                    this.continuingAppropriations = (response.data.data || []).map(item => ({
+                        ...item,
+                        // Ensure accounts array includes subitems
+                        accounts: (item.accounts || []).map(account => ({
+                            ...account,
+                            // Parse account name to extract subitems
+                            accountName: account.accountName || 'Unknown Account',
+                            subItems: account.subItems || [],
+                        }))
+                    }))
                     return this.continuingAppropriations
                 } else {
                     this.error = response.data.message || 'Failed to fetch continuing appropriations'

@@ -27,6 +27,7 @@
             row-key="id"
             class="expense-accounts-table"
             :pagination="{ rowsPerPage: 5 }"
+            :loading="store.expenseAccountsLoading"
             flat
             bordered
           >

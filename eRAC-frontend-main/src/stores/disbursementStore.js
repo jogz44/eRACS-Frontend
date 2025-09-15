@@ -1393,10 +1393,19 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Get the disbursement data
         const disbursement = response.data.data;
         console.log('=============================================>>>>>>>>:', disbursement);
+        console.log('Main disbursement ID:', disbursement.id);
+        console.log('Main disbursement DV Number:', disbursement.dv_number);
+        console.log('Main disbursement status:', disbursement.status);
         console.log('Expenses from backend:', disbursement.expenses);
+        console.log('Reimbursement data:', disbursement.reimbursement);
         if (disbursement.expenses && disbursement.expenses.length > 0) {
           console.log('First expense structure:', disbursement.expenses[0]);
           console.log('First expense keys:', Object.keys(disbursement.expenses[0]));
+        }
+        if (disbursement.reimbursement) {
+          console.log('Reimbursement DV Number:', disbursement.reimbursement.dv_number);
+          console.log('Reimbursement reference DV:', disbursement.reimbursement.ref_dv_number);
+          console.log('Reimbursement expenses:', disbursement.reimbursement.expenses);
         }
 
         if (disbursement) {
@@ -1452,7 +1461,47 @@ export const useDisbursementStore = defineStore('disbursement', {
 
           console.log('Mapped expenses for view:', mappedExpenses)
 
-          return {
+          // Map reimbursement expenses if they exist
+          const mappedReimbursementExpenses = disbursement.reimbursement?.expenses ? 
+            disbursement.reimbursement.expenses.map((expense) => {
+              // Use the account_name from backend or fallback to lookup
+              const fullAccountName = expense.account_name || this.getExpenseAccountName(
+                expense.expense_class_id,
+                expense.expense_type_id,
+                expense.expense_item_id,
+                expense.expense_sub_item_id
+              )
+
+              // Parse the full account name to extract individual components
+              const parts = fullAccountName.split(' > ')
+              const account = parts[0] || ''
+              const expenseType = parts[1] || ''
+              const expenseItem = parts[2] || ''
+              const expenseSubItem = parts[3] || ''
+
+              return {
+                id: expense.id,
+                accountName: expense.account_name || fullAccountName,
+                amount: expense.amount,
+                particular: expense.particular,
+                accountId: expense.accountId,
+                expense_class_id: expense.expense_class_id,
+                expense_type_id: expense.expense_type_id,
+                expense_item_id: expense.expense_item_id,
+                expense_sub_item_id: expense.expense_sub_item_id,
+                expense_class_name: parts[0] || '',
+                expense_type_name: parts[1] || '',
+                expense_item_name: parts[2] || '',
+                expense_sub_item_name: parts[3] || '',
+                // Add fields for multi-column display
+                account: account,
+                expenseType: expenseType,
+                expenseItem: expenseItem,
+                expenseSubItem: expenseSubItem,
+              }
+            }) : []
+
+          const result = {
             id: disbursement.id,
             date: disbursement.date,
             dvNumber: disbursement.dv_number,
@@ -1460,9 +1509,40 @@ export const useDisbursementStore = defineStore('disbursement', {
             bank_id: disbursement.bank_id,
             payee: disbursement.payee,
             dvAmount: disbursement.dv_amount,
+            status: disbursement.status,
+            remarks: disbursement.remarks,
+            rejection_remarks: disbursement.rejection_remarks,
             expenses: mappedExpenses,
-            reimbursement: disbursement.reimbursement ?? null
+            reimbursement: disbursement.reimbursement ? {
+              id: disbursement.reimbursement.id,
+              date: disbursement.reimbursement.date,
+              dv_number: disbursement.reimbursement.dv_number,
+              dv_amount: disbursement.reimbursement.dv_amount,
+              bank_id: disbursement.reimbursement.bank_id,
+              bank_name: disbursement.reimbursement.bank_name,
+              cheque_number: disbursement.reimbursement.cheque_number,
+              status: disbursement.reimbursement.status,
+              ref_dv_number: disbursement.reimbursement.ref_dv_number,
+              expenses: mappedReimbursementExpenses
+            } : null
           };
+
+          console.log('Final mapped result for ViewOrDetails:', result);
+          console.log('Main disbursement details:', {
+            id: result.id,
+            dvNumber: result.dvNumber,
+            status: result.status,
+            expensesCount: result.expenses?.length || 0
+          });
+          console.log('Reimbursement details:', result.reimbursement ? {
+            id: result.reimbursement.id,
+            dv_number: result.reimbursement.dv_number,
+            ref_dv_number: result.reimbursement.ref_dv_number,
+            status: result.reimbursement.status,
+            expensesCount: result.reimbursement.expenses?.length || 0
+          } : 'No reimbursement');
+
+          return result;
         }
         return null
       } catch (error) {
@@ -1669,11 +1749,25 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.dialogs.orDetails = false
       this.dialogs.disbursement = false
 
-      // Safely clone the row data
+      console.log('=== openViewOrDetails called ===');
+      console.log('Row data from list:', row);
+      console.log('Row ID:', row.id);
+      console.log('Row DV Number:', row.dvNumber);
+
+      // Always fetch fresh data from backend to ensure we have the correct disbursement
+      // This prevents issues where the list might show reimbursement data instead of main disbursement
       try {
-        this.currentLiquidation = JSON.parse(JSON.stringify(row));
+        const freshDisbursementData = await this.fetchDisbursementForView(row.id);
+        if (freshDisbursementData) {
+          this.currentLiquidation = freshDisbursementData;
+          console.log('Fresh disbursement data loaded:', this.currentLiquidation);
+        } else {
+          // Fallback to row data if fetch fails
+          this.currentLiquidation = JSON.parse(JSON.stringify(row));
+          console.log('Using fallback row data:', this.currentLiquidation);
+        }
       } catch (error) {
-        console.error('Error cloning row data:', error);
+        console.error('Error fetching fresh disbursement data:', error);
         // Fallback: create a new object with the essential properties
         this.currentLiquidation = {
           id: row.id,
@@ -1689,7 +1783,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         };
       }
 
-      console.error('ksdafkjaisdhkasj=========================:', this.currentLiquidation);
+      console.log('Final currentLiquidation data:', this.currentLiquidation);
 
       // Initialize orDetails as empty array
       this.currentLiquidation.orDetails = []
@@ -1712,7 +1806,8 @@ export const useDisbursementStore = defineStore('disbursement', {
         }
       }
 
-      // Fetch OR Details from backend
+      // Fetch OR Details from backend - ALWAYS use the main disbursement ID (row.id)
+      // This ensures OR details are always for the original disbursement, not reimbursement
       if (row.id) {
         try {
           // Get auth store instance
@@ -1723,12 +1818,14 @@ export const useDisbursementStore = defineStore('disbursement', {
             throw new Error('Auth store not available')
           }
 
+          console.log('=== Fetching OR Details ===');
+          console.log('Main disbursement ID for OR details:', row.id);
+          console.log('Main disbursement DV Number:', row.dvNumber);
           console.log('Auth store:', authStore)
           console.log('Is admin:', authStore.admin)
-          console.log('Admin token:', authStore.adminToken)
-          console.log('Regular token:', authStore.token)
 
           // Use different endpoints for admin vs regular users
+          // IMPORTANT: Always use row.id (main disbursement ID) for OR details
           const endpoint = authStore.admin
             ? `/api/admin/disbursements/${row.id}/or-details`
             : `/api/barangay/disbursements/${row.id}/or-details`
@@ -1749,6 +1846,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           console.log('OR Details response:', res.data)
           console.log('Response data structure:', res.data)
           console.log('Data array:', res.data.data)
+          console.log('OR Details count:', res.data.data?.length || 0)
 
           // Check if we have data and it's an array
           if (
@@ -1757,6 +1855,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             Array.isArray(res.data.data) &&
             res.data.data.length > 0
           ) {
+            console.log('Processing OR details for main disbursement ID:', row.id);
             const backendUrl = 'http://localhost:8000' // Change if your backend runs elsewhere
             this.currentLiquidation.orDetails = res.data.data.map((or, index) => {
               console.log(`Processing OR detail ${index}:`, or)
@@ -1788,6 +1887,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             })
 
             console.log('Final mapped OR Details:', this.currentLiquidation.orDetails)
+            console.log('OR Details total amount:', this.currentLiquidation.orDetails.reduce((sum, or) => sum + (parseFloat(or.orAmount) || 0), 0));
 
             // Set single remarks from the latest OR detail (most recent one)
             if (res.data.data.length > 0) {
@@ -3265,17 +3365,11 @@ async submitVoidRequest() {
             .map((or) => ({
               id: or.id,
               orNumber: or.orNumber,
-              orAmount:
-                or.orNumber === reimbursementData.or_number
-                  ? (parseFloat(or.orAmount) - parseFloat(reimbursementData.or_amount)).toFixed(2)
-                  : or.orAmount, // Only deduct from matching OR
-              orRefAmount:
-                or.orNumber === reimbursementData.or_number
-                  ? parseFloat(reimbursementData.or_amount)
-                  : 0, // Set reimbursement amount only for matching OR
+              orAmount: or.orAmount, // Keep original OR amount
+              orRefAmount: 0, // No reference amount for reimbursement
               orDate: or.orDate || '',
               remarks: or.remarks, // Keep original remarks
-              orPhotoUrl: 'or-photos/samplejaskd.png',
+              orPhotoUrl: or.serverPhotoPath || or.orPhotoUrl || 'or-photos/samplejaskd.png',
             })),
           liquidatedAmount: totalActualExpense,
         }

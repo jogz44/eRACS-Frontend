@@ -29,7 +29,7 @@ class ReportController extends Controller
             'request_params' => $data
         ]);
         
-        $q = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem', 'details','details.disbursement'])
+        $q = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem', 'expenseSubItem', 'details','details.disbursement'])
             ->when($barangayId, fn($qq) => $qq->where('barangay_id', $barangayId))
             ->whereHas('details.disbursement', function($query) use ($data) {
                 $query->whereDate('date', '>=', $data['from'])
@@ -88,6 +88,7 @@ class ReportController extends Controller
                         'accountTitle' => implode(' - ', array_filter([
                             $o->expenseType->name ?? null,
                             $o->expenseItem->name ?? null,
+                            $o->expenseSubItem->name ?? null,
                         ])),
                         'appropriation' => (float) $o->amount,
                         'particular' => $detail?->particulars,
@@ -221,7 +222,7 @@ class ReportController extends Controller
         // Determine barangay scope: explicit param (admin) or authenticated user's barangay
         $barangayId = $data['barangay_id'] ?? optional($request->user())->barangay_id;
 
-        $q = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem','details.disbursement'])
+        $q = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem', 'expenseSubItem','details.disbursement'])
             ->when($barangayId, fn($qq) => $qq->where('barangay_id', $barangayId))
             ->whereHas('details.disbursement', function($query) use ($data) {
                 $query->whereDate('date', '>=', $data['from'])
@@ -243,7 +244,8 @@ class ReportController extends Controller
                 'order'=> $o->expenseClass?->order,
                 'ppa' => implode(' - ', array_filter([
                     $o->expenseType?->name,
-                    $o->expenseItem?->name
+                    $o->expenseItem?->name,
+                    $o->expenseSubItem?->name
                 ])),
                 'appropriation'=> (float)$o->amount,
                 'obligation'   => (float) $filteredDetails->sum('amount'), // Use filtered details
