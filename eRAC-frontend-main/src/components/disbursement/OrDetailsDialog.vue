@@ -9,65 +9,94 @@
           Add official receipt details for liquidation
         </div>
       </q-card-section>
+
       <q-card-section>
         <div class="row q-col-gutter-md">
-
           <!-- Date Field -->
-          <div class="col-md-4 col-sm-6 q-mb-md">
-            <div class="text-caption text-grey">Date</div>
-            <div class="text-body1 text-weight-medium">
-              {{ store.currentLiquidation.date }}
-            </div>
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">Date:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              v-model="store.currentLiquidation.date"
+              mask="##/##/####"
+            >
+              <template v-slot:append>
+                <q-icon name="event" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date v-model="store.currentLiquidation.date" mask="DD/MM/YYYY" />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
           </div>
 
           <!-- DV Number Field -->
-          <div class="col-md-4 col-sm-6 q-mb-md">
-            <div class="text-caption text-grey">DV Number</div>
-            <div class="text-body1 text-weight-medium">
-              {{ store.currentLiquidation.dvNumber }}
-            </div>
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">DV Number:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="store.currentLiquidation.dvNumber"
+              :disable="true"
+            />
           </div>
 
           <!-- DV Amount Field -->
-          <div class="col-md-4 col-sm-6 q-mb-md">
-            <div class="text-caption text-grey">DV Amount</div>
-            <div class="text-body1 text-weight-medium">
-              ₱ {{ formatCurrency(store.currentLiquidation.dvAmount || 0) }}
-            </div>
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">DV Amount:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="formatCurrency(store.currentLiquidation.dvAmount || 0)"
+              prefix="₱"
+              :disable="true"
+            />
           </div>
 
           <!-- Actual Expense Field -->
-          <div class="col-md-4 col-sm-6"> <q-item-label class="q-mb-xs">Actual Expense:</q-item-label> <q-input filled
-              outlined dense :model-value="formatCurrency(totalActualExpense)" prefix="₱" :readonly="true" /> </div>
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">Actual Expense:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="formatCurrency(totalActualExpense)"
+              prefix="₱"
+              :disable="true"
+            />
+          </div>
+
           <!-- Amount to Return Field -->
-          <div class="col-md-4 col-sm-6"> <q-item-label class="q-mb-xs">Amount to Return to
-              Appropriation:</q-item-label> <q-input filled outlined dense
-              :model-value="formatCurrency(totalReturnAmount)" prefix="₱" :readonly="true"
-              :color="actualReturnAmount < 0 ? 'negative' : undefined" /> </div> <!-- Remarks Field -->
-          <div class="col-md-4 col-sm-12"> <q-item-label class="q-mb-xs">Remarks:</q-item-label> <q-input filled
-              outlined dense v-model="store.currentLiquidation.remarks" placeholder="Enter remarks" /> </div>
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs">Amount to Return to Appropriation:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="formatCurrency(totalReturnAmount)"
+              prefix="₱"
+              :disable="true"
+              :color="actualReturnAmount < 0 ? 'negative' : undefined"
+            />
+          </div>
 
-        </div>
-      </q-card-section>
-
-
-      <!-- Expense Account Details Section -->
-      <q-card-section>
-        <div class="row items-center q-mb-md">
-          <div class="text-subtitle1">
-            <strong>Expense Accounts:</strong>
+          <!-- Remarks Field -->
+          <div class="col-md-4 col-sm-12">
+            <q-item-label class="q-mb-xs">Remarks:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              v-model="store.currentLiquidation.remarks"
+              placeholder="Enter remarks"
+              @update:model-value="handleRemarksChange"
+            />
           </div>
         </div>
-
-        <!-- Expense Account Details Table -->
-        <q-table :rows="expenseAccountDetails" :columns="expenseAccountColumns" row-key="id"
-          :pagination="{ rowsPerPage: 5 }" flat bordered>
-          <template v-slot:body-cell-amount="props">
-            <q-td :props="props" class="text-right">
-              ₱{{ formatCurrency(props.row.amount) }}
-            </q-td>
-          </template>
-        </q-table>
       </q-card-section>
 
       <!-- Liquidation Details Section -->
@@ -85,25 +114,44 @@
 
         <!-- OR Details (All Editable) -->
         <div v-if="store.currentLiquidation?.orDetails?.length > 0" class="q-mb-lg">
-          <div v-for="(orDetail, index) in store.currentLiquidation.orDetails" :key="orDetail.id || `new-or-${index}`"
-            class="q-mb-md">
+          <div
+            v-for="(orDetail, index) in store.currentLiquidation.orDetails"
+            :key="orDetail.id || `new-or-${index}`"
+            class="q-mb-md"
+          >
             <div class="row items-center q-col-gutter-md">
               <!-- Remove Button -->
               <div class="col-auto" v-if="store.currentLiquidation.orDetails.length > 1">
-                <q-btn flat round dense icon="remove" color="red" @click="removeOrDetail(index)"
-                  title="Remove this OR" />
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="remove"
+                  color="red"
+                  @click="removeOrDetail(index)"
+                  title="Remove this OR"
+                />
               </div>
 
               <div class="col row q-col-gutter-md no-wrap">
                 <!-- OR Date -->
                 <div class="col">
                   <div class="text-bold q-mb-xs">OR Date:</div>
-                  <q-input filled unelaveted outlined v-model="orDetail.orDate" placeholder="Select Date">
+                  <q-input
+                    filled
+                    unelaveted
+                    outlined
+                    v-model="orDetail.orDate"
+                    placeholder="Select Date"
+                  >
                     <template v-slot:append>
                       <q-icon name="event" class="cursor-pointer">
                         <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                          <q-date v-model="orDetail.orDate" mask="DD/MM/YYYY"
-                            @update:model-value="(val) => handleDateChange(val, index)" />
+                          <q-date
+                            v-model="orDetail.orDate"
+                            mask="DD/MM/YYYY"
+                            @update:model-value="(val) => handleDateChange(val, index)"
+                          />
                         </q-popup-proxy>
                       </q-icon>
                     </template>
@@ -113,17 +161,33 @@
                 <!-- OR Number -->
                 <div class="col">
                   <div class="text-bold q-mb-xs">OR Number:</div>
-                  <q-input filled unelaveted outlined v-model="orDetail.orNumber" placeholder="OR Number" />
+                  <q-input
+                    filled
+                    unelaveted
+                    outlined
+                    v-model="orDetail.orNumber"
+                    placeholder="OR Number"
+                  />
                 </div>
 
                 <!-- OR Amount -->
                 <div class="col">
                   <div class="text-bold q-mb-xs">OR Amount:</div>
-                  <q-input filled unelaveted outlined :model-value="formatInputValue(orDetail.orAmount)"
+                  <q-input
+                    filled
+                    unelaveted
+                    outlined
+                    :model-value="formatInputValue(orDetail.orAmount)"
                     @update:model-value="(val) => handleOrAmountInput(orDetail, val)"
-                    @blur="(e) => handleOrAmountBlur(orDetail, e.target.value)" prefix="₱" placeholder="0.00"
-                    inputmode="decimal" pattern="\\d*\\.?\\d{0,2}" @keypress="blockNonNumeric"
-                    @paste.prevent="handlePasteNumeric" @input="calculateTotals" />
+                    @blur="(e) => handleOrAmountBlur(orDetail, e.target.value)"
+                    prefix="₱"
+                    placeholder="0.00"
+                    inputmode="decimal"
+                    pattern="\\d*\\.?\\d{0,2}"
+                    @keypress="blockNonNumeric"
+                    @paste.prevent="handlePasteNumeric"
+                    @input="calculateTotals"
+                  />
                   <!-- Over-liquidation warning -->
                   <div v-if="actualReturnAmount < 0" class="text-negative q-mt-xs text-caption">
                     Exceeds DV amount by ₱{{ formatCurrency(Math.abs(actualReturnAmount)) }}
@@ -134,21 +198,48 @@
                 <div class="col">
                   <div class="text-bold q-mb-xs" style="display: flex; align-items: center">
                     OR Image:
-                    <q-btn v-if="orDetail.orPhotoUrl" flat dense round icon="delete" color="red"
-                      @click="removeOrImage(index)" style="margin-left: 8px" />
+                    <q-btn
+                      v-if="orDetail.orPhotoUrl"
+                      flat
+                      dense
+                      round
+                      icon="delete"
+                      color="red"
+                      @click="removeOrImage(index)"
+                      style="margin-left: 8px"
+                    />
                   </div>
-                  <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px">
-                    <q-btn v-if="!orDetail.orPhotoUrl" flat dense color="primary" icon="upload" label="Upload"
-                      @click="triggerOrFileInput(index)" style="min-width: 100px" />
-                    <q-img v-if="orDetail.orPhotoUrl" :src="orDetail.orPhotoUrl" style="
+                  <div
+                    style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px"
+                  >
+                    <q-btn
+                      v-if="!orDetail.orPhotoUrl"
+                      flat
+                      dense
+                      color="primary"
+                      icon="upload"
+                      label="Upload"
+                      @click="triggerOrFileInput(index)"
+                      style="min-width: 100px"
+                    />
+                    <q-img
+                      v-if="orDetail.orPhotoUrl"
+                      :src="orDetail.orPhotoUrl"
+                      style="
                         max-width: 100%;
                         max-height: 100px;
                         border-radius: 4px;
                         border: 1px solid #eee;
-                      " />
+                      "
+                    />
                   </div>
-                  <input :ref="setOrImageInputRef(index)" type="file" accept=".jpg,.jpeg,.png" style="display: none"
-                    @change="(e) => onOrImageChange(e, index)" />
+                  <input
+                    :ref="setOrImageInputRef(index)"
+                    type="file"
+                    accept=".jpg,.jpeg,.png"
+                    style="display: none"
+                    @change="(e) => onOrImageChange(e, index)"
+                  />
                 </div>
               </div>
             </div>
@@ -157,12 +248,27 @@
       </q-card-section>
 
       <q-card-actions align="right" class="custom-actions">
-        <q-btn flat label="Cancel" class="modal-cancel-btn" @click="store.closeDialog('orDetails')" />
-        <q-btn flat label="Partial" color="warning" @click="handlePartialLiquidation"
-          :disable="!isValid || !canSubmit || savingSubmit" :loading="savingPartial" />
-        <q-btn :label="needsReimbursement ? 'Reimbursement' : 'Submit'" :color="needsReimbursement ? 'orange' : 'green'"
+        <q-btn
+          flat
+          label="Cancel"
+          class="modal-cancel-btn"
+          @click="store.closeDialog('orDetails')"
+        />
+        <q-btn
+          flat
+          label="Partial"
+          color="warning"
+          @click="handlePartialLiquidation"
+          :disable="!isValid || !canSubmit || savingSubmit"
+          :loading="savingPartial"
+        />
+        <q-btn
+          :label="needsReimbursement ? 'Reimbursement' : 'Submit'"
+          :color="needsReimbursement ? 'orange' : 'green'"
           @click="needsReimbursement ? handleReimbursement() : showSubmitConfirmation()"
-          :disable="!isValid || savingPartial || (needsReimbursement && reimbursementAmount <= 0)" :loading="savingSubmit" />
+          :disable="!isValid || savingPartial"
+          :loading="savingSubmit"
+        />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -193,13 +299,8 @@
   <q-dialog v-model="showReimbursementDialog" persistent>
     <q-card style="min-width: 1000px">
       <q-card-section class="q-pb-none">
-        <div class="q-mb-md text-left">
-          <div class="text-h5 text-weight-bold">
-            Reimbursement Transaction
-          </div>
-          <div class="text-subtitle2 text-grey-7">
-            Reference: Disbursement No. {{ store.currentLiquidation.dvNumber }}
-          </div>
+        <div class="text-h6">
+          Reimbursement for Disbursement #{{ store.currentLiquidation.dvNumber }}
         </div>
       </q-card-section>
 
@@ -208,28 +309,57 @@
           <!-- Date Field -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">Date:</q-item-label>
-            <q-input filled outlined dense :model-value="store.currentLiquidation.date" :disable="true" />
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="store.currentLiquidation.date"
+              :disable="true"
+            />
           </div>
 
           <!-- DV Number Field -->
           <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">Reimburse DV Number:</q-item-label>
-            <q-input filled outlined dense v-model="reimbursementDvNumber" :disable="true" />
+            <q-item-label class="q-mb-xs">DV Number (Auto-generated):</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              v-model="reimbursementDvNumber"
+              :disable="true"
+              hint="DV number will be automatically generated"
+            />
           </div>
 
           <!-- DV Amount Field -->
           <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">Reimburse Amount:</q-item-label>
-            <q-input filled outlined dense :model-value="formatCurrency(reimbursementAmount)" prefix="₱"
-              :disable="true" />
+            <q-item-label class="q-mb-xs">REIMB Amount:</q-item-label>
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="formatCurrency(reimbursementAmount)"
+              prefix="₱"
+              :disable="true"
+            />
           </div>
 
           <!-- Bank Selection -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">Bank:</q-item-label>
-            <q-select filled outlined dense v-model="selectedReimbursementBank" :options="bankStore.availableBanks"
-              option-label="name" option-value="id" emit-value map-options :label="currentReimbursementBankLabel"
-              @update:model-value="handleReimbursementBankSelection" />
+            <q-select
+              filled
+              outlined
+              dense
+              v-model="selectedReimbursementBank"
+              :options="bankStore.availableBanks"
+              option-label="name"
+              option-value="id"
+              emit-value
+              map-options
+              :label="currentReimbursementBankLabel"
+              @update:model-value="handleReimbursementBankSelection"
+            />
           </div>
 
           <!-- Cheque Number Field -->
@@ -241,7 +371,13 @@
           <!-- Payee Field -->
           <div class="col-md-4 col-sm-6">
             <q-item-label class="q-mb-xs">Payee:</q-item-label>
-            <q-input filled outlined dense :model-value="store.currentLiquidation.payee" :disable="true" />
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="store.currentLiquidation.payee"
+              :disable="true"
+            />
           </div>
         </div>
       </q-card-section>
@@ -250,54 +386,42 @@
       <q-card-section>
         <div class="row items-center q-mb-md">
           <div class="text-subtitle1">
-            <strong>Expense Account for Reimbursement:</strong>
+            <strong>Select Expense Account for Reimbursement:</strong>
           </div>
           <q-space />
-          <q-btn
-            color="primary"
-            icon="add"
-            label="Change Account"
-            flat
-            @click="showExpenseAccountDialog = true"
-            v-if="selectedReimbursementExpenseAccounts.length > 0"
-          />
           <q-btn
             color="primary"
             icon="add"
             label="Add"
             flat
             @click="showExpenseAccountDialog = true"
-            v-else
           />
         </div>
 
-        <!-- Auto-selection notification -->
-        <div v-if="selectedReimbursementExpenseAccounts.length > 0" class="q-mb-md">
-          <q-banner class="bg-blue-1 text-blue-8" rounded>
-            <template v-slot:avatar>
-              <q-icon name="auto_awesome" color="blue" />
-            </template>
-            <div class="text-body2">
-              <strong>Account automatically selected</strong> from the original disbursement
-            </div>
-          </q-banner>
-        </div>
-
         <!-- Selected Expense Accounts Table -->
-        <q-table :rows="selectedReimbursementExpenseAccounts" :columns="selectedExpenseAccountColumns" row-key="id"
-          :pagination="{ rowsPerPage: 0 }" flat bordered>
-          <template v-slot:body-cell-account="props">
-            <q-td :props="props">
-              <div class="expense-account-hierarchy">
-                {{ props.row.accountName }}
-              </div>
-            </q-td>
-          </template>
+        <q-table
+          :rows="selectedReimbursementExpenseAccounts"
+          :columns="selectedExpenseAccountColumns"
+          row-key="id"
+          :pagination="{ rowsPerPage: 5 }"
+          flat
+          bordered
+        >
           <template v-slot:body-cell-amount="props">
             <q-td :props="props" class="text-right">
               <div class="flex justify-end">
-                <q-input dense v-model="props.row.amount" prefix="₱" inputmode="decimal" pattern="\\d*\\.?\\d{0,2}"
-                  @keypress="blockNonNumeric" @paste.prevent="handlePasteNumeric" style="width: 120px" />
+                <q-input
+                  dense
+                  :model-value="formatInputValue(props.row.amount)"
+                  @update:model-value="(val) => handleExpenseAmountInput(props.row, val)"
+                  @blur="(e) => handleExpenseAmountBlur(props.row, e.target.value)"
+                  prefix="₱"
+                  inputmode="decimal"
+                  pattern="\\d*\\.?\\d{0,2}"
+                  @keypress="blockNonNumeric"
+                  @paste.prevent="(e) => handlePasteToTwoDecimals(e, (val) => (props.row.amount = val))"
+                  style="width: 120px"
+                />
               </div>
             </q-td>
           </template>
@@ -307,10 +431,15 @@
         <div class="q-mt-md q-pa-md" style="background-color: #f5f5f5; border-radius: 8px">
           <div class="text-body2">
             <strong>Total Selected: ₱{{ formatCurrency(totalSelectedExpenseAmount) }}</strong>
-            <span class="text-grey-7 q-ml-md">of ₱{{ formatCurrency(reimbursementAmount) }} needed</span>
+            <span class="text-grey-7 q-ml-md"
+              >of ₱{{ formatCurrency(reimbursementAmount) }} needed</span
+            >
           </div>
-          <div v-if="totalSelectedExpenseAmount > reimbursementAmount" class="text-negative text-caption q-mt-xs">
-            Total exceeds reimburse amount by ₱{{
+          <div
+            v-if="totalSelectedExpenseAmount > reimbursementAmount"
+            class="text-negative text-caption q-mt-xs"
+          >
+            Total exceeds reimbursement amount by ₱{{
               formatCurrency(totalSelectedExpenseAmount - reimbursementAmount)
             }}
           </div>
@@ -327,8 +456,14 @@
         </div>
 
         <!-- Selected ORs Table -->
-        <q-table :rows="selectedReimbursementOrs" :columns="selectedOrColumns" row-key="id"
-          :pagination="{ rowsPerPage: 0 }" flat bordered>
+        <q-table
+          :rows="selectedReimbursementOrs"
+          :columns="selectedOrColumns"
+          row-key="id"
+          :pagination="{ rowsPerPage: 5 }"
+          flat
+          bordered
+        >
           <template v-slot:body-cell-dvAmount="props">
             <q-td :props="props" class="text-right">
               {{ formatCurrency(props.row.orAmount || 0) }}
@@ -337,8 +472,18 @@
           <template v-slot:body-cell-orAmount="props">
             <q-td :props="props" class="text-right">
               <div class="flex justify-end">
-                <q-input dense v-model="props.row.reimbAmount" prefix="₱" inputmode="decimal" pattern="\\d*\\.?\\d{0,2}"
-                  @keypress="blockNonNumeric" @paste.prevent="handlePasteNumeric" style="width: 120px" />
+                <q-input
+                  dense
+                  :model-value="formatInputValue(props.row.reimbAmount)"
+                  @update:model-value="(val) => handleReimbAmountInput(props.row, val)"
+                  @blur="(e) => handleReimbAmountBlur(props.row, e.target.value)"
+                  prefix="₱"
+                  inputmode="decimal"
+                  pattern="\\d*\\.?\\d{0,2}"
+                  @keypress="blockNonNumeric"
+                  @paste.prevent="(e) => handlePasteToTwoDecimals(e, (val) => (props.row.reimbAmount = val))"
+                  style="width: 120px"
+                />
               </div>
             </q-td>
           </template>
@@ -348,9 +493,14 @@
         <div class="q-mt-md q-pa-md" style="background-color: #f5f5f5; border-radius: 8px">
           <div class="text-body2">
             <strong>Total OR Amount: ₱{{ formatCurrency(totalSelectedOrAmount) }}</strong>
-            <span class="text-grey-7 q-ml-md">of ₱{{ formatCurrency(reimbursementAmount) }} needed</span>
+            <span class="text-grey-7 q-ml-md"
+              >of ₱{{ formatCurrency(reimbursementAmount) }} needed</span
+            >
           </div>
-          <div v-if="totalSelectedOrAmount !== reimbursementAmount" class="text-negative text-caption q-mt-xs">
+          <div
+            v-if="totalSelectedOrAmount !== reimbursementAmount"
+            class="text-negative text-caption q-mt-xs"
+          >
             Total must exactly match reimbursement amount
           </div>
         </div>
@@ -358,12 +508,16 @@
 
       <q-card-actions align="right" class="custom-actions">
         <q-btn flat label="Cancel" @click="showReimbursementDialog = false" />
-        <q-btn label="Submit Reimbursement" color="orange" @click="handleSubmitReimbursement"
-          :loading="savingReimbursement" :disable="!canSubmitReimbursement" />
+        <q-btn
+          label="Submit Reimbursement"
+          color="orange"
+          @click="handleSubmitReimbursement"
+          :loading="savingReimbursement"
+          :disable="!canSubmitReimbursement"
+        />
       </q-card-actions>
     </q-card>
   </q-dialog>
-
 
   <!-- Expense Account Selection Dialog -->
   <q-dialog v-model="showExpenseAccountDialog" persistent>
@@ -379,16 +533,29 @@
       </q-card-section>
 
       <q-card-section>
-        <q-input outlined dense placeholder="Search expense account..." v-model="store.expenseSearch" class="q-mb-sm"
-          style="width: 300px">
+        <q-input
+          outlined
+          dense
+          placeholder="Search expense account..."
+          v-model="store.expenseSearch"
+          class="q-mb-sm"
+          style="width: 300px"
+        >
           <template v-slot:append>
             <q-icon name="search" />
           </template>
         </q-input>
 
-        <q-table :rows="validExpenseAccounts" :columns="store.expenseAccountColumns" row-key="id"
-          :pagination="{ rowsPerPage: 5 }" :loading="store.loading || store.expenseTypeLoading"
-          :filter="store.expenseSearch" flat bordered>
+        <q-table
+          :rows="validExpenseAccounts"
+          :columns="store.expenseAccountColumns"
+          row-key="id"
+          :pagination="{ rowsPerPage: 5 }"
+          :loading="store.loading || store.expenseTypeLoading"
+          :filter="store.expenseSearch"
+          flat
+          bordered
+        >
           <template v-slot:no-data>
             <div class="full-width row flex-center text-grey-6 q-gutter-sm">
               <q-icon size="2em" name="inbox" />
@@ -402,8 +569,11 @@
           </template>
           <template v-slot:body-cell-budget_source="props">
             <q-td :props="props">
-              <q-badge :color="getBudgetSourceColor(props.row.budget_source)"
-                :label="getBudgetSourceLabel(props.row.budget_source)" class="budget-source-badge" />
+              <q-badge
+                :color="getBudgetSourceColor(props.row.budget_source)"
+                :label="getBudgetSourceLabel(props.row.budget_source)"
+                class="budget-source-badge"
+              />
             </q-td>
           </template>
           <template v-slot:body-cell-action="props">
@@ -446,15 +616,6 @@ const selectedReimbursementOrs = ref([])
 const availableOrNumbers = ref([])
 const showExpenseAccountDialog = ref(false)
 
-// Debug watcher for selectedReimbursementExpenseAccounts
-watch(selectedReimbursementExpenseAccounts, (newVal, oldVal) => {
-  console.log('=== selectedReimbursementExpenseAccounts CHANGED ===')
-  console.log('Old value:', oldVal)
-  console.log('New value:', newVal)
-  console.log('New length:', newVal?.length || 0)
-}, { deep: true })
-
-
 const store = useDisbursementStore()
 const bankStore = useBankStore()
 
@@ -483,26 +644,11 @@ function initializeOrDetails() {
   // Don't add additional rows automatically - let users add them as needed
 }
 
-// Watch dialog open, fetch OR Details and expense data
+// Watch dialog open, fetch OR Details
 watch(
   () => store.dialogs.orDetails,
-  async (isOpen) => {
+  (isOpen) => {
     if (isOpen) {
-      // Fetch full disbursement data including expenses if not already loaded
-      if (store.currentLiquidation?.id && (!store.currentLiquidation.expenses || store.currentLiquidation.expenses.length === 0)) {
-        try {
-          console.log('Fetching full disbursement data for ID:', store.currentLiquidation.id)
-          const fullDisbursementData = await store.fetchDisbursementForView(store.currentLiquidation.id)
-          if (fullDisbursementData) {
-            // Update currentLiquidation with the full data including expenses
-            store.currentLiquidation = { ...store.currentLiquidation, ...fullDisbursementData }
-            console.log('Updated currentLiquidation with expenses:', store.currentLiquidation.expenses)
-          }
-        } catch (error) {
-          console.error('Error fetching full disbursement data:', error)
-        }
-      }
-
       // Only initialize if we don't already have OR details
       if (!store.currentLiquidation?.orDetails || store.currentLiquidation.orDetails.length === 0) {
         initializeOrDetails()
@@ -583,26 +729,14 @@ watch(
         console.log('Expense accounts after balance refresh:', store.expenseAccounts.length)
       }
 
-      // AUTO-SELECT ACCOUNT: Automatically select the same account from the original disbursement
-      // Add a small delay to ensure expense accounts are fully loaded
-      console.log('=== SCHEDULING AUTO-SELECTION ===')
-      console.log('Current time:', new Date().toISOString())
-      setTimeout(async () => {
-        console.log('=== AUTO-SELECTION TIMEOUT TRIGGERED ===')
-        console.log('Current time:', new Date().toISOString())
-        await autoSelectOriginalAccount()
-      }, 500)
-
       // Populate selected ORs with all OR details
       selectedReimbursementOrs.value = store.currentLiquidation.orDetails.map((or) => ({
         ...or,
         reimbAmount: '',
       }))
     } else {
-      // Reset form when dialog closes - add a small delay to avoid race conditions
-      setTimeout(() => {
-        resetReimbursementForm()
-      }, 100)
+      // Reset form when dialog closes
+      resetReimbursementForm()
     }
   },
 )
@@ -630,8 +764,6 @@ const actualReturnAmount = computed(() => {
 // Reimbursement amount calculation (OR amount - DV amount)
 const reimbursementAmount = computed(() => {
   const excess = actualReturnAmount.value
-  // Only allow reimbursement if there's actual excess (over-liquidation)
-  // If liquidated amount equals disbursed amount, no reimbursement needed
   return excess < 0 ? Math.abs(excess) : 0
 })
 
@@ -670,95 +802,11 @@ const selectedExpenseAccountColumns = computed(() => [
   },
 ])
 
-const expenseAccountColumns = computed(() => [
-  {
-    name: 'id',
-    label: 'ID',
-    field: 'id',
-    align: 'left',
-    sortable: true,
-  },
-  {
-    name: 'account',
-    label: 'Expense Class',
-    field: 'account',
-    align: 'left',
-    sortable: true,
-  },
-  {
-    name: 'expenseType',
-    label: 'Expense Type',
-    field: 'expenseType',
-    align: 'left',
-    sortable: true,
-  },
-  {
-    name: 'expenseItem',
-    label: 'Expense Item',
-    field: 'expenseItem',
-    align: 'left',
-    sortable: true,
-  },
-  {
-    name: 'expenseSubItem',
-    label: 'Sub Item',
-    field: 'expenseSubItem',
-    align: 'left',
-    sortable: true,
-    format: (val) => val || '-',
-  },
-  {
-    name: 'amount',
-    label: 'Amount',
-    field: 'amount',
-    align: 'right',
-    sortable: true,
-  },
-  {
-    name: 'particular',
-    label: 'Particular',
-    field: 'particular',
-    align: 'left',
-    sortable: true,
-  },
-])
-
 const totalSelectedExpenseAmount = computed(() => {
   return selectedReimbursementExpenseAccounts.value.reduce(
     (sum, account) => sum + (parseFloat(account.amount) || 0),
     0,
   )
-})
-
-const expenseAccountDetails = computed(() => {
-  // Debug logging to see what data is available
-  console.log('=== EXPENSE ACCOUNT DEBUG ===')
-  console.log('currentLiquidation:', store.currentLiquidation)
-  console.log('currentLiquidation.expenses:', store.currentLiquidation?.expenses)
-  console.log('currentLiquidation keys:', store.currentLiquidation ? Object.keys(store.currentLiquidation) : 'No currentLiquidation')
-
-  // Get expense details from the current liquidation
-  if (!store.currentLiquidation?.expenses || store.currentLiquidation.expenses.length === 0) {
-    console.log('No expenses found in currentLiquidation')
-    return []
-  }
-
-  const mappedExpenses = store.currentLiquidation.expenses.map((expense, index) => ({
-    id: expense.id || index + 1,
-    accountName: expense.accountName || expense.account_name || 'N/A',
-    amount: expense.amount || 0,
-    particular: expense.particular || 'N/A',
-    // Add fields for multi-column display
-    account: expense.account || expense.expense_class_name || '',
-    expenseType: expense.expenseType || expense.expense_type_name || '',
-    expenseItem: expense.expenseItem || expense.expense_item_name || '',
-    expenseSubItem: expense.expenseSubItem || expense.expense_sub_item_name || '',
-  }))
-
-  console.log('Mapped expenses:', mappedExpenses)
-  console.log('=== END DEBUG ===')
-
-  return mappedExpenses
 })
 
 const selectedOrColumns = computed(() => [
@@ -1089,14 +1137,8 @@ const canSubmit = computed(() => {
 
   const returnAmount = actualReturnAmount.value
 
-  // Cannot submit if return amount is negative (over-liquidation) without sufficient budget
-  if (returnAmount < 0) {
-    // Check if there's sufficient budget for reimbursement
-    //const reimbursementNeeded = Math.abs(returnAmount)
-    // For now, we'll allow over-liquidation but show a warning
-    // The backend will handle budget validation
-    return true
-  }
+  // Cannot submit if return amount is negative (over-liquidation)
+  if (returnAmount < 0) return false
 
   // Allow submit when form is valid and return amount is 0 or positive
   return returnAmount >= 0
@@ -1106,6 +1148,12 @@ const handleDateChange = (date, index) => {
   console.log('Date changed:', date, 'for index:', index)
   store.currentLiquidation.orDetails[index].orDate = date
   calculateTotals()
+}
+
+const handleRemarksChange = (newRemarks) => {
+  // Ensure remarks are properly updated in the store
+  store.currentLiquidation.remarks = newRemarks
+  console.log('Remarks updated:', newRemarks)
 }
 
 const handlePartialLiquidation = async () => {
@@ -1187,19 +1235,6 @@ const handleConfirmationPartial = () => {
 
 const handleReimbursement = () => {
   console.log('Reimbursement triggered - showing reimbursement modal...')
-
-  // Check if reimbursement is actually needed
-  if (reimbursementAmount.value <= 0) {
-    $q.notify({
-      type: 'warning',
-      message: 'No reimbursement needed. The liquidated amount does not exceed the disbursed amount.',
-      icon: 'warning',
-      position: 'top',
-      timeout: 3000,
-    })
-    return
-  }
-
   showReimbursementDialog.value = true
 }
 
@@ -1287,7 +1322,7 @@ const handleSubmitReimbursement = async () => {
 
     // Validate that total expense amounts match reimbursement amount
     const totalExpenseAmount = selectedReimbursementExpenseAccounts.value.reduce(
-      (sum, acc) => sum + (parseFloat(acc.amount) || 0),
+      (sum, acc) => sum + (acc.amount || 0),
       0,
     )
     if (Math.abs(totalExpenseAmount - reimbursementAmount.value) > 0.01) {
@@ -1301,7 +1336,7 @@ const handleSubmitReimbursement = async () => {
     }
 
     // Validate that total OR amounts match reimbursement amount
-    const totalOrAmount = selectedReimbursementOrs.value.reduce((sum, or) => sum + (parseFloat(or.reimbAmount) || 0), 0)
+    const totalOrAmount = selectedReimbursementOrs.value.reduce((sum, or) => sum + (or.reimbAmount || 0), 0)
     if (Math.abs(totalOrAmount - reimbursementAmount.value) > 0.01) {
       $q.notify({
         type: 'negative',
@@ -1322,7 +1357,7 @@ const handleSubmitReimbursement = async () => {
       bank_id: selectedReimbursementBank.value,
       dvNumber: reimbursementDvNumber.value,
       cheque_number: reimbursementChequeNumber.value,
-      payee: store.currentLiquidation.payee, // Use original disbursement payee
+      payee: reimbursementPayee.value,
       expense_account: {
         id: primaryExpenseAccount.id,
         expense_class_id: primaryExpenseAccount.expense_class_id,
@@ -1352,23 +1387,12 @@ const handleSubmitReimbursement = async () => {
       // Reset reimbursement form
       resetReimbursementForm()
     } else {
-      // Handle specific budget validation error
-      if (result.error === 'Insufficient budget' || result.message?.includes('No more budget')) {
-        $q.notify({
-          type: 'negative',
-          message: 'No more budget for this account. Please commit again.',
-          icon: 'warning',
-          position: 'top',
-          timeout: 5000,
-        })
-      } else {
-        $q.notify({
-          type: 'negative',
-          message: result.error || result.message || 'Failed to submit reimbursement',
-          icon: 'error',
-          position: 'top',
-        })
-      }
+      $q.notify({
+        type: 'negative',
+        message: result.error || 'Failed to submit reimbursement',
+        icon: 'error',
+        position: 'top',
+      })
     }
   } catch (error) {
     console.error('Error submitting reimbursement:', error)
@@ -1384,327 +1408,12 @@ const handleSubmitReimbursement = async () => {
 }
 
 const resetReimbursementForm = () => {
-  console.log('=== RESETTING REIMBURSEMENT FORM ===')
-  console.log('Current selectedReimbursementExpenseAccounts before reset:', selectedReimbursementExpenseAccounts.value)
-
   selectedReimbursementBank.value = null
   reimbursementChequeNumber.value = ''
   reimbursementPayee.value = ''
   reimbursementDvNumber.value = ''
   selectedReimbursementExpenseAccounts.value = []
   selectedReimbursementOrs.value = []
-
-  console.log('Form reset completed')
-}
-
-// Auto-select the same account from the original disbursement
-const autoSelectOriginalAccount = async () => {
-  try {
-    console.log('=== AUTO-SELECTING ORIGINAL ACCOUNT FUNCTION CALLED ===')
-    console.log('Function called at:', new Date().toISOString())
-    console.log('=== AUTO-SELECTING ORIGINAL ACCOUNT ===')
-    console.log('Current liquidation expenses:', store.currentLiquidation?.expenses)
-    console.log('Available expense accounts:', store.expenseAccounts?.length || 0)
-
-    if (!store.currentLiquidation?.expenses || store.currentLiquidation.expenses.length === 0) {
-      console.log('No expenses found in original disbursement')
-      return
-    }
-
-    if (!store.expenseAccounts || store.expenseAccounts.length === 0) {
-      console.log('No expense accounts available for matching')
-      $q.notify({
-        type: 'warning',
-        message: 'No expense accounts available. Please refresh and try again.',
-        icon: 'warning',
-        position: 'top',
-        timeout: 3000,
-      })
-      return
-    }
-
-    // Get the first expense from the original disbursement
-    // For now, we'll use the first expense. In the future, this could be enhanced
-    // to handle multiple expense accounts by allowing user selection
-    const originalExpense = store.currentLiquidation.expenses[0]
-    console.log('Original expense:', originalExpense)
-
-    if (!originalExpense) {
-      console.log('No original expense found')
-      return
-    }
-
-    // If there are multiple expenses, show a warning
-    if (store.currentLiquidation.expenses.length > 1) {
-      console.log('Multiple expenses found in original disbursement, using the first one')
-      $q.notify({
-        type: 'warning',
-        message: `Multiple expense accounts found. Using the first account: ${originalExpense.account_name || 'Unknown'}`,
-        icon: 'warning',
-        position: 'top',
-        timeout: 4000,
-      })
-    }
-
-    // Find matching expense account in the available accounts
-    console.log('Available expense accounts:', store.expenseAccounts)
-    console.log('Original expense full object:', JSON.stringify(originalExpense, null, 2))
-    console.log('Looking for account with IDs:', {
-      expense_class_id: originalExpense.expense_class_id,
-      expense_type_id: originalExpense.expense_type_id,
-      expense_item_id: originalExpense.expense_item_id,
-      expense_sub_item_id: originalExpense.expense_sub_item_id
-    })
-
-    const matchingAccount = store.expenseAccounts.find(account => {
-      // Match by expense hierarchy IDs - convert to numbers for comparison
-      const classMatch = parseInt(account.expense_class_id) === parseInt(originalExpense.expense_class_id)
-      const typeMatch = parseInt(account.expense_type_id) === parseInt(originalExpense.expense_type_id)
-      const itemMatch = parseInt(account.expense_item_id) === parseInt(originalExpense.expense_item_id)
-      const subItemMatch = parseInt(account.expense_sub_item_id) === parseInt(originalExpense.expense_sub_item_id)
-
-      console.log('Checking account:', {
-        id: account.id,
-        account: account.account,
-        expenseType: account.expenseType,
-        expenseItem: account.expenseItem,
-        expenseSubItem: account.expenseSubItem,
-        expense_class_id: account.expense_class_id,
-        expense_type_id: account.expense_type_id,
-        expense_item_id: account.expense_item_id,
-        expense_sub_item_id: account.expense_sub_item_id,
-        matches: { classMatch, typeMatch, itemMatch, subItemMatch }
-      })
-
-      // Also log the full account object for debugging
-      console.log('Full account object:', JSON.stringify(account, null, 2))
-
-      return classMatch && typeMatch && itemMatch && subItemMatch
-    })
-
-    if (matchingAccount) {
-      console.log('Found matching account:', matchingAccount)
-
-      // Check if account has sufficient budget
-      const requiredAmount = parseFloat(reimbursementAmount.value)
-      const availableBalance = parseFloat(matchingAccount.balance || 0)
-
-      console.log('Required amount:', requiredAmount)
-      console.log('Available balance:', availableBalance)
-
-      if (availableBalance >= requiredAmount) {
-        // Auto-select the account with the reimbursement amount
-        const autoSelectedAccount = {
-          ...matchingAccount,
-          amount: requiredAmount.toString(),
-          accountName: `${matchingAccount.account}${matchingAccount.expenseType ? ` > ${matchingAccount.expenseType}` : ''}${matchingAccount.expenseItem ? ` > ${matchingAccount.expenseItem}` : ''}${matchingAccount.expenseSubItem ? ` > ${matchingAccount.expenseSubItem}` : ''}`
-        }
-
-        selectedReimbursementExpenseAccounts.value = [autoSelectedAccount]
-
-        console.log('=== AUTO-SELECTION SUCCESS (EXACT MATCH) ===')
-        console.log('Auto-selected account:', autoSelectedAccount)
-        console.log('selectedReimbursementExpenseAccounts.value:', selectedReimbursementExpenseAccounts.value)
-        console.log('Array length:', selectedReimbursementExpenseAccounts.value.length)
-
-        $q.notify({
-          type: 'positive',
-          message: `Automatically selected account: ${autoSelectedAccount.accountName}`,
-          icon: 'check_circle',
-          position: 'top',
-          timeout: 3000,
-        })
-      } else {
-        // Show budget validation error
-        $q.notify({
-          type: 'negative',
-          message: 'No more budget for this account. Please commit again.',
-          icon: 'warning',
-          position: 'top',
-          timeout: 5000,
-        })
-
-        console.log('Insufficient budget for auto-selection')
-      }
-    } else {
-      console.log('No exact matching account found, trying fallback matching...')
-
-      // Fallback: Try multiple matching strategies with priority scoring
-      const fallbackMatches = store.expenseAccounts.map(account => {
-        // Strategy 1: Try matching by account name (the full hierarchy string) - HIGHEST PRIORITY
-        const accountNameMatch = account.account && originalExpense.account_name &&
-          account.account.toLowerCase().includes(originalExpense.account_name.toLowerCase().split(' > ')[0])
-
-        // Strategy 2: Try matching by exact expense item ID - HIGH PRIORITY
-        const exactItemMatch = parseInt(account.expense_item_id) === parseInt(originalExpense.expense_item_id)
-
-        // Strategy 3: Try matching by partial hierarchy (class and type) - MEDIUM PRIORITY
-        const partialMatch = parseInt(account.expense_class_id) === parseInt(originalExpense.expense_class_id) &&
-          parseInt(account.expense_type_id) === parseInt(originalExpense.expense_type_id)
-
-        // Strategy 4: Try matching by just the expense class - LOW PRIORITY
-        const classOnlyMatch = parseInt(account.expense_class_id) === parseInt(originalExpense.expense_class_id)
-
-        // Strategy 5: Try matching by account name parts - MEDIUM PRIORITY
-        const namePartsMatch = originalExpense.account_name && account.account &&
-          originalExpense.account_name.toLowerCase().includes(account.account.toLowerCase())
-
-        // Strategy 6: Try reverse matching (account name in original) - MEDIUM PRIORITY
-        const reverseNameMatch = originalExpense.account_name && account.account &&
-          account.account.toLowerCase().includes(originalExpense.account_name.toLowerCase())
-
-        // Calculate priority score (higher is better)
-        let priorityScore = 0
-        if (exactItemMatch) priorityScore += 100  // Highest priority for exact item match
-        if (accountNameMatch) priorityScore += 80
-        if (namePartsMatch) priorityScore += 60
-        if (reverseNameMatch) priorityScore += 60
-        if (partialMatch) priorityScore += 40
-        if (classOnlyMatch) priorityScore += 20
-
-        console.log('Fallback matching for account:', {
-          id: account.id,
-          account: account.account,
-          expenseItem: account.expenseItem,
-          exactItemMatch,
-          accountNameMatch,
-          partialMatch,
-          classOnlyMatch,
-          namePartsMatch,
-          reverseNameMatch,
-          priorityScore,
-          originalExpenseItemId: originalExpense.expense_item_id,
-          accountExpenseItemId: account.expense_item_id
-        })
-
-        return {
-          account,
-          priorityScore,
-          exactItemMatch,
-          accountNameMatch,
-          partialMatch,
-          classOnlyMatch,
-          namePartsMatch,
-          reverseNameMatch
-        }
-      }).filter(match => match.priorityScore > 0) // Only include accounts that have some match
-
-      // Sort by priority score (highest first) and take the best match
-      const sortedMatches = fallbackMatches.sort((a, b) => b.priorityScore - a.priorityScore)
-      const bestMatch = sortedMatches.length > 0 ? sortedMatches[0] : null
-      const fallbackMatch = bestMatch ? bestMatch.account : null
-
-      console.log('Fallback matching results:', {
-        totalMatches: fallbackMatches.length,
-        sortedMatches: sortedMatches.map(m => ({
-          id: m.account.id,
-          account: m.account.account,
-          expenseItem: m.account.expenseItem,
-          priorityScore: m.priorityScore,
-          exactItemMatch: m.exactItemMatch
-        })),
-        bestMatch: bestMatch ? {
-          id: bestMatch.account.id,
-          account: bestMatch.account.account,
-          expenseItem: bestMatch.account.expenseItem,
-          priorityScore: bestMatch.priorityScore,
-          exactItemMatch: bestMatch.exactItemMatch
-        } : null
-      })
-
-      if (fallbackMatch) {
-        console.log('Found fallback matching account:', fallbackMatch)
-
-        // Check if account has sufficient budget
-        const requiredAmount = parseFloat(reimbursementAmount.value)
-        const availableBalance = parseFloat(fallbackMatch.balance || 0)
-
-        if (availableBalance >= requiredAmount) {
-          // Auto-select the account with the reimbursement amount
-          const autoSelectedAccount = {
-            ...fallbackMatch,
-            amount: requiredAmount.toString(),
-            accountName: `${fallbackMatch.account}${fallbackMatch.expenseType ? ` > ${fallbackMatch.expenseType}` : ''}${fallbackMatch.expenseItem ? ` > ${fallbackMatch.expenseItem}` : ''}${fallbackMatch.expenseSubItem ? ` > ${fallbackMatch.expenseSubItem}` : ''}`
-          }
-
-          selectedReimbursementExpenseAccounts.value = [autoSelectedAccount]
-
-          console.log('=== AUTO-SELECTION SUCCESS (FALLBACK MATCH) ===')
-          console.log('Auto-selected account:', autoSelectedAccount)
-          console.log('selectedReimbursementExpenseAccounts.value:', selectedReimbursementExpenseAccounts.value)
-          console.log('Array length:', selectedReimbursementExpenseAccounts.value.length)
-          console.log('First item in array:', selectedReimbursementExpenseAccounts.value[0])
-          console.log('First item accountName:', selectedReimbursementExpenseAccounts.value[0]?.accountName)
-          console.log('First item amount:', selectedReimbursementExpenseAccounts.value[0]?.amount)
-          console.log('First item id:', selectedReimbursementExpenseAccounts.value[0]?.id)
-
-          // Force reactivity update
-          await nextTick()
-          console.log('After nextTick - Array length:', selectedReimbursementExpenseAccounts.value.length)
-
-          $q.notify({
-            type: 'positive',
-            message: `Automatically selected account (fallback match): ${autoSelectedAccount.accountName}`,
-            icon: 'check_circle',
-            position: 'top',
-            timeout: 4000,
-          })
-
-          // Show additional info about the fallback match
-          $q.notify({
-            type: 'info',
-            message: 'Note: Selected account has same fund and type as original, but different item/sub-item.',
-            icon: 'info',
-            position: 'top',
-            timeout: 5000,
-          })
-        } else {
-          // Show budget validation error
-          $q.notify({
-            type: 'negative',
-            message: 'No more budget for this account. Please commit again.',
-            icon: 'warning',
-            position: 'top',
-            timeout: 5000,
-          })
-        }
-      } else {
-        console.log('No matching account found in available accounts')
-        console.log('=== DEBUGGING INFO ===')
-        console.log('Original expense:', originalExpense)
-        console.log('All available accounts:', store.expenseAccounts.map(acc => ({
-          id: acc.id,
-          account: acc.account,
-          expenseType: acc.expenseType,
-          expenseItem: acc.expenseItem,
-          expenseSubItem: acc.expenseSubItem,
-          expense_class_id: acc.expense_class_id,
-          expense_type_id: acc.expense_type_id,
-          expense_item_id: acc.expense_item_id,
-          expense_sub_item_id: acc.expense_sub_item_id,
-          balance: acc.balance
-        })))
-        console.log('=== END DEBUGGING INFO ===')
-
-        $q.notify({
-          type: 'warning',
-          message: 'Could not find matching account. Please select manually.',
-          icon: 'warning',
-          position: 'top',
-          timeout: 5000,
-        })
-      }
-    }
-  } catch (error) {
-    console.error('Error in auto-select original account:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Error auto-selecting account. Please select manually.',
-      icon: 'error',
-      position: 'top',
-      timeout: 3000,
-    })
-  }
 }
 
 const handleSaveOrDetails = async () => {
@@ -1778,7 +1487,7 @@ const formatCurrency = (value) => {
 const formatInputValue = (value) => {
   if (!value && value !== 0) return ''
   const isNumber = typeof value === 'number'
-  const cleanValue = String(value).replace(/,/g, '')
+  const cleanValue = String(value).replace(/[₱,\s]/g, '')
   const num = parseFloat(cleanValue)
   if (isNaN(num)) return ''
   return isNumber
@@ -1803,6 +1512,40 @@ const handleOrAmountInput = (orDetail, value) => {
 const handleOrAmountBlur = (orDetail, value) => {
   const formatted = formatToTwoDecimals(value)
   orDetail.orAmount = formatted
+}
+
+// Expense account amount input handlers
+const handleExpenseAmountInput = (account, value) => {
+  let cleanValue = String(value).replace(/[^\d.]/g, '')
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    cleanValue = parts[0] + '.' + parts.slice(1).join('')
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
+  }
+  account.amount = cleanValue
+}
+
+const handleExpenseAmountBlur = (account, value) => {
+  account.amount = formatToTwoDecimals(value)
+}
+
+// Reimbursement OR amount input handlers
+const handleReimbAmountInput = (row, value) => {
+  let cleanValue = String(value).replace(/[^\d.]/g, '')
+  const parts = cleanValue.split('.')
+  if (parts.length > 2) {
+    cleanValue = parts[0] + '.' + parts.slice(1).join('')
+  }
+  if (parts.length === 2 && parts[1].length > 2) {
+    cleanValue = parts[0] + '.' + parts[1].substring(0, 2)
+  }
+  row.reimbAmount = cleanValue
+}
+
+const handleReimbAmountBlur = (row, value) => {
+  row.reimbAmount = formatToTwoDecimals(value)
 }
 
 // Format input value to exactly two decimal places
@@ -1856,7 +1599,7 @@ const handlePasteNumeric = (event) => {
     finalText += '.' + parts.slice(1).join('').substring(0, 2)
   }
   event.target.value = finalText
-
+  
   // Find the OR detail that this input belongs to and update it
   const inputElement = event.target
   const orDetailIndex = Array.from(inputElement.closest('.q-card-section').querySelectorAll('input[prefix="₱"]')).indexOf(inputElement)
@@ -1865,6 +1608,18 @@ const handlePasteNumeric = (event) => {
   }
 }
 
+// Generic paste handler for table inputs where we already know the destination
+const handlePasteToTwoDecimals = (event, applyValue) => {
+  event.preventDefault()
+  const pastedText = event.clipboardData.getData('text')
+  const cleanText = pastedText.replace(/[^\d.]/g, '')
+  const parts = cleanText.split('.')
+  let finalText = parts[0]
+  if (parts.length > 1) {
+    finalText += '.' + parts.slice(1).join('').substring(0, 2)
+  }
+  applyValue(finalText)
+}
 </script>
 
 <style scoped>
@@ -1882,23 +1637,10 @@ const handlePasteNumeric = (event) => {
   color: #666;
 }
 
-/* Expense account hierarchy styling */
-.expense-account-hierarchy {
-  font-size: 13px;
-  line-height: 1.4;
-  word-break: break-word;
-  max-width: 400px;
-}
-
 /* Responsive design for mobile */
 @media (max-width: 768px) {
   .q-card {
     min-width: 95vw !important;
-  }
-
-  .expense-account-hierarchy {
-    font-size: 11px;
-    max-width: 250px;
   }
 }
 </style>
