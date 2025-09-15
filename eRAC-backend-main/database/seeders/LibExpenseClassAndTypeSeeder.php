@@ -107,7 +107,6 @@ class LibExpenseClassAndTypeSeeder extends Seeder
             ],
         ];
 
-        // Define items per Class > Type similar to typesMap
         $itemsMap = [
             'SANGUNIANG KABATAAN (SK) - 10%' => [
                 'MOOE' => [
