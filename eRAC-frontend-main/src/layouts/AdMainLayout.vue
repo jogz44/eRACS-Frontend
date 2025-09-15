@@ -47,7 +47,92 @@
             option-value="id"
             @update:model-value="onBarangayChange"
           />
+          <!-- Notifications Bell -->
+          <q-btn
+            flat
+            round
+            dense
+            class="notification-btn q-ml-sm"
+            size="md"
+          >
+            <q-icon name="notifications" size="24px" color="white">
+              <q-badge v-if="totalNotificationCount > 0" floating color="red" text-color="white" rounded>
+                {{ totalNotificationCount > 9 ? '9+' : totalNotificationCount }}
+              </q-badge>
+            </q-icon>
 
+            <q-menu anchor="bottom right" self="top right" class="notification-menu">
+              <q-list style="min-width: 300px">
+                <q-item clickable @click="goToPendingUsers" class="notification-item">
+                  <q-item-section avatar>
+                    <q-icon name="person_add" color="primary" size="28px" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold">Pending User Requests</q-item-label>
+                    <q-item-label caption>
+                      {{ pendingUserCount }} awaiting approval
+                    </q-item-label>
+                  </q-item-section>
+                  <q-item-section side>
+                    <q-icon name="chevron_right" size="20px" />
+                  </q-item-section>
+                </q-item>
+
+                <q-separator />
+
+                <q-item v-if="totalNotificationCount === 0">
+                  <q-item-section class="text-center text-grey q-pa-md">
+                    No new notifications
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
+          </q-btn>
+          <!-- Admin Avatar Menu -->
+          <q-btn
+            flat
+            dense
+            class="user-menu-btn q-ml-sm"
+            size="md"
+          >
+            <div class="user-profile-container">
+              <q-avatar size="32px" class="user-avatar">
+                <img src="src/assets/admin.png" alt="Admin" />
+              </q-avatar>
+              <q-icon name="keyboard_arrow_down" size="14px" color="white" class="dropdown-arrow" />
+            </div>
+
+            <q-menu class="user-menu" transition-show="jump-down" transition-hide="jump-up">
+              <q-list style="min-width: 250px">
+                <!-- Admin Profile Header -->
+                <q-item class="user-profile-header">
+                  <q-item-section avatar>
+                    <q-avatar size="72px">
+                      <img src="src/assets/admin.png" />
+                    </q-avatar>
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="text-weight-bold text-h6">
+                      {{ authStore.admin?.name || 'Admin' }}
+                    </q-item-label>
+                    <q-item-label caption>
+                      {{ getRoleDisplayName() }}
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-separator />
+
+                <!-- Menu Items -->
+                <q-item clickable v-ripple @click="handleLogout" class="menu-item">
+                  <q-item-section avatar>
+                    <q-icon name="logout" color="negative" />
+                  </q-item-section>
+                  <q-item-section>Log Out</q-item-section>
+                </q-item>
+              </q-list>
+            </q-menu>
+          </q-btn>
         </div>
       </q-toolbar>
     </q-header>
@@ -176,35 +261,7 @@
           </div>
         </div>
 
-        <!-- Sticky Footer -->
-        <div class="drawer-footer q-mt-auto q-pa-xs">
-          <div class="text-caption text-grey items-center q-pa-sm footer-avatar">
-            <div class="footer-user q-pa-sm">
-              <q-avatar size="$q.screen.lt.md ? '32px' : '45px'">
-                <img src="src/assets/admin.png" style="max-width: 100%; height: auto;" />
-              </q-avatar>
-              <div class="footer-user-info">
-                <span class="Custom-text text-caption text-white text-weight-bold">
-                  {{ authStore.admin?.name || 'Admin' }}
-                </span>
-                <span class="position-text text-caption text-white text-weight-medium text-h5">
-                  {{ getRoleDisplayName() }}
-                </span>
-              </div>
-              <q-space />
-              <q-btn
-                icon="logout"
-                color="white"
-                flat
-                round
-                dense
-                @click="handleLogout"
-              >
-                <q-tooltip>Log Out</q-tooltip>
-              </q-btn>
-            </div>
-          </div>
-        </div>
+        <!-- Footer removed: account info moved to header -->
       </div>
     </q-drawer>
 
@@ -294,6 +351,7 @@
 
 <script setup>
 import { ref, watch, onMounted, nextTick, computed } from 'vue'
+import { onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'stores/auth'
@@ -307,6 +365,12 @@ const leftDrawerOpen = ref(false)
 const activePanel = ref(null)
 const barangayOptions = ref([])
 const barangay = ref(null)
+const pendingUserCount = ref(0)
+const notificationTimerId = ref(null)
+
+const totalNotificationCount = computed(() => {
+  return pendingUserCount.value
+})
 
 onMounted(async () => {
   try {
@@ -337,6 +401,19 @@ onMounted(async () => {
     console.error('Error loading setup data:', error)
     // Don't show notification if it might break the page
     // Just log the error for debugging
+  }
+  // Initial load of notifications
+  await fetchPendingUserCount()
+  // Poll every 60 seconds
+  notificationTimerId.value = setInterval(() => {
+    fetchPendingUserCount()
+  }, 60000)
+})
+
+onUnmounted(() => {
+  if (notificationTimerId.value) {
+    clearInterval(notificationTimerId.value)
+    notificationTimerId.value = null
   }
 })
 
@@ -406,7 +483,7 @@ const navigateToFavorite = (link) => {
     })
     return
   }
-  
+
   router.push(link)
   closePanel()
 }
@@ -489,6 +566,25 @@ const getRoleDisplayName = () => {
   if (authStore.isSuperAdmin) return 'Accounting Office'
   if (authStore.isCOA) return 'COA'
   return 'Administrator'
+}
+
+const fetchPendingUserCount = async () => {
+  try {
+    const response = await api.get('/api/admin/users/pending', {
+      headers: {
+        Authorization: `Bearer ${authStore.adminToken}`,
+        Accept: 'application/json',
+      },
+    })
+    const list = Array.isArray(response.data) ? response.data : []
+    pendingUserCount.value = list.length
+  } catch {
+    // Silently fail; keep last known count
+  }
+}
+
+const goToPendingUsers = () => {
+  router.push('/admin/usercontrol/pending')
 }
 
 const handleLogout = async () => {
@@ -1215,5 +1311,59 @@ watch(
 
 .panel-item.disabled span {
   color: #9e9e9e !important;
+}
+
+/* Admin header user menu (reused from user layout) */
+.user-profile-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.user-avatar {
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.2s ease;
+}
+
+.user-menu-btn:hover .user-avatar {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.dropdown-arrow {
+  transition: transform 0.2s ease;
+  opacity: 0.8;
+}
+
+.user-menu-btn:hover .dropdown-arrow {
+  opacity: 1;
+  transform: translateY(1px);
+}
+
+.user-menu {
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.user-profile-header {
+  padding: 20px;
+  background: linear-gradient(135deg, #187c19, #69b31e);
+  color: white;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.menu-item {
+  padding: 16px 20px;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+}
+
+.menu-item:last-child {
+  border-bottom: none;
 }
 </style>

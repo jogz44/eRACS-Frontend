@@ -374,13 +374,16 @@ const clearAllFilters = () => {
   store.dateFrom = ''
   store.dateTo = ''
 
-  $q.notify({
-    type: 'info',
-    message: 'All filters cleared',
-    icon: 'clear_all',
-    position: 'top',
-    timeout: 1500
-  })
+    $q.notify({
+      type: 'positive',
+      message: 'All filters have been cleared successfully',
+      icon: 'clear_all',
+      position: 'top',
+      timeout: 2000,
+      actions: [
+        { label: 'Dismiss', color: 'white' }
+      ]
+    })
 }
 
 // Open add dialog with validation
@@ -457,6 +460,17 @@ onMounted(async () => {
 .summary-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  background-color: #e8f5e9;
+  border-color: #4caf50;
+}
+
+.summary-card:hover .text-h4 {
+  color: #2e7d32 !important;
+}
+
+.summary-card:hover .summary-header .q-icon,
+.summary-card:hover .text-h6 {
+  color: #2e7d32;
 }
 
 .summary-card.loading-state {
