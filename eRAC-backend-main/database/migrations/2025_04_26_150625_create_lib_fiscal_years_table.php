@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use App\Models\Barangay;
 
 return new class extends Migration
 {
@@ -21,6 +22,10 @@ return new class extends Migration
              // Ensure each barangay has unique year entries
             $table->unique(['barangay_id', 'year']);
         });
+
+        foreach (Barangay::all() as $barangay) {
+            DB::table('lib_fiscal_years')->insert(['barangay_id' => $barangay->id, 'year' => now()->year, 'is_active' => false,]);
+        }
     }
 
     /**

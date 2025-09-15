@@ -219,7 +219,6 @@
                 color="green"
                 :error="showStep2Validation && (!email || !isValidEmail(email))"
                 :error-message="getEmailErrorMessage()"
-                @keyup.enter="handleSubmit"
               >
                 <template v-slot:prepend>
                   <q-icon name="mail" />
@@ -236,7 +235,6 @@
                 color="green"
                 :error="showStep2Validation && (!username || username.length < 4)"
                 :error-message="getUsernameErrorMessage()"
-                @keyup.enter="handleSubmit"
               >
                 <template v-slot:prepend>
                   <q-icon name="person" />
@@ -257,7 +255,6 @@
                 color="green"
                 :error="showStep2Validation && (!password || password.length < 8)"
                 :error-message="getPasswordErrorMessage()"
-                @keyup.enter="handleSubmit"
               >
                 <template #append>
                   <q-icon
@@ -283,7 +280,6 @@
                 color="green"
                 :error="showStep2Validation && (!confirmPassword || password !== confirmPassword)"
                 :error-message="getConfirmPasswordErrorMessage()"
-                @keyup.enter="handleSubmit"
               >
                 <template #append>
                   <q-icon
@@ -300,8 +296,10 @@
           </div>
           <q-stepper-navigation class="row justify-between q-mt-md">
             <q-btn flat @click="step = 1" color="green" label="Back" :disable="isLoading" />
+
             <!-- <q-btn  @click="step = 3" color="green" label="Submit OTP" :disable="isLoading" /> -->
             <q-btn @click="handleSubmit" color="green" label="Submit" :loading="isLoading" :disable="isLoading" />
+
           </q-stepper-navigation>
         </q-step>
         <!-- Step 3: OTP -->
@@ -550,6 +548,7 @@ export default {
     }
 
     // Step 2 validation and submission
+    // Final registration submit (called after OTP verification in a real flow)
     const handleSubmit = async () => {
       showStep2Validation.value = true
 
@@ -662,37 +661,32 @@ export default {
       })
     }
 
-    // Global keyboard event handler
-    const handleGlobalKeydown = (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault()
-        event.stopPropagation()
-
-        if (step.value === 1) {
-          validateStep1()
-        } else if (step.value === 2) {
-          handleSubmit()
-        }
-      }
+    // Move from Account Info to OTP by validation; used by global Enter handler
+    const goToOtp = () => {
+      showStep2Validation.value = true
+      if (!email.value.trim() || !isValidEmail(email.value)) return
+      if (!username.value.trim() || username.value.length < 4) return
+      if (!password.value || password.value.length < 8) return
+      if (!confirmPassword.value || password.value !== confirmPassword.value) return
+      step.value = 3
     }
 
-    // Global Enter key handler for the page
-    const handleGlobalEnterKey = (event) => {
-      if (event) {
-        event.preventDefault()
-        event.stopPropagation()
-      }
-
+    // Global keyboard event handler: single source of truth for Enter
+    const handleGlobalKeydown = (event) => {
+      if (event.key !== 'Enter') return
+      event.preventDefault()
+      event.stopPropagation()
       if (step.value === 1) {
         validateStep1()
       } else if (step.value === 2) {
-        handleSubmit()
+        goToOtp()
+      } else if (step.value === 3) {
+        handleOtpSubmit()
       }
     }
 
-    // Add and remove global event listeners
     onMounted(() => {
-      document.addEventListener('keydown', handleGlobalKeydown)
+      document.addEventListener('keydown', handleGlobalKeydown, { passive: false })
     })
 
     onUnmounted(() => {
@@ -734,7 +728,7 @@ export default {
       getUsernameErrorMessage,
       getPasswordErrorMessage,
       getConfirmPasswordErrorMessage,
-      handleGlobalEnterKey,
+      goToOtp,
       cardWidth: $q.screen.lt.sm ? '100%' : $q.screen.lt.md ? '80%' : '50%',
     }
   },
