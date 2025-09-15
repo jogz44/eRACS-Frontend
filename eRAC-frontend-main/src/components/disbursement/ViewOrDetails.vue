@@ -1,6 +1,8 @@
 <template>
   <q-dialog v-model="store.dialogs.viewOrDetails">
     <q-card style="min-width: 1100px">
+      <!-- Debug data trigger -->
+      <div v-show="false">{{ debugData }}</div>
       <div class="disbursement-tran">
         <q-card-section>
           <div class="text-h6">Disbursement #{{ store.currentLiquidation.dvNumber }}</div>
@@ -89,7 +91,7 @@
             <template v-slot:body-cell-account="props">
               <q-td :props="props">
                 <div class="expense-account-hierarchy">
-                  {{ props.row.accountName || `${props.row.account}${props.row.expenseType ? ` > ${props.row.expenseType}` : ''}${props.row.expenseItem ? ` > ${props.row.expenseItem}` : ''}${props.row.expenseSubItem ? ` > ${props.row.expenseSubItem}` : ''}` }}
+                  {{ props.row.accountName || props.row.account_name || `${props.row.account || ''}${props.row.expenseType ? ` > ${props.row.expenseType}` : ''}${props.row.expenseItem ? ` > ${props.row.expenseItem}` : ''}${props.row.expenseSubItem ? ` > ${props.row.expenseSubItem}` : ''}` }}
                 </div>
               </q-td>
             </template>
@@ -191,7 +193,7 @@
             <template v-slot:body-cell-account="props">
               <q-td :props="props">
                 <div class="expense-account-hierarchy">
-                  {{ props.row.accountName || props.row.account_name || `${props.row.account}${props.row.expenseType ? ` > ${props.row.expenseType}` : ''}${props.row.expenseItem ? ` > ${props.row.expenseItem}` : ''}${props.row.expenseSubItem ? ` > ${props.row.expenseSubItem}` : ''}` }}
+                  {{ props.row.accountName || props.row.account_name || `${props.row.account || ''}${props.row.expenseType ? ` > ${props.row.expenseType}` : ''}${props.row.expenseItem ? ` > ${props.row.expenseItem}` : ''}${props.row.expenseSubItem ? ` > ${props.row.expenseSubItem}` : ''}` }}
                 </div>
               </q-td>
             </template>
@@ -342,7 +344,7 @@ const expenseAccountColumns = [
   {
     name: 'account',
     label: 'Expense Account',
-    field: 'account',
+    field: 'accountName',
     align: 'left',
     sortable: true,
     style: 'min-width: 400px;',
@@ -411,22 +413,80 @@ const copyToClipboard = (text) => {
 }
 
 const totalActualExpense = computed(() => {
-  if (!store.currentLiquidation?.orDetails) return 0
-  return store.currentLiquidation.orDetails.reduce(
+  console.log('=== Actual Expense Calculation ===');
+  console.log('Current liquidation data:', store.currentLiquidation);
+  console.log('Has reimbursement:', !!store.currentLiquidation?.reimbursement);
+  
+  // If this disbursement has a reimbursement, we need to show the original liquidation values
+  // The actual expense should be the same as the DV amount (fully liquidated)
+  if (store.currentLiquidation?.reimbursement) {
+    console.log('Disbursement has reimbursement - using DV amount as actual expense');
+    const dvAmount = parseFloat(store.currentLiquidation.dvAmount) || 0;
+    console.log('Using DV amount as actual expense:', dvAmount);
+    return dvAmount;
+  }
+  
+  // For disbursements without reimbursement, calculate from OR details
+  if (!store.currentLiquidation?.orDetails || store.currentLiquidation.orDetails.length === 0) {
+    console.log('No OR details found');
+    return 0;
+  }
+  
+  const total = store.currentLiquidation.orDetails.reduce(
     (sum, or) => sum + (parseFloat(or.orAmount) || 0),
     0,
   )
+  
+  console.log('OR Details:', store.currentLiquidation.orDetails);
+  console.log('OR Details count:', store.currentLiquidation.orDetails.length);
+  console.log('Calculated total actual expense from OR details:', total);
+  console.log('Main disbursement DV amount:', store.currentLiquidation.dvAmount);
+  
+  return total
 })
 
 const totalReturnAmount = computed(() => {
+  // Always use the DV amount from the main disbursement, not from reimbursement
   if (!store.currentLiquidation?.dvAmount) return 0
   const returnAmount = store.currentLiquidation.dvAmount - totalActualExpense.value
   // Prevent negative return amounts - if over-liquidation occurs, show 0
-  return Math.max(0, returnAmount)
+  const finalReturnAmount = Math.max(0, returnAmount)
+  
+  console.log('=== Return Amount Calculation ===');
+  console.log('DV Amount:', store.currentLiquidation.dvAmount);
+  console.log('Actual Expense:', totalActualExpense.value);
+  console.log('Calculated return amount:', finalReturnAmount);
+  
+  return finalReturnAmount
 })
 
 const orDetailsCount = computed(() => {
   return store.currentLiquidation?.orDetails?.length || 0
+})
+
+// Debug computed property to log data structure
+const debugData = computed(() => {
+  console.log('=== ViewOrDetails Debug Data ===')
+  console.log('Current liquidation data:', store.currentLiquidation)
+  console.log('Main disbursement ID:', store.currentLiquidation?.id)
+  console.log('Main disbursement DV Number:', store.currentLiquidation?.dvNumber)
+  console.log('Main disbursement status:', store.currentLiquidation?.status)
+  console.log('Main expenses count:', store.currentLiquidation?.expenses?.length || 0)
+  console.log('Main expenses:', store.currentLiquidation?.expenses)
+  
+  if (store.currentLiquidation?.reimbursement) {
+    console.log('=== Reimbursement Data ===')
+    console.log('Reimbursement ID:', store.currentLiquidation.reimbursement.id)
+    console.log('Reimbursement DV Number:', store.currentLiquidation.reimbursement.dv_number)
+    console.log('Reimbursement reference DV:', store.currentLiquidation.reimbursement.ref_dv_number)
+    console.log('Reimbursement status:', store.currentLiquidation.reimbursement.status)
+    console.log('Reimbursement expenses count:', store.currentLiquidation.reimbursement.expenses?.length || 0)
+    console.log('Reimbursement expenses:', store.currentLiquidation.reimbursement.expenses)
+  } else {
+    console.log('No reimbursement data found')
+  }
+  
+  return store.currentLiquidation
 })
 
 // Check if user is an approver (Captain/SK Chairperson)

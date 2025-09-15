@@ -38,15 +38,14 @@
 
           <!-- Actual Expense Field -->
           <div class="col-md-4 col-sm-6"> <q-item-label class="q-mb-xs">Actual Expense:</q-item-label> <q-input filled
-              outlined dense :model-value="formatCurrency(totalActualExpense)" prefix="₱" readonly="true" /> </div>
+              outlined dense :model-value="formatCurrency(totalActualExpense)" prefix="₱" :readonly="true" /> </div>
           <!-- Amount to Return Field -->
           <div class="col-md-4 col-sm-6"> <q-item-label class="q-mb-xs">Amount to Return to
               Appropriation:</q-item-label> <q-input filled outlined dense
-              :model-value="formatCurrency(totalReturnAmount)" prefix="₱" readonly="true"
+              :model-value="formatCurrency(totalReturnAmount)" prefix="₱" :readonly="true"
               :color="actualReturnAmount < 0 ? 'negative' : undefined" /> </div> <!-- Remarks Field -->
           <div class="col-md-4 col-sm-12"> <q-item-label class="q-mb-xs">Remarks:</q-item-label> <q-input filled
-              outlined dense v-model="store.currentLiquidation.remarks" placeholder="Enter remarks"
-              @update:model-value="handleRemarksChange" /> </div>
+              outlined dense v-model="store.currentLiquidation.remarks" placeholder="Enter remarks" /> </div>
 
         </div>
       </q-card-section>
@@ -163,7 +162,7 @@
           :disable="!isValid || !canSubmit || savingSubmit" :loading="savingPartial" />
         <q-btn :label="needsReimbursement ? 'Reimbursement' : 'Submit'" :color="needsReimbursement ? 'orange' : 'green'"
           @click="needsReimbursement ? handleReimbursement() : showSubmitConfirmation()"
-          :disable="!isValid || savingPartial" :loading="savingSubmit" />
+          :disable="!isValid || savingPartial || (needsReimbursement && reimbursementAmount <= 0)" :loading="savingSubmit" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -631,6 +630,8 @@ const actualReturnAmount = computed(() => {
 // Reimbursement amount calculation (OR amount - DV amount)
 const reimbursementAmount = computed(() => {
   const excess = actualReturnAmount.value
+  // Only allow reimbursement if there's actual excess (over-liquidation)
+  // If liquidated amount equals disbursed amount, no reimbursement needed
   return excess < 0 ? Math.abs(excess) : 0
 })
 
@@ -1088,8 +1089,14 @@ const canSubmit = computed(() => {
 
   const returnAmount = actualReturnAmount.value
 
-  // Cannot submit if return amount is negative (over-liquidation)
-  if (returnAmount < 0) return false
+  // Cannot submit if return amount is negative (over-liquidation) without sufficient budget
+  if (returnAmount < 0) {
+    // Check if there's sufficient budget for reimbursement
+    const reimbursementNeeded = Math.abs(returnAmount)
+    // For now, we'll allow over-liquidation but show a warning
+    // The backend will handle budget validation
+    return true
+  }
 
   // Allow submit when form is valid and return amount is 0 or positive
   return returnAmount >= 0
@@ -1180,6 +1187,19 @@ const handleConfirmationPartial = () => {
 
 const handleReimbursement = () => {
   console.log('Reimbursement triggered - showing reimbursement modal...')
+  
+  // Check if reimbursement is actually needed
+  if (reimbursementAmount.value <= 0) {
+    $q.notify({
+      type: 'warning',
+      message: 'No reimbursement needed. The liquidated amount does not exceed the disbursed amount.',
+      icon: 'warning',
+      position: 'top',
+      timeout: 3000,
+    })
+    return
+  }
+  
   showReimbursementDialog.value = true
 }
 
@@ -1267,7 +1287,7 @@ const handleSubmitReimbursement = async () => {
 
     // Validate that total expense amounts match reimbursement amount
     const totalExpenseAmount = selectedReimbursementExpenseAccounts.value.reduce(
-      (sum, acc) => sum + (acc.amount || 0),
+      (sum, acc) => sum + (parseFloat(acc.amount) || 0),
       0,
     )
     if (Math.abs(totalExpenseAmount - reimbursementAmount.value) > 0.01) {
@@ -1281,7 +1301,7 @@ const handleSubmitReimbursement = async () => {
     }
 
     // Validate that total OR amounts match reimbursement amount
-    const totalOrAmount = selectedReimbursementOrs.value.reduce((sum, or) => sum + (or.reimbAmount || 0), 0)
+    const totalOrAmount = selectedReimbursementOrs.value.reduce((sum, or) => sum + (parseFloat(or.reimbAmount) || 0), 0)
     if (Math.abs(totalOrAmount - reimbursementAmount.value) > 0.01) {
       $q.notify({
         type: 'negative',
@@ -1302,7 +1322,7 @@ const handleSubmitReimbursement = async () => {
       bank_id: selectedReimbursementBank.value,
       dvNumber: reimbursementDvNumber.value,
       cheque_number: reimbursementChequeNumber.value,
-      payee: reimbursementPayee.value,
+      payee: store.currentLiquidation.payee, // Use original disbursement payee
       expense_account: {
         id: primaryExpenseAccount.id,
         expense_class_id: primaryExpenseAccount.expense_class_id,

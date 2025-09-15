@@ -84,9 +84,12 @@ class ContinuingAppropriationController extends Controller
                 'expenseClass' => $o->expenseClass?->name,
                 'expenseType' => $o->expenseType?->name,
                 'expenseItem' => $o->expenseItem?->name,
+                'expenseSubItem' => $o->expenseSubItem?->name,
                 'total_amount' => (float) $o->total_amount,
                 'details_amount' => (float) $details_amount,
                 'remaining_amount' => (float) $o->total_amount - (float) $details_amount,
+                // Add subitems array for frontend display
+                'subItems' => $o->subItems ?? [],
             ];
         })
         ->filter(fn($row) => $row['remaining_amount'] != 0)
@@ -178,7 +181,7 @@ class ContinuingAppropriationController extends Controller
             $continuedAccounts = ContApproAccounts::with([
                 'transactionAppropriation.expenseClass.fiscalYear',
                 'transactionAppropriation.expenseType',
-                'transactionAppropriation.expenseItem'
+                'transactionAppropriation.expenseItem.childItems'
             ])
             ->whereHas('continuingAppropriation', function($query) use ($request) {
                 $query->where('barangay_id', $request->user()->barangay_id)
@@ -190,7 +193,10 @@ class ContinuingAppropriationController extends Controller
             ->map(function ($account) {
                 $tranApp = $account->transactionAppropriation;
                 
-                return [
+                // Get sub-items for this expense item
+                $subItems = $tranApp->expenseItem?->childItems ?? collect();
+                
+                $result = [
                     'id' => $account->id,
                     'tranAppropriationId' => $tranApp->id,
                     'year' => $tranApp->expenseClass?->fiscalYear?->year,
@@ -199,8 +205,17 @@ class ContinuingAppropriationController extends Controller
                     'expenseItem' => $tranApp->expenseItem?->name,
                     'remaining_amount' => (float) $account->current_amount,
                     'continuingAppropriationId' => $account->contAppropriation_id,
-                    'description' => $account->continuingAppropriation?->description || 'Continued from previous year'
+                    'description' => $account->continuingAppropriation?->description || 'Continued from previous year',
+                    'subItems' => $subItems->map(function($subItem) {
+                        return [
+                            'id' => $subItem->id,
+                            'name' => $subItem->name,
+                            'order' => $subItem->order,
+                        ];
+                    })->toArray()
                 ];
+                
+                return $result;
             })
             ->filter(function($account) {
                 return $account['expenseClass'] && $account['expenseType'] && $account['expenseItem'];
@@ -255,12 +270,23 @@ class ContinuingAppropriationController extends Controller
                         'unappropriated' => (float) $availableAmount, // This now shows actual available amount
                         'status' => $item->status,
                         'accounts' => $item->continuingAccounts->map(function ($account) {
+                            $tranApp = $account->transactionAppropriation;
+                            $accountNameParts = [
+                                $tranApp->expenseClass?->name,
+                                $tranApp->expenseType?->name,
+                                $tranApp->expenseItem?->name,
+                                $tranApp->expenseSubItem?->name
+                            ];
+                            
                             return [
                                 'id' => $account->id,
                                 'balance' => (float) $account->current_amount,
-                                'accountName' => $account->transactionAppropriation->expenseClass?->name . ' > ' .
-                                               $account->transactionAppropriation->expenseType?->name . ' > ' .
-                                               $account->transactionAppropriation->expenseItem?->name
+                                'accountName' => implode(' > ', array_filter($accountNameParts)),
+                                'expenseClass' => $tranApp->expenseClass?->name,
+                                'expenseType' => $tranApp->expenseType?->name,
+                                'expenseItem' => $tranApp->expenseItem?->name,
+                                'expenseSubItem' => $tranApp->expenseSubItem?->name,
+                                'subItems' => $tranApp->subItems ?? [],
                             ];
                         })
                     ];
