@@ -30,7 +30,7 @@
       </q-card-section>
 
       <q-card-section>
-        <q-form @submit="updateProfile" class="profile-form">
+        <q-form ref="profileFormRef" @submit="updateProfile" class="profile-form">
           <div class="row q-col-gutter-md">
             <div class="col-12 col-md-6">
               <q-input
@@ -176,7 +176,7 @@
       </q-card-section>
 
       <q-card-section>
-        <q-form @submit="changePassword" class="password-form">
+        <q-form ref="passwordFormRef" :key="passwordFormKey" @submit="changePassword" class="password-form">
           <div class="row q-col-gutter-md">
             <div class="col-12">
               <q-input
@@ -259,6 +259,9 @@ const photoPreview = ref(null)
 const isUploadingPhoto = ref(false)
 const isHoveringPreview = ref(false)
 const isHoveringBadge = ref(false)
+const passwordFormRef = ref(null)
+const profileFormRef = ref(null)
+const passwordFormKey = ref(0)
 
 // Profile form data
 const profileForm = ref({
@@ -471,7 +474,8 @@ const changePassword = async () => {
         message: 'Password changed successfully',
         position: 'top'
       })
-      resetPasswordForm()
+      // Reset form after successful password change
+      await resetPasswordForm()
     } else {
       throw new Error(result.error)
     }
@@ -512,14 +516,24 @@ const resetForm = () => {
       photo_path: ''
     }
   }
+  
+  // Reset form validation state
+  if (profileFormRef.value) {
+    profileFormRef.value.resetValidation()
+  }
 }
 
-const resetPasswordForm = () => {
+const resetPasswordForm = async () => {
+  // Clear form data
   passwordForm.value = {
     current_password: '',
     new_password: '',
     confirm_password: ''
   }
+  
+  // Force form re-render by changing key
+  passwordFormKey.value++
+  
 }
 
 // Initialize form with current user data

@@ -321,7 +321,7 @@
           >
             <div class="text-weight-medium text-primary">{{ conflict.typeName }}</div>
             <div class="text-caption text-grey-7">
-              Type-level allocation: <strong>{{ appropriationStore.formatCurrency(conflict.typeAmount) }}</strong>
+              {{ conflict.typeName }} allocation: <strong>{{ appropriationStore.formatCurrency(conflict.typeAmount) }}</strong>
             </div>
             <div class="text-caption text-grey-7">
               Total in items: <strong>{{ appropriationStore.formatCurrency(conflict.itemsTotal) }}</strong>
