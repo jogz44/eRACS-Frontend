@@ -253,24 +253,24 @@
             <strong>Expense Account for Reimbursement:</strong>
           </div>
           <q-space />
-          <q-btn 
-            color="primary" 
-            icon="add" 
-            label="Change Account" 
-            flat 
+          <q-btn
+            color="primary"
+            icon="add"
+            label="Change Account"
+            flat
             @click="showExpenseAccountDialog = true"
             v-if="selectedReimbursementExpenseAccounts.length > 0"
           />
-          <q-btn 
-            color="primary" 
-            icon="add" 
-            label="Add" 
-            flat 
+          <q-btn
+            color="primary"
+            icon="add"
+            label="Add"
+            flat
             @click="showExpenseAccountDialog = true"
             v-else
           />
         </div>
-        
+
         <!-- Auto-selection notification -->
         <div v-if="selectedReimbursementExpenseAccounts.length > 0" class="q-mb-md">
           <q-banner class="bg-blue-1 text-blue-8" rounded>
@@ -502,7 +502,7 @@ watch(
           console.error('Error fetching full disbursement data:', error)
         }
       }
-      
+
       // Only initialize if we don't already have OR details
       if (!store.currentLiquidation?.orDetails || store.currentLiquidation.orDetails.length === 0) {
         initializeOrDetails()
@@ -736,7 +736,7 @@ const expenseAccountDetails = computed(() => {
   console.log('currentLiquidation:', store.currentLiquidation)
   console.log('currentLiquidation.expenses:', store.currentLiquidation?.expenses)
   console.log('currentLiquidation keys:', store.currentLiquidation ? Object.keys(store.currentLiquidation) : 'No currentLiquidation')
-  
+
   // Get expense details from the current liquidation
   if (!store.currentLiquidation?.expenses || store.currentLiquidation.expenses.length === 0) {
     console.log('No expenses found in currentLiquidation')
@@ -754,10 +754,10 @@ const expenseAccountDetails = computed(() => {
     expenseItem: expense.expenseItem || expense.expense_item_name || '',
     expenseSubItem: expense.expenseSubItem || expense.expense_sub_item_name || '',
   }))
-  
+
   console.log('Mapped expenses:', mappedExpenses)
   console.log('=== END DEBUG ===')
-  
+
   return mappedExpenses
 })
 
@@ -1187,7 +1187,7 @@ const handleConfirmationPartial = () => {
 
 const handleReimbursement = () => {
   console.log('Reimbursement triggered - showing reimbursement modal...')
-  
+
   // Check if reimbursement is actually needed
   if (reimbursementAmount.value <= 0) {
     $q.notify({
@@ -1199,7 +1199,7 @@ const handleReimbursement = () => {
     })
     return
   }
-  
+
   showReimbursementDialog.value = true
 }
 
@@ -1386,14 +1386,14 @@ const handleSubmitReimbursement = async () => {
 const resetReimbursementForm = () => {
   console.log('=== RESETTING REIMBURSEMENT FORM ===')
   console.log('Current selectedReimbursementExpenseAccounts before reset:', selectedReimbursementExpenseAccounts.value)
-  
+
   selectedReimbursementBank.value = null
   reimbursementChequeNumber.value = ''
   reimbursementPayee.value = ''
   reimbursementDvNumber.value = ''
   selectedReimbursementExpenseAccounts.value = []
   selectedReimbursementOrs.value = []
-  
+
   console.log('Form reset completed')
 }
 
@@ -1405,7 +1405,7 @@ const autoSelectOriginalAccount = async () => {
     console.log('=== AUTO-SELECTING ORIGINAL ACCOUNT ===')
     console.log('Current liquidation expenses:', store.currentLiquidation?.expenses)
     console.log('Available expense accounts:', store.expenseAccounts?.length || 0)
-    
+
     if (!store.currentLiquidation?.expenses || store.currentLiquidation.expenses.length === 0) {
       console.log('No expenses found in original disbursement')
       return
@@ -1475,7 +1475,7 @@ const autoSelectOriginalAccount = async () => {
         expense_sub_item_id: account.expense_sub_item_id,
         matches: { classMatch, typeMatch, itemMatch, subItemMatch }
       })
-      
+
       // Also log the full account object for debugging
       console.log('Full account object:', JSON.stringify(account, null, 2))
 
@@ -1484,14 +1484,14 @@ const autoSelectOriginalAccount = async () => {
 
     if (matchingAccount) {
       console.log('Found matching account:', matchingAccount)
-      
+
       // Check if account has sufficient budget
       const requiredAmount = parseFloat(reimbursementAmount.value)
       const availableBalance = parseFloat(matchingAccount.balance || 0)
-      
+
       console.log('Required amount:', requiredAmount)
       console.log('Available balance:', availableBalance)
-      
+
       if (availableBalance >= requiredAmount) {
         // Auto-select the account with the reimbursement amount
         const autoSelectedAccount = {
@@ -1499,14 +1499,14 @@ const autoSelectOriginalAccount = async () => {
           amount: requiredAmount.toString(),
           accountName: `${matchingAccount.account}${matchingAccount.expenseType ? ` > ${matchingAccount.expenseType}` : ''}${matchingAccount.expenseItem ? ` > ${matchingAccount.expenseItem}` : ''}${matchingAccount.expenseSubItem ? ` > ${matchingAccount.expenseSubItem}` : ''}`
         }
-        
+
         selectedReimbursementExpenseAccounts.value = [autoSelectedAccount]
-        
+
         console.log('=== AUTO-SELECTION SUCCESS (EXACT MATCH) ===')
         console.log('Auto-selected account:', autoSelectedAccount)
         console.log('selectedReimbursementExpenseAccounts.value:', selectedReimbursementExpenseAccounts.value)
         console.log('Array length:', selectedReimbursementExpenseAccounts.value.length)
-        
+
         $q.notify({
           type: 'positive',
           message: `Automatically selected account: ${autoSelectedAccount.accountName}`,
@@ -1523,36 +1523,36 @@ const autoSelectOriginalAccount = async () => {
           position: 'top',
           timeout: 5000,
         })
-        
+
         console.log('Insufficient budget for auto-selection')
       }
     } else {
       console.log('No exact matching account found, trying fallback matching...')
-      
+
       // Fallback: Try multiple matching strategies with priority scoring
       const fallbackMatches = store.expenseAccounts.map(account => {
         // Strategy 1: Try matching by account name (the full hierarchy string) - HIGHEST PRIORITY
-        const accountNameMatch = account.account && originalExpense.account_name && 
+        const accountNameMatch = account.account && originalExpense.account_name &&
           account.account.toLowerCase().includes(originalExpense.account_name.toLowerCase().split(' > ')[0])
-        
+
         // Strategy 2: Try matching by exact expense item ID - HIGH PRIORITY
         const exactItemMatch = parseInt(account.expense_item_id) === parseInt(originalExpense.expense_item_id)
-        
+
         // Strategy 3: Try matching by partial hierarchy (class and type) - MEDIUM PRIORITY
         const partialMatch = parseInt(account.expense_class_id) === parseInt(originalExpense.expense_class_id) &&
           parseInt(account.expense_type_id) === parseInt(originalExpense.expense_type_id)
-        
+
         // Strategy 4: Try matching by just the expense class - LOW PRIORITY
         const classOnlyMatch = parseInt(account.expense_class_id) === parseInt(originalExpense.expense_class_id)
-        
+
         // Strategy 5: Try matching by account name parts - MEDIUM PRIORITY
-        const namePartsMatch = originalExpense.account_name && account.account && 
+        const namePartsMatch = originalExpense.account_name && account.account &&
           originalExpense.account_name.toLowerCase().includes(account.account.toLowerCase())
-        
+
         // Strategy 6: Try reverse matching (account name in original) - MEDIUM PRIORITY
-        const reverseNameMatch = originalExpense.account_name && account.account && 
+        const reverseNameMatch = originalExpense.account_name && account.account &&
           account.account.toLowerCase().includes(originalExpense.account_name.toLowerCase())
-        
+
         // Calculate priority score (higher is better)
         let priorityScore = 0
         if (exactItemMatch) priorityScore += 100  // Highest priority for exact item match
@@ -1561,7 +1561,7 @@ const autoSelectOriginalAccount = async () => {
         if (reverseNameMatch) priorityScore += 60
         if (partialMatch) priorityScore += 40
         if (classOnlyMatch) priorityScore += 20
-        
+
         console.log('Fallback matching for account:', {
           id: account.id,
           account: account.account,
@@ -1576,7 +1576,7 @@ const autoSelectOriginalAccount = async () => {
           originalExpenseItemId: originalExpense.expense_item_id,
           accountExpenseItemId: account.expense_item_id
         })
-        
+
         return {
           account,
           priorityScore,
@@ -1588,12 +1588,12 @@ const autoSelectOriginalAccount = async () => {
           reverseNameMatch
         }
       }).filter(match => match.priorityScore > 0) // Only include accounts that have some match
-      
+
       // Sort by priority score (highest first) and take the best match
       const sortedMatches = fallbackMatches.sort((a, b) => b.priorityScore - a.priorityScore)
       const bestMatch = sortedMatches.length > 0 ? sortedMatches[0] : null
       const fallbackMatch = bestMatch ? bestMatch.account : null
-      
+
       console.log('Fallback matching results:', {
         totalMatches: fallbackMatches.length,
         sortedMatches: sortedMatches.map(m => ({
@@ -1611,14 +1611,14 @@ const autoSelectOriginalAccount = async () => {
           exactItemMatch: bestMatch.exactItemMatch
         } : null
       })
-      
+
       if (fallbackMatch) {
         console.log('Found fallback matching account:', fallbackMatch)
-        
+
         // Check if account has sufficient budget
         const requiredAmount = parseFloat(reimbursementAmount.value)
         const availableBalance = parseFloat(fallbackMatch.balance || 0)
-        
+
         if (availableBalance >= requiredAmount) {
           // Auto-select the account with the reimbursement amount
           const autoSelectedAccount = {
@@ -1626,9 +1626,9 @@ const autoSelectOriginalAccount = async () => {
             amount: requiredAmount.toString(),
             accountName: `${fallbackMatch.account}${fallbackMatch.expenseType ? ` > ${fallbackMatch.expenseType}` : ''}${fallbackMatch.expenseItem ? ` > ${fallbackMatch.expenseItem}` : ''}${fallbackMatch.expenseSubItem ? ` > ${fallbackMatch.expenseSubItem}` : ''}`
           }
-          
+
           selectedReimbursementExpenseAccounts.value = [autoSelectedAccount]
-          
+
           console.log('=== AUTO-SELECTION SUCCESS (FALLBACK MATCH) ===')
           console.log('Auto-selected account:', autoSelectedAccount)
           console.log('selectedReimbursementExpenseAccounts.value:', selectedReimbursementExpenseAccounts.value)
@@ -1637,11 +1637,11 @@ const autoSelectOriginalAccount = async () => {
           console.log('First item accountName:', selectedReimbursementExpenseAccounts.value[0]?.accountName)
           console.log('First item amount:', selectedReimbursementExpenseAccounts.value[0]?.amount)
           console.log('First item id:', selectedReimbursementExpenseAccounts.value[0]?.id)
-          
+
           // Force reactivity update
           await nextTick()
           console.log('After nextTick - Array length:', selectedReimbursementExpenseAccounts.value.length)
-          
+
           $q.notify({
             type: 'positive',
             message: `Automatically selected account (fallback match): ${autoSelectedAccount.accountName}`,
@@ -1649,7 +1649,7 @@ const autoSelectOriginalAccount = async () => {
             position: 'top',
             timeout: 4000,
           })
-          
+
           // Show additional info about the fallback match
           $q.notify({
             type: 'info',
@@ -1685,7 +1685,7 @@ const autoSelectOriginalAccount = async () => {
           balance: acc.balance
         })))
         console.log('=== END DEBUGGING INFO ===')
-        
+
         $q.notify({
           type: 'warning',
           message: 'Could not find matching account. Please select manually.',
