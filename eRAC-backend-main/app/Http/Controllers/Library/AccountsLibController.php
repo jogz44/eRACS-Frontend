@@ -66,13 +66,13 @@ public function createFiscalYear(Request $request)
     ]);
     
     $classes = [
-        ['name' => 'SANGUNIANG KABATAAN (SK) - 10%',                   'order' => 0],
-        ['name' => 'PERSONAL SERVICES',                                'order' => 1],
-        ['name' => 'MOOE',                                             'order' => 2],
-        ['name' => 'LOCALLY FUNDED PROJECTS',                          'order' => 3],
-        ['name' => 'CAPITAL OUTLAY',                                   'order' => 4],
-        ['name' => 'BRGY. DISASTER RISK REDUCTION AND MANAGEMENT FUND','order' => 5],
-        ['name' => '20% DEVELOPMENT FUND',                             'order' => 6],
+        ['name' => 'SANGUNIANG KABATAAN (SK) - 10%', 'order' => 0],
+        ['name' => 'PERSONAL SERVICES', 'order' => 1],
+        ['name' => 'MOOE', 'order' => 2],
+        ['name' => 'LOCALLY FUNDED PROJECTS', 'order' => 3],
+        ['name' => 'CAPITAL OUTLAY', 'order' => 4],
+        ['name' => 'BRGY. DISASTER RISK REDUCTION AND MANAGEMENT FUND (BDRRMF) - 5%', 'order' => 5],
+        ['name' => '20% DEVELOPMENT FUND', 'order' => 6],
     ];
 
     $typesMap = [
@@ -150,126 +150,126 @@ public function createFiscalYear(Request $request)
     ];
 
     $itemsMap = [
-            'SANGUNIANG KABATAAN (SK) - 10%' => [
+        'SANGUNIANG KABATAAN (SK) - 10%' => [
+            'MOOE' => [
+                ['name' => 'Training & Seminars', 'order' => 0],
+                ['name' => 'Traveling Expenses', 'order' => 1],
+                ['name' => 'Office Supplies', 'order' => 2],
+                ['name' => 'Other MOOE', 'order' => 3],
+                ['name' => 'Other Supplies', 'order' => 4],
+                ['name' => 'Subsidy to Comelec', 'order' => 5],
+                ['name' => 'Water Expense', 'order' => 6],
+                ['name' => 'Electricity Expense', 'order' => 7],
+                ['name' => 'Repair and Maintenance of Government Vehicle', 'order' => 8],
+                ['name' => 'Repair and Maintenance of Government Facilities', 'order' => 9],
+            ],
+            'LOCALLY FUNDED PROGRAM' => [
+                ['name' => 'Nutrition Program', 'order' => 0],
+                ['name' => 'Childrens Congress', 'order' => 1],
+                ['name' => 'Araw ng Barangay Activities', 'order' => 2],
+                ['name' => 'Scholarship Program', 'order' => 3],
+                ['name' => 'Poverty Reduction Project', 'order' => 4],
+                ['name' => 'Cultural Assistance', 'order' => 5],
+                ['name' => 'Cultural Program', 'order' => 6],
+                ['name' => 'Sports Festival', 'order' => 7],
+                ['name' => 'Protection of Children R.A 9344', 'order' => 8],
+                ['name' => 'Health Program', 'order' => 9],
+            ],
+            'CAPITAL OUTLAY' => [
+                ['name' => 'IT Equipment', 'order' => 0],
+            ],
+        ],
+        'MOOE' => [
+            'Utility Expenses' => [
+                ['name' => 'Water Expenses', 'order' => 0],
+                ['name' => 'Electricity Expenses', 'order' => 1],
+            ],
+        ],
+        'LOCALLY FUNDED PROJECTS' => [
+            'Maint. of Peace & Order' => [
+                ['name' => 'Other MOE', 'order' => 0],
+            ],
+            'Environmental Sanitary Program' => [
+                ['name' => 'OTHER MOE', 'order' => 0],
+                ['name' => 'Office Supplies', 'order' => 1],
+            ],
+            'Health Program' => [
+                ['name' => 'Office Supplies', 'order' => 0],
+                ['name' => 'Medicines', 'order' => 1],
+                ['name' => 'Other MOE', 'order' => 2],
+            ],
+            'Nutrition Program' => [
+                ['name' => 'Other MOE', 'order' => 0],
+                ['name' => 'Office Supplies', 'order' => 1],
+                ['name' => 'Training Expense', 'order' => 2],
+                ['name' => 'Other Supplies', 'order' => 3],
+            ],
+            'Anti-Rabies Program' => [
+                ['name' => 'Other MOE', 'order' => 0],
+            ],
+            'Lupong Tagapamayapa Program' => [
+                ['name' => 'Other MOE', 'order' => 0],
+            ],
+            'Purok Affairs Program' => [
+                ['name' => 'Other MOE', 'order' => 0],
+                ['name' => 'Training Expense', 'order' => 1],
+            ],
+            'Welfare for Disabled Person' => [
+                ['name' => 'Other MOE', 'order' => 0],
+            ],
+            'HIV/AIDS Awareness' => [
+                ['name' => 'Other MOE', 'order' => 0],
+            ],
+            'Daycare Program' => [
+                ['name' => 'Office Supplies', 'order' => 0],
+                ['name' => 'Other MOE', 'order' => 1],
+                ['name' => 'Training Expense', 'order' => 2],
+                ['name' => 'Other Supplies', 'order' => 3],
+            ],
+            'Bloodletting Program' => [
+                ['name' => 'Other MOE', 'order' => 0],
+            ],
+            'Livelihood Program (GAD)' => [
+                ['name' => 'Training Expense(GAD)', 'order' => 0],
+            ],
+            'Electrification Maintenance Program (GAD)' => [
+                ['name' => 'Other Supplies Expense', 'order' => 0],
+            ],
+            'VAW Program and Human Rights Program (GAD)' => [
+                ['name' => 'Other MOE', 'order' => 0],
+            ],
+            'Job Fair Program (GAD)' => [
+                ['name' => 'Other MOE', 'order' => 0],
+            ],
+            'Gender and Development Program (GAD)' => [
+                ['name' => 'Training Expense', 'order' => 0],
+            ],
+        ],
+        'BRGY. DISASTER RISK REDUCTION AND MANAGEMENT FUND (BDRRMF) - 5%' => [
+            'Pre & Post Disaster Fund' => [
+                ['name' => 'MOOE', 'order' => 0], //has items
+                ['name' => 'CAPITAL OUTLAY', 'order' => 1], //has items
+            ],
+        ],
+    ];
+
+    $subItemsMap = [
+        'BRGY. DISASTER RISK REDUCTION AND MANAGEMENT FUND (BDRRMF) - 5%' => [
+            'Pre & Post Disaster Fund' => [
                 'MOOE' => [
-                    ['name' => 'Training & Seminars', 'order' => 0],
-                    ['name' => 'Traveling Expenses', 'order' => 1],
-                    ['name' => 'Office Supplies', 'order' => 2],
-                    ['name' => 'Other MOOE', 'order' => 3],
-                    ['name' => 'Other Supplies', 'order' => 4],
-                    ['name' => 'Subsidy to Comelec', 'order' => 5],
-                    ['name' => 'Water Expense', 'order' => 6],
-                    ['name' => 'Electricity Expense', 'order' => 7],
-                    ['name' => 'Repair and Maintenance of Government Vehicle', 'order' => 8],
-                    ['name' => 'Repair and Maintenance of Government Facilities', 'order' => 9],
-                ],
-                'LOCALLY FUNDED PROGRAM' => [
-                    ['name' => 'Nutrition Program', 'order' => 0],
-                    ['name' => 'Childrens Congress', 'order' => 1],
-                    ['name' => 'Araw ng Barangay Activities', 'order' => 2],
-                    ['name' => 'Scholarship Program', 'order' => 3],
-                    ['name' => 'Poverty Reduction Project', 'order' => 4],
-                    ['name' => 'Cultural Assistance', 'order' => 5],
-                    ['name' => 'Cultural Program', 'order' => 6],
-                    ['name' => 'Sports Festival', 'order' => 7],
-                    ['name' => 'Protection of Children R.A 9344', 'order' => 8],
-                    ['name' => 'Health Program', 'order' => 9],
+                    ['name' => 'Desilting of Drainage Canal', 'order' => 0],
+                    ['name' => 'Food Supplies (Relief Goods)', 'order' => 1],
+                    ['name' => 'Other Supplies', 'order' => 2],
+                    ['name' => 'Training & Seminar', 'order' => 3],
                 ],
                 'CAPITAL OUTLAY' => [
-                    ['name' => 'IT Equipment', 'order' => 0],
+                    ['name' => 'Const. of Drainage', 'order' => 0],
+                    ['name' => 'Generator Set', 'order' => 1],
                 ],
             ],
-            'MOOE' => [
-                'Utility Expenses' => [
-                    ['name' => 'Water Expenses', 'order' => 0],
-                    ['name' => 'Electricity Expenses', 'order' => 1],
-                ],
-            ],
-            'LOCALLY FUNDED PROJECTS' => [
-                'Maint. of Peace & Order' => [
-                    ['name' => 'Other MOE', 'order' => 0],
-                ],
-                'Environmental Sanitary Program' => [
-                    ['name' => 'OTHER MOE', 'order' => 0],
-                    ['name' => 'Office Supplies', 'order' => 1],
-                ],
-                'Health Program' => [
-                    ['name' => 'Office Supplies', 'order' => 0],
-                    ['name' => 'Medicines', 'order' => 1],
-                    ['name' => 'Other MOE', 'order' => 2],
-                ],
-                'Nutrition Program' => [
-                    ['name' => 'Other MOE', 'order' => 0],
-                    ['name' => 'Office Supplies', 'order' => 1],
-                    ['name' => 'Training Expense', 'order' => 2],
-                    ['name' => 'Other Supplies', 'order' => 3],
-                ],
-                'Anti-Rabies Program' => [
-                    ['name' => 'Other MOE', 'order' => 0],
-                ],
-                'Lupong Tagapamayapa Program' => [
-                    ['name' => 'Other MOE', 'order' => 0],
-                ],
-                'Purok Affairs Program' => [
-                    ['name' => 'Other MOE', 'order' => 0],
-                    ['name' => 'Training Expense', 'order' => 1],
-                ],
-                'Welfare for Disabled Person' => [
-                    ['name' => 'Other MOE', 'order' => 0],
-                ],
-                'HIV/AIDS Awareness' => [
-                    ['name' => 'Other MOE', 'order' => 0],
-                ],
-                'Daycare Program' => [
-                    ['name' => 'Office Supplies', 'order' => 0],
-                    ['name' => 'Other MOE', 'order' => 1],
-                    ['name' => 'Training Expense', 'order' => 2],
-                    ['name' => 'Other Supplies', 'order' => 3],
-                ],
-                'Bloodletting Program' => [
-                    ['name' => 'Other MOE', 'order' => 0],
-                ],
-                'Livelihood Program (GAD)' => [
-                    ['name' => 'Training Expense(GAD)', 'order' => 0],
-                ],
-                'Electrification Maintenance Program (GAD)' => [
-                    ['name' => 'Other Supplies Expense', 'order' => 0],
-                ],
-                'VAW Program and Human Rights Program (GAD)' => [
-                    ['name' => 'Other MOE', 'order' => 0],
-                ],
-                'Job Fair Program (GAD)' => [
-                    ['name' => 'Other MOE', 'order' => 0],
-                ],
-                'Gender and Development Program (GAD)' => [
-                    ['name' => 'Training Expense', 'order' => 0],
-                ],
-            ],
-            'BRGY. DISASTER RISK REDUCTION AND MANAGEMENT FUND (BDRRMF) - 5%' => [
-                'Pre & Post Disaster Fund' => [
-                    ['name' => 'MOOE', 'order' => 0], //has items
-                    ['name' => 'CAPITAL OUTLAY', 'order' => 1], //has items
-                ],
-            ],
-        ];
-
-        $subItemsMap = [
-            'BRGY. DISASTER RISK REDUCTION AND MANAGEMENT FUND (BDRRMF) - 5%' => [
-                'Pre & Post Disaster Fund' => [
-                    'MOOE' => [
-                        ['name' => 'Desilting of Drainage Canal', 'order' => 0],
-                        ['name' => 'Food Supplies (Relief Goods)', 'order' => 1],
-                        ['name' => 'Other Supplies', 'order' => 2],
-                        ['name' => 'Training & Seminar', 'order' => 3],
-                    ],
-                    'CAPITAL OUTLAY' => [
-                        ['name' => 'Const. of Drainage', 'order' => 0],
-                        ['name' => 'Generator Set', 'order' => 1],
-                    ],
-                ],
-            ],
-        ];
-
+        ],
+    ];
+    
     $now = now();
     
 
