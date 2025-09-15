@@ -31,6 +31,26 @@
             flat
             bordered
           >
+            <template v-slot:no-data>
+              <div class="full-width row flex-center q-gutter-sm">
+                <q-icon name="warning" color="orange" size="2em" />
+                <div class="text-center">
+                  <div class="text-h6 text-orange">No Expense Accounts Available</div>
+                  <div class="text-body2 text-grey-7 q-mt-sm">
+                    This could be due to:
+                  </div>
+                  <div class="text-body2 text-grey-6 q-mt-xs">
+                    • No appropriations with "committed" status<br>
+                    • No appropriations for current fiscal year<br>
+                    • No appropriations for current barangay<br>
+                    • Missing expense hierarchy setup
+                  </div>
+                  <div class="text-body2 text-grey-7 q-mt-sm">
+                    Please ensure appropriations are properly set up and committed.
+                  </div>
+                </div>
+              </div>
+            </template>
             <template v-slot:body-cell-expense_class="props">
               <q-td :props="props">
                 <q-badge
@@ -54,7 +74,18 @@
             </template>
             <template v-slot:body-cell-expense_sub_item="props">
               <q-td :props="props">
-                <span class="subitem-text">{{ props.row.expense_sub_item_name || '-' }}</span>
+                <div v-if="props.row.expense_sub_item_name" class="subitem-container">
+                  <q-chip 
+                    size="sm" 
+                    color="teal" 
+                    text-color="white" 
+                    icon="label"
+                    class="subitem-chip"
+                  >
+                    {{ props.row.expense_sub_item_name }}
+                  </q-chip>
+                </div>
+                <span v-else class="empty-text">-</span>
               </q-td>
             </template>
             <template v-slot:body-cell-action="props">
@@ -203,6 +234,20 @@ const cardWidthStyle = computed(() => {
   font-style: italic;
 }
 
+.subitem-container {
+  display: flex;
+  align-items: center;
+}
+
+.subitem-chip {
+  font-size: 0.75rem;
+  font-weight: 500;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .empty-text {
   font-size: 0.875rem;
   color: #999;
@@ -239,6 +284,11 @@ const cardWidthStyle = computed(() => {
 
   .subitem-text {
     font-size: 0.7rem !important;
+  }
+
+  .subitem-chip {
+    font-size: 0.6rem !important;
+    padding: 2px 4px !important;
   }
 
   .expense-type-text {
@@ -292,6 +342,11 @@ const cardWidthStyle = computed(() => {
     font-size: 0.75rem !important;
   }
 
+  .subitem-chip {
+    font-size: 0.65rem !important;
+    padding: 3px 6px !important;
+  }
+
   .expense-type-text {
     font-size: 0.75rem !important;
   }
@@ -341,6 +396,11 @@ const cardWidthStyle = computed(() => {
 
   .subitem-text {
     font-size: 0.8rem !important;
+  }
+
+  .subitem-chip {
+    font-size: 0.7rem !important;
+    padding: 4px 8px !important;
   }
 
   .expense-type-text {

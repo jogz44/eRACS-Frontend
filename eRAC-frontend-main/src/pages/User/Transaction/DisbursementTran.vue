@@ -420,7 +420,7 @@
                   v-if="
                     isApprover ||
                     authStore.admin ||
-                    (isTreasurer && props.row.edit_approved === true)
+                    isTreasurer
                   "
                   dense
                   icon="edit"
@@ -444,7 +444,8 @@
                   v-permission="'view'"
                 />
 
-                <!-- Treasurer: Request edit -->
+                <!-- Treasurer: Request edit - COMMENTED OUT FOR FUTURE REUSE -->
+                <!--
                 <q-btn
                   dense
                   icon="edit_note"
@@ -459,6 +460,7 @@
                   @click.stop="() => handleEditRequest(props.row)"
                   v-permission="'edit'"
                 />
+                -->
 
                 <!-- Treasurer: Request void -->
                 <q-btn
@@ -579,7 +581,8 @@
         </q-card>
       </q-dialog>
 
-      <!-- Dialog (for Treasurers) -->
+      <!-- Dialog (for Treasurers) - COMMENTED OUT FOR FUTURE REUSE -->
+      <!--
       <q-dialog v-model="store.dialogs.editRequest" persistent>
         <q-card style="min-width: 500px; max-width: 90vw">
           <q-card-section class="q-pb-none">
@@ -615,6 +618,7 @@
           </q-card-actions>
         </q-card>
       </q-dialog>
+      -->
 
       <!-- Remarks Dialog -->
       <q-dialog v-model="remarksDialog" persistent>
@@ -698,7 +702,7 @@ const statusOptions = [
   { label: 'Unliquidated', value: 'Unliquidated' },
   { label: 'Partial', value: 'Partial' },
   { label: 'Liquidated', value: 'Liquidated' },
-  { label: 'Edit Requested', value: 'Edit Requested' },
+  // { label: 'Edit Requested', value: 'Edit Requested' }, // COMMENTED OUT FOR FUTURE REUSE
   { label: 'Void Requested', value: 'Void Requested' },
   { label: 'Voided', value: 'Voided' },
   { label: 'Stale', value: 'Stale' },
@@ -913,8 +917,8 @@ const getStatusColor = (status) => {
       return 'amber'
     case 'Liquidated':
       return 'green'
-    case 'Edit Requested':
-      return 'deep-purple'
+    // case 'Edit Requested': // COMMENTED OUT FOR FUTURE REUSE
+    //   return 'deep-purple'
     case 'Void Requested':
       return 'deep-orange'
     case 'Voided':
@@ -931,13 +935,16 @@ const getStatusTextColor = (status) => {
     case 'Unliquidated':
     case 'Partial':
     case 'Liquidated':
-    case 'Edit Requested':
-    case 'Void Requested':
-    case 'Voided':
+       case 'Void Requested':
+           case 'Voided':
     case 'Stale':
       return 'white'
     default:
       return 'black'
+    // case 'Edit Requested': // COMMENTED OUT FOR FUTURE REUSE
+    //   return 'white'
+
+
   }
 }
 
@@ -1512,10 +1519,11 @@ const handleDialogClose = (dialogName) => {
   } else if (dialogName === 'void') {
     // Clear void form when closing void dialog
     store.resetForm('void')
-  } else if (dialogName === 'editRequest') {
-    // Close edit request dialog via store method
-    store.closeEditRequestDialog()
   }
+  // } else if (dialogName === 'editRequest') { // COMMENTED OUT FOR FUTURE REUSE
+  //   // Close edit request dialog via store method
+  //   store.closeEditRequestDialog()
+  // }
 
   store.closeDialog(dialogName)
 }
@@ -1525,10 +1533,10 @@ const handleVoidDisbursement = (row) => {
   store.openVoidDialog(row)
 }
 
-// Open edit request dialog for treasurer
-const handleEditRequest = (row) => {
-  store.openEditRequestDialog(row)
-}
+// Open edit request dialog for treasurer - COMMENTED OUT FOR FUTURE REUSE
+// const handleEditRequest = (row) => {
+//   store.openEditRequestDialog(row)
+// }
 
 // Submit void request from dialog
 const handleSubmitVoidRequest = async () => {
@@ -1679,7 +1687,7 @@ const handleLiquidateDisbursement = async (row) => {
 const hasRemarks = (row) => {
   return (
     (row.status === 'Void Requested' && row.remarks) ||
-    (row.status === 'Edit Requested' && row.remarks) ||
+    // (row.status === 'Edit Requested' && row.remarks) || // COMMENTED OUT FOR FUTURE REUSE
     (row.status === 'Voided' && row.remarks) ||
     row.rejection_remarks
   )
@@ -1739,50 +1747,50 @@ const openViewOrDetailsFromRemarks = async () => {
   }
 }
 
-// Submit edit request from dialog
-const handleSubmitEditRequest = async () => {
-  if (!store.forms.edit.remarks || store.forms.edit.remarks.trim() === '') {
-    $q.notify({
-      type: 'negative',
-      message: 'Please provide remarks for the edit request',
-      icon: 'warning',
-      position: 'top',
-      timeout: 3000,
-    })
-    return
-  }
+// Submit edit request from dialog - COMMENTED OUT FOR FUTURE REUSE
+// const handleSubmitEditRequest = async () => {
+//   if (!store.forms.edit.remarks || store.forms.edit.remarks.trim() === '') {
+//     $q.notify({
+//       type: 'negative',
+//       message: 'Please provide remarks for the edit request',
+//       icon: 'warning',
+//       position: 'top',
+//       timeout: 3000,
+//     })
+//     return
+//   }
 
-  try {
-    const result = await store.submitEditRequest()
-    if (result.success) {
-      $q.notify({
-        type: 'positive',
-        message: 'Edit request submitted successfully!',
-        icon: 'check_circle',
-        position: 'top',
-        timeout: 3000,
-      })
-      await refreshData()
-    } else {
-      $q.notify({
-        type: 'negative',
-        message: result.message || 'Failed to submit edit request',
-        icon: 'error',
-        position: 'top',
-        timeout: 5000,
-      })
-    }
-  } catch (error) {
-    console.error('Error submitting edit request:', error)
-    $q.notify({
-      type: 'negative',
-      message: error.message || 'Failed to submit edit request',
-      icon: 'error',
-      position: 'top',
-      timeout: 5000,
-    })
-  }
-}
+//   try {
+//     const result = await store.submitEditRequest()
+//     if (result.success) {
+//       $q.notify({
+//         type: 'positive',
+//         message: 'Edit request submitted successfully!',
+//         icon: 'check_circle',
+//         position: 'top',
+//         timeout: 3000,
+//       })
+//       await refreshData()
+//     } else {
+//       $q.notify({
+//         type: 'negative',
+//         message: result.message || 'Failed to submit edit request',
+//         icon: 'error',
+//         position: 'top',
+//         timeout: 5000,
+//       })
+//     }
+//   } catch (error) {
+//     console.error('Error submitting edit request:', error)
+//     $q.notify({
+//       type: 'negative',
+//       message: error.message || 'Failed to submit edit request',
+//       icon: 'error',
+//       position: 'top',
+//       timeout: 5000,
+//     })
+//   }
+// }
 </script>
 
 <style scoped>

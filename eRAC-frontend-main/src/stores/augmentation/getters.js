@@ -180,8 +180,12 @@ export function useGetters(state) {
   })
 
   const filteredExpenseAccounts = computed(() => {
+    console.log('=== FILTERED EXPENSE ACCOUNTS GETTER ===')
+    console.log('AugexpenseAccounts.value:', state.AugexpenseAccounts.value)
+    console.log('AugexpenseAccounts.value length:', state.AugexpenseAccounts.value?.length)
+    
     if (!state.AugexpenseAccounts.value || state.AugexpenseAccounts.value.length === 0) {
-      console.log('No expense accounts available')
+      console.log('No expense accounts available - returning empty array')
       return []
     }
 
@@ -216,6 +220,8 @@ export function useGetters(state) {
         (item.description && item.description.toLowerCase().includes(query))
     )
     console.log('After search filtering:', searchFiltered.length)
+    console.log('Final filtered results:', searchFiltered)
+    console.log('=== END FILTERED EXPENSE ACCOUNTS GETTER ===')
     return searchFiltered
   })
 
