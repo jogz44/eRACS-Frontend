@@ -81,10 +81,31 @@ export const useAuthStore = defineStore('auth', {
     },
 
     _formatUser(userData) {
+      if (!userData) {
+        return {
+          id: null,
+          first_name: '',
+          middle_name: '',
+          last_name: '',
+          suffix: '',
+          email: '',
+          username: '',
+          barangay_name: '',
+          position_name: '',
+          position: '',
+          photo_path: null,
+          photo_url: null,
+        }
+      }
+      
       return {
         id: userData.id || null,
         first_name: userData.first_name || '',
+        middle_name: userData.middle_name || '',
         last_name: userData.last_name || '',
+        suffix: userData.suffix || '',
+        email: userData.email || '',
+        username: userData.username || '',
         barangay_name: userData.barangay_name || '',
         position_name: userData.position_name || '',
         position: userData.position || '',
@@ -442,11 +463,23 @@ export const useAuthStore = defineStore('auth', {
       try {
         const response = await api.put('/api/barangay/update-profile', profileData)
         
-        // Update the user data in the store
-        this.user = response.data.user
+        // Validate response structure - check for middleware-wrapped response
+        let userData = null
+        if (response.data && response.data.data && response.data.data.user) {
+          // Response wrapped by middleware
+          userData = response.data.data.user
+        } else if (response.data && response.data.user) {
+          // Direct response
+          userData = response.data.user
+        } else {
+          throw new Error('Invalid response from server - missing user data')
+        }
+        
+        // Update the user data in the store with formatted data
+        this.user = this._formatUser(userData)
         
         // Update localStorage
-        localStorage.setItem('user_data', JSON.stringify(response.data.user))
+        localStorage.setItem('user_data', JSON.stringify(this.user))
         
         return {
           success: true,
