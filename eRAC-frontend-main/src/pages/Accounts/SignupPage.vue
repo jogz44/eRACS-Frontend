@@ -298,7 +298,7 @@
             <q-btn flat @click="step = 1" color="green" label="Back" :disable="isLoading" />
 
             <!-- <q-btn  @click="step = 3" color="green" label="Submit OTP" :disable="isLoading" /> -->
-            <q-btn @click="handleSubmit" color="green" label="Submit" :loading="isLoading" :disable="isLoading" />
+            <q-btn @click="goToOtp" color="green" label="Verify Email" :loading="isLoading" :disable="isLoading" />
 
           </q-stepper-navigation>
         </q-step>
@@ -328,7 +328,7 @@
                     color="green"
                     class="otp-input"
                     maxlength="6"
-                    @keyup.enter="handleOtpSubmit"
+                    @keyup.enter="handleSubmit"
                   >
                     <template v-slot:prepend>
                       <q-icon name="lock" />
@@ -354,7 +354,7 @@
 
           <q-stepper-navigation class="row justify-between q-mt-md">
             <q-btn flat @click="step = 2" color="green" label="Back" :disable="isLoading" />
-            <q-btn @click="handleOtpSubmit" color="green" label="Verify & Complete" :disable="isLoading" />
+            <q-btn @click="handleSubmit" color="green" label="Verify & Complete" :disable="isLoading" />
           </q-stepper-navigation>
         </q-step>
       </q-stepper>
@@ -578,6 +578,31 @@ export default {
         return
       }
 
+      if (!otpCode.value.trim()) {
+        $q.notify({
+          type: 'negative',
+          message: 'Please enter the verification code',
+          position: 'top',
+        })
+        return
+      }
+
+      // For demo purposes, accept any 6-digit code
+      if (otpCode.value.length === 6) {
+        $q.notify({
+          type: 'positive',
+          message: 'Email verified successfully!',
+          position: 'top',
+        })
+        router.push('/')
+      } else {
+        $q.notify({
+          type: 'negative',
+          message: 'Please enter a valid 6-digit code',
+          position: 'top',
+        })
+      }
+
       isLoading.value = true
       try {
         // 1. First upload the photo
@@ -599,6 +624,7 @@ export default {
           password: password.value,
           password_confirmation: confirmPassword.value,
           photo: uploadResult.path,
+          otp: otpCode.value,
         }
 
         const result = await authStore.register(registrationData)
@@ -625,33 +651,6 @@ export default {
       }
     }
 
-    // OTP methods
-    const handleOtpSubmit = () => {
-      if (!otpCode.value.trim()) {
-        $q.notify({
-          type: 'negative',
-          message: 'Please enter the verification code',
-          position: 'top',
-        })
-        return
-      }
-
-      // For demo purposes, accept any 6-digit code
-      if (otpCode.value.length === 6) {
-        $q.notify({
-          type: 'positive',
-          message: 'Email verified successfully!',
-          position: 'top',
-        })
-        router.push('/')
-      } else {
-        $q.notify({
-          type: 'negative',
-          message: 'Please enter a valid 6-digit code',
-          position: 'top',
-        })
-      }
-    }
 
     const resendOtp = () => {
       $q.notify({
@@ -681,7 +680,7 @@ export default {
       } else if (step.value === 2) {
         goToOtp()
       } else if (step.value === 3) {
-        handleOtpSubmit()
+        handleSubmit()
       }
     }
 
@@ -720,7 +719,6 @@ export default {
       onFileRejected,
       validateStep1,
       handleSubmit,
-      handleOtpSubmit,
       resendOtp,
       uploadedFiles,
       isValidEmail,

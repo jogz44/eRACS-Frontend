@@ -180,7 +180,7 @@ export const useAuthStore = defineStore('auth', {
           password: userData.password,
           password_confirmation: userData.password_confirmation,
           photo_path: userData.photo || null, // Handle optional field
-          is_approved: true,
+          otp: userData.otp,
         }
 
         // 4. Make registration request

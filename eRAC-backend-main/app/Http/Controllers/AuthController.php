@@ -7,6 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use App\Models\BarangayUser;
 use App\Models\Barangay;
+use App\Models\OtpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -41,8 +42,16 @@ public function register(Request $request)
         'username' => 'required|string|max:255|unique:barangay_users',
         'password' => 'required|string|min:8|confirmed',
         'photo_path' => 'required|string',
-        'is_approved' => 'sometimes|boolean'
+        'otp' => 'required|string'
     ]);
+
+    $otpverified=OtpService::verify($validated['email'],$validated['otp']);
+
+    if(!$otpverified){
+        return response()->json([
+            'message' => 'Incorrect OTP',
+        ], 201);
+    }
 
     $user = BarangayUser::create([
         'first_name' => $validated['first_name'],
