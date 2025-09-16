@@ -1002,6 +1002,14 @@ const saveExpenseType = async () => {
     if (!fiscalYear) {
       throw new Error('Selected year not found in database')
     }
+    
+    const upperCaseName = newExpenseType.value.name.toUpperCase()
+
+    // Create the expense type
+    await accountsStore.createExpenseType({
+      name: upperCaseName,
+      expenseClassId: currentParentClass.value.id,
+    })
 
     // Force refresh types to ensure the new one is displayed
     await accountsStore.fetchExpenseTypes(currentParentClass.value.id)
@@ -1013,7 +1021,7 @@ const saveExpenseType = async () => {
       initTypeContainer(container, currentParentClass.value.id)
     }
 
-    $q.notify({ type: 'positive', message: 'Type added successfully' })
+    $q.notify({ type: 'positive', message: 'Type added successfully', position: 'top' })
     resetTypeForm()
   } catch (error) {
     console.error('Error adding expense type:', error)
