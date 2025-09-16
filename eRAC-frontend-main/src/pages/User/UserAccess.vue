@@ -27,6 +27,12 @@
       <div>You need to be logged in to manage user access permissions.</div>
     </q-banner>
 
+    <!-- Access Management Notice -->
+    <q-banner v-if="hasValidToken && !canManageAccess && !checkingAccess" class="bg-blue text-white q-mb-md" icon="info">
+      <div class="text-weight-medium">Access Management Restricted</div>
+      <div>Only Barangay Captain, SK Chairperson, and Admin can manage user access permissions. Contact your administrator to modify user permissions.</div>
+    </q-banner>
+
     <!-- Debug Info (remove in production) -->
     <q-banner v-if="false" class="bg-grey-3 text-dark q-mb-md" icon="info">
       <div class="text-weight-medium">Debug Info</div>
@@ -115,7 +121,16 @@
 
         <template v-slot:body-cell-actions="props">
           <q-td :props="props">
-            <q-btn label="Access" color="primary" dense @click="openAccessModal(props.row)" />
+            <q-btn 
+              v-if="canManageAccess" 
+              label="Access" 
+              color="primary" 
+              dense 
+              @click="openAccessModal(props.row)" 
+            />
+            <span v-else class="text-grey-6 text-caption disabled-access-text">
+              Contact Captain/SK Chairperson
+            </span>
           </q-td>
         </template>
       </q-table>
@@ -176,6 +191,8 @@ export default {
       search: '',
       selectedPosition: null,
       users: [],
+      canManageAccess: false,
+      checkingAccess: false,
       columns: [
         { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true },
         { name: 'name', label: 'Name', field: 'name', align: 'left', sortable: true },
@@ -268,6 +285,10 @@ export default {
         this.users = []
       }
     }
+    
+    // Check if user can manage access permissions
+    await this.checkAccessPermissions()
+    
     await this.loadAcceptedUsers()
 
     // Log page visit (moved from invalid top-level onMounted)
@@ -488,6 +509,49 @@ export default {
       this.search = ''
       this.selectedPosition = null
     },
+
+    async checkAccessPermissions() {
+      this.checkingAccess = true
+      try {
+        // Check if user has admin token (for admin users) or regular token (for barangay users)
+        const token = this.authStore.adminToken || this.authStore.token
+
+        if (!token) {
+          this.canManageAccess = false
+          return
+        }
+
+        // Set the appropriate authorization header
+        const config = {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+
+        const response = await api.get('/api/admin/can-manage-access', config)
+        
+        if (response.data && response.data.can_manage_access !== undefined) {
+          this.canManageAccess = response.data.can_manage_access
+        } else {
+          this.canManageAccess = false
+        }
+      } catch (error) {
+        console.error('Error checking access permissions:', error)
+        this.canManageAccess = false
+        
+        // Show notification only if it's not a 401 (unauthorized) error
+        if (error.response?.status !== 401) {
+          this.$q.notify({
+            type: 'warning',
+            message: 'Unable to verify access permissions. Contact your administrator.',
+            position: 'top',
+            timeout: 3000,
+          })
+        }
+      } finally {
+        this.checkingAccess = false
+      }
+    },
   },
 }
 </script>
@@ -526,5 +590,17 @@ export default {
 
 .q-banner.bg-orange {
   border-left: 4px solid #ff9800;
+}
+
+/* Disabled access text styling */
+.disabled-access-text {
+  cursor: not-allowed;
+  user-select: none;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.disabled-access-text:hover {
+  opacity: 1;
 }
 </style>

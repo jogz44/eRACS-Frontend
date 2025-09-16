@@ -298,6 +298,7 @@ Route::prefix('admin')->group(function () {
         Route::get('/particulars', [DisbursementController::class, 'getParticular']);
         // Fixed path to avoid double 'admin' in route: now /api/admin/user-access/{id}
         Route::post('/user-access/{id}', [AdminAuthController::class, 'updateUserPermissions']);
+        Route::get('/can-manage-access', [AdminAuthController::class, 'canManageUserAccessCheck']);
         Route::get('/logs', [AdminAuthController::class, 'getAllLogs']);
         Route::get('/admin-logs', [AdminAuthController::class, 'getAdminLogs']);
 
