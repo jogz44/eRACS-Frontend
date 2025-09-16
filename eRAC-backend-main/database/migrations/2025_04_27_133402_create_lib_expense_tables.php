@@ -277,8 +277,18 @@ return new class extends Migration
         ];
 
         foreach ($barangays as $barangay) {
-            // Ensure fiscal years exist
-            $fiscalYear = LibFiscalYear::where('year', now()->year)->first();
+            // Get or create fiscal year for this specific barangay
+            $fiscalYear = LibFiscalYear::firstOrCreate(
+                [
+                    'barangay_id' => $barangay->id,
+                    'year' => now()->year,
+                ],
+                [
+                    'is_active' => true,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]
+            );
 
             foreach ($classes as $class) {
                 $classModel = LibExpenseClass::firstOrCreate(
