@@ -8,23 +8,23 @@
 # Accept: application/json
 
 ### Generate OTP
-# POST http://localhost:8000/api/barangay/otp/generate
-# Accept: application/json
-# Content-Type: application/json
-
-# {
-#   "email": "slashysirua@gmail.com"
-# }
-
-### Verify OTP
-POST http://localhost:8000/api/barangay/otp/verify
+POST http://localhost:8000/api/barangay/otp/generate
 Accept: application/json
 Content-Type: application/json
 
 {
-  "email": "slashysirua@gmail.com",
-  "otp": "157697"
+  "email": "slashysirus@gmail.com"
 }
+
+### Verify OTP
+# POST http://localhost:8000/api/barangay/otp/verify
+# Accept: application/json
+# Content-Type: application/json
+
+# {
+#   "email": "slashysirua@gmail.com",
+#   "otp": "157697"
+# }
 
 # GET http://localhost:8000/api/user
 # Accept: application/json

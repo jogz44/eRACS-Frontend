@@ -64,7 +64,7 @@ public function register(Request $request)
         'username' => $validated['username'],
         'password' => Hash::make($validated['password']),
         'photo_path' => $validated['photo_path'],
-        'is_approved' => false, // Set to false by default - requires admin approval
+        'is_approved' => false,
         'role' => 'barangay_user'
     ]);
 

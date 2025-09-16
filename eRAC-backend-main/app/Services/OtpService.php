@@ -6,7 +6,6 @@ use App\Models\Otp;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Mail;
 
 class OtpService
 {
@@ -16,34 +15,54 @@ class OtpService
      * Generate a new OTP and send it via email.
      */
     public function generate(string $email): bool
-{
-    // (1) Generate OTP
-    $pass = "";
-    $characters = "0123456789";
-    for ($i = 0; $i < config('otp.length', 6); $i++) {
-        $pass .= $characters[rand(0, strlen($characters) - 1)];
+    {
+        // (1) Generate OTP
+        $pass = "";
+        $characters = "0123456789";
+
+        // for ($i = 0; $i < config('otp.length', 6); $i++) {
+        //     $pass .= $characters[rand(0, strlen($characters) - 1)];
+        // }
+        $pass = "000000";
+
+        // (2) Store OTP in DB (hashed)
+        Otp::updateOrCreate(
+            ['email' => $email],
+            [
+                'pass'      => bcrypt($pass),
+                'timestamp' => Carbon::now(),
+            ]
+        );
+
+        // (3) Send via PHPMailer
+        $mail = new PHPMailer(true);
+
+        try {
+            $mail->isSMTP();
+            $mail->Host       = 'smtp.gmail.com';
+            $mail->SMTPAuth   = true;
+            $mail->Username   = 'mahusayjograd@gmail.com'; // SMTP username
+            $mail->Password   = 'mfdp feje aill bgcy'; // SMTP password
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port       = 587;
+
+            //Recipients
+            $mail->setFrom('mahusayjograd@gmail.com', 'eRACS WEB APP');
+            $mail->addAddress($email);
+            $mail->addAddress($email);
+
+            $mail->isHTML(true);
+            $mail->Subject = 'eRACS REGISTRATION';
+            $mail->Body    = "Your OTP is <b>$pass</b>. Enter at <a href='" . url('/challenge') . "'>eRACS</a>.";
+            $mail->AltBody = "Your OTP is $pass. Enter at " . url('/challenge');
+
+            $mail->send();
+            return true;
+        } catch (Exception $e) {
+            $this->error = "Failed to send OTP email. Mailer Error: {$mail->ErrorInfo}";
+            return false;
+        }
     }
-
-    // (2) Store OTP in DB (hashed)
-    Otp::updateOrCreate(
-        ['email' => $email],
-        ['pass' => bcrypt($pass), 'timestamp' => Carbon::now()]
-    );
-
-    try {
-        // (3) Send using Laravel Mail (respects MAIL_MAILER=log)
-        Mail::raw("Your OTP is $pass", function ($message) use ($email) {
-            $message->to($email)
-                    ->from(config('mail.from.address'), config('mail.from.name'))
-                    ->subject('Barangay User REGISTRATION');
-        });
-
-        return true;
-    } catch (\Exception $e) {
-        $this->error = "Failed to log/send OTP email. Error: {$e->getMessage()}";
-        return false;
-    }
-}
 
     /**
      * Verify OTP

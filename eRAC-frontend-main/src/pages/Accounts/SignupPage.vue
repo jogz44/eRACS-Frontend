@@ -651,13 +651,22 @@ export default {
       }
     }
 
+    const resendOtp = async () => {
+      try {
+        const { data } = await api.post('/api/barangay/otp/generate', {email: email.value})
 
-    const resendOtp = () => {
-      $q.notify({
-        type: 'info',
-        message: 'Verification code resent to your email',
-        position: 'top',
-      })
+        $q.notify({
+          type: data.status === 'success' ? 'positive' : 'negative',
+          message: data.message,
+          position: 'top',
+        })
+      } catch (err) {
+        $q.notify({
+          type: 'negative',
+          message: err.response?.data?.message || 'Failed to send OTP.',
+          position: 'top',
+        })
+      }
     }
 
     // Move from Account Info to OTP by validation; used by global Enter handler
@@ -678,6 +687,7 @@ export default {
       if (step.value === 1) {
         validateStep1()
       } else if (step.value === 2) {
+        resendOtp()
         goToOtp()
       } else if (step.value === 3) {
         handleSubmit()
