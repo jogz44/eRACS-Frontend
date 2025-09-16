@@ -294,13 +294,10 @@
               </q-input>
             </div>
           </div>
-          <q-stepper-navigation class="row justify-between q-mt-md">
-            <q-btn flat @click="step = 1" color="green" label="Back" :disable="isLoading" />
-
-            <!-- <q-btn  @click="step = 3" color="green" label="Submit OTP" :disable="isLoading" /> -->
-            <q-btn @click="handleSubmit" color="green" label="Submit" :loading="isLoading" :disable="isLoading" />
-
-          </q-stepper-navigation>
+            <q-stepper-navigation class="row justify-between q-mt-md">
+              <q-btn flat @click="step = 1" color="green" label="Back" :disable="isLoading || isSubmitting" />
+              <q-btn @click="goToOtp" color="green" label="Submit OTP" :disable="isLoading || isSubmitting" />
+            </q-stepper-navigation>
         </q-step>
         <!-- Step 3: OTP -->
         <q-step :name="3" title="OTP" icon="verified_user" :done="step > 3">
@@ -353,8 +350,8 @@
           </div>
 
           <q-stepper-navigation class="row justify-between q-mt-md">
-            <q-btn flat @click="step = 2" color="green" label="Back" :disable="isLoading" />
-            <q-btn @click="handleOtpSubmit" color="green" label="Verify & Complete" :disable="isLoading" />
+            <q-btn flat @click="step = 2" color="green" label="Back" :disable="isLoading || isSubmitting" />
+            <q-btn @click="handleOtpSubmit" color="green" label="Verify & Complete" :disable="isLoading || isSubmitting" />
           </q-stepper-navigation>
         </q-step>
       </q-stepper>
@@ -411,6 +408,9 @@ export default {
     // Separate validation states for each step
     const showStep1Validation = ref(false)
     const showStep2Validation = ref(false)
+    
+    // Flag to prevent double submission
+    const isSubmitting = ref(false)
 
     onMounted(async () => {
       try {
@@ -550,6 +550,11 @@ export default {
     // Step 2 validation and submission
     // Final registration submit (called after OTP verification in a real flow)
     const handleSubmit = async () => {
+      // Prevent double submission
+      if (isSubmitting.value) {
+        return
+      }
+      
       showStep2Validation.value = true
 
       // Validate step 2 fields
@@ -578,6 +583,7 @@ export default {
         return
       }
 
+      isSubmitting.value = true
       isLoading.value = true
       try {
         // 1. First upload the photo
@@ -622,11 +628,17 @@ export default {
         })
       } finally {
         isLoading.value = false
+        isSubmitting.value = false
       }
     }
 
     // OTP methods
     const handleOtpSubmit = () => {
+      // Prevent double execution only if already submitting
+      if (isSubmitting.value) {
+        return
+      }
+      
       if (!otpCode.value.trim()) {
         $q.notify({
           type: 'negative',
@@ -643,7 +655,8 @@ export default {
           message: 'Email verified successfully!',
           position: 'top',
         })
-        router.push('/')
+        // After OTP verification, proceed with actual registration
+        handleSubmit()
       } else {
         $q.notify({
           type: 'negative',
@@ -713,6 +726,7 @@ export default {
       isPasswordVisible2,
       otpCode,
       isLoading,
+      isSubmitting,
       showStep1Validation,
       showStep2Validation,
       onFileAdded,
