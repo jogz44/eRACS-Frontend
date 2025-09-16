@@ -142,7 +142,19 @@ class AdminAuthController extends Controller  // <-- This is crucial
     // Approve a user
     public function approveUser(Request $request, BarangayUser $user)
     {
-        $user->update(['is_approved' => true]);
+        // Set default permissions - only view access for new users
+        $defaultPermissions = [
+            'view' => true,
+            'add' => false,
+            'edit' => false,
+            'delete' => false,
+            'print' => false,
+        ];
+
+        $user->update([
+            'is_approved' => true,
+            'permissions' => $defaultPermissions
+        ]);
 
         return response()->json([
             'message' => 'User approved successfully',
@@ -206,6 +218,16 @@ class AdminAuthController extends Controller  // <-- This is crucial
     public function updateUserPermissions(Request $request, $id) {
         try {
             $user = BarangayUser::findOrFail($id);
+            
+            // Check if the requesting user has permission to manage user access
+            $requestingUser = $request->user('barangay') ?? $request->user('admin');
+            
+            if (!$this->canManageUserAccess($requestingUser)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'You do not have permission to manage user access. Only Barangay Captain, SK Chairperson, and Admin can manage user permissions.'
+                ], 403);
+            }
 
             // Validate the permissions data
             $validated = $request->validate([
@@ -231,6 +253,54 @@ class AdminAuthController extends Controller  // <-- This is crucial
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Check if the user can manage user access permissions
+     * Only Barangay Captain, SK Chairperson, and Admin can manage permissions
+     */
+    private function canManageUserAccess($user) {
+        if (!$user) {
+            return false;
+        }
+
+        // Check if user is admin (from admin guard)
+        if ($user instanceof \App\Models\Admin) {
+            return true;
+        }
+
+        // Check if user is barangay user with appropriate role
+        if ($user instanceof \App\Models\BarangayUser) {
+            // Check by role field
+            if ($user->role === 'admin') {
+                return true;
+            }
+
+            // Check by position name
+            $position = $user->position ? $user->position->name : '';
+            $positionLower = strtolower($position);
+            
+            return strpos($positionLower, 'captain') !== false ||
+                   strpos($positionLower, 'chairperson') !== false ||
+                   strpos($positionLower, 'barangay captain') !== false ||
+                   strpos($positionLower, 'sk chairperson') !== false;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if current user can manage user access permissions
+     * This endpoint can be called from frontend to determine UI visibility
+     */
+    public function canManageUserAccessCheck(Request $request) {
+        $user = $request->user('barangay') ?? $request->user('admin');
+        $canManage = $this->canManageUserAccess($user);
+        
+        return response()->json([
+            'can_manage_access' => $canManage,
+            'user_role' => $user ? ($user->role ?? ($user->position ? $user->position->name : 'Unknown')) : 'Not authenticated'
+        ]);
     }
 
     // Get logs
