@@ -124,30 +124,62 @@ export function useAugmentationActions(state) {
               expenseClass.children.forEach(expenseType => {
                 if (expenseType.children && expenseType.children.length > 0) {
                   expenseType.children.forEach(expenseItem => {
-                    expenseAccounts.push({
-                      id: expenseItem.id,
-                      account: `${expenseClass.name} - ${expenseType.name} - ${expenseItem.name}`,
-                      description: `${expenseClass.name} > ${expenseType.name} > ${expenseItem.name}`,
-                      balance: 0, // Unallocated accounts have 0 balance
-                      expense_class: expenseClass.name,
-                      expense_class_id: expenseClass.id,
-                      expense_type_id: expenseType.id,
-                      expense_item_id: expenseItem.id,
-                      budget_source: 'Unallocated',
-                      is_allocated: false
-                    })
+                    // Check if this item has sub-items
+                    if (expenseItem.children && expenseItem.children.length > 0) {
+                      // Process each sub-item
+                      expenseItem.children.forEach(subItem => {
+                        expenseAccounts.push({
+                          id: subItem.id,
+                          appropriation_id: null, // No appropriation for unallocated accounts
+                          account: `${expenseClass.name} - ${expenseType.name} - ${expenseItem.name} - ${subItem.name}`,
+                          description: `${expenseClass.name} > ${expenseType.name} > ${expenseItem.name} > ${subItem.name}`,
+                          balance: 0, // Unallocated accounts have 0 balance
+                          expense_class: expenseClass.name,
+                          expense_class_id: expenseClass.id,
+                          expense_type: expenseType.name,
+                          expense_type_id: expenseType.id,
+                          expense_item: expenseItem.name,
+                          expense_item_id: expenseItem.id,
+                          expense_sub_item_name: subItem.name,
+                          budget_source: 'Unallocated',
+                          is_allocated: false
+                        })
+                      })
+                    } else {
+                      // No sub-items, process as regular item
+                      expenseAccounts.push({
+                        id: expenseItem.id,
+                        appropriation_id: null, // No appropriation for unallocated accounts
+                        account: `${expenseClass.name} - ${expenseType.name} - ${expenseItem.name}`,
+                        description: `${expenseClass.name} > ${expenseType.name} > ${expenseItem.name}`,
+                        balance: 0, // Unallocated accounts have 0 balance
+                        expense_class: expenseClass.name,
+                        expense_class_id: expenseClass.id,
+                        expense_type: expenseType.name,
+                        expense_type_id: expenseType.id,
+                        expense_item: expenseItem.name,
+                        expense_item_id: expenseItem.id,
+                        expense_sub_item_name: null, // No sub-items at this level
+                        budget_source: 'Unallocated',
+                        is_allocated: false
+                      })
+                    }
                   })
                 } else {
                   // Type level account (no items)
                   expenseAccounts.push({
                     id: expenseType.id,
+                    appropriation_id: null, // No appropriation for unallocated accounts
                     account: `${expenseClass.name} - ${expenseType.name}`,
                     description: `${expenseClass.name} > ${expenseType.name}`,
                     balance: 0,
                     expense_class: expenseClass.name,
                     expense_class_id: expenseClass.id,
+                    expense_type: expenseType.name,
                     expense_type_id: expenseType.id,
+                    expense_item: null, // No items at type level
                     expense_item_id: null,
+                    expense_sub_item_name: null, // No sub-items at type level
                     budget_source: 'Unallocated',
                     is_allocated: false
                   })
@@ -157,13 +189,17 @@ export function useAugmentationActions(state) {
               // Class level account (no types)
               expenseAccounts.push({
                 id: expenseClass.id,
+                appropriation_id: null, // No appropriation for unallocated accounts
                 account: expenseClass.name,
                 description: expenseClass.name,
                 balance: 0,
                 expense_class: expenseClass.name,
                 expense_class_id: expenseClass.id,
+                expense_type: null, // No types at class level
                 expense_type_id: null,
+                expense_item: null, // No items at class level
                 expense_item_id: null,
+                expense_sub_item_name: null, // No sub-items at class level
                 budget_source: 'Unallocated',
                 is_allocated: false
               })
@@ -185,6 +221,7 @@ export function useAugmentationActions(state) {
       appropriations.forEach(appropriation => {
         const key = `${appropriation.expense_class_id || 'class'}-${appropriation.expense_type_id || 'type'}-${appropriation.expense_item_id || 'item'}-${appropriation.expense_sub_item_id || 'subitem'}`
         appropriationMap[key] = appropriation
+        console.log('Mapped appropriation key:', key, 'for appropriation:', appropriation.id, 'sub_item_id:', appropriation.expense_sub_item_id)
       })
 
       // Transform the complete expense hierarchy and add allocation information
@@ -195,21 +232,54 @@ export function useAugmentationActions(state) {
             expenseClass.children.forEach(expenseType => {
               if (expenseType.children && expenseType.children.length > 0) {
                 expenseType.children.forEach(expenseItem => {
-                  const key = `${expenseClass.id}-${expenseType.id}-${expenseItem.id}-subitem`
-                  const appropriation = appropriationMap[key]
+                  // Check if this item has sub-items
+                  if (expenseItem.children && expenseItem.children.length > 0) {
+                    console.log('Processing sub-items for item:', expenseItem.name, 'sub-items count:', expenseItem.children.length)
+                    // Process each sub-item
+                    expenseItem.children.forEach(subItem => {
+                      const key = `${expenseClass.id}-${expenseType.id}-${expenseItem.id}-${subItem.id}`
+                      const appropriation = appropriationMap[key]
+                      console.log('Sub-item key:', key, 'appropriation found:', !!appropriation, 'sub-item name:', subItem.name)
 
-                  expenseAccounts.push({
-                    id: expenseItem.id,
-                    account: `${expenseClass.name} - ${expenseType.name} - ${expenseItem.name}`,
-                    description: `${expenseClass.name} > ${expenseType.name} > ${expenseItem.name}`,
-                    balance: appropriation ? appropriation.amount : 0,
-                    expense_class: expenseClass.name,
-                    expense_class_id: expenseClass.id,
-                    expense_type_id: expenseType.id,
-                    expense_item_id: expenseItem.id,
-                    budget_source: appropriation ? (appropriation.budget_description?.toLowerCase().includes('supplemental') ? 'Supplemental Budget' : 'Annual Budget') : 'Unallocated',
-                    is_allocated: !!appropriation
-                  })
+                      expenseAccounts.push({
+                        id: subItem.id,
+                        appropriation_id: appropriation ? appropriation.id : null, // Add the actual appropriation ID
+                        account: `${expenseClass.name} - ${expenseType.name} - ${expenseItem.name} - ${subItem.name}`,
+                        description: `${expenseClass.name} > ${expenseType.name} > ${expenseItem.name} > ${subItem.name}`,
+                        balance: appropriation ? appropriation.amount : 0,
+                        expense_class: expenseClass.name,
+                        expense_class_id: expenseClass.id,
+                        expense_type: expenseType.name,
+                        expense_type_id: expenseType.id,
+                        expense_item: expenseItem.name,
+                        expense_item_id: expenseItem.id,
+                        expense_sub_item_name: subItem.name,
+                        budget_source: appropriation ? (appropriation.budget_description?.toLowerCase().includes('supplemental') ? 'Supplemental Budget' : 'Annual Budget') : 'Unallocated',
+                        is_allocated: !!appropriation
+                      })
+                    })
+                  } else {
+                    // No sub-items, process as regular item
+                    const key = `${expenseClass.id}-${expenseType.id}-${expenseItem.id}-subitem`
+                    const appropriation = appropriationMap[key]
+
+                    expenseAccounts.push({
+                      id: expenseItem.id,
+                      appropriation_id: appropriation ? appropriation.id : null, // Add the actual appropriation ID
+                      account: `${expenseClass.name} - ${expenseType.name} - ${expenseItem.name}`,
+                      description: `${expenseClass.name} > ${expenseType.name} > ${expenseItem.name}`,
+                      balance: appropriation ? appropriation.amount : 0,
+                      expense_class: expenseClass.name,
+                      expense_class_id: expenseClass.id,
+                      expense_type: expenseType.name,
+                      expense_type_id: expenseType.id,
+                      expense_item: expenseItem.name,
+                      expense_item_id: expenseItem.id,
+                      expense_sub_item_name: null, // No sub-items at this level
+                      budget_source: appropriation ? (appropriation.budget_description?.toLowerCase().includes('supplemental') ? 'Supplemental Budget' : 'Annual Budget') : 'Unallocated',
+                      is_allocated: !!appropriation
+                    })
+                  }
                 })
               } else {
                 // Type level account (no items)
@@ -218,13 +288,17 @@ export function useAugmentationActions(state) {
 
                 expenseAccounts.push({
                   id: expenseType.id,
+                  appropriation_id: appropriation ? appropriation.id : null, // Add the actual appropriation ID
                   account: `${expenseClass.name} - ${expenseType.name}`,
                   description: `${expenseClass.name} > ${expenseType.name}`,
                   balance: appropriation ? appropriation.amount : 0,
                   expense_class: expenseClass.name,
                   expense_class_id: expenseClass.id,
+                  expense_type: expenseType.name,
                   expense_type_id: expenseType.id,
+                  expense_item: null, // No items at type level
                   expense_item_id: null,
+                  expense_sub_item_name: null, // No sub-items at type level
                   budget_source: appropriation ? (appropriation.budget_description?.toLowerCase().includes('supplemental') ? 'Supplemental Budget' : 'Annual Budget') : 'Unallocated',
                   is_allocated: !!appropriation
                 })
@@ -237,13 +311,17 @@ export function useAugmentationActions(state) {
 
             expenseAccounts.push({
               id: expenseClass.id,
+              appropriation_id: appropriation ? appropriation.id : null, // Add the actual appropriation ID
               account: expenseClass.name,
               description: expenseClass.name,
               balance: appropriation ? appropriation.amount : 0,
               expense_class: expenseClass.name,
               expense_class_id: expenseClass.id,
+              expense_type: null, // No types at class level
               expense_type_id: null,
+              expense_item: null, // No items at class level
               expense_item_id: null,
+              expense_sub_item_name: null, // No sub-items at class level
               budget_source: appropriation ? (appropriation.budget_description?.toLowerCase().includes('supplemental') ? 'Supplemental Budget' : 'Annual Budget') : 'Unallocated',
               is_allocated: !!appropriation
             })
@@ -292,12 +370,21 @@ export function useAugmentationActions(state) {
       const payload = {
         augmentation_date: backendDate,
         remarks: state.forms.value.augmentation.remarks,
-        details: state.Augexpenses.value.map(expense => ({
-          from_appropriation_id: expense.from_appropriation_id,
-          to_appropriation_id: expense.to_appropriation_id,
-          amount: expense.amount,
-          particulars: expense.particulars
-        }))
+        details: state.Augexpenses.value.map(expense => {
+          const detail = {
+            from_appropriation_id: expense.from_appropriation_id,
+            to_appropriation_id: expense.to_appropriation_id,
+            amount: expense.amount,
+            particulars: expense.particulars
+          }
+          
+          // If TO appropriation is null (unallocated), include expense hierarchy data
+          if (!expense.to_appropriation_id && expense.to_expense_data) {
+            detail.to_expense_data = expense.to_expense_data
+          }
+          
+          return detail
+        })
       }
 
 

@@ -320,11 +320,15 @@ export const useChartDataStore = defineStore('chartData', {
           ...this.getAuthConfig(),
           params,
         })
-        const budgets = budgetsResponse.data.data || []
+        // Filter to only include annual budgets for total calculation (exclude supplemental budgets)
+        const budgets = (budgetsResponse.data.data || []).filter(budget => 
+          budget.budget_type === 'annual' || 
+          (budget.description && budget.description.toLowerCase().includes('annual'))
+        )
 
-        // Calculate totals
+        // Calculate totals - include augmentation to get true total budget
         const totalAppropriation = budgets.reduce(
-          (sum, budget) => sum + (parseFloat(budget.amount) || 0),
+          (sum, budget) => sum + (parseFloat(budget.original_amount) || 0) + (parseFloat(budget.augmentation) || 0),
           0,
         )
         const totalObligation = budgets.reduce((sum, budget) => {

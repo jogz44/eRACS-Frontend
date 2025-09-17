@@ -52,6 +52,18 @@ export function useFormActions(state) {
       throw new Error('From and To appropriations must be different')
     }
     
+    // Validate that FROM appropriation exists (must be allocated)
+    if (!augExpense.from_appropriation_id) {
+      throw new Error('From appropriation must be selected from an allocated account')
+    }
+    
+    // For TO appropriation: if it's null (unallocated), we need to handle this case
+    // The backend currently requires both appropriations to exist, but augmentation to unallocated accounts
+    // should be allowed. This might need backend changes to support creating new appropriations.
+    if (!augExpense.to_appropriation_id) {
+      console.warn('TO appropriation is null (unallocated account). Backend may need to handle this case.')
+    }
+    
     // Validate particulars
     if (!particulars) {
       throw new Error('Particulars is required')
@@ -95,6 +107,8 @@ export function useFormActions(state) {
       transfer_type: transferType,
       amount: amount,
       particulars: particulars,
+      // Include expense hierarchy data for creating new appropriations if needed
+      to_expense_data: augExpense.to_expense_data || null
     }
     
     console.log('Adding expense data:', expenseData)

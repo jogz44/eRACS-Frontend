@@ -1334,9 +1334,10 @@ class AppropriationController extends Controller
             \Log::info('Barangay ID: ' . $barangayId . ', Year: ' . $year);
 
 
-            // Get budgets for this barangay with year filter
+            // Get budgets for this barangay with year filter - only include annual budgets for total calculation
             $budgetsQuery = Budget::with(['tranAppropriations', 'fiscalYear'])
-                ->where('barangay_id', $barangayId);
+                ->where('barangay_id', $barangayId)
+                ->where('budget_type', \App\BudgetType::ANNUAL); // Only annual budgets for total calculation
             
             if ($year !== 'all') {
                 $budgetsQuery->whereHas('fiscalYear', function($q) use ($year) {
@@ -1349,8 +1350,10 @@ class AppropriationController extends Controller
 
             \Log::info('Found ' . $budgets->count() . ' budgets for year ' . $year);
 
-            // Calculate totals
-            $totalAppropriation = $budgets->sum('original_amount');
+            // Calculate totals - include augmentation to get true total budget
+            $totalAppropriation = $budgets->sum(function($budget) {
+                return (float)$budget->original_amount + (float)$budget->augmentation;
+            });
             $totalObligation = $budgets->sum(function($budget) {
                 $total = 0;
                 $processedItems = [];

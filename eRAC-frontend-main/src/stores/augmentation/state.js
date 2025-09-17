@@ -56,6 +56,7 @@ export function initialState() {
         balance: 0,
         particulars: '',
         amount: '',
+        to_expense_data: null, // Store expense hierarchy data for creating new appropriations
       }),
     }),
 
