@@ -29,7 +29,7 @@
 
         <q-space/>
 
-        <div class="row items-center q-gutter-sm">
+        <div class="header-controls">
           <q-select
             outlined
             dense
@@ -37,7 +37,7 @@
             label="Select Barangay"
             placeholder="Choose a barangay to enable transactions"
             color="green"
-            class="q-mb-sm q-pt-sm"
+            class="barangay-selector"
             style="width: 200px;"
             emit-value
             map-options
@@ -47,60 +47,69 @@
             option-value="id"
             @update:model-value="onBarangayChange"
           />
-          <!-- Notifications Bell -->
-          <q-btn
-            flat
-            round
-            dense
-            class="notification-btn q-ml-sm"
-            size="md"
-          >
-            <q-icon name="notifications" size="24px" color="white">
-              <q-badge v-if="totalNotificationCount > 0" floating color="red" text-color="white" rounded>
-                {{ totalNotificationCount > 9 ? '9+' : totalNotificationCount }}
-              </q-badge>
-            </q-icon>
+          
+          <div class="user-controls">
+            <!-- Notifications Bell -->
+            <q-btn
+              flat
+              round
+              dense
+              class="notification-btn"
+              size="md"
+            >
+              <q-icon name="notifications" size="24px" color="white">
+                <q-badge 
+                  v-if="totalNotificationCount > 0" 
+                  floating 
+                  color="red" 
+                  text-color="white" 
+                  rounded 
+                  class="notification-badge"
+                  :label="totalNotificationCount > 9 ? '9+' : totalNotificationCount.toString()"
+                />
+              </q-icon>
 
-            <q-menu anchor="bottom right" self="top right" class="notification-menu">
-              <q-list style="min-width: 300px">
-                <q-item clickable @click="goToPendingUsers" class="notification-item">
-                  <q-item-section avatar>
-                    <q-icon name="person_add" color="primary" size="28px" />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label class="text-weight-bold">Pending User Requests</q-item-label>
-                    <q-item-label caption>
-                      {{ pendingUserCount }} awaiting approval
-                    </q-item-label>
-                  </q-item-section>
-                  <q-item-section side>
-                    <q-icon name="chevron_right" size="20px" />
-                  </q-item-section>
-                </q-item>
+              <q-menu anchor="bottom right" self="top right" class="notification-menu" :offset="[0, 10]">
+                <q-list style="min-width: 300px">
+                  <q-item clickable @click="goToPendingUsers" class="notification-item">
+                    <q-item-section avatar>
+                      <q-icon name="person_add" color="primary" size="28px" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label class="text-weight-bold">Pending User Requests</q-item-label>
+                      <q-item-label caption>
+                        {{ pendingUserCount }} awaiting approval
+                      </q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-icon name="chevron_right" size="20px" />
+                    </q-item-section>
+                  </q-item>
 
-                <q-separator />
+                  <q-separator />
 
-                <q-item v-if="totalNotificationCount === 0">
-                  <q-item-section class="text-center text-grey q-pa-md">
-                    No new notifications
-                  </q-item-section>
-                </q-item>
-              </q-list>
-            </q-menu>
-          </q-btn>
-          <!-- Admin Avatar Menu -->
-          <q-btn
-            flat
-            dense
-            class="user-menu-btn q-ml-sm"
-            size="md"
-          >
-            <div class="user-profile-container">
-              <q-avatar size="32px" class="user-avatar">
-                <img src="src/assets/admin.png" alt="Admin" />
-              </q-avatar>
-              <q-icon name="keyboard_arrow_down" size="14px" color="white" class="dropdown-arrow" />
-            </div>
+                  <q-item v-if="totalNotificationCount === 0">
+                    <q-item-section class="text-center text-grey q-pa-md">
+                      No new notifications
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </q-btn>
+            
+            <!-- Admin Avatar Menu -->
+            <q-btn
+              flat
+              dense
+              class="user-menu-btn"
+              size="md"
+            >
+              <div class="user-profile-container">
+                <q-avatar size="32px" class="user-avatar">
+                  <img src="src/assets/admin.png" alt="Admin" />
+                </q-avatar>
+                <q-icon name="keyboard_arrow_down" size="14px" color="white" class="dropdown-arrow" />
+              </div>
 
             <q-menu class="user-menu" transition-show="jump-down" transition-hide="jump-up">
               <q-list style="min-width: 250px">
@@ -133,6 +142,7 @@
               </q-list>
             </q-menu>
           </q-btn>
+          </div>
         </div>
       </q-toolbar>
     </q-header>
@@ -369,6 +379,8 @@ const pendingUserCount = ref(0)
 const notificationTimerId = ref(null)
 
 const totalNotificationCount = computed(() => {
+  // For testing - you can temporarily set this to 1 to see the badge
+  // return 1
   return pendingUserCount.value
 })
 
@@ -1365,5 +1377,84 @@ watch(
 
 .menu-item:last-child {
   border-bottom: none;
+}
+
+/* Header Controls Styling */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.barangay-selector {
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Notification Button and Badge Styling */
+.notification-btn {
+  position: relative;
+}
+
+.notification-btn .q-icon {
+  position: relative;
+}
+
+.notification-badge {
+  font-size: 9px !important;
+  font-weight: bold !important;
+  min-width: 14px !important;
+  height: 14px !important;
+  line-height: 14px !important;
+  padding: 0 3px !important;
+  top: -2px !important;
+  right: -2px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+  z-index: 1000 !important;
+  position: absolute !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Notification Menu Positioning */
+.notification-menu {
+  margin-top: 8px !important;
+  z-index: 3000 !important;
+}
+
+.notification-menu .q-list {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.notification-item {
+  padding: 12px 16px;
+  transition: background-color 0.2s ease;
+}
+
+.notification-item:hover {
+  background-color: #f5f5f5;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .header-controls {
+    gap: 8px;
+  }
+  
+  .user-controls {
+    gap: 4px;
+  }
+  
+  .barangay-selector {
+    width: 160px !important;
+  }
 }
 </style>

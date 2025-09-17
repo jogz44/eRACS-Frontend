@@ -247,7 +247,8 @@ export default {
 }
 
 .my-sticky-header-table {
-  max-height: 390px;
+  height: calc(100vh - 300px);
+  min-height: 300px;
   overflow-y: auto;
 }
 
