@@ -7,7 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use App\Models\BarangayUser;
 use App\Models\Barangay;
-use App\Models\OtpService;
+use App\Services\OtpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -20,7 +20,13 @@ use App\Http\Controllers\AdminAuthController;
 
 class AuthController extends Controller
 {
+    
+    protected $otp;
 
+    public function __construct(OtpService $otp)
+    {
+        $this->otp = $otp;
+    }
      public function index()
 
     {
@@ -45,12 +51,11 @@ public function register(Request $request)
         'otp' => 'required|string'
     ]);
 
-    $otpverified=OtpService::verify($validated['email'],$validated['otp']);
-
-    if(!$otpverified){
+    if (! $this->otp->verify($validated['email'], $validated['otp'])) {
         return response()->json([
+            'status'  => 'error',
             'message' => 'Incorrect OTP',
-        ], 201);
+        ], 400);
     }
 
     $user = BarangayUser::create([

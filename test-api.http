@@ -16,14 +16,14 @@ Content-Type: application/json
   "email": "slashysirus@gmail.com"
 }
 
-### Verify OTP
-# POST http://localhost:8000/api/barangay/otp/verify
+# ### Verify OTP
+# POST http://localhost:8000/api/otp/verify
 # Accept: application/json
 # Content-Type: application/json
 
 # {
-#   "email": "slashysirua@gmail.com",
-#   "otp": "157697"
+#   "email": "user@example.com",
+#   "otp": "123456"
 # }
 
 # GET http://localhost:8000/api/user
