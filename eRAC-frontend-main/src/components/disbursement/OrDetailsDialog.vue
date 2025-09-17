@@ -595,7 +595,6 @@
 import { computed, watch, ref, nextTick } from 'vue'
 import { useDisbursementStore } from 'stores/disbursementStore'
 import { useBankStore } from 'stores/bankStore'
-import { useAuthStore } from 'stores/auth'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
 
@@ -699,11 +698,6 @@ watch(
         }))
       }
 
-      // Debug user type
-      const authStore = useAuthStore()
-      console.log('Current user is admin:', authStore.admin)
-      console.log('Current user type:', authStore.user?.user_type)
-
       // Reset budget source filter to show all accounts
       store.selectedBudgetSource = 'all'
 
@@ -711,22 +705,16 @@ watch(
       store.expenseSearch = ''
 
       // Use the special method for fetching expense accounts for reimbursements
-      console.log('Loading expense accounts for reimbursement...')
       await store.fetchExpenseAccountsForReimbursement()
-      console.log('Expense accounts loaded:', store.expenseAccounts.length)
 
       // If still empty, try the regular method as fallback
       if (store.expenseAccounts.length === 0) {
-        console.log('Fallback: trying regular expense account loading...')
         await store.fetchExpenseAccounts()
-        console.log('Expense accounts after fallback:', store.expenseAccounts.length)
       }
 
       // If still empty, try refreshing with balances
       if (store.expenseAccounts.length === 0) {
-        console.log('Fallback: trying refresh with balances...')
         await store.refreshExpenseAccountsWithBalances()
-        console.log('Expense accounts after balance refresh:', store.expenseAccounts.length)
       }
 
       // Populate selected ORs with all OR details
@@ -926,11 +914,6 @@ const addOrDetail = () => {
 
 // Remove OR detail (unified function)
 const removeOrDetail = async (index) => {
-  console.log('Removing OR detail at index:', index)
-  console.log(
-    'Current OR details before removal:',
-    JSON.parse(JSON.stringify(store.currentLiquidation.orDetails)),
-  )
 
   if (store.currentLiquidation.orDetails && store.currentLiquidation.orDetails.length > 0) {
     // Ensure we don't go below minimum rows
@@ -945,7 +928,6 @@ const removeOrDetail = async (index) => {
     }
 
     const orDetail = store.currentLiquidation.orDetails[index]
-    console.log('Removing OR detail:', orDetail)
 
     // If it's an existing OR detail (has ID), delete it from backend first
     if (orDetail.id) {
@@ -958,7 +940,6 @@ const removeOrDetail = async (index) => {
           )
           if (currentIndex !== -1) {
             store.currentLiquidation.orDetails.splice(currentIndex, 1)
-            console.log('OR detail removed from backend and local array at index:', currentIndex)
           } else {
             console.warn('OR detail not found in array after backend deletion')
           }
@@ -996,16 +977,10 @@ const removeOrDetail = async (index) => {
       )
       if (currentIndex !== -1) {
         store.currentLiquidation.orDetails.splice(currentIndex, 1)
-        console.log('New OR detail removed from local array at index:', currentIndex)
       } else {
         console.warn('New OR detail not found in array')
       }
     }
-
-    console.log(
-      'OR details after removal:',
-      JSON.parse(JSON.stringify(store.currentLiquidation.orDetails)),
-    )
   }
 }
 
@@ -1077,45 +1052,6 @@ const isValid = computed(() => {
 
 // Filter expense accounts to only show those with valid expense_item_id
 const validExpenseAccounts = computed(() => {
-  // Comprehensive debug logging
-  console.log('=== EXPENSE ACCOUNTS DEBUG ===')
-  console.log('Store expenseAccounts length:', store.expenseAccounts?.length || 0)
-  console.log('Store filteredExpenseAccounts length:', store.filteredExpenseAccounts?.length || 0)
-  console.log('Store expenseSearch:', store.expenseSearch)
-  console.log('Store selectedBudgetSource:', store.selectedBudgetSource)
-
-  // Log first few accounts to see structure
-  if (store.filteredExpenseAccounts?.length > 0) {
-    console.log('First 3 filtered accounts:', store.filteredExpenseAccounts.slice(0, 3))
-    console.log('Sample account structure:', {
-      id: store.filteredExpenseAccounts[0]?.id,
-      expense_item_id: store.filteredExpenseAccounts[0]?.expense_item_id,
-      account: store.filteredExpenseAccounts[0]?.account,
-      expenseItem: store.filteredExpenseAccounts[0]?.expenseItem,
-    })
-  }
-
-  // Check what we're filtering for
-  const accountsWithExpenseItemId =
-    store.filteredExpenseAccounts?.filter(
-      (account) => account.expense_item_id && account.expense_item_id !== null,
-    ) || []
-
-  console.log('Accounts with expense_item_id:', accountsWithExpenseItemId.length)
-  console.log('Sample valid account:', accountsWithExpenseItemId[0])
-
-  // Also check for accounts without expense_item_id
-  const accountsWithoutExpenseItemId =
-    store.filteredExpenseAccounts?.filter(
-      (account) => !account.expense_item_id || account.expense_item_id === null,
-    ) || []
-
-  console.log('Accounts without expense_item_id:', accountsWithoutExpenseItemId.length)
-  if (accountsWithoutExpenseItemId.length > 0) {
-    console.log('Sample invalid account:', accountsWithoutExpenseItemId[0])
-  }
-
-  console.log('=== END DEBUG ===')
 
   // Return all accounts for now to see what's available
   // We'll add the expense_item_id filter back once we confirm the data structure
@@ -1123,12 +1059,10 @@ const validExpenseAccounts = computed(() => {
 
   // If we have accounts, show them all for now
   if (allAccounts.length > 0) {
-    console.log('Returning all accounts for selection:', allAccounts.length)
     return allAccounts
   }
 
   // If no accounts, return empty array
-  console.log('No accounts available')
   return []
 })
 
@@ -1145,7 +1079,6 @@ const canSubmit = computed(() => {
 })
 
 const handleDateChange = (date, index) => {
-  console.log('Date changed:', date, 'for index:', index)
   store.currentLiquidation.orDetails[index].orDate = date
   calculateTotals()
 }
@@ -1153,7 +1086,6 @@ const handleDateChange = (date, index) => {
 const handleRemarksChange = (newRemarks) => {
   // Ensure remarks are properly updated in the store
   store.currentLiquidation.remarks = newRemarks
-  console.log('Remarks updated:', newRemarks)
 }
 
 const handlePartialLiquidation = async () => {
@@ -1217,24 +1149,20 @@ const handlePartialLiquidation = async () => {
 }
 
 const showSubmitConfirmation = () => {
-  console.log('Showing confirmation dialog...')
   showConfirmationDialog.value = true
 }
 
 const handleConfirmationSubmit = () => {
   showConfirmationDialog.value = false
-  console.log('User confirmed liquidation, proceeding...')
   handleSaveOrDetails()
 }
 
 const handleConfirmationPartial = () => {
   showConfirmationDialog.value = false
-  console.log('User chose partial liquidation...')
   handlePartialLiquidation()
 }
 
 const handleReimbursement = () => {
-  console.log('Reimbursement triggered - showing reimbursement modal...')
   showReimbursementDialog.value = true
 }
 
@@ -1369,8 +1297,6 @@ const handleSubmitReimbursement = async () => {
       or_date: primaryOr.orDate,
     }
 
-    console.log('Reimbursement data being submitted:', JSON.stringify(reimbursementData, null, 2))
-
     // Call store method to submit reimbursement
     const result = await store.submitReimbursement(reimbursementData)
 
@@ -1417,7 +1343,6 @@ const resetReimbursementForm = () => {
 }
 
 const handleSaveOrDetails = async () => {
-  console.log('handleSaveOrDetails called - starting liquidation process...')
   savingSubmit.value = true
   try {
     // First, upload all photos that haven't been uploaded yet (for all OR details)

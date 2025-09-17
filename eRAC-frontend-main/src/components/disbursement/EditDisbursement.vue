@@ -20,7 +20,7 @@
           <div class="col-md-4 col-sm-6 q-mb-md">
             <div class="text-caption text-grey">Date</div>
             <div class="text-body1 text-weight-medium">
-              {{ store.currentLiquidation.date }}
+              {{ store.forms.disbursement.date }}
             </div>
           </div>
 
@@ -28,7 +28,7 @@
           <div class="col-md-4 col-sm-6 q-mb-md">
             <div class="text-caption text-grey">DV Number</div>
             <div class="text-body1 text-weight-medium">
-              {{ store.currentLiquidation.dvNumber }}
+              {{ store.forms.disbursement.dvNumber }}
             </div>
           </div>
           
@@ -41,6 +41,8 @@
           <div class="col-md-4 col-sm-12">
             <q-item-label class="q-mb-xs">Bank:</q-item-label>
             <q-select outlined dense :v-model="store.isChequeCancel ? store.forms.disbursement.bank_id : null" :options="bankStore.availableBanks"
+                  emit-value
+                  map-options
               option-label="name" option-value="id"  :label="currentBankLabel"
               :disable="!isChequeCancelled" @update:model-value="handleBankSelection" />
           </div>
@@ -67,7 +69,7 @@
       <div>
 
         <!-- Cancel Cheque Confirmation Dialog -->
-        <q-dialog v-model="showConfirmDialog" persistent>
+        <q-dialog v-model="showConfirmDialog">
           <q-card style="min-width: 400px">
             <q-card-section>
               <div class="text-h6">Cancel Cheque</div>
@@ -218,9 +220,12 @@ function filterFn (val, update) {
 // Example bank list (replace with your data)
 
 // Computed properties
+
 const currentBankLabel = computed(() => {
   if (store.forms.disbursement.bank_id) {
-    const selectedBank = bankStore.banks.find(b => b.id === store.forms.disbursement.bank_id)
+    const selectedBank = bankStore.banks.find(
+      (bank) => bank.id === store.forms.disbursement.bank_id,
+    )
     return selectedBank ? selectedBank.name : 'Select Bank'
   }
   return 'Select Bank'
@@ -479,18 +484,40 @@ const confirmCancelCheque = async () => {
 }
 
 // Handle bank selection
+
 const handleBankSelection = async (bankId) => {
   if (bankId) {
     try {
+      // Clear previous auto-generated values
+      store.autoCheque = null
+      store.autoBookletID = null
+
       await store.selectBank(bankId)
+
+      // Auto-generate cheque number after bank selection
+      if (store.autoCheque && store.autoBookletID) {
+        $q.notify({
+          type: 'positive',
+          message: `Auto-generated cheque number: ${store.autoCheque}`,
+          icon: 'check_circle',
+          position: 'top',
+          timeout: 2000,
+        })
+      }
     } catch (error) {
+      console.error('Error selecting bank:', error)
       $q.notify({
         type: 'negative',
         message: `Failed to load booklets for selected bank: ${error.message}`,
         icon: 'error',
         position: 'top',
+        timeout: 5000,
       })
     }
+  } else {
+    // Clear auto-generated values when bank is deselected
+    store.autoCheque = null
+    store.autoBookletID = null
   }
 }
 
