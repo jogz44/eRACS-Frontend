@@ -312,7 +312,7 @@
           <q-td :props="props">
             <q-btn
               dense
-              :label="selectedBudgetType === 'supplemental' ? 'Allocate' : 'Commit'"
+              :label="selectedBudgetType === 'supplemental' ? 'Commit' : 'Commit'"
               :color="props.row.unappropriated <= 0 ? 'grey' : 'secondary'"
               @click="openAllocationDialog(props.row)"
               :disable="props.row.unappropriated <= 0"
@@ -658,8 +658,7 @@ const supplementalBudgetTotal = computed(() => {
   return appropriationStore.appropriations
     .filter((budget) => {
       const isSupplemental = budget.description?.toLowerCase().includes('supplemental')
-      const hasUnappropriated = (budget.unappropriated || 0) > 0
-      return isSupplemental && hasUnappropriated
+      return isSupplemental
     })
     .reduce((total, budget) => total + (parseFloat(budget.amount) || 0), 0)
 })
@@ -671,11 +670,10 @@ const annualBudgetCount = computed(() => {
 })
 
 const supplementalBudgetCount = computed(() => {
-  // Only count supplemental budgets that have unappropriated amount > 0
+  // Count all supplemental budgets regardless of unappropriated amount
   return appropriationStore.appropriations.filter((budget) => {
     const isSupplemental = budget.description?.toLowerCase().includes('supplemental')
-    const hasUnappropriated = (budget.unappropriated || 0) > 0
-    return isSupplemental && hasUnappropriated
+    return isSupplemental
   }).length
 })
 
@@ -684,7 +682,7 @@ const totalAllocatedAmount = computed(() => {
   return appropriationStore.appropriations.reduce((total, budget) => {
     const originalAmount = parseFloat(budget.amount) || 0
     const unappropriatedAmount = parseFloat(budget.unappropriated) || 0
-    
+
     // Calculate how much has been allocated (original - unappropriated)
     const allocatedAmount = originalAmount - unappropriatedAmount
     return total + Math.max(0, allocatedAmount)

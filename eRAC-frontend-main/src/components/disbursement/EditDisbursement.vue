@@ -15,7 +15,7 @@
 
       <q-card-section>
         <div class="row q-col-gutter-md">
-          
+
           <!-- Date Field -->
           <div class="col-md-4 col-sm-6 q-mb-md">
             <div class="text-caption text-grey">Date</div>
@@ -31,7 +31,7 @@
               {{ store.currentLiquidation.dvNumber }}
             </div>
           </div>
-          
+
           <!-- Payee Field -->
           <div class="col-md-4 col-sm-12">
             <q-item-label class="q-mb-xs">Payee:</q-item-label>

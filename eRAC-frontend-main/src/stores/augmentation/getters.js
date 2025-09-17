@@ -225,6 +225,21 @@ export function useGetters(state) {
     return searchFiltered
   })
 
+  const expenseHierarchy = computed(() => {
+    console.log('=== EXPENSE HIERARCHY GETTER ===')
+    console.log('expenseHierarchy.value:', state.expenseHierarchy.value)
+    console.log('expenseHierarchy.value length:', state.expenseHierarchy.value?.length)
+    
+    if (!state.expenseHierarchy.value || state.expenseHierarchy.value.length === 0) {
+      console.log('No expense hierarchy available - returning empty array')
+      return []
+    }
+
+    console.log('Returning expense hierarchy:', state.expenseHierarchy.value)
+    console.log('=== END EXPENSE HIERARCHY GETTER ===')
+    return state.expenseHierarchy.value
+  })
+
   return {
     augmentationColumns,
     expenseAugColumns,
@@ -232,5 +247,6 @@ export function useGetters(state) {
     filteredAugmentations,
     totalExpensesAmount,
     filteredExpenseAccounts,
+    expenseHierarchy,
   }
 }

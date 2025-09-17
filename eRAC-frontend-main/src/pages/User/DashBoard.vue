@@ -18,17 +18,17 @@
           <div class="year-filter-section">
             <div class="row items-center justify-end q-gutter-sm">
               <div class="text-subtitle2 text-weight-medium">Year Filter:</div>
-              <q-select 
-                v-model="chartStore.selectedYear" 
-                :options="chartStore.availableYears" 
+              <q-select
+                v-model="chartStore.selectedYear"
+                :options="chartStore.availableYears"
                 option-value="value"
-                option-label="label" 
-                emit-value 
-                map-options 
-                dense 
-                outlined 
+                option-label="label"
+                emit-value
+                map-options
+                dense
+                outlined
                 style="min-width: 120px"
-                :loading="chartStore.isYearFilterLoading" 
+                :loading="chartStore.isYearFilterLoading"
                 :disable="chartStore.isYearFilterLoading"
                 @update:model-value="onYearChange">
                 <template v-slot:prepend>
@@ -40,14 +40,14 @@
               </q-select>
 
               <!-- Refresh years button -->
-              <q-btn 
-                icon="refresh" 
-                color="primary" 
-                flat 
-                dense 
-                size="sm" 
+              <q-btn
+                icon="refresh"
+                color="primary"
+                flat
+                dense
+                size="sm"
                 @click="refreshYears"
-                :loading="chartStore.isYearFilterLoading" 
+                :loading="chartStore.isYearFilterLoading"
                 :disable="chartStore.isYearFilterLoading">
                 <q-tooltip>Refresh available years</q-tooltip>
               </q-btn>
@@ -495,13 +495,15 @@ const onYearChange = async (newYear) => {
     isYearChanging.value = true
 
     // Show loading notification
-    $q.notify({
-      type: 'info',
-      message: `Loading data for ${newYear === 'all' ? 'all years' : newYear}...`,
-      icon: 'hourglass_empty',
-      position: 'top',
-      timeout: 2000,
-    })
+    // $q.notify({
+    //   type: 'info',
+    //   backgroundColor:'primary',
+
+    //   message: `Loading data for ${newYear === 'all' ? 'all years' : newYear}...`,
+    //   icon: 'hourglass_empty',
+    //   position: 'top',
+    //   timeout: 2000,
+    // })
 
     // Update the store's selected year
     chartStore.setSelectedYear(newYear)
@@ -1292,18 +1294,18 @@ onMounted(async () => {
   .dashboard-card {
     padding: 16px 20px;
   }
-  
+
   .year-filter-section {
     justify-content: center;
     margin-top: 16px;
   }
-  
+
   .year-filter-section .row {
     flex-wrap: wrap;
     justify-content: center;
     gap: 12px;
   }
-  
+
   .welcome-user {
     text-align: center;
     margin-bottom: 8px;
@@ -1314,15 +1316,15 @@ onMounted(async () => {
   .dashboard-card {
     padding: 12px 16px;
   }
-  
+
   .year-filter-section .q-select {
     min-width: 100px;
   }
-  
+
   .welcome-user {
     font-size: 18px;
   }
-  
+
   .Custom-caption {
     font-size: 12px;
   }

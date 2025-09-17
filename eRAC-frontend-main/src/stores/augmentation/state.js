@@ -7,6 +7,7 @@ export function initialState() {
     Augexpenses: ref([]),
 
     AugexpenseAccounts: ref([]),
+    expenseHierarchy: ref([]),
     availableBudgets: ref([]),
 
     // Loading states

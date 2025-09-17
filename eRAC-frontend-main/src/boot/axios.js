@@ -9,7 +9,7 @@ import axios from 'axios'
 // for each client)
 const api = axios.create({
   baseURL: process.env.API_URL || 'http://localhost:8000',
-  //baseURL: process.env.API_URL || 'http://192.168.150.161:8000',
+  // baseURL: process.env.API_URL || 'http://192.168.150.161:8000',
   withCredentials: true,
   headers: {
     Accept: 'application/json',
@@ -29,7 +29,7 @@ export default defineBoot(({ app }) => {
   // Set default Authorization header from localStorage
   const adminToken = localStorage.getItem('admin_token')
   const barangayToken = localStorage.getItem('barangay_token')
-  
+
   if (adminToken) {
     api.defaults.headers.common['Authorization'] = `Bearer ${adminToken}`
   } else if (barangayToken) {
@@ -44,13 +44,13 @@ export default defineBoot(({ app }) => {
         // Clear tokens from localStorage
         localStorage.removeItem('admin_token')
         localStorage.removeItem('barangay_token')
-        
+
         // Remove Authorization header
         delete api.defaults.headers.common['Authorization']
-        
+
         // Store a flag that the session expired
         localStorage.setItem('session_expired', 'true')
-        
+
         // Dispatch a custom event that components can listen to
         window.dispatchEvent(new CustomEvent('session-expired'))
       }

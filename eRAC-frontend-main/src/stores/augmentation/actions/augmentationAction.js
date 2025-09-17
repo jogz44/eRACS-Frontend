@@ -64,7 +64,7 @@ export function useAugmentationActions(state) {
       }
 
       const currentFiscalYear = fiscalYearResponse.data.data[0]
-      const params = { 
+      const params = {
         fiscal_year_id: currentFiscalYear.id,
         ...(state.selectedBudgetSource.value !== 'all' ? { budget_type: state.selectedBudgetSource.value } : {})
       }
@@ -78,6 +78,7 @@ export function useAugmentationActions(state) {
 
       // Store the hierarchy for possible future use
       state.expenseData = response.data.data || []
+      state.expenseHierarchy = response.data.data || []
 
       // Fetch appropriations instead of expense hierarchy
       const appropriationResponse = await api.get('/api/barangay/appropriations', {
@@ -85,7 +86,7 @@ export function useAugmentationActions(state) {
           Authorization: `Bearer ${token}`,
           Accept: 'application/json',
         },
-        params: { 
+        params: {
           status: 'committed',
           fiscal_year_id: currentFiscalYear.id,
           ...(state.selectedBudgetSource.value !== 'all' ? { budget_type: state.selectedBudgetSource.value } : {})
@@ -93,7 +94,7 @@ export function useAugmentationActions(state) {
       })
 
       const appropriations = appropriationResponse.data.data || []
-      
+
       // Debug logging
       console.log('=== AUGMENTATION EXPENSE ACCOUNTS DEBUG ===')
       console.log('API Response:', appropriationResponse.data)
@@ -101,7 +102,7 @@ export function useAugmentationActions(state) {
       console.log('Fiscal Year ID:', currentFiscalYear.id)
       console.log('Budget Source Filter:', state.selectedBudgetSource.value)
       console.log('Raw appropriations:', appropriations)
-      
+
       // Check if no appropriations found
       if (appropriations.length === 0) {
         console.warn('No appropriations found. This could be due to:')
@@ -109,158 +110,152 @@ export function useAugmentationActions(state) {
         console.warn('2. No appropriations for current fiscal year')
         console.warn('3. No appropriations for current barangay')
         console.warn('4. Missing expense hierarchy relationships')
-        
-        // Show user-friendly message
-        state.AugexpenseAccounts.value = []
+
+        // Use the expense hierarchy data instead of appropriations
+        // This shows ALL expense accounts from the library, even unallocated ones
+        console.log('Using expense hierarchy data instead of appropriations')
+        console.log('Expense hierarchy data:', state.expenseHierarchy)
+
+        // Transform expense hierarchy into expense accounts format
+        const expenseAccounts = []
+        if (state.expenseHierarchy && state.expenseHierarchy.length > 0) {
+          state.expenseHierarchy.forEach(expenseClass => {
+            if (expenseClass.children && expenseClass.children.length > 0) {
+              expenseClass.children.forEach(expenseType => {
+                if (expenseType.children && expenseType.children.length > 0) {
+                  expenseType.children.forEach(expenseItem => {
+                    expenseAccounts.push({
+                      id: expenseItem.id,
+                      account: `${expenseClass.name} - ${expenseType.name} - ${expenseItem.name}`,
+                      description: `${expenseClass.name} > ${expenseType.name} > ${expenseItem.name}`,
+                      balance: 0, // Unallocated accounts have 0 balance
+                      expense_class: expenseClass.name,
+                      expense_class_id: expenseClass.id,
+                      expense_type_id: expenseType.id,
+                      expense_item_id: expenseItem.id,
+                      budget_source: 'Unallocated',
+                      is_allocated: false
+                    })
+                  })
+                } else {
+                  // Type level account (no items)
+                  expenseAccounts.push({
+                    id: expenseType.id,
+                    account: `${expenseClass.name} - ${expenseType.name}`,
+                    description: `${expenseClass.name} > ${expenseType.name}`,
+                    balance: 0,
+                    expense_class: expenseClass.name,
+                    expense_class_id: expenseClass.id,
+                    expense_type_id: expenseType.id,
+                    expense_item_id: null,
+                    budget_source: 'Unallocated',
+                    is_allocated: false
+                  })
+                }
+              })
+            } else {
+              // Class level account (no types)
+              expenseAccounts.push({
+                id: expenseClass.id,
+                account: expenseClass.name,
+                description: expenseClass.name,
+                balance: 0,
+                expense_class: expenseClass.name,
+                expense_class_id: expenseClass.id,
+                expense_type_id: null,
+                expense_item_id: null,
+                budget_source: 'Unallocated',
+                is_allocated: false
+              })
+            }
+          })
+        }
+
+        console.log('Generated expense accounts from hierarchy:', expenseAccounts.length)
+        state.AugexpenseAccounts.value = expenseAccounts
         return
       }
 
-      const flattened = appropriations.map(appropriation => {
-        // Extract budget source from budget_description
-        let budgetSource = 'Annual Budget' // Default
-        if (appropriation.budget_description) {
-          const description = appropriation.budget_description.toLowerCase()
-          if (description.includes('supplemental')) {
-            budgetSource = 'Supplemental Budget'
-          } else if (description.includes('annual')) {
-            budgetSource = 'Annual Budget'
-          }
-        }
+      // Instead of replacing the expense hierarchy, merge appropriations with it
+      // This preserves ALL expense accounts (allocated and unallocated)
+      console.log('Merging appropriations with complete expense hierarchy')
 
-        // Determine expense class based on account name
-        const accountName = appropriation.account_name || 'Unknown Account'
-        let expenseClass = 'Other' // Default
-        let expenseClassId = appropriation.expense_class_id || null
-        
-        // First try to match by expense_class_id if available
-        if (appropriation.expense_class_id) {
-          // Try to find the expense class name by ID from the accounts library
-          // This would require fetching expense classes, but for now we'll use the ID
-          expenseClass = `Class ID: ${appropriation.expense_class_id}`
-          console.log('Using expense_class_id:', accountName, '->', expenseClass)
-        } else {
-          // Fallback to pattern matching if no expense_class_id
-          const lowerAccountName = accountName.toLowerCase()
-          
-          // Try to extract expense class from account name structure
-          // Account names typically follow: "EXPENSE CLASS > EXPENSE TYPE > EXPENSE ITEM"
-          const accountParts = accountName.split(' > ')
-          if (accountParts.length >= 1) {
-            const possibleClassName = accountParts[0].trim()
-            expenseClass = possibleClassName
-            console.log('Extracted from account structure:', accountName, '->', expenseClass)
-          } else {
-            // Fallback to pattern matching
-            if (lowerAccountName.includes('sangguniang kabataan') || 
-                lowerAccountName.includes('sk -') ||
-                lowerAccountName.includes('sk)')) {
-              expenseClass = 'Sangguniang Kabataan'
-            } else if (lowerAccountName.includes('capital outlay') ||
-                       lowerAccountName.includes('infrastructure') ||
-                       lowerAccountName.includes('equipment') ||
-                       lowerAccountName.includes('machinery') ||
-                       lowerAccountName.includes('furniture') ||
-                       lowerAccountName.includes('vehicle')) {
-              expenseClass = 'Capital Outlay'
-            } else if (lowerAccountName.includes('disaster') ||
-                       lowerAccountName.includes('bdrrmf') ||
-                       lowerAccountName.includes('risk reduction')) {
-              expenseClass = 'Disaster Risk Reduction'
-            } else if (lowerAccountName.includes('general services') ||
-                       lowerAccountName.includes('general fund') ||
-                       lowerAccountName.includes('office supplies') ||
-                       lowerAccountName.includes('utilities') ||
-                       lowerAccountName.includes('communication') ||
-                       lowerAccountName.includes('travel') ||
-                       lowerAccountName.includes('training')) {
-              expenseClass = 'General Services'
-            } else if (lowerAccountName.includes('social services') ||
-                       lowerAccountName.includes('social fund') ||
-                       lowerAccountName.includes('health') ||
-                       lowerAccountName.includes('education') ||
-                       lowerAccountName.includes('welfare') ||
-                       lowerAccountName.includes('assistance')) {
-              expenseClass = 'Social Services'
-            } else if (lowerAccountName.includes('economic services') ||
-                       lowerAccountName.includes('economic fund') ||
-                       lowerAccountName.includes('agriculture') ||
-                       lowerAccountName.includes('livelihood') ||
-                       lowerAccountName.includes('business') ||
-                       lowerAccountName.includes('employment')) {
-              expenseClass = 'Economic Services'
-            } else if (lowerAccountName.includes('environmental services') ||
-                       lowerAccountName.includes('environmental fund') ||
-                       lowerAccountName.includes('environment') ||
-                       lowerAccountName.includes('sanitation') ||
-                       lowerAccountName.includes('waste') ||
-                       lowerAccountName.includes('cleanup')) {
-              expenseClass = 'Environmental Services'
-            } else if (lowerAccountName.includes('maintenance') ||
-                       lowerAccountName.includes('repair') ||
-                       lowerAccountName.includes('construction') ||
-                       lowerAccountName.includes('road') ||
-                       lowerAccountName.includes('bridge') ||
-                       lowerAccountName.includes('building')) {
-              expenseClass = 'Infrastructure'
-            } else if (lowerAccountName.includes('security') ||
-                       lowerAccountName.includes('peace and order') ||
-                       lowerAccountName.includes('police') ||
-                       lowerAccountName.includes('fire') ||
-                       lowerAccountName.includes('emergency')) {
-              expenseClass = 'Peace and Order'
-            } else if (lowerAccountName.includes('sports') ||
-                       lowerAccountName.includes('recreation') ||
-                       lowerAccountName.includes('youth') ||
-                       lowerAccountName.includes('cultural') ||
-                       lowerAccountName.includes('festival')) {
-              expenseClass = 'Sports and Recreation'
-            }
-            
-            console.log('Matched by pattern:', accountName, '->', expenseClass)
-          }
-        }
-        
-        return {
-          id: appropriation.id,
-          account: accountName,
-          balance: appropriation.amount || 0,
-          appropriation_id: appropriation.id, // This is now the representative ID
-          // Store additional info for debugging
-          expense_class_id: expenseClassId,
-          expense_class: appropriation.expense_class_name || expenseClass, // Use backend data or fallback
-          expense_type_id: appropriation.expense_type_id,
-          expense_type: appropriation.expense_type_name,
-          expense_item_id: appropriation.expense_item_id,
-          expense_item: appropriation.expense_item_name,
-          expense_sub_item_id: appropriation.expense_sub_item_id,
-          expense_sub_item_name: appropriation.expense_sub_item_name,
-          appropriation_ids: appropriation.appropriation_ids || [appropriation.id], // All IDs in the group
-          budget_source: budgetSource, // Properly extracted budget source
-          fiscal_year_id: appropriation.fiscal_year_id || currentFiscalYear.id, // Add fiscal year for validation
-          // Additional validation fields
-          allocated: appropriation.amount || 0,
-          obligated: appropriation.obligated || 0,
-          reserved: appropriation.reserved || 0,
-          available: (appropriation.amount || 0) - (appropriation.obligated || 0) - (appropriation.reserved || 0)
-        }
+      // Create a map of appropriations by expense hierarchy IDs for quick lookup
+      const appropriationMap = {}
+      appropriations.forEach(appropriation => {
+        const key = `${appropriation.expense_class_id || 'class'}-${appropriation.expense_type_id || 'type'}-${appropriation.expense_item_id || 'item'}-${appropriation.expense_sub_item_id || 'subitem'}`
+        appropriationMap[key] = appropriation
       })
 
-      // If we're selecting TO expense, filter out the FROM expense
-      if (state.isSelectingToExpense.value && state.forms.value.augExpense?.value) {
-        const fromExpense = state.forms.value.augExpense.value
-        const filtered = flattened.filter(expense => {
-          // Filter out the appropriation that matches the FROM appropriation
-          return expense.appropriation_id !== fromExpense.from_appropriation_id
+      // Transform the complete expense hierarchy and add allocation information
+      const expenseAccounts = []
+      if (state.expenseHierarchy && state.expenseHierarchy.length > 0) {
+        state.expenseHierarchy.forEach(expenseClass => {
+          if (expenseClass.children && expenseClass.children.length > 0) {
+            expenseClass.children.forEach(expenseType => {
+              if (expenseType.children && expenseType.children.length > 0) {
+                expenseType.children.forEach(expenseItem => {
+                  const key = `${expenseClass.id}-${expenseType.id}-${expenseItem.id}-subitem`
+                  const appropriation = appropriationMap[key]
+
+                  expenseAccounts.push({
+                    id: expenseItem.id,
+                    account: `${expenseClass.name} - ${expenseType.name} - ${expenseItem.name}`,
+                    description: `${expenseClass.name} > ${expenseType.name} > ${expenseItem.name}`,
+                    balance: appropriation ? appropriation.amount : 0,
+                    expense_class: expenseClass.name,
+                    expense_class_id: expenseClass.id,
+                    expense_type_id: expenseType.id,
+                    expense_item_id: expenseItem.id,
+                    budget_source: appropriation ? (appropriation.budget_description?.toLowerCase().includes('supplemental') ? 'Supplemental Budget' : 'Annual Budget') : 'Unallocated',
+                    is_allocated: !!appropriation
+                  })
+                })
+              } else {
+                // Type level account (no items)
+                const key = `${expenseClass.id}-${expenseType.id}-type-subitem`
+                const appropriation = appropriationMap[key]
+
+                expenseAccounts.push({
+                  id: expenseType.id,
+                  account: `${expenseClass.name} - ${expenseType.name}`,
+                  description: `${expenseClass.name} > ${expenseType.name}`,
+                  balance: appropriation ? appropriation.amount : 0,
+                  expense_class: expenseClass.name,
+                  expense_class_id: expenseClass.id,
+                  expense_type_id: expenseType.id,
+                  expense_item_id: null,
+                  budget_source: appropriation ? (appropriation.budget_description?.toLowerCase().includes('supplemental') ? 'Supplemental Budget' : 'Annual Budget') : 'Unallocated',
+                  is_allocated: !!appropriation
+                })
+              }
+            })
+          } else {
+            // Class level account (no types)
+            const key = `${expenseClass.id}-class-subitem-subitem`
+            const appropriation = appropriationMap[key]
+
+            expenseAccounts.push({
+              id: expenseClass.id,
+              account: expenseClass.name,
+              description: expenseClass.name,
+              balance: appropriation ? appropriation.amount : 0,
+              expense_class: expenseClass.name,
+              expense_class_id: expenseClass.id,
+              expense_type_id: null,
+              expense_item_id: null,
+              budget_source: appropriation ? (appropriation.budget_description?.toLowerCase().includes('supplemental') ? 'Supplemental Budget' : 'Annual Budget') : 'Unallocated',
+              is_allocated: !!appropriation
+            })
+          }
         })
-        state.AugexpenseAccounts.value = filtered
-      } else {
-        state.AugexpenseAccounts.value = flattened
       }
-      
-      // Debug final result
-      console.log('Final flattened data:', flattened)
-      console.log('Final AugexpenseAccounts.value:', state.AugexpenseAccounts.value)
-      console.log('=== END AUGMENTATION EXPENSE ACCOUNTS DEBUG ===')
+
+      console.log('Generated expense accounts from hierarchy with appropriations:', expenseAccounts.length)
+      state.AugexpenseAccounts.value = expenseAccounts
+      return
+
+
     } catch (error) {
       console.error('Failed to fetch expense accounts:', error)
       console.error('Error details:', error.response?.data || error.message)
@@ -319,7 +314,7 @@ export function useAugmentationActions(state) {
       if (authStore.admin) {
         throw new Error('Admin users cannot create augmentations')
       }
-      
+
       const endpoint = "/api/barangay/budget-augmentations"
       const token = authStore.token
 
@@ -437,7 +432,7 @@ export function useAugmentationActions(state) {
       if (authStore.admin) {
         throw new Error('Admin users cannot delete augmentations')
       }
-      
+
       const token = authStore.token
       await api.delete(`/api/barangay/budget-augmentations/${id}`, {
         headers: {
@@ -463,11 +458,11 @@ export function useAugmentationActions(state) {
 
   const fetchAugmentationById = async (id) => {
     try {
-      
+
       // Use different endpoints and tokens for admin vs regular users
       const endpoint = authStore.admin ? `/api/admin/augmentations/${id}` : `/api/barangay/budget-augmentations/${id}`
       const token = authStore.admin ? authStore.adminToken : authStore.token
-      
+
       const response = await api.get(endpoint, {
         headers: {
           Authorization: `Bearer ${token}`,
