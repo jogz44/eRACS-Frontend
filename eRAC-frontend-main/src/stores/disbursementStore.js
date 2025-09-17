@@ -1349,20 +1349,15 @@ export const useDisbursementStore = defineStore('disbursement', {
       try {
         const authStore = useAuthStore()
         const endpoint = authStore.admin ? `/api/admin/disbursements/${id}` : `/api/barangay/disbursements/${id}`
-        // Use barangay user token for barangay endpoints
-        const token = authStore.token
+        // Use shared auth config that selects the correct token (admin vs barangay)
+        const config = getAuthConfig()
 
         // Ensure expense data is loaded first
         if (!this.expenseData || this.expenseData.length === 0) {
           await this.fetchExpenseAccounts()
         }
 
-        const response = await api.get(endpoint, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-          },
-        })
+        const response = await api.get(endpoint, config)
 
         // Get the disbursement data
         const disbursement = response.data.data;
