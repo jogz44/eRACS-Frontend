@@ -95,26 +95,11 @@ export function useAugmentationActions(state) {
 
       const appropriations = appropriationResponse.data.data || []
 
-      // Debug logging
-      console.log('=== AUGMENTATION EXPENSE ACCOUNTS DEBUG ===')
-      console.log('API Response:', appropriationResponse.data)
-      console.log('Appropriations count:', appropriations.length)
-      console.log('Fiscal Year ID:', currentFiscalYear.id)
-      console.log('Budget Source Filter:', state.selectedBudgetSource.value)
-      console.log('Raw appropriations:', appropriations)
-
       // Check if no appropriations found
       if (appropriations.length === 0) {
-        console.warn('No appropriations found. This could be due to:')
-        console.warn('1. No appropriations with status="committed"')
-        console.warn('2. No appropriations for current fiscal year')
-        console.warn('3. No appropriations for current barangay')
-        console.warn('4. Missing expense hierarchy relationships')
 
         // Use the expense hierarchy data instead of appropriations
         // This shows ALL expense accounts from the library, even unallocated ones
-        console.log('Using expense hierarchy data instead of appropriations')
-        console.log('Expense hierarchy data:', state.expenseHierarchy)
 
         // Transform expense hierarchy into expense accounts format
         const expenseAccounts = []
@@ -170,15 +155,12 @@ export function useAugmentationActions(state) {
             }
           })
         }
-
-        console.log('Generated expense accounts from hierarchy:', expenseAccounts.length)
         state.AugexpenseAccounts.value = expenseAccounts
         return
       }
 
       // Instead of replacing the expense hierarchy, merge appropriations with it
       // This preserves ALL expense accounts (allocated and unallocated)
-      console.log('Merging appropriations with complete expense hierarchy')
 
       // Create a map of appropriations by expense hierarchy IDs for quick lookup
       const appropriationMap = {}
@@ -250,8 +232,6 @@ export function useAugmentationActions(state) {
           }
         })
       }
-
-      console.log('Generated expense accounts from hierarchy with appropriations:', expenseAccounts.length)
       state.AugexpenseAccounts.value = expenseAccounts
       return
 

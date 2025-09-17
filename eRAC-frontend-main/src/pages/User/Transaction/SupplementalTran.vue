@@ -836,11 +836,6 @@ const loadData = async (showNotification = true) => {
     const failures = results.filter(result => result.status === 'rejected')
 
     if (failures.length === 0) {
-      // Debug: Log the data from the store
-      console.log('Store data after refresh:', {
-        unusedExpenses: supplementalBudgetStore.availableUnusedExpenses,
-        filteredUnused: supplementalBudgetStore.filteredUnusedExpenses
-      })
 
       // Sync local expenses after successful data load
       syncLocalExpenses()
@@ -1154,10 +1149,6 @@ const createSupplementalBudget = async () => {
         amount: exp.amount_to_use
       }))
     }
-
-    console.log('Creating supplemental budget with data:', data)
-    console.log('Valid selected expenses:', validSelectedExpenses.value)
-    console.log('Selected expenses total:', selectedExpensesTotal.value)
 
     const result = await supplementalBudgetStore.createSupplementalBudget(data)
 
