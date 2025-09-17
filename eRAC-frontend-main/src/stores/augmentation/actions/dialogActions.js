@@ -73,6 +73,14 @@ export function useDialogActions(state, fetchExpenseAccounts, resetForm ) {
       state.forms.value.augExpense.value.to_appropriation_id = expenseItem.appropriation_id
       state.forms.value.augExpense.value.to_budget_source = expenseItem.budget_source || 'Annual Budget'
       state.forms.value.augExpense.value.to_expense_class = expenseItem.expense_class
+      
+      // Store expense hierarchy data for creating new appropriations if needed
+      state.forms.value.augExpense.value.to_expense_data = {
+        expense_class_id: expenseItem.expense_class_id,
+        expense_type_id: expenseItem.expense_type_id,
+        expense_item_id: expenseItem.expense_item_id,
+        expense_sub_item_id: expenseItem.expense_sub_item_id || null
+      }
 
       // Reset the flag and loading state
       state.isSelectingToExpense.value = false
@@ -99,6 +107,7 @@ export function useDialogActions(state, fetchExpenseAccounts, resetForm ) {
           balance: 0,
           particulars: '',
           amount: 0,
+          to_expense_data: null,
         }
       } else {
         console.error('augExpense form ref is not available')
@@ -125,6 +134,7 @@ export function useDialogActions(state, fetchExpenseAccounts, resetForm ) {
       balance: expenseItem.balance || 0,
       particulars: '',
       amount: '',
+      to_expense_data: null, // Will be set when TO expense is selected
     }
 
     state.dialogs.value.augExpense = false

@@ -602,7 +602,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
               hierarchy[expenseClass].children[expenseType].children[expenseItem] = {
                 id: account.id, // Use the continuing account ID
                 name: expenseItem,
-                amount: account.remaining_amount || 0,
+                amount: account.balance || 0,
                 budget_source: 'Continuing Appropriation',
                 description: appropriation.description || `Continued from ${appropriation.year}`,
                 continuingAccountId: account.id,

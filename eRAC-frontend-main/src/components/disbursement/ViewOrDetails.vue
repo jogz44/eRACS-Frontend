@@ -5,7 +5,19 @@
       <div v-show="false">{{ debugData }}</div>
       <div class="disbursement-tran">
         <q-card-section>
+          <div class="row">
           <div class="text-h6">Disbursement #{{ store.currentLiquidation.dvNumber }}</div>
+          <q-space />
+          <div>  <q-btn
+            flat
+            dense
+            icon="picture_as_pdf"
+            color="red"
+            @click="exportToPDF"
+            title="Export to PDF"
+            :loading="exportingPDF"
+          /></div>
+        </div>
           <div class="text-caption text-grey-6 q-mt-sm">
             View liquidation details and official receipt information
           </div>
@@ -224,6 +236,7 @@
             @click="reloadOrDetails"
             title="Reload OR Details"
           />
+
         </div>
 
         <!-- OR Details Table -->
@@ -330,6 +343,7 @@ const $q = useQuasar()
 const loadingOrDetails = ref(false)
 const voidActionLoading = ref(false)
 const editActionLoading = ref(false)
+const exportingPDF = ref(false)
 
 // Table columns for Expense Accounts - using single account column to avoid overlapping
 const expenseAccountColumns = [
@@ -413,24 +427,24 @@ const copyToClipboard = (text) => {
 }
 
 const totalActualExpense = computed(() => {
-  
+
   // If this disbursement has a reimbursement, we need to show the original liquidation values
   // The actual expense should be the same as the DV amount (fully liquidated)
   if (store.currentLiquidation?.reimbursement) {
     const dvAmount = parseFloat(store.currentLiquidation.dvAmount) || 0;
     return dvAmount;
   }
-  
+
   // For disbursements without reimbursement, calculate from OR details
   if (!store.currentLiquidation?.orDetails || store.currentLiquidation.orDetails.length === 0) {
     return 0;
   }
-  
+
   const total = store.currentLiquidation.orDetails.reduce(
     (sum, or) => sum + (parseFloat(or.orAmount) || 0),
     0,
   )
-  
+
   return total
 })
 
@@ -440,7 +454,7 @@ const totalReturnAmount = computed(() => {
   const returnAmount = store.currentLiquidation.dvAmount - totalActualExpense.value
   // Prevent negative return amounts - if over-liquidation occurs, show 0
   const finalReturnAmount = Math.max(0, returnAmount)
-  
+
   return finalReturnAmount
 })
 
@@ -450,7 +464,7 @@ const orDetailsCount = computed(() => {
 
 // Debug computed property to log data structure
 const debugData = computed(() => {
-  
+
   return store.currentLiquidation
 })
 
@@ -469,6 +483,83 @@ const isApprover = computed(() => {
 const reloadOrDetails = async () => {
   if (store.currentLiquidation?.id) {
     await store.openViewOrDetails(store.currentLiquidation)
+  }
+}
+
+// Export to PDF function
+const exportToPDF = async () => {
+  exportingPDF.value = true
+  const html2canvas = (await import('html2canvas')).default
+  const jsPDF = (await import('jspdf')).default
+
+  try {
+    const element = document.querySelector('.q-dialog .q-card')
+
+    if (!element) {
+      $q.notify({
+        type: 'negative',
+        message: 'No content found to export!',
+        icon: 'error',
+        position: 'top',
+        timeout: 3000,
+      })
+      return
+    }
+
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+    })
+
+    const imgData = canvas.toDataURL('image/png')
+    // Create PDF in portrait orientation with A4 dimensions
+    const pdf = new jsPDF('p', 'mm', 'a4') // 'p' for portrait
+
+    const pageWidth = pdf.internal.pageSize.getWidth() // 210mm (A4 width)
+    const pageHeight = pdf.internal.pageSize.getHeight() // 297mm (A4 height)
+    const imgWidth = pageWidth - 20 // Add margins
+    const imgHeight = (canvas.height * imgWidth) / canvas.width
+
+    let heightLeft = imgHeight
+    let position = 10 // Start with top margin
+
+    pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight)
+    heightLeft -= (pageHeight - 20) // Account for margins
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight + 10
+      pdf.addPage()
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight)
+      heightLeft -= (pageHeight - 20)
+    }
+
+    // Generate filename with DV number and date
+    const dvNumber = store.currentLiquidation?.dvNumber || 'Unknown'
+    const date = store.currentLiquidation?.date || new Date().toISOString().split('T')[0]
+    const filename = `Disbursement_${dvNumber}_${date}.pdf`
+
+    pdf.save(filename)
+
+    $q.notify({
+      type: 'positive',
+      message: 'Disbursement details exported to PDF successfully!',
+      icon: 'picture_as_pdf',
+      position: 'top',
+      timeout: 3000,
+    })
+  } catch (error) {
+    console.error('Error exporting to PDF:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to export PDF',
+      icon: 'error',
+      position: 'top',
+      timeout: 5000,
+    })
+  } finally {
+    exportingPDF.value = false
   }
 }
 

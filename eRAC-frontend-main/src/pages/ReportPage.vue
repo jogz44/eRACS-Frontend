@@ -8,113 +8,122 @@
     <SetupDialog v-model="showSetupDialog" />
 
     <!-- Current Year Reports Card -->
-    <q-card class="report-card q-mb-xl" flat bordered>
-      <q-card-section class="q-pb-none q-pt-lg">
-        <div class="subsection-title">Registry of Appropriation and Commitment (RAC)</div>
-      </q-card-section>
+    <div class="row q-col-gutter-md q-pa-md">
+      <!-- RAC Card -->
+      <div class="col-12 col-md-6">
+        <q-card class="report-card" flat bordered>
+          <q-card-section class="q-pb-none q-pt-lg">
+            <div class="subsection-title">Registry of Appropriation and Commitment (RAC)</div>
+          </q-card-section>
 
-      <q-card-section class="q-pt-md q-pb-lg">
-        <div class="row q-col-gutter-lg items-end">
-          <div class="col-12 col-sm-6 col-md-4">
-            <q-input
-              bg-color="white"
-              outlined
-              dense
-              :model-value="dateRangeDisplay"
-              label="Date Range"
-              class="custom-date-range"
-              clearable
-              @clear="onDateRangeClear"
-              readonly
-            >
-              <template v-slot:append>
-                <q-icon name="event" class="calend-icon">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date
-                      v-model="CurrentRacDateRange"
-                      range
-                      @update:model-value="onDateRangeChange"
-                    />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
-          </div>
+          <q-card-section class="q-pt-md q-pb-lg">
+            <div class="col q-col-gutter-md items-end">
 
-          <div class="col-12 col-sm-6 col-md-4">
-            <q-select
-              outlined
-              dense
-              v-model="expenseSelectedCurrent"
-              label="Expense Category"
-              :options="reportStore.expenseOptionsCurrent"
-              map-options
-              option-label="name"
-              option-value="id"
-              :loading="loading"
-            />
-          </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <q-input
+                  bg-color="white"
+                  outlined
+                  dense
+                  :model-value="dateRangeDisplay"
+                  label="Date Range"
+                  class="custom-date-range"
+                  clearable
+                  @clear="onDateRangeClear"
+                  readonly
+                >
+                  <template v-slot:append>
+                    <q-icon name="event" class="calend-icon">
+                      <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                        <q-date
+                          v-model="CurrentRacDateRange"
+                          range
+                          @update:model-value="onDateRangeChange"
+                        />
+                      </q-popup-proxy>
+                    </q-icon>
+                  </template>
+                </q-input>
+              </div>
 
-          <div class="col-12 col-sm-6 col-md-4">
-            <q-btn
-              color="primary"
-              icon="settings"
-              label="Generate Report"
-              class="full-width"
-              @click="openRACModal('current-rac')"
-              :loading="loading"
-            />
-          </div>
-        </div>
-      </q-card-section>
+              <div class="col-12 col-sm-6 col-md-4">
+                <q-select
+                  outlined
+                  dense
+                  v-model="expenseSelectedCurrent"
+                  label="Expense Category"
+                  :options="reportStore.expenseOptionsCurrent"
+                  map-options
+                  option-label="name"
+                  option-value="id"
+                  :loading="loading"
+                />
+              </div>
 
-      <q-separator class="q-my-lg" />
+              <div class="col-12 col-sm-6 col-md-4">
+                <q-btn
+                  color="primary"
+                  icon="settings"
+                  label="Generate Report"
+                  class="full-width"
+                  @click="openRACModal('current-rac')"
+                  :loading="loading"
+                />
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
 
-      <q-card-section class="q-pb-none q-pt-lg">
-        <div class="subsection-title">Status of Appropriation and Obligation (SACB)</div>
-      </q-card-section>
+      <!-- SACB Card -->
+      <div class="col-12 col-md-6">
+        <q-card class="report-card" flat bordered>
+          <q-card-section class="q-pb-none q-pt-lg">
+            <div class="subsection-title">Status of Appropriation and Obligation (SACB)</div>
+          </q-card-section>
 
-      <q-card-section class="q-pt-md q-pb-lg">
-        <div class="row q-col-gutter-lg items-end">
-          <div class="col-12 col-sm-6 col-md-6">
-            <q-input
-              bg-color="white"
-              outlined
-              dense
-              :model-value="currentSacbDateRangeDisplay"
-              label="Date Range"
-              class="custom-date-range"
-              clearable
-              @clear="onCurrentSacbDateRangeClear"
-              readonly
-            >
-              <template v-slot:append>
-                <q-icon name="event" class="calend-icon">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date
-                      v-model="currentSacbDateRange"
-                      range
-                      @update:model-value="onCurrentSacbDateRangeChange"
-                    />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
-          </div>
+          <q-card-section class="q-pt-md q-pb-lg">
+            <div class="col q-col-gutter-md items-end">
+              <div class="col-12 col-sm-6 col-md-6">
+                <q-input
+                  bg-color="white"
+                  outlined
+                  dense
+                  :model-value="currentSacbDateRangeDisplay"
+                  label="Date Range"
+                  class="custom-date-range"
+                  clearable
+                  @clear="onCurrentSacbDateRangeClear"
+                  readonly
+                >
+                  <template v-slot:append>
+                    <q-icon name="event" class="calend-icon">
+                      <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                        <q-date
+                          v-model="currentSacbDateRange"
+                          range
+                          @update:model-value="onCurrentSacbDateRangeChange"
+                        />
+                      </q-popup-proxy>
+                    </q-icon>
+                  </template>
+                </q-input>
+              </div>
 
-          <div class="col-12 col-sm-6 col-md-6">
-            <q-btn
-              color="primary"
-              icon="settings"
-              label="Generate Report"
-              class="full-width"
-              @click="openSACBModal('current-sacb')"
-              :loading="loading"
-            />
-          </div>
-        </div>
-      </q-card-section>
-    </q-card>
+              <div class="col-12 col-sm-6 col-md-6">
+                <q-btn
+                  color="primary"
+                  icon="settings"
+                  label="Generate Report"
+                  class="full-width"
+                  @click="openSACBModal('current-sacb')"
+                  :loading="loading"
+                />
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
 
     <!-- Continuing Reports Header with bottom border -->
     <div class="section-header q-mb-xl">
@@ -122,113 +131,97 @@
     </div>
 
     <!-- Continuing Reports Card -->
-    <q-card class="report-card q-mb-xl" flat bordered>
-      <q-card-section class="q-pb-none q-pt-lg">
-        <div class="subsection-title">Registry of Appropriation and Commitment (RAC)</div>
-      </q-card-section>
+    <div class="row q-col-gutter-md q-pa-md">
+      <!-- Continuing RAC Card -->
+      <div class="col-12 col-md-6">
+        <q-card class="report-card" flat bordered>
+          <q-card-section class="q-pb-none q-pt-lg">
+            <div class="subsection-title">Registry of Appropriation and Commitment (RAC)</div>
+          </q-card-section>
 
-      <q-card-section class="q-pt-md q-pb-lg">
-        <div class="row q-col-gutter-lg items-end">
-          <div class="col-12 col-sm-6 col-md-4">
-            <q-input
-              bg-color="white"
-              outlined
-              dense
-              :model-value="continuingDateRangeDisplay"
-              label="Date Range"
-              class="custom-date-range"
-              clearable
-              @clear="onContinuingDateRangeClear"
-              readonly
-            >
-              <template v-slot:append>
-                <q-icon name="event" class="calend-icon">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date
-                      v-model="continuingRacDateRange"
-                      range
-                      @update:model-value="onContinuingDateRangeChange"
-                    />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
-          </div>
+          <q-card-section class="q-pt-md q-pb-lg">
+            <div class="col q-col-gutter-md items-end">
+              <div class="col-12 col-sm-6 col-md-4">
+                <q-input
+                  bg-color="white"
+                  outlined
+                  dense
+                  :model-value="continuingDateRangeDisplay"
+                  label="Date Range"
+                  class="custom-date-range"
+                  clearable
+                  @clear="onContinuingDateRangeClear"
+                  readonly
+                >
+                  <template v-slot:append>
+                    <q-icon name="event" class="calend-icon">
+                      <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                        <q-date
+                          v-model="continuingRacDateRange"
+                          range
+                          @update:model-value="onContinuingDateRangeChange"
+                        />
+                      </q-popup-proxy>
+                    </q-icon>
+                  </template>
+                </q-input>
+              </div>
 
-          <div class="col-12 col-sm-6 col-md-4">
-            <q-select
-              outlined
-              dense
-              v-model="expenseSelectedContinuing"
-              label="Expense Category"
-              map-options
-              :options="reportStore.expenseOptionsContinuing"
-              :loading="loading"
-              option-value="id"
-              option-label="name"
-            />
-          </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <q-select
+                  outlined
+                  dense
+                  v-model="expenseSelectedContinuing"
+                  label="Expense Category"
+                  map-options
+                  :options="reportStore.expenseOptionsContinuing"
+                  :loading="loading"
+                  option-value="id"
+                  option-label="name"
+                />
+              </div>
 
-          <div class="col-12 col-sm-6 col-md-4">
-            <q-btn
-              color="primary"
-              icon="settings"
-              label="Generate Report"
-              class="full-width"
-              @click="openRACModal('continuing-rac')"
-              :loading="loading"
-            />
-          </div>
-        </div>
-      </q-card-section>
+              <div class="col-12 col-sm-6 col-md-4">
+                <q-btn
+                  color="primary"
+                  icon="settings"
+                  label="Generate Report"
+                  class="full-width"
+                  @click="openRACModal('continuing-rac')"
+                  :loading="loading"
+                />
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
 
-      <q-separator class="q-my-lg" />
+      <!-- Continuing SACB Card -->
+      <div class="col-12 col-md-6">
+        <q-card class="report-card" flat bordered>
+          <q-card-section class="q-pb-none q-pt-lg">
+            <div class="subsection-title">Status of Appropriation and Obligation (SACB)</div>
+          </q-card-section>
 
-      <q-card-section class="q-pb-none q-pt-lg">
-        <div class="subsection-title">Status of Appropriation and Obligation (SACB)</div>
-      </q-card-section>
+          <q-card-section class="q-pt-md q-pb-lg">
 
-      <q-card-section class="q-pt-md q-pb-lg">
-        <div class="row q-col-gutter-lg items-end">
-          <div class="col-12 col-sm-6 col-md-6">
-            <q-input
-              bg-color="white"
-              outlined
-              dense
-              :model-value="continuingSacbDateRangeDisplay"
-              label="Date Range"
-              class="custom-date-range"
-              clearable
-              @clear="onContinuingSacbDateRangeClear"
-              readonly
-            >
-              <template v-slot:append>
-                <q-icon name="event" class="calend-icon">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date
-                      v-model="continuingSacbDateRange"
-                      range
-                      @update:model-value="onContinuingSacbDateRangeChange"
-                    />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
-          </div>
+              <div class="col-12 col-sm-6 col-md-6">
+                <div class="row justify-center">
+                  <q-btn
+                  class="full-width"
+                    color="primary"
+                    icon="settings"
+                    label="Generate Report"
+                    @click="openSACModal('continuing-sacb')"
+                    :loading="loading"
+                  />
+                </div>
+              </div>
 
-          <div class="col-12 col-sm-6 col-md-6">
-            <q-btn
-              color="primary"
-              icon="settings"
-              label="Generate Report"
-              class="full-width"
-              @click="openSACBModal('continuing-sacb')"
-              :loading="loading"
-            />
-          </div>
-        </div>
-      </q-card-section>
-    </q-card>
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
 
     <!-- SACB Modal -->
     <q-dialog
@@ -713,11 +706,9 @@
                         </th>
                       </tr>
 
-                        <tr class="header-row-main">
-                        <th colspan="20" style="background-color: whitesmoke;"></th>
-
+                      <tr class="header-row-main">
+                        <th colspan="20" style="background-color: whitesmoke"></th>
                       </tr>
-
                     </thead>
                     <tbody>
                       <tr
@@ -725,7 +716,6 @@
                         :key="index"
                         class="data-row"
                       >
-
                         <td class="col-date">{{ row.date || '' }}</td>
                         <td class="col-particulars">{{ row.particular || '' }}</td>
                         <td class="col-dv">{{ row.dvNumber || '' }}</td>
@@ -771,8 +761,7 @@
                             reportStore.reportRAC
                               .reduce(
                                 (sum, r) =>
-                                  sum +
-                                  (r[reportStore.accountTitleKeyMap[accountTitle]] || 0),
+                                  sum + (r[reportStore.accountTitleKeyMap[accountTitle]] || 0),
                                 0,
                               )
                               .toLocaleString()
@@ -935,7 +924,12 @@ const computedSACBRows = computed(() => {
 
 function makeTotalRow(items) {
   const sum = (field) =>
-    items.reduce((acc, item) => acc + (typeof item[field] === 'string' ? parseFloat(item[field].replace(/,/g, '')) : item[field]), 0)
+    items.reduce(
+      (acc, item) =>
+        acc +
+        (typeof item[field] === 'string' ? parseFloat(item[field].replace(/,/g, '')) : item[field]),
+      0,
+    )
 
   return {
     isTotal: true,
@@ -950,7 +944,12 @@ const totalAppropriation = computed(() => {
   return reportStore.reportSACB
     .filter((row) => !row.isSection) // skip section headers
     .reduce((sum, row) => {
-      return sum + (typeof row.appropriation === 'string' ? parseFloat(row.appropriation.replace(/,/g, '')) : row.appropriation)
+      return (
+        sum +
+        (typeof row.appropriation === 'string'
+          ? parseFloat(row.appropriation.replace(/,/g, ''))
+          : row.appropriation)
+      )
     }, 0)
     .toLocaleString('en-US', { minimumFractionDigits: 2 })
 })
@@ -958,14 +957,26 @@ const totalAppropriation = computed(() => {
 const totalObligation = computed(() => {
   return reportStore.reportSACB
     .filter((row) => !row.isSection)
-    .reduce((sum, row) => sum + (typeof row.obligation === 'string' ? parseFloat(row.obligation.replace(/,/g, '')) : row.obligation), 0)
+    .reduce(
+      (sum, row) =>
+        sum +
+        (typeof row.obligation === 'string'
+          ? parseFloat(row.obligation.replace(/,/g, ''))
+          : row.obligation),
+      0,
+    )
     .toLocaleString('en-US', { minimumFractionDigits: 2 })
 })
 
 const totalBalance = computed(() => {
   return reportStore.reportSACB
     .filter((row) => !row.isSection)
-    .reduce((sum, row) => sum + (typeof row.balance === 'string' ? parseFloat(row.balance.replace(/,/g, '')) : row.balance), 0)
+    .reduce(
+      (sum, row) =>
+        sum +
+        (typeof row.balance === 'string' ? parseFloat(row.balance.replace(/,/g, '')) : row.balance),
+      0,
+    )
     .toLocaleString('en-US', { minimumFractionDigits: 2 })
 })
 
@@ -1070,12 +1081,16 @@ const openSACBModal = (type) => {
 
   // Log report generation activity
   const reportType = getReportTypeLabel(type)
-  const dateRange = type === 'current-sacb'
-    ? `${currentSacbDateRange.value.from} to ${currentSacbDateRange.value.to}`
-    : type === 'continuing-sacb'
-      ? `${continuingSacbDateRange.value.from} to ${continuingSacbDateRange.value.to}`
-      : 'No date range'
-  logAdminActivity('Report Generated', `Generated ${reportType} report for date range: ${dateRange}`)
+  const dateRange =
+    type === 'current-sacb'
+      ? `${currentSacbDateRange.value.from} to ${currentSacbDateRange.value.to}`
+      : type === 'continuing-sacb'
+        ? `${continuingSacbDateRange.value.from} to ${continuingSacbDateRange.value.to}`
+        : 'No date range'
+  logAdminActivity(
+    'Report Generated',
+    `Generated ${reportType} report for date range: ${dateRange}`,
+  )
 
   loadSacbReport(
     type === 'current-sacb'
@@ -1128,12 +1143,16 @@ const openRACModal = (type) => {
   // Log report generation activity
   const reportType = getReportTypeLabel(type)
   const expenseCategory = reportStore.expenseRacSelected?.name || 'Unknown'
-  const dateRange = type === 'current-rac'
-    ? `${CurrentRacDateRange.value.from} to ${CurrentRacDateRange.value.to}`
-    : type === 'continuing-rac'
-      ? `${continuingRacDateRange.value.from} to ${continuingRacDateRange.value.to}`
-      : 'No date range'
-  logAdminActivity('Report Generated', `Generated ${reportType} report for expense category: ${expenseCategory} with date range: ${dateRange}`)
+  const dateRange =
+    type === 'current-rac'
+      ? `${CurrentRacDateRange.value.from} to ${CurrentRacDateRange.value.to}`
+      : type === 'continuing-rac'
+        ? `${continuingRacDateRange.value.from} to ${continuingRacDateRange.value.to}`
+        : 'No date range'
+  logAdminActivity(
+    'Report Generated',
+    `Generated ${reportType} report for expense category: ${expenseCategory} with date range: ${dateRange}`,
+  )
 
   loadRacReport(
     type === 'current-rac'
@@ -1195,13 +1214,13 @@ const onCurrentSacbDateRangeClear = () => {
   currentSacbDateRange.value = { from: '', to: '' }
 }
 
-const onContinuingSacbDateRangeChange = (newRange) => {
-  continuingSacbDateRange.value = newRange
-}
+// const onContinuingSacbDateRangeChange = (newRange) => {
+//   continuingSacbDateRange.value = newRange
+// }
 
-const onContinuingSacbDateRangeClear = () => {
-  continuingSacbDateRange.value = { from: '', to: '' }
-}
+// const onContinuingSacbDateRangeClear = () => {
+//   continuingSacbDateRange.value = { from: '', to: '' }
+// }
 
 /* -------------------- HELPERS -------------------- */
 const notifyError = (msg) => $q.notify({ type: 'negative', message: msg, position: 'top' })
@@ -2151,7 +2170,7 @@ onActivated(async () => {
   color: black;
   font-weight: 600;
   font-size: 20px;
-  font-family:  'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   text-transform: uppercase;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   text-align: center;
@@ -2165,32 +2184,32 @@ onActivated(async () => {
   color: black !important;
   font-weight: 600 !important;
   font-size: 15px !important;
-   font-family:  'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   text-transform: uppercase !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
   text-align: center !important;
-     justify-content: center;
+  justify-content: center;
   align-items: center;
 }
 
 /* Obligation header styling */
 .preview-table .col-obligation-header {
-  background: whitesmoke!important;
-   font-family:  'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: whitesmoke !important;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   color: black !important;
   font-weight: 600 !important;
   font-size: 15px !important;
   text-transform: uppercase !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
   text-align: center !important;
-      justify-content: center;
+  justify-content: center;
   align-items: center;
 }
 
 /* Regular header row styling */
 .preview-table .header-row th {
   background: whitesmoke;
-   font-family:  'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   color: black;
   font-weight: 600;
   font-size: 12px;
@@ -2199,7 +2218,6 @@ onActivated(async () => {
   text-align: center;
   text-transform: uppercase;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-
 }
 
 .preview-table .text-right {
