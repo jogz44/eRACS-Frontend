@@ -47,11 +47,19 @@
               </div>
             </div>
 
-            <!-- Actual Expense Field -->
+            <!-- Bank Field -->
             <div class="col-md-4 col-sm-6 q-mb-md">
-              <div class="text-caption text-grey">Actual Expense</div>
+              <div class="text-caption text-grey">Bank</div>
               <div class="text-body1 text-weight-medium">
-                ₱ {{ formatCurrency(totalActualExpense) }}
+                {{ store.currentLiquidation.bank_name }}
+              </div>
+            </div>
+
+            <!-- Cheque Number Field -->
+            <div class="col-md-4 col-sm-6 q-mb-md">
+              <div class="text-caption text-grey">Cheque Number</div>
+              <div class="text-body1 text-weight-medium">
+                {{ store.currentLiquidation.chequeNumber }}
               </div>
             </div>
 
@@ -62,12 +70,26 @@
                 ₱ {{ formatCurrency(totalReturnAmount) }}
               </div>
             </div>
-
+            <!-- Actual Expense Field -->
+            <div class="col-md-4 col-sm-6 q-mb-md">
+              <div class="text-caption text-grey">Actual Expense</div>
+              <div class="text-body1 text-weight-medium">
+                ₱ {{ formatCurrency(totalActualExpense) }}
+              </div>
+            </div>
             <!-- Remarks Field -->
             <div class="col-md-4 col-sm-12 q-mb-md">
               <div class="text-caption text-grey">Remarks</div>
               <div class="text-body1 text-weight-medium">
                 {{ store.currentLiquidation.remarks || '—' }}
+              </div>
+            </div>
+
+            <!-- Status Field -->
+            <div class="col-md-4 col-sm-12 q-mb-md">
+              <div class="text-caption text-grey">Status</div>
+              <div class="text-body1 text-weight-medium">
+                {{ store.currentLiquidation.status }}
               </div>
             </div>
           </div>
