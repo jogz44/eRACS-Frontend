@@ -1334,24 +1334,32 @@ class AppropriationController extends Controller
             \Log::info('Barangay ID: ' . $barangayId . ', Year: ' . $year);
 
 
-            // Get budgets for this barangay with year filter - only include annual budgets for total calculation
+            // Get budgets for this barangay with year filter - include both annual and supplemental budgets for obligation calculation
             $budgetsQuery = Budget::with(['tranAppropriations', 'fiscalYear'])
+                ->where('barangay_id', $barangayId);
+            
+            // Get only annual budgets for total appropriation calculation
+            $annualBudgetsQuery = Budget::with(['tranAppropriations', 'fiscalYear'])
                 ->where('barangay_id', $barangayId)
-                ->where('budget_type', \App\BudgetType::ANNUAL); // Only annual budgets for total calculation
+                ->where('budget_type', \App\BudgetType::ANNUAL);
             
             if ($year !== 'all') {
                 $budgetsQuery->whereHas('fiscalYear', function($q) use ($year) {
                     $q->where('year', $year);
                 });
+                $annualBudgetsQuery->whereHas('fiscalYear', function($q) use ($year) {
+                    $q->where('year', $year);
+                });
             }
             
-            $budgets = $budgetsQuery->get();
+            $budgets = $budgetsQuery->get(); // All budgets for obligation calculation
+            $annualBudgets = $annualBudgetsQuery->get(); // Only annual budgets for appropriation calculation
 
 
             \Log::info('Found ' . $budgets->count() . ' budgets for year ' . $year);
 
-            // Calculate totals - include augmentation to get true total budget
-            $totalAppropriation = $budgets->sum(function($budget) {
+            // Calculate totals - use annual budgets only for appropriation, all budgets for obligation
+            $totalAppropriation = $annualBudgets->sum(function($budget) {
                 return (float)$budget->original_amount + (float)$budget->augmentation;
             });
             $totalObligation = $budgets->sum(function($budget) {
@@ -1438,8 +1446,9 @@ class AppropriationController extends Controller
                 return (float) $o->total_amount - (float) ($d->details_amount ?? 0);
             });
             $totalUnappropriated = $totalAppropriation - $totalObligation;
+            $totalExpense = $totalObligation - $totalBalance;
 
-            \Log::info('Totals - Appropriation: ' . $totalAppropriation . ', Obligation: ' . $totalObligation . ', Balance: ' . $totalBalance);
+            \Log::info('Totals - Appropriation: ' . $totalAppropriation . ', Obligation: ' . $totalObligation . ', Balance: ' . $totalBalance . ', Expense: ' . $totalExpense);
 
 
             // Get expense hierarchy for pie chart
@@ -1607,6 +1616,7 @@ class AppropriationController extends Controller
                     'summary' => [
                         'total_appropriation' => (float)$totalAppropriation,
                         'total_obligation' => (float)$totalObligation,
+                        'total_expense' => (float)$totalExpense,
                         'total_unappropriated' => (float)$totalUnappropriated,
                         'total_balance' => (float)$totalBalance,
                         'type_level_total' => (float)$typeLevelTotal,

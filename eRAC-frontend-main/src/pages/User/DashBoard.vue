@@ -873,7 +873,7 @@ onMounted(async () => {
   width: 100%;
   min-width: unset;
   height: 100%;
-  min-height: 500px;
+  min-height: 550px;
   display: flex;
   flex-direction: column;
 

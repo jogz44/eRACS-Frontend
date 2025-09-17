@@ -29,9 +29,9 @@ export const useChartDataStore = defineStore('chartData', {
         change: '0%',
       },
       {
-        label: 'Total Obligation',
+        label: 'Total Expense',
         value: '₱0.00',
-        icon: 'assignment',
+        icon: 'receipt',
         color: 'secondary',
         trend: 'down',
         change: '0%',
@@ -320,18 +320,21 @@ export const useChartDataStore = defineStore('chartData', {
           ...this.getAuthConfig(),
           params,
         })
-        // Filter to only include annual budgets for total calculation (exclude supplemental budgets)
-        const budgets = (budgetsResponse.data.data || []).filter(budget => 
+        // Filter to only include annual budgets for total appropriation calculation
+        const annualBudgets = (budgetsResponse.data.data || []).filter(budget => 
           budget.budget_type === 'annual' || 
           (budget.description && budget.description.toLowerCase().includes('annual'))
         )
+        
+        // Include all budgets for obligation calculation (both annual and supplemental)
+        const allBudgets = budgetsResponse.data.data || []
 
-        // Calculate totals - include augmentation to get true total budget
-        const totalAppropriation = budgets.reduce(
+        // Calculate totals - use annual budgets for appropriation, all budgets for obligation
+        const totalAppropriation = annualBudgets.reduce(
           (sum, budget) => sum + (parseFloat(budget.original_amount) || 0) + (parseFloat(budget.augmentation) || 0),
           0,
         )
-        const totalObligation = budgets.reduce((sum, budget) => {
+        const totalObligation = allBudgets.reduce((sum, budget) => {
           const allocated =
             budget.allocations?.reduce(
               (allocSum, alloc) => allocSum + (parseFloat(alloc.amount) || 0),
@@ -340,6 +343,9 @@ export const useChartDataStore = defineStore('chartData', {
           return sum + allocated
         }, 0)
         const totalBalance = totalAppropriation - totalObligation
+
+        // Calculate total expense (total obligation - total balance)
+        const totalExpense = totalObligation - totalBalance
 
         // Update summary cards
         this.summaryCards = [
@@ -352,9 +358,9 @@ export const useChartDataStore = defineStore('chartData', {
             change: '2.5%',
           },
           {
-            label: 'Total Obligation',
-            value: this.formatCurrency(totalObligation),
-            icon: 'assignment',
+            label: 'Total Expense',
+            value: this.formatCurrency(totalExpense),
+            icon: 'receipt',
             color: 'secondary',
             trend: 'down',
             change: '1.2%',
@@ -370,7 +376,7 @@ export const useChartDataStore = defineStore('chartData', {
           },
         ]
 
-        return { totalAppropriation, totalObligation, totalBalance }
+        return { totalAppropriation, totalObligation, totalExpense, totalBalance }
       } catch (error) {
         console.error('Error fetching dashboard summary:', error)
         throw error
@@ -534,9 +540,9 @@ export const useChartDataStore = defineStore('chartData', {
           change: '2.5%',
         },
         {
-          label: 'Total Obligation',
+          label: 'Total Expense',
           value: this.formatCurrency(0),
-          icon: 'assignment',
+          icon: 'receipt',
           color: 'secondary',
           trend: 'down',
           change: '1.2%',
@@ -620,9 +626,9 @@ export const useChartDataStore = defineStore('chartData', {
               change: '2.5%',
             },
             {
-              label: 'Total Obligation',
-              value: this.formatCurrency(dashboardData.summary.total_obligation),
-              icon: 'assignment',
+              label: 'Total Expense',
+              value: this.formatCurrency(dashboardData.summary.total_expense),
+              icon: 'receipt',
               color: 'secondary',
               trend: 'down',
               change: '1.2%',
