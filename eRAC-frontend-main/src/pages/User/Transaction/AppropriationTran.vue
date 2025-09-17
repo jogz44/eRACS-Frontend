@@ -1337,7 +1337,7 @@ const columns = computed(() => {
       if (col.name === 'commit') {
         return {
           ...col,
-          label: 'Allocate',
+          label: 'Commit',
         }
       }
       return col
