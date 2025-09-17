@@ -508,7 +508,6 @@ export const useChartDataStore = defineStore('chartData', {
 
     // Test method to set static data
     setTestData() {
-      console.log('Setting test data for pie chart')
       this.pieChartData = {
         labels: ['Personnel Services', 'Maintenance', 'Capital Outlay', 'Financial Expenses'],
         datasets: [
@@ -548,8 +547,6 @@ export const useChartDataStore = defineStore('chartData', {
           change: '3.8%',
         },
       ]
-
-      console.log('Test data set:', this.pieChartData)
     },
 
     // Fetch disbursement overview data
@@ -598,13 +595,6 @@ export const useChartDataStore = defineStore('chartData', {
     async loadDashboardData() {
       try {
         this.isLoading = true
-        console.log('Loading dashboard data...')
-        console.log(
-          'Selected year for API call:',
-          this.selectedYear,
-          'Type:',
-          typeof this.selectedYear,
-        )
 
         try {
           // Try the new optimized dashboard endpoint first
@@ -612,10 +602,8 @@ export const useChartDataStore = defineStore('chartData', {
             ...this.getAuthConfig(),
             params: { year: this.selectedYear },
           })
-          console.log('Dashboard API response:', response.data)
 
           const dashboardData = response.data.data
-          console.log('Dashboard data:', dashboardData)
 
           // Update summary cards
           this.summaryCards = [
@@ -685,7 +673,6 @@ export const useChartDataStore = defineStore('chartData', {
                 },
               ],
             }
-            console.log('Updated pie chart data:', this.pieChartData)
           } else {
             this.pieChartData = {
               labels: ['No Data Available'],
@@ -697,7 +684,6 @@ export const useChartDataStore = defineStore('chartData', {
                 },
               ],
             }
-            console.log('No pie chart data available, showing placeholder')
           }
 
           // Fetch comprehensive disbursement data for overview

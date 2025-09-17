@@ -727,9 +727,6 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
           year: yearValue,
         }
 
-        console.log('Adding sub-item to store:', subItemToAdd)
-        console.log('Current year:', this.selectedYear, 'Year value:', yearValue)
-
         this.expenseSubItems.push(subItemToAdd)
 
         // Force reactivity update

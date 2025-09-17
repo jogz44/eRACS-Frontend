@@ -144,8 +144,6 @@ export const useSupplementalBudgetStore = defineStore('supplementalBudget', {
         const endpoint = authStore.admin ? '/api/admin/supplemental-budgets' : '/api/barangay/supplemental-budgets'
         const token = authStore.admin ? authStore.adminToken : authStore.token
 
-        console.log('Creating supplemental budget with data:', data)
-        console.log('Using endpoint:', endpoint)
 
         const response = await api.post(endpoint, data, {
           headers: {
@@ -154,7 +152,6 @@ export const useSupplementalBudgetStore = defineStore('supplementalBudget', {
           },
         })
 
-        console.log('Supplemental budget created successfully:', response.data)
 
         // Use Promise.allSettled to handle partial failures gracefully
         const results = await Promise.allSettled([
@@ -172,10 +169,6 @@ export const useSupplementalBudgetStore = defineStore('supplementalBudget', {
         this.totalSupplementalAmount = this.supplementalBudgets.reduce((sum, budget) => sum + (budget.total_amount || 0), 0)
         this.totalUnusedAmount = this.availableUnusedExpenses.reduce((sum, expense) => sum + (expense.unused_amount || 0), 0)
         
-        console.log('Data refresh completed - Unused expenses:', this.availableUnusedExpenses.length)
-        console.log('Total unused amount:', this.totalUnusedAmount)
-        console.log('Supplemental budgets:', this.supplementalBudgets.length)
-        console.log('Total supplemental amount:', this.totalSupplementalAmount)
 
         return response.data
       } catch (error) {
@@ -204,7 +197,6 @@ export const useSupplementalBudgetStore = defineStore('supplementalBudget', {
         })
 
         this.years = response.data.data || []
-        console.log('Fetched fiscal years:', this.years)
       } catch (error) {
         console.error('Error fetching years:', error)
         throw error

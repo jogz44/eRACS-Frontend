@@ -255,13 +255,6 @@ export const useReportStore = defineStore('report', {
         const to = this._normalizeDate($date.value.to)
         const from = this._normalizeDate($date.value.from)
 
-        // Debug logging for admin RAC request
-        console.log('Admin RAC Request Params:', {
-          to,
-          from,
-          expense_class_id: selected?.id,
-          barangay_id: barangayId,
-        })
         
         // Use the same endpoint as user page but with admin parameters
         const response = await api.get(
@@ -279,12 +272,6 @@ export const useReportStore = defineStore('report', {
 
         const rawData = response?.data?.data?.rows || []
         
-        // Debug logging for admin RAC response
-        console.log('Admin RAC Response:', response?.data)
-        console.log('Admin RAC Raw Data:', rawData)
-        console.log('Admin RAC Raw Data Length:', rawData.length)
-        console.log('Admin RAC Selected Barangay ID:', barangayId)
-        console.log('Admin RAC Selected Expense Class:', selected?.id)
         
         // Use account titles from backend response if available, otherwise extract from keys
         if (response?.data?.account_titles && response?.data?.account_title_key_map) {
