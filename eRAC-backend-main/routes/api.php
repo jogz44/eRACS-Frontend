@@ -259,6 +259,7 @@ Route::prefix('admin')->group(function () {
         Route::get('/expense-details', [DisbursementController::class, 'getExpenseDetails']);
         // Admin can view OR details for any disbursement
         Route::get('/disbursements/{id}/or-details', [DisbursementController::class, 'getOrDetails']);
+        Route::get('disbursements/{id}', [DisbursementController::class, 'show']);
 
         // Admin report endpoints
         Route::get('/report/sacb', [ReportController::class, 'getSacbReport']);

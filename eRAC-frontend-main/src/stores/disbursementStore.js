@@ -1348,6 +1348,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     async fetchDisbursementForView(id) {
       try {
         const authStore = useAuthStore()
+        const endpoint = authStore.admin ? `/api/admin/disbursements/${id}` : `/api/barangay/disbursements/${id}`
         // Use barangay user token for barangay endpoints
         const token = authStore.token
 
@@ -1356,7 +1357,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           await this.fetchExpenseAccounts()
         }
 
-        const response = await api.get(`/api/barangay/disbursements/${id}`, {
+        const response = await api.get(endpoint, {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',
@@ -1446,13 +1447,13 @@ export const useDisbursementStore = defineStore('disbursement', {
                 expenseSubItem: expenseSubItem,
               }
             }) : []
-
           const result = {
             id: disbursement.id,
             date: disbursement.date,
             dvNumber: disbursement.dv_number,
             chequeNumber: disbursement.cheque_number,
             bank_id: disbursement.bank_id,
+            bank_name: disbursement.bank_name,
             payee: disbursement.payee,
             dvAmount: disbursement.dv_amount,
             status: disbursement.status,

@@ -803,10 +803,7 @@ class DisbursementController extends Controller
     public function show($id)
     {
         try {
-            \Log::info("Fetching disbursement with ID: " . $id);
-
             $user = request()->user();
-            \Log::info("User: ", ['user_id' => $user ? $user->id : 'null', 'barangay_id' => $user ? $user->barangay_id : 'null']);
 
             $query = Disbursement::with(['bank', 'cheque.booklet', 'expenseDetails.appropriation.expenseClass', 'expenseDetails.appropriation.expenseType', 'expenseDetails.appropriation.expenseItem', 'expenseDetails.appropriation.expenseSubItem']);
 
