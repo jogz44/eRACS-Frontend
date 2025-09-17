@@ -464,25 +464,6 @@ const orDetailsCount = computed(() => {
 
 // Debug computed property to log data structure
 const debugData = computed(() => {
-  console.log('=== ViewOrDetails Debug Data ===')
-  console.log('Current liquidation data:', store.currentLiquidation)
-  console.log('Main disbursement ID:', store.currentLiquidation?.id)
-  console.log('Main disbursement DV Number:', store.currentLiquidation?.dvNumber)
-  console.log('Main disbursement status:', store.currentLiquidation?.status)
-  console.log('Main expenses count:', store.currentLiquidation?.expenses?.length || 0)
-  console.log('Main expenses:', store.currentLiquidation?.expenses)
-
-  if (store.currentLiquidation?.reimbursement) {
-    console.log('=== Reimbursement Data ===')
-    console.log('Reimbursement ID:', store.currentLiquidation.reimbursement.id)
-    console.log('Reimbursement DV Number:', store.currentLiquidation.reimbursement.dv_number)
-    console.log('Reimbursement reference DV:', store.currentLiquidation.reimbursement.ref_dv_number)
-    console.log('Reimbursement status:', store.currentLiquidation.reimbursement.status)
-    console.log('Reimbursement expenses count:', store.currentLiquidation.reimbursement.expenses?.length || 0)
-    console.log('Reimbursement expenses:', store.currentLiquidation.reimbursement.expenses)
-  } else {
-    console.log('No reimbursement data found')
-  }
 
   return store.currentLiquidation
 })

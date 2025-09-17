@@ -59,7 +59,6 @@ export const useContApprStore = defineStore('continuing-appropriation',{
                     expenseItem: row.expenseItem,
                     expenseSubItem: row.expenseSubItem,
                 }))
-                console.log('Mapped Continuing Appropriations:', this.continueAccounts)
                 return this.continueAccounts
             } catch (error) {
                 this.error = error.response?.data?.message || error.message

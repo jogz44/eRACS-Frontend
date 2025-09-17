@@ -312,7 +312,6 @@ export const useAuthStore = defineStore('auth', {
       localStorage.removeItem('acceptedUsers')
       
       this.isLoggingOut = false
-      console.log('User logged out successfully')
     },
 
     async initialize() {

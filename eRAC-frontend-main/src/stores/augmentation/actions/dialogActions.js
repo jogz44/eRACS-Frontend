@@ -119,7 +119,6 @@ export function useDialogActions(state, fetchExpenseAccounts, resetForm ) {
     const accountName = expenseItem.account || 'Unknown Account'
 
     // Set the selected expense class for filtering TO expenses
-    console.log('Setting selected expense class to:', expenseItem.expense_class)
     state.selectedExpenseClass.value = expenseItem.expense_class
 
     state.forms.value.augExpense.value = {

@@ -493,11 +493,9 @@ export const useBankStore = defineStore('bank', {
       this.isLoading = true
       this.error = null
       try {
-        console.log('[Store] Fetching cheques for bank ID:', bankId)
 
         const config = this.getAuthConfig()
         const response = await api.get(`/api/barangay/banks/${bankId}/cheques`, config)
-        console.log('[Store] Raw API response:', response.data)
 
         // Normalize and transform cheques
         const rawCheques = Array.isArray(response.data.data)
@@ -522,8 +520,6 @@ export const useBankStore = defineStore('bank', {
           data: cheques,
           cheques,
         }
-
-        console.log('[Store] Final normalized response:', result)
         return result
       } catch (error) {
         console.error('[Store] Error fetching cheques:', error)
@@ -531,7 +527,6 @@ export const useBankStore = defineStore('bank', {
         throw error
       } finally {
         this.isLoading = false
-        console.log('[Store] Finished fetching cheques')
       }
     },
 

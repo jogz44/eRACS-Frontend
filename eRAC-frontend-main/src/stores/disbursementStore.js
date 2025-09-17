@@ -827,14 +827,11 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         if (authStore.admin) {
           // For admin users, fetch from accounts library to get expense structure
-          console.log('Fetching expense accounts for admin user...')
           await this.fetchExpenseTypesFromAccountsLib()
-          console.log('Expense types loaded for admin:', this.expenseTypes?.length || 0)
 
           // Create mock expense data structure for admin users
           // This allows them to see expense accounts for reimbursement purposes
           this.expenseData = this.createMockExpenseDataForAdmin()
-          console.log('Mock expense data created:', this.expenseData?.length || 0)
         } else {
           // For regular users, use the normal flow
           const appropriationStore = useAppropriationStore()
@@ -862,7 +859,6 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Get default booklet ID for a bank
     async getDefaultBookletId(bankId) {
       try {
-        console.log('Fetching booklet ID for bank:', bankId)
 
         // Try multiple API endpoints to find booklets
         let booklets = []
@@ -874,7 +870,6 @@ export const useDisbursementStore = defineStore('disbursement', {
             this.getAuthConfig(),
           )
           booklets = response.data.data || []
-          console.log('Found booklets via main endpoint:', booklets.length)
         } catch (error) {
           console.warn('Main booklets endpoint failed:', error.message)
         }
@@ -887,7 +882,6 @@ export const useDisbursementStore = defineStore('disbursement', {
               this.getAuthConfig(),
             )
             booklets = response.data.data || []
-            console.log('Found booklets via alternative endpoint:', booklets.length)
           } catch (error) {
             console.warn('Alternative booklets endpoint failed:', error.message)
           }
@@ -899,7 +893,6 @@ export const useDisbursementStore = defineStore('disbursement', {
             const response = await api.get('/api/barangay/booklets', this.getAuthConfig())
             const allBooklets = response.data.data || []
             booklets = allBooklets.filter((booklet) => booklet.bank_id === bankId)
-            console.log('Found booklets via all booklets endpoint:', booklets.length)
           } catch (error) {
             console.warn('All booklets endpoint failed:', error.message)
           }
@@ -907,7 +900,6 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         if (booklets.length > 0) {
           const selectedBooklet = booklets[0]
-          console.log('Selected booklet:', selectedBooklet)
           return selectedBooklet.id
         }
 
@@ -916,7 +908,6 @@ export const useDisbursementStore = defineStore('disbursement', {
           const response = await api.get('/api/barangay/booklets', this.getAuthConfig())
           const allBooklets = response.data.data || []
           if (allBooklets.length > 0) {
-            console.log('Using first available booklet as fallback:', allBooklets[0])
             return allBooklets[0].id
           }
         } catch (error) {
@@ -934,20 +925,14 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     // Create mock expense data structure for admin users
     createMockExpenseDataForAdmin() {
-      // This creates a basic expense structure that admin users can use for reimbursements
-      // We'll use the expense types from the accounts library
-      console.log('Creating mock expense data for admin...')
-      console.log('Available expense types:', this.expenseTypes?.length || 0)
 
       if (!this.expenseTypes || this.expenseTypes.length === 0) {
-        console.log('No expense types available for admin mock data')
         return []
       }
 
       // Group expense types by class
       const groupedByClass = {}
       this.expenseTypes.forEach((type) => {
-        console.log('Processing expense type:', type)
 
         if (!groupedByClass[type.expense_class_id]) {
           groupedByClass[type.expense_class_id] = {
@@ -972,8 +957,6 @@ export const useDisbursementStore = defineStore('disbursement', {
       })
 
       const result = Object.values(groupedByClass)
-      console.log('Mock expense data created:', result.length, 'classes')
-      console.log('Sample mock data:', result[0])
 
       return result
     },
@@ -1280,7 +1263,6 @@ export const useDisbursementStore = defineStore('disbursement', {
         })
         // Get the disbursement data
         const disbursement = response.data.data
-        console.log('=---------------------------->',disbursement)
         if (disbursement) {
           this.forms.disbursement = {
             date: formatDateForForm(disbursement.date),
@@ -1317,14 +1299,6 @@ export const useDisbursementStore = defineStore('disbursement', {
                 expense.expense_item_id,
                 expense.expense_sub_item_id
               )
-
-              console.log('Backend account_name (fetchDisbursementById):', expense.account_name)
-              console.log('Expense IDs (fetchDisbursementById):', {
-                class: expense.expense_class_id,
-                type: expense.expense_type_id,
-                item: expense.expense_item_id,
-                subitem: expense.expense_sub_item_id
-              })
 
               // Parse the full account name to extract individual components
               const parts = fullAccountName.split(' > ')
@@ -1379,7 +1353,6 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Ensure expense data is loaded first
         if (!this.expenseData || this.expenseData.length === 0) {
-          console.log('Loading expense data for account name lookup...')
           await this.fetchExpenseAccounts()
         }
 
@@ -1392,21 +1365,6 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Get the disbursement data
         const disbursement = response.data.data;
-        console.log('=============================================>>>>>>>>:', disbursement);
-        console.log('Main disbursement ID:', disbursement.id);
-        console.log('Main disbursement DV Number:', disbursement.dv_number);
-        console.log('Main disbursement status:', disbursement.status);
-        console.log('Expenses from backend:', disbursement.expenses);
-        console.log('Reimbursement data:', disbursement.reimbursement);
-        if (disbursement.expenses && disbursement.expenses.length > 0) {
-          console.log('First expense structure:', disbursement.expenses[0]);
-          console.log('First expense keys:', Object.keys(disbursement.expenses[0]));
-        }
-        if (disbursement.reimbursement) {
-          console.log('Reimbursement DV Number:', disbursement.reimbursement.dv_number);
-          console.log('Reimbursement reference DV:', disbursement.reimbursement.ref_dv_number);
-          console.log('Reimbursement expenses:', disbursement.reimbursement.expenses);
-        }
 
         if (disbursement) {
           // Map expenses to ensure proper field names
@@ -1419,14 +1377,6 @@ export const useDisbursementStore = defineStore('disbursement', {
               expense.expense_sub_item_id
             )
 
-            console.log('Backend account_name:', expense.account_name)
-            console.log('Full account name for expense', expense.id, ':', fullAccountName)
-            console.log('Expense IDs:', {
-              class: expense.expense_class_id,
-              type: expense.expense_type_id,
-              item: expense.expense_item_id,
-              subitem: expense.expense_sub_item_id
-            })
 
             // Parse the full account name to extract individual components
             const parts = fullAccountName.split(' > ')
@@ -1434,8 +1384,6 @@ export const useDisbursementStore = defineStore('disbursement', {
             const expenseType = parts[1] || ''
             const expenseItem = parts[2] || ''
             const expenseSubItem = parts[3] || ''
-
-            console.log('Parsed parts:', { account, expenseType, expenseItem, expenseSubItem })
 
             return {
               id: expense.id,
@@ -1458,8 +1406,6 @@ export const useDisbursementStore = defineStore('disbursement', {
               expenseSubItem: expenseSubItem,
             }
           })
-
-          console.log('Mapped expenses for view:', mappedExpenses)
 
           // Map reimbursement expenses if they exist
           const mappedReimbursementExpenses = disbursement.reimbursement?.expenses ? 
@@ -1526,21 +1472,6 @@ export const useDisbursementStore = defineStore('disbursement', {
               expenses: mappedReimbursementExpenses
             } : null
           };
-
-          console.log('Final mapped result for ViewOrDetails:', result);
-          console.log('Main disbursement details:', {
-            id: result.id,
-            dvNumber: result.dvNumber,
-            status: result.status,
-            expensesCount: result.expenses?.length || 0
-          });
-          console.log('Reimbursement details:', result.reimbursement ? {
-            id: result.reimbursement.id,
-            dv_number: result.reimbursement.dv_number,
-            ref_dv_number: result.reimbursement.ref_dv_number,
-            status: result.reimbursement.status,
-            expensesCount: result.reimbursement.expenses?.length || 0
-          } : 'No reimbursement');
 
           return result;
         }
@@ -1749,22 +1680,15 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.dialogs.orDetails = false
       this.dialogs.disbursement = false
 
-      console.log('=== openViewOrDetails called ===');
-      console.log('Row data from list:', row);
-      console.log('Row ID:', row.id);
-      console.log('Row DV Number:', row.dvNumber);
-
       // Always fetch fresh data from backend to ensure we have the correct disbursement
       // This prevents issues where the list might show reimbursement data instead of main disbursement
       try {
         const freshDisbursementData = await this.fetchDisbursementForView(row.id);
         if (freshDisbursementData) {
           this.currentLiquidation = freshDisbursementData;
-          console.log('Fresh disbursement data loaded:', this.currentLiquidation);
         } else {
           // Fallback to row data if fetch fails
           this.currentLiquidation = JSON.parse(JSON.stringify(row));
-          console.log('Using fallback row data:', this.currentLiquidation);
         }
       } catch (error) {
         console.error('Error fetching fresh disbursement data:', error);
@@ -1783,23 +1707,17 @@ export const useDisbursementStore = defineStore('disbursement', {
         };
       }
 
-      console.log('Final currentLiquidation data:', this.currentLiquidation);
 
       // Initialize orDetails as empty array
       this.currentLiquidation.orDetails = []
 
       // Ensure expenses are available
       if (!this.currentLiquidation.expenses || this.currentLiquidation.expenses.length === 0) {
-        console.log('No expenses found in row, attempting to fetch disbursement details')
         try {
           const disbursement = await this.fetchDisbursementForView(row.id)
           if (disbursement) {
             this.currentLiquidation.expenses = disbursement.expenses;
             this.currentLiquidation.reimbursement = disbursement.reimbursement;
-            console.log('Loaded expenses from fetchDisbursementForView:', disbursement.expenses);
-            console.log('Loaded reimbursement from fetchDisbursementForView:', disbursement.reimbursement);
-            console.error('Lohjkhjgiew:', disbursement);
-            console.error('LoadghjghjorView:', this.currentLiquidation);
           }
         } catch (error) {
           console.error('Error fetching disbursement details:', error)
@@ -1818,12 +1736,6 @@ export const useDisbursementStore = defineStore('disbursement', {
             throw new Error('Auth store not available')
           }
 
-          console.log('=== Fetching OR Details ===');
-          console.log('Main disbursement ID for OR details:', row.id);
-          console.log('Main disbursement DV Number:', row.dvNumber);
-          console.log('Auth store:', authStore)
-          console.log('Is admin:', authStore.admin)
-
           // Use different endpoints for admin vs regular users
           // IMPORTANT: Always use row.id (main disbursement ID) for OR details
           const endpoint = authStore.admin
@@ -1835,18 +1747,12 @@ export const useDisbursementStore = defineStore('disbursement', {
             throw new Error('No authentication token available')
           }
 
-          console.log('Fetching OR details from:', endpoint)
           const res = await api.get(endpoint, {
             headers: {
               Authorization: `Bearer ${token}`,
               Accept: 'application/json',
             },
           })
-
-          console.log('OR Details response:', res.data)
-          console.log('Response data structure:', res.data)
-          console.log('Data array:', res.data.data)
-          console.log('OR Details count:', res.data.data?.length || 0)
 
           // Check if we have data and it's an array
           if (
@@ -1855,10 +1761,8 @@ export const useDisbursementStore = defineStore('disbursement', {
             Array.isArray(res.data.data) &&
             res.data.data.length > 0
           ) {
-            console.log('Processing OR details for main disbursement ID:', row.id);
             const backendUrl = 'http://localhost:8000' // Change if your backend runs elsewhere
             this.currentLiquidation.orDetails = res.data.data.map((or, index) => {
-              console.log(`Processing OR detail ${index}:`, or)
 
               // Convert YYYY-MM-DD to DD/MM/YYYY format
               let formattedDate = ''
@@ -1882,13 +1786,8 @@ export const useDisbursementStore = defineStore('disbursement', {
                 isExisting: true, // Flag to identify existing OR details
               }
 
-              console.log(`Mapped OR detail ${index}:`, mappedOr)
               return mappedOr
             })
-
-            console.log('Final mapped OR Details:', this.currentLiquidation.orDetails)
-            console.log('OR Details total amount:', this.currentLiquidation.orDetails.reduce((sum, or) => sum + (parseFloat(or.orAmount) || 0), 0));
-
             // Set single remarks from the latest OR detail (most recent one)
             if (res.data.data.length > 0) {
               // Get the latest OR detail (last in the array) for remarks
@@ -1896,7 +1795,6 @@ export const useDisbursementStore = defineStore('disbursement', {
               this.currentLiquidation.remarks = latestOrDetail.remarks || ''
             }
           } else {
-            console.log('No OR details found in response or empty array')
             this.currentLiquidation.orDetails = []
           }
         } catch (error) {
@@ -1905,11 +1803,9 @@ export const useDisbursementStore = defineStore('disbursement', {
           this.currentLiquidation.orDetails = []
         }
       } else {
-        console.log('No row ID provided, initializing empty orDetails')
         this.currentLiquidation.orDetails = []
       }
 
-      console.log('Final currentLiquidation.orDetails:', this.currentLiquidation.orDetails)
       this.dialogs.viewOrDetails = true
     },
 
@@ -2201,15 +2097,11 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Helper method to get expense account name from IDs
     getExpenseAccountName(expenseClassId, expenseTypeId, expenseItemId, expenseSubItemId = null) {
       try {
-        console.log('getExpenseAccountName called with:', { expenseClassId, expenseTypeId, expenseItemId, expenseSubItemId });
-        console.log('Available expenseData:', this.expenseData?.length || 0);
 
         let accountName = ''
 
         // Find expense class - convert IDs to strings for comparison
         const expenseClass = this.expenseData.find((ec) => String(ec.id) === String(expenseClassId))
-        console.log('Found expense class:', expenseClass);
-
         if (expenseClass) {
           accountName = expenseClass.name
 
@@ -2218,7 +2110,6 @@ export const useDisbursementStore = defineStore('disbursement', {
             const expenseType = expenseClass.children.find(
               (et) => String(et.id) === String(expenseTypeId),
             )
-            console.log('Found expense type:', expenseType);
 
             if (expenseType) {
               accountName += ` > ${expenseType.name}`
@@ -2228,28 +2119,20 @@ export const useDisbursementStore = defineStore('disbursement', {
                 const expenseItem = expenseType.children.find(
                   (ei) => String(ei.id) === String(expenseItemId),
                 )
-                console.log('Found expense item:', expenseItem);
 
                 if (expenseItem) {
                   accountName += ` > ${expenseItem.name}`
 
                   // Find expense subitem
                   if (expenseSubItemId && expenseItem.children) {
-                    console.log('Looking for subitem with ID:', expenseSubItemId);
-                    console.log('Available subitems:', expenseItem.children);
 
                     const expenseSubItem = expenseItem.children.find(
                       (esi) => String(esi.id) === String(expenseSubItemId),
                     )
-                    console.log('Found expense subitem:', expenseSubItem);
 
                     if (expenseSubItem) {
                       accountName += ` > ${expenseSubItem.name}`
-                    } else {
-                      console.log('Subitem not found in children');
-                    }
-                  } else {
-                    console.log('No subitem ID provided or no children available');
+                    } 
                   }
                 }
               }
@@ -2257,7 +2140,6 @@ export const useDisbursementStore = defineStore('disbursement', {
           }
         }
 
-        console.log('Final account name:', accountName);
         return accountName || 'Unknown Account'
       } catch (error) {
         console.error('Error getting expense account name:', error)
@@ -2471,8 +2353,6 @@ export const useDisbursementStore = defineStore('disbursement', {
             }
           })
         }
-
-        console.log('-------------------------------steve----------',this.forms.disbursement)
 
         // Refresh balances to reflect current editing context (exclude current disbursement's DB expenses)
         this.refreshExpenseAccountsWithBalances()
@@ -3324,14 +3204,6 @@ async submitVoidRequest() {
         const yyyy = today.getFullYear()
         const formattedDate = `${dd}/${mm}/${yyyy}`
 
-        // Generate unique DV number for reimbursement using proper sequence
-        // Try to get the next available DV number from the backend
-
-        // Get booklet ID with comprehensive fallback
-        const bookletId =
-          reimbursementData.cheque_booklet ||
-          (await this.getDefaultBookletId(reimbursementData.bank_id))
-        console.log('Using booklet ID:', bookletId)
 
         // Calculate total actual expense from OR details
         const totalActualExpense =
@@ -3375,8 +3247,6 @@ async submitVoidRequest() {
             })),
           liquidatedAmount: totalActualExpense,
         }
-
-        console.log('Submitting reimbursement with payload:', JSON.stringify(payload, null, 2))
 
         // Add barangay_id for admin users if selected
         if (authStore.admin) {

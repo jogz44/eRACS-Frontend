@@ -162,10 +162,7 @@ export function useGetters(state) {
   })
 
   const totalExpensesAmount = computed(() => {
-    console.log('totalExpensesAmount getter called')
-    console.log('Augexpenses value:', state.Augexpenses.value)
     if (!state.Augexpenses.value || state.Augexpenses.value.length === 0) {
-      console.log('No expenses, returning 0')
       return 0
     }
     const total = state.Augexpenses.value.reduce((total, expense) => {
@@ -175,41 +172,27 @@ export function useGetters(state) {
           : expense.amount
       return total + (Number(amount) || 0)
     }, 0)
-    console.log('Calculated total:', total)
     return total
   })
 
   const filteredExpenseAccounts = computed(() => {
-    console.log('=== FILTERED EXPENSE ACCOUNTS GETTER ===')
-    console.log('AugexpenseAccounts.value:', state.AugexpenseAccounts.value)
-    console.log('AugexpenseAccounts.value length:', state.AugexpenseAccounts.value?.length)
     
     if (!state.AugexpenseAccounts.value || state.AugexpenseAccounts.value.length === 0) {
-      console.log('No expense accounts available - returning empty array')
       return []
     }
 
     let base = state.AugexpenseAccounts.value
-    console.log('Total expense accounts:', base.length)
-    console.log('Selected expense class:', state.selectedExpenseClass.value)
 
     // Apply expense class filtering when selecting TO expense
     if (state.selectedExpenseClass.value) {
-      console.log('Filtering by expense class:', state.selectedExpenseClass.value)
-      const beforeFilter = base.length
       base = base.filter(item => {
         const matches = item.expense_class === state.selectedExpenseClass.value
-        if (!matches) {
-          console.log('Filtered out:', item.account, 'expense_class:', item.expense_class)
-        }
         return matches
       })
-      console.log('After expense class filtering:', base.length, 'out of', beforeFilter)
     }
 
     // Apply search filtering
     if (!state.expenseSearch.value.trim()) {
-      console.log('No search query, returning filtered results:', base.length)
       return base
     }
 
@@ -219,24 +202,15 @@ export function useGetters(state) {
         item.account.toLowerCase().includes(query) ||
         (item.description && item.description.toLowerCase().includes(query))
     )
-    console.log('After search filtering:', searchFiltered.length)
-    console.log('Final filtered results:', searchFiltered)
-    console.log('=== END FILTERED EXPENSE ACCOUNTS GETTER ===')
     return searchFiltered
   })
 
   const expenseHierarchy = computed(() => {
-    console.log('=== EXPENSE HIERARCHY GETTER ===')
-    console.log('expenseHierarchy.value:', state.expenseHierarchy.value)
-    console.log('expenseHierarchy.value length:', state.expenseHierarchy.value?.length)
     
     if (!state.expenseHierarchy.value || state.expenseHierarchy.value.length === 0) {
-      console.log('No expense hierarchy available - returning empty array')
       return []
     }
 
-    console.log('Returning expense hierarchy:', state.expenseHierarchy.value)
-    console.log('=== END EXPENSE HIERARCHY GETTER ===')
     return state.expenseHierarchy.value
   })
 

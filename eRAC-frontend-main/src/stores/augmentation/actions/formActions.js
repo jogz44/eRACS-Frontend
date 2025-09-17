@@ -111,7 +111,6 @@ export function useFormActions(state) {
       to_expense_data: augExpense.to_expense_data || null
     }
     
-    console.log('Adding expense data:', expenseData)
     
     if (!state.Augexpenses.value) {
       state.Augexpenses.value = []
