@@ -31,7 +31,6 @@ export default defineBoot(({ app }) => {
         if (token) {
           api.defaults.headers.common['Authorization'] = `Bearer ${token}`
           await api.post(endpoint, { timestamp: Date.now() })
-          console.log('💓 Heartbeat sent successfully')
         }
       }
     } catch (error) {
@@ -117,8 +116,6 @@ export default defineBoot(({ app }) => {
     if (isMonitoring) {
       return
     }
-
-    console.log('🟢 Starting activity monitoring for authenticated user')
     isMonitoring = true
     
     // Reset timestamp on user activity

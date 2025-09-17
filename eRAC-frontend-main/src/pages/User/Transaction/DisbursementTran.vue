@@ -714,11 +714,9 @@ const searchQuery = ref('')
 const filteredParticulars = ref(store.particulars)
 
 function filterFn(val, update) {
-  console.log('[filterFn] input value:', val)
 
   if (val === '') {
     update(() => {
-      console.log('[filterFn] reset to all', store.particulars.length, 'items')
       filteredParticulars.value = store.particulars
     })
     return
@@ -727,13 +725,11 @@ function filterFn(val, update) {
   update(() => {
     const needle = val.toLowerCase()
     const results = store.particulars.filter((opt) => opt.label.toLowerCase().includes(needle))
-    console.log('[filterFn] matches:', results.length, 'items')
     filteredParticulars.value = results
   })
 }
 
-watch(filteredParticulars, (val) => {
-  console.log('[watch] filteredParticulars updated:', val.length)
+watch(filteredParticulars, () => {
 })
 
 // Formatting helpers for amount input (kept local to this component)

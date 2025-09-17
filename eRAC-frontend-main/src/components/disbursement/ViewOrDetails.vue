@@ -413,22 +413,16 @@ const copyToClipboard = (text) => {
 }
 
 const totalActualExpense = computed(() => {
-  console.log('=== Actual Expense Calculation ===');
-  console.log('Current liquidation data:', store.currentLiquidation);
-  console.log('Has reimbursement:', !!store.currentLiquidation?.reimbursement);
   
   // If this disbursement has a reimbursement, we need to show the original liquidation values
   // The actual expense should be the same as the DV amount (fully liquidated)
   if (store.currentLiquidation?.reimbursement) {
-    console.log('Disbursement has reimbursement - using DV amount as actual expense');
     const dvAmount = parseFloat(store.currentLiquidation.dvAmount) || 0;
-    console.log('Using DV amount as actual expense:', dvAmount);
     return dvAmount;
   }
   
   // For disbursements without reimbursement, calculate from OR details
   if (!store.currentLiquidation?.orDetails || store.currentLiquidation.orDetails.length === 0) {
-    console.log('No OR details found');
     return 0;
   }
   
@@ -436,11 +430,6 @@ const totalActualExpense = computed(() => {
     (sum, or) => sum + (parseFloat(or.orAmount) || 0),
     0,
   )
-  
-  console.log('OR Details:', store.currentLiquidation.orDetails);
-  console.log('OR Details count:', store.currentLiquidation.orDetails.length);
-  console.log('Calculated total actual expense from OR details:', total);
-  console.log('Main disbursement DV amount:', store.currentLiquidation.dvAmount);
   
   return total
 })
@@ -451,11 +440,6 @@ const totalReturnAmount = computed(() => {
   const returnAmount = store.currentLiquidation.dvAmount - totalActualExpense.value
   // Prevent negative return amounts - if over-liquidation occurs, show 0
   const finalReturnAmount = Math.max(0, returnAmount)
-  
-  console.log('=== Return Amount Calculation ===');
-  console.log('DV Amount:', store.currentLiquidation.dvAmount);
-  console.log('Actual Expense:', totalActualExpense.value);
-  console.log('Calculated return amount:', finalReturnAmount);
   
   return finalReturnAmount
 })
