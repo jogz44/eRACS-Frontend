@@ -2472,6 +2472,8 @@ export const useDisbursementStore = defineStore('disbursement', {
           })
         }
 
+        console.log('-------------------------------steve----------',this.forms.disbursement)
+
         // Refresh balances to reflect current editing context (exclude current disbursement's DB expenses)
         this.refreshExpenseAccountsWithBalances()
       } catch (error) {
