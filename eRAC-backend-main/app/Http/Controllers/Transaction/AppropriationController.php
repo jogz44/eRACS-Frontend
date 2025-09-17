@@ -2106,10 +2106,7 @@ class AppropriationController extends Controller
                 'budget_type' => $budget->budget_type->value
             ]);
 
-            // Create appropriations for each expense source
-            $createdAppropriations = [];
-            $sourceBudgets = []; // Track source budgets to update their current_amount
-            
+            // Transfer funds from source appropriations to supplemental budget
             foreach ($request->expense_sources as $source) {
                 $sourceAppropriation = TranAppropriation::find($source['appropriation_id']);
                 
@@ -2130,15 +2127,8 @@ class AppropriationController extends Controller
                     'remaining_after' => $sourceAppropriation->amount - $source['amount']
                 ]);
 
-                // Reduce the source appropriation amount FIRST
+                // Reduce the source appropriation amount
                 $sourceAppropriation->decrement('amount', $source['amount']);
-                
-                // Track the source budget for current_amount update
-                $sourceBudgetId = $sourceAppropriation->budget_id;
-                if (!isset($sourceBudgets[$sourceBudgetId])) {
-                    $sourceBudgets[$sourceBudgetId] = 0;
-                }
-                $sourceBudgets[$sourceBudgetId] += $source['amount'];
                 
                 // Log after reduction
                 \Log::info('After reducing source appropriation:', [
@@ -2147,40 +2137,19 @@ class AppropriationController extends Controller
                     'reduction_amount' => $source['amount']
                 ]);
 
-                // Create new appropriation for supplemental budget - this will be unappropriated (not tied to specific expense account)
-                $newAppropriation = TranAppropriation::create([
-                    'barangay_id' => $barangayId,
-                    'budget_id' => $budget->id,
-                    'expense_class_id' => null, // Not tied to specific expense class
-                    'expense_type_id' => null,  // Not tied to specific expense type
-                    'expense_item_id' => null,  // Not tied to specific expense item
-                    'expense_sub_item_id' => null, // Not tied to specific expense sub-item
-                    'amount' => $source['amount'],
-                    'transaction_date' => now(),
-                    'status' => 'committed',
-                    'user_id' => $request->user('barangay')->id ?? $request->user('admin')->id
-                ]);
-
-                $createdAppropriations[] = $newAppropriation;
-
-                \Log::info('Created supplemental appropriation (unappropriated):', [
+                \Log::info('Funds transferred to supplemental budget:', [
                     'source_id' => $sourceAppropriation->id,
                     'source_amount_before' => $sourceAppropriation->amount + $source['amount'],
                     'source_amount_after' => $sourceAppropriation->amount,
-                    'deducted_amount' => $source['amount'],
-                    'new_appropriation_id' => $newAppropriation->id,
-                    'new_appropriation_amount' => $newAppropriation->amount,
-                    'note' => 'This appropriation is unappropriated and not tied to any specific expense account - available for general allocation'
+                    'transferred_amount' => $source['amount'],
+                    'note' => 'Funds transferred to supplemental budget - no tran_appropriations entry created for supplemental budget'
                 ]);
             }
 
-            // Note: We do NOT decrement the source budget's current_amount during transfer
-            // because the funds are being moved to supplemental budget, not spent
-            // The annual budget should retain its unappropriated amount
             \Log::info('Transfer completed - funds moved to supplemental budget:', [
-                'source_budgets_affected' => array_keys($sourceBudgets),
-                'total_transferred' => array_sum($sourceBudgets),
-                'note' => 'Annual budget current_amount unchanged - funds moved, not spent'
+                'total_transferred' => $totalAmount,
+                'supplemental_budget_id' => $budget->id,
+                'note' => 'Funds transferred to supplemental budget - no tran_appropriations entries created for supplemental budget'
             ]);
 
             // Log the creation
@@ -2198,7 +2167,7 @@ class AppropriationController extends Controller
             \Log::info('Supplemental budget creation completed successfully:', [
                 'budget_id' => $budget->id,
                 'total_amount' => $totalAmount,
-                'created_appropriations' => count($createdAppropriations),
+                'funds_transferred' => $totalAmount,
                 'transaction_committed' => true
             ]);
 
@@ -2207,7 +2176,7 @@ class AppropriationController extends Controller
                 'message' => 'Supplemental budget created successfully',
                 'data' => [
                     'budget' => $budget,
-                    'appropriations' => $createdAppropriations
+                    'transferred_amount' => $totalAmount
                 ]
             ], 201);
             } catch (\Exception $e) {
@@ -2376,3 +2345,4 @@ class AppropriationController extends Controller
         return implode(' > ', $parts);
     }
 }
+

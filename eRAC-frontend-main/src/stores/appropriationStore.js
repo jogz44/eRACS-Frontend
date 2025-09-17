@@ -105,8 +105,8 @@ export const useAppropriationStore = defineStore("appropriation", {
       // Use existingAllocationsTotal instead of totalAllocated for accurate calculation
       const existingAllocated = state.existingAllocationsTotal || 0
       const result = Math.round((total - existingAllocated) * 100) / 100
-      
-      
+
+
       return result
     },
 
@@ -136,20 +136,18 @@ export const useAppropriationStore = defineStore("appropriation", {
           if (state.selectedBudgetType === 'annual') {
             return description.includes('annual')
           } else if (state.selectedBudgetType === 'supplemental') {
-            // For supplemental budgets, only show those with unappropriated amount > 0
-            return description.includes('supplemental') && (item.unappropriated || 0) > 0
+            // For supplemental budgets, show all regardless of unappropriated amount
+            return description.includes('supplemental')
           }
           return true
         })
       } else {
-        // For 'all' view, filter out supplemental budgets with zero unappropriated amount
-        results = results.filter((item) => {
-          const description = item.description?.toLowerCase() || ''
-          if (description.includes('supplemental')) {
-            return (item.unappropriated || 0) > 0
-          }
-          return true
-        })
+        // For 'all' view, show all budgets including supplemental budgets with zero unappropriated amount
+        // results = results.filter((item) => {
+        //   const description = item.description?.toLowerCase() || ''
+        //   // Show all budgets regardless of unappropriated amount
+        //   return true
+        // })
       }
 
       // Date filtering (inclusive)
@@ -204,7 +202,7 @@ export const useAppropriationStore = defineStore("appropriation", {
         }
 
         this.showAllocationDialog = true
-        
+
       } catch (error) {
         console.error("[ERROR] in openAllocationDialog:", {
           error: error.message,
@@ -290,15 +288,15 @@ export const useAppropriationStore = defineStore("appropriation", {
             newBudget.barangay_id = selectedBarangay
           }
         }
-        
+
         // Admin users cannot create budgets - only view
         if (this.authStore.admin) {
           throw new Error('Admin users cannot create budgets')
         }
-        
+
         const endpoint = "/api/barangay/budgets/create"
         const token = this.authStore.token
-        
+
         const response = await api.post(endpoint, newBudget, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -331,7 +329,7 @@ export const useAppropriationStore = defineStore("appropriation", {
       try {
         const currentYear = new Date().getFullYear()
         const params = { year: currentYear }
-        
+
         // Add barangay filter for admin users
         if (this.authStore.admin) {
           const selectedBarangayId = this.authStore.getSelectedBarangay()
@@ -339,11 +337,11 @@ export const useAppropriationStore = defineStore("appropriation", {
             params.barangay_id = selectedBarangayId
           }
         }
-        
+
         // Use different endpoints for admin vs regular users
         const endpoint = this.authStore.admin ? "/api/admin/budgets" : "/api/barangay/budgets"
         const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
-        
+
         const response = await api.get(endpoint, {
           params: params,
           headers: {
@@ -395,9 +393,9 @@ export const useAppropriationStore = defineStore("appropriation", {
       try {
         // Use admin token if admin is logged in
         const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
-        
+
         let fiscalYear = null
-        
+
         if (this.authStore.admin) {
           // For admin users, we don't need to fetch expense hierarchy since they only view data
           // Set empty allocations to prevent errors
@@ -454,7 +452,7 @@ export const useAppropriationStore = defineStore("appropriation", {
         // Use different endpoints for admin vs regular users
         const endpoint = this.authStore.admin ? `/api/admin/budgets/${budgetId}/allocations` : `/api/barangay/budgets/${budgetId}/allocations`
         const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
-        
+
         const response = await api.get(endpoint, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -584,7 +582,7 @@ export const useAppropriationStore = defineStore("appropriation", {
         if (this.authStore.admin) {
           throw new Error('Admin users cannot commit allocations')
         }
-        
+
         const endpoint = `/api/barangay/budgets/${budgetId}/allocate`
         const token = this.authStore.token
 
@@ -733,7 +731,7 @@ export const useAppropriationStore = defineStore("appropriation", {
         // Use different endpoints for admin vs regular users
         const endpoint = this.authStore.admin ? `/api/admin/budgets/${id}/history` : `/api/barangay/budgets/${id}/history`
         const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
-        
+
         const response = await api.get(endpoint, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -910,7 +908,7 @@ export const useAppropriationStore = defineStore("appropriation", {
     async fetchFiscalYears() {
       try {
         const token = this.authStore.admin ? this.authStore.adminToken : this.authStore.token
-        
+
         if (this.authStore.admin) {
           // For admin users, provide current year and "All Years" option
           const currentYear = new Date().getFullYear()
@@ -920,7 +918,7 @@ export const useAppropriationStore = defineStore("appropriation", {
           ]
           return
         }
-        
+
         // For barangay users, fetch from barangay endpoint
         const response = await api.get("/api/barangay/fiscal-years", {
           headers: {
@@ -929,7 +927,7 @@ export const useAppropriationStore = defineStore("appropriation", {
             Accept: "application/json",
           },
         })
-        
+
         const fiscalYears = Array.isArray(response.data) ? response.data : response.data.data || []
         this.fiscalYears = fiscalYears.map(fy => ({
           year: fy.year.toString(),

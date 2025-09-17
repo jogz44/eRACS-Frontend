@@ -624,7 +624,7 @@
                 no-caps
               />
 
-              <q-btn
+              <!-- <q-btn
                 unelevated
                 icon="print"
                 label="Print"
@@ -632,7 +632,7 @@
                 @click="handleRACPrint"
                 size="sm"
                 no-caps
-              />
+              /> -->
 
               <q-btn flat icon="close" @click="closeRACModal" color="#666" size="md">
                 <q-tooltip>Close</q-tooltip>
@@ -1164,11 +1164,11 @@ const handleSACBPrint = () => {
   notifySuccess('Report sent to printer successfully!')
 }
 
-const handleRACPrint = () => {
-  logAdminActivity('Report Printed', `Printed ${RACModal.reportType} report`)
-  closeRACModal()
-  notifySuccess('Report sent to printer successfully!')
-}
+// const handleRACPrint = () => {
+//   logAdminActivity('Report Printed', `Printed ${RACModal.reportType} report`)
+//   closeRACModal()
+//   notifySuccess('Report sent to printer successfully!')
+// }
 // Cur-Rac Date range
 const onDateRangeChange = (newRange) => {
   CurrentRacDateRange.value = newRange
