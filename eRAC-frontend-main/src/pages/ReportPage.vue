@@ -1533,6 +1533,7 @@ onActivated(async () => {
 
 /* Card styling */
 .report-card {
+  min-height: 280px;
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border: 1px solid #e8e8e8;
