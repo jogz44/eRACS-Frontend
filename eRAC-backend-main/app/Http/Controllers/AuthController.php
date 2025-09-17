@@ -7,6 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use App\Models\BarangayUser;
 use App\Models\Barangay;
+use App\Services\OtpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -19,7 +20,13 @@ use App\Http\Controllers\AdminAuthController;
 
 class AuthController extends Controller
 {
+    
+    protected $otp;
 
+    public function __construct(OtpService $otp)
+    {
+        $this->otp = $otp;
+    }
      public function index()
 
     {
@@ -41,8 +48,15 @@ public function register(Request $request)
         'username' => 'required|string|max:255|unique:barangay_users',
         'password' => 'required|string|min:8|confirmed',
         'photo_path' => 'required|string',
-        'is_approved' => 'sometimes|boolean'
+        'otp' => 'required|string'
     ]);
+
+    if (! $this->otp->verify($validated['email'], $validated['otp'])) {
+        return response()->json([
+            'status'  => 'error',
+            'message' => 'Incorrect OTP',
+        ], 400);
+    }
 
     $user = BarangayUser::create([
         'first_name' => $validated['first_name'],
@@ -55,7 +69,7 @@ public function register(Request $request)
         'username' => $validated['username'],
         'password' => Hash::make($validated['password']),
         'photo_path' => $validated['photo_path'],
-        'is_approved' => false, // Set to false by default - requires admin approval
+        'is_approved' => false,
         'role' => 'barangay_user'
     ]);
 

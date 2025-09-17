@@ -19,37 +19,44 @@ class OtpService
         // (1) Generate OTP
         $pass = "";
         $characters = "0123456789";
-        for ($i = 0; $i < config('otp.length', 6); $i++) {
-            $pass .= $characters[rand(0, strlen($characters) - 1)];
-        }
+
+        // for ($i = 0; $i < config('otp.length', 6); $i++) {
+        //     $pass .= $characters[rand(0, strlen($characters) - 1)];
+        // }
+        $pass = "000000";
 
         // (2) Store OTP in DB (hashed)
         Otp::updateOrCreate(
             ['email' => $email],
-            ['pass' => bcrypt($pass), 'timestamp' => Carbon::now()]
+            [
+                'pass'      => bcrypt($pass),
+                'timestamp' => Carbon::now(),
+            ]
         );
 
         // (3) Send via PHPMailer
         $mail = new PHPMailer(true);
+
         try {
             $mail->isSMTP();
-            $mail->Host = 'smtp.gmail.com';
-            $mail->SMTPAuth = true;
-            $mail->Username = env('MAIL_USERNAME');
-            $mail->Password = env('MAIL_PASSWORD'); // App password
+            $mail->Host       = 'smtp.gmail.com';
+            $mail->SMTPAuth   = true;
+            $mail->Username   = 'mahusayjograd@gmail.com'; // SMTP username
+            $mail->Password   = 'mfdp feje aill bgcy'; // SMTP password
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->Port = 587;
+            $mail->Port       = 587;
 
-            $mail->setFrom(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME', 'PEESO WEB APP'));
+            //Recipients
+            $mail->setFrom('mahusayjograd@gmail.com', 'eRACS WEB APP');
+            $mail->addAddress($email);
             $mail->addAddress($email);
 
             $mail->isHTML(true);
-            $mail->Subject = 'PEESO WEB APP REGISTRATION';
-            $mail->Body    = "Your OTP is <b>$pass</b>. Enter at <a href='" . url('/challenge') . "'>PEESO</a>.";
+            $mail->Subject = 'eRACS REGISTRATION';
+            $mail->Body    = "Your OTP is <b>$pass</b>. Enter at <a href='" . url('/challenge') . "'>eRACS</a>.";
             $mail->AltBody = "Your OTP is $pass. Enter at " . url('/challenge');
 
             $mail->send();
-
             return true;
         } catch (Exception $e) {
             $this->error = "Failed to send OTP email. Mailer Error: {$mail->ErrorInfo}";
