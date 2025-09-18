@@ -656,6 +656,7 @@ const handleLogout = async () => {
                           } catch (error) {
                             console.error('Error saving barangay selection:', error)
                           }
+
                         } else {
                           localStorage.removeItem('admin_selected_barangay')
                           localStorage.removeItem('admin_selected_barangay_name')
