@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Admin;
 use App\Models\Barangay;
 use App\Models\BarangayUser;
+use App\Models\Budget;
 
 //use Symfony\Component\HttpFoundation\Cookie;
 
@@ -534,19 +535,56 @@ class AdminAuthController extends Controller  // <-- This is crucial
                     $q2->where('year', now()->year);
                 });
             }])
+            ->with(['disbursement' => function ($q) {
+                $q->whereYear('date', now()->year);
+            }])
             ->get()
             ->map(function ($barangay) {
-                $totalOriginal = $barangay->budget->sum('original_amount');
-                $totalCurrent = $barangay->budget->sum('current_amount');
+                $totalAnnual = $barangay->budget->where('budget_type', 'annual')->sum('original_amount');
+                $totalSupplemental = $barangay->budget->where('budget_type', 'supplemental')->sum('original_amount');
+                $totalExpenses= $barangay->disbursement->sum('dv_amount');
                 $totalEntries = $barangay->budget->count();
+
+                $query = Budget::with(['tranAppropriations', 'fiscalYear']);
+                $query->where('barangay_id', $barangay->id);
+
+                $query->whereHas('fiscalYear', function($q) {
+                    $q->where('year', now()->year);
+                });
+                $budgets = $query->get();
+
+                $totalAppropriation = $budgets
+                    ->filter(function ($budget) {
+                        // ✅ Always pull the raw column, not the relation
+                        $budgetType = strtolower((string) $budget->getRawOriginal('budget_type'));
+                        $description = strtolower((string) $budget->description);
+
+                        return str_contains($description, 'annual') || $budgetType === 'annual';
+                    })
+                    ->reduce(function ($sum, $budget) {
+                        return $sum + (float) $budget->original_amount + (float) $budget->augmentation;
+                    }, 0);
+
+
+                // 2. totalObligation → allocations from all budgets
+                $totalObligation = $budgets->reduce(function($sum, $budget) {
+                    return $sum + $budget->tranAppropriations->sum('amount');
+                }, 0);
+
+                // 3. totalBalance
+                $totalBalance = $totalAppropriation - $totalObligation;
+
+                // 4. totalExpense
+                $totalBalance = $totalObligation - $totalBalance;
 
                 return [
                     'id' => $barangay->id,
                     'barangay_name' => $barangay->name,
-                    'total_original_amount' => number_format($totalOriginal, 2, '.', ''),
-                    'total_current_amount' => number_format($totalCurrent, 2, '.', ''),
-                    'total_budget_entries' => $totalEntries,
-                    $barangay->budget
+                    'total_budget' => number_format($totalAnnual, 2, '.', ''),
+                    'total_supp' => number_format($totalSupplemental, 2, '.', ''),
+                    'total_expenses' => number_format($totalExpenses, 2, '.', ''),
+                    'total_entries' => $totalEntries,
+                    'total_balance' => number_format($totalBalance, 2, '.', ''),
                 ];
             })
             ->sortBy('barangay_name')

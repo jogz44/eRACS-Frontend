@@ -59,9 +59,9 @@
               ₱{{ props.row.budget }}
             </q-td>
           </template>
-          <template v-slot:body-cell-appropriation="props">
+          <template v-slot:body-cell-expenses="props">
             <q-td :props="props">
-              ₱{{ props.row.appropriation }}
+              ₱{{ props.row.expenses }}
             </q-td>
           </template>
           <template v-slot:body-cell-balance="props">
@@ -86,12 +86,14 @@ export default {
     const barangaySummary = ref([])
     const isLoading = ref(true)
     const totalBudget = ref(0)
+    const totalSupplemental = ref(0)
     const totalExpenses = ref(0)
     const totalBalance = ref(0)
     const refreshInterval = ref(null)
 
     const selectedData = computed(() => ({
       budget: totalBudget.value.toLocaleString(undefined, { minimumFractionDigits: 2 }),
+      supple: totalSupplemental.value.toLocaleString(undefined, { minimumFractionDigits: 2 }),
       expenses: totalExpenses.value.toLocaleString(undefined, { minimumFractionDigits: 2 }),
       balance: totalBalance.value.toLocaleString(undefined, { minimumFractionDigits: 2 })
     }))
@@ -99,7 +101,8 @@ export default {
     const summaryColumns = [
       { name: 'barangay', label: 'Barangay', align: 'left', field: 'barangay' },
       { name: 'budget', label: 'Total Budget', align: 'right', field: 'budget' },
-      { name: 'appropriation', label: 'Total Expenses', align: 'right', field: 'appropriation' },
+      { name: 'supplemental', label: 'Total Supplemental', align: 'right', field: 'supplemental' },
+      { name: 'expenses', label: 'Total Expenses', align: 'right', field: 'expenses' },
       { name: 'balance', label: 'Total Balance', align: 'right', field: 'balance' }
     ]
 
@@ -112,29 +115,36 @@ export default {
 
         // Calculate totals
         let budgetSum = 0
+        let suppleSum = 0 
+        let expensesSum = 0 
         let balanceSum = 0
 
         barangaySummary.value = response.data.map((b) => {
-          const budget = parseFloat(b.total_original_amount || '0')
-          const balance = parseFloat(b.total_current_amount || '0')
-          const expenses = budget - balance
+          const budget = parseFloat(b.total_budget || '0')
+          const suppl = parseFloat(b.total_supp || '0')
+          const expenses = parseFloat(b.total_expenses || '0')
+          const balance = parseFloat(b.total_balance || '0')
 
           // Add to sums
           budgetSum += budget
+          suppleSum += suppl
+          expensesSum += expenses
           balanceSum += balance
 
           return {
             barangay: b.barangay_name || 'Unknown',
             budget: budget.toLocaleString(undefined, { minimumFractionDigits: 2 }),
-            appropriation: expenses.toLocaleString(undefined, { minimumFractionDigits: 2 }),
+            supplemental: suppl.toLocaleString(undefined, { minimumFractionDigits: 2 }),
+            expenses: expenses.toLocaleString(undefined, { minimumFractionDigits: 2 }),
             balance: balance.toLocaleString(undefined, { minimumFractionDigits: 2 })
           }
         })
 
         // Update the totals
         totalBudget.value = budgetSum
+        totalSupplemental.value = suppleSum
+        totalExpenses.value = expensesSum
         totalBalance.value = balanceSum
-        totalExpenses.value = budgetSum - balanceSum
 
       } catch (error) {
         console.error('API error:', error)

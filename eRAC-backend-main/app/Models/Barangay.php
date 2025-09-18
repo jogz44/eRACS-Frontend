@@ -41,6 +41,11 @@ class Barangay extends Model
     {
         return $this->hasMany(TranAppropriation::class);
     }
+    
+    public function disbursement()
+    {
+        return $this->hasMany(Disbursement::class);
+    }
 
     // Helper to get all barangays for dropdown
     public static function dropdown()
