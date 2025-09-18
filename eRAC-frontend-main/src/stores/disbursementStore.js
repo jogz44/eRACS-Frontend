@@ -1625,7 +1625,31 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     async openOrDetailsDialog(item) {
-      this.currentLiquidation = JSON.parse(JSON.stringify(item))
+      // Always fetch fresh data from backend to ensure we have the complete disbursement with expenses
+      try {
+        const freshDisbursementData = await this.fetchDisbursementForView(item.id);
+        if (freshDisbursementData) {
+          this.currentLiquidation = freshDisbursementData;
+        } else {
+          // Fallback to item data if fetch fails
+          this.currentLiquidation = JSON.parse(JSON.stringify(item));
+        }
+      } catch (error) {
+        console.error('Error fetching fresh disbursement data:', error);
+        // Fallback: create a new object with the essential properties
+        this.currentLiquidation = {
+          id: item.id,
+          dvNumber: item.dvNumber,
+          payee: item.payee,
+          date: item.date,
+          dvAmount: item.dvAmount,
+          status: item.status,
+          remarks: item.remarks,
+          rejection_remarks: item.rejection_remarks,
+          expenses: item.expenses || [],
+          orDetails: []
+        };
+      }
 
       // Fetch existing OR Details from backend if this is a partial liquidation
       if (item.id && item.status === 'Partial') {

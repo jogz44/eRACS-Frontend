@@ -99,6 +99,36 @@
         </div>
       </q-card-section>
 
+           <!-- Expense Accounts Section -->
+      <q-card-section v-if="expenseAccounts.length > 0">
+        <div class="text-subtitle1 q-mb-md">
+          <strong>Expense Accounts:</strong>
+        </div>
+
+        <!-- Expense Accounts Table -->
+        <q-table
+          :rows="expenseAccounts"
+          :columns="expenseAccountColumns"
+          row-key="id"
+          :pagination="{ rowsPerPage: 5 }"
+          flat
+          bordered
+        >
+          <template v-slot:body-cell-account="props">
+            <q-td :props="props">
+              <div class="expense-account-hierarchy">
+                {{ props.row.accountName || props.row.account_name || `${props.row.account || ''}${props.row.expenseType ? ` > ${props.row.expenseType}` : ''}${props.row.expenseItem ? ` > ${props.row.expenseItem}` : ''}${props.row.expenseSubItem ? ` > ${props.row.expenseSubItem}` : ''}` }}
+              </div>
+            </q-td>
+          </template>
+          <template v-slot:body-cell-amount="props">
+            <q-td :props="props">
+              {{ formatCurrency(props.value) }}
+            </q-td>
+          </template>
+        </q-table>
+      </q-card-section>
+
       <!-- Liquidation Details Section -->
       <q-card-section>
         <div class="row items-center q-mb-md">
@@ -246,6 +276,8 @@
           </div>
         </div>
       </q-card-section>
+
+
 
       <q-card-actions align="right" class="custom-actions">
         <q-btn
@@ -398,6 +430,18 @@
           />
         </div>
 
+        <!-- Auto-selection notification -->
+        <div v-if="selectedReimbursementExpenseAccounts.length > 0 && isAutoSelected" class="q-mb-md">
+          <q-banner class="bg-blue-1 text-blue-8" rounded>
+            <template v-slot:avatar>
+              <q-icon name="info" color="blue" />
+            </template>
+            <div class="text-body2">
+              <strong>Auto-selected from original disbursement:</strong> The expense accounts from the original disbursement have been pre-selected for your convenience. You can modify the amounts or add additional accounts as needed.
+            </div>
+          </q-banner>
+        </div>
+
         <!-- Selected Expense Accounts Table -->
         <q-table
           :rows="selectedReimbursementExpenseAccounts"
@@ -407,6 +451,19 @@
           flat
           bordered
         >
+          <template v-slot:body-cell-action="props">
+            <q-td :props="props">
+              <q-btn
+                dense
+                flat
+                round
+                icon="remove"
+                color="red"
+                @click="removeReimbursementExpenseAccount(props.row)"
+                title="Remove this expense account"
+              />
+            </q-td>
+          </template>
           <template v-slot:body-cell-amount="props">
             <q-td :props="props" class="text-right">
               <div class="flex justify-end">
@@ -614,9 +671,46 @@ const selectedReimbursementExpenseAccounts = ref([])
 const selectedReimbursementOrs = ref([])
 const availableOrNumbers = ref([])
 const showExpenseAccountDialog = ref(false)
+const isAutoSelected = ref(false)
 
 const store = useDisbursementStore()
 const bankStore = useBankStore()
+
+// Table columns for Expense Accounts - using single account column to avoid overlapping
+const expenseAccountColumns = [
+  {
+    name: 'id',
+    label: 'ID',
+    field: 'id',
+    align: 'left',
+    sortable: true,
+    style: 'width: 60px;',
+  },
+  {
+    name: 'account',
+    label: 'Expense Account',
+    field: 'accountName',
+    align: 'left',
+    sortable: true,
+    style: 'min-width: 400px;',
+  },
+  {
+    name: 'amount',
+    label: 'Amount',
+    field: 'amount',
+    align: 'right',
+    sortable: true,
+    style: 'width: 120px;',
+  },
+  {
+    name: 'particular',
+    label: 'Particular',
+    field: 'particular',
+    align: 'left',
+    sortable: true,
+    style: 'min-width: 200px;',
+  },
+]
 
 // Initialize OR Details when dialog opens
 function initializeOrDetails() {
@@ -717,6 +811,30 @@ watch(
         await store.refreshExpenseAccountsWithBalances()
       }
 
+      // Auto-select the original disbursement's expense accounts for reimbursement
+      if (store.currentLiquidation?.expenses && store.currentLiquidation.expenses.length > 0) {
+        selectedReimbursementExpenseAccounts.value = store.currentLiquidation.expenses.map((expense) => ({
+          ...expense,
+          accountName: expense.accountName || expense.account_name || `${expense.account || ''}${expense.expenseType ? ` > ${expense.expenseType}` : ''}${expense.expenseItem ? ` > ${expense.expenseItem}` : ''}${expense.expenseSubItem ? ` > ${expense.expenseSubItem}` : ''}`,
+          amount: '', // Leave amount empty for user to fill
+        }))
+
+        // Set auto-selection flag
+        isAutoSelected.value = true
+
+        // Show notification that original accounts were auto-selected
+        $q.notify({
+          type: 'info',
+          message: `Auto-selected ${store.currentLiquidation.expenses.length} expense account(s) from original disbursement`,
+          icon: 'info',
+          position: 'top',
+          timeout: 3000,
+        })
+      } else {
+        // Reset auto-selection flag if no original expenses
+        isAutoSelected.value = false
+      }
+
       // Populate selected ORs with all OR details
       selectedReimbursementOrs.value = store.currentLiquidation.orDetails.map((or) => ({
         ...or,
@@ -764,6 +882,11 @@ const orDetailsCount = computed(() => {
   return store.currentLiquidation?.orDetails?.length || 0
 })
 
+// Get expense accounts from current liquidation
+const expenseAccounts = computed(() => {
+  return store.currentLiquidation?.expenses || store.currentLiquidation?.expense_accounts || []
+})
+
 // Reimbursement computed properties
 const currentReimbursementBankLabel = computed(() => {
   if (selectedReimbursementBank.value) {
@@ -787,6 +910,14 @@ const selectedExpenseAccountColumns = computed(() => [
     field: 'amount',
     align: 'right',
     sortable: true,
+  },
+  {
+    name: 'action',
+    label: 'Action',
+    field: 'action',
+    align: 'center',
+    sortable: false,
+    style: 'width: 80px;',
   },
 ])
 
@@ -1180,6 +1311,13 @@ const addExpenseAccount = (account) => {
   showExpenseAccountDialog.value = false
 }
 
+const removeReimbursementExpenseAccount = (account) => {
+  const index = selectedReimbursementExpenseAccounts.value.findIndex((acc) => acc.id === account.id)
+  if (index !== -1) {
+    selectedReimbursementExpenseAccounts.value.splice(index, 1)
+  }
+}
+
 const handleSubmitReimbursement = async () => {
   savingReimbursement.value = true
   try {
@@ -1340,6 +1478,7 @@ const resetReimbursementForm = () => {
   reimbursementDvNumber.value = ''
   selectedReimbursementExpenseAccounts.value = []
   selectedReimbursementOrs.value = []
+  isAutoSelected.value = false
 }
 
 const handleSaveOrDetails = async () => {
@@ -1524,7 +1663,7 @@ const handlePasteNumeric = (event) => {
     finalText += '.' + parts.slice(1).join('').substring(0, 2)
   }
   event.target.value = finalText
-  
+
   // Find the OR detail that this input belongs to and update it
   const inputElement = event.target
   const orDetailIndex = Array.from(inputElement.closest('.q-card-section').querySelectorAll('input[prefix="₱"]')).indexOf(inputElement)
@@ -1562,10 +1701,43 @@ const handlePasteToTwoDecimals = (event, applyValue) => {
   color: #666;
 }
 
+/* Expense account hierarchy styling */
+.expense-account-hierarchy {
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: break-word;
+  white-space: normal;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+/* Table styling to prevent overlapping */
+.q-table .q-td {
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  padding: 8px 12px !important;
+}
+
+.q-table .q-th {
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  padding: 8px 12px !important;
+}
+
 /* Responsive design for mobile */
 @media (max-width: 768px) {
   .q-card {
     min-width: 95vw !important;
+  }
+
+  .q-table {
+    font-size: 12px;
+  }
+
+  .expense-account-hierarchy {
+    font-size: 11px;
+    max-width: 250px;
   }
 }
 </style>
