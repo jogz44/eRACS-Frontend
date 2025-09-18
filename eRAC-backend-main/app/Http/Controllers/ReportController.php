@@ -224,9 +224,12 @@ class ReportController extends Controller
 
         $q = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem', 'expenseSubItem','details.disbursement'])
             ->when($barangayId, fn($qq) => $qq->where('barangay_id', $barangayId))
-            ->whereHas('details.disbursement', function($query) use ($data) {
-                $query->whereDate('date', '>=', $data['from'])
-                      ->whereDate('date', '<=', $data['to']);
+            ->where(function ($query) use ($data) {
+                $query->whereHas('details.disbursement', function($q2) use ($data) {
+                    $q2->whereDate('date', '>=', $data['from'])
+                    ->whereDate('date', '<=', $data['to']);
+                })
+                ->orDoesntHave('details.disbursement'); // include those without disbursements
             });
 
         $rows = $q->orderBy('transaction_date')->get()->map(function($o) use ($data) {

@@ -3,9 +3,15 @@
 # Accept: application/json
 
 
-GET http://localhost:8000/api/admin/per-barangay-budgets
-Authorization: Bearer 
+GET http://localhost:8000/api/barangay/report/sacb
+Authorization: Bearer 1|QVRs6ExHDDv5NS5jFdMwKcuJoHMcjAuPYuPWSLESb6364732
 Accept: application/json
+Content-Type: application/json
+
+{
+    "from": "2025-01-01",
+    "to": "2025-08-08"
+}
 
 ### Generate OTP
 # POST http://localhost:8000/api/barangay/otp/generate
