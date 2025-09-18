@@ -5,7 +5,7 @@
         <div>
           <div class="text-h6 text-weight-medium">Supplemental Budget</div>
           <div class="text-caption text-grey-7">
-            Create supplemental budgets from unused expenses
+            {{ isAdmin ? 'View supplemental budgets submitted by barangays' : 'Create supplemental budgets from unused expenses' }}
           </div>
         </div>
         <q-btn
@@ -71,15 +71,12 @@
           <!-- Flexible spacer -->
           <div class="col"></div>
 
-          <!-- Selected Count Indicator and Proceed Transfer Button -->
-          <div class="col-auto">
+          <!-- Selected Count Indicator and Proceed Transfer Button (hidden for admin view-only) -->
+          <div class="col-auto" v-if="!isAdmin">
             <div class="row items-center q-gutter-sm">
-              <!-- Selected Count Indicator -->
               <div v-if="selectedExpenses.length > 0" class="text-caption text-grey-7">
                 {{ selectedExpenses.length }} selected
               </div>
-
-              <!-- Proceed Transfer Button -->
               <q-btn
                 dense
                 color="primary"
@@ -121,7 +118,7 @@
         align="justify"
         narrow-indicator
       >
-        <q-tab name="unused" label="Available Unused Expenses" />
+        <q-tab v-if="!isAdmin" name="unused" label="Available Unused Expenses" />
         <q-tab name="supplemental" label="Supplemental Budgets" />
       </q-tabs>
 
@@ -129,12 +126,12 @@
 
       <q-tab-panels v-model="activeTab" animated>
         <!-- Unused Expenses Tab -->
-        <q-tab-panel name="unused">
+        <q-tab-panel v-if="!isAdmin" name="unused">
              <q-table
         :rows="filteredExpenses"
         :columns="columns"
         row-key="id"
-        selection="multiple"
+        :selection="isAdmin ? undefined : 'multiple'"
         v-model:selected="selectedExpenses"
         :pagination="pagination"
         v-model:pagination="pagination"
@@ -144,11 +141,11 @@
         flat
         bordered
       >
-        <template v-slot:header-selection="scope">
+        <template v-if="!isAdmin" v-slot:header-selection="scope">
           <q-checkbox color="primary" v-model="scope.selected" />
         </template>
 
-        <template v-slot:body-selection="scope">
+        <template v-if="!isAdmin" v-slot:body-selection="scope">
           <q-checkbox color="primary" v-model="scope.selected" />
         </template>
 
@@ -190,7 +187,7 @@
         </template>
 
         <!-- Added amount input column to main table -->
-        <template v-slot:body-cell-amount_to_use="props">
+        <template v-if="!isAdmin" v-slot:body-cell-amount_to_use="props">
           <q-td :props="props">
             <q-input
               :model-value="formatInputValue(props.row.amount_to_use)"
@@ -283,6 +280,21 @@
 
               </q-td>
 
+            </template>
+
+            <!-- Review/Remarks column content -->
+            <template v-slot:body-cell-remarks="props">
+              <q-td :props="props">
+                <q-btn
+                  v-if="isAdmin"
+                  dense
+                  :icon="isReviewed(props.row.id) ? 'check' : 'rate_review'"
+                  :label="isReviewed(props.row.id) ? 'Reviewed' : 'Review'"
+                  :color="isReviewed(props.row.id) ? 'positive' : 'primary'"
+                  :outline="!isReviewed(props.row.id)"
+                  @click="isReviewed(props.row.id) ? showRemarksDialog(props.row.id) : handleReviewClick(props.row)"
+                />
+              </q-td>
             </template>
           </q-table>
 
@@ -402,6 +414,29 @@
       </q-card>
     </q-dialog>
 
+    <!-- Admin Review Dialog -->
+    <q-dialog v-model="showReviewDialog">
+      <q-card style="min-width: 400px">
+        <q-card-section class="q-pb-none">
+          <div class="text-h6">Confirm Review</div>
+        </q-card-section>
+        <q-card-section>
+          <q-input
+            outlined
+            v-model="adminRemarks"
+            label="Admin Remarks"
+            type="textarea"
+            rows="3"
+            :rules="[(val) => !!val || 'Remarks are required']"
+          />
+        </q-card-section>
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" @click="cancelReview" />
+          <q-btn label="OK" color="primary" @click="confirmReview" :disable="!adminRemarks.trim()" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <!-- Create Supplemental Budget Dialog -->
     <q-dialog v-model="showCreateDialog">
       <q-card style="min-width: 600px; max-width: 90vw">
@@ -465,8 +500,11 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useSupplementalBudgetStore } from 'src/stores/supplementalBudgetStore'
 import { usePageLogging } from '../../../composables/usePageLogging'
+import { useAuthStore } from 'stores/auth'
 
 const $q = useQuasar()
+const authStore = useAuthStore()
+const isAdmin = computed(() => !!authStore.admin)
 const supplementalBudgetStore = useSupplementalBudgetStore()
 const { logPageVisit } = usePageLogging()
 
@@ -475,7 +513,7 @@ const showViewDialog = ref(false)
 const showCreateDialog = ref(false)
 const searchQuery = ref('')
 const selectedYear = ref(new Date().getFullYear())
-const activeTab = ref('unused')
+const activeTab = ref(isAdmin.value ? 'supplemental' : 'unused')
 const selectedExpenses = ref([])
 const supplementalDescription = ref('')
 const localExpenses = ref([])
@@ -497,6 +535,23 @@ const selectedRow = ref({
   created_at: '',
   appropriations: []
 })
+
+// Admin review state (view-only with remarks)
+const showReviewDialog = ref(false)
+const adminRemarks = ref('')
+const reviewedSet = ref(new Set())
+const currentReviewRow = ref(null)
+
+const isReviewed = (id) => reviewedSet.value.has(id)
+const handleReviewClick = (row) => { currentReviewRow.value = row; adminRemarks.value = ''; showReviewDialog.value = true }
+const cancelReview = () => { showReviewDialog.value = false; adminRemarks.value = ''; currentReviewRow.value = null }
+const confirmReview = async () => {
+  if (!adminRemarks.value.trim() || !currentReviewRow.value) return
+  reviewedSet.value.add(currentReviewRow.value.id)
+  showReviewDialog.value = false
+  adminRemarks.value = ''
+  currentReviewRow.value = null
+}
 
 // Column definitions
 const columns = computed(() => [
@@ -585,6 +640,13 @@ const supplementalColumns = [
     sortable: false,
   },
   {
+    name: 'barangay',
+    label: 'Barangay',
+    field: 'barangay_name',
+    align: 'left',
+    sortable: true,
+  },
+  {
     name: 'description',
     label: 'Description',
     field: 'description',
@@ -609,6 +671,13 @@ const supplementalColumns = [
     name: 'action',
     label: 'Action',
     field: 'action',
+    align: 'center',
+    sortable: false,
+  },
+  {
+    name: 'remarks',
+    label: 'Remarks',
+    field: 'remarks',
     align: 'center',
     sortable: false,
   },

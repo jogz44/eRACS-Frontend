@@ -28,6 +28,13 @@ export function useGetters(state) {
       sortable: false,
     },
     {
+      name: 'barangay_name',
+      label: 'Barangay',
+      field: 'barangay_name',
+      align: 'left',
+      sortable: true,
+    },
+    {
       name: 'actions',
       label: 'Actions',
       field: '',
@@ -176,7 +183,7 @@ export function useGetters(state) {
   })
 
   const filteredExpenseAccounts = computed(() => {
-    
+
     if (!state.AugexpenseAccounts.value || state.AugexpenseAccounts.value.length === 0) {
       return []
     }
@@ -214,7 +221,7 @@ export function useGetters(state) {
   })
 
   const expenseHierarchy = computed(() => {
-    
+
     if (!state.expenseHierarchy.value || state.expenseHierarchy.value.length === 0) {
       return []
     }

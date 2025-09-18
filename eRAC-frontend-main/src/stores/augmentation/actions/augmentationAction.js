@@ -357,12 +357,12 @@ export function useAugmentationActions(state) {
             amount: expense.amount,
             particulars: expense.particulars
           }
-          
+
           // If TO appropriation is null (unallocated), include expense hierarchy data
           if (!expense.to_appropriation_id && expense.to_expense_data) {
             detail.to_expense_data = expense.to_expense_data
           }
-          
+
           return detail
         })
       }

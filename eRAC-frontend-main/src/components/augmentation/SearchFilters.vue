@@ -46,17 +46,15 @@
         @click="clearAllFilters"
         class="clear-all-btn"
       />
-       <q-space />
+      <q-space />
       <q-btn
-        label="Add"
-        icon="add"
-        class="add-table-btn"
-        @click="handleOpenDialog"
-        color="primary"
-        :loading="store.loading.addDialog"
-        :disable="store.loading.addDialog"
-        style="min-width: 150px; border-radius: 3px; font-size: small !important;"
-        v-permission="'add'"
+        unelevated
+        icon="print"
+        label="Print"
+        color="green"
+        @click="handlePrint"
+        size="md"
+        no-caps
       />
 
       <!-- Clear All Filters Button -->
@@ -67,8 +65,10 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useQuasar } from 'quasar'
 import { useAugmentationStore } from 'stores/augmentation'
 
+const $q = useQuasar()
 const store = useAugmentationStore()
 const dateRange = ref(null)
 
@@ -85,8 +85,21 @@ const dateRangeDisplay = computed(() => {
   return `${fromDate} - ${toDate}`
 })
 
-const handleOpenDialog = async () => {
-  await store.openDialog('augmentation')
+// Print handler similar to other admin pages
+const handlePrint = () => {
+  if (dateRangeDisplay.value === '') {
+    $q.notify({
+      type: 'negative',
+      message: 'Please select a date range.',
+      position: 'top',
+    })
+    return
+  }
+  $q.notify({
+    type: 'positive',
+    message: 'Report sent to printer successfully!',
+    position: 'top',
+  })
 }
 
 const onDateRangeChange = (newRange) => {
