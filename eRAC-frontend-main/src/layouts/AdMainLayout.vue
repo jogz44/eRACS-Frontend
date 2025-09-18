@@ -47,7 +47,7 @@
             option-value="id"
             @update:model-value="onBarangayChange"
           />
-          
+
           <div class="user-controls">
             <!-- Notifications Bell -->
             <q-btn
@@ -58,12 +58,12 @@
               size="md"
             >
               <q-icon name="notifications" size="24px" color="white">
-                <q-badge 
-                  v-if="totalNotificationCount > 0" 
-                  floating 
-                  color="red" 
-                  text-color="white" 
-                  rounded 
+                <q-badge
+                  v-if="totalNotificationCount > 0"
+                  floating
+                  color="red"
+                  text-color="white"
+                  rounded
                   class="notification-badge"
                   :label="totalNotificationCount > 9 ? '9+' : totalNotificationCount.toString()"
                 />
@@ -96,7 +96,7 @@
                 </q-list>
               </q-menu>
             </q-btn>
-            
+
             <!-- Admin Avatar Menu -->
             <q-btn
               flat
@@ -228,6 +228,15 @@
               <span>Augmentation</span>
               <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
             </div>
+            <div
+              class="transaction-item"
+              :class="{ 'disabled': !isBarangaySelected }"
+              @click="navigateTo('/admin/supplemental')"
+            >
+              <q-icon name="add_circle" size="16px" />
+              <span>Supplemental</span>
+              <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
+            </div>
           </div>
 
           <!-- Continuing Transactions -->
@@ -316,6 +325,15 @@
           >
             <div class="colored-dot dot-blue"></div>
             <span>Augmentation</span>
+            <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
+          </div>
+            <div
+            class="panel-item"
+            :class="{ 'disabled': !isBarangaySelected }"
+            @click="navigateTo('/admin/supplemental')"
+          >
+            <div class="colored-dot dot-blue"></div>
+            <span>Supplemental</span>
             <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
           </div>
         </div>
@@ -519,6 +537,7 @@ const navigateTo = (link) => {
     '/admin/appropriation',
     '/admin/disbursement',
     '/admin/augmentation',
+    '/admin/supplemental',
     '/admin/contAppropriation',
     '/admin/contDisbursement'
   ]
@@ -671,6 +690,13 @@ const handleLogout = async () => {
                             const { useAugmentationStore } = await import('stores/augmentation')
                             const augmentationStore = useAugmentationStore()
                             await augmentationStore.fetchAugmentations()
+
+                          }else if (currentRoute.includes('/admin/supplemental')) {
+                            // On supplemental page - only refresh supplemental store
+                            const { useSupplementalBudgetStore } = await import('stores/supplementalBudgetStore')
+                            const supplementalBudgetStore = useSupplementalBudgetStore()
+                            await supplementalBudgetStore.fetchSupplementalBudgets()
+
                           } else if (currentRoute.includes('/admin/reportPage')) {
                             // On reports page - refresh report store expense classes
                             const { useReportStore } = await import('stores/reportStore')
@@ -698,6 +724,7 @@ const handleLogout = async () => {
                             const { useAppropriationStore } = await import('stores/appropriationStore')
                             const { useDisbursementStore } = await import('stores/disbursementStore')
                             const { useAugmentationStore } = await import('stores/augmentation')
+
 
                             const appropriationStore = useAppropriationStore()
                             const disbursementStore = useDisbursementStore()
@@ -1448,11 +1475,11 @@ watch(
   .header-controls {
     gap: 8px;
   }
-  
+
   .user-controls {
     gap: 4px;
   }
-  
+
   .barangay-selector {
     width: 160px !important;
   }

@@ -221,6 +221,11 @@ const routes = [
         name: 'adminAugmentation',
         component: () => import('../pages/Admin/Transaction/AugmentationTran.vue'),
       },
+      {
+        path: 'supplemental',
+        name: 'adminSupplemental',
+        component: () => import('../pages/Admin/Transaction/SupplementalTran.vue'),
+      },
 
       // Continuing Transactions
 

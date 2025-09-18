@@ -191,6 +191,14 @@ export function useGetters(state) {
       })
     }
 
+    // Apply balance filtering - show only expenses with non-zero balance
+    if (state.showOnlyWithBalance.value) {
+      base = base.filter(item => {
+        const balance = parseFloat(item.balance) || 0
+        return balance > 0
+      })
+    }
+
     // Apply search filtering
     if (!state.expenseSearch.value.trim()) {
       return base

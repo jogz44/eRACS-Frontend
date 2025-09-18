@@ -19,6 +19,20 @@
           </template>
         </q-input>
 
+        <!-- Balance Filter Toggle -->
+        <div class="balance-filter-container q-mb-md">
+          <div class="row items-center q-gutter-md">
+            <q-toggle
+              v-model="store.showOnlyWithBalance"
+              color="primary"
+              size="md"
+            />
+            <div class="text-subtitle2 text-grey-7">
+              Show only expenses with balance
+            </div>
+          </div>
+        </div>
+
         <!-- Expense Account Selection Table -->
         <div class="table-container">
           <q-table
@@ -254,6 +268,17 @@ const cardWidthStyle = computed(() => {
   font-style: italic;
 }
 
+.balance-filter-container {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.balance-filter-container .row {
+  align-items: center;
+}
+
 /* Responsive Dialog - Only sizing adjustments for mobile and tablet */
 @media (max-width: 600px) {
   /* Mobile View - Only size adjustments */
@@ -309,6 +334,19 @@ const cardWidthStyle = computed(() => {
 
   .q-dialog .q-btn {
     min-height: 44px !important;
+  }
+
+  .balance-filter-container {
+    padding: 8px !important;
+  }
+
+  .balance-filter-container .row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+
+  .balance-filter-container .q-toggle {
+    margin-bottom: 8px !important;
   }
 }
 
