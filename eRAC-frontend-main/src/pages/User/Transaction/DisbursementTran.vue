@@ -1743,50 +1743,6 @@ const openViewOrDetailsFromRemarks = async () => {
   }
 }
 
-// Submit edit request from dialog - COMMENTED OUT FOR FUTURE REUSE
-// const handleSubmitEditRequest = async () => {
-//   if (!store.forms.edit.remarks || store.forms.edit.remarks.trim() === '') {
-//     $q.notify({
-//       type: 'negative',
-//       message: 'Please provide remarks for the edit request',
-//       icon: 'warning',
-//       position: 'top',
-//       timeout: 3000,
-//     })
-//     return
-//   }
-
-//   try {
-//     const result = await store.submitEditRequest()
-//     if (result.success) {
-//       $q.notify({
-//         type: 'positive',
-//         message: 'Edit request submitted successfully!',
-//         icon: 'check_circle',
-//         position: 'top',
-//         timeout: 3000,
-//       })
-//       await refreshData()
-//     } else {
-//       $q.notify({
-//         type: 'negative',
-//         message: result.message || 'Failed to submit edit request',
-//         icon: 'error',
-//         position: 'top',
-//         timeout: 5000,
-//       })
-//     }
-//   } catch (error) {
-//     console.error('Error submitting edit request:', error)
-//     $q.notify({
-//       type: 'negative',
-//       message: error.message || 'Failed to submit edit request',
-//       icon: 'error',
-//       position: 'top',
-//       timeout: 5000,
-//     })
-//   }
-// }
 </script>
 
 <style scoped>

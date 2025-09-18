@@ -16,6 +16,7 @@
               :key="index"
               :color="getExpenseClassColor(expenseClass)"
               :label="expenseClass"
+              text-color="black"
               class="expense-class-summary-badge q-mr-xs q-mb-xs"
             />
           </div>
@@ -120,14 +121,6 @@ import { computed, ref, watch } from 'vue'
 import { useActivityLogging } from 'src/composables/useActivityLogging'
 import { useQuasar } from 'quasar'
 import { api } from 'boot/axios'
-
-// // Define props
-// const props = defineProps({
-//   filteredData: {
-//     type: Array,
-//     default: () => []
-//   }
-// })
 
 const store = useAugmentationStore()
 const $q = useQuasar()
@@ -317,8 +310,20 @@ const getExpenseClassSummary = (augmentation) => {
   const expenseClasses = new Set()
 
   augmentation.details.forEach(detail => {
-    if (detail.expense_class) {
-      expenseClasses.add(detail.expense_class)
+    // Extract expense class from from_account (e.g., "General Services > Office Supplies > Stationery")
+    if (detail.from_account) {
+      const fromParts = detail.from_account.split(' > ')
+      if (fromParts.length >= 1) {
+        expenseClasses.add(fromParts[0].trim())
+      }
+    }
+    
+    // Extract expense class from to_account
+    if (detail.to_account) {
+      const toParts = detail.to_account.split(' > ')
+      if (toParts.length >= 1) {
+        expenseClasses.add(toParts[0].trim())
+      }
     }
   })
 
