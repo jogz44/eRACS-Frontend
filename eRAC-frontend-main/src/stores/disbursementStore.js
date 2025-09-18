@@ -427,9 +427,8 @@ export const useDisbursementStore = defineStore('disbursement', {
           return val
         },
       },
-      { name: 'remarks', label: 'Remarks', field: '', align: 'center' },
       { name: 'action', label: 'Action', field: '', align: 'center' },
-      { name: 'liquidate', label: 'Liquidate', field: '', align: 'center' },
+      { name: 'remarks', label: 'Remarks', field: '', align: 'center' },
     ],
 
     expenseColumns: () => [
@@ -1404,7 +1403,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           })
 
           // Map reimbursement expenses if they exist
-          const mappedReimbursementExpenses = disbursement.reimbursement?.expenses ? 
+          const mappedReimbursementExpenses = disbursement.reimbursement?.expenses ?
             disbursement.reimbursement.expenses.map((expense) => {
               // Use the account_name from backend or fallback to lookup
               const fullAccountName = expense.account_name || this.getExpenseAccountName(
@@ -2152,7 +2151,7 @@ export const useDisbursementStore = defineStore('disbursement', {
 
                     if (expenseSubItem) {
                       accountName += ` > ${expenseSubItem.name}`
-                    } 
+                    }
                   }
                 }
               }
