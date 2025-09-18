@@ -508,9 +508,9 @@
                     <!-- Regular Row -->
                     <tr v-else>
                       <td class="text-left">{{ props.row.ppa }}</td>
-                      <td class="text-right">{{ props.row.appropriation }}</td>
-                      <td class="text-right">{{ props.row.obligation }}</td>
-                      <td class="text-right">{{ props.row.balance }}</td>
+                      <td class="text-right">{{ formatCurrency(props.row.appropriation) }}</td>
+                      <td class="text-right">{{ formatCurrency(props.row.obligation) }}</td>
+                      <td class="text-right">{{ formatCurrency(props.row.balance) }}</td>
                     </tr>
                   </template>
                 </q-table>
@@ -1482,6 +1482,13 @@ function saveAsTemplate() {
   localStorage.setItem('sacbSignatoryTemplate', JSON.stringify(template))
   logAdminActivity('Signatory Template Saved', 'Saved signatory template for future use')
   notifySuccess('Signatory template saved successfully')
+}
+function formatCurrency(value) {
+  if (value == null) return '0.00'
+  return Number(value).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
 }
 
 /* -------------------- LIFECYCLE -------------------- */
