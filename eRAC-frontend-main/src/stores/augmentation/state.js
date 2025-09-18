@@ -23,6 +23,7 @@ export function initialState() {
     selectedBarangayId: ref(null), // Added for admin barangay filtering
     selectedBudgetSource: ref('all'), // For budget source filtering (annual/supplemental)
     selectedExpenseClass: ref(null), // For expense class filtering when selecting TO expense
+    showOnlyWithBalance: ref(false), // For filtering expenses with non-zero balance
 
     // Pagination
     pagination: ref({
