@@ -219,10 +219,10 @@ class AdminAuthController extends Controller  // <-- This is crucial
     public function updateUserPermissions(Request $request, $id) {
         try {
             $user = BarangayUser::findOrFail($id);
-            
+
             // Check if the requesting user has permission to manage user access
             $requestingUser = $request->user('barangay') ?? $request->user('admin');
-            
+
             if (!$this->canManageUserAccess($requestingUser)) {
                 return response()->json([
                     'status' => 'error',
@@ -280,7 +280,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
             // Check by position name
             $position = $user->position ? $user->position->name : '';
             $positionLower = strtolower($position);
-            
+
             return strpos($positionLower, 'captain') !== false ||
                    strpos($positionLower, 'chairperson') !== false ||
                    strpos($positionLower, 'barangay captain') !== false ||
@@ -297,7 +297,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
     public function canManageUserAccessCheck(Request $request) {
         $user = $request->user('barangay') ?? $request->user('admin');
         $canManage = $this->canManageUserAccess($user);
-        
+
         return response()->json([
             'can_manage_access' => $canManage,
             'user_role' => $user ? ($user->role ?? ($user->position ? $user->position->name : 'Unknown')) : 'Not authenticated'
@@ -575,7 +575,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
                 $totalBalance = $totalAppropriation - $totalObligation;
 
                 // 4. totalExpense
-                $totalBalance = $totalObligation - $totalBalance;
+                $totalExpense  = $totalObligation - $totalExpenses;
 
                 return [
                     'id' => $barangay->id,
@@ -584,7 +584,7 @@ class AdminAuthController extends Controller  // <-- This is crucial
                     'total_supp' => number_format($totalSupplemental, 2, '.', ''),
                     'total_expenses' => number_format($totalExpenses, 2, '.', ''),
                     'total_entries' => $totalEntries,
-                    'total_balance' => number_format($totalBalance, 2, '.', ''),
+                    'total_balance' => number_format($totalExpense, 2, '.', ''),
                 ];
             })
             ->sortBy('barangay_name')
