@@ -19,7 +19,7 @@ class ReportController extends Controller
 
         // Determine barangay scope: explicit param (admin) or authenticated user's barangay
         $barangayId = $data['barangay_id'] ?? $request->user()?->barangay_id;
-        
+
         // Debug logging for barangay ID
         \Log::info('RAC Report - Barangay ID Debug', [
             'requested_barangay_id' => $data['barangay_id'] ?? 'not provided',
@@ -28,7 +28,7 @@ class ReportController extends Controller
             'is_admin_request' => isset($data['barangay_id']),
             'request_params' => $data
         ]);
-        
+
         $q = TranAppropriation::with(['expenseClass', 'expenseType', 'expenseItem', 'expenseSubItem', 'details','details.disbursement'])
             ->when($barangayId, fn($qq) => $qq->where('barangay_id', $barangayId))
             ->whereHas('details.disbursement', function($query) use ($data) {
@@ -72,14 +72,14 @@ class ReportController extends Controller
                 ] : null
             ] : null
         ]);
-        
+
         $rows = $initialResults
             ->flatMap(function ($o) use ($data) {
                 return $o->details->filter(function ($detail) use ($data) {
                     // Only include details where the disbursement date is within the range
                     $disb = $detail->disbursement;
                     if (!$disb || !$disb->date) return false;
-                    
+
                     $disbDate = \Carbon\Carbon::parse($disb->date)->format('Y-m-d');
                     return $disbDate >= $data['from'] && $disbDate <= $data['to'];
                 })->map(function ($detail) use ($o) {
@@ -104,17 +104,17 @@ class ReportController extends Controller
             ->map(function ($group) {
                 $firstItem = $group->first();
                 $particulars = $group->pluck('particular')->filter()->unique()->implode(', ');
-                
+
                 // Debug logging for particulars
                 \Log::info('RAC Particulars', [
                     'dvNumber' => $firstItem['dvNumber'],
                     'individual_particulars' => $group->pluck('particular')->toArray(),
                     'concatenated_particulars' => $particulars
                 ]);
-                
+
                 // Calculate appropriation based on expense class - sum amounts for this specific class
                 $classAppropriation = $group->sum('amount'); // Sum all amounts for this DV within this class
-                
+
                 // Debug logging to understand the data structure
                 \Log::info('RAC Class Appropriation', [
                     'dvNumber' => $firstItem['dvNumber'],
@@ -122,7 +122,7 @@ class ReportController extends Controller
                     'groupItems' => $group->pluck('accountTitle')->toArray(),
                     'groupAmounts' => $group->pluck('amount')->toArray()
                 ]);
-                
+
                 // Create a base row with common fields
                 $row = [
                     'particular' => $particulars,
@@ -132,7 +132,7 @@ class ReportController extends Controller
                     'amount' => $group->sum('amount'), // Sum all amounts for this DV
                     'appropriation' => $classAppropriation, // Use the class-specific total amount
                 ];
-                
+
                 // Add each account title as a separate column
                 $group->each(function ($item) use (&$row) {
                     $accountTitle = $item['accountTitle'];
@@ -140,7 +140,7 @@ class ReportController extends Controller
                         // Create a unique key for this account title - preserve dashes, only replace spaces and special chars
                         $key = 'amount_' . strtolower(str_replace([' ', '&', '.', '(', ')'], ['_', '_', '_', '_', '_'], $accountTitle));
                         $row[$key] = $item['amount'];
-                        
+
                         // Debug logging
                         \Log::info('RAC Account Title', [
                             'dvNumber' => $item['dvNumber'],
@@ -150,7 +150,7 @@ class ReportController extends Controller
                         ]);
                     }
                 });
-                
+
                 return $row;
             })
             ->values()
@@ -169,7 +169,7 @@ class ReportController extends Controller
         // Extract account titles and create key map
         $accountTitles = [];
         $accountTitleKeyMap = [];
-        
+
         $rows->each(function ($row) use (&$accountTitles, &$accountTitleKeyMap) {
             foreach ($row as $key => $value) {
                 if (str_starts_with($key, 'amount_')) {
@@ -177,7 +177,7 @@ class ReportController extends Controller
                     $accountTitle = str_replace('amount_', '', $key);
                     $accountTitle = str_replace('_', ' ', $accountTitle);
                     $accountTitle = preg_replace('/\s+/', ' ', trim($accountTitle));
-                    
+
                     if (!in_array($accountTitle, $accountTitles)) {
                         $accountTitles[] = $accountTitle;
                         $accountTitleKeyMap[$accountTitle] = $key;
@@ -203,7 +203,7 @@ class ReportController extends Controller
         ]);
     }
 
-    
+
     public function getSacbReport(Request $request)
     {
         $data = $request->validate([
@@ -237,35 +237,168 @@ class ReportController extends Controller
             $filteredDetails = $o->details->filter(function ($detail) use ($data) {
                 $disb = $detail->disbursement;
                 if (!$disb || !$disb->date) return false;
-                
+
                 $disbDate = \Carbon\Carbon::parse($disb->date)->format('Y-m-d');
                 return $disbDate >= $data['from'] && $disbDate <= $data['to'];
             });
-            
+
             return [
-                'expense'=> $o->expenseClass?->name,
-                'order'=> $o->expenseClass?->order,
-                'ppa' => implode(' - ', array_filter([
-                    $o->expenseType?->name,
-                    $o->expenseItem?->name,
-                    $o->expenseSubItem?->name
-                ])),
-                'appropriation'=> (float)$o->amount,
-                'obligation'   => (float) $filteredDetails->sum('amount'), // Use filtered details
-                'balance'      => (float) $o->amount - (float) $filteredDetails->sum('amount'),
+                'expense_class_id' => $o->expense_class_id,
+                'expense_class_name' => $o->expenseClass?->name,
+                'expense_class_order' => $o->expenseClass?->order,
+                'expense_type_id' => $o->expense_type_id,
+                'expense_type_name' => $o->expenseType?->name,
+                'expense_item_id' => $o->expense_item_id,
+                'expense_item_name' => $o->expenseItem?->name,
+                'expense_sub_item_id' => $o->expense_sub_item_id,
+                'expense_sub_item_name' => $o->expenseSubItem?->name,
+                'appropriation' => (float)$o->amount,
+                'obligation' => (float) $filteredDetails->sum('amount'),
+                'balance' => (float) $o->amount - (float) $filteredDetails->sum('amount'),
             ];
-        })->groupBy('ppa')   // group all rows by PPA
-            ->map(function ($group) {
-                return [
-                    'expense'      => $group->first()['expense'],
-                    'order'        => $group->first()['order'],
-                    'ppa'          => $group->first()['ppa'],
-                    'appropriation'=> $group->sum('appropriation'),
-                    'obligation'   => $group->sum('obligation'),
-                    'balance'      => $group->sum('appropriation') - $group->sum('obligation'),
+        });
+
+        // Build hierarchical structure similar to ViewCommitDialog.vue
+        $hierarchicalData = [];
+        $classMap = [];
+
+        // Group by expense class first
+        $rows->each(function ($row) use (&$classMap) {
+            $classId = $row['expense_class_id'];
+            $className = $row['expense_class_name'];
+            $classOrder = $row['expense_class_order'];
+
+            if (!isset($classMap[$classId])) {
+                $classMap[$classId] = [
+                    'id' => $classId,
+                    'name' => $className,
+                    'order' => $classOrder,
+                    'types' => [],
+                    'total_appropriation' => 0,
+                    'total_obligation' => 0,
+                    'total_balance' => 0,
                 ];
-            })
-            ->values();
+            }
+
+            // Add to class totals
+            $classMap[$classId]['total_appropriation'] += $row['appropriation'];
+            $classMap[$classId]['total_obligation'] += $row['obligation'];
+            $classMap[$classId]['total_balance'] += $row['balance'];
+
+            // Handle type level
+            $typeId = $row['expense_type_id'];
+            $typeName = $row['expense_type_name'];
+
+            if ($typeId && !isset($classMap[$classId]['types'][$typeId])) {
+                $classMap[$classId]['types'][$typeId] = [
+                    'id' => $typeId,
+                    'name' => $typeName,
+                    'items' => [],
+                    'total_appropriation' => 0,
+                    'total_obligation' => 0,
+                    'total_balance' => 0,
+                ];
+            }
+
+            if ($typeId) {
+                // Add to type totals
+                $classMap[$classId]['types'][$typeId]['total_appropriation'] += $row['appropriation'];
+                $classMap[$classId]['types'][$typeId]['total_obligation'] += $row['obligation'];
+                $classMap[$classId]['types'][$typeId]['total_balance'] += $row['balance'];
+
+                // Handle item level
+                $itemId = $row['expense_item_id'];
+                $itemName = $row['expense_item_name'];
+
+                if ($itemId && !isset($classMap[$classId]['types'][$typeId]['items'][$itemId])) {
+                    $classMap[$classId]['types'][$typeId]['items'][$itemId] = [
+                        'id' => $itemId,
+                        'name' => $itemName,
+                        'sub_items' => [],
+                        'total_appropriation' => 0,
+                        'total_obligation' => 0,
+                        'total_balance' => 0,
+                    ];
+                }
+
+                if ($itemId) {
+                    // Add to item totals
+                    $classMap[$classId]['types'][$typeId]['items'][$itemId]['total_appropriation'] += $row['appropriation'];
+                    $classMap[$classId]['types'][$typeId]['items'][$itemId]['total_obligation'] += $row['obligation'];
+                    $classMap[$classId]['types'][$typeId]['items'][$itemId]['total_balance'] += $row['balance'];
+
+                    // Handle sub-item level
+                    $subItemId = $row['expense_sub_item_id'];
+                    $subItemName = $row['expense_sub_item_name'];
+
+                    if ($subItemId) {
+                        $classMap[$classId]['types'][$typeId]['items'][$itemId]['sub_items'][$subItemId] = [
+                            'id' => $subItemId,
+                            'name' => $subItemName,
+                            'appropriation' => $row['appropriation'],
+                            'obligation' => $row['obligation'],
+                            'balance' => $row['balance'],
+                        ];
+                    }
+                }
+            }
+        });
+
+        // Convert to hierarchical structure for frontend
+        $hierarchicalRows = [];
+        $classCounter = 1;
+
+        foreach ($classMap as $classId => $class) {
+            // Add expense class header with total amounts from all children
+            $hierarchicalRows[] = [
+                'isSection' => true,
+                'ppa' => $classCounter . '. ' . $class['name'],
+                'appropriation' => $class['total_appropriation'],  // Always show class totals
+                'obligation' => $class['total_obligation'],
+                'balance' => $class['total_balance'],
+            ];
+
+            // Add expense types
+            foreach ($class['types'] as $typeId => $type) {
+                // Only show type totals if it has no items
+                $hasItems = !empty($type['items']);
+                $hierarchicalRows[] = [
+                    'isType' => true,
+                    'ppa' => $type['name'],
+                    'appropriation' => $hasItems ? null : $type['total_appropriation'],
+                    'obligation' => $hasItems ? null : $type['total_obligation'],
+                    'balance' => $hasItems ? null : $type['total_balance'],
+                ];
+
+                // Add expense items
+                foreach ($type['items'] as $itemId => $item) {
+                    // Only show item totals if it has no sub-items
+                    $hasSubItems = !empty($item['sub_items']);
+                    $hierarchicalRows[] = [
+                        'isItem' => true,
+                        'ppa' => $item['name'],
+                        'appropriation' => $hasSubItems ? null : $item['total_appropriation'],
+                        'obligation' => $hasSubItems ? null : $item['total_obligation'],
+                        'balance' => $hasSubItems ? null : $item['total_balance'],
+                    ];
+
+                    // Add sub-items if they exist (always show amounts for sub-items as they are leaves)
+                    foreach ($item['sub_items'] as $subItemId => $subItem) {
+                        $hierarchicalRows[] = [
+                            'isSubItem' => true,
+                            'ppa' => $subItem['name'],
+                            'appropriation' => $subItem['appropriation'],
+                            'obligation' => $subItem['obligation'],
+                            'balance' => $subItem['balance'],
+                        ];
+                    }
+                }
+            }
+
+            $classCounter++;
+        }
+
+        $rows = collect($hierarchicalRows);
 
         $summary = [
             'count' => $rows->count(),
