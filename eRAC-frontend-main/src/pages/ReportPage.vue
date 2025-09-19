@@ -495,13 +495,13 @@
                             <span class="main-section-title">{{ row.ppa }}</span>
                           </div>
                           <div class="col-appropriation text-right">
-                            <span class="main-section-total">{{ formatCurrency(row.appropriation) }}</span>
+                            <span class="main-section-total">{{ row.appropriation ? formatCurrency(row.appropriation) : '' }}</span>
                           </div>
                           <div class="col-obligation text-right">
-                            <span class="main-section-total">{{ formatCurrency(row.obligation) }}</span>
+                            <span class="main-section-total">{{ row.obligation ? formatCurrency(row.obligation)  : '' }}</span>
                           </div>
                           <div class="col-balance text-right">
-                            <span class="main-section-total">{{ formatCurrency(row.balance) }}</span>
+                            <span class="main-section-total">{{ row.balance ? formatCurrency(row.balance)  : '' }}</span>
                           </div>
                         </div>
                       </div>
@@ -512,9 +512,9 @@
                           <span class="subcategory-indent">></span>
                           <span class="subcategory-text">{{ row.ppa }}</span>
                         </div>
-                        <div class="col-appropriation text-right">{{ formatCurrency(row.appropriation) }}</div>
-                        <div class="col-obligation text-right">{{ formatCurrency(row.obligation) }}</div>
-                        <div class="col-balance text-right">{{ formatCurrency(row.balance) }}</div>
+                        <div class="col-appropriation text-right">{{ row.appropriation ? formatCurrency(row.appropriation) : '' }}</div>
+                        <div class="col-obligation text-right">{{ row.obligation ? formatCurrency(row.obligation)  : '' }}</div>
+                        <div class="col-balance text-right">{{ row.balance ? formatCurrency(row.balance)  : '' }}</div>
                       </div>
 
                       <!-- Sub-sub-category (like "Monetization of Leave Credits", "Productivity Enhancement Incentive") -->
@@ -523,9 +523,9 @@
                           <span class="subsubcategory-indent">></span>
                           <span class="subsubcategory-text">{{ row.ppa }}</span>
                         </div>
-                        <div class="col-appropriation text-right">{{ formatCurrency(row.appropriation) }}</div>
-                        <div class="col-obligation text-right">{{ formatCurrency(row.obligation) }}</div>
-                        <div class="col-balance text-right">{{ formatCurrency(row.balance) }}</div>
+                        <div class="col-appropriation text-right">{{ row.appropriation ? formatCurrency(row.appropriation) : '' }}</div>
+                        <div class="col-obligation text-right">{{ row.obligation ? formatCurrency(row.obligation)  : '' }}</div>
+                        <div class="col-balance text-right">{{ row.balance ? formatCurrency(row.balance)  : '' }}</div>
                       </div>
 
                       <!-- Sub-sub-sub-category (like individual sub-items) -->
@@ -535,18 +535,18 @@
                           <span class="subsubsubcategory-text">{{ row.ppa }}</span>
                         </div>
                         <div class="amount-group">
-                          <div class="col-appropriation text-right">{{ formatCurrency(row.appropriation) }}</div>
-                          <div class="col-obligation text-right">{{ formatCurrency(row.obligation) }}</div>
-                          <div class="col-balance text-right">{{ formatCurrency(row.balance) }}</div>
+                          <div class="col-appropriation text-right">{{ row.appropriation ? formatCurrency(row.appropriation) : '' }}</div>
+                          <div class="col-obligation text-right">{{ row.obligation ? formatCurrency(row.obligation)  : '' }}</div>
+                          <div class="col-balance text-right">{{ row.balance ? formatCurrency(row.balance)  : '' }}</div>
                         </div>
                       </div>
 
                       <!-- Total Row -->
                       <div v-else-if="row.isTotal" class="total-row">
                         <div class="col-description text-right text-bold">TOTAL</div>
-                        <div class="col-appropriation text-right text-bold">{{ formatCurrency(row.appropriation) }}</div>
-                        <div class="col-obligation text-right text-bold">{{ formatCurrency(row.obligation) }}</div>
-                        <div class="col-balance text-right text-bold">{{ formatCurrency(row.balance) }}</div>
+                        <div class="col-appropriation text-right text-bold">{{ row.appropriation ? formatCurrency(row.appropriation) : '' }}</div>
+                        <div class="col-obligation text-right text-bold">{{ row.obligation ? formatCurrency(row.obligation)  : '' }}</div>
+                        <div class="col-balance text-right text-bold">{{ row.balance ? formatCurrency(row.balance)  : '' }}</div>
                       </div>
                     </template>
 
