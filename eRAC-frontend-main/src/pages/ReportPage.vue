@@ -475,51 +475,88 @@
               </q-card-section>
 
               <q-card-section>
-                <!-- SACB Table with improved styling -->
+                <!-- SACB Table with hierarchical totals -->
+                <div class="financial-report-table">
+                  <div class="table-header">
+                    <div class="header-row">
+                      <div class="col-description">PROGRAM / PROJECT / ACTIVITY</div>
+                      <div class="col-appropriation">APPROPRIATION</div>
+                      <div class="col-obligation">OBLIGATION</div>
+                      <div class="col-balance">BALANCE</div>
+                    </div>
+                  </div>
 
-                <q-table
-                  :rows="computedSACBRows"
-                  :columns="sacbColumns"
-                  row-key="ppa"
-                  flat
-                  bordered
-                  dense
-                  separator="cell"
-                  class="sacb-table"
-                  hide-pagination
-                  :pagination="{ rowsPerPage: 0 }"
-                >
-                  <template v-slot:body="props">
-                    <!-- Section Header -->
-                    <tr v-if="props.row.isSection">
-                      <td :colspan="sacbColumns.length" class="text-bold text-left bg-grey-3">
-                        {{ props.row.ppa }}
-                      </td>
-                    </tr>
+                  <div class="table-body">
+                    <template v-for="(row, index) in reportStore.reportSACB" :key="index">
+                      <!-- Section Header (Main Category like "1. PERSONAL SERVICES") -->
+                      <div v-if="row.isSection" class="main-section">
+                        <div class="main-section-header">
+                          <div class="col-description">
+                            <span class="main-section-title">{{ row.ppa }}</span>
+                          </div>
+                          <div class="col-appropriation text-right">
+                            <span class="main-section-total">{{ formatCurrency(row.appropriation) }}</span>
+                          </div>
+                          <div class="col-obligation text-right">
+                            <span class="main-section-total">{{ formatCurrency(row.obligation) }}</span>
+                          </div>
+                          <div class="col-balance text-right">
+                            <span class="main-section-total">{{ formatCurrency(row.balance) }}</span>
+                          </div>
+                        </div>
+                      </div>
 
-                    <!-- Total Row -->
-                    <tr v-else-if="props.row.isTotal">
-                      <td class="text-right text-bold">TOTAL</td>
-                      <td class="text-right text-bold">{{ props.row.appropriation }}</td>
-                      <td class="text-right text-bold">{{ props.row.obligation }}</td>
-                      <td class="text-right text-bold">{{ props.row.balance }}</td>
-                    </tr>
+                      <!-- Sub-category (like "Honorarium", "Other Personnel Benefits") -->
+                      <div v-else-if="row.isType" class="subcategory-row">
+                        <div class="col-description">
+                          <span class="subcategory-indent">></span>
+                          <span class="subcategory-text">{{ row.ppa }}</span>
+                        </div>
+                        <div class="col-appropriation text-right">{{ formatCurrency(row.appropriation) }}</div>
+                        <div class="col-obligation text-right">{{ formatCurrency(row.obligation) }}</div>
+                        <div class="col-balance text-right">{{ formatCurrency(row.balance) }}</div>
+                      </div>
 
-                    <!-- Regular Row -->
-                    <tr v-else>
-                      <td class="text-left">{{ props.row.ppa }}</td>
-                      <td class="text-right">
-                        {{ props.row.appropriation ? formatCurrency(props.row.appropriation) : '' }}
-                      </td>
-                      <td class="text-right">
-                        {{ props.row.obligation ? formatCurrency(props.row.obligation) : '' }}
-                      </td>
-                      <td class="text-right">
-                        {{ props.row.balance ? formatCurrency(props.row.balance) : '' }}
-                      </td>
-                    </tr>
-                  </template>
-                </q-table>
+                      <!-- Sub-sub-category (like "Monetization of Leave Credits", "Productivity Enhancement Incentive") -->
+                      <div v-else-if="row.isItem" class="subsubcategory-row">
+                        <div class="col-description">
+                          <span class="subsubcategory-indent">></span>
+                          <span class="subsubcategory-text">{{ row.ppa }}</span>
+                        </div>
+                        <div class="col-appropriation text-right">{{ formatCurrency(row.appropriation) }}</div>
+                        <div class="col-obligation text-right">{{ formatCurrency(row.obligation) }}</div>
+                        <div class="col-balance text-right">{{ formatCurrency(row.balance) }}</div>
+                      </div>
+
+                      <!-- Sub-sub-sub-category (like individual sub-items) -->
+                      <div v-else-if="row.isSubItem" class="subsubsubcategory-row">
+                        <div class="col-description">
+                          <span class="subsubsubcategory-indent">></span>
+                          <span class="subsubsubcategory-text">{{ row.ppa }}</span>
+                        </div>
+                        <div class="col-appropriation text-right">{{ formatCurrency(row.appropriation) }}</div>
+                        <div class="col-obligation text-right">{{ formatCurrency(row.obligation) }}</div>
+                        <div class="col-balance text-right">{{ formatCurrency(row.balance) }}</div>
+                      </div>
+
+                      <!-- Total Row -->
+                      <div v-else-if="row.isTotal" class="total-row">
+                        <div class="col-description text-right text-bold">TOTAL</div>
+                        <div class="col-appropriation text-right text-bold">{{ formatCurrency(row.appropriation) }}</div>
+                        <div class="col-obligation text-right text-bold">{{ formatCurrency(row.obligation) }}</div>
+                        <div class="col-balance text-right text-bold">{{ formatCurrency(row.balance) }}</div>
+                      </div>
+                    </template>
+
+                    <!-- No data message -->
+                    <div v-if="!reportStore.reportSACB || reportStore.reportSACB.length === 0" class="no-data-message">
+                      <div class="col-description">No SACB data available</div>
+                      <div class="col-appropriation"></div>
+                      <div class="col-obligation"></div>
+                      <div class="col-balance"></div>
+                    </div>
+                  </div>
+                </div>
 
                 <!-- Report Summary Section -->
                 <div class="report-summary q-mt-xl">
@@ -904,87 +941,32 @@ import { useReportStore } from 'stores/reportStore'
 import { usePageLogging } from '../composables/usePageLogging'
 import { useActivityLogging } from '../composables/useActivityLogging'
 
-const computedSACBRows = computed(() => {
-  const result = []
-  let sectionItems = []
-
-  reportStore.reportSACB.forEach((row, index) => {
-    if (row.isSection) {
-      // If sectionItems has data, push a total before starting new section
-      if (sectionItems.length) {
-        result.push(makeTotalRow(sectionItems))
-        sectionItems = []
-      }
-      result.push(row) // push the section header
-    } else {
-      result.push(row)
-      sectionItems.push(row)
-    }
-
-    // Last row check
-    if (index === reportStore.reportSACB.length - 1 && sectionItems.length) {
-      result.push(makeTotalRow(sectionItems))
-    }
-  })
-
-  return result
-})
-
-function makeTotalRow(items) {
-  const sum = (field) =>
-    items.reduce(
-      (acc, item) =>
-        acc +
-        (typeof item[field] === 'string' ? parseFloat(item[field].replace(/,/g, '')) : item[field]),
-      0,
-    )
-
-  return {
-    isTotal: true,
-    ppa: 'TOTAL',
-    appropriation: sum('appropriation').toLocaleString('en-US', { minimumFractionDigits: 2 }),
-    obligation: sum('obligation').toLocaleString('en-US', { minimumFractionDigits: 2 }),
-    balance: sum('balance').toLocaleString('en-US', { minimumFractionDigits: 2 }),
-  }
-}
+// Remove the old computedSACBRows since we're using hierarchical structure directly
 
 const totalAppropriation = computed(() => {
   return reportStore.reportSACB
-    .filter((row) => !row.isSection) // skip section headers
+    .filter((row) => row.isType || row.isItem) // only count type and item rows
     .reduce((sum, row) => {
-      return (
-        sum +
-        (typeof row.appropriation === 'string'
-          ? parseFloat(row.appropriation.replace(/,/g, ''))
-          : row.appropriation)
-      )
+      return sum + (row.appropriation || 0)
     }, 0)
     .toLocaleString('en-US', { minimumFractionDigits: 2 })
 })
 
 const totalObligation = computed(() => {
   return reportStore.reportSACB
-    .filter((row) => !row.isSection)
-    .reduce(
-      (sum, row) =>
-        sum +
-        (typeof row.obligation === 'string'
-          ? parseFloat(row.obligation.replace(/,/g, ''))
-          : row.obligation),
-      0,
-    )
+    .filter((row) => row.isType || row.isItem) // only count type and item rows
+    .reduce((sum, row) => {
+      return sum + (row.obligation || 0)
+    }, 0)
     .toLocaleString('en-US', { minimumFractionDigits: 2 })
 })
 
 const totalBalance = computed(() => {
   return reportStore.reportSACB
-    .filter((row) => !row.isSection)
-    .reduce(
-      (sum, row) =>
-        sum +
-        (typeof row.balance === 'string' ? parseFloat(row.balance.replace(/,/g, '')) : row.balance),
-      0,
-    )
+    .filter((row) => row.isType || row.isItem) // only count type and item rows
+    .reduce((sum, row) => {
+      return sum + (row.balance || 0)
+    }, 0)
     .toLocaleString('en-US', { minimumFractionDigits: 2 })
 })
 
@@ -1235,33 +1217,7 @@ const notifyError = (msg) => $q.notify({ type: 'negative', message: msg, positio
 const notifySuccess = (msg) => $q.notify({ type: 'positive', message: msg, position: 'top' })
 
 /* -------------------- COMPUTED -------------------- */
-const sacbColumns = computed(() => [
-  { name: 'ppa', label: 'Account Title', field: 'ppa', align: 'left', sortable: true },
-  {
-    name: 'appropriation',
-    label: 'Appropriation',
-    field: 'appropriation',
-    align: 'right',
-    sortable: true,
-    format: (val) => val?.toLocaleString(),
-  },
-  {
-    name: 'obligation',
-    label: 'Obligation',
-    field: 'obligation',
-    align: 'right',
-    sortable: true,
-    format: (val) => val?.toLocaleString(),
-  },
-  {
-    name: 'balance',
-    label: 'Balance',
-    field: 'balance',
-    align: 'right',
-    sortable: true,
-    format: (val) => val?.toLocaleString(),
-  },
-])
+// Removed sacbColumns as we're using custom hierarchical table structure
 
 const dateRangeDisplay = computed(() => {
   if (!CurrentRacDateRange.value.from && !CurrentRacDateRange.value.to) return ''
@@ -1490,8 +1446,9 @@ function saveAsTemplate() {
   notifySuccess('Signatory template saved successfully')
 }
 function formatCurrency(value) {
-  if (value == null) return '0.00'
-  return Number(value).toLocaleString('en-US', {
+  if (value == null || value === '') return ''
+  if (typeof value !== 'number') return ''
+  return value.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })
@@ -2356,6 +2313,298 @@ onActivated(async () => {
   .print-content-wrapper {
     max-width: none !important;
     padding: 10px !important;
+  }
+}
+
+/* Financial Report Table - Exact Match to Reference Image */
+.financial-report-table {
+  border: 2px solid #000;
+  background: white;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 14px;
+}
+
+.table-header {
+  background: #f0f0f0;
+  border-bottom: 2px solid #000;
+}
+
+.header-row {
+  display: grid;
+  grid-template-columns: 1fr 120px 120px 120px;
+  min-height: 40px;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #000;
+}
+
+.table-body {
+  background: white;
+}
+
+.main-section {
+  border-bottom: 2px solid #000;
+}
+
+.main-section:last-child {
+  border-bottom: none;
+}
+
+.main-section-header {
+  display: grid;
+  grid-template-columns: 1fr 120px 120px 120px;
+  min-height: 40px;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #000;
+  font-weight: 600;
+  font-size: 16px;
+  color: #000;
+}
+
+.main-section-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: #000;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.main-section-total {
+  font-weight: 600;
+  font-size: 14px;
+  color: #000;
+  font-family: 'Courier New', monospace;
+}
+
+.subcategory-row,
+.subsubcategory-row {
+  display: grid;
+  grid-template-columns: 1fr 120px 120px 120px;
+  min-height: 32px;
+  align-items: center;
+  padding: 6px 12px;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 14px;
+  color: #000;
+}
+
+.subcategory-row:hover,
+.subsubcategory-row:hover {
+  background-color: #f8f9fa;
+}
+
+/* Sub-category (like "Honorarium", "Other Personnel Benefits") */
+.subcategory-row {
+  background-color: white;
+  font-weight: 400;
+  padding-left: 20px;
+}
+
+.subcategory-text {
+  font-weight: 400;
+  font-size: 14px;
+  color: #000;
+}
+
+.subcategory-indent {
+  margin-right: 8px;
+  font-weight: bold;
+  color: #000;
+  font-size: 16px;
+}
+
+/* Sub-sub-category (like "Monetization of Leave Credits") */
+.subsubcategory-row {
+  background-color: white;
+  font-weight: 400;
+  padding-left: 40px;
+}
+
+.subsubcategory-text {
+  font-weight: 400;
+  font-size: 14px;
+  color: #000;
+}
+
+.subsubcategory-indent {
+  margin-right: 8px;
+  font-weight: bold;
+  color: #000;
+  font-size: 16px;
+}
+
+/* Sub-sub-sub-category (like individual sub-items) */
+.subsubsubcategory-row {
+  background-color: #fafafa;
+  font-weight: 400;
+  padding-left: 60px;
+}
+
+.subsubsubcategory-text {
+  font-weight: 400;
+  font-size: 13px;
+  color: #666;
+}
+
+.subsubsubcategory-indent {
+  margin-right: 8px;
+  font-weight: bold;
+  color: #666;
+  font-size: 14px;
+}
+
+.col-description {
+  text-align: left;
+  padding-right: 16px;
+}
+
+.col-appropriation,
+.col-obligation,
+.col-balance {
+  text-align: right;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  color: #000;
+}
+
+/* Total Row */
+.total-row {
+  display: grid;
+  grid-template-columns: 1fr 120px 120px 120px;
+  min-height: 40px;
+  align-items: center;
+  padding: 8px 12px;
+  background: #e9ecef;
+  border-top: 2px solid #000;
+  font-weight: 600;
+  font-size: 14px;
+  color: #000;
+}
+
+/* No Data Message */
+.no-data-message {
+  display: grid;
+  grid-template-columns: 1fr 120px 120px 120px;
+  min-height: 40px;
+  align-items: center;
+  padding: 8px 12px;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+}
+
+/* Expand/collapse functionality styles */
+.section-content,
+.type-content,
+.item-content-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.expand-btn {
+  min-width: 24px !important;
+  width: 24px !important;
+  height: 24px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  color: #187c19 !important;
+}
+
+.expand-btn:hover {
+  background-color: rgba(24, 124, 25, 0.1) !important;
+}
+
+.expand-spacer {
+  width: 24px;
+  height: 24px;
+  display: inline-block;
+}
+
+/* Responsive adjustments for financial report table */
+@media (max-width: 768px) {
+  .header-row,
+  .main-section-header,
+  .subcategory-row,
+  .subsubcategory-row,
+  .subsubsubcategory-row,
+  .total-row,
+  .no-data-message {
+    grid-template-columns: 1fr 80px 80px 80px;
+    padding: 6px 8px;
+    min-height: 36px;
+  }
+
+  .col-appropriation,
+  .col-obligation,
+  .col-balance {
+    font-size: 11px;
+  }
+
+  .main-section-title {
+    font-size: 14px;
+  }
+
+  .subcategory-text {
+    font-size: 13px;
+  }
+
+  .subsubcategory-text {
+    font-size: 12px;
+  }
+
+  .subcategory-row {
+    padding-left: 16px;
+  }
+
+  .subsubcategory-row {
+    padding-left: 32px;
+  }
+}
+
+@media (max-width: 600px) {
+  .header-row,
+  .main-section-header,
+  .subcategory-row,
+  .subsubcategory-row,
+  .subsubsubcategory-row,
+  .total-row,
+  .no-data-message {
+    grid-template-columns: 1fr 60px 60px 60px;
+    padding: 4px 6px;
+    min-height: 32px;
+  }
+
+  .col-appropriation,
+  .col-obligation,
+  .col-balance {
+    font-size: 10px;
+  }
+
+  .main-section-title {
+    font-size: 13px;
+  }
+
+  .subcategory-text {
+    font-size: 12px;
+  }
+
+  .subsubcategory-text {
+    font-size: 11px;
+  }
+
+  .subcategory-row {
+    padding-left: 12px;
+  }
+
+  .subsubcategory-row {
+    padding-left: 24px;
   }
 }
 </style>

@@ -60,10 +60,10 @@ export const useReportStore = defineStore('report', {
     },
     getAuthConfig() {
       const authStore = useAuthStore()
-      
+
       // Use admin token if admin is logged in, otherwise use regular token
       const token = authStore.admin ? authStore.adminToken : authStore.token
-      
+
       if (!token) {
         throw new Error('Authentication token not found')
       }
@@ -80,7 +80,7 @@ export const useReportStore = defineStore('report', {
         const authStore = useAuthStore()
         const config = this.getAuthConfig()
         const currentYear = new Date().getFullYear()
-        
+
         // Handle admin vs regular user differently
         if (authStore.admin) {
           // For admin users, defer fetching to selected barangay-specific method
@@ -89,7 +89,7 @@ export const useReportStore = defineStore('report', {
           this.positionsOptions = []
           return
         }
-        
+
         // Regular barangay users can fetch their expense classes
         const expenseClasses = await api.get(
           `/api/barangay/expense-classes?fiscal_year=${currentYear}`,
@@ -185,7 +185,7 @@ export const useReportStore = defineStore('report', {
         // Handle middleware-wrapped response structure
         const responseData = response?.data?.data || response?.data
         const rawData = responseData?.data?.rows || responseData?.rows || []
-        
+
         // Use account titles from backend response if available, otherwise extract from keys
         if (responseData?.data?.account_titles && responseData?.data?.account_title_key_map) {
           this.dynamicAccountColumns = responseData.data.account_titles
@@ -197,20 +197,20 @@ export const useReportStore = defineStore('report', {
           // Fallback: Extract unique account titles from dynamic keys (amount_*)
           const accountTitles = []
           const accountTitleMap = {} // Map readable titles to keys
-          
+
           rawData.forEach(item => {
             Object.keys(item).forEach(key => {
               if (key.startsWith('amount_')) {
                 // Convert key back to readable account title - smart conversion
                 let accountTitle = key.replace('amount_', '')
-                
+
                 // Handle common patterns to restore proper formatting
                 // Convert underscores back to spaces, but preserve some structure
                 accountTitle = accountTitle.replace(/_/g, ' ')
-                
+
                 // Clean up multiple spaces
                 accountTitle = accountTitle.replace(/\s+/g, ' ').trim()
-                
+
                 if (!accountTitles.includes(accountTitle)) {
                   accountTitles.push(accountTitle)
                   accountTitleMap[accountTitle] = key // Store mapping
@@ -232,17 +232,16 @@ export const useReportStore = defineStore('report', {
             payee: pos.payee,
             amount: pos.amount,
           }
-          
+
           // Copy all dynamic amount columns from the grouped data
           Object.keys(pos).forEach(key => {
             if (key.startsWith('amount_')) {
               row[key] = pos[key]
             }
           })
-          
+
           return row
         })
-        
       } catch (error) {
         console.error('Error:', error)
         throw error
@@ -255,7 +254,7 @@ export const useReportStore = defineStore('report', {
         const to = this._normalizeDate($date.value.to)
         const from = this._normalizeDate($date.value.from)
 
-        
+
         // Use the same endpoint as user page but with admin parameters
         const response = await api.get(
           `/api/admin/report/rac`,
@@ -271,8 +270,8 @@ export const useReportStore = defineStore('report', {
         )
 
         const rawData = response?.data?.data?.rows || []
-        
-        
+
+
         // Use account titles from backend response if available, otherwise extract from keys
         if (response?.data?.account_titles && response?.data?.account_title_key_map) {
           this.dynamicAccountColumns = response.data.account_titles
@@ -281,20 +280,20 @@ export const useReportStore = defineStore('report', {
           // Fallback: Extract unique account titles from dynamic keys (amount_*)
           const accountTitles = []
           const accountTitleMap = {} // Map readable titles to keys
-          
+
           rawData.forEach(item => {
             Object.keys(item).forEach(key => {
               if (key.startsWith('amount_')) {
                 // Convert key back to readable account title - smart conversion
                 let accountTitle = key.replace('amount_', '')
-                
+
                 // Handle common patterns to restore proper formatting
                 // Convert underscores back to spaces, but preserve some structure
                 accountTitle = accountTitle.replace(/_/g, ' ')
-                
+
                 // Clean up multiple spaces
                 accountTitle = accountTitle.replace(/\s+/g, ' ').trim()
-                
+
                 if (!accountTitles.includes(accountTitle)) {
                   accountTitles.push(accountTitle)
                   accountTitleMap[accountTitle] = key // Store mapping
@@ -316,17 +315,17 @@ export const useReportStore = defineStore('report', {
             payee: pos.payee,
             amount: pos.amount,
           }
-          
+
           // Copy all dynamic amount columns from the grouped data
           Object.keys(pos).forEach(key => {
             if (key.startsWith('amount_')) {
               row[key] = pos[key]
             }
           })
-          
+
           return row
         })
-        
+
       } catch (error) {
         console.error('Admin RAC fetch error:', error)
         throw error
@@ -358,34 +357,8 @@ export const useReportStore = defineStore('report', {
         const responseData = response?.data?.data || response?.data
         const rows = responseData?.data?.rows || responseData?.rows || []
 
-        const grouped = {}
-        rows.forEach((row) => {
-          const key = `${row.order}-${row.expense}`
-          if (!grouped[key]) grouped[key] = []
-          grouped[key].push(row)
-        })
-
-        this.reportSACB = []
-        let count=0;
-        Object.keys(grouped)
-          .sort()
-          .forEach((key) => {
-            const items = grouped[key]
-            const firstItem = items[0]
-            this.reportSACB.push({
-              isSection: true,
-              ppa: `${++count}. ${firstItem.expense}`,
-            })
-
-            items.forEach((item) => {
-              this.reportSACB.push({
-                ppa: `• ${item.ppa}`,
-                appropriation: Number(item.appropriation),
-                obligation: Number(item.obligation),
-                balance: Number(item.balance),
-              })
-            })
-          })
+        // Backend now returns hierarchical structure directly
+        this.reportSACB = rows
       } catch (error) {
         console.error('Fetch by steve - Error:', error)
         throw error

@@ -388,7 +388,7 @@
 
       <!-- Results Summary -->
       <div v-if="filteredDisbursements.length > 0" class="q-mb-sm">
-        <q-chip
+        <!-- <q-chip
           :color="
             filteredDisbursements.length === store.disbursements.length ? 'grey-6' : 'primary'
           "
@@ -399,7 +399,7 @@
         >
           {{ filteredDisbursements.length }} of {{ store.disbursements.length }} disbursements
           <span v-if="filteredDisbursements.length !== store.disbursements.length">(filtered)</span>
-        </q-chip>
+        </q-chip> -->
       </div>
 
       <!-- Main Data Table -->
