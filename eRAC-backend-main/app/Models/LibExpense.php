@@ -9,13 +9,6 @@ class LibExpenseClass extends Model
 {
     protected $table = 'lib_expense_classes';
 
-    protected static function booted()
-    {
-        static::addGlobalScope('ordered', function (Builder $builder) {
-            $builder->orderBy('order', 'asc');
-        });
-    }
-
     // Relationships
     public function barangay()
     {
@@ -65,12 +58,6 @@ class LibExpenseType extends Model
 {
     protected $table = 'lib_expense_types';
 
-    protected static function booted()
-    {
-        static::addGlobalScope('ordered', function (Builder $builder) {
-            $builder->orderBy('order', 'asc');
-        });
-    }
     // Relationships
     public function expenseClass()
     {
@@ -110,12 +97,6 @@ class LibExpenseItem extends Model
 {
     protected $table = 'lib_expense_items';
 
-    protected static function booted()
-    {
-        static::addGlobalScope('ordered', function (Builder $builder) {
-            $builder->orderBy('order', 'asc');
-        });
-    }
     // Relationships
     public function expenseType()
     {
