@@ -18,18 +18,9 @@
           <div class="year-filter-section">
             <div class="row items-center justify-end q-gutter-sm">
               <div class="text-subtitle2 text-weight-medium">Year Filter:</div>
-              <q-select
-                v-model="chartStore.selectedYear"
-                :options="chartStore.availableYears"
-                option-value="value"
-                option-label="label"
-                emit-value
-                map-options
-                dense
-                outlined
-                style="min-width: 120px"
-                :loading="chartStore.isYearFilterLoading"
-                :disable="chartStore.isYearFilterLoading"
+              <q-select v-model="chartStore.selectedYear" :options="chartStore.availableYears" option-value="value"
+                option-label="label" emit-value map-options dense outlined style="min-width: 120px"
+                :loading="chartStore.isYearFilterLoading" :disable="chartStore.isYearFilterLoading"
                 @update:model-value="onYearChange">
                 <template v-slot:prepend>
                   <q-icon name="calendar_today" />
@@ -40,15 +31,8 @@
               </q-select>
 
               <!-- Refresh years button -->
-              <q-btn
-                icon="refresh"
-                color="primary"
-                flat
-                dense
-                size="sm"
-                @click="refreshYears"
-                :loading="chartStore.isYearFilterLoading"
-                :disable="chartStore.isYearFilterLoading">
+              <q-btn icon="refresh" color="primary" flat dense size="sm" @click="refreshYears"
+                :loading="chartStore.isYearFilterLoading" :disable="chartStore.isYearFilterLoading">
                 <q-tooltip>Refresh available years</q-tooltip>
               </q-btn>
 
@@ -66,12 +50,8 @@
     <!-- Summary Cards Row -->
     <div class="row q-col-gutter-lg q-mb-lg">
       <div v-for="(card, index) in chartStore.summaryCards" :key="index" class="col-xs-12 col-sm-6 col-md-4 q-mb-md">
-        <q-card
-          class="summary-card"
-          :class="`card-${index}`"
-          :clickable="isClickableCard(card.label)"
-          @click="handleSummaryCardClick(card.label)"
-        >
+        <q-card class="summary-card" :class="`card-${index}`" :clickable="isClickableCard(card.label)"
+          @click="handleSummaryCardClick(card.label)">
           <q-card-section class="row items-center justify-evenly q-pa-md" style="height: 100%">
             <div class="row items-center" style="max-width: 90%">
               <q-avatar :icon="card.icon" size="45px" :color="card.color || 'primary'" text-color="white"
@@ -168,8 +148,8 @@
             </div>
 
             <q-table v-else :rows="filteredDisbursementRows" :columns="disbursementTableColumns" row-key="id" flat
-              bordered :pagination="{ rowsPerPage: 5 }" class="disbursement-table responsive-table"
-              style="height: 100%" @row-click="handleDisbursementRowClick">
+              bordered :pagination="{ rowsPerPage: 5 }" class="disbursement-table responsive-table" style="height: 100%"
+              @row-click="handleDisbursementRowClick">
               <!-- Status column with color coding -->
               <template v-slot:body-cell-status="props">
                 <q-td :props="props">
@@ -1233,6 +1213,7 @@ onMounted(async () => {
   overflow-y: auto;
   border: 1px solid #e0e0e0;
 }
+
 .dashboard-card {
   background: white;
   border-radius: 12px;
