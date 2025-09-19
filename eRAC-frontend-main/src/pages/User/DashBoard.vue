@@ -157,15 +157,18 @@
               </q-btn>
             </div>
 
-            <!-- Status Count Summary -->
-          </q-card-section>
+          <!-- Amount column with currency formatting -->
+          <template v-slot:body-cell-dv_amount="props">
+            <q-td :props="props">
+              {{ chartStore.formatCurrency(props.value) }}
+            </q-td>
+          </template>
 
-          <q-separator />
+          <!-- Aging column with color coding -->
+          <template v-slot:body-cell-aging="props">
+            <q-td :props="props">
+              <!-- Debug info (remove in production) -->
 
-          <q-card-section style="height: 350px; position: relative; width: 100%; overflow-x: auto">
-            <div v-if="chartStore.isLoading" class="absolute-center">
-              <q-spinner color="primary" size="3em" />
-            </div>
 
             <q-table v-else :rows="filteredDisbursementRows" :columns="disbursementTableColumns" row-key="id" flat
               bordered :pagination="{ rowsPerPage: 5 }" class="disbursement-table responsive-table"
@@ -177,17 +180,16 @@
                 </q-td>
               </template>
 
-              <!-- Amount column with currency formatting -->
-              <template v-slot:body-cell-dv_amount="props">
-                <q-td :props="props">
-                  {{ chartStore.formatCurrency(props.value) }}
-                </q-td>
-              </template>
+            </q-td>
+          </template>
 
-              <!-- Aging column with color coding -->
-              <template v-slot:body-cell-aging="props">
-                <q-td :props="props">
-                  <!-- Debug info (remove in production) -->
+          <!-- Liquidated amount column with currency formatting -->
+          <template v-slot:body-cell-liquidated_amount="props">
+            <q-td :props="props">
+              {{ props.value ? chartStore.formatCurrency(props.value) : '-' }}
+            </q-td>
+          </template>
+        </q-table>
 
                   <div v-if="props.value !== '-' && props.row.status !== 'Liquidated'" class="aging-display">
                     <q-chip :color="getAgingColor(props.value)" text-color="white" size="sm"
@@ -283,7 +285,7 @@ const selectedDisbursementFilter = ref('unliquidated')
 const disbursementFilters = ref([
   { label: 'Unliquidated', value: 'unliquidated' },
   { label: 'Partial', value: 'Partial' },
-  { label: 'Liquidated', value: 'Liquidated' },
+  { label: 'Liquidated', value: 'Liquidated' }
 ])
 
 // Custom disbursement table columns
@@ -380,10 +382,10 @@ const getStatusColor = (status) => {
 
 // Helper function to get aging color based on days
 const getAgingColor = (days) => {
-  if (days <= 7) return 'green' // 0-7 days: Green (Good)
-  if (days <= 14) return 'orange' // 8-14 days: Orange (Warning)
+  if (days <= 7) return 'green'        // 0-7 days: Green (Good)
+  if (days <= 14) return 'orange'      // 8-14 days: Orange (Warning)
   if (days <= 30) return 'deep-orange' // 15-30 days: Deep Orange (Caution)
-  return 'red' // 31+ days: Red (Critical)
+  return 'red'                         // 31+ days: Red (Critical)
 }
 
 // Helper function to get aging tooltip text
@@ -438,7 +440,7 @@ const refreshDisbursements = async () => {
       message: 'Disbursement data refreshed!',
       icon: 'refresh',
       position: 'top',
-      timeout: 2000,
+      timeout: 2000
     })
   } catch (error) {
     console.error('Error refreshing disbursements:', error)
@@ -447,7 +449,7 @@ const refreshDisbursements = async () => {
       message: 'Failed to refresh disbursement data',
       icon: 'error',
       position: 'top',
-      timeout: 3000,
+      timeout: 3000
     })
   }
 }
@@ -813,8 +815,8 @@ onMounted(async () => {
     transform 0.3s ease,
     box-shadow 0.3s ease;
   height: 100%;
-  background-color: #c2ffc2;
-  overflow-y: hidden;
+    background-color: #C2FFC2;
+    overflow-y: hidden;
 
   &:hover {
     transform: translateY(-5px);
@@ -844,12 +846,12 @@ onMounted(async () => {
 
   &.card-1 {
     border-top: 4px solid rgba(88, 178, 101, 1);
-    background-color: white;
+      background-color: white;
   }
 
   &.card-2 {
     border-top: 4px solid rgba(88, 178, 101, 1);
-    background-color: white;
+      background-color: white;
   }
 }
 
