@@ -80,7 +80,7 @@ Route::prefix('barangay')->group(function () {
         Route::post('expense-classes', [AccountsLibController::class, 'createExpenseClass']);
         Route::put('expense-classes/{classId}', [AccountsLibController::class, 'updateClass']);
         Route::delete('expense-classes/{classId}', [AccountsLibController::class, 'deleteClass']);
-        Route::patch('expense-classes/update-order', [AccountsLibController::class, 'updateOrder']);
+        Route::patch('expense-classes/update-order', [AccountsLibController::class, 'updateClassOrder']);
         //
         Route::post('expense-classes/copy-to-year/{sourceYearId}',
         [AccountsLibController::class, 'copyToYear']);

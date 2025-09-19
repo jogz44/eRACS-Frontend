@@ -758,28 +758,28 @@ public function createExpenseType(Request $request, $classId)
     return response()->json(['message' => 'Type deleted successfully']);
 }
 //Sotrtable
-public function updateOrder(Request $request, $classId)
+public function updateClassOrder(Request $request)
 {
     $this->verifyBarangayAccess();
     $barangayId = Auth::user()->barangay_id;
 
-    $request->validate([
-        'types' => 'required|array',
-        'types.*.id' => 'required|exists:lib_expense_types,id',
-        'types.*.order' => 'required|integer'
+    $validated = $request->validate([
+        'classes' => 'required|array',
+        'classes.*.id' => 'required|exists:lib_expense_classes,id',
+        'classes.*.order' => 'required|integer'
     ]);
 
-    DB::transaction(function () use ($request, $barangayId, $classId) {
-        foreach ($request->types as $typeData) {
-            LibExpenseType::forBarangay($barangayId)
-                ->where('id', $typeData['id'])
-                ->where('expense_class_id', $classId)
-                ->update(['order' => $typeData['order']]);
+    DB::transaction(function () use ($validated, $barangayId) {
+        foreach ($validated['classes'] as $classData) {
+            LibExpenseClass::forBarangay($barangayId)
+                ->where('id', $classData['id'])
+                ->update(['order' => $classData['order']]);
         }
     });
 
-    return response()->json(['message' => 'Type order updated successfully']);
+    return response()->json(['message' => 'Class order updated successfully']);
 }
+
 
     // =============================================
     // Expense Item Methods
