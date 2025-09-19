@@ -429,6 +429,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       },
       { name: 'action', label: 'Action', field: '', align: 'center' },
       { name: 'remarks', label: 'Remarks', field: '', align: 'center' },
+      { name: 'liquidate', label: 'Liquidate', field: '', align: 'center' },
     ],
 
     expenseColumns: () => [

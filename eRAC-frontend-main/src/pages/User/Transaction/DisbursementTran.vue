@@ -406,7 +406,7 @@
       <q-card flat bordered>
         <q-table
           :rows="filteredDisbursements"
-          :columns="store.disbursementColumns"
+          :columns="userColumns"
           row-key="id"
           :pagination="store.pagination"
           :loading="store.loadingDisbursements"
@@ -507,21 +507,6 @@
             </q-td>
           </template>
 
-          <template v-slot:body-cell-remarks="props">
-            <q-td :props="props">
-              <div v-if="hasRemarks(props.row)" class="row items-center justify-center">
-                <q-icon
-                  name="edit_note"
-                  color="primary"
-                  size="md"
-                  class="cursor-pointer"
-                  @click="openRemarksDialog(props.row)"
-                  title="View remarks"
-                />
-              </div>
-              <div v-else class="text-grey-6 text-center">-</div>
-            </q-td>
-          </template>
 
           <template v-slot:body-cell-liquidate="props">
             <q-td :props="props">
@@ -951,6 +936,11 @@ const isApprover = computed(() => /(captain|chairperson)/i.test(userPosition.val
 
 // Current fiscal year
 const currentFiscalYear = computed(() => new Date().getFullYear())
+
+// User-specific columns without remarks
+const userColumns = computed(() => {
+  return store.disbursementColumns.filter(column => column.name !== 'remarks')
+})
 
 // Function to load all data with optimized loading strategy
 const loadAllData = async () => {

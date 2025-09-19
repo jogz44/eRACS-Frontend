@@ -255,7 +255,7 @@
       <q-card flat bordered>
         <q-table
           :rows="store.filteredDisbursements"
-          :columns="store.disbursementColumns"
+          :columns="adminColumns"
           row-key="id"
           :pagination="store.pagination"
           :loading="store.loadingDisbursements"
@@ -310,6 +310,8 @@
               </q-btn>
             </q-td>
           </template>
+
+
         </q-table>
       </q-card>
 
@@ -598,6 +600,11 @@ const currentBankLabel = computed(() => {
   return 'Select Bank'
 })
 
+// Admin-specific columns without liquidation
+const adminColumns = computed(() => {
+  return store.disbursementColumns.filter(column => column.name !== 'liquidate')
+})
+
 const handleBankSelection = async (bankId) => {
   if (bankId) {
     try {
@@ -665,6 +672,7 @@ const handleEnterKey = (event) => {
   border-bottom: 1px solid #e0e0e0;
   padding-bottom: 8px;
 }
+
 
 @media (max-width: 768px) {
   .q-pa-md {
