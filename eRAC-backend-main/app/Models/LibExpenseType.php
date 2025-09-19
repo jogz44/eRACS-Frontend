@@ -13,6 +13,13 @@ class LibExpenseType extends Model
         'name',
         'order',
     ];
+
+     protected static function booted()
+    {
+        static::addGlobalScope('ordered', function (Builder $builder) {
+            $builder->orderBy('order', 'asc');
+        });
+    }
     // Relationships
     public function expenseClass()
     {

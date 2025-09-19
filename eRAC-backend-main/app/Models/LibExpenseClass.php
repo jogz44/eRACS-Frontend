@@ -13,6 +13,13 @@ class LibExpenseClass extends Model
         return $this->belongsTo(Barangay::class);
     }
 
+    protected static function booted()
+    {
+        static::addGlobalScope('ordered', function (Builder $builder) {
+            $builder->orderBy('order', 'asc');
+        });
+    }
+
     protected $fillable = [
         'barangay_id',
         'fiscal_year_id',
