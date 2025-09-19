@@ -181,6 +181,7 @@ export const useReportStore = defineStore('report', {
           },
           config,
         )
+        console.log('========================',response)
 
         // Handle middleware-wrapped response structure
         const responseData = response?.data?.data || response?.data
