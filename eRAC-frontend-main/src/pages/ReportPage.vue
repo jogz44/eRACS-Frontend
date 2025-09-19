@@ -508,9 +508,15 @@
                     <!-- Regular Row -->
                     <tr v-else>
                       <td class="text-left">{{ props.row.ppa }}</td>
-                      <td class="text-right">{{ formatCurrency(props.row.appropriation) }}</td>
-                      <td class="text-right">{{ formatCurrency(props.row.obligation) }}</td>
-                      <td class="text-right">{{ formatCurrency(props.row.balance) }}</td>
+                      <td class="text-right">
+                        {{ props.row.appropriation ? formatCurrency(props.row.appropriation) : '' }}
+                      </td>
+                      <td class="text-right">
+                        {{ props.row.obligation ? formatCurrency(props.row.obligation) : '' }}
+                      </td>
+                      <td class="text-right">
+                        {{ props.row.balance ? formatCurrency(props.row.balance) : '' }}
+                      </td>
                     </tr>
                   </template>
                 </q-table>
