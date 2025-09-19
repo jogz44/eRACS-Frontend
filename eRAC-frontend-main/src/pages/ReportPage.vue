@@ -534,9 +534,11 @@
                           <span class="subsubsubcategory-indent">></span>
                           <span class="subsubsubcategory-text">{{ row.ppa }}</span>
                         </div>
-                        <div class="col-appropriation text-right">{{ formatCurrency(row.appropriation) }}</div>
-                        <div class="col-obligation text-right">{{ formatCurrency(row.obligation) }}</div>
-                        <div class="col-balance text-right">{{ formatCurrency(row.balance) }}</div>
+                        <div class="amount-group">
+                          <div class="col-appropriation text-right">{{ formatCurrency(row.appropriation) }}</div>
+                          <div class="col-obligation text-right">{{ formatCurrency(row.obligation) }}</div>
+                          <div class="col-balance text-right">{{ formatCurrency(row.balance) }}</div>
+                        </div>
                       </div>
 
                       <!-- Total Row -->
@@ -2441,9 +2443,13 @@ onActivated(async () => {
 
 /* Sub-sub-sub-category (like individual sub-items) */
 .subsubsubcategory-row {
-  background-color: #fafafa;
-  font-weight: 400;
-  padding-left: 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 32px;
+  padding: 4px 16px 4px 60px;
+  background-color: white;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .subsubsubcategory-text {
@@ -2457,6 +2463,13 @@ onActivated(async () => {
   font-weight: bold;
   color: #666;
   font-size: 14px;
+}
+
+.amount-group {
+  display: grid;
+  grid-template-columns: 120px 120px 120px;
+  gap: 8px;
+  align-items: center;
 }
 
 .col-description {
@@ -2533,12 +2546,20 @@ onActivated(async () => {
   .main-section-header,
   .subcategory-row,
   .subsubcategory-row,
-  .subsubsubcategory-row,
   .total-row,
   .no-data-message {
     grid-template-columns: 1fr 80px 80px 80px;
     padding: 6px 8px;
     min-height: 36px;
+  }
+
+  .subsubsubcategory-row {
+    padding: 6px 8px 6px 48px;
+  }
+
+  .amount-group {
+    grid-template-columns: 80px 80px 80px;
+    gap: 6px;
   }
 
   .col-appropriation,
@@ -2573,12 +2594,20 @@ onActivated(async () => {
   .main-section-header,
   .subcategory-row,
   .subsubcategory-row,
-  .subsubsubcategory-row,
   .total-row,
   .no-data-message {
     grid-template-columns: 1fr 60px 60px 60px;
     padding: 4px 6px;
     min-height: 32px;
+  }
+
+  .subsubsubcategory-row {
+    padding: 4px 6px 4px 36px;
+  }
+
+  .amount-group {
+    grid-template-columns: 60px 60px 60px;
+    gap: 4px;
   }
 
   .col-appropriation,
