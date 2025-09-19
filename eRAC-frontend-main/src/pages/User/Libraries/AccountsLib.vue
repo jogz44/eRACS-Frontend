@@ -957,7 +957,7 @@ const loadExpenseClassesForYear = async (yearId) => {
   }
 }
 
-const handleSortEnd = (evt) => {
+const handleSortEnd = async (evt) => {
   const items = [...filteredExpenseClasses.value]
   const [movedItem] = items.splice(evt.oldIndex, 1)
   items.splice(evt.newIndex, 0, movedItem)
@@ -969,11 +969,32 @@ const handleSortEnd = (evt) => {
     }
   })
 
+  // notify immediate change
   $q.notify({
     type: 'info',
-    message: 'Order changed (not saved to server)',
-    timeout: 1000,
+    message: 'Order changed, saving...',
+    timeout: 800,
+      position: 'top' 
   })
+
+  try {
+    // persist to server
+    await accountsStore.updateClassOrder(items)
+
+    $q.notify({
+      type: 'positive',
+      message: 'Order saved successfully',
+      timeout: 1000,
+      position: 'top' 
+    })
+  } catch (error) {
+    console.error('Failed to update class order:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to save class order: ' + error.message,
+      position: 'top' 
+    })
+  }
 }
 
 // Expense Type related functions

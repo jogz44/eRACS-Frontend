@@ -18,18 +18,9 @@
           <div class="year-filter-section">
             <div class="row items-center justify-end q-gutter-sm">
               <div class="text-subtitle2 text-weight-medium">Year Filter:</div>
-              <q-select
-                v-model="chartStore.selectedYear"
-                :options="chartStore.availableYears"
-                option-value="value"
-                option-label="label"
-                emit-value
-                map-options
-                dense
-                outlined
-                style="min-width: 120px"
-                :loading="chartStore.isYearFilterLoading"
-                :disable="chartStore.isYearFilterLoading"
+              <q-select v-model="chartStore.selectedYear" :options="chartStore.availableYears" option-value="value"
+                option-label="label" emit-value map-options dense outlined style="min-width: 120px"
+                :loading="chartStore.isYearFilterLoading" :disable="chartStore.isYearFilterLoading"
                 @update:model-value="onYearChange">
                 <template v-slot:prepend>
                   <q-icon name="calendar_today" />
@@ -40,15 +31,8 @@
               </q-select>
 
               <!-- Refresh years button -->
-              <q-btn
-                icon="refresh"
-                color="primary"
-                flat
-                dense
-                size="sm"
-                @click="refreshYears"
-                :loading="chartStore.isYearFilterLoading"
-                :disable="chartStore.isYearFilterLoading">
+              <q-btn icon="refresh" color="primary" flat dense size="sm" @click="refreshYears"
+                :loading="chartStore.isYearFilterLoading" :disable="chartStore.isYearFilterLoading">
                 <q-tooltip>Refresh available years</q-tooltip>
               </q-btn>
 
@@ -66,12 +50,8 @@
     <!-- Summary Cards Row -->
     <div class="row q-col-gutter-lg q-mb-lg">
       <div v-for="(card, index) in chartStore.summaryCards" :key="index" class="col-xs-12 col-sm-6 col-md-4 q-mb-md">
-        <q-card
-          class="summary-card"
-          :class="`card-${index}`"
-          :clickable="isClickableCard(card.label)"
-          @click="handleSummaryCardClick(card.label)"
-        >
+        <q-card class="summary-card" :class="`card-${index}`" :clickable="isClickableCard(card.label)"
+          @click="handleSummaryCardClick(card.label)">
           <q-card-section class="row items-center justify-evenly q-pa-md" style="height: 100%">
             <div class="row items-center" style="max-width: 90%">
               <q-avatar :icon="card.icon" size="45px" :color="card.color || 'primary'" text-color="white"
@@ -157,22 +137,19 @@
               </q-btn>
             </div>
 
-          <!-- Amount column with currency formatting -->
-          <template v-slot:body-cell-dv_amount="props">
-            <q-td :props="props">
-              {{ chartStore.formatCurrency(props.value) }}
-            </q-td>
-          </template>
+            <!-- Status Count Summary -->
+          </q-card-section>
 
-          <!-- Aging column with color coding -->
-          <template v-slot:body-cell-aging="props">
-            <q-td :props="props">
-              <!-- Debug info (remove in production) -->
+          <q-separator />
 
+          <q-card-section style="height: 350px; position: relative; width: 100%; overflow-x: auto">
+            <div v-if="chartStore.isLoading" class="absolute-center">
+              <q-spinner color="primary" size="3em" />
+            </div>
 
             <q-table v-else :rows="filteredDisbursementRows" :columns="disbursementTableColumns" row-key="id" flat
-              bordered :pagination="{ rowsPerPage: 5 }" class="disbursement-table responsive-table"
-              style="height: 100%" @row-click="handleDisbursementRowClick">
+              bordered :pagination="{ rowsPerPage: 5 }" class="disbursement-table responsive-table" style="height: 100%"
+              @row-click="handleDisbursementRowClick">
               <!-- Status column with color coding -->
               <template v-slot:body-cell-status="props">
                 <q-td :props="props">
@@ -180,16 +157,17 @@
                 </q-td>
               </template>
 
-            </q-td>
-          </template>
+              <!-- Amount column with currency formatting -->
+              <template v-slot:body-cell-dv_amount="props">
+                <q-td :props="props">
+                  {{ chartStore.formatCurrency(props.value) }}
+                </q-td>
+              </template>
 
-          <!-- Liquidated amount column with currency formatting -->
-          <template v-slot:body-cell-liquidated_amount="props">
-            <q-td :props="props">
-              {{ props.value ? chartStore.formatCurrency(props.value) : '-' }}
-            </q-td>
-          </template>
-        </q-table>
+              <!-- Aging column with color coding -->
+              <template v-slot:body-cell-aging="props">
+                <q-td :props="props">
+                  <!-- Debug info (remove in production) -->
 
                   <div v-if="props.value !== '-' && props.row.status !== 'Liquidated'" class="aging-display">
                     <q-chip :color="getAgingColor(props.value)" text-color="white" size="sm"
@@ -285,7 +263,7 @@ const selectedDisbursementFilter = ref('unliquidated')
 const disbursementFilters = ref([
   { label: 'Unliquidated', value: 'unliquidated' },
   { label: 'Partial', value: 'Partial' },
-  { label: 'Liquidated', value: 'Liquidated' }
+  { label: 'Liquidated', value: 'Liquidated' },
 ])
 
 // Custom disbursement table columns
@@ -382,10 +360,10 @@ const getStatusColor = (status) => {
 
 // Helper function to get aging color based on days
 const getAgingColor = (days) => {
-  if (days <= 7) return 'green'        // 0-7 days: Green (Good)
-  if (days <= 14) return 'orange'      // 8-14 days: Orange (Warning)
+  if (days <= 7) return 'green' // 0-7 days: Green (Good)
+  if (days <= 14) return 'orange' // 8-14 days: Orange (Warning)
   if (days <= 30) return 'deep-orange' // 15-30 days: Deep Orange (Caution)
-  return 'red'                         // 31+ days: Red (Critical)
+  return 'red' // 31+ days: Red (Critical)
 }
 
 // Helper function to get aging tooltip text
@@ -440,7 +418,7 @@ const refreshDisbursements = async () => {
       message: 'Disbursement data refreshed!',
       icon: 'refresh',
       position: 'top',
-      timeout: 2000
+      timeout: 2000,
     })
   } catch (error) {
     console.error('Error refreshing disbursements:', error)
@@ -449,7 +427,7 @@ const refreshDisbursements = async () => {
       message: 'Failed to refresh disbursement data',
       icon: 'error',
       position: 'top',
-      timeout: 3000
+      timeout: 3000,
     })
   }
 }
@@ -815,8 +793,8 @@ onMounted(async () => {
     transform 0.3s ease,
     box-shadow 0.3s ease;
   height: 100%;
-    background-color: #C2FFC2;
-    overflow-y: hidden;
+  background-color: #c2ffc2;
+  overflow-y: hidden;
 
   &:hover {
     transform: translateY(-5px);
@@ -846,12 +824,12 @@ onMounted(async () => {
 
   &.card-1 {
     border-top: 4px solid rgba(88, 178, 101, 1);
-      background-color: white;
+    background-color: white;
   }
 
   &.card-2 {
     border-top: 4px solid rgba(88, 178, 101, 1);
-      background-color: white;
+    background-color: white;
   }
 }
 
@@ -1235,6 +1213,7 @@ onMounted(async () => {
   overflow-y: auto;
   border: 1px solid #e0e0e0;
 }
+
 .dashboard-card {
   background: white;
   border-radius: 12px;
