@@ -408,6 +408,7 @@ class AppropriationController extends Controller
             $query->with(['childItems'])->whereNull('parent_item_id'); // Only load root items, not sub-items
         }])
             ->where('fiscal_year_id', $fiscalYearId)
+            ->orderBy('order')
             ->get()
             ->map(function($class) use ($barangayId, $budgetId, $budgetIds, $budgetType) {
                 // Calculate allocated amount for this expense class
@@ -1679,7 +1680,7 @@ class AppropriationController extends Controller
             \Log::info('Found ' . $budgets->count() . ' budgets for barangay ' . $barangayId);
             
             // Check expense classes
-            $expenseClasses = LibExpenseClass::where('barangay_id', $barangayId)->get();
+            $expenseClasses = LibExpenseClass::where('barangay_id', $barangayId)->orderBy('order')->get();
             \Log::info('Found ' . $expenseClasses->count() . ' expense classes for barangay ' . $barangayId);
             
             // Check appropriations
