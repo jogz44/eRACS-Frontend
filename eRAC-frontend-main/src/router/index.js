@@ -56,7 +56,7 @@ export default defineRouter(function (/* { store, ssrContext } */) {
             '/admin/appropriation', '/admin/disbursement', '/admin/augmentation',
             '/admin/contAppropriation', '/admin/contDisbursement', '/admin/contAugmentation'
           ]
-          
+
           if (transactionPages.includes(to.path)) {
             const selectedBarangay = localStorage.getItem('admin_selected_barangay')
             if (!selectedBarangay) {

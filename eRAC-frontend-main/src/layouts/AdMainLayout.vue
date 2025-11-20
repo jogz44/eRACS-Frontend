@@ -106,7 +106,7 @@
             >
               <div class="user-profile-container">
                 <q-avatar size="32px" class="user-avatar">
-                  <img src="src/assets/admin.png" alt="Admin" />
+                  <img :src=adminlogo alt="Admin" />
                 </q-avatar>
                 <q-icon name="keyboard_arrow_down" size="14px" color="white" class="dropdown-arrow" />
               </div>
@@ -117,7 +117,7 @@
                 <q-item class="user-profile-header">
                   <q-item-section avatar>
                     <q-avatar size="72px">
-                      <img src="src/assets/admin.png" />
+                      <img :src=adminlogo />
                     </q-avatar>
                   </q-item-section>
                   <q-item-section>
@@ -164,9 +164,9 @@
         <div class="logo-section">
           <q-item class="row items-center q-pt-md" style="padding: 5px;">
             <img
-              src="src/assets/tagumlogo.png"
+              :src=eracslogo
               alt="ERACS Logo"
-              style="width: 100px; height: 75px; max-width: 100%; height: auto;"
+              style="width: 100px;  max-width: 100%; height: auto;"
               class="q-mb-sm"
             />
             <q-item-label class="eracs-title text-center" style="font-size: small;color: black; font-style: normal;">
@@ -384,7 +384,8 @@ import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'stores/auth'
 import { api } from 'boot/axios'
-
+import adminlogo from "src/assets/admin.png"
+import eracslogo from "src/assets/tagumlogo.png"
 
 const $q = useQuasar()
 const router = useRouter()

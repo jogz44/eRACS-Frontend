@@ -478,6 +478,11 @@ export default {
       }
 
       isLoading.value = true
+
+      if(!verifyOtp()){
+        return
+      }
+
       try {
         // 1. First upload the photo
         const uploadResult = await authStore.uploadPhoto(uploadedFile.value)
@@ -506,11 +511,11 @@ export default {
           throw new Error(result.error)
         }else{
           // Success
-          $q.notify({
-            type: 'positive',
-            message: 'Email is Verified!',
-            position: 'top',
-          })
+          // $q.notify({
+          //   type: 'positive',
+          //   message: 'Email is Verified!',
+          //   position: 'top',
+          // })
           $q.notify({
             type: 'positive',
             message: 'Registration successful!',
@@ -534,6 +539,26 @@ export default {
     const resendOtp = async () => {
       isSending.value=true
       try {
+        const { data } = await api.post('/api/barangay/otp/resend', { email: email.value })
+
+        $q.notify({
+          type: data.status === 'success' ? 'positive' : 'negative',
+          message: data.message,
+          position: 'top',
+        })
+      } catch (err) {
+        $q.notify({
+          type: 'negative',
+          message: err.response?.data?.message || 'Failed to send OTP.',
+          position: 'top',
+        })
+      }finally{
+        isSending.value=false
+      }
+    }
+    const sendOtp = async () => {
+      isSending.value=true
+      try {
         const { data } = await api.post('/api/barangay/otp/generate', { email: email.value })
 
         $q.notify({
@@ -541,6 +566,32 @@ export default {
           message: data.message,
           position: 'top',
         })
+      } catch (err) {
+        $q.notify({
+          type: 'negative',
+          message: err.response?.data?.message || 'Failed to send OTP.',
+          position: 'top',
+        })
+      }finally{
+        isSending.value=false
+      }
+    }
+
+    const verifyOtp = async () => {
+      isSending.value=true
+      try {
+        const { data } = await api.post('/api/barangay/otp/verify', { email: email.value, otp: otpCode.value })
+
+        $q.notify({
+          type: data.status === 'success' ? 'positive' : 'negative',
+          message: data.message,
+          position: 'top',
+        })
+        if (data.status==='success'){
+          return true
+        }else{
+          return false
+        }
       } catch (err) {
         $q.notify({
           type: 'negative',
@@ -560,7 +611,7 @@ export default {
       if (!password.value || password.value.length < 8) return
       if (!confirmPassword.value || password.value !== confirmPassword.value) return
       step.value = 3
-      resendOtp()
+      sendOtp()
     }
 
     // Global keyboard event handler: single source of truth for Enter

@@ -107,6 +107,7 @@
                     </q-icon>
                   </template>
                 </q-input>
+                <q-input v-model="date" filled type="date" hint="Native date" />
               </div>
 
 

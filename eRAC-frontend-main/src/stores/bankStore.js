@@ -360,8 +360,8 @@ export const useBankStore = defineStore('bank', {
         const quantity = parseInt(bookletData.quantity)
 
         // Validate quantity
-        if (quantity < 1 || quantity > 50) {
-          throw new Error('Quantity must be between 1 and 50')
+        if (quantity < 1 || quantity > 150) {
+          throw new Error('Quantity must be between 1 and 150')
         }
 
         // Client-side validationw Error('Booklet number must be numeric')
@@ -420,7 +420,7 @@ export const useBankStore = defineStore('bank', {
           status: c.status || c.cheque_status || 'error',
           date: c.date || c.created_at || '',
           dvn: c.dvn || 'error',
-          dvamount: c.dvamount 
+          dvamount: c.dvamount
             ? '₱ ' + Number(c.dvamount).toLocaleString('en-PH', { minimumFractionDigits: 2 })
             : '-',
         }))
@@ -451,14 +451,14 @@ export const useBankStore = defineStore('bank', {
         // Import disbursement store to check for stale disbursements
         const { useDisbursementStore } = await import('./disbursementStore')
         const disbursementStore = useDisbursementStore()
-        
+
         // Get all disbursements
         await disbursementStore.fetchDisbursements()
-        
+
         // Update cheque status based on disbursement status and frontend cancelled cheques
         cheques.forEach(cheque => {
           const disbursement = disbursementStore.disbursements.find(d => d.chequeNumber === cheque.chequeNo)
-          
+
           // Check if cheque is cancelled in frontend
           if (disbursementStore.cancelledCheques.has(cheque.chequeNo)) {
             cheque.status = 'cancelled'

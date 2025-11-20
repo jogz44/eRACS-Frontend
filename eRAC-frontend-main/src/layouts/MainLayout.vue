@@ -27,10 +27,10 @@
           Barangay {{ authStore.user?.barangay_name }}
         </q-toolbar-title>
         <!--- Bell for notifications-->
-        <q-btn 
-          flat 
-          round 
-          dense 
+        <q-btn
+          flat
+          round
+          dense
           class="notification-btn"
           size="md"
         >
@@ -97,9 +97,9 @@
         </q-btn>
 
         <!--- User Avatar Menu-->
-        <q-btn 
-          flat 
-          dense 
+        <q-btn
+          flat
+          dense
           class="user-menu-btn"
           size="md"
         >
@@ -173,7 +173,7 @@
         <div class="logo-section">
           <q-item class="row items-center q-pt-md" style="padding: 5px">
             <img
-              src="src/assets/tagumlogo.png"
+              :src=eracslogo
               alt="ERACS Logo"
               style="width: 100px; height: 75px; max-width: 100%; height: auto"
               class="q-mb-sm"
@@ -355,6 +355,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from 'stores/auth'
 import { useDisbursementStore } from 'stores/disbursementStore'
 import { useQuasar } from 'quasar'
+import eracslogo from "src/assets/tagumlogo.png"
 
 const $q = useQuasar()
 const router = useRouter()

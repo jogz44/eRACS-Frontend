@@ -660,8 +660,8 @@ const addBooklet = async () => {
     const start = parseInt(newBooklet.value.starting_cheque_numb)
     const end = parseInt(newBooklet.value.ending_cheque_numb)
 
-    if (newBooklet.value.quantity > 50) {
-      throw new Error('Quantity must not exceed 50')
+    if (newBooklet.value.quantity > 150) {
+      throw new Error('Quantity must not exceed 150')
     }
     if (newBooklet.value.quantity <= 0) {
       throw new Error('Quantity must be greater than 0')
