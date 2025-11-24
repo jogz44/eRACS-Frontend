@@ -20,54 +20,32 @@
             <div class="col q-col-gutter-md items-end">
 
               <div class="col-12 col-sm-6 col-md-4">
-                <q-input
-                  bg-color="white"
-                  outlined
-                  dense
-                  :model-value="dateRangeDisplay"
-                  label="Date Range"
-                  class="custom-date-range"
-                  clearable
-                  @clear="onDateRangeClear"
-                  readonly
-                >
+                <!-- <q-input bg-color="white" outlined dense :model-value="dateRangeDisplay" label="Date Range"
+                  class="custom-date-range" clearable @clear="onDateRangeClear" readonly>
                   <template v-slot:append>
                     <q-icon name="event" class="calend-icon">
                       <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                        <q-date
-                          v-model="CurrentRacDateRange"
-                          range
-                          @update:model-value="onDateRangeChange"
-                        />
+                        <q-date v-model="CurrentRacDateRange" range @update:model-value="onDateRangeChange" />
                       </q-popup-proxy>
                     </q-icon>
                   </template>
-                </q-input>
+                </q-input> -->
+                <q-input v-model="CurrentRacDateRange.from" filled type="date" hint="From Date"
+                  @update:model-value="changeMonth" />
+                <br />
+                <q-input v-model="CurrentRacDateRange.to" filled type="date" hint="To Date" />
+                <br />
               </div>
 
               <div class="col-12 col-sm-6 col-md-4">
-                <q-select
-                  outlined
-                  dense
-                  v-model="expenseSelectedCurrent"
-                  label="Expense Category"
-                  :options="reportStore.expenseOptionsCurrent"
-                  map-options
-                  option-label="name"
-                  option-value="id"
-                  :loading="loading"
-                />
+                <q-select outlined dense v-model="expenseSelectedCurrent" label="Expense Category"
+                  :options="reportStore.expenseOptionsCurrent" map-options option-label="name" option-value="id"
+                  :loading="loading" />
               </div>
 
               <div class="col-12 col-sm-6 col-md-4">
-                <q-btn
-                  color="primary"
-                  icon="settings"
-                  label="Generate Report"
-                  class="full-width"
-                  @click="openRACModal('current-rac')"
-                  :loading="loading"
-                />
+                <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
+                  @click="openRACModal('current-rac')" :loading="loading" />
               </div>
             </div>
           </q-card-section>
@@ -84,7 +62,7 @@
           <q-card-section class="q-pt-md q-pb-lg">
             <div class="col q-col-gutter-md items-end">
               <div class="col-12 col-sm-6 col-md-6">
-                <q-input
+                <!-- <q-input
                   bg-color="white"
                   outlined
                   dense
@@ -106,21 +84,21 @@
                       </q-popup-proxy>
                     </q-icon>
                   </template>
-                </q-input>
-                <q-input v-model="date" filled type="date" hint="Native date" />
+                </q-input> -->
+
+                <q-input v-model="currentSacbDateRange.from" filled type="date" hint="From Date"
+                  @update:model-value="(v) => onDateChange('from', v)" />
+                <br />
+                <q-input v-model="currentSacbDateRange.to" filled type="date" hint="To Date"
+                  @update:model-value="(v) => onDateChange('to', v)" />
+                <br />
               </div>
 
 
 
               <div class="col-12 col-sm-6 col-md-6">
-                <q-btn
-                  color="primary"
-                  icon="settings"
-                  label="Generate Report"
-                  class="full-width"
-                  @click="openSACBModal('current-sacb')"
-                  :loading="loading"
-                />
+                <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
+                  @click="openSACBModal('current-sacb')" :loading="loading" />
               </div>
             </div>
           </q-card-section>
@@ -145,54 +123,34 @@
           <q-card-section class="q-pt-md q-pb-lg">
             <div class="col q-col-gutter-md items-end">
               <div class="col-12 col-sm-6 col-md-4">
-                <q-input
-                  bg-color="white"
-                  outlined
-                  dense
-                  :model-value="continuingDateRangeDisplay"
-                  label="Date Range"
-                  class="custom-date-range"
-                  clearable
-                  @clear="onContinuingDateRangeClear"
-                  readonly
-                >
+                <!-- <q-input bg-color="white" outlined dense :model-value="continuingDateRangeDisplay" label="Date Range"
+                  class="custom-date-range" clearable @clear="onContinuingDateRangeClear" readonly>
                   <template v-slot:append>
                     <q-icon name="event" class="calend-icon">
                       <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                        <q-date
-                          v-model="continuingRacDateRange"
-                          range
-                          @update:model-value="onContinuingDateRangeChange"
-                        />
+                        <q-date v-model="continuingRacDateRange" range
+                          @update:model-value="onContinuingDateRangeChange" />
                       </q-popup-proxy>
                     </q-icon>
                   </template>
-                </q-input>
+                </q-input> -->
+                <q-input v-model="continuingRacDateRange.from" filled type="date" hint="From Date"
+                  @update:model-value="(v) => onDateChangecontinuing('from', v)" />
+                <br />
+                <q-input v-model="continuingRacDateRange.to" filled type="date" hint="To Date"
+                  @update:model-value="(v) => onDateChangecontinuing('to', v)" />
+                <br />
               </div>
 
               <div class="col-12 col-sm-6 col-md-4">
-                <q-select
-                  outlined
-                  dense
-                  v-model="expenseSelectedContinuing"
-                  label="Expense Category"
-                  map-options
-                  :options="reportStore.expenseOptionsContinuing"
-                  :loading="loading"
-                  option-value="id"
-                  option-label="name"
-                />
+                <q-select outlined dense v-model="expenseSelectedContinuing" label="Expense Category" map-options
+                  :options="reportStore.expenseOptionsContinuing" :loading="loading" option-value="id"
+                  option-label="name" />
               </div>
 
               <div class="col-12 col-sm-6 col-md-4">
-                <q-btn
-                  color="primary"
-                  icon="settings"
-                  label="Generate Report"
-                  class="full-width"
-                  @click="openRACModal('continuing-rac')"
-                  :loading="loading"
-                />
+                <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
+                  @click="openRACModal('continuing-rac')" :loading="loading" />
               </div>
             </div>
           </q-card-section>
@@ -208,18 +166,12 @@
 
           <q-card-section class="q-pt-md q-pb-lg">
 
-              <div class="col-12 col-sm-6 col-md-6">
-                <div class="row justify-center">
-                  <q-btn
-                  class="full-width"
-                    color="primary"
-                    icon="settings"
-                    label="Generate Report"
-                    @click="openSACModal('continuing-sacb')"
-                    :loading="loading"
-                  />
-                </div>
+            <div class="col-12 col-sm-6 col-md-6">
+              <div class="row justify-center">
+                <q-btn class="full-width" color="primary" icon="settings" label="Generate Report"
+                  @click="openSACModal('continuing-sacb')" :loading="loading" />
               </div>
+            </div>
 
           </q-card-section>
         </q-card>
@@ -227,24 +179,13 @@
     </div>
 
     <!-- SACB Modal -->
-    <q-dialog
-      v-model="SACBModal.show"
-      maximized
-      transition-show="slide-up"
-      transition-hide="slide-down"
-    >
+    <q-dialog v-model="SACBModal.show" maximized transition-show="slide-up" transition-hide="slide-down">
       <q-layout view="lHh Lpr lFf" class="sacb-layout">
         <!-- Header -->
         <q-header elevated class="bg-white text-dark sacb-header">
           <q-toolbar class="q-px-md">
-            <q-btn
-              flat
-              icon="menu"
-              @click="toggleSACBDrawer"
-              class="q-mr-md"
-              :color="sacbDrawerOpen ? '#187C19' : '#666'"
-              size="md"
-            >
+            <q-btn flat icon="menu" @click="toggleSACBDrawer" class="q-mr-md"
+              :color="sacbDrawerOpen ? '#187C19' : '#666'" size="md">
               <q-tooltip>Toggle Settings Panel</q-tooltip>
             </q-btn>
 
@@ -256,25 +197,10 @@
 
             <!-- Action Buttons -->
             <div class="q-gutter-sm">
-              <q-btn
-                outline
-                icon="file_download"
-                label="Export PDF"
-                color="#69B31E"
-                @click="exportSACBToPDF"
-                size="sm"
-                no-caps
-              />
+              <q-btn outline icon="file_download" label="Export PDF" color="#69B31E" @click="exportSACBToPDF" size="sm"
+                no-caps />
 
-              <q-btn
-                unelevated
-                icon="print"
-                label="Print"
-                color="#187C19"
-                @click="handleSACBPrint"
-                size="sm"
-                no-caps
-              />
+              <q-btn unelevated icon="print" label="Print" color="#187C19" @click="handleSACBPrint" size="sm" no-caps />
 
               <q-btn flat icon="close" @click="closeSACBModal" color="#666" size="md">
                 <q-tooltip>Close</q-tooltip>
@@ -284,15 +210,8 @@
         </q-header>
 
         <!-- Left Drawer for Report Signatories -->
-        <q-drawer
-          v-model="sacbDrawerOpen"
-          side="left"
-          bordered
-          :width="350"
-          :breakpoint="768"
-          :show-if-above="false"
-          class="bg-grey-1 sacb-drawer"
-        >
+        <q-drawer v-model="sacbDrawerOpen" side="left" bordered :width="350" :breakpoint="768" :show-if-above="false"
+          class="bg-grey-1 sacb-drawer">
           <div class="drawer-content-sacb">
             <q-scroll-area class="drawer-scrollable-content">
               <div class="q-pa-lg drawer-content">
@@ -320,7 +239,8 @@
                     </div>
                     <div class="info-item">
                       <span class="info-label">Date Range:</span>
-                      <span class="info-value">{{ getSACBDateRangeDisplay() }}</span>
+                      <span class="info-value">{{ formatFullDate(currentSacbDateRange.from) }} - {{
+                        formatFullDate(currentSacbDateRange.to) }}</span>
                     </div>
                     <div class="info-item">
                       <span class="info-label">Report Type:</span>
@@ -343,57 +263,24 @@
                         <q-icon name="create" size="sm" style="color: #69b31e" class="q-mr-xs" />
                         <span class="text-weight-medium">Prepared by</span>
                       </div>
-                      <q-input
-                        outlined
-                        dense
-                        v-model="SetupModal.Preparedby"
-                        placeholder="Enter full name"
-                        class="q-mb-sm"
-                        clearable
-                      />
-                      <q-select
-                        outlined
-                        dense
-                        :options="reportStore.positionsOptions"
-                        map-options
-                        option-label="label"
-                        option-value="value"
-                        v-model="SetupModal.Preparedposition"
-                        placeholder="Select position"
-                        clearable
-                      />
+                      <q-input outlined dense v-model="SetupModal.Preparedby" placeholder="Enter full name"
+                        class="q-mb-sm" clearable />
+                      <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
+                        option-value="value" v-model="SetupModal.Preparedposition" placeholder="Select position"
+                        clearable />
                     </div>
 
                     <!-- Noted by -->
                     <div class="signatory-group q-mb-lg">
                       <div class="signatory-header">
-                        <q-icon
-                          name="visibility"
-                          size="sm"
-                          style="color: #e0ffe7"
-                          class="q-mr-xs"
-                        />
+                        <q-icon name="visibility" size="sm" style="color: #e0ffe7" class="q-mr-xs" />
                         <span class="text-weight-medium">Noted by</span>
                       </div>
-                      <q-input
-                        outlined
-                        dense
-                        v-model="SetupModal.Notedby"
-                        placeholder="Enter full name"
-                        class="q-mb-sm"
-                        clearable
-                      />
-                      <q-select
-                        outlined
-                        dense
-                        :options="reportStore.positionsOptions"
-                        map-options
-                        option-label="label"
-                        option-value="value"
-                        v-model="SetupModal.Notedposition"
-                        placeholder="Select position"
-                        clearable
-                      />
+                      <q-input outlined dense v-model="SetupModal.Notedby" placeholder="Enter full name" class="q-mb-sm"
+                        clearable />
+                      <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
+                        option-value="value" v-model="SetupModal.Notedposition" placeholder="Select position"
+                        clearable />
                     </div>
 
                     <!-- Certified by -->
@@ -402,25 +289,11 @@
                         <q-icon name="verified" size="sm" style="color: #187c19" class="q-mr-xs" />
                         <span class="text-weight-medium">Certified by</span>
                       </div>
-                      <q-input
-                        outlined
-                        dense
-                        v-model="SetupModal.Certifiedby"
-                        placeholder="Enter full name"
-                        class="q-mb-sm"
-                        clearable
-                      />
-                      <q-select
-                        outlined
-                        dense
-                        :options="reportStore.positionsOptions"
-                        map-options
-                        option-label="label"
-                        option-value="value"
-                        v-model="SetupModal.Certifiedposition"
-                        placeholder="Select position"
-                        clearable
-                      />
+                      <q-input outlined dense v-model="SetupModal.Certifiedby" placeholder="Enter full name"
+                        class="q-mb-sm" clearable />
+                      <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
+                        option-value="value" v-model="SetupModal.Certifiedposition" placeholder="Select position"
+                        clearable />
                     </div>
                   </q-card-section>
                 </q-card>
@@ -433,24 +306,10 @@
                       Quick Actions
                     </div>
                     <div class="q-gutter-sm">
-                      <q-btn
-                        outline
-                        size="sm"
-                        icon="refresh"
-                        label="Reset Form"
-                        color="#E0FFE7"
-                        @click="resetSignatories"
-                        class="full-width"
-                      />
-                      <q-btn
-                        outline
-                        size="sm"
-                        icon="save"
-                        label="Save as Template"
-                        color="#69B31E"
-                        @click="saveAsTemplate"
-                        class="full-width"
-                      />
+                      <q-btn outline size="sm" icon="refresh" label="Reset Form" color="#E0FFE7"
+                        @click="resetSignatories" class="full-width" />
+                      <q-btn outline size="sm" icon="save" label="Save as Template" color="#69B31E"
+                        @click="saveAsTemplate" class="full-width" />
                     </div>
                   </q-card-section>
                 </q-card>
@@ -471,7 +330,8 @@
                   Barangay {{ authStore.user?.barangay_name }}
                 </div>
                 <div class="text-subtitle1 text-center q-mb-lg" style="color: #666">
-                  Period: {{ getSACBDateRangeDisplay() }}
+                  Period: {{ formatFullDate(currentSacbDateRange.from) }} - {{ formatFullDate(currentSacbDateRange.to)
+                  }}
                 </div>
               </q-card-section>
 
@@ -496,13 +356,15 @@
                             <span class="main-section-title">{{ row.ppa }}</span>
                           </div>
                           <div class="col-appropriation text-right">
-                            <span class="main-section-total">{{ row.appropriation ? formatCurrency(row.appropriation) : '' }}</span>
+                            <span class="main-section-total">{{ row.appropriation ? formatCurrency(row.appropriation) :
+                              '' }}</span>
                           </div>
                           <div class="col-obligation text-right">
-                            <span class="main-section-total">{{ row.obligation ? formatCurrency(row.obligation)  : '' }}</span>
+                            <span class="main-section-total">{{ row.obligation ? formatCurrency(row.obligation) : ''
+                              }}</span>
                           </div>
                           <div class="col-balance text-right">
-                            <span class="main-section-total">{{ row.balance ? formatCurrency(row.balance)  : '' }}</span>
+                            <span class="main-section-total">{{ row.balance ? formatCurrency(row.balance) : '' }}</span>
                           </div>
                         </div>
                       </div>
@@ -513,9 +375,11 @@
                           <span class="subcategory-indent">></span>
                           <span class="subcategory-text">{{ row.ppa }}</span>
                         </div>
-                        <div class="col-appropriation text-right">{{ row.appropriation ? formatCurrency(row.appropriation) : '' }}</div>
-                        <div class="col-obligation text-right">{{ row.obligation ? formatCurrency(row.obligation)  : '' }}</div>
-                        <div class="col-balance text-right">{{ row.balance ? formatCurrency(row.balance)  : '' }}</div>
+                        <div class="col-appropriation text-right">{{ row.appropriation ?
+                          formatCurrency(row.appropriation) : '' }}</div>
+                        <div class="col-obligation text-right">{{ row.obligation ? formatCurrency(row.obligation) : ''
+                          }}</div>
+                        <div class="col-balance text-right">{{ row.balance ? formatCurrency(row.balance) : '' }}</div>
                       </div>
 
                       <!-- Sub-sub-category (like "Monetization of Leave Credits", "Productivity Enhancement Incentive") -->
@@ -524,9 +388,11 @@
                           <span class="subsubcategory-indent">></span>
                           <span class="subsubcategory-text">{{ row.ppa }}</span>
                         </div>
-                        <div class="col-appropriation text-right">{{ row.appropriation ? formatCurrency(row.appropriation) : '' }}</div>
-                        <div class="col-obligation text-right">{{ row.obligation ? formatCurrency(row.obligation)  : '' }}</div>
-                        <div class="col-balance text-right">{{ row.balance ? formatCurrency(row.balance)  : '' }}</div>
+                        <div class="col-appropriation text-right">{{ row.appropriation ?
+                          formatCurrency(row.appropriation) : '' }}</div>
+                        <div class="col-obligation text-right">{{ row.obligation ? formatCurrency(row.obligation) : ''
+                          }}</div>
+                        <div class="col-balance text-right">{{ row.balance ? formatCurrency(row.balance) : '' }}</div>
                       </div>
 
                       <!-- Sub-sub-sub-category (like individual sub-items) -->
@@ -536,18 +402,23 @@
                           <span class="subsubsubcategory-text">{{ row.ppa }}</span>
                         </div>
                         <div class="amount-group">
-                          <div class="col-appropriation text-right">{{ row.appropriation ? formatCurrency(row.appropriation) : '' }}</div>
-                          <div class="col-obligation text-right">{{ row.obligation ? formatCurrency(row.obligation)  : '' }}</div>
-                          <div class="col-balance text-right">{{ row.balance ? formatCurrency(row.balance)  : '' }}</div>
+                          <div class="col-appropriation text-right">{{ row.appropriation ?
+                            formatCurrency(row.appropriation) : '' }}</div>
+                          <div class="col-obligation text-right">{{ row.obligation ? formatCurrency(row.obligation) : ''
+                            }}</div>
+                          <div class="col-balance text-right">{{ row.balance ? formatCurrency(row.balance) : '' }}</div>
                         </div>
                       </div>
 
                       <!-- Total Row -->
                       <div v-else-if="row.isTotal" class="total-row">
                         <div class="col-description text-right text-bold">TOTAL</div>
-                        <div class="col-appropriation text-right text-bold">{{ row.appropriation ? formatCurrency(row.appropriation) : '' }}</div>
-                        <div class="col-obligation text-right text-bold">{{ row.obligation ? formatCurrency(row.obligation)  : '' }}</div>
-                        <div class="col-balance text-right text-bold">{{ row.balance ? formatCurrency(row.balance)  : '' }}</div>
+                        <div class="col-appropriation text-right text-bold">{{ row.appropriation ?
+                          formatCurrency(row.appropriation) : '' }}</div>
+                        <div class="col-obligation text-right text-bold">{{ row.obligation ?
+                          formatCurrency(row.obligation) : '' }}</div>
+                        <div class="col-balance text-right text-bold">{{ row.balance ? formatCurrency(row.balance) : ''
+                          }}</div>
                       </div>
                     </template>
 
@@ -637,12 +508,7 @@
     </q-dialog>
 
     <!-- RAC Modal -->
-    <q-dialog
-      v-model="RACModal.show"
-      maximized
-      transition-show="slide-up"
-      transition-hide="slide-down"
-    >
+    <q-dialog v-model="RACModal.show" maximized transition-show="slide-up" transition-hide="slide-down">
       <q-layout view="lHh Lpr lFf" class="rac-layout">
         <!-- Header -->
         <q-header elevated class="bg-white text-dark rac-header">
@@ -655,15 +521,8 @@
 
             <!-- Action Buttons -->
             <div class="q-gutter-sm">
-              <q-btn
-                outline
-                icon="file_download"
-                label="Export PDF"
-                color="#69B31E"
-                @click="exportToPDF"
-                size="sm"
-                no-caps
-              />
+              <q-btn outline icon="file_download" label="Export PDF" color="#69B31E" @click="exportToPDF" size="sm"
+                no-caps />
 
               <!-- <q-btn
                 unelevated
@@ -687,14 +546,9 @@
           <div class="print-content-wrapper q-pa-md">
             <q-card class="print-modal" id="rac-print-content">
               <q-card-section class="q-pb-none">
-                <div
-                  class="row items-center justify-between text-h6 text-weight-bold"
-                  style="color: #187c19"
-                >
+                <div class="row items-center justify-between text-h6 text-weight-bold" style="color: #187c19">
                   <span>{{ RACModal.reportType }}</span>
-                  <span class="stat-label text-h10"
-                    >Generated Date: {{ new Date().toLocaleDateString() }}</span
-                  >
+                  <span class="stat-label text-h10">Generated Date: {{ new Date().toLocaleDateString() }}</span>
                 </div>
                 <div class="text-h6 text-weight-medium" style="color: #187c19">
                   Barangay {{ authStore.user?.barangay_name }}
@@ -709,26 +563,19 @@
                 <div class="preview-table-container">
                   <!-- Header matching preview table style -->
                   <!-- Table with preview layout structure -->
-                  <table
-                    v-if="reportStore.reportRAC && reportStore.reportRAC.length > 0"
-                    class="preview-table"
-                    :data-columns="dynamicColumnsCount"
-                  >
+                  <table v-if="reportStore.reportRAC && reportStore.reportRAC.length > 0" class="preview-table"
+                    :data-columns="dynamicColumnsCount">
                     <thead>
                       <!-- First header row with expense class and obligation -->
 
                       <tr class="header-row-main">
-                        <th colspan="20" class="col-expense-class">
+                        <th :colspan="5+dynamicColumnsCount" class="col-expense-class">
                           {{ reportStore.expenseRacSelected?.name || 'Not Selected' }}
                         </th>
                       </tr>
                       <tr class="header-row-main">
                         <th colspan="5" class="col-expense-class">OBLIGATION</th>
-                        <th
-                          v-if="hasDynamicColumns"
-                          :colspan="1 + dynamicColumnsCount"
-                          class="col-obligation-header"
-                        >
+                        <th v-if="hasDynamicColumns" :colspan="dynamicColumnsCount" class="col-obligation-header">
                           ACCOUNT TITLE
                         </th>
                         <th v-else :colspan="1" class="col-obligation-header">ACCOUNT TITLE</th>
@@ -741,11 +588,8 @@
                         <th class="col-payee">Payee</th>
                         <th class="col-appropriation">Appropriation</th>
                         <!-- Dynamic Account Title Columns -->
-                        <th
-                          v-for="accountTitle in reportStore.dynamicAccountColumns"
-                          :key="accountTitle"
-                          class="col-account-title"
-                        >
+                        <th v-for="accountTitle in reportStore.dynamicAccountColumns" :key="accountTitle"
+                          class="col-account-title">
                           {{ accountTitle }}
                         </th>
                         <!-- Fallback when no dynamic columns -->
@@ -754,16 +598,12 @@
                         </th>
                       </tr>
 
-                      <tr class="header-row-main">
-                        <th colspan="20" style="background-color: whitesmoke"></th>
-                      </tr>
+                      <!-- <tr class="header-row-main">
+                        <th :colspan="5 + dynamicColumnsCount" style="background-color: whitesmoke"></th>
+                      </tr> -->
                     </thead>
                     <tbody>
-                      <tr
-                        v-for="(row, index) in reportStore.reportRAC"
-                        :key="index"
-                        class="data-row"
-                      >
+                      <tr v-for="(row, index) in reportStore.reportRAC" :key="index" class="data-row">
                         <td class="col-date">{{ row.date || '' }}</td>
                         <td class="col-particulars">{{ row.particular || '' }}</td>
                         <td class="col-dv">{{ row.dvNumber || '' }}</td>
@@ -772,15 +612,12 @@
                           {{ (row.appropriation || 0).toLocaleString() }}
                         </td>
                         <!-- Dynamic Account Title Cells -->
-                        <td
-                          v-for="accountTitle in reportStore.dynamicAccountColumns"
-                          :key="accountTitle"
-                          class="col-account-title text-right"
-                        >
+                        <td v-for="accountTitle in reportStore.dynamicAccountColumns" :key="accountTitle"
+                          class="col-account-title text-right">
                           {{
-                            row[reportStore.accountTitleKeyMap[accountTitle]]
-                              ? row[reportStore.accountTitleKeyMap[accountTitle]].toLocaleString()
-                              : ''
+                          row[reportStore.accountTitleKeyMap[accountTitle]]
+                          ? row[reportStore.accountTitleKeyMap[accountTitle]].toLocaleString()
+                          : ''
                           }}
                         </td>
                         <!-- Fallback when no dynamic columns -->
@@ -794,32 +631,26 @@
                         <td class="col-payee"></td>
                         <td class="col-appropriation text-right font-weight-bold">
                           {{
-                            reportStore.reportRAC
-                              .reduce((sum, r) => sum + (r.appropriation || 0), 0)
-                              .toLocaleString()
+                          reportStore.reportRAC
+                          .reduce((sum, r) => sum + (r.appropriation || 0), 0)
+                          .toLocaleString()
                           }}
                         </td>
                         <!-- Dynamic Account Title Total Cells -->
-                        <td
-                          v-for="accountTitle in reportStore.dynamicAccountColumns"
-                          :key="accountTitle"
-                          class="col-account-title text-right font-weight-bold"
-                        >
+                        <td v-for="accountTitle in reportStore.dynamicAccountColumns" :key="accountTitle"
+                          class="col-account-title text-right font-weight-bold">
                           {{
-                            reportStore.reportRAC
-                              .reduce(
-                                (sum, r) =>
-                                  sum + (r[reportStore.accountTitleKeyMap[accountTitle]] || 0),
-                                0,
-                              )
-                              .toLocaleString()
+                          reportStore.reportRAC
+                          .reduce(
+                          (sum, r) =>
+                          sum + (r[reportStore.accountTitleKeyMap[accountTitle]] || 0),
+                          0,
+                          )
+                          .toLocaleString()
                           }}
                         </td>
                         <!-- Fallback when no dynamic columns -->
-                        <td
-                          v-if="!hasDynamicColumns"
-                          class="col-account-title text-right font-weight-bold"
-                        >
+                        <td v-if="!hasDynamicColumns" class="col-account-title text-right font-weight-bold">
                           -
                         </td>
                       </tr>
@@ -849,40 +680,34 @@
                           <div class="summary-stats">
                             <div class="stat-item">
                               <span class="stat-label">Total Appropriation:</span>
-                              <span class="stat-value"
-                                >₱{{
-                                  reportStore.reportRAC
-                                    .reduce((sum, r) => sum + (r.appropriation || 0), 0)
-                                    .toLocaleString()
-                                }}</span
-                              >
+                              <span class="stat-value">₱{{
+                                reportStore.reportRAC
+                                .reduce((sum, r) => sum + (r.appropriation || 0), 0)
+                                .toLocaleString()
+                                }}</span>
                             </div>
                             <div class="stat-item">
                               <span class="stat-label">Total Obligation:</span>
-                              <span class="stat-value"
-                                >₱{{
-                                  reportStore.reportRAC
-                                    .reduce((sum, r) => sum + (r.amount || 0), 0)
-                                    .toLocaleString()
-                                }}</span
-                              >
+                              <span class="stat-value">₱{{
+                                reportStore.reportRAC
+                                .reduce((sum, r) => sum + (r.amount || 0), 0)
+                                .toLocaleString()
+                                }}</span>
                             </div>
                             <div class="stat-item">
                               <span class="stat-label">Remaining Balance:</span>
-                              <span class="stat-value"
-                                >₱{{
-                                  (
-                                    reportStore.reportRAC.reduce(
-                                      (sum, r) => sum + (r.appropriation || 0),
-                                      0,
-                                    ) -
-                                    reportStore.reportRAC.reduce(
-                                      (sum, r) => sum + (r.amount || 0),
-                                      0,
-                                    )
-                                  ).toLocaleString()
-                                }}</span
-                              >
+                              <span class="stat-value">₱{{
+                                (
+                                reportStore.reportRAC.reduce(
+                                (sum, r) => sum + (r.appropriation || 0),
+                                0,
+                                ) -
+                                reportStore.reportRAC.reduce(
+                                (sum, r) => sum + (r.amount || 0),
+                                0,
+                                )
+                                ).toLocaleString()
+                                }}</span>
                             </div>
                             <!-- Dynamic Account Title Totals -->
                             <!-- <div v-for="accountTitle in reportStore.dynamicAccountColumns"
@@ -912,14 +737,13 @@
                               <span class="stat-label">Total Records:</span>
                               <span class="stat-value">{{
                                 reportStore.reportRAC ? reportStore.reportRAC.length : 0
-                              }}</span>
+                                }}</span>
                             </div>
 
                             <div class="stat-item">
                               <span class="stat-label">Date Range:</span>
                               <span class="stat-value">
-                                {{ dateRangeDisplay || 'No date range selected' }}</span
-                              >
+                                {{ dateRangeDisplay || 'No date range selected' }}</span>
                             </div>
                           </div>
                         </q-card-section>
@@ -938,7 +762,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onActivated } from 'vue'
 import SetupDialog from 'components/SetupDialog.vue'
-import { useQuasar } from 'quasar'
+import { useQuasar,date } from 'quasar'
 import { useAuthStore } from 'stores/auth'
 import { useReportStore } from 'stores/reportStore'
 import { usePageLogging } from '../composables/usePageLogging'
@@ -976,6 +800,7 @@ const totalBalance = computed(() => {
 // Computed property for dynamic columns count
 const dynamicColumnsCount = computed(() => {
   return reportStore.dynamicAccountColumns.length
+
 })
 
 // Check if there are dynamic columns
@@ -998,10 +823,19 @@ const exportingSACBPDF = ref(false)
 const sacbDrawerOpen = ref(true)
 
 // Date ranges
-const CurrentRacDateRange = ref({ from: '', to: '' })
-const currentSacbDateRange = ref({ from: '', to: '' })
-const continuingRacDateRange = ref({ from: '', to: '' })
-const continuingSacbDateRange = ref({ from: '', to: '' })
+const currentYear = new Date().getFullYear()
+const currentdate = new Date().toISOString().slice(0, 10)  // YYYY-MM-DD
+const laterMonth = new Date().getMonth()
+const laterlastday = new Date(currentYear, laterMonth , 0).getDate()
+
+function pad(n) {
+  return String(n).padStart(2, '0')
+}
+
+const CurrentRacDateRange = ref({ from: `${currentYear}-${laterMonth}-01`, to: `${currentYear}-${laterMonth}-${pad(laterlastday)}` })
+const currentSacbDateRange = ref({ from: `${currentYear}-01-01`, to: currentdate })
+const continuingRacDateRange = ref({ from: `${currentYear}-${laterMonth}-01`, to: `${currentYear}-${laterMonth}-${pad(laterlastday)}` })
+const continuingSacbDateRange = ref({ from: `${currentYear}-01-01`, to: currentdate })
 
 const expenseSelectedCurrent = ref(null)
 const expenseSelectedContinuing = ref(null)
@@ -1182,30 +1016,30 @@ const handleSACBPrint = () => {
 //   notifySuccess('Report sent to printer successfully!')
 // }
 // Cur-Rac Date range
-const onDateRangeChange = (newRange) => {
-  CurrentRacDateRange.value = newRange
-}
+// const onDateRangeChange = (newRange) => {
+//   CurrentRacDateRange.value = newRange
+// }
 
-const onDateRangeClear = () => {
-  CurrentRacDateRange.value = { from: '', to: '' }
-}
+// const onDateRangeClear = () => {
+//   CurrentRacDateRange.value = { from: '', to: '' }
+// }
 
-const onContinuingDateRangeChange = (newRange) => {
-  continuingRacDateRange.value = newRange
-}
+// const onContinuingDateRangeChange = (newRange) => {
+//   continuingRacDateRange.value = newRange
+// }
 
-const onContinuingDateRangeClear = () => {
-  continuingRacDateRange.value = { from: '', to: '' }
-  logAdminActivity('Date Range Cleared', 'Cleared continuing RAC date range')
-}
+// const onContinuingDateRangeClear = () => {
+//   continuingRacDateRange.value = { from: '', to: '' }
+//   logAdminActivity('Date Range Cleared', 'Cleared continuing RAC date range')
+// }
 
-const onCurrentSacbDateRangeChange = (newRange) => {
-  currentSacbDateRange.value = newRange
-}
+// const onCurrentSacbDateRangeChange = (newRange) => {
+//   currentSacbDateRange.value = newRange
+// }
 
-const onCurrentSacbDateRangeClear = () => {
-  currentSacbDateRange.value = { from: '', to: '' }
-}
+// const onCurrentSacbDateRangeClear = () => {
+//   currentSacbDateRange.value = { from: '', to: '' }
+// }
 
 // const onContinuingSacbDateRangeChange = (newRange) => {
 //   continuingSacbDateRange.value = newRange
@@ -1231,32 +1065,32 @@ const dateRangeDisplay = computed(() => {
   return `${CurrentRacDateRange.value.from} - ${CurrentRacDateRange.value.to}`
 })
 
-const continuingDateRangeDisplay = computed(() => {
-  if (!continuingRacDateRange.value.from && !continuingRacDateRange.value.to) return ''
-  if (continuingRacDateRange.value.from && !continuingRacDateRange.value.to)
-    return `From ${continuingRacDateRange.value.from}`
-  if (!continuingRacDateRange.value.from && continuingRacDateRange.value.to)
-    return `To ${continuingRacDateRange.value.to}`
-  return `${continuingRacDateRange.value.from} - ${continuingRacDateRange.value.to}`
-})
+// const continuingDateRangeDisplay = computed(() => {
+//   if (!continuingRacDateRange.value.from && !continuingRacDateRange.value.to) return ''
+//   if (continuingRacDateRange.value.from && !continuingRacDateRange.value.to)
+//     return `From ${continuingRacDateRange.value.from}`
+//   if (!continuingRacDateRange.value.from && continuingRacDateRange.value.to)
+//     return `To ${continuingRacDateRange.value.to}`
+//   return `${continuingRacDateRange.value.from} - ${continuingRacDateRange.value.to}`
+// })
 
-const currentSacbDateRangeDisplay = computed(() => {
-  if (!currentSacbDateRange.value.from && !currentSacbDateRange.value.to) return ''
-  if (currentSacbDateRange.value.from && !currentSacbDateRange.value.to)
-    return `From ${currentSacbDateRange.value.from}`
-  if (!currentSacbDateRange.value.from && currentSacbDateRange.value.to)
-    return `To ${currentSacbDateRange.value.to}`
-  return `${currentSacbDateRange.value.from} - ${currentSacbDateRange.value.to}`
-})
+// const currentSacbDateRangeDisplay = computed(() => {
+//   if (!currentSacbDateRange.value.from && !currentSacbDateRange.value.to) return ''
+//   if (currentSacbDateRange.value.from && !currentSacbDateRange.value.to)
+//     return `From ${currentSacbDateRange.value.from}`
+//   if (!currentSacbDateRange.value.from && currentSacbDateRange.value.to)
+//     return `To ${currentSacbDateRange.value.to}`
+//   return `${currentSacbDateRange.value.from} - ${currentSacbDateRange.value.to}`
+// })
 
-const continuingSacbDateRangeDisplay = computed(() => {
-  if (!continuingSacbDateRange.value.from && !continuingSacbDateRange.value.to) return ''
-  if (continuingSacbDateRange.value.from && !continuingSacbDateRange.value.to)
-    return `From ${continuingSacbDateRange.value.from}`
-  if (!continuingSacbDateRange.value.from && continuingSacbDateRange.value.to)
-    return `To ${continuingSacbDateRange.value.to}`
-  return `${continuingSacbDateRange.value.from} - ${continuingSacbDateRange.value.to}`
-})
+// const continuingSacbDateRangeDisplay = computed(() => {
+//   if (!continuingSacbDateRange.value.from && !continuingSacbDateRange.value.to) return ''
+//   if (continuingSacbDateRange.value.from && !continuingSacbDateRange.value.to)
+//     return `From ${continuingSacbDateRange.value.from}`
+//   if (!continuingSacbDateRange.value.from && continuingSacbDateRange.value.to)
+//     return `To ${continuingSacbDateRange.value.to}`
+//   return `${continuingSacbDateRange.value.from} - ${continuingSacbDateRange.value.to}`
+// })
 
 async function loadRacReport($date) {
   try {
@@ -1406,16 +1240,65 @@ async function exportSACBToPDF() {
   }
 }
 
-function getSACBDateRangeDisplay() {
-  // Determine which SACB date range to use based on which modal was opened
-  const currentDisplay = currentSacbDateRangeDisplay.value
-  const continuingDisplay = continuingSacbDateRangeDisplay.value
+// function getSACBDateRangeDisplay() {
+//   // Determine which SACB date range to use based on which modal was opened
+//   const currentDisplay = currentSacbDateRangeDisplay.value
+//   const continuingDisplay = continuingSacbDateRangeDisplay.value
 
-  // Return the one that has data, prioritizing current
-  if (currentDisplay) return currentDisplay
-  if (continuingDisplay) return continuingDisplay
-  return 'No date range selected'
+//   // Return the one that has data, prioritizing current
+//   if (currentDisplay) return currentDisplay
+//   if (continuingDisplay) return continuingDisplay
+//   return 'No date range selected'
+// }
+//displaying full date format
+function formatFullDate(dateString) {
+  return date.formatDate(dateString, 'MMMM DD, YYYY')
 }
+//auto change sacb year
+function onDateChange(field, newValue) {
+  // Extract the year from the changed field
+  const changedYear = new Date(newValue).getFullYear()
+
+  // Copy existing dates
+  const from = new Date(currentSacbDateRange.value.from)
+  const to = new Date(currentSacbDateRange.value.to)
+
+  // Apply the year to BOTH using the year the user actually changed
+  from.setFullYear(changedYear)
+  to.setFullYear(changedYear)
+
+  currentSacbDateRange.value.from = from.toISOString().slice(0, 10)
+  currentSacbDateRange.value.to = to.toISOString().slice(0, 10)
+}
+function onDateChangecontinuing(field, newValue) {
+  // Extract the year from the changed field
+  const changedYear = new Date(newValue).getFullYear()
+
+  // Copy existing dates
+  const from = new Date(currentSacbDateRange.value.from)
+  const to = new Date(currentSacbDateRange.value.to)
+
+  // Apply the year to BOTH using the year the user actually changed
+  from.setFullYear(changedYear)
+  to.setFullYear(changedYear)
+
+  currentSacbDateRange.value.from = from.toISOString().slice(0, 10)
+  currentSacbDateRange.value.to = to.toISOString().slice(0, 10)
+}
+//auto change rac month
+function changeMonth(newDate) {
+  if (!newDate) return
+
+  const date = new Date(newDate)
+
+  const year = date.getFullYear()
+  const month = date.getMonth()          // 0–11
+  const lastDay = new Date(year, month + 1, 0).getDate()
+
+  // Update ONLY the `to` date
+  CurrentRacDateRange.value.to = `${year}-${pad(month + 1)}-${pad(lastDay)}`
+}
+
 
 function toggleSACBDrawer() {
   sacbDrawerOpen.value = !sacbDrawerOpen.value
@@ -2332,7 +2215,7 @@ onActivated(async () => {
   border-bottom: 2px solid #000;
 }
 
-.header-row {
+/* .header-row {
   display: grid;
   grid-template-columns: 1fr 120px 120px 120px;
   min-height: 40px;
@@ -2343,8 +2226,19 @@ onActivated(async () => {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #000;
+} */
+.header-row {
+  /* display:inline-tabl; */
+  grid-template-columns: auto 1fr repeat(auto-fill, 120px);
+  min-height: 40px;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #000;
 }
-
 .table-body {
   background: white;
 }
@@ -2489,8 +2383,8 @@ onActivated(async () => {
 
 /* Total Row */
 .total-row {
-  display: grid;
-  grid-template-columns: 1fr 120px 120px 120px;
+  /* display: grid; */
+  grid-template-columns: auto 1fr repeat(auto-fill,120px);
   min-height: 40px;
   align-items: center;
   padding: 8px 12px;

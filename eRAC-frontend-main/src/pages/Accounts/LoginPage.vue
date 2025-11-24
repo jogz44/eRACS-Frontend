@@ -113,11 +113,11 @@
             </div>
           </div>
 
-          <div class="text-center">
+          <!-- <div class="text-center">
             <div class="text-caption">
               Switch to <span class="text-blue cursor-pointer" @click="goToAdmin">Admin</span>
             </div>
-          </div>
+          </div> -->
         </div>
 
 
@@ -246,7 +246,7 @@ onUnmounted(() => {
 
 const goToForgotPassword = () => router.push('/forgotpage')
 const goToSignUp = () => router.push('/signup')
-const goToAdmin = () => router.push('/admin/login')
+// const goToAdmin = () => router.push('/admin/login')
 // const goToAdmin = () => {
 //   $q.dialog({
 //     title: 'Choose position',

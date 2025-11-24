@@ -119,11 +119,11 @@
           />
 
           <!-- Switch to user link -->
-          <div class="text-center">
+          <!-- <div class="text-center">
             <div class="text-caption">
               Switch to <span class="text-blue cursor-pointer" @click="goToUser">User</span>
             </div>
-          </div>
+          </div> -->
         </div>
 
 
@@ -189,9 +189,9 @@ const isPasswordVisible = ref(false)
 const showValidation = ref(false)
 const showInactivityDialog = ref(false)
 
-const goToUser = () => {
-  router.push('/') // Make sure this matches your signup route
-}
+// const goToUser = () => {
+//   router.push('/') // Make sure this matches your signup route
+// }
 
 // Get signin title based on username
 const getSigninTitle = () => {
