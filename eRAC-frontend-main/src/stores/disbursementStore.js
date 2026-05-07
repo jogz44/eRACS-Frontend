@@ -1144,7 +1144,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
-    async fetchDisbursements() {
+    async fetchDisbursements(year = null) {
       this.loadingDisbursements = true
       this.isCancelCheque = false
       try {
@@ -1166,8 +1166,11 @@ export const useDisbursementStore = defineStore('disbursement', {
         }
 
         // Add current fiscal year filter to only show current year transactions
-        const currentYear = new Date().getFullYear()
-        params.year = currentYear
+        // const currentYear = new Date().getFullYear()
+        // params.year = currentYear
+
+          // params.year = year ?? new Date().getFullYear()
+          params.year = year !== null && year !== undefined ? Number(year) : new Date().getFullYear()
 
         // Fetch disbursements and particulars in parallel for faster loading
         const [disbursementsResponse, particularsResponse] = await Promise.all([

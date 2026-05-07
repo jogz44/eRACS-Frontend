@@ -15,7 +15,10 @@ export const useContApprStore = defineStore('continuing-appropriation',{
         selectedRow: null,
     }),
     getters: {
-    },
+  fiscalYearOptions: (state) => state.years,
+  fiscalYears: (state) => state.years.map((y) => String(y.label)),
+  selectedFiscalYear: (state) => state.selectedYear,
+},
     actions: {
 
         getAuthConfig() {
@@ -67,6 +70,21 @@ export const useContApprStore = defineStore('continuing-appropriation',{
                 this.loading = false
             }
         },
+
+        setSelectedFiscalYear(value) {
+    this.selectedYear = value
+  },
+  async initialize() {
+    this.loading = true
+    this.error = null
+    try {
+      await this.fetchYears()
+      await this.fetchContinueAccounts()
+      await this.fetchContinuingAppropriations()
+    } finally {
+      this.loading = false
+    }
+  },
         async fetchYears() {
             const config = this.getAuthConfig()
             try {
@@ -101,11 +119,16 @@ export const useContApprStore = defineStore('continuing-appropriation',{
             }
         },
 
-        async fetchContinuingAppropriations() {
+        async fetchContinuingAppropriations(fiscalYearId = null) {
             const config = this.getAuthConfig()
+            const params = fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}
             try {
                 this.loading = true
-                const response = await api.get('/api/barangay/continuing-appropriations/list', config)
+                const response = await api.get('/api/barangay/continuing-appropriations/list', {
+                ...config,
+                params
+                })
+
 
                 if (response.data.status) {
                     // Process the data to include subitems information

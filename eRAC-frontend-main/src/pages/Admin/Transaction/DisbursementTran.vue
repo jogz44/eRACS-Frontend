@@ -1,3 +1,4 @@
+<!-- admin -->
 <template>
   <q-page class="q-pa-md disbursement-page">
     <div class="page-header q-mb-md">
@@ -361,6 +362,7 @@
 
 <script setup>
 import { watch, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import SearchFilters from 'pages/Admin/SearchFilters.vue'
 import OrDetailsDialog from 'components/disbursement/OrDetailsDialog.vue'
 import ViewOrDetails from 'components/disbursement/ViewOrDetails.vue'
@@ -371,34 +373,36 @@ import { usePageLogging } from '../../../composables/usePageLogging'
 import { useActivityLogging } from '../../../composables/useActivityLogging'
 import { useAuthStore } from 'stores/auth'
 import { api } from 'boot/axios'
+import { ref, computed } from 'vue'
+import { useQuasar } from 'quasar'
 
+const $q = useQuasar()
 const store = useDisbursementStore()
 const bankStore = useBankStore()
 const authStore = useAuthStore()
+const route = useRoute()
 const { logPageVisit } = usePageLogging()
 const { logAdminActivity } = useActivityLogging()
 
 onMounted(async () => {
   try {
-    // Load essential data in parallel for faster loading
+    const year = route.query.year ? parseInt(route.query.year, 10) : null
+
     const [disbursementsPromise, banksPromise] = await Promise.allSettled([
-      store.fetchDisbursements(),
+      store.fetchDisbursements(year),  // PASS year HERE
       bankStore.banks.length ? Promise.resolve() : bankStore.fetchBanks()
     ])
 
-    // Only fetch expense accounts if needed (for admin users, this is not essential)
     if (!store.expenseData.length) {
       store.fetchExpenseAccounts().catch(error => {
         console.warn('Failed to fetch expense accounts:', error)
       })
     }
 
-    // Log page visit in background
     logPageVisit('Current Disbursement').catch(error => {
       console.warn('Failed to log page visit:', error)
     })
 
-    // Check for errors in critical operations
     if (disbursementsPromise.status === 'rejected') {
       throw disbursementsPromise.reason
     }
@@ -415,6 +419,24 @@ onMounted(async () => {
     })
   }
 })
+
+watch(
+  () => route.query.year,
+  async (newYear) => {
+    const year = newYear ? parseInt(newYear, 10) : null
+    try {
+      await store.fetchDisbursements(year)
+      await loadDisbursementReviews()
+    } catch (error) {
+      console.error('Failed to fetch disbursements for year:', year, error)
+      $q.notify({
+        type: 'negative',
+        message: 'Failed to load disbursements for selected year: ' + error.message,
+        position: 'top',
+      })
+    }
+  }
+)
 
 // Watch for changes in the selected bank to update the cheque booklets
 watch(
@@ -435,11 +457,6 @@ watch(
   },
 )
 
-import { ref, computed } from 'vue'
-import { useQuasar } from 'quasar'
-
-const $q = useQuasar()
-
 // Persistent review state per disbursement row
 const reviewedSet = ref(new Set())
 const disbursementRemarks = ref(new Map()) // Store remarks per reviewed DV
@@ -448,20 +465,6 @@ const loadingReviews = ref(new Set()) // Track which items are loading reviews
 const isReviewed = (id) => reviewedSet.value.has(id)
 const getRemarks = (id) => disbursementRemarks.value.get(id) || ''
 const isLoadingReview = (id) => loadingReviews.value.has(id)
-
-// Watch for disbursements data to be available and load reviews immediately
-watch(
-  () => store.filteredDisbursements,
-  async (newDisbursements) => {
-    if (newDisbursements && newDisbursements.length > 0) {
-      // Only load if we haven't loaded reviews yet (prevent double loading)
-      if (reviewedSet.value.size === 0 && loadingReviews.value.size === 0) {
-        await loadDisbursementReviews()
-      }
-    }
-  },
-  { immediate: true }
-)
 
 // Load existing reviews for disbursements
 const loadDisbursementReviews = async () => {
@@ -620,11 +623,24 @@ const handleBankSelection = async (bankId) => {
   }
 }
 
+// Watch for disbursements data to be available and load reviews immediately
+watch(
+  () => store.filteredDisbursements,
+  async (newDisbursements) => {
+    if (newDisbursements && newDisbursements.length > 0) {
+      // Only load if we haven't loaded reviews yet (prevent double loading)
+      if (reviewedSet.value.size === 0 && loadingReviews.value.size === 0) {
+        await loadDisbursementReviews()
+      }
+    }
+  },
+  { immediate: true }
+)
+
 const refreshData = async () => {
   try {
-    // Only refresh essential data for faster response
-    await store.fetchDisbursements()
-    // Reload reviews after refreshing disbursements
+    const year = route.query.year ? parseInt(route.query.year, 10) : null
+    await store.fetchDisbursements(year)
     await loadDisbursementReviews()
   } catch (error) {
     console.error('Failed to refresh data:', error)

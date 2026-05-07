@@ -1,3 +1,4 @@
+<!-- user -->
 <template>
   <q-page class="q-pa-md disbursement-page">
     <div class="page-header q-mb-md">
@@ -189,7 +190,6 @@
                 <q-input
                   outlined
                   dense
-                  :disable="true"
                   v-model="store.forms.disbursement.dvNumber"
                   @keydown.enter="handleEnterKey"
                 />
@@ -345,23 +345,69 @@
             </div>
             <!-- <q-select outlined dense v-model="store.forms.expense.particulars" :options="filteredParticulars"
               label="Particulars" use-input fill-input hide-selected new-value-mode="add-unique" @filter="filterFn" /> -->
-            <q-select
-              outlined
-              dense
-              v-model="store.forms.expense.particulars"
-              :options="filteredParticulars"
-              label="Particulars"
-              use-input
-              fill-input
-              hide-selected
-              new-value-mode="add-unique"
-              option-label="label"
-              option-value="label"
-              map-options
-              emit-value
-              @filter="filterFn"
-            />
+<q-select
+  outlined
+  dense
+  v-model="store.forms.expense.particulars"
+  :options="filteredParticulars"
+  label="Particulars"
+  use-input
+  hide-selected
+  fill-input
+  new-value-mode="add-unique"
+  option-label="label"
+  option-value="label"
+  emit-value
+  @filter="filterFn"
+  @input-value="(val) => { particularInputVal = val }"
+  @blur="() => { if (particularInputVal) store.forms.expense.particulars = particularInputVal }"
+/>
 
+<!-- <q-select
+  outlined
+  dense
+  v-model="store.forms.expense.particulars"
+  :options="filteredParticulars"
+  label="Particulars"
+  use-input
+  fill-input
+  hide-selected
+  new-value-mode="add-unique"
+  option-label="label"
+  option-value="label"
+  emit-value
+  @filter="filterFn"
+  @input-value="(val) => { particularInputVal = val }"
+  @keyup.tab="() => { if (particularInputVal) store.forms.expense.particulars = particularInputVal }"
+  @keyup.esc="() => { if (particularInputVal) store.forms.expense.particulars = particularInputVal }"
+  popup-content-style="display: none"
+  v-if="false"
+/>
+
+<q-input
+  outlined
+  dense
+  v-model="store.forms.expense.particulars"
+  label="Particulars"
+>
+  <template v-slot:append>
+    <q-icon name="arrow_drop_down" class="cursor-pointer">
+      <q-menu fit>
+        <q-list>
+          <q-item
+            v-for="opt in filteredParticulars"
+            :key="opt.label"
+            clickable
+            v-close-popup
+            @click="store.forms.expense.particulars = opt.label"
+          >
+            <q-item-section>{{ opt.label }}</q-item-section>
+          </q-item>
+        </q-list>
+      </q-menu>
+    </q-icon>
+  </template>
+</q-input> -->
             <q-input
               outlined
               dense
@@ -675,6 +721,7 @@ import { useAuthStore } from 'stores/auth'
 import { useBankStore } from 'stores/bankStore'
 import { usePageLogging } from '../../../composables/usePageLogging'
 
+const particularInputVal = ref('')
 const store = useDisbursementStore()
 const bankStore = useBankStore()
 const authStore = useAuthStore()

@@ -1,4 +1,4 @@
-<template>
+  <template>
   <q-page class="q-pa-md accountslib-page">
     <div class="page-header q-mb-md">
       <div class="row items-center justify-between">

@@ -376,6 +376,7 @@
 <script setup>
 import { ref, watch, onMounted, computed } from 'vue'
 import { useQuasar } from 'quasar'
+import { useRoute } from 'vue-router'
 import CommitDialog from 'components/appropriation/CommitDialog.vue'
 import ViewCommitDialog from 'components/appropriation/ViewCommitDialog.vue'
 import { useAppropriationStore } from 'stores/appropriationStore'
@@ -387,6 +388,7 @@ import { useAuthStore } from 'stores/auth'
 // import SearchFilters from 'src/components/appropriation/SearchFilters.vue'
 
 const $q = useQuasar()
+const route = useRoute()
 const accountLibraryStore = useAccountsLibraryStore()
 const appropriationStore = useAppropriationStore()
 const { logPageVisit } = usePageLogging()
@@ -805,13 +807,43 @@ const saveEditedAllocation = async () => {
 }
 
 
+// onMounted(async () => {
+//   try {
+//     await appropriationStore.initialize()
+
+//     const year = route.query.year ? parseInt(route.query.year) : null
+// await appropriationStore.fetchBudgets(year)
+// await appropriationStore.fetchAppropriations(year)
+    
+//     // Log page visit
+//     await logPageVisit('Current Appropriation')
+
+//     await loadBarangayOptions()
+//   } catch (error) {
+//     $q.notify({
+//       type: 'negative',
+//       message: error.response?.data?.message || 'Failed to load data',
+//       icon: 'error',
+//       position: 'top',
+//     })
+//   }
+// })
+
 onMounted(async () => {
   try {
-    await appropriationStore.initialize()
-    
-    // Log page visit
-    await logPageVisit('Current Appropriation')
+    const year = route.query.year ? parseInt(route.query.year) : null
 
+    await appropriationStore.fetchFiscalYears()
+    
+    // Sync the store's selectedFiscalYear with the route query
+    if (year) {
+      appropriationStore.setSelectedFiscalYear(year.toString())
+    }
+    
+    await appropriationStore.fetchBudgets(year)
+    await appropriationStore.fetchAppropriations(year)
+    
+    await logPageVisit('Current Appropriation')
     await loadBarangayOptions()
   } catch (error) {
     $q.notify({
@@ -1045,6 +1077,18 @@ const handleEnterKey = (event) => {
     saveBudget()
   }
 }
+
+watch(
+  () => route.query.year,
+  (newYear) => {
+    const year = newYear ? parseInt(newYear) : null
+    if (year) {
+      appropriationStore.setSelectedFiscalYear(year.toString())
+    } else {
+      appropriationStore.setSelectedFiscalYear(null)
+    }
+  }
+)
 
 // const addBudget = () => {
 //   openDialog()

@@ -14,7 +14,7 @@
           flat
           dense
           @click="loadData"
-          :loading="loading"
+          :loading="loading"    
         />
       </div>
     </div>
@@ -560,10 +560,12 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useSupplementalBudgetStore } from 'src/stores/supplementalBudgetStore'
 import { usePageLogging } from '../../../composables/usePageLogging'
+import { useRoute } from 'vue-router' 
 
 const $q = useQuasar()
 const supplementalBudgetStore = useSupplementalBudgetStore()
 const { logPageVisit } = usePageLogging()
+const route = useRoute()
 
 const loading = ref(false)
 const showViewDialog = ref(false)
@@ -902,7 +904,7 @@ const ensureSelected = (expense) => {
     // Update existing selection with current expense data but preserve existing amount_to_use
     const existingAmount = selectedExpenses.value[existingIndex].amount_to_use
     selectedExpenses.value[existingIndex] = {
-      ...expense,
+      ...expense, 
       amount_to_use: existingAmount !== undefined ? existingAmount : (expense.amount_to_use || undefined)
     }
   }
@@ -1215,15 +1217,19 @@ onMounted(async () => {
     // Load years first
     await supplementalBudgetStore.fetchYears()
 
-    // Set default year if not set
-    if (!supplementalBudgetStore.selectedYear) {
+    // Respect year from URL query (set by the layout panel)
+    const urlYear = route.query.year ? parseInt(route.query.year) : null
+    if (urlYear) {
+      supplementalBudgetStore.setSelectedYear(urlYear)
+      selectedYear.value = urlYear
+    } else if (!supplementalBudgetStore.selectedYear) {
       supplementalBudgetStore.setSelectedYear(new Date().getFullYear())
     }
 
     // Load data
     await loadData(false) // Don't show notification on initial load
 
-    // Sync local expenses after initial load
+     // Sync local expenses after initial load
     syncLocalExpenses()
 
     // Log page visit
@@ -1255,6 +1261,16 @@ watch(showViewDialog, (newValue) => {
     }
   }
 })
+
+watch(
+  () => route.query.year,
+  async (newYear) => {
+    const year = newYear ? parseInt(newYear) : null
+    supplementalBudgetStore.setSelectedYear(year ?? new Date().getFullYear())
+    selectedYear.value = year ?? new Date().getFullYear()
+    await loadData(false)
+  },
+)
 
 // Watch for create dialog close to clear selections
 watch(showCreateDialog, (newValue) => {

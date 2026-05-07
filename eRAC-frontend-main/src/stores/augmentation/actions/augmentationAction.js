@@ -5,43 +5,48 @@ export function useAugmentationActions(state) {
   const authStore = useAuthStore()
 
 
-  const fetchAugmentations = async () => {
-    state.loadingAugmentations.value = true
-    try {
-      // Use different endpoints and tokens for admin vs regular users
-      const endpoint = authStore.admin ? "/api/admin/augmentations" : "/api/barangay/budget-augmentations"
-      const token = authStore.admin ? authStore.adminToken : authStore.token
+const fetchAugmentations = async (year = null) => {
+  state.loadingAugmentations.value = true
+  try {
+    const endpoint = authStore.admin ? "/api/admin/augmentations" : "/api/barangay/budget-augmentations"
+    const token = authStore.admin ? authStore.adminToken : authStore.token
 
-      const params = {}
+    const params = {}
 
-      if (state.searchQuery.value) params.search = state.searchQuery.value
-      if (state.dateFrom.value) params.date_from = state.dateFrom.value
-      if (state.dateTo.value) params.date_to = state.dateTo.value
+    if (state.searchQuery.value) params.search = state.searchQuery.value
+    if (state.dateFrom.value) params.date_from = state.dateFrom.value
+    if (state.dateTo.value) params.date_to = state.dateTo.value
+    if (year !== null && year !== undefined && year !== '') params.year = year
 
-      // Add barangay_id parameter for admin users if selected
-      if (authStore.admin) {
-        const selectedBarangayId = authStore.getSelectedBarangay()
-        if (selectedBarangayId) {
-          params.barangay_id = selectedBarangayId
-        }
+
+    // Pass year param — backend uses it to filter by fiscal year
+    // if (year !== null && year !== undefined) {
+    //   params.year = year
+    // }
+
+    if (authStore.admin) {
+      const selectedBarangayId = authStore.getSelectedBarangay()
+      if (selectedBarangayId) {
+        params.barangay_id = selectedBarangayId
       }
-
-      const response = await api.get(endpoint, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/json',
-        },
-        params
-      })
-
-      state.augmentation.value = response.data.data || []
-    } catch (error) {
-      console.error('Failed to fetch augmentations:', error)
-      state.augmentation.value = []
-    } finally {
-      state.loadingAugmentations.value = false
     }
+
+    const response = await api.get(endpoint, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+      params
+    })
+
+    state.augmentation.value = response.data.data || []
+  } catch (error) {
+    console.error('Failed to fetch augmentations:', error)
+    state.augmentation.value = []
+  } finally {
+    state.loadingAugmentations.value = false
   }
+}
 
   // --- UPDATED: Fetch and flatten expense accounts like disbursement ---
   const fetchExpenseAccounts = async () => {

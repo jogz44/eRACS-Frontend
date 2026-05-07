@@ -1,8 +1,39 @@
 <template>
   <q-page class="q-pa-lg report-page">
     <!-- Main Header with bottom border -->
-    <div class="section-header q-mb-xl">
-      <div class="section-title">Current Year Reports</div>
+    <div class="dashboard-card q-mb-md">
+      <div class="section-header row items-center justify-between q-mb-xl">
+        <div class="section-title col-12 col-md-8">Current Year Reports</div>
+        <!-- Year Filter Section -->
+
+        <div class="col-12 col-md-4">
+          <div class="year-filter-section">
+            <div class="row items-center justify-end q-gutter-sm">
+              <div class="text-subtitle2 text-weight-medium">Year Filter:</div>
+              <q-select
+                v-model="reportStore.selectedYear"
+                :options="reportStore.availableYears"
+                option-value="value"
+                option-label="label"
+                emit-value
+                map-options
+                dense
+                outlined
+                style="min-width: 120px"
+                @update:model-value="onYearChange"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="calendar_today" />
+                </template>
+              </q-select>
+
+              <q-btn icon="refresh" color="primary" flat dense size="sm" @click="refreshYears">
+                <q-tooltip>Refresh available years</q-tooltip>
+              </q-btn>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <SetupDialog v-model="showSetupDialog" />
@@ -18,7 +49,6 @@
 
           <q-card-section class="q-pt-md q-pb-lg">
             <div class="col q-col-gutter-md items-end">
-
               <div class="col-12 col-sm-6 col-md-4">
                 <!-- <q-input bg-color="white" outlined dense :model-value="dateRangeDisplay" label="Date Range"
                   class="custom-date-range" clearable @clear="onDateRangeClear" readonly>
@@ -30,22 +60,41 @@
                     </q-icon>
                   </template>
                 </q-input> -->
-                <q-input v-model="CurrentRacDateRange.from" filled type="date" hint="From Date"
-                  @update:model-value="changeMonth" />
+                <q-input
+                  v-model="CurrentRacDateRange.from"
+                  filled
+                  type="date"
+                  hint="From Date"
+                  @update:model-value="changeMonth"
+                />
                 <br />
                 <q-input v-model="CurrentRacDateRange.to" filled type="date" hint="To Date" />
                 <br />
               </div>
 
               <div class="col-12 col-sm-6 col-md-4">
-                <q-select outlined dense v-model="expenseSelectedCurrent" label="Expense Category"
-                  :options="reportStore.expenseOptionsCurrent" map-options option-label="name" option-value="id"
-                  :loading="loading" />
+                <q-select
+                  outlined
+                  dense
+                  v-model="expenseSelectedCurrent"
+                  label="Expense Category"
+                  :options="reportStore.expenseOptionsCurrent"
+                  map-options
+                  option-label="name"
+                  option-value="id"
+                  :loading="loading"
+                />
               </div>
 
               <div class="col-12 col-sm-6 col-md-4">
-                <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-                  @click="openRACModal('current-rac')" :loading="loading" />
+                <q-btn
+                  color="primary"
+                  icon="settings"
+                  label="Generate Report"
+                  class="full-width"
+                  @click="openRACModal('current-rac')"
+                  :loading="loading"
+                />
               </div>
             </div>
           </q-card-section>
@@ -86,19 +135,33 @@
                   </template>
                 </q-input> -->
 
-                <q-input v-model="currentSacbDateRange.from" filled type="date" hint="From Date"
-                  @update:model-value="(v) => onDateChange('from', v)" />
+                <q-input
+                  v-model="currentSacbDateRange.from"
+                  filled
+                  type="date"
+                  hint="From Date"
+                  @update:model-value="(v) => onDateChange('from', v)"
+                />
                 <br />
-                <q-input v-model="currentSacbDateRange.to" filled type="date" hint="To Date"
-                  @update:model-value="(v) => onDateChange('to', v)" />
+                <q-input
+                  v-model="currentSacbDateRange.to"
+                  filled
+                  type="date"
+                  hint="To Date"
+                  @update:model-value="(v) => onDateChange('to', v)"
+                />
                 <br />
               </div>
 
-
-
               <div class="col-12 col-sm-6 col-md-6">
-                <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-                  @click="openSACBModal('current-sacb')" :loading="loading" />
+                <q-btn
+                  color="primary"
+                  icon="settings"
+                  label="Generate Report"
+                  class="full-width"
+                  @click="openSACBModal('current-sacb')"
+                  :loading="loading"
+                />
               </div>
             </div>
           </q-card-section>
@@ -134,23 +197,47 @@
                     </q-icon>
                   </template>
                 </q-input> -->
-                <q-input v-model="continuingRacDateRange.from" filled type="date" hint="From Date"
-                  @update:model-value="(v) => onDateChangecontinuing('from', v)" />
+                <q-input
+                  v-model="continuingRacDateRange.from"
+                  filled
+                  type="date"
+                  hint="From Date"
+                  @update:model-value="(v) => onDateChangecontinuing('from', v)"
+                />
                 <br />
-                <q-input v-model="continuingRacDateRange.to" filled type="date" hint="To Date"
-                  @update:model-value="(v) => onDateChangecontinuing('to', v)" />
+                <q-input
+                  v-model="continuingRacDateRange.to"
+                  filled
+                  type="date"
+                  hint="To Date"
+                  @update:model-value="(v) => onDateChangecontinuing('to', v)"
+                />
                 <br />
               </div>
 
               <div class="col-12 col-sm-6 col-md-4">
-                <q-select outlined dense v-model="expenseSelectedContinuing" label="Expense Category" map-options
-                  :options="reportStore.expenseOptionsContinuing" :loading="loading" option-value="id"
-                  option-label="name" />
+                <q-select
+                  outlined
+                  dense
+                  v-model="expenseSelectedContinuing"
+                  label="Expense Category"
+                  map-options
+                  :options="reportStore.expenseOptionsContinuing"
+                  :loading="loading"
+                  option-value="id"
+                  option-label="name"
+                />
               </div>
 
               <div class="col-12 col-sm-6 col-md-4">
-                <q-btn color="primary" icon="settings" label="Generate Report" class="full-width"
-                  @click="openRACModal('continuing-rac')" :loading="loading" />
+                <q-btn
+                  color="primary"
+                  icon="settings"
+                  label="Generate Report"
+                  class="full-width"
+                  @click="openRACModal('continuing-rac')"
+                  :loading="loading"
+                />
               </div>
             </div>
           </q-card-section>
@@ -165,27 +252,42 @@
           </q-card-section>
 
           <q-card-section class="q-pt-md q-pb-lg">
-
             <div class="col-12 col-sm-6 col-md-6">
               <div class="row justify-center">
-                <q-btn class="full-width" color="primary" icon="settings" label="Generate Report"
-                  @click="openSACModal('continuing-sacb')" :loading="loading" />
+                <q-btn
+                  class="full-width"
+                  color="primary"
+                  icon="settings"
+                  label="Generate Report"
+                  @click="openSACModal('continuing-sacb')"
+                  :loading="loading"
+                />
               </div>
             </div>
-
           </q-card-section>
         </q-card>
       </div>
     </div>
 
     <!-- SACB Modal -->
-    <q-dialog v-model="SACBModal.show" maximized transition-show="slide-up" transition-hide="slide-down">
+    <q-dialog
+      v-model="SACBModal.show"
+      maximized
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
       <q-layout view="lHh Lpr lFf" class="sacb-layout">
         <!-- Header -->
         <q-header elevated class="bg-white text-dark sacb-header">
           <q-toolbar class="q-px-md">
-            <q-btn flat icon="menu" @click="toggleSACBDrawer" class="q-mr-md"
-              :color="sacbDrawerOpen ? '#187C19' : '#666'" size="md">
+            <q-btn
+              flat
+              icon="menu"
+              @click="toggleSACBDrawer"
+              class="q-mr-md"
+              :color="sacbDrawerOpen ? '#187C19' : '#666'"
+              size="md"
+            >
               <q-tooltip>Toggle Settings Panel</q-tooltip>
             </q-btn>
 
@@ -197,10 +299,25 @@
 
             <!-- Action Buttons -->
             <div class="q-gutter-sm">
-              <q-btn outline icon="file_download" label="Export PDF" color="#69B31E" @click="exportSACBToPDF" size="sm"
-                no-caps />
+              <q-btn
+                outline
+                icon="file_download"
+                label="Export PDF"
+                color="#69B31E"
+                @click="exportSACBToPDF"
+                size="sm"
+                no-caps
+              />
 
-              <q-btn unelevated icon="print" label="Print" color="#187C19" @click="handleSACBPrint" size="sm" no-caps />
+              <q-btn
+                unelevated
+                icon="print"
+                label="Print"
+                color="#187C19"
+                @click="handleSACBPrint"
+                size="sm"
+                no-caps
+              />
 
               <q-btn flat icon="close" @click="closeSACBModal" color="#666" size="md">
                 <q-tooltip>Close</q-tooltip>
@@ -210,8 +327,15 @@
         </q-header>
 
         <!-- Left Drawer for Report Signatories -->
-        <q-drawer v-model="sacbDrawerOpen" side="left" bordered :width="350" :breakpoint="768" :show-if-above="false"
-          class="bg-grey-1 sacb-drawer">
+        <q-drawer
+          v-model="sacbDrawerOpen"
+          side="left"
+          bordered
+          :width="350"
+          :breakpoint="768"
+          :show-if-above="false"
+          class="bg-grey-1 sacb-drawer"
+        >
           <div class="drawer-content-sacb">
             <q-scroll-area class="drawer-scrollable-content">
               <div class="q-pa-lg drawer-content">
@@ -239,8 +363,10 @@
                     </div>
                     <div class="info-item">
                       <span class="info-label">Date Range:</span>
-                      <span class="info-value">{{ formatFullDate(currentSacbDateRange.from) }} - {{
-                        formatFullDate(currentSacbDateRange.to) }}</span>
+                      <span class="info-value"
+                        >{{ formatFullDate(currentSacbDateRange.from) }} -
+                        {{ formatFullDate(currentSacbDateRange.to) }}</span
+                      >
                     </div>
                     <div class="info-item">
                       <span class="info-label">Report Type:</span>
@@ -263,24 +389,57 @@
                         <q-icon name="create" size="sm" style="color: #69b31e" class="q-mr-xs" />
                         <span class="text-weight-medium">Prepared by</span>
                       </div>
-                      <q-input outlined dense v-model="SetupModal.Preparedby" placeholder="Enter full name"
-                        class="q-mb-sm" clearable />
-                      <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
-                        option-value="value" v-model="SetupModal.Preparedposition" placeholder="Select position"
-                        clearable />
+                      <q-input
+                        outlined
+                        dense
+                        v-model="SetupModal.Preparedby"
+                        placeholder="Enter full name"
+                        class="q-mb-sm"
+                        clearable
+                      />
+                      <q-select
+                        outlined
+                        dense
+                        :options="reportStore.positionsOptions"
+                        map-options
+                        option-label="label"
+                        option-value="value"
+                        v-model="SetupModal.Preparedposition"
+                        placeholder="Select position"
+                        clearable
+                      />
                     </div>
 
                     <!-- Noted by -->
                     <div class="signatory-group q-mb-lg">
                       <div class="signatory-header">
-                        <q-icon name="visibility" size="sm" style="color: #e0ffe7" class="q-mr-xs" />
+                        <q-icon
+                          name="visibility"
+                          size="sm"
+                          style="color: #e0ffe7"
+                          class="q-mr-xs"
+                        />
                         <span class="text-weight-medium">Noted by</span>
                       </div>
-                      <q-input outlined dense v-model="SetupModal.Notedby" placeholder="Enter full name" class="q-mb-sm"
-                        clearable />
-                      <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
-                        option-value="value" v-model="SetupModal.Notedposition" placeholder="Select position"
-                        clearable />
+                      <q-input
+                        outlined
+                        dense
+                        v-model="SetupModal.Notedby"
+                        placeholder="Enter full name"
+                        class="q-mb-sm"
+                        clearable
+                      />
+                      <q-select
+                        outlined
+                        dense
+                        :options="reportStore.positionsOptions"
+                        map-options
+                        option-label="label"
+                        option-value="value"
+                        v-model="SetupModal.Notedposition"
+                        placeholder="Select position"
+                        clearable
+                      />
                     </div>
 
                     <!-- Certified by -->
@@ -289,11 +448,25 @@
                         <q-icon name="verified" size="sm" style="color: #187c19" class="q-mr-xs" />
                         <span class="text-weight-medium">Certified by</span>
                       </div>
-                      <q-input outlined dense v-model="SetupModal.Certifiedby" placeholder="Enter full name"
-                        class="q-mb-sm" clearable />
-                      <q-select outlined dense :options="reportStore.positionsOptions" map-options option-label="label"
-                        option-value="value" v-model="SetupModal.Certifiedposition" placeholder="Select position"
-                        clearable />
+                      <q-input
+                        outlined
+                        dense
+                        v-model="SetupModal.Certifiedby"
+                        placeholder="Enter full name"
+                        class="q-mb-sm"
+                        clearable
+                      />
+                      <q-select
+                        outlined
+                        dense
+                        :options="reportStore.positionsOptions"
+                        map-options
+                        option-label="label"
+                        option-value="value"
+                        v-model="SetupModal.Certifiedposition"
+                        placeholder="Select position"
+                        clearable
+                      />
                     </div>
                   </q-card-section>
                 </q-card>
@@ -306,10 +479,24 @@
                       Quick Actions
                     </div>
                     <div class="q-gutter-sm">
-                      <q-btn outline size="sm" icon="refresh" label="Reset Form" color="#E0FFE7"
-                        @click="resetSignatories" class="full-width" />
-                      <q-btn outline size="sm" icon="save" label="Save as Template" color="#69B31E"
-                        @click="saveAsTemplate" class="full-width" />
+                      <q-btn
+                        outline
+                        size="sm"
+                        icon="refresh"
+                        label="Reset Form"
+                        color="#E0FFE7"
+                        @click="resetSignatories"
+                        class="full-width"
+                      />
+                      <q-btn
+                        outline
+                        size="sm"
+                        icon="save"
+                        label="Save as Template"
+                        color="#69B31E"
+                        @click="saveAsTemplate"
+                        class="full-width"
+                      />
                     </div>
                   </q-card-section>
                 </q-card>
@@ -330,8 +517,8 @@
                   Barangay {{ authStore.user?.barangay_name }}
                 </div>
                 <div class="text-subtitle1 text-center q-mb-lg" style="color: #666">
-                  Period: {{ formatFullDate(currentSacbDateRange.from) }} - {{ formatFullDate(currentSacbDateRange.to)
-                  }}
+                  Period: {{ formatFullDate(currentSacbDateRange.from) }} -
+                  {{ formatFullDate(currentSacbDateRange.to) }}
                 </div>
               </q-card-section>
 
@@ -356,15 +543,19 @@
                             <span class="main-section-title">{{ row.ppa }}</span>
                           </div>
                           <div class="col-appropriation text-right">
-                            <span class="main-section-total">{{ row.appropriation ? formatCurrency(row.appropriation) :
-                              '' }}</span>
+                            <span class="main-section-total">{{
+                              row.appropriation ? formatCurrency(row.appropriation) : ''
+                            }}</span>
                           </div>
                           <div class="col-obligation text-right">
-                            <span class="main-section-total">{{ row.obligation ? formatCurrency(row.obligation) : ''
-                              }}</span>
+                            <span class="main-section-total">{{
+                              row.obligation ? formatCurrency(row.obligation) : ''
+                            }}</span>
                           </div>
                           <div class="col-balance text-right">
-                            <span class="main-section-total">{{ row.balance ? formatCurrency(row.balance) : '' }}</span>
+                            <span class="main-section-total">{{
+                              row.balance ? formatCurrency(row.balance) : ''
+                            }}</span>
                           </div>
                         </div>
                       </div>
@@ -375,11 +566,15 @@
                           <span class="subcategory-indent">></span>
                           <span class="subcategory-text">{{ row.ppa }}</span>
                         </div>
-                        <div class="col-appropriation text-right">{{ row.appropriation ?
-                          formatCurrency(row.appropriation) : '' }}</div>
-                        <div class="col-obligation text-right">{{ row.obligation ? formatCurrency(row.obligation) : ''
-                          }}</div>
-                        <div class="col-balance text-right">{{ row.balance ? formatCurrency(row.balance) : '' }}</div>
+                        <div class="col-appropriation text-right">
+                          {{ row.appropriation ? formatCurrency(row.appropriation) : '' }}
+                        </div>
+                        <div class="col-obligation text-right">
+                          {{ row.obligation ? formatCurrency(row.obligation) : '' }}
+                        </div>
+                        <div class="col-balance text-right">
+                          {{ row.balance ? formatCurrency(row.balance) : '' }}
+                        </div>
                       </div>
 
                       <!-- Sub-sub-category (like "Monetization of Leave Credits", "Productivity Enhancement Incentive") -->
@@ -388,11 +583,15 @@
                           <span class="subsubcategory-indent">></span>
                           <span class="subsubcategory-text">{{ row.ppa }}</span>
                         </div>
-                        <div class="col-appropriation text-right">{{ row.appropriation ?
-                          formatCurrency(row.appropriation) : '' }}</div>
-                        <div class="col-obligation text-right">{{ row.obligation ? formatCurrency(row.obligation) : ''
-                          }}</div>
-                        <div class="col-balance text-right">{{ row.balance ? formatCurrency(row.balance) : '' }}</div>
+                        <div class="col-appropriation text-right">
+                          {{ row.appropriation ? formatCurrency(row.appropriation) : '' }}
+                        </div>
+                        <div class="col-obligation text-right">
+                          {{ row.obligation ? formatCurrency(row.obligation) : '' }}
+                        </div>
+                        <div class="col-balance text-right">
+                          {{ row.balance ? formatCurrency(row.balance) : '' }}
+                        </div>
                       </div>
 
                       <!-- Sub-sub-sub-category (like individual sub-items) -->
@@ -402,28 +601,38 @@
                           <span class="subsubsubcategory-text">{{ row.ppa }}</span>
                         </div>
                         <div class="amount-group">
-                          <div class="col-appropriation text-right">{{ row.appropriation ?
-                            formatCurrency(row.appropriation) : '' }}</div>
-                          <div class="col-obligation text-right">{{ row.obligation ? formatCurrency(row.obligation) : ''
-                            }}</div>
-                          <div class="col-balance text-right">{{ row.balance ? formatCurrency(row.balance) : '' }}</div>
+                          <div class="col-appropriation text-right">
+                            {{ row.appropriation ? formatCurrency(row.appropriation) : '' }}
+                          </div>
+                          <div class="col-obligation text-right">
+                            {{ row.obligation ? formatCurrency(row.obligation) : '' }}
+                          </div>
+                          <div class="col-balance text-right">
+                            {{ row.balance ? formatCurrency(row.balance) : '' }}
+                          </div>
                         </div>
                       </div>
 
                       <!-- Total Row -->
                       <div v-else-if="row.isTotal" class="total-row">
                         <div class="col-description text-right text-bold">TOTAL</div>
-                        <div class="col-appropriation text-right text-bold">{{ row.appropriation ?
-                          formatCurrency(row.appropriation) : '' }}</div>
-                        <div class="col-obligation text-right text-bold">{{ row.obligation ?
-                          formatCurrency(row.obligation) : '' }}</div>
-                        <div class="col-balance text-right text-bold">{{ row.balance ? formatCurrency(row.balance) : ''
-                          }}</div>
+                        <div class="col-appropriation text-right text-bold">
+                          {{ row.appropriation ? formatCurrency(row.appropriation) : '' }}
+                        </div>
+                        <div class="col-obligation text-right text-bold">
+                          {{ row.obligation ? formatCurrency(row.obligation) : '' }}
+                        </div>
+                        <div class="col-balance text-right text-bold">
+                          {{ row.balance ? formatCurrency(row.balance) : '' }}
+                        </div>
                       </div>
                     </template>
 
                     <!-- No data message -->
-                    <div v-if="!reportStore.reportSACB || reportStore.reportSACB.length === 0" class="no-data-message">
+                    <div
+                      v-if="!reportStore.reportSACB || reportStore.reportSACB.length === 0"
+                      class="no-data-message"
+                    >
                       <div class="col-description">No SACB data available</div>
                       <div class="col-appropriation"></div>
                       <div class="col-obligation"></div>
@@ -508,7 +717,12 @@
     </q-dialog>
 
     <!-- RAC Modal -->
-    <q-dialog v-model="RACModal.show" maximized transition-show="slide-up" transition-hide="slide-down">
+    <q-dialog
+      v-model="RACModal.show"
+      maximized
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
       <q-layout view="lHh Lpr lFf" class="rac-layout">
         <!-- Header -->
         <q-header elevated class="bg-white text-dark rac-header">
@@ -521,8 +735,25 @@
 
             <!-- Action Buttons -->
             <div class="q-gutter-sm">
-              <q-btn outline icon="file_download" label="Export PDF" color="#69B31E" @click="exportToPDF" size="sm"
-                no-caps />
+              <q-btn
+                outline
+                icon="file_download"
+                label="Export PDF"
+                color="#69B31E"
+                @click="exportToPDF"
+                size="sm"
+                no-caps
+              />
+
+              <q-btn
+                outline
+                icon="table_view"
+                label="Export Excel"
+                color="#69B31E"
+                @click="exportToExcel"
+                size="sm"
+                no-caps
+              />
 
               <!-- <q-btn
                 unelevated
@@ -546,9 +777,14 @@
           <div class="print-content-wrapper q-pa-md">
             <q-card class="print-modal" id="rac-print-content">
               <q-card-section class="q-pb-none">
-                <div class="row items-center justify-between text-h6 text-weight-bold" style="color: #187c19">
+                <div
+                  class="row items-center justify-between text-h6 text-weight-bold"
+                  style="color: #187c19"
+                >
                   <span>{{ RACModal.reportType }}</span>
-                  <span class="stat-label text-h10">Generated Date: {{ new Date().toLocaleDateString() }}</span>
+                  <span class="stat-label text-h10"
+                    >Generated Date: {{ new Date().toLocaleDateString() }}</span
+                  >
                 </div>
                 <div class="text-h6 text-weight-medium" style="color: #187c19">
                   Barangay {{ authStore.user?.barangay_name }}
@@ -563,19 +799,26 @@
                 <div class="preview-table-container">
                   <!-- Header matching preview table style -->
                   <!-- Table with preview layout structure -->
-                  <table v-if="reportStore.reportRAC && reportStore.reportRAC.length > 0" class="preview-table"
-                    :data-columns="dynamicColumnsCount">
+                  <table
+                    v-if="reportStore.reportRAC && reportStore.reportRAC.length > 0"
+                    class="preview-table"
+                    :data-columns="dynamicColumnsCount"
+                  >
                     <thead>
                       <!-- First header row with expense class and obligation -->
 
                       <tr class="header-row-main">
-                        <th :colspan="5+dynamicColumnsCount" class="col-expense-class">
+                        <th :colspan="5 + dynamicColumnsCount" class="col-expense-class">
                           {{ reportStore.expenseRacSelected?.name || 'Not Selected' }}
                         </th>
                       </tr>
                       <tr class="header-row-main">
                         <th colspan="5" class="col-expense-class">OBLIGATION</th>
-                        <th v-if="hasDynamicColumns" :colspan="dynamicColumnsCount" class="col-obligation-header">
+                        <th
+                          v-if="hasDynamicColumns"
+                          :colspan="dynamicColumnsCount"
+                          class="col-obligation-header"
+                        >
                           ACCOUNT TITLE
                         </th>
                         <th v-else :colspan="1" class="col-obligation-header">ACCOUNT TITLE</th>
@@ -588,8 +831,11 @@
                         <th class="col-payee">Payee</th>
                         <th class="col-appropriation">Appropriation</th>
                         <!-- Dynamic Account Title Columns -->
-                        <th v-for="accountTitle in reportStore.dynamicAccountColumns" :key="accountTitle"
-                          class="col-account-title">
+                        <th
+                          v-for="accountTitle in reportStore.dynamicAccountColumns"
+                          :key="accountTitle"
+                          class="col-account-title"
+                        >
                           {{ accountTitle }}
                         </th>
                         <!-- Fallback when no dynamic columns -->
@@ -603,7 +849,11 @@
                       </tr> -->
                     </thead>
                     <tbody>
-                      <tr v-for="(row, index) in reportStore.reportRAC" :key="index" class="data-row">
+                      <tr
+                        v-for="(row, index) in reportStore.reportRAC"
+                        :key="index"
+                        class="data-row"
+                      >
                         <td class="col-date">{{ row.date || '' }}</td>
                         <td class="col-particulars">{{ row.particular || '' }}</td>
                         <td class="col-dv">{{ row.dvNumber || '' }}</td>
@@ -612,12 +862,15 @@
                           {{ (row.appropriation || 0).toLocaleString() }}
                         </td>
                         <!-- Dynamic Account Title Cells -->
-                        <td v-for="accountTitle in reportStore.dynamicAccountColumns" :key="accountTitle"
-                          class="col-account-title text-right">
+                        <td
+                          v-for="accountTitle in reportStore.dynamicAccountColumns"
+                          :key="accountTitle"
+                          class="col-account-title text-right"
+                        >
                           {{
-                          row[reportStore.accountTitleKeyMap[accountTitle]]
-                          ? row[reportStore.accountTitleKeyMap[accountTitle]].toLocaleString()
-                          : ''
+                            row[reportStore.accountTitleKeyMap[accountTitle]]
+                              ? row[reportStore.accountTitleKeyMap[accountTitle]].toLocaleString()
+                              : ''
                           }}
                         </td>
                         <!-- Fallback when no dynamic columns -->
@@ -631,26 +884,32 @@
                         <td class="col-payee"></td>
                         <td class="col-appropriation text-right font-weight-bold">
                           {{
-                          reportStore.reportRAC
-                          .reduce((sum, r) => sum + (r.appropriation || 0), 0)
-                          .toLocaleString()
+                            reportStore.reportRAC
+                              .reduce((sum, r) => sum + (r.appropriation || 0), 0)
+                              .toLocaleString()
                           }}
                         </td>
                         <!-- Dynamic Account Title Total Cells -->
-                        <td v-for="accountTitle in reportStore.dynamicAccountColumns" :key="accountTitle"
-                          class="col-account-title text-right font-weight-bold">
+                        <td
+                          v-for="accountTitle in reportStore.dynamicAccountColumns"
+                          :key="accountTitle"
+                          class="col-account-title text-right font-weight-bold"
+                        >
                           {{
-                          reportStore.reportRAC
-                          .reduce(
-                          (sum, r) =>
-                          sum + (r[reportStore.accountTitleKeyMap[accountTitle]] || 0),
-                          0,
-                          )
-                          .toLocaleString()
+                            reportStore.reportRAC
+                              .reduce(
+                                (sum, r) =>
+                                  sum + (r[reportStore.accountTitleKeyMap[accountTitle]] || 0),
+                                0,
+                              )
+                              .toLocaleString()
                           }}
                         </td>
                         <!-- Fallback when no dynamic columns -->
-                        <td v-if="!hasDynamicColumns" class="col-account-title text-right font-weight-bold">
+                        <td
+                          v-if="!hasDynamicColumns"
+                          class="col-account-title text-right font-weight-bold"
+                        >
                           -
                         </td>
                       </tr>
@@ -680,34 +939,40 @@
                           <div class="summary-stats">
                             <div class="stat-item">
                               <span class="stat-label">Total Appropriation:</span>
-                              <span class="stat-value">₱{{
-                                reportStore.reportRAC
-                                .reduce((sum, r) => sum + (r.appropriation || 0), 0)
-                                .toLocaleString()
-                                }}</span>
+                              <span class="stat-value"
+                                >₱{{
+                                  reportStore.reportRAC
+                                    .reduce((sum, r) => sum + (r.appropriation || 0), 0)
+                                    .toLocaleString()
+                                }}</span
+                              >
                             </div>
                             <div class="stat-item">
                               <span class="stat-label">Total Obligation:</span>
-                              <span class="stat-value">₱{{
-                                reportStore.reportRAC
-                                .reduce((sum, r) => sum + (r.amount || 0), 0)
-                                .toLocaleString()
-                                }}</span>
+                              <span class="stat-value"
+                                >₱{{
+                                  reportStore.reportRAC
+                                    .reduce((sum, r) => sum + (r.amount || 0), 0)
+                                    .toLocaleString()
+                                }}</span
+                              >
                             </div>
                             <div class="stat-item">
                               <span class="stat-label">Remaining Balance:</span>
-                              <span class="stat-value">₱{{
-                                (
-                                reportStore.reportRAC.reduce(
-                                (sum, r) => sum + (r.appropriation || 0),
-                                0,
-                                ) -
-                                reportStore.reportRAC.reduce(
-                                (sum, r) => sum + (r.amount || 0),
-                                0,
-                                )
-                                ).toLocaleString()
-                                }}</span>
+                              <span class="stat-value"
+                                >₱{{
+                                  (
+                                    reportStore.reportRAC.reduce(
+                                      (sum, r) => sum + (r.appropriation || 0),
+                                      0,
+                                    ) -
+                                    reportStore.reportRAC.reduce(
+                                      (sum, r) => sum + (r.amount || 0),
+                                      0,
+                                    )
+                                  ).toLocaleString()
+                                }}</span
+                              >
                             </div>
                             <!-- Dynamic Account Title Totals -->
                             <!-- <div v-for="accountTitle in reportStore.dynamicAccountColumns"
@@ -737,13 +1002,14 @@
                               <span class="stat-label">Total Records:</span>
                               <span class="stat-value">{{
                                 reportStore.reportRAC ? reportStore.reportRAC.length : 0
-                                }}</span>
+                              }}</span>
                             </div>
 
                             <div class="stat-item">
                               <span class="stat-label">Date Range:</span>
                               <span class="stat-value">
-                                {{ dateRangeDisplay || 'No date range selected' }}</span>
+                                {{ dateRangeDisplay || 'No date range selected' }}</span
+                              >
                             </div>
                           </div>
                         </q-card-section>
@@ -757,12 +1023,23 @@
         </q-page-container>
       </q-layout>
     </q-dialog>
+
+     <!-- Loading Overlay for Year Changes -->
+    <q-inner-loading :showing="reportStore.isLoading && isYearChanging" color="primary">
+      <q-spinner size="50px" color="primary" />
+      <div class="text-center q-mt-md">
+        <div class="text-h6">Loading Data</div>
+        <div class="text-caption">Please wait while we fetch data for the selected year...</div>
+      </div>
+    </q-inner-loading>
+
   </q-page>
 </template>
+
 <script setup>
 import { ref, reactive, computed, onMounted, onActivated } from 'vue'
 import SetupDialog from 'components/SetupDialog.vue'
-import { useQuasar,date } from 'quasar'
+import { useQuasar, date } from 'quasar'
 import { useAuthStore } from 'stores/auth'
 import { useReportStore } from 'stores/reportStore'
 import { usePageLogging } from '../composables/usePageLogging'
@@ -800,7 +1077,6 @@ const totalBalance = computed(() => {
 // Computed property for dynamic columns count
 const dynamicColumnsCount = computed(() => {
   return reportStore.dynamicAccountColumns.length
-
 })
 
 // Check if there are dynamic columns
@@ -822,19 +1098,130 @@ const exportingPDF = ref(false)
 const exportingSACBPDF = ref(false)
 const sacbDrawerOpen = ref(true)
 
-// Date ranges
-const currentYear = new Date().getFullYear()
-const currentdate = new Date().toISOString().slice(0, 10)  // YYYY-MM-DD
-const laterMonth = new Date().getMonth()
-const laterlastday = new Date(currentYear, laterMonth , 0).getDate()
-
 function pad(n) {
   return String(n).padStart(2, '0')
 }
 
-const CurrentRacDateRange = ref({ from: `${currentYear}-${laterMonth}-01`, to: `${currentYear}-${laterMonth}-${pad(laterlastday)}` })
+// Date ranges
+const currentYear = new Date().getFullYear()
+const currentdate = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+const laterMonthNum = new Date().getMonth() + 1
+const laterMonth = pad(laterMonthNum)      
+const laterlastday = new Date(currentYear, laterMonthNum, 0).getDate()
+
+//Year Filter
+const selectedYear = ref(null)
+
+const isYearChanging = ref(false)
+
+//refresh years after filtering
+function refreshYears() {
+  reportStore.fetchAvailableYears()
+
+  selectedYear.value = null   
+  onYearChange(null)       
+
+  notifySuccess('Filters reset to defaults.')
+}
+
+async function onYearChange(year) {
+  isYearChanging.value = true
+  loading.value = true
+
+  try {
+    // Sync store's selectedYear with what the dropdown emitted
+    reportStore.selectedYear = year
+
+    if (year === null) {
+      const today = new Date()
+      const month = today.getMonth()
+      const lastDay = new Date(currentYear, month + 1, 0).getDate()
+      const mm = pad(month + 1)
+
+      CurrentRacDateRange.value     = { from: `${currentYear}-${mm}-01`, to: `${currentYear}-${mm}-${pad(lastDay)}` }
+      continuingRacDateRange.value  = { from: `${currentYear}-${mm}-01`, to: `${currentYear}-${mm}-${pad(lastDay)}` }
+      currentSacbDateRange.value    = { from: `${currentYear}-01-01`, to: new Date().toISOString().slice(0, 10) }
+      continuingSacbDateRange.value = { from: `${currentYear}-01-01`, to: new Date().toISOString().slice(0, 10) }
+    } else {
+      const y = parseInt(year)
+      if (!y || String(y).length !== 4) return
+
+      const today = new Date()
+      const isCurrentYear = y === today.getFullYear()
+      const sacbFrom = `${y}-01-01`
+      const sacbTo   = isCurrentYear ? today.toISOString().slice(0, 10) : `${y}-12-31`
+      const month    = today.getMonth()
+      const lastDay  = new Date(y, month + 1, 0).getDate()
+      const mm       = pad(month + 1)
+
+      currentSacbDateRange.value    = { from: sacbFrom, to: sacbTo }
+      continuingSacbDateRange.value = { from: sacbFrom, to: sacbTo }
+      CurrentRacDateRange.value     = { from: `${y}-${mm}-01`, to: `${y}-${mm}-${pad(lastDay)}` }
+      continuingRacDateRange.value  = { from: `${y}-${mm}-01`, to: `${y}-${mm}-${pad(lastDay)}` }
+    }
+
+    expenseSelectedCurrent.value    = null
+    expenseSelectedContinuing.value = null
+
+    // Only re-fetch expense classes — years list doesn't need to reload
+    await reportStore.fetchData(reportStore.selectedYear)
+  } finally {
+    isYearChanging.value = false
+    loading.value = false
+  }
+}
+
+//refresh year filter
+// function onYearChange(year) {
+//   // null = "All Years" — reset dates to current month/year defaults
+//   if (year === null) {
+//     const today = new Date()
+//     const month = today.getMonth()
+//     const lastDay = new Date(currentYear, month + 1, 0).getDate()
+//     const mm = pad(month + 1)
+
+//     CurrentRacDateRange.value      = { from: `${currentYear}-${mm}-01`, to: `${currentYear}-${mm}-${pad(lastDay)}` }
+//     continuingRacDateRange.value   = { from: `${currentYear}-${mm}-01`, to: `${currentYear}-${mm}-${pad(lastDay)}` }
+//     currentSacbDateRange.value     = { from: `${currentYear}-01-01`, to: today.toISOString().slice(0, 10) }
+//     continuingSacbDateRange.value  = { from: `${currentYear}-01-01`, to: today.toISOString().slice(0, 10) }
+//     expenseSelectedCurrent.value   = null
+//     expenseSelectedContinuing.value = null
+//     return
+//   }
+
+//   const y = parseInt(year)
+//   if (!y || String(y).length !== 4) return
+
+//   const today = new Date()
+//   const isCurrentYear = y === today.getFullYear()
+
+//   const sacbFrom = `${y}-01-01`
+//   const sacbTo   = isCurrentYear ? today.toISOString().slice(0, 10) : `${y}-12-31`
+
+//   const month   = today.getMonth()
+//   const lastDay = new Date(y, month + 1, 0).getDate()
+//   const mm      = pad(month + 1)
+//   const racFrom = `${y}-${mm}-01`
+//   const racTo   = `${y}-${mm}-${pad(lastDay)}`
+
+//   currentSacbDateRange.value     = { from: sacbFrom, to: sacbTo }
+//   continuingSacbDateRange.value  = { from: sacbFrom, to: sacbTo }
+//   CurrentRacDateRange.value      = { from: racFrom, to: racTo }
+//   continuingRacDateRange.value   = { from: racFrom, to: racTo }
+
+//   expenseSelectedCurrent.value   = null
+//   expenseSelectedContinuing.value = null
+// }
+
+const CurrentRacDateRange = ref({
+  from: `${currentYear}-${laterMonth}-01`,
+  to: `${currentYear}-${laterMonth}-${pad(laterlastday)}`,
+})
 const currentSacbDateRange = ref({ from: `${currentYear}-01-01`, to: currentdate })
-const continuingRacDateRange = ref({ from: `${currentYear}-${laterMonth}-01`, to: `${currentYear}-${laterMonth}-${pad(laterlastday)}` })
+const continuingRacDateRange = ref({
+  from: `${currentYear}-${laterMonth}-01`,
+  to: `${currentYear}-${laterMonth}-${pad(laterlastday)}`,
+})
 const continuingSacbDateRange = ref({ from: `${currentYear}-01-01`, to: currentdate })
 
 const expenseSelectedCurrent = ref(null)
@@ -884,9 +1271,9 @@ const SetupModal = reactive({
 const loadAllData = async () => {
   loading.value = true
   try {
-    const criticalPromises = [reportStore.fetchData()]
-
-    await Promise.all(criticalPromises)
+    // fetchAvailableYears first so selectedYear is valid before fetchData runs
+    await reportStore.fetchAvailableYears()
+    await reportStore.fetchData(reportStore.selectedYear)
   } catch (error) {
     console.error('Error loading data:', error)
     notifyError('Failed to load data. Please try again later.')
@@ -894,6 +1281,21 @@ const loadAllData = async () => {
     loading.value = false
   }
 }
+
+// const loadAllData = async () => {
+//   loading.value = true
+//   try {
+//     await Promise.all([
+//       reportStore.fetchData(reportStore.selectedYear),  // ← pass year here
+//       reportStore.fetchAvailableYears()
+//     ])
+//   } catch (error) {
+//     console.error('Error loading data:', error)
+//     notifyError('Failed to load data. Please try again later.')
+//   } finally {
+//     loading.value = false
+//   }
+// }
 
 const openSACBModal = (type) => {
   if (type === 'current-sacb') {
@@ -1178,6 +1580,427 @@ async function exportToPDF() {
   }
 }
 
+async function exportToExcel() {
+  try {
+    const ExcelJS = (await import('exceljs')).default
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('RAC Report')
+
+    const dynamicCols = reportStore.dynamicAccountColumns
+    const totalCols = 5 + dynamicCols.length
+
+    // ── Helper: apply border to a cell ──
+    const thinBorder = {
+      top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+      bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+      left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+      right: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+    }
+    // const mediumBorder = {
+    //   top:    { style: 'medium', color: { argb: 'FF000000' } },
+    //   bottom: { style: 'medium', color: { argb: 'FF000000' } },
+    //   left:   { style: 'medium', color: { argb: 'FF000000' } },
+    //   right:  { style: 'medium', color: { argb: 'FF000000' } },
+    // }
+
+    const outerBorder = {
+      top: { style: 'medium', color: { argb: 'FFD3D3D3' } },
+      bottom: { style: 'medium', color: { argb: 'FFD3D3D3' } },
+      left: { style: 'medium', color: { argb: 'FFD3D3D3' } },
+      right: { style: 'medium', color: { argb: 'FFD3D3D3' } },
+    }
+
+    // const applyBorderRange = (startRow, endRow, startCol, endCol, border) => {
+    //   for (let r = startRow; r <= endRow; r++) {
+    //     for (let c = startCol; c <= endCol; c++) {
+    //       const cell = ws.getCell(r, c)
+    //       cell.border = border
+    //     }
+    //   }
+    // }
+
+    // ── Column widths ──
+    ws.columns = [
+      { width: 20 }, // A - Date
+      { width: 32 }, // B - Particulars
+      { width: 18 }, // C - DV#
+      { width: 26 }, // D - Payee
+      { width: 16 }, // E - Appropriation
+      ...dynamicCols.map(() => ({ width: 22 })),
+    ]
+
+    // ROW 1 — Report Title
+    ws.mergeCells(1, 1, 1, totalCols)
+    const titleCell = ws.getCell(1, 1)
+    titleCell.value = RACModal.reportType
+    titleCell.font = { bold: true, color: { argb: 'FF187C19' }, size: 14, name: 'Arial' }
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' }
+    ws.getRow(1).height = 28
+
+    // ROW 2 — Barangay
+    ws.mergeCells(2, 1, 2, totalCols)
+    const barangayCell = ws.getCell(2, 1)
+    barangayCell.value = `Barangay ${authStore.user?.barangay_name || ''}`
+    barangayCell.font = { color: { argb: 'FF187C19' }, size: 11, name: 'Arial' }
+    barangayCell.alignment = { horizontal: 'center', vertical: 'middle' }
+    ws.getRow(2).height = 20
+
+    // ROW 3 — Generated Date
+    ws.mergeCells(3, 1, 3, totalCols)
+    const dateCell = ws.getCell(3, 1)
+    dateCell.value = `Generated Date: ${new Date().toLocaleDateString()}`
+    dateCell.font = { color: { argb: 'FF666666' }, size: 10, name: 'Arial' }
+    dateCell.alignment = { horizontal: 'center', vertical: 'middle' }
+    ws.getRow(3).height = 16
+
+    // ROW 4 — Spacer
+    ws.getRow(4).height = 20
+
+    // ROW 5 — Expense Class Name
+    ws.mergeCells(5, 1, 5, totalCols)
+    const expenseCell = ws.getCell(5, 1)
+    expenseCell.value = reportStore.expenseRacSelected?.name || 'Not Selected'
+    expenseCell.font = { bold: true, size: 12, name: 'Arial' }
+    expenseCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } }
+    expenseCell.alignment = { horizontal: 'center', vertical: 'middle' }
+    expenseCell.border = outerBorder
+    ws.getRow(5).height = 24
+
+    // Fill empty merged cells in row 5 with same fill & border
+    for (let c = 2; c <= totalCols; c++) {
+      const cell = ws.getCell(5, c)
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } }
+      cell.border = {
+        top: { style: 'medium', color: { argb: 'FFD3D3D3' } },
+        bottom: { style: 'medium', color: { argb: 'FFD3D3D3' } },
+        right:
+          c === 0
+            ? { style: 'medium', color: { argb: 'FFD3D3D3' } }
+            : { style: 'thin', color: { argb: 'FFCCCCCC' } },
+        left:
+          c === totalCols
+            ? { style: 'medium', color: { argb: 'FFD3D3D3' } }
+            : { style: 'thin', color: { argb: 'FFCCCCCC' } },
+      }
+    }
+
+    // ROW 6 — OBLIGATION / ACCOUNT TITLE grouped header
+    ws.mergeCells(6, 1, 6, 4)
+    const obligCell = ws.getCell(6, 1)
+    obligCell.value = 'OBLIGATION'
+    obligCell.font = { bold: true, size: 11, name: 'Arial' }
+    obligCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } }
+    obligCell.alignment = { horizontal: 'center', vertical: 'middle' }
+    obligCell.border = {
+      top: { style: 'medium', color: { argb: 'FFD3D3D3' } },
+      bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+      left: { style: 'medium', color: { argb: 'FFD3D3D3' } },
+      right: { style: 'medium', color: { argb: 'FFD3D3D3' } },
+    }
+
+    // Fill merged cells 2-4 in row 6
+    for (let c = 2; c <= 4; c++) {
+      const cell = ws.getCell(6, c)
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } }
+      cell.border = {
+        top: { style: 'medium', color: { argb: 'FFD3D3D3' } },
+        bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+      }
+    }
+
+    if (dynamicCols.length > 0) {
+      ws.mergeCells(6, 5, 6, totalCols)
+    }
+    const acctCell = ws.getCell(6, 5)
+    acctCell.value = 'ACCOUNT TITLE'
+    acctCell.font = { bold: true, size: 11, name: 'Arial' }
+    acctCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } }
+    acctCell.alignment = { horizontal: 'center', vertical: 'middle' }
+    acctCell.border = {
+      top: { style: 'medium', color: { argb: 'FFD3D3D3' } },
+      bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+      left: { style: 'medium', color: { argb: 'FFD3D3D3' } },
+      right: { style: 'medium', color: { argb: 'FFD3D3D3' } },
+    }
+
+    for (let c = 6; c <= totalCols; c++) {
+      const cell = ws.getCell(6, c)
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } }
+      cell.border = {
+        top: { style: 'medium', color: { argb: 'FFD3D3D3' } },
+        bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+        left: c === 0 ? { style: 'medium', color: { argb: 'FFD3D3D3' } } : undefined,
+        right: c === totalCols ? { style: 'medium', color: { argb: 'FFD3D3D3' } } : undefined,
+      }
+    }
+
+    ws.getRow(6).height = 24
+
+    // ROW 7 — Column Headers
+    const colHeaders = [
+      'DATE',
+      'PARTICULARS',
+      'DV#',
+      'PAYEE',
+      'APPROPRIATION',
+      ...dynamicCols.map((c) => c.toUpperCase()),
+    ]
+    colHeaders.forEach((header, i) => {
+      const cell = ws.getCell(7, i + 1)
+      cell.value = header
+      cell.font = { bold: true, size: 10, name: 'Arial' }
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } }
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
+        bottom: { style: 'medium', color: { argb: 'FFD3D3D3' } },
+        left:
+          i === 0
+            ? { style: 'medium', color: { argb: 'FFD3D3D3' } }
+            : { style: 'thin', color: { argb: 'FFCCCCCC' } },
+        right:
+          i === colHeaders.length - 1
+            ? { style: 'medium', color: { argb: 'FFD3D3D3' } }
+            : { style: 'thin', color: { argb: 'FFCCCCCC' } },
+      }
+    })
+    ws.getRow(7).height = 44
+
+    // DATA ROWS — starting at row 8
+    const dataStartExcelRow = 8
+    reportStore.reportRAC.forEach((row, i) => {
+      const excelRow = dataStartExcelRow + i
+      const isEven = i % 2 === 1
+      const rowFill = isEven
+        ? { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8F9FA' } }
+        : { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } }
+
+      const values = [
+        row.date || '',
+        row.particular || '',
+        row.dvNumber || '',
+        row.payee || '',
+        row.appropriation || 0,
+        ...dynamicCols.map((col) => row[reportStore.accountTitleKeyMap[col]] ?? ''),
+      ]
+
+      values.forEach((val, ci) => {
+        const cell = ws.getCell(excelRow, ci + 1)
+        cell.value = val
+        cell.fill = rowFill
+        cell.font = { size: 10, name: 'Arial' }
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFDDDDDD' } },
+          bottom: { style: 'thin', color: { argb: 'FFDDDDDD' } },
+          left:
+            ci === 0
+              ? { style: 'medium', color: { argb: 'FFD3D3D3' } }
+              : { style: 'thin', color: { argb: 'FFDDDDDD' } },
+          right:
+            ci === values.length - 1
+              ? { style: 'medium', color: { argb: 'FFD3D3D3' } }
+              : { style: 'thin', color: { argb: 'FFDDDDDD' } },
+        }
+
+        // Numbers: right-align and format
+        if (ci >= 4) {
+          cell.alignment = { horizontal: 'right', vertical: 'middle' }
+          cell.numFmt = '#,##0.00'
+        } else {
+          cell.alignment = { horizontal: 'left', vertical: 'middle' }
+        }
+      })
+
+      ws.getRow(excelRow).height = 18
+    })
+
+    // TOTAL ROW
+    const totalExcelRow = dataStartExcelRow + reportStore.reportRAC.length
+
+    const totalValues = [
+      '',
+      'Total Appropriation',
+      '',
+      '',
+      reportStore.reportRAC.reduce((s, r) => s + (r.appropriation || 0), 0),
+      ...dynamicCols.map((col) =>
+        reportStore.reportRAC.reduce(
+          (s, r) => s + (r[reportStore.accountTitleKeyMap[col]] || 0),
+          0,
+        ),
+      ),
+    ]
+
+    // Merge label columns A–D
+    ws.mergeCells(totalExcelRow, 1, totalExcelRow, 4)
+
+    totalValues.forEach((val, ci) => {
+      const cell = ws.getCell(totalExcelRow, ci + 1)
+      cell.value = val
+      cell.font = { bold: true, size: 10, name: 'Arial' }
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE9ECEF' } }
+      cell.border = {
+        top: { style: 'medium', color: { argb: 'FFD3D3D3' } },
+        bottom: { style: 'medium', color: { argb: 'FFD3D3D3' } },
+        left:
+          ci === 0
+            ? { style: 'medium', color: { argb: 'FFD3D3D3' } }
+            : { style: 'thin', color: { argb: 'FFCCCCCC' } },
+        right:
+          ci === totalValues.length - 1
+            ? { style: 'medium', color: { argb: 'FFD3D3D3' } }
+            : { style: 'thin', color: { argb: 'FFCCCCCC' } },
+      }
+      if (ci >= 4) {
+        cell.alignment = { horizontal: 'right', vertical: 'middle' }
+        cell.numFmt = '#,##0.00'
+      } else if (ci === 1) {
+        cell.alignment = { horizontal: 'center', vertical: 'middle' }
+      }
+    })
+
+    ws.getRow(totalExcelRow).height = 22
+
+    // SPACER ROWS
+    const spacer1 = totalExcelRow + 1
+    const spacer2 = totalExcelRow + 2
+    ws.getRow(spacer1).height = 12
+    ws.getRow(spacer2).height = 12
+
+    // SUMMARY STATISTICS + REPORT INFORMATION
+    const summaryStartRow = totalExcelRow + 3
+
+    const totalAppr = reportStore.reportRAC.reduce((s, r) => s + (r.appropriation || 0), 0)
+    const totalOblig = reportStore.reportRAC.reduce((s, r) => s + (r.amount || 0), 0)
+    const totalBal = totalAppr - totalOblig
+
+    const summaryHeaderStyle = (cell, label) => {
+      cell.value = label
+      cell.font = { bold: true, size: 11, name: 'Arial', color: { argb: 'FFFFFFFF' } }
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '58B265FF' } }
+      cell.alignment = { horizontal: 'center', vertical: 'middle' }
+      cell.border = outerBorder
+    }
+
+    // Section header row
+    ws.mergeCells(summaryStartRow, 1, summaryStartRow, 2)
+    summaryHeaderStyle(ws.getCell(summaryStartRow, 1), 'SUMMARY STATISTICS')
+    ws.getCell(summaryStartRow, 2).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF187C19' },
+    }
+    ws.getCell(summaryStartRow, 2).border = outerBorder
+
+    ws.mergeCells(summaryStartRow, 3, summaryStartRow, 5)
+    summaryHeaderStyle(ws.getCell(summaryStartRow, 3), 'REPORT INFORMATION')
+    for (let c = 4; c <= 5; c++) {
+      ws.getCell(summaryStartRow, c).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF187C19' },
+      }
+      ws.getCell(summaryStartRow, c).border = outerBorder
+    }
+    ws.getRow(summaryStartRow).height = 22
+
+    // Summary data rows
+    const summaryData = [
+      ['Total Appropriation:', totalAppr, 'Report Type:', 'RAC'],
+      ['Total Obligation:', totalOblig, 'Total Records:', reportStore.reportRAC.length],
+      ['Remaining Balance:', totalBal, 'Date Range:', dateRangeDisplay.value || 'N/A'],
+    ]
+
+    summaryData.forEach((rowData, i) => {
+      const excelRow = summaryStartRow + 1 + i
+      const isEven = i % 2 === 1
+      const rowFill = isEven
+        ? { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } }
+        : { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } }
+
+      // Col A - label
+      const labelCell = ws.getCell(excelRow, 1)
+      labelCell.value = rowData[0]
+      labelCell.font = { bold: true, size: 10, name: 'Arial' }
+      labelCell.fill = rowFill
+      labelCell.alignment = { horizontal: 'left', vertical: 'middle' }
+      labelCell.border = thinBorder
+
+      // Col B - value (number)
+      const valCell = ws.getCell(excelRow, 2)
+      valCell.value = rowData[1]
+      valCell.font = { bold: true, size: 10, name: 'Arial', color: { argb: 'FF187C19' } }
+      valCell.fill = rowFill
+      valCell.alignment = { horizontal: 'right', vertical: 'middle' }
+      valCell.border = thinBorder
+      if (typeof rowData[1] === 'number' && i < 2) valCell.numFmt = '#,##0.00'
+
+      // Col C - info label
+      const infoLabelCell = ws.getCell(excelRow, 3)
+      infoLabelCell.value = rowData[2]
+      infoLabelCell.font = { bold: true, size: 10, name: 'Arial' }
+      infoLabelCell.fill = rowFill
+      infoLabelCell.alignment = { horizontal: 'left', vertical: 'middle' }
+      infoLabelCell.border = thinBorder
+
+      // Col D-E - info value (merged)
+      ws.mergeCells(excelRow, 4, excelRow, 5)
+      const infoValCell = ws.getCell(excelRow, 4)
+      infoValCell.value = rowData[3]
+      infoValCell.font = { size: 10, name: 'Arial' }
+      infoValCell.fill = rowFill
+      infoValCell.alignment = { horizontal: 'left', vertical: 'middle' }
+      infoValCell.border = thinBorder
+      ws.getCell(excelRow, 5).fill = rowFill
+      ws.getCell(excelRow, 5).border = thinBorder
+
+      ws.getRow(excelRow).height = 18
+    })
+
+    const applyOuterBorder = (startRow, endRow, startCol, endCol) => {
+      for (let r = startRow; r <= endRow; r++) {
+        for (let c = startCol; c <= endCol; c++) {
+          const cell = ws.getCell(r, c)
+
+          cell.border = {
+            top:
+              r === startRow ? { style: 'medium', color: { argb: 'FFD3D3D3' } } : cell.border?.top,
+            bottom:
+              r === endRow ? { style: 'medium', color: { argb: 'FFD3D3D3' } } : cell.border?.bottom,
+            left:
+              c === startCol ? { style: 'medium', color: { argb: 'FFD3D3D3' } } : cell.border?.left,
+            right:
+              c === endCol ? { style: 'medium', color: { argb: 'FFD3D3D3' } } : cell.border?.right,
+          }
+        }
+      }
+    }
+
+    const summaryEndRow = summaryStartRow + summaryData.length
+
+    applyOuterBorder(summaryStartRow, summaryEndRow, 1, 5)
+
+    // WRITE FILE
+    const buffer = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    const barangay = authStore.user?.barangay_name?.replace(/\s+/g, '_') || 'Barangay'
+    link.href = url
+    link.download = `RAC_${barangay}_${CurrentRacDateRange.value.from}_to_${CurrentRacDateRange.value.to}.xlsx`
+    link.click()
+    URL.revokeObjectURL(url)
+
+    logAdminActivity('Report Exported', `Exported ${RACModal.reportType} report to Excel`)
+    $q.notify({ type: 'positive', message: 'RAC Excel Exported Successfully!' })
+  } catch (error) {
+    console.error(error)
+    $q.notify({ type: 'negative', message: 'Failed to export Excel' })
+  }
+} 
+
 async function exportSACBToPDF() {
   exportingSACBPDF.value = true
   const html2canvas = (await import('html2canvas')).default
@@ -1292,13 +2115,12 @@ function changeMonth(newDate) {
   const date = new Date(newDate)
 
   const year = date.getFullYear()
-  const month = date.getMonth()          // 0–11
+  const month = date.getMonth() // 0–11
   const lastDay = new Date(year, month + 1, 0).getDate()
 
   // Update ONLY the `to` date
   CurrentRacDateRange.value.to = `${year}-${pad(month + 1)}-${pad(lastDay)}`
 }
-
 
 function toggleSACBDrawer() {
   sacbDrawerOpen.value = !sacbDrawerOpen.value
@@ -1343,12 +2165,13 @@ function formatCurrency(value) {
 /* -------------------- LIFECYCLE -------------------- */
 onMounted(async () => {
   await loadAllData()
-  // Log page visit
   await logPageVisit('Reports')
 })
+
 onActivated(async () => {
   await loadAllData()
 })
+
 </script>
 
 <style scoped>
@@ -1986,6 +2809,135 @@ onActivated(async () => {
   .rac-header .q-toolbar-title {
     font-size: 0.9rem;
   }
+
+  .year-filter-section {
+    .filter-card .q-card__section {
+      padding: 12px 16px;
+
+      .row {
+        gap: 12px;
+
+        .mobile-actions {
+          gap: 8px;
+
+          .q-btn {
+            min-height: 36px;
+            font-size: 12px;
+
+            .q-btn__content {
+              .q-btn__label {
+                font-size: 12px;
+              }
+            }
+          }
+        }
+      }
+
+      .q-select {
+        min-width: 120px !important;
+      }
+
+      .q-btn {
+        font-size: 12px;
+        padding: 8px 12px;
+      }
+    }
+  }
+}
+
+@media (max-width: 1024px) {
+  .year-filter-section {
+    .filter-main-section {
+      .filter-desktop-layout {
+        .filter-controls-section {
+          .filter-input-section .year-select {
+            min-width: 140px;
+            max-width: 180px;
+          }
+        }
+
+        .filter-actions-section {
+          .reset-year-btn {
+            .q-btn__content {
+              .q-btn__label {
+                display: none;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 360px) {
+  .year-filter-section {
+    .filter-main-section {
+      .filter-mobile-layout {
+        .mobile-actions {
+          .q-btn {
+            .q-btn__content {
+              .q-btn__label {
+                font-size: 11px;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .summary-card {
+    min-width: unset !important;
+    width: 100% !important;
+  }
+
+  .chart-card,
+  .responsive-card,
+  .responsive-table {
+    width: 100% !important;
+    min-width: unset !important;
+  }
+
+  .year-filter-section {
+    .filter-card .q-card__section {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 16px;
+
+      .row {
+        justify-content: center;
+      }
+    }
+  }
+}
+
+/* Year filter section improvements */
+.year-filter-section {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.year-filter-section .row {
+  align-items: center;
+  gap: 8px;
+}
+
+.year-filter-section .q-select {
+  min-width: 120px;
+}
+
+.year-filter-section .q-btn {
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.year-filter-section .q-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.2);
 }
 
 /* Added preview table styles to match the reference design */
@@ -2384,7 +3336,7 @@ onActivated(async () => {
 /* Total Row */
 .total-row {
   /* display: grid; */
-  grid-template-columns: auto 1fr repeat(auto-fill,120px);
+  grid-template-columns: auto 1fr repeat(auto-fill, 120px);
   min-height: 40px;
   align-items: center;
   padding: 8px 12px;

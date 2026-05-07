@@ -423,6 +423,8 @@ const $q = useQuasar()
 const contApprStore = useContApprStore()
 const { continueAccounts, continuingAppropriations } = storeToRefs(contApprStore)
 
+
+const { selectedYear } = storeToRefs(contApprStore)
 const loading = ref(false)
 const showContinueDialog = ref(false)
 const showViewDialog = ref(false)
@@ -568,20 +570,31 @@ const filteredDialogAccounts = computed(() => {
   )
 })
 
+// const filteredAppropriations = computed(() => {
+//   const query = searchQuery.value.toLowerCase()
+//   const currentYear = new Date().getFullYear()
+//   const lastYear = currentYear - 1
+
+//   return mergedAppropriations.value.filter((row) => {
+//     // Only show data from 2024 or last year
+//     const rowYear = parseInt(row.year)
+//     const isCurrentOrLastYear = rowYear === 2024 || rowYear === lastYear
+
+//     if (!isCurrentOrLastYear) {
+//       return false
+//     }
+
+//     return (
+//       row.description.toLowerCase().includes(query) ||
+//       row.expense_class?.toLowerCase().includes(query) ||
+//       row.year?.toString().includes(query)
+//     )
+//   })
+// })
+
 const filteredAppropriations = computed(() => {
   const query = searchQuery.value.toLowerCase()
-  const currentYear = new Date().getFullYear()
-  const lastYear = currentYear - 1
-
   return mergedAppropriations.value.filter((row) => {
-    // Only show data from 2024 or last year
-    const rowYear = parseInt(row.year)
-    const isCurrentOrLastYear = rowYear === 2024 || rowYear === lastYear
-
-    if (!isCurrentOrLastYear) {
-      return false
-    }
-
     return (
       row.description.toLowerCase().includes(query) ||
       row.expense_class?.toLowerCase().includes(query) ||
@@ -589,8 +602,6 @@ const filteredAppropriations = computed(() => {
     )
   })
 })
-
-
 
 const loadPendingUsers = async () => {
   loading.value = true
@@ -806,7 +817,7 @@ onMounted(async () => {
   try {
     await contApprStore.fetchContinueAccounts()
     await contApprStore.fetchYears()
-    await contApprStore.fetchContinuingAppropriations()
+    await contApprStore.fetchContinuingAppropriations(contApprStore.selectedYear)
 
     // Log page visit
     const { logPageVisit } = usePageLogging()
@@ -821,6 +832,13 @@ onMounted(async () => {
     generalLoading.value = false
   }
 })
+
+watch(selectedYear, async (newYear) => {
+  if (newYear) {
+    await contApprStore.fetchContinuingAppropriations(newYear)
+  }
+})
+
 
 // Watch for dialog close to clear selections
 watch(showContinueDialog, (newValue) => {

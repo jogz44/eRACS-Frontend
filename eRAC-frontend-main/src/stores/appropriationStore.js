@@ -124,6 +124,11 @@ export const useAppropriationStore = defineStore("appropriation", {
           const d = new Date(value)
           return isNaN(d.getTime()) ? null : d
         }
+        if (state.selectedFiscalYear && state.selectedFiscalYear !== 'all') {
+    results = results.filter((item) => {
+      return String(item.fiscal_year) === String(state.selectedFiscalYear)
+    })
+  }
         return null
       }
 
@@ -323,12 +328,20 @@ export const useAppropriationStore = defineStore("appropriation", {
       }
     },
 
-    async fetchBudgets(options = { silent: false }) {
-      const silent = options?.silent === true
+      async fetchBudgets(yearOrOptions = null, options = { silent: false }) {
+      const isLegacyOptionsOnly =
+        yearOrOptions &&
+        typeof yearOrOptions === 'object' &&
+        !Array.isArray(yearOrOptions)
+      const year = isLegacyOptionsOnly ? null : yearOrOptions
+      const mergedOptions = isLegacyOptionsOnly ? yearOrOptions : options
+      const silent = mergedOptions?.silent === true
       if (!silent) this.loading = true
       try {
-        const currentYear = new Date().getFullYear()
-        const params = { year: currentYear }
+        const params = {
+          year: year !== null && year !== undefined ? Number(year) : new Date().getFullYear(),
+        }
+
 
         // Add barangay filter for admin users
         if (this.authStore.admin) {
@@ -385,8 +398,12 @@ export const useAppropriationStore = defineStore("appropriation", {
     },
 
     // Backwards-compat: some components call fetchAppropriations; route to fetchBudgets
-    async fetchAppropriations(options = { silent: false }) {
-      return this.fetchBudgets(options)
+    // async fetchAppropriations(options = { silent: false }) {
+    //   return this.fetchBudgets(options)
+    // },
+
+   async fetchAppropriations(yearOrOptions = null, options = { silent: false }) {
+      return this.fetchBudgets(yearOrOptions, options)
     },
 
     async fetchExpenseHierarchy() {

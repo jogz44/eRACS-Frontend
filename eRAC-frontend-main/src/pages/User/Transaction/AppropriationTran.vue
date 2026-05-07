@@ -585,12 +585,18 @@ const budgetTypeOptions = [{ label: 'Annual Budget', value: 'annual' }]
 
 const loadAppropriation = async () => {
   loading.value = true
-  try {
-    // Use Promise.allSettled to handle partial failures gracefully
-    const results = await Promise.allSettled([
-      appropriationStore.fetchBudgets(),
-      appropriationStore.fetchAppropriations()
-    ])
+  // try {
+  //   // Use Promise.allSettled to handle partial failures gracefully
+  //   const results = await Promise.allSettled([
+  //     appropriationStore.fetchBudgets(),
+  //     appropriationStore.fetchAppropriations()
+  //   ])
+    try {
+          const year = route.query.year ? parseInt(route.query.year) : null
+          const results = await Promise.allSettled([
+            appropriationStore.fetchBudgets(year),
+            appropriationStore.fetchAppropriations(year)
+          ])
 
     // Check for any failures
     const failures = results.filter(result => result.status === 'rejected')
@@ -916,6 +922,16 @@ watch(selectedFiscalYear, (newYearId) => {
     }
   }
 })
+
+//watch for year filtering
+watch(
+  () => route.query.year,
+  async (newYear) => {
+    const year = newYear ? parseInt(newYear) : null
+    await appropriationStore.fetchBudgets(year)
+    await appropriationStore.fetchAppropriations(year)
+  },
+)
 
 // Watch for budget type changes and sync with store
 watch(selectedBudgetType, (newBudgetType) => {
@@ -1245,16 +1261,38 @@ const applyNavigationFilters = () => {
   }
 }
 
+// onMounted(async () => {
+//   try {
+//     // Apply navigation filters first
+//     applyNavigationFilters()
+
+//     // Load both budgets and appropriations to ensure complete data
+//     await appropriationStore.fetchBudgets()
+//     await appropriationStore.fetchAppropriations()
+
+//     // Log page visit
+//     const { logPageVisit } = usePageLogging()
+//     await logPageVisit('Current Appropriation')
+//   } catch (error) {
+//     $q.notify({
+//       type: 'negative',
+//       message: error.response?.data?.message || 'Failed to load budgets',
+//       icon: 'error',
+//       position: 'top',
+//     })
+//   }
+// })
+
 onMounted(async () => {
   try {
-    // Apply navigation filters first
     applyNavigationFilters()
 
-    // Load both budgets and appropriations to ensure complete data
-    await appropriationStore.fetchBudgets()
-    await appropriationStore.fetchAppropriations()
+    // Read year from route query — same as the layout sends it
+    const year = route.query.year ? parseInt(route.query.year) : null
 
-    // Log page visit
+    await appropriationStore.fetchBudgets(year)
+    await appropriationStore.fetchAppropriations(year)
+
     const { logPageVisit } = usePageLogging()
     await logPageVisit('Current Appropriation')
   } catch (error) {

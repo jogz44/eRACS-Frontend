@@ -60,7 +60,7 @@
           <div class="office-name">City Accounting Office</div>
             <div class="system-name">Electronic Registry of Appropriation and Commitment System (eRACs)</div>
 
-          <div class="signin-title">{{ getSigninTitle() }}</div>
+          <div class="signin-title">Admin</div>
         </div>
 
         <div class="login-form">
@@ -194,14 +194,14 @@ const showInactivityDialog = ref(false)
 // }
 
 // Get signin title based on username
-const getSigninTitle = () => {
-  if (email.value === 'coa') {
-    return 'COA Officer'
-  } else if (email.value === 'admin') {
-    return 'Super Administrator'
-  }
-  return 'Admin'
-}
+// const getSigninTitle = () => {
+//   if (email.value === 'coa') {
+//     return 'COA Officer'
+//   } else if (email.value === 'admin') {
+//     return 'Super Administrator'
+//   }
+//   return 'Admin'
+// }
 
 // Validation function
 const validateLogin = () => {

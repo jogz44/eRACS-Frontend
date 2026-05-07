@@ -263,59 +263,82 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
         throw error
       } finally {
         this.loading = false
-      }
+      }  
     },
 
     //Expense Types
 
     async fetchExpenseTypes(expenseClassId) {
-      const key = `${expenseClassId}-${this.selectedYear}`
+  const key = `${expenseClassId}-${this.selectedYear}`
+  if (this.fetchedTypes.has(key)) return
 
-      // ✅ Already fetched? Don't fetch again
-      if (this.fetchedTypes.has(key)) return
+  this.loading = true
+  try {
+    const response = await api.get(
+      `/api/barangay/expense-classes/${expenseClassId}/types`,
+      getAuthConfig(),
+    )
 
-      this.loading = true
+    // Response shape: { status, message, data: { success, data: { data: [...] } } }
+    const typesData = response.data?.data?.data?.data
 
-      try {
-        const response = await api.get(
-          `/api/barangay/expense-classes/${expenseClassId}/types`,
-          getAuthConfig(),
-        )
+    if (!Array.isArray(typesData)) {
+      console.error('Unexpected response shape:', JSON.stringify(response.data))
+      throw new Error(`Expected array of expense types, got: ${typeof typesData}`)
+    }
 
-        const apiData = response.data?.data
-        const typesData = apiData?.data || apiData
+    // accountsLibstore.js — fetchExpenseTypes()
+// async fetchExpenseTypes(expenseClassId) {
+//   const key = `${expenseClassId}-${this.selectedYear}`
+//   if (this.fetchedTypes.has(key)) return
 
-        if (!Array.isArray(typesData)) {
-          throw new Error('API did not return an array of expense types')
-        }
+//   this.loading = true
+//   try {
+//     const response = await api.get(
+//       `/api/barangay/expense-classes/${expenseClassId}/types`,
+//       getAuthConfig(),
+//     )
 
-        // 🔁 Remove old types for this class (to prevent duplicates)
-        this.expenseTypes = this.expenseTypes.filter((et) => et.expense_class_id != expenseClassId)
+//     // ✅ Guard against non-2xx wrapped in axios (shouldn't happen, but safety net)
+//     if (!response.data?.success && response.data?.success !== undefined) {
+//       throw new Error(response.data?.message || 'Server returned an error')
+//     }
 
-        // ✅ Get the year value
-        const fiscalYear = this.years.find((y) => y.id == this.selectedYear)
-        const yearValue = fiscalYear?.year?.toString() || null
+//     const apiData = response.data?.data
+//     const typesData = apiData?.data ?? apiData  // handles both {data:{data:[]}} and {data:[]}
 
-        // ✅ Append the fetched types
-        this.expenseTypes.push(
-          ...typesData.map((t) => ({
-            id: t.id,
-            name: t.name,
-            expense_class_id: t.expense_class_id || expenseClassId,
-            order: t.order || 0,
-            year: yearValue,
-          })),
-        )
+//     if (!Array.isArray(typesData)) {
+//       // ✅ Log the actual shape so you can debug quickly
+//       console.error('Unexpected response shape:', JSON.stringify(response.data))
+//       throw new Error(`Expected array of expense types, got: ${typeof typesData}`)
+//     }
 
-        // ✅ Mark as fetched only after success
-        this.fetchedTypes.add(key)
-      } catch (error) {
-        console.error('Error fetching expense types:', error)
-        throw error // important so toggleExpansion handles this too
-      } finally {
-        this.loading = false
-      }
-    },
+    this.expenseTypes = this.expenseTypes.filter(
+      (et) => et.expense_class_id != expenseClassId,
+    )
+
+    const fiscalYear = this.years.find((y) => y.id == this.selectedYear)
+    const yearValue = fiscalYear?.year?.toString() || null
+
+    this.expenseTypes.push(
+      ...typesData.map((t) => ({
+        id: t.id,
+        name: t.name,
+        expense_class_id: t.expense_class_id || expenseClassId,
+        order: t.order || 0,
+        year: yearValue,
+      })),
+    )
+
+    this.fetchedTypes.add(key)
+  } catch (error) {
+    // ✅ Don't add to fetchedTypes on error, so retry is possible
+    console.error('Error fetching expense types:', error.response?.data || error.message)
+    throw error
+  } finally {
+    this.loading = false
+  }
+},
 
     async createExpenseType(typeData) {
       this.loading = true

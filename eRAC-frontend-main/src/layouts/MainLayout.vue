@@ -1,3 +1,4 @@
+<!-- user -->
 <template>
   <q-layout view="lHh Lpr lFf">
     <!-- HEADER -->
@@ -265,9 +266,36 @@
       :class="{ 'panel-open': activePanel === 'transactions' }"
       v-show="activePanel === 'transactions'"
     >
-      <div class="panel-header">
-        <div class="panel-title">Transactions</div>
-        <q-btn flat round dense icon="close" @click="closePanel" class="close-btn" />
+      <div class="panel-header" style="flex-direction: column; align-items: stretch; gap: 8px;">
+        <!-- Top row: Title + Close -->
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div class="panel-title">Transactions</div>
+          <q-btn flat round dense icon="close" @click="closePanel" class="close-btn" />
+        </div>
+
+        <!-- Bottom row: Year filter + Refresh -->
+        <div class="row items-center q-gutter-sm">
+          <q-select
+            v-model="selectedYear"
+            :options="availableYears"
+            option-value="value"
+            option-label="label"
+            emit-value
+            map-options
+            dense
+            outlined
+            style="min-width: 120px; flex: 1;"
+            @update:model-value="onYearChange"
+          >
+            <template v-slot:prepend>
+              <q-icon name="calendar_today" />
+            </template>
+          </q-select>
+
+          <q-btn icon="refresh" color="primary" flat dense size="sm" @click="refreshYears">
+            <q-tooltip>Refresh available years</q-tooltip>
+          </q-btn>
+        </div>
       </div>
 
       <div class="panel-content">
@@ -349,36 +377,41 @@
 
 <script setup>
 import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue'
-// import NavLink from 'components/Nav/NavLink.vue'
 import SetupDialog from 'components/SetupDialog.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from 'stores/auth'
 import { useDisbursementStore } from 'stores/disbursementStore'
+import { useAppropriationStore } from 'stores/appropriationStore'
+import { useSupplementalBudgetStore } from 'stores/supplementalBudgetStore'
+import { useAugmentationStore } from 'src/stores/augmentation'
+import { useReportStore } from 'stores/reportStore'
 import { useQuasar } from 'quasar'
 import eracslogo from "src/assets/tagumlogo.png"
 
 const $q = useQuasar()
 const router = useRouter()
 const authStore = useAuthStore()
+const reportStore = useReportStore()
 const disbursementStore = useDisbursementStore()
 const route = useRoute()
+const appropriationStore = useAppropriationStore()
+const supplementalStore = useSupplementalBudgetStore()
+const augmentationStore = useAugmentationStore()
 
 const leftDrawerOpen = ref(false)
 const showSetupDialog = ref(false)
 const imageLoadingFailed = ref(false)
 const activePanel = ref(null)
 
-// Computed property to check if user has access to restricted features
+// const selectedYear = ref(new Date().getFullYear())
+
 const hasAccessToRestrictedFeatures = computed(() => {
   const restrictedPositions = ['barangay captain']
   const userPosition = authStore.user?.position_name?.toLowerCase().trim()
   return restrictedPositions.includes(userPosition)
 })
 
-// Computed property for void request count (only for Captains/Chairpersons)
 const voidRequestCount = computed(() => {
-  // Only show count for users who can approve/reject void requests
-  // Try to get position from the relationship first, fallback to position_name
   const userPosition =
     authStore.user?.position?.name?.toLowerCase().trim() ||
     authStore.user?.position_name?.toLowerCase().trim()
@@ -391,36 +424,15 @@ const voidRequestCount = computed(() => {
       userPosition.includes('sk chairperson'))
 
   if (!canApproveVoid) return 0
+  if (!authStore.user?.barangay_name) return 0
+  if (!disbursementStore.disbursements || disbursementStore.disbursements.length === 0) return 0
 
-  // Additional security check: ensure user has barangay_name
-  if (!authStore.user?.barangay_name) {
-    console.warn('User does not have barangay_name, cannot show void request count')
-    return 0
-  }
-
-  // Ensure disbursements are loaded
-  if (!disbursementStore.disbursements || disbursementStore.disbursements.length === 0) {
-    return 0
-  }
-
-  // Count disbursements with 'Void Requested' status
-  // Filter by both status and barangay_name for security
-  const voidCount = disbursementStore.disbursements.filter((d) => {
-    const hasVoidRequestedStatus = d.status === 'Void Requested'
-    const matchesBarangay = d.barangay_name === authStore.user.barangay_name
-
-
-    return hasVoidRequestedStatus && matchesBarangay
+  return disbursementStore.disbursements.filter((d) => {
+    return d.status === 'Void Requested' && d.barangay_name === authStore.user.barangay_name
   }).length
-
-
-  return voidCount
 })
 
-// Computed property for edit request count (only for Captains/Chairpersons)
 const editRequestCount = computed(() => {
-  // Only show count for users who can approve/reject edit requests
-  // Try to get position from the relationship first, fallback to position_name
   const userPosition =
     authStore.user?.position?.name?.toLowerCase().trim() ||
     authStore.user?.position_name?.toLowerCase().trim()
@@ -433,69 +445,40 @@ const editRequestCount = computed(() => {
       userPosition.includes('sk chairperson'))
 
   if (!canApproveEdit) return 0
+  if (!authStore.user?.barangay_name) return 0
+  if (!disbursementStore.disbursements || disbursementStore.disbursements.length === 0) return 0
 
-  // Additional security check: ensure user has barangay_name
-  if (!authStore.user?.barangay_name) {
-    console.warn('User does not have barangay_name, cannot show edit request count')
-    return 0
-  }
-
-  // Ensure disbursements are loaded
-  if (!disbursementStore.disbursements || disbursementStore.disbursements.length === 0) {
-    return 0
-  }
-
-  // Count disbursements with 'Edit Requested' status
-  // Filter by both status and barangay_name for security
-  const editCount = disbursementStore.disbursements.filter((d) => {
-    const hasEditRequestedStatus = d.status === 'Edit Requested'
-    const matchesBarangay = d.barangay_name === authStore.user.barangay_name
-
-
-    return hasEditRequestedStatus && matchesBarangay
+  return disbursementStore.disbursements.filter((d) => {
+    return d.status === 'Edit Requested' && d.barangay_name === authStore.user.barangay_name
   }).length
-
-
-  return editCount
 })
 
-// Add this computed property
 const totalNotificationCount = computed(() => {
   return voidRequestCount.value + editRequestCount.value
 })
 
-// Add this method
 const refreshAllNotifications = async () => {
-  await Promise.all([
-    refreshVoidRequestCount(),
-    refreshEditRequestCount()
-  ])
+  const year = route.query.year ? parseInt(route.query.year) : null
+  await disbursementStore.fetchDisbursements(year)
+  await nextTick()
 
   $q.notify({
     type: 'positive',
     message: 'Notifications refreshed',
     icon: 'refresh',
     position: 'top',
-    timeout: 1000
+    timeout: 1000,
   })
 }
 
-// Favorites data
 const favorites = ref([
   { title: 'Dashboard', link: '/home/dashboard', icon: 'dashboard' },
-  {
-    title: 'Transactions',
-    type: 'panel',
-    panelType: 'transactions',
-    icon: 'account_balance_wallet',
-  },
+  { title: 'Transactions', type: 'panel', panelType: 'transactions', icon: 'account_balance_wallet' },
   { title: 'Libraries', type: 'panel', panelType: 'libraries', icon: 'library_books' },
   { title: 'Reports', link: '/home/reports', icon: 'assessment' },
 ])
 
-// Saved searches data
 const savedSearches = ref([
-  //  { title: 'Accounts', link: '/home/libraries/accounts', icon: 'settings' },
   { title: 'User Control', link: '/home/useraccess', icon: 'admin_panel_settings' },
   { title: 'Log Activities', link: '/home/logsview', icon: 'history' },
 ])
@@ -508,7 +491,6 @@ const navigateToFavorite = (link) => {
 }
 
 const navigateToSearch = (link) => {
-  // Check if the link requires barangay captain permission
   if (link === '/home/logsview' || link === '/home/useraccess') {
     if (!hasAccessToRestrictedFeatures.value) {
       $q.notify({
@@ -521,14 +503,16 @@ const navigateToSearch = (link) => {
       return
     }
   }
-
   router.push(link)
   closePanel()
 }
 
 const navigateTo = (link) => {
-  router.push(link)
-  // Close the panel after navigation
+  const query = {}
+  if (selectedYear.value !== null && selectedYear.value !== undefined) {
+    query.year = selectedYear.value
+  }
+  router.push({ path: link, query })
   closePanel()
   if ($q.screen.lt.md) {
     leftDrawerOpen.value = false
@@ -541,7 +525,6 @@ const togglePanel = (panelType) => {
   } else {
     activePanel.value = panelType
     nextTick(() => {
-      // Ensure panel is properly positioned for middle-left animation
       const panel = document.querySelector('.sliding-panel.panel-open')
       if (panel && panel.style) {
         panel.style.transform = 'translate(0, -50%)'
@@ -562,191 +545,72 @@ const closePanel = () => {
   }
 }
 
-// Method to refresh void request count
-const refreshVoidRequestCount = async () => {
-  if (authStore.user?.barangay_name) {
-    $q.notify({
-      type: 'info',
-      message: 'Refreshing data...',
-      icon: 'refresh',
-      position: 'top',
-      timeout: 1000,
-    })
-
-    // Use the existing fetchDisbursements method
-    await disbursementStore.fetchDisbursements()
-
-    // Force reactivity update
-    await nextTick()
-  }
-}
-
-// Method to refresh edit request count
-const refreshEditRequestCount = async () => {
-  if (authStore.user?.barangay_name) {
-    $q.notify({
-      type: 'info',
-      message: 'Refreshing data...',
-      icon: 'refresh',
-      position: 'top',
-      timeout: 1000,
-    })
-
-    // Use the existing fetchDisbursements method
-    await disbursementStore.fetchDisbursements()
-
-    // Force reactivity update
-    await nextTick()
-  }
-}
-
-// Method to handle void request click - navigate to disbursement page with void request filter
 const handleVoidRequestClick = async () => {
-  // Security check: ensure user has barangay_name
   if (!authStore.user?.barangay_name) {
-    $q.notify({
-      type: 'negative',
-      message: 'Access denied: Invalid user context',
-      icon: 'error',
-      position: 'top',
-      timeout: 3000,
-    })
+    $q.notify({ type: 'negative', message: 'Access denied: Invalid user context', position: 'top', timeout: 3000 })
     return
   }
-
-
-  // Close the panel first
   closePanel()
+  $q.notify({ type: 'info', message: 'Opening void requests...', icon: 'pending_actions', position: 'top', timeout: 2000 })
 
-  // Show loading notification
-  $q.notify({
-    type: 'info',
-    color: 'lightgreen',
-    textColor: 'white',
-    bgcolor: 'lightgreen',
-    message: 'Opening void requests...',
-    icon: 'pending_actions',
-    position: 'top',
-    timeout: 2000,
-  })
+  const year = route.query.year ? parseInt(route.query.year) : null
+  await disbursementStore.fetchDisbursements(year)
 
-  // Check if there are any void requests for this barangay
-
-  // Refresh disbursement data before navigation to ensure we have the latest data
-  await disbursementStore.fetchDisbursements()
-
-  // Re-check void requests after refresh
-  const updatedVoidRequestsForThisBarangay = disbursementStore.disbursements.filter(
+  const pending = disbursementStore.disbursements.filter(
     (d) => d.status === 'Void Requested' && d.barangay_name === authStore.user.barangay_name,
   )
 
-  if (updatedVoidRequestsForThisBarangay.length > 0) {
-    // Navigate to disbursement page with void request status filter
-    await router.push({
-      path: '/home/transactions/disbursement',
-      query: { status: 'Void Requested' }
-    })
-
-    // Show success notification
-    $q.notify({
-      type: 'positive',
-      message: `Showing ${updatedVoidRequestsForThisBarangay.length} void request(s) for your barangay`,
-      icon: 'check_circle',
-      position: 'top',
-      timeout: 3000,
-    })
+  if (pending.length > 0) {
+    await router.push({ path: '/home/transactions/disbursement', query: { status: 'Void Requested' } })
+    $q.notify({ type: 'positive', message: `Showing ${pending.length} void request(s)`, position: 'top', timeout: 3000 })
   } else {
-    // Navigate to disbursement page anyway but show warning
     await router.push('/home/transactions/disbursement')
-
-    // Show warning if no void requests found for this barangay
-    const allVoidRequests = disbursementStore.disbursements.filter(
-      (d) => d.status === 'Void Requested',
-    )
-
-    $q.notify({
-      type: 'warning',
-      message: `No void requests found for your barangay (${authStore.user.barangay_name}). Found ${allVoidRequests.length} void requests for other barangays.`,
-      icon: 'warning',
-      position: 'top',
-      timeout: 5000,
-    })
+    $q.notify({ type: 'warning', message: 'No void requests found for your barangay.', position: 'top', timeout: 5000 })
   }
 }
 
-// Method to handle edit request click - navigate to disbursement page with edit request filter
 const handleEditRequestClick = async () => {
-  // Security check: ensure user has barangay_name
   if (!authStore.user?.barangay_name) {
-    $q.notify({
-      type: 'negative',
-      message: 'Access denied: Invalid user context',
-      icon: 'error',
-      position: 'top',
-      timeout: 3000,
-    })
+    $q.notify({ type: 'negative', message: 'Access denied: Invalid user context', position: 'top', timeout: 3000 })
     return
   }
-
-
-  // Close the panel first
   closePanel()
+  $q.notify({ type: 'info', message: 'Opening edit requests...', icon: 'edit_note', position: 'top', timeout: 2000 })
 
-  // Show loading notification
-  $q.notify({
-    type: 'info',
-    color: 'lightgreen',
-    textColor: 'white',
-    bgcolor: 'lightgreen',
-    message: 'Opening edit requests...',
-    icon: 'edit_note',
-    position: 'top',
-    timeout: 2000,
-  })
+  const year = route.query.year ? parseInt(route.query.year) : null
+  await disbursementStore.fetchDisbursements(year)
 
-  // Check if there are any edit requests for this barangay
-
-
-  // Refresh disbursement data before navigation to ensure we have the latest data
-  await disbursementStore.fetchDisbursements()
-
-  // Re-check edit requests after refresh
-  const updatedEditRequestsForThisBarangay = disbursementStore.disbursements.filter(
+  const pending = disbursementStore.disbursements.filter(
     (d) => d.status === 'Edit Requested' && d.barangay_name === authStore.user.barangay_name,
   )
 
-  if (updatedEditRequestsForThisBarangay.length > 0) {
-    // Navigate to disbursement page with edit request status filter
-    await router.push({
-      path: '/home/transactions/disbursement',
-      query: { status: 'Edit Requested' }
-    })
-
-    // Show success notification
-    $q.notify({
-      type: 'positive',
-      message: `Showing ${updatedEditRequestsForThisBarangay.length} edit request(s) for your barangay`,
-      icon: 'check_circle',
-      position: 'top',
-      timeout: 3000,
-    })
+  if (pending.length > 0) {
+    await router.push({ path: '/home/transactions/disbursement', query: { status: 'Edit Requested' } })
+    $q.notify({ type: 'positive', message: `Showing ${pending.length} edit request(s)`, position: 'top', timeout: 3000 })
   } else {
-    // Navigate to disbursement page anyway but show warning
     await router.push('/home/transactions/disbursement')
-
-    // Show warning if no edit requests found for this barangay
-    const allEditRequests = disbursementStore.disbursements.filter(
-      (d) => d.status === 'Edit Requested',
-    )
-
-    $q.notify({
-      type: 'warning',
-      message: `No edit requests found for your barangay (${authStore.user.barangay_name}). Found ${allEditRequests.length} edit requests for other barangays.`,
-      icon: 'warning',
-      position: 'top',
-      timeout: 5000,
-    })
+    $q.notify({ type: 'warning', message: 'No edit requests found for your barangay.', position: 'top', timeout: 5000 })
   }
+}
+
+const expenseSelectedCurrent = ref(null)
+const expenseSelectedContinuing = ref(null)
+const selectedYear = ref(null)
+
+const availableYears = computed(() => reportStore.availableYears)
+
+function refreshYears() {
+  reportStore.fetchAvailableYears()
+  selectedYear.value = null
+  expenseSelectedCurrent.value = null
+  expenseSelectedContinuing.value = null
+}
+
+function onYearChange(year) {
+  const y = parseInt(year)
+  if (!y || String(y).length !== 4) return
+  expenseSelectedCurrent.value = null
+  expenseSelectedContinuing.value = null
 }
 
 const userPhoto = computed(() => {
@@ -773,7 +637,6 @@ const handleLogout = async () => {
   })
 }
 
-// Close panel when clicking outside or pressing escape
 const handleKeydown = (event) => {
   if (event.key === 'Escape' && activePanel.value) {
     closePanel()
@@ -784,44 +647,52 @@ onMounted(async () => {
   await authStore.initialize()
   document.addEventListener('keydown', handleKeydown)
 
-  // Load disbursements to get void request count
   if (authStore.user?.barangay_name) {
-    await disbursementStore.fetchDisbursements()
+    const year = route.query.year ? parseInt(route.query.year) : null
+    await reportStore.fetchAvailableYears() 
 
-    // Force refresh void request count after initial load
-    setTimeout(async () => {
-      if (authStore.user?.barangay_name) {
-        await disbursementStore.fetchDisbursements()
-      }
-    }, 1000)
+    await disbursementStore.fetchDisbursements(year)
+    await appropriationStore.fetchBudgets(year)
+    await augmentationStore.fetchAugmentations(year)
 
-    // Set up periodic refresh for void request count (every 10 seconds)
     const refreshInterval = setInterval(async () => {
       if (authStore.user?.barangay_name) {
-        await disbursementStore.fetchDisbursements()
+        const y = route.query.year ? parseInt(route.query.year) : null
+        await disbursementStore.fetchDisbursements(y)
       }
     }, 10000)
 
-    // Clean up interval on component unmount
     onUnmounted(() => {
       clearInterval(refreshInterval)
+      document.removeEventListener('keydown', handleKeydown)
     })
   }
 })
 
 watch(
+  () => route.query.year,
+  async (newYear) => {
+    const year = newYear ? parseInt(newYear) : null
+    await disbursementStore.fetchDisbursements(year)
+    await appropriationStore.fetchBudgets(year)
+    await appropriationStore.fetchAppropriations(year)
+    await supplementalStore.fetchSupplementalBudgets(year)
+    await augmentationStore.fetchAugmentations(year)
+     
+  },
+)
+
+watch(
   () => authStore.user,
   async (newUser) => {
     imageLoadingFailed.value = false
-
-    // Refresh disbursements when user changes to update void request count
     if (newUser?.barangay_name) {
-      await disbursementStore.fetchDisbursements()
+      const year = route.query.year ? parseInt(route.query.year) : null
+      await disbursementStore.fetchDisbursements(year)
     }
   },
   { deep: true },
 )
-
 
 watch(
   () => route.meta.title,

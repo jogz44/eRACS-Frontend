@@ -4,6 +4,7 @@ import { useAuthStore } from './auth'
 
 export const useReportStore = defineStore('report', {
   state: () => ({
+    selectedYear: new Date().getFullYear(),
     reportRAC: [],
     reportSACB: [],
 
@@ -13,6 +14,10 @@ export const useReportStore = defineStore('report', {
     notedPosition: null,
     certBy: '',
     certPosition: null,
+    
+    isLoading: false,
+
+    availableYears: [],
 
     expenseOptionsCurrent: [],
     expenseOptionsContinuing: [],
@@ -49,7 +54,7 @@ export const useReportStore = defineStore('report', {
     _normalizeDate(input) {
       if (!input || typeof input !== 'string') return input
       // Convert YYYY/MM/DD to YYYY-MM-DD
-      return input.replaceAll('/', '-')
+      return input.replaceAll('/  ', '-')
     },
     _getSelectedExpenseClass() {
       // Handle both ref and plain object for expenseRacSelected
@@ -75,50 +80,101 @@ export const useReportStore = defineStore('report', {
         },
       }
     },
-    async fetchData() {
+
+    async fetchData(year = null) {
+  try {
+    const authStore = useAuthStore()
+    const config = this.getAuthConfig()
+
+    if (authStore.admin) {
+      this.expenseOptionsCurrent = []
+      this.expenseOptionsContinuing = []
+      this.positionsOptions = []
+      return
+    }
+
+    // Always send a year — fall back to current year to prevent duplicate
+    // entries caused by the backend returning ALL years when no filter is sent
+    const fiscalYear = year ?? new Date().getFullYear()
+    const params = { fiscal_year: fiscalYear }
+
+    const [expenseClasses, positionsOptions] = await Promise.all([
+      api.get('/api/barangay/expense-classes', { ...config, params }),
+      api.get('/api/barangay/positions', config),
+    ])
+
+    const list = expenseClasses?.data?.data?.data || []
+
+    this.expenseOptionsCurrent = list.map((expense) => ({ id: expense.id, name: expense.name }))
+    this.expenseOptionsContinuing = list.map((expense) => ({ id: expense.id, name: expense.name }))
+    this.positionsOptions = positionsOptions?.data?.map((pos) => ({
+      label: pos.name,
+      value: pos.id,
+    })) || []
+  } catch (error) {
+    console.error('Error:', error)
+    throw error
+  }
+},
+
+    async fetchAvailableYears() {
       try {
-        const authStore = useAuthStore()
+        this.isLoading = true
         const config = this.getAuthConfig()
-        const currentYear = new Date().getFullYear()
+        const authStore = useAuthStore()
 
-        // Handle admin vs regular user differently
-        if (authStore.admin) {
-          // For admin users, defer fetching to selected barangay-specific method
-          this.expenseOptionsCurrent = []
-          this.expenseOptionsContinuing = []
-          this.positionsOptions = []
-          return
+      if (authStore.admin) {
+        const selectedBarangayId = authStore.getSelectedBarangay()
+        if (selectedBarangayId) {
+          try {
+            // Fetch fiscal years scoped to the selected barangay
+            const res = await api.get('/api/admin/fiscal-years', {
+              ...config,
+              params: { barangay_id: selectedBarangayId },
+            })
+            const fiscalYears = Array.isArray(res.data?.data) ? res.data.data : []
+            this.availableYears = [
+              { label: 'Year Filter', value: null },
+              ...fiscalYears.map((fy) => ({ label: fy.year.toString(), value: fy.year })),
+            ]
+            return
+          } catch {
+            // fallthrough to default below
+          }
         }
+        // No barangay selected or fetch failed — show current year only
+        const currentYear = new Date().getFullYear()
+        this.availableYears = [
+          { label: 'Year Filter', value: null },
+          { label: currentYear.toString(), value: currentYear },
+        ]
+        return
+      }
 
-        // Regular barangay users can fetch their expense classes
-        const expenseClasses = await api.get(
-          `/api/barangay/expense-classes?fiscal_year=${currentYear}`,
-          config,
-        )
-        const positionsOptions = await api.get('/api/barangay/positions', config)
+        // Use the SAME endpoint as the dashboard — fiscal-years has the real data
+        const res = await api.get('/api/barangay/fiscal-years', config)
+        const fiscalYears = Array.isArray(res.data?.data) ? res.data.data : []
 
-        const list = expenseClasses?.data?.data?.data || []
+        this.availableYears = [
+          { label: 'Year Filter', value: null },
+          ...fiscalYears.map((fy) => ({
+            label: fy.year.toString(),
+            value: fy.year,
+          })),
+        ]
 
-        this.expenseOptionsCurrent = list.map((expense) => ({
-          id: expense.id,
-          name: expense.name,
-        }))
-
-        this.expenseOptionsContinuing = list.map((expense) => ({
-          id: expense.id,
-          name: expense.name,
-        }))
-
-        this.positionsOptions =
-          positionsOptions?.data?.map((pos) => ({
-            label: pos.name,
-            value: pos.id,
-          })) || []
-      } catch (error) {
-        console.error('Error:', error)
-        throw error
+        // Default to current year if not already set
+        if (!this.selectedYear) {
+          this.selectedYear = new Date().getFullYear()
+        }
+      } catch (e) {
+        console.error('Failed to fetch available years', e)
+        this.availableYears = [{ label: 'Year Filter', value: null }]
+      } finally {
+        this.isLoading = false
       }
     },
+        
     async fetchExpenseClassesForBarangay(barangayId, year) {
       try {
         const config = this.getAuthConfig()

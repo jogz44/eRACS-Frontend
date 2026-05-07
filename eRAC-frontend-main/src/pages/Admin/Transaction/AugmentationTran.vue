@@ -25,8 +25,9 @@
   </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
+import { useRoute } from 'vue-router'
 import { useAugmentationStore } from 'stores/augmentation'
 import AugmentationTable from 'components/augmentation/AugmentationTable.vue'
 import SearchFilters from 'components/augmentation/SearchFilters.vue'
@@ -34,6 +35,7 @@ import AugmentationDialog from 'components/augmentation/AugmentationDialog.vue'
 import { usePageLogging } from '../../../composables/usePageLogging'
 
 const $q = useQuasar()
+const route = useRoute()
 const store = useAugmentationStore()
 const loading = ref(false)
 const { logPageVisit } = usePageLogging()
@@ -41,8 +43,10 @@ const { logPageVisit } = usePageLogging()
 const loadPendingUsers = async () => {
   loading.value = true
   try {
-    
-    await store.fetchAugmentations()
+    // const year = route.query.year ? parseInt(route.query.year) : null
+    // await store.fetchAugmentations(year)
+    const year = route.query.year ? parseInt(route.query.year, 10) : null
+    await store.fetchAugmentations(year)
     $q.notify({
       type: 'positive',
       message: 'Augmentations refreshed!',
@@ -64,18 +68,23 @@ const loadPendingUsers = async () => {
 
 onMounted(async () => {
   try {
-    // For admin users, only fetch augmentations (view-only)
-    // fetchAvailableBudgets is only needed for creating augmentations, which admins don't do
-    await store.fetchAugmentations()
-    
-    // Log page visit
+    // const year = route.query.year ? parseInt(route.query.year) : null
+    // await store.fetchAugmentations(year)
+     const year = route.query.year ? parseInt(route.query.year, 10) : null
+    await store.fetchAugmentations(year)
     await logPageVisit('Current Augmentation')
   } catch (error) {
     console.error('Error in admin augmentation page onMounted:', error)
   }
 })
 
-
+watch(
+  () => route.query.year,
+  async (newYear) => {
+    const year = newYear ? parseInt(newYear) : null
+    await store.fetchAugmentations(year)
+  }
+)
 </script>
 
 <style scoped>
