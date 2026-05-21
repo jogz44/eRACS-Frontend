@@ -46,7 +46,8 @@ export const useDisbursementStore = defineStore('disbursement', {
     selectedBank: null,
     selectedBooklet: null,
     selectedChequeNumber: null,
-    disbursements: [], // <-- Remove static data, will be loaded from API
+    disbursements: [], // Remove static data, will be loaded from API
+    pendingChequeNumbers: [], // cheque numbers assigned in current session but not yet saved
 
     // Track cancelled cheques in frontend
     cancelledCheques: new Set(), // Store cancelled cheque numbers
@@ -85,13 +86,13 @@ export const useDisbursementStore = defineStore('disbursement', {
     voidingDisbursement: false, // Loading state for voiding disbursement
     requestingEdit: false, // Loading state for edit request
     editActionLoading: false, // Loading state for edit approval/rejection actions
-
+ 
     // Form data
     forms: {
       disbursement: {
         date: '',
         dvNumber: '',
-        chequeNumber: '', // Changed from checkNumber to chequeNumber
+        chequeNumber: '', 
         bank_id: '',
         payee: '',
         amount: '',
@@ -99,6 +100,9 @@ export const useDisbursementStore = defineStore('disbursement', {
       expense: {
         account: '',
         balance: 0,
+        bank_id: '',
+        cheque_number: '',
+        bankLoading: false,
         particulars: '',
         amount: '',
         disbursementId: null,
@@ -126,124 +130,9 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     // Pagination
-    pagination: { rowsPerPage: 10 },
-
-    // Test data for development - remove in production
-    testDisbursements: [
-      {
-        id: 1,
-        date: '2023-01-01',
-        dvNumber: 'DV001',
-        chequeNumber: 'CHQ000001',
-        bank: 'Bank A',
-        payee: 'John Doe',
-        dvAmount: 1000.0,
-        status: 'Unliquidated',
-        aging: '30 days',
-        expenses: [
-          {
-            id: 1,
-            accountId: 1,
-            accountName: 'Expense Class A > Expense Type A > Expense Item A',
-            amount: 100.0,
-            particular: 'Particular 1',
-          },
-          {
-            id: 2,
-            accountId: 2,
-            accountName: 'Expense Class B > Expense Type B',
-            amount: 200.0,
-            particular: 'Particular 2',
-          },
-        ],
-        orDetails: [
-          {
-            id: 1,
-            orNumber: 'OR001',
-            orAmount: 100.0,
-            orDate: '2023-01-10',
-            orImage: null,
-            orPhotoUrl: null,
-            serverPhotoPath: null,
-            remarks: 'Remarks 1',
-          },
-          {
-            id: 2,
-            orNumber: 'OR002',
-            orAmount: 200.0,
-            orDate: '2023-01-15',
-            orImage: null,
-            orPhotoUrl: null,
-            serverPhotoPath: null,
-            remarks: 'Remarks 2',
-          },
-        ],
-        actualExpense: 300.0,
-        returnAmount: 700.0,
-        remarks: null,
-        void_requested_at: null,
-        void_approved_at: null,
-        rejection_remarks: null,
-        void_rejected_at: null,
-      },
-      {
-        id: 2,
-        date: '2023-02-01',
-        dvNumber: 'DV002',
-        chequeNumber: 'CHQ000002',
-        bank: 'Bank B',
-        payee: 'Jane Smith',
-        dvAmount: 2000.0,
-        status: 'Liquidated',
-        aging: '0 days',
-        expenses: [
-          {
-            id: 3,
-            accountId: 1,
-            accountName: 'Expense Class A > Expense Type A > Expense Item A',
-            amount: 50.0,
-            particular: 'Particular 3',
-          },
-          {
-            id: 4,
-            accountId: 2,
-            accountName: 'Expense Class B > Expense Type B',
-            amount: 100.0,
-            particular: 'Particular 4',
-          },
-        ],
-        orDetails: [
-          {
-            id: 3,
-            orNumber: 'OR003',
-            orAmount: 50.0,
-            orDate: '2023-02-05',
-            orImage: null,
-            orPhotoUrl: null,
-            serverPhotoPath: null,
-            remarks: 'Remarks 3',
-          },
-          {
-            id: 4,
-            orNumber: 'OR004',
-            orAmount: 100.0,
-            orDate: '2023-02-10',
-            orImage: null,
-            orPhotoUrl: null,
-            serverPhotoPath: null,
-            remarks: 'Remarks 4',
-          },
-        ],
-        actualExpense: 150.0,
-        returnAmount: 1850.0,
-        remarks: null,
-        void_requested_at: null,
-        void_approved_at: null,
-        rejection_remarks: null,
-        void_rejected_at: null,
-      },
-    ],
+    pagination: { rowsPerPage: 10 }
   }),
+  
 
   getters: {
     // Filtered expense accounts for search
@@ -393,6 +282,7 @@ export const useDisbursementStore = defineStore('disbursement', {
       { name: 'dvNumber', label: 'DV Number', field: 'dvNumber', align: 'left', sortable: true },
       { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
       { name: 'payee', label: 'Payee', field: 'payee', align: 'left', sortable: true },
+      { name: 'particular', label: 'Particular', field: 'particular', align: 'left', sortable: true },
       {
         name: 'chequeNumber',
         label: 'Cheque Number',
@@ -438,6 +328,20 @@ export const useDisbursementStore = defineStore('disbursement', {
         name: 'accountName',
         label: 'Account Name',
         field: 'accountName',
+        align: 'left',
+        sortable: true,
+      },
+      {
+        name: 'bank',
+        label: 'Bank',
+        field: (row) => row.bankName || row.bank || '-',
+        align: 'left',
+        sortable: true,
+      },
+      {
+        name: 'chequeNumber',
+        label: 'Cheque Number',
+        field: (row) => row.chequeNumber || row.cheque_number || '-',
         align: 'left',
         sortable: true,
       },
@@ -749,6 +653,51 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
+    // async selectBankForExpense(bankId) {
+    //   this.forms.expense.bank_id = bankId
+    //   this.forms.expense.cheque_number = ''
+    //   if (!bankId) return
+    //   this.forms.expense.bankLoading = true
+    //   try {
+    //     const authStore = useAuthStore()
+    //     const token = authStore.admin ? authStore.adminToken : authStore.token
+    //     const res = await api.get(`/api/barangay/banks/${bankId}/available-cheques`, {
+    //       headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+    //     })
+    //     this.forms.expense.cheque_number = res.data?.data?.cheque?.[0]?.cheque_number || ''
+    //   } catch (e) {
+    //     console.error('Expense bank selection error:', e)
+    //     this.forms.expense.bank_id = null
+    //     this.forms.expense.cheque_number = ''
+    //   } finally {
+    //     this.forms.expense.bankLoading = false
+    //   }
+    // },  
+
+    async selectBankForExpense(bankId) {
+      this.forms.expense.bank_id = bankId
+      this.forms.expense.cheque_number = ''
+      if (!bankId) return
+      this.forms.expense.bankLoading = true
+      try {
+        const authStore = useAuthStore()
+        const token = authStore.admin ? authStore.adminToken : authStore.token
+        const res = await api.get(`/api/barangay/banks/${bankId}/available-cheques`, {
+          headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+        })
+        const cheques = res.data?.data?.cheque || []
+        // Skip cheques already assigned in this session
+        const next = cheques.find(c => !this.pendingChequeNumbers.includes(c.cheque_number))
+        this.forms.expense.cheque_number = next?.cheque_number || ''
+      } catch (e) {
+        console.error('Expense bank selection error:', e)
+        this.forms.expense.bank_id = null
+        this.forms.expense.cheque_number = ''
+      } finally {
+        this.forms.expense.bankLoading = false
+      }
+    },
+
     // Refresh expense accounts with updated balances after disbursement changes
     async refreshExpenseAccountsWithBalances() {
       try {
@@ -777,6 +726,33 @@ export const useDisbursementStore = defineStore('disbursement', {
     setBudgetSourceFilter(budgetSource) {
       this.selectedBudgetSource = budgetSource
     },
+
+generateLocalDvNumber() {
+  const now = new Date()
+  const yy = String(now.getFullYear()).slice(-2)          
+  const mm = String(now.getMonth() + 1).padStart(2, '0') 
+
+  // Collect every existing DV number regardless of month/year prefix,
+  // pull out only the trailing sequence number, and find the highest one.
+  // const allDvNumbers = (this.disbursements || [])
+  //   .map(d => d.dvNumber)
+  //   .filter(Boolean)
+
+  let maxSeq = 0
+    ;(this.disbursements || [])
+      .map(d => d.dvNumber)
+      .filter(Boolean)
+      .forEach(dv => {
+        // Handles DV-26-05-1005 and any DV-*-*-NNNN pattern
+        const match = dv.match(/^DV-\d+-\d+-(\d+)$/)
+        if (match) {
+          const seq = parseInt(match[1], 10) || 0
+          if (seq > maxSeq) maxSeq = seq
+        }
+      })
+
+    return `DV-${yy}-${mm}-${String(maxSeq + 1).padStart(4, '0')}`
+  },
 
     // Fetch expense hierarchy from appropriation store and accounts library store
     async fetchExpenseAccounts() {
@@ -1145,112 +1121,146 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     async fetchDisbursements(year = null) {
-      this.loadingDisbursements = true
-      this.isCancelCheque = false
-      try {
-        const authStore = useAuthStore()
+  this.loadingDisbursements = true
+  try {
+    const authStore = useAuthStore()
+    const endpoint = authStore.admin ? '/api/admin/disbursements' : '/api/barangay/disbursements'
+    const token = authStore.admin ? authStore.adminToken : authStore.token
 
-        // Use different endpoints and tokens for admin vs regular users
-        const endpoint = authStore.admin
-          ? '/api/admin/disbursements'
-          : '/api/barangay/disbursements'
-        const token = authStore.admin ? authStore.adminToken : authStore.token
+    const params = {}
+    if (authStore.admin) {
+      const selectedBarangay = authStore.getSelectedBarangay()
+      if (selectedBarangay) params.barangay_id = selectedBarangay
+    }
+    params.year = year !== null && year !== undefined ? Number(year) : new Date().getFullYear()
 
-        // Add barangay_id parameter for admin users if selected
-        const params = {}
-        if (authStore.admin) {
-          const selectedBarangay = authStore.getSelectedBarangay()
-          if (selectedBarangay) {
-            params.barangay_id = selectedBarangay
-          }
-        }
-
-        // Add current fiscal year filter to only show current year transactions
-        // const currentYear = new Date().getFullYear()
-        // params.year = currentYear
-
-          // params.year = year ?? new Date().getFullYear()
-          params.year = year !== null && year !== undefined ? Number(year) : new Date().getFullYear()
-
-        // Fetch disbursements and particulars in parallel for faster loading
-        const [disbursementsResponse, particularsResponse] = await Promise.all([
-          api.get(endpoint, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: 'application/json',
-            },
-            params: params,
-          }),
-          api.get(authStore.admin ? '/api/admin/particulars' : '/api/barangay/particulars', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: 'application/json',
-            },
-          }),
-        ])
-
-        // Process particulars data
-        const pData = Array.isArray(particularsResponse.data?.data)
-          ? particularsResponse.data.data
-          : Array.isArray(particularsResponse.data)
-            ? particularsResponse.data
-            : []
-        this.particulars = pData.map((item) => ({ label: item.particulars }))
-
-        // console.error('=-=-------------------------------------------------------------------------===============',this.particulars);
-        // Map backend fields to frontend fields if needed
-        // Derive selected barangay name for admin context as fallback
-        const selectedBarangayName = authStore.admin
-          ? authStore.getSelectedBarangayName && authStore.getSelectedBarangayName()
-          : null
-
-        this.disbursements = (disbursementsResponse.data.data || []).map((d) => {
-          const disbursement = {
-            id: d.id,
-            date: d.date,
-            dvNumber: d.dv_number,
-            chequeNumber: d.cheque_number,
-            bank: d.bank_name,
-            payee: d.payee,
-            dvAmount: d.dv_amount,
-            status: d.status,
-            remarks: d.remarks,
-            rejection_remarks: d.rejection_remarks,
-            // Normalize barangay name across possible backend shapes; fallback to selected name for admin context
-            barangay_name:
-              d.barangay_name ||
-              d.barangayName ||
-              (typeof d.barangay === 'string' ? d.barangay : d.barangay?.name) ||
-              selectedBarangayName ||
-              '',
-            aging: calculateAging(d.date),
-            expenses: d.expenses || [],
-          }
-
-          // Check if disbursement should be marked as stale based on aging
-          if (shouldBeStale(disbursement)) {
-            disbursement.status = 'Stale'
-            // Also update the associated cheque status to stale
-            this.updateChequeStatusToStale(disbursement.chequeNumber)
-          }
-
-          return disbursement
-        })
-
-
-        // Only fetch expense details if we don't have any (for admin users, this is not essential)
-        if (!this.expenseDetailsData.length && !authStore.admin) {
-          this.fetchExpenseDetails().catch((error) => {
-            console.warn('Failed to fetch expense details:', error)
-          })
-        }
-      } catch (error) {
-        console.error('Failed to fetch disbursements:', error)
-        this.disbursements = []
-      } finally {
-        this.loadingDisbursements = false
-      }
+    // Fetch all three in parallel
+const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = await Promise.allSettled([
+  api.get(endpoint, { 
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }, 
+    params 
+  }),
+  api.get(authStore.admin ? '/api/admin/particulars' : '/api/barangay/particulars', {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+  }),
+  api.get('/api/barangay/bir-remittances', {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    params: { 
+      year: params.year,
+      ...(params.barangay_id ? { barangay_id: params.barangay_id } : {}) 
     },
+  }),
+  api.get('/api/barangay/fund-transfers', {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    params: { 
+      year: params.year,
+      ...(params.barangay_id ? { barangay_id: params.barangay_id } : {}) 
+    },
+  }),
+])
+
+    // Particulars
+    if (particularsResponse.status === 'fulfilled') {
+      const pData = Array.isArray(particularsResponse.value.data?.data)
+        ? particularsResponse.value.data.data
+        : Array.isArray(particularsResponse.value.data) ? particularsResponse.value.data : []
+      this.particulars = pData.map(item => ({ label: item.particulars }))
+    }
+
+    const selectedBarangayName = authStore.admin
+      ? authStore.getSelectedBarangayName?.()
+      : null
+
+    // Regular disbursements
+   const regularRows = disbursementsResponse.status === 'fulfilled'
+  ? (disbursementsResponse.value.data.data || []).map(d => ({
+      id: d.id,
+      row_id: d.row_id,
+      disbursement_id: d.disbursement_id,
+      expense_detail_id: d.expense_detail_id,
+      date: d.date,
+      dvNumber: d.dv_number,
+      chequeNumber: d.cheque_number,
+      bank: d.bank_name,
+      payee: d.payee,
+      particular: d.particular,
+      dvAmount: d.dv_amount,
+      status: d.status,
+      remarks: d.remarks,
+      rejection_remarks: d.rejection_remarks,
+      barangay_name: d.barangay_name || d.barangayName || (typeof d.barangay === 'string' ? d.barangay : d.barangay?.name) || selectedBarangayName || '',
+      aging: calculateAging(d.date),
+      expenses: d.expenses || [],
+      type: 'regular',
+    }))
+  : []
+
+    // BIR rows
+    const birRows = birResponse.status === 'fulfilled'
+      ? (birResponse.value.data.data || []).map(d => ({
+          id: `bir-${d.id}`,
+          _rawId: d.id,
+          _table: 'bir',
+          date: d.date,
+          dvNumber: d.dv_number,
+          chequeNumber: d.cheque_number,
+          bank: d.bank_name,
+          payee: d.payee,
+          dvAmount: d.dv_amount,
+          status: d.status,
+          remarks: d.remarks,
+          rejection_remarks: d.rejection_remarks,
+          type: 'bir',
+          aging: calculateAging(d.date),
+          expenses: [],
+        }))
+      : []
+
+    // SK / fund-transfer rows
+  const ftRows = ftResponse.status === 'fulfilled'
+  ? (ftResponse.value.data.data || []).map(d => ({
+      id: `ft-${d.id}`,
+      _rawId: d.id,
+      _table: 'fund_transfer',
+      _originalType: d.type,           // keep original for debugging
+      date: d.date,
+      dvNumber: d.dv_number,
+      chequeNumber: d.cheque_number,
+      bank: d.bank_name,
+      payee: d.payee,
+      dvAmount: d.amount,
+      status: d.status,
+      remarks: d.remarks,
+      rejection_remarks: d.rejection_remarks,
+      // type: 'sk',                    
+      type: d.type || 'sk',
+      aging: calculateAging(d.date),
+      expenses: [],
+    }))
+  : []
+
+    // Merge all into one array
+    this.disbursements = [...regularRows, ...birRows, ...ftRows]
+    console.log('Disbursement types breakdown:', {
+      regular: regularRows.length,
+      bir: birRows.length,
+      sk: ftRows.length,
+      birSample: birRows[0],
+      skSample: ftRows[0],
+})
+
+    // Expense details (non-blocking)
+    if (!this.expenseDetailsData.length && !authStore.admin) {
+      this.fetchExpenseDetails().catch(e => console.warn('Failed to fetch expense details:', e))
+    }
+
+  } catch (error) {
+    console.error('Failed to fetch disbursements:', error)
+    this.disbursements = []
+  } finally {
+    this.loadingDisbursements = false
+  }
+},
 
     async fetchDisbursementById(id) {
       this.isChequeCancel = false
@@ -1316,6 +1326,11 @@ export const useDisbursementStore = defineStore('disbursement', {
                 accountName: expense.account_name || fullAccountName, // Use particular as fallback
                 amount: expense.amount,
                 particular: expense.particular,
+                bank_id: expense.bank_id || disbursement.bank_id || null,
+                bankName: expense.bank_name || disbursement.bank_name || '',
+                bank: expense.bank_name || disbursement.bank_name || '',
+                cheque_number: expense.cheque_number || disbursement.cheque_number || '',
+                chequeNumber: expense.cheque_number || disbursement.cheque_number || '',
                 expense_class_id: expense.expense_class_id,
                 expense_type_id: expense.expense_type_id,
                 expense_item_id: expense.expense_item_id,
@@ -1390,6 +1405,11 @@ export const useDisbursementStore = defineStore('disbursement', {
               amount: expense.amount,
               particular: expense.particular,
               accountId: expense.accountId,
+              bank_id: expense.bank_id || disbursement.bank_id || null,
+              bankName: expense.bank_name || disbursement.bank_name || '',
+              bank: expense.bank_name || disbursement.bank_name || '',
+              cheque_number: expense.cheque_number || disbursement.cheque_number || '',
+              chequeNumber: expense.cheque_number || disbursement.cheque_number || '',
               expense_class_id: expense.expense_class_id,
               expense_type_id: expense.expense_type_id,
               expense_item_id: expense.expense_item_id,
@@ -1430,6 +1450,11 @@ export const useDisbursementStore = defineStore('disbursement', {
                 amount: expense.amount,
                 particular: expense.particular,
                 accountId: expense.accountId,
+                bank_id: expense.bank_id || disbursement.reimbursement.bank_id || null,
+                bankName: expense.bank_name || disbursement.reimbursement.bank_name || '',
+                bank: expense.bank_name || disbursement.reimbursement.bank_name || '',
+                cheque_number: expense.cheque_number || disbursement.reimbursement.cheque_number || '',
+                chequeNumber: expense.cheque_number || disbursement.reimbursement.cheque_number || '',
                 expense_class_id: expense.expense_class_id,
                 expense_type_id: expense.expense_type_id,
                 expense_item_id: expense.expense_item_id,
@@ -1560,7 +1585,6 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Dialog Actions
     async openDialog(dialogName) {
       if (dialogName === 'disbursement') {
-        // Reset the form first to clear any previous data
         this.resetForm('disbursement')
 
         const today = new Date()
@@ -1569,15 +1593,32 @@ export const useDisbursementStore = defineStore('disbursement', {
         const yyyy = today.getFullYear()
 
         this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
+        // try {
+        //   const response = await api.get('/api/barangay/generate-dvnumber', getAuthConfig())
+        //   const newDVNumber = response.data.data.dv_number || ''
+        //   this.forms.disbursement.dvNumber = newDVNumber
+        //   console.error('dvnum=================', newDVNumber)
+        // } catch (error) {
+        //   console.error('Failed to generate new DV number:', error)
+        //   this.forms.disbursement.dvNumber = ''
+        // }
         try {
-          const response = await api.get('/api/barangay/generate-dvnumber', getAuthConfig())
-          const newDVNumber = response.data.data.dv_number || ''
-          this.forms.disbursement.dvNumber = newDVNumber
-          console.error('dvnum=================', newDVNumber)
-        } catch (error) {
-          console.error('Failed to generate new DV number:', error)
-          this.forms.disbursement.dvNumber = ''
-        }
+            const response = await api.get('/api/barangay/generate-dvnumber', getAuthConfig())
+            let apiDvNumber = response.data.data?.dv_number || ''
+
+            // Check whether the number the backend handed back is already taken
+            // in the list we already fetched.  If so, derive the next one locally.
+            const alreadyExists = !!(apiDvNumber && (this.disbursements || [])
+              .some(d => d.dvNumber === apiDvNumber))
+
+            this.forms.disbursement.dvNumber = alreadyExists
+              ? this.generateLocalDvNumber()
+              : (apiDvNumber || this.generateLocalDvNumber())
+
+          } catch (error) {
+            console.error('Failed to generate DV number from API, using local fallback:', error)
+            this.forms.disbursement.dvNumber = this.generateLocalDvNumber()
+          }
 
         // Generate cheque number (separate logic)
         const lastCheque = this.disbursements.reduce(
@@ -1650,6 +1691,16 @@ export const useDisbursementStore = defineStore('disbursement', {
         };
       }
 
+      if (item.expense_detail_id && this.currentLiquidation?.expenses?.length) {
+        const selectedExpense = this.currentLiquidation.expenses.find(
+          (expense) => String(expense.id) === String(item.expense_detail_id),
+        )
+        if (selectedExpense) {
+          this.currentLiquidation.expenses = [selectedExpense]
+          this.currentLiquidation.dvAmount = parseFloat(selectedExpense.amount) || 0
+        }
+      }
+
       // Fetch existing OR Details from backend if this is a partial liquidation
       if (item.id && item.status === 'Partial') {
         try {
@@ -1692,6 +1743,10 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
 
       this.dialogs.orDetails = true
+    },
+
+    async openLiquidateDialog(row) {
+      return this.openOrDetailsDialog(row)
     },
 
     // In your disbursementStore.js actions
@@ -1858,6 +1913,9 @@ export const useDisbursementStore = defineStore('disbursement', {
         particulars: '',
         amount: '',
         disbursementId: this.currentItem?.id || null,
+        bank_id: null,         
+        cheque_number: '',     
+        bankLoading: false,    
         // Store additional information for backend
         expense_class_id: item.expense_class_id,
         expense_type_id: item.expense_type_id,
@@ -1952,10 +2010,14 @@ export const useDisbursementStore = defineStore('disbursement', {
         particulars: existingExpense.particular,
         amount: existingExpense.amount,
         disbursementId: this.currentItem?.id || null,
+        bank_id: existingExpense.bank_id || this.forms.disbursement.bank_id || null,
+        cheque_number: existingExpense.cheque_number || existingExpense.chequeNumber || this.forms.disbursement.chequeNumber || '',
+        bankLoading: false,
         // Store additional information for backend
         expense_class_id: existingExpense.expense_class_id,
         expense_type_id: existingExpense.expense_type_id,
         expense_item_id: existingExpense.expense_item_id,
+        expense_sub_item_id: existingExpense.expense_sub_item_id,
         // Flag to indicate this is an edit operation
         isEditing: true,
         editingExpenseId: existingExpense.id, // Use the database ID for editing
@@ -1971,9 +2033,9 @@ export const useDisbursementStore = defineStore('disbursement', {
         const token = authStore.admin ? authStore.adminToken : authStore.token
 
         // Validate required fields
-        if (!this.forms.disbursement.bank_id) {
-          throw new Error('Please select a bank')
-        }
+        // if (!this.forms.disbursement.bank_id) {
+        //   throw new Error('Please select a bank')
+        // }
         if (!this.forms.disbursement.payee) {
           throw new Error('Please enter a payee')
         }
@@ -1982,23 +2044,48 @@ export const useDisbursementStore = defineStore('disbursement', {
         }
 
         // Prepare the payload
-        const payload = {
-          date: this.forms.disbursement.date,
-          dv_number: this.forms.disbursement.dvNumber,
-          cheque_number: this.autoCheque,
-          cheque_booklet: this.autoBookletID,
-          bank_id: this.forms.disbursement.bank_id,
-          payee: this.forms.disbursement.payee,
-          dv_amount: this.totalExpensesAmount,
-          expenses: this.expenses.map((expense) => ({
-            accountId: expense.accountId,
-            amount: expense.amount,
-            particular: expense.particular,
-            expense_class_id: expense.expense_class_id,
-            expense_type_id: expense.expense_type_id,
-            expense_item_id: expense.expense_item_id,
-          })),
-        }
+        // const payload = {
+        //   date: this.forms.disbursement.date,
+        //   dv_number: this.forms.disbursement.dvNumber,
+        //   cheque_number: this.autoCheque,
+        //   cheque_booklet: this.autoBookletID,
+        //   bank_id: this.forms.disbursement.bank_id,
+        //   payee: this.forms.disbursement.payee,
+        //   dv_amount: this.totalExpensesAmount,
+        //   expenses: this.expenses.map((expense) => ({
+        //   accountId: expense.accountId,
+        //   amount: expense.amount,
+        //   particular: expense.particular,
+        //   bank_id: expense.bank_id,              
+        //   cheque_number: expense.cheque_number,  
+        //   expense_class_id: expense.expense_class_id, 
+        //   expense_type_id: expense.expense_type_id,
+        //   expense_item_id: expense.expense_item_id,
+        //   expense_sub_item_id: expense.expense_sub_item_id, 
+        // })),
+        // }
+
+        const firstExpense = this.expenses[0]
+
+const payload = {
+  date: this.forms.disbursement.date,
+  dv_number: this.forms.disbursement.dvNumber,
+  cheque_number: firstExpense.cheque_number,
+  bank_id: firstExpense.bank_id,
+  payee: this.forms.disbursement.payee,
+  dv_amount: this.totalExpensesAmount,
+  expenses: this.expenses.map((expense) => ({
+    accountId: expense.accountId,
+    amount: expense.amount,
+    particular: expense.particular,
+    bank_id: expense.bank_id,
+    cheque_number: expense.cheque_number,
+    expense_class_id: expense.expense_class_id,
+    expense_type_id: expense.expense_type_id,
+    expense_item_id: expense.expense_item_id,
+    expense_sub_item_id: expense.expense_sub_item_id,
+  })),
+}
 
         // Add barangay_id for admin users if selected
         if (authStore.admin) {
@@ -2022,7 +2109,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         // The backend now automatically creates expense details, so we don't need to do it manually
         // Close the dialog immediately to avoid showing cleared fields briefly
         this.dialogs.disbursement = false
-
+        this.pendingChequeNumbers = []
         // Defer clearing form and regenerating fields until after dialog hide animation
         setTimeout(async () => {
           this.resetForm('disbursement')
@@ -2037,11 +2124,15 @@ export const useDisbursementStore = defineStore('disbursement', {
 
           try {
             const response = await api.get('/api/barangay/generate-dvnumber', getAuthConfig())
-            const newDVNumber = response.data.data.dv_number || ''
-            this.forms.disbursement.dvNumber = newDVNumber
+            const apiDv = response.data.data?.dv_number || ''
+            const alreadyExists = !!(apiDv && (this.disbursements || [])
+              .some(d => d.dvNumber === apiDv))
+            this.forms.disbursement.dvNumber = alreadyExists
+              ? this.generateLocalDvNumber()
+              : (apiDv || this.generateLocalDvNumber())
           } catch (error) {
-            console.error('Failed to generate new DV number:', error)
-            this.forms.disbursement.dvNumber = ''
+            console.error('Failed to generate DV number, using local fallback:', error)
+            this.forms.disbursement.dvNumber = this.generateLocalDvNumber()
           }
         }, 350) // match Quasar default transition
 
@@ -2175,6 +2266,17 @@ export const useDisbursementStore = defineStore('disbursement', {
       const amount = Number(this.forms.expense.amount) || 0
       const particulars = this.forms.expense.particulars?.trim() || ''
 
+            if (!this.forms.expense.bank_id) {
+        throw new Error('Bank is required')
+      }
+
+      if (!this.forms.expense.cheque_number) {
+        throw new Error('No available cheque number for the selected bank')
+      }
+
+      const bank = bankStore.availableBanks.find(
+        (b) => String(b.id) === String(this.forms.expense.bank_id),
+      )
       // Validate particulars
       if (!particulars) {
         throw new Error('Particulars is required')
@@ -2227,6 +2329,11 @@ export const useDisbursementStore = defineStore('disbursement', {
             ...this.expenses[existingExpenseIndex],
             amount: amount,
             particular: particulars,
+            bank_id: this.forms.expense.bank_id,
+            bankName: bank?.name || this.expenses[existingExpenseIndex].bankName || '',
+            bank: bank?.name || this.expenses[existingExpenseIndex].bank || '',
+            cheque_number: this.forms.expense.cheque_number,
+            chequeNumber: this.forms.expense.cheque_number,
           }
           this.expenses = [...this.expenses]
         }
@@ -2242,11 +2349,18 @@ export const useDisbursementStore = defineStore('disbursement', {
           expense_type_id: this.forms.expense.expense_type_id,
           expense_item_id: this.forms.expense.expense_item_id,
           expense_sub_item_id: this.forms.expense.expense_sub_item_id,
+          bank_id: this.forms.expense.bank_id,
+          bankName: bank?.name || '',
+          cheque_number: this.forms.expense.cheque_number,
+          chequeNumber: this.forms.expense.cheque_number,
           // Note: No dbId until disbursement is saved
         }
 
         // Add to local expenses array (frontend only)
         this.expenses.push(expense)
+        if (expense.cheque_number && !this.pendingChequeNumbers.includes(expense.cheque_number)) {
+          this.pendingChequeNumbers.push(expense.cheque_number)
+        }
         this.expenses = [...this.expenses]
       }
 
@@ -2319,6 +2433,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Reset bank-related selections
         this.autoBookletID = null
         this.autoCheque = null
+        this.pendingChequeNumbers = []
       } else if (formName === 'expense') {
         this.forms.expense = {
           account: '',
@@ -2327,6 +2442,9 @@ export const useDisbursementStore = defineStore('disbursement', {
           disbursementId: null,
           isEditing: false,
           editingExpenseId: null,
+          bank_id: null,      
+    cheque_number: '',   
+    bankLoading: false,
         }
       } else if (formName === 'orDetails') {
         this.forms.orDetails = {
@@ -2430,6 +2548,7 @@ export const useDisbursementStore = defineStore('disbursement', {
               expense_class_id: exp.expense_class_id || null,
               expense_type_id: exp.expense_type_id || null,
               expense_item_id: exp.expense_item_id || null,
+              expense_sub_item_id: exp.expense_sub_item_id || null,
             }
             const createRes = await api.post('/api/barangay/expense-details', createBody, {
               headers: {
@@ -2457,15 +2576,18 @@ export const useDisbursementStore = defineStore('disbursement', {
           dv_amount: !this.cancelledCheques
             ? this.lockedTotalAmount || 0
             : this.totalExpensesAmount,
-          expenses: this.expenses.map((expense) => ({
-            id: Number(expense.id) || undefined,
-            accountId: expense.accountId,
-            amount: expense.amount,
-            particular: expense.particular,
-            expense_class_id: expense.expense_class_id,
-            expense_type_id: expense.expense_type_id,
-            expense_item_id: expense.expense_item_id,
-          })),
+        expenses: this.expenses.map((expense) => ({
+  id: Number(expense.id) > 0 ? Number(expense.id) : null,
+  accountId: expense.accountId,
+  amount: expense.amount,
+  particular: expense.particular,
+  bank_id: expense.bank_id,              // ADD
+  cheque_number: expense.cheque_number,  // ADD
+  expense_class_id: expense.expense_class_id,
+  expense_type_id: expense.expense_type_id,
+  expense_item_id: expense.expense_item_id,
+  expense_sub_item_id: expense.expense_sub_item_id,  // was missing before
+})),
         }
 
         const response = await api.put(

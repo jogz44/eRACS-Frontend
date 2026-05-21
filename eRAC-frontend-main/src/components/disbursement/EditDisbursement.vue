@@ -1,3 +1,4 @@
+//components/disbursement/EditDisbursement.vue
 <template>
   <!--Edit Disbursement-->
   <q-dialog v-model="store.dialogs.editDisbursement" persistent>
@@ -143,39 +144,82 @@
   <!-- Edit Expense Dialog -->
   <q-dialog v-model="store.dialogs.expenseDetail">
     <q-card style="min-width: 500px">
-      <q-card-section class="q-pb-none">
-        <div class="text-h6">Add Expense</div>
-      </q-card-section>
+  <q-card-section class="q-pb-none">
+    <div class="text-h6">Add Expense</div>
+  </q-card-section>
 
-      <q-card-section>
-        <div class="text-subtitle1 q-mb-sm">
-          <strong>Account:</strong> {{ store.forms.expense.account }}
-        </div>
-        <div class="text-subtitle1 q-mb-md">
-          <strong>Available Balance:</strong> ₱{{ store.forms.expense.balance.toLocaleString() }}
-        </div>
-        <div class="text-subtitle1 q-mb-md">
-        <q-select outlined dense v-model="store.forms.expense.particulars" :options="filteredParticulars"
-          label="Particulars" use-input fill-input hide-selected new-value-mode="add-unique" option-label="label"
-          option-value="label" map-options emit-value @filter="filterFn" />
+  <q-card-section>
+    <div class="text-subtitle1 q-mb-sm">
+      <strong>Account:</strong> {{ store.forms.expense.account }}
+    </div>
 
-        </div>
-        <div class="text-subtitle1 q-mb-md">
-        <q-input outlined dense :model-value="formatInputValue(store.forms.expense.amount)"
-          @update:model-value="(val) => store.forms.expense.amount = handleAmountInput(val)"
-          @blur="(e) => (store.forms.expense.amount = formatToTwoDecimals(e.target.value))" label="Amount"
-          class="q-mb-md" prefix="₱" inputmode="decimal" pattern="\\d*\\.?\\d{0,2}" @keypress="blockNonNumeric"
-          @paste.prevent="handlePasteNumeric" />
-        </div>
-      </q-card-section>
+    <div class="text-subtitle1 q-mb-md">
+      <strong>Available Balance:</strong>
+      ₱{{ store.forms.expense.balance.toLocaleString() }}
+    </div>
 
-      <q-card-actions align="right" class="q-pa-md">
+    <q-select
+      outlined
+      dense
+      v-model="store.forms.expense.bank_id"
+      :options="bankStore.availableBanks"
+      option-label="name"
+      option-value="id"
+      emit-value
+      map-options
+      label="Select bank"
+      :loading="store.forms.expense.bankLoading"
+      class="q-mb-md"
+      @update:model-value="store.selectBankForExpense"
+    />
 
+    <q-input
+      outlined
+      dense
+      v-model="store.forms.expense.cheque_number"
+      :disable="true"
+      placeholder="Auto-generated"
+      label="Cheque No."
+      class="q-mb-md"
+    />
 
-        <q-btn flat label="Cancel" @click="store.closeDialog('expenseDetail')" />
-        <q-btn label="Save" @click="handleSaveExpense" color="primary" />
-      </q-card-actions>
-    </q-card>
+    <q-select
+      outlined
+      dense
+      v-model="store.forms.expense.particulars"
+      :options="filteredParticulars"
+      label="Particulars"
+      use-input
+      fill-input
+      hide-selected
+      new-value-mode="add-unique"
+      option-label="label"
+      option-value="label"
+      map-options
+      emit-value
+      class="q-mb-md"
+      @filter="filterFn"
+    />
+
+    <q-input
+      outlined
+      dense
+      :model-value="formatInputValue(store.forms.expense.amount)"
+      @update:model-value="val => store.forms.expense.amount = handleAmountInput(val)"
+      @blur="e => store.forms.expense.amount = formatToTwoDecimals(e.target.value)"
+      label="Amount"
+      prefix="₱"
+      inputmode="decimal"
+      @keypress="blockNonNumeric"
+      @paste.prevent="handlePasteNumeric"
+    />
+  </q-card-section>
+
+  <q-card-actions align="right" class="q-pa-md">
+    <q-btn flat label="Cancel" @click="store.closeDialog('expenseDetail')" />
+    <q-btn label="Save" @click="handleSaveExpense" color="primary" />
+  </q-card-actions>
+</q-card>
   </q-dialog>
 </template>
 

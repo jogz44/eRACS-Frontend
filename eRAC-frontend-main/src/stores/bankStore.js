@@ -173,18 +173,28 @@ export const useBankStore = defineStore('bank', {
         const endpoint = authStore.admin ? '/api/admin/banks' : '/api/barangay/banks'
         const response = await api.get(endpoint, config)
 
+         console.log('RAW bank response:', JSON.stringify(response.data.data || response.data))
+
         this.banks = (response.data.data || response.data || []).map((bank) => ({
           id: bank.id,
-          name: bank.name,
+          name: bank.bank_name || bank.name, 
           status: bank.status || 'Available',
           booklets_count: bank.booklets_count || 0, // Changed from cheques_count
           booklets: bank.booklets || [], // Changed from cheques
         }))
-        this.availableBanks = this.banks.filter((bank) => bank.status === 'Available')
+        // this.availableBanks = this.banks.filter((bank) => bank.status === 'Available')
 
-        if (this.availableBanks.length == 0) {
-          this.availableBanks[0] = { id: 0, name: 'No Available Bank' }
-        }
+        // if (this.availableBanks.length == 0) {
+        //   this.availableBanks[0] = { id: 0, name: 'No Available Bank' }
+        // }
+
+        this.availableBanks = this.banks.filter(
+  (bank) => !bank.status || bank.status === 'Available'
+)
+
+if (this.availableBanks.length === 0) {
+  this.availableBanks = [{ id: 0, name: 'No Available Bank' }]
+}
 
         return this.banks
       } catch (error) {

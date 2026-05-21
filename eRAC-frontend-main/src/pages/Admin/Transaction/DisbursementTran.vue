@@ -15,6 +15,60 @@
       </div>
     </div>
 
+        <!-- TYPE NAVIGATION CARDS -->
+    <div class="q-mb-md">
+      <div class="row q-col-gutter-sm">
+
+        <!-- Regular -->
+        <div class="col-md-4 col-sm-12">
+          <q-card :class="['type-nav-card', { 'type-nav-active': selectedDisbursementType === 'regular' }]"
+            @click="handleTypeNavClick('regular')" clickable v-ripple>
+            <q-card-section class="text-center q-pa-md">
+              <q-icon name="list" size="md" class="q-mb-sm"
+                :color="selectedDisbursementType === 'regular' ? 'white' : 'grey-7'" />
+              <div class="text-subtitle2 text-weight-medium">Regular</div>
+              <div class="text-caption q-mt-xs type-count">
+                {{ typeCounts.regular }} transaction{{ typeCounts.regular !== 1 ? 's' : '' }}
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <!-- BIR Remittance -->
+        <div class="col-md-4 col-sm-12">
+          <q-card
+            :class="['type-nav-card', 'type-nav-bir', { 'type-nav-active type-nav-active-bir': selectedDisbursementType === 'bir' }]"
+            @click="handleTypeNavClick('bir')" clickable v-ripple>
+            <q-card-section class="text-center q-pa-md">
+              <q-icon name="receipt" size="md" class="q-mb-sm"
+                :color="selectedDisbursementType === 'bir' ? 'white' : 'deep-orange'" />
+              <div class="text-subtitle2 text-weight-medium">BIR Remittance</div>
+              <div class="text-caption q-mt-xs type-count">
+                {{ typeCounts.bir }} transaction{{ typeCounts.bir !== 1 ? 's' : '' }}
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <!-- SK / Provincial Aid -->
+        <div class="col-md-4 col-sm-12">
+          <q-card
+            :class="['type-nav-card', 'type-nav-sk', { 'type-nav-active type-nav-active-sk': selectedDisbursementType === 'sk' }]"
+            @click="handleTypeNavClick('sk')" clickable v-ripple>
+            <q-card-section class="text-center q-pa-md">
+              <q-icon name="swap_horiz" size="md" class="q-mb-sm"
+                :color="selectedDisbursementType === 'sk' ? 'white' : 'blue-10'" />
+              <div class="text-subtitle2 text-weight-medium">SK / Provincial Aid</div>
+              <div class="text-caption q-mt-xs type-count">
+                {{ typeCounts.sk }} transaction{{ typeCounts.sk !== 1 ? 's' : '' }}
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
+
+      </div>
+    </div>
+
     <div class="q-mb-sm">
       <SearchFilters />
 
@@ -22,8 +76,41 @@
       <q-dialog v-model="store.dialogs.disbursement" persistent @keydown.enter="handleEnterKey">
         <q-card style="min-width: 900px; max-width: 95vw">
           <q-card-section class="q-pb-none">
-            <div class="text-h6">Disbursement</div>
-          </q-card-section>
+  <div class="text-h6">Disbursement</div>
+</q-card-section>
+
+<!-- Tab Navigation -->
+<div class="row no-wrap" style="border-bottom: 1px solid #e0e0e0; margin: 0 16px;">
+  <q-btn
+    flat
+    no-caps
+    label="Disbursement"
+    class="tab-btn col"
+    :class="{ 'tab-active': activeTab === 'disbursement' }"
+    @click="activeTab = 'disbursement'"
+    style="border-radius: 0; padding: 10px 0;"
+  />
+  <div style="width: 1px; background: #e0e0e0; margin: 8px 0;" />
+  <q-btn
+    flat
+    no-caps
+    label="BIR Remittance"
+    class="tab-btn col"
+    :class="{ 'tab-active': activeTab === 'bir' }"
+    @click="activeTab = 'bir'"
+    style="border-radius: 0; padding: 10px 0;"
+  />
+  <div style="width: 1px; background: #e0e0e0; margin: 8px 0;" />
+  <q-btn
+    flat
+    no-caps
+    label="SK Remittance"
+    class="tab-btn col"
+    :class="{ 'tab-active': activeTab === 'sk' }"
+    @click="activeTab = 'sk'"
+    style="border-radius: 0; padding: 10px 0;"
+  />
+</div>
 
           <q-card-section>
             <div class="row q-col-gutter-md">
@@ -192,6 +279,16 @@
                   />
                 </q-td>
               </template>
+
+              <template v-slot:body-cell-type="props">
+  <q-td :props="props">
+    <q-badge
+      :color="props.row.type === 'sk' ? 'blue-8' : props.row.type === 'aid' ? 'purple' : 'grey-6'"
+      :label="props.row.type === 'sk' ? 'SK' : props.row.type === 'aid' ? 'Provincial Aid' : props.row.type || '-'"
+      rounded
+    />
+  </q-td>
+</template>
             </q-table>
           </q-card-section>
 
@@ -255,7 +352,7 @@
       <!-- Main Data Table -->
       <q-card flat bordered>
         <q-table
-          :rows="store.filteredDisbursements"
+          :rows="filteredByType"
           :columns="adminColumns"
           row-key="id"
           :pagination="store.pagination"
@@ -457,6 +554,7 @@ watch(
   },
 )
 
+const activeTab = ref('disbursement')
 // Persistent review state per disbursement row
 const reviewedSet = ref(new Set())
 const disbursementRemarks = ref(new Map()) // Store remarks per reviewed DV
@@ -465,6 +563,23 @@ const loadingReviews = ref(new Set()) // Track which items are loading reviews
 const isReviewed = (id) => reviewedSet.value.has(id)
 const getRemarks = (id) => disbursementRemarks.value.get(id) || ''
 const isLoadingReview = (id) => loadingReviews.value.has(id)
+
+// Add near your other refs
+const selectedDisbursementType = ref('regular')
+
+const typeCounts = computed(() => ({
+  regular: store.filteredDisbursements.filter(d => d.type === 'regular').length,
+  bir:     store.filteredDisbursements.filter(d => d.type === 'bir').length,
+  sk:      store.filteredDisbursements.filter(d => d.type === 'sk' || d.type === 'aid' || d.type === 'fund_transfer').length,
+}))
+
+const filteredByType = computed(() =>
+  store.filteredDisbursements.filter(d => d.type === selectedDisbursementType.value)
+)
+
+const handleTypeNavClick = (type) => {
+  selectedDisbursementType.value = type
+}
 
 // Load existing reviews for disbursements
 const loadDisbursementReviews = async () => {
@@ -705,5 +820,78 @@ const handleEnterKey = (event) => {
     width: 100%;
     margin-bottom: 8px;
   }
+}
+
+.tab-btn {
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 13px;
+}
+.tab-btn:hover {
+  color: rgba(0, 0, 0, 0.87);
+  background: transparent !important;
+}
+.tab-active {
+  color: #16a34a !important;
+  border-bottom: 2px solid #16a34a;
+}
+
+/*  Type navigation cards  */
+.type-nav-card {
+  border-radius: 12px;
+  border: 2px solid #e0e0e0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  background: white;
+}
+
+.type-nav-card:hover {
+  border-color: #bdbdbd;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+/* Regular — active = primary green */
+.type-nav-active {
+  background: var(--q-primary) !important;
+  border-color: var(--q-primary) !important;
+  color: white !important;
+}
+
+.type-nav-active .text-subtitle2,
+.type-nav-active .text-caption,
+.type-nav-active .type-count {
+  color: white !important;
+}
+
+/* BIR — active = deep-orange */
+.type-nav-active-bir {
+  /* background: var(--q-deep-orange) !important;
+  border-color: var(--q-deep-orange) !important; */
+  background: var(--q-primary) !important;
+  border-color: var(--q-primary) !important;
+  color: white !important;
+}
+
+/* SK — active = blue-10 */
+.type-nav-active-sk {
+  /* background: var(--q-blue-10) !important;
+  border-color: var(--q-blue-10) !important; */
+  background: var(--q-primary) !important;
+  border-color: var(--q-primary) !important;
+  color: white !important;
+}
+
+.type-count {
+  opacity: 0.85;
+}
+
+/* Small + button in the top-right of active card */
+.type-nav-add-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
 }
 </style>
