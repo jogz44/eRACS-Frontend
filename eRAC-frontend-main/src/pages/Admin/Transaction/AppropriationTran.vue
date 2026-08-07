@@ -93,9 +93,9 @@
         <q-btn
           unelevated
                 icon="print"
-                label="Print"
+                label="Export"
                 color="green"
-                @click="handleSACBPrint"
+                @click="handleExport"
                 size="md"
                 no-caps
         />
@@ -386,6 +386,7 @@ import { useActivityLogging } from '../../../composables/useActivityLogging'
 import { api } from 'boot/axios'
 import { useAuthStore } from 'stores/auth'
 // import SearchFilters from 'src/components/appropriation/SearchFilters.vue'
+import { exportTransactionToExcel } from '../../../composables/transactionExportConfigs'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -394,6 +395,7 @@ const appropriationStore = useAppropriationStore()
 const { logPageVisit } = usePageLogging()
 const { logAdminActivity } = useActivityLogging()
 const authStore = useAuthStore()
+const tableRows = computed(() => appropriationStore.filteredAppropriations)
 
 const showDialog = ref(false)
 const selectedFiscalYear = computed({
@@ -483,6 +485,26 @@ const clearAllFilters = () => {
   appropriationStore.setSelectedFiscalYear(defaultYear)
 }
 
+const exportHeader = computed(() => {
+  const selectedYear = route.query.year || selectedFiscalYear.value || new Date().getFullYear()
+
+  return {
+    title: 'Appropriation Transactions',
+    barangay: authStore.getSelectedBarangayName?.() || 'All Barangays',
+    periodLabel: dateRangeDisplay.value ? 'Date Range' : 'Year',
+    period: dateRangeDisplay.value || selectedYear,
+  }
+})
+
+async function handleExport() {
+  if (!tableRows.value.length) {
+    $q.notify({ type: 'warning', message: 'No data to export' })
+    return
+  }
+  await exportTransactionToExcel('appropriation', tableRows.value, {
+    header: exportHeader.value,
+  })
+}
 
 const showEditAllocationDialog = ref(false)
 // const editAllocations = ref([])
@@ -619,19 +641,6 @@ watch(selectedFiscalYear, (newYearId) => {
   }
 })
 
-// Watch for appropriations data to be available and load reviews immediately
-watch(
-  () => appropriationStore.filteredAppropriations,
-  async (newAppropriations) => {
-    if (newAppropriations && newAppropriations.length > 0) {
-      // Only load if we haven't loaded reviews yet (prevent double loading)
-      if (appropriationReviewedSet.value.size === 0 && loadingReviews.value.size === 0) {
-        await loadAppropriationReviews()
-      }
-    }
-  },
-  { immediate: true }
-)
 
 // const openEditAllocationDialog = async (row) => {
 //   try {
@@ -1077,6 +1086,20 @@ const handleEnterKey = (event) => {
     saveBudget()
   }
 }
+
+// Watch for appropriations data to be available and load reviews immediately
+watch(
+  () => appropriationStore.filteredAppropriations,
+  async (newAppropriations) => {
+    if (newAppropriations && newAppropriations.length > 0) {
+      // Only load if we haven't loaded reviews yet (prevent double loading)
+      if (appropriationReviewedSet.value.size === 0 && loadingReviews.value.size === 0) {
+        await loadAppropriationReviews()
+      }
+    }
+  },
+  { immediate: true }
+)
 
 watch(
   () => route.query.year,

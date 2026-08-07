@@ -28,16 +28,16 @@
           Barangay {{ authStore.user?.barangay_name }}
         </q-toolbar-title>
         <!--- Bell for notifications-->
-        <q-btn
-          flat
-          round
-          dense
-          class="notification-btn"
-          size="md"
-        >
+        <q-btn flat round dense class="notification-btn" size="md">
           <q-icon name="notifications" size="24px" color="white">
             <!-- Show notification -->
-            <q-badge v-if="totalNotificationCount > 0" floating color="red" text-color="white" rounded>
+            <q-badge
+              v-if="totalNotificationCount > 0"
+              floating
+              color="red"
+              text-color="white"
+              rounded
+            >
               {{ totalNotificationCount > 9 ? '9+' : totalNotificationCount }}
             </q-badge>
           </q-icon>
@@ -56,7 +56,12 @@
               <q-separator />
 
               <!-- Void Requests -->
-              <q-item v-if="voidRequestCount > 0" clickable @click="handleVoidRequestClick" class="notification-item void-notification">
+              <q-item
+                v-if="voidRequestCount > 0"
+                clickable
+                @click="handleVoidRequestClick"
+                class="notification-item void-notification"
+              >
                 <q-item-section avatar>
                   <q-icon name="pending_actions" color="orange" size="28px" />
                 </q-item-section>
@@ -72,7 +77,12 @@
               </q-item>
 
               <!-- Edit Requests -->
-              <q-item v-if="editRequestCount > 0" clickable @click="handleEditRequestClick" class="notification-item edit-notification">
+              <q-item
+                v-if="editRequestCount > 0"
+                clickable
+                @click="handleEditRequestClick"
+                class="notification-item edit-notification"
+              >
                 <q-item-section avatar>
                   <q-icon name="edit_note" color="purple" size="28px" />
                 </q-item-section>
@@ -98,19 +108,10 @@
         </q-btn>
 
         <!--- User Avatar Menu-->
-        <q-btn
-          flat
-          dense
-          class="user-menu-btn"
-          size="md"
-        >
+        <q-btn flat dense class="user-menu-btn" size="md">
           <div class="user-profile-container">
             <q-avatar size="32px" class="user-avatar">
-              <img
-                :src="userPhoto"
-                @error="handleImageError"
-                :alt="authStore.user?.first_name"
-              />
+              <img :src="userPhoto" @error="handleImageError" :alt="authStore.user?.first_name" />
             </q-avatar>
             <q-icon name="keyboard_arrow_down" size="14px" color="white" class="dropdown-arrow" />
           </div>
@@ -172,18 +173,18 @@
       <div class="drawer-content">
         <!-- Logo & Title Section -->
         <div class="logo-section">
-          <q-item class="row items-center q-pt-md" style="padding: 5px">
+          <q-item class="column items-center q-pt-md" style="padding: 5px">
             <img
-              :src=eracslogo
+              :src="eracslogo"
               alt="ERACS Logo"
-              style="width: 100px; height: 75px; max-width: 100%; height: auto"
+              style="width: 100px; height: auto; max-width: 100%"
               class="q-mb-sm"
             />
             <q-item-label
               class="eracs-title text-center"
-              style="font-size: small; color: black; font-style: normal"
+              style="font-size: small; color: white; font-style: normal"
             >
-              Electronic Registry of Appropriation and Commitment System (eRACs)
+              Electronic Registry of Appropriation and Commitment System (eRACS)
             </q-item-label>
           </q-item>
         </div>
@@ -252,9 +253,7 @@
 
         <!-- Sticky Footer -->
         <div class="drawer-footer q-mt-auto q-pa-xs">
-          <div class="text-caption text-grey items-center q-pa-sm footer-avatar">
-
-          </div>
+          <div class="text-caption text-grey items-center q-pa-sm footer-avatar"></div>
         </div>
       </div>
     </q-drawer>
@@ -266,9 +265,9 @@
       :class="{ 'panel-open': activePanel === 'transactions' }"
       v-show="activePanel === 'transactions'"
     >
-      <div class="panel-header" style="flex-direction: column; align-items: stretch; gap: 8px;">
+      <div class="panel-header" style="flex-direction: column; align-items: stretch; gap: 8px">
         <!-- Top row: Title + Close -->
-        <div style="display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; justify-content: space-between">
           <div class="panel-title">Transactions</div>
           <q-btn flat round dense icon="close" @click="closePanel" class="close-btn" />
         </div>
@@ -284,7 +283,7 @@
             map-options
             dense
             outlined
-            style="min-width: 120px; flex: 1;"
+            style="min-width: 120px; flex: 1"
             @update:model-value="onYearChange"
           >
             <template v-slot:prepend>
@@ -301,7 +300,6 @@
       <div class="panel-content">
         <!-- Void Request Summary Header -->
 
-
         <!-- Current Transactions -->
         <div class="panel-section">
           <div class="panel-section-title">Current</div>
@@ -312,7 +310,6 @@
           <div class="panel-item" @click="navigateTo('/home/transactions/disbursement')">
             <div class="colored-dot dot-red"></div>
             <span>Disbursement</span>
-
           </div>
           <div class="panel-item" @click="navigateTo('/home/transactions/augmentation')">
             <div class="colored-dot dot-blue"></div>
@@ -360,6 +357,34 @@
             <div class="colored-dot dot-grey"></div>
             <span>Bank Library</span>
           </div>
+          <div class="panel-item" @click="navigateTo('/home/libraries/payee')">
+            <div class="colored-dot dot-grey"></div>
+            <span>Payees Library</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="sliding-panel reports-panel"
+      :class="{ 'panel-open': activePanel === 'reports' }"
+      v-show="activePanel === 'reports'"
+    >
+      <div class="panel-header">
+        <div class="panel-title">Reports</div>
+        <q-btn flat round dense icon="close" @click="closePanel" class="close-btn" />
+      </div>
+
+      <div class="panel-content">
+        <div class="panel-section">
+          <div class="panel-item" @click="navigateTo('/home/reports')">
+            <div class="colored-dot dot-light-blue"></div>
+            <span>Current Reports</span>
+          </div>
+          <div class="panel-item" @click="navigateTo('/home/reports/continuing-reports')">
+            <div class="colored-dot dot-grey"></div>
+            <span>Continuing Reports</span>
+          </div>
         </div>
       </div>
     </div>
@@ -368,7 +393,7 @@
     <div v-if="activePanel" class="panel-backdrop" @click="closePanel"></div>
 
     <!-- MAIN CONTENT -->
-    <q-page-container style="background: #d9d9d9; min-height: 100vh">
+    <q-page-container class="main-content">
       <SetupDialog v-model="showSetupDialog" />
       <router-view />
     </q-page-container>
@@ -386,7 +411,8 @@ import { useSupplementalBudgetStore } from 'stores/supplementalBudgetStore'
 import { useAugmentationStore } from 'src/stores/augmentation'
 import { useReportStore } from 'stores/reportStore'
 import { useQuasar } from 'quasar'
-import eracslogo from "src/assets/tagumlogo.png"
+import eracslogo from 'src/assets/tagumlogo.png'
+import defaultUserAvatar from 'src/assets/user.png'
 
 const $q = useQuasar()
 const router = useRouter()
@@ -411,47 +437,47 @@ const hasAccessToRestrictedFeatures = computed(() => {
   return restrictedPositions.includes(userPosition)
 })
 
-const voidRequestCount = computed(() => {
-  const userPosition =
-    authStore.user?.position?.name?.toLowerCase().trim() ||
-    authStore.user?.position_name?.toLowerCase().trim()
+// const voidRequestCount = computed(() => {
+//   const userPosition =
+//     authStore.user?.position?.name?.toLowerCase().trim() ||
+//     authStore.user?.position_name?.toLowerCase().trim()
 
-  const canApproveVoid =
-    userPosition &&
-    (userPosition.includes('captain') ||
-      userPosition.includes('chairperson') ||
-      userPosition.includes('barangay captain') ||
-      userPosition.includes('sk chairperson'))
+//   const canApproveVoid =
+//     userPosition &&
+//     (userPosition.includes('captain') ||
+//       userPosition.includes('chairperson') ||
+//       userPosition.includes('barangay captain') ||
+//       userPosition.includes('sk chairperson'))
 
-  if (!canApproveVoid) return 0
-  if (!authStore.user?.barangay_name) return 0
-  if (!disbursementStore.disbursements || disbursementStore.disbursements.length === 0) return 0
+//   if (!canApproveVoid) return 0
+//   if (!authStore.user?.barangay_name) return 0
+//   if (!disbursementStore.disbursements || disbursementStore.disbursements.length === 0) return 0
 
-  return disbursementStore.disbursements.filter((d) => {
-    return d.status === 'Void Requested' && d.barangay_name === authStore.user.barangay_name
-  }).length
-})
+//   return disbursementStore.disbursements.filter((d) => {
+//     return d.status === 'Void Requested' && d.barangay_name === authStore.user.barangay_name
+//   }).length
+// })
 
-const editRequestCount = computed(() => {
-  const userPosition =
-    authStore.user?.position?.name?.toLowerCase().trim() ||
-    authStore.user?.position_name?.toLowerCase().trim()
+// const editRequestCount = computed(() => {
+//   const userPosition =
+//     authStore.user?.position?.name?.toLowerCase().trim() ||
+//     authStore.user?.position_name?.toLowerCase().trim()
 
-  const canApproveEdit =
-    userPosition &&
-    (userPosition.includes('captain') ||
-      userPosition.includes('chairperson') ||
-      userPosition.includes('barangay captain') ||
-      userPosition.includes('sk chairperson'))
+//   const canApproveEdit =
+//     userPosition &&
+//     (userPosition.includes('captain') ||
+//       userPosition.includes('chairperson') ||
+//       userPosition.includes('barangay captain') ||
+//       userPosition.includes('sk chairperson'))
 
-  if (!canApproveEdit) return 0
-  if (!authStore.user?.barangay_name) return 0
-  if (!disbursementStore.disbursements || disbursementStore.disbursements.length === 0) return 0
+//   if (!canApproveEdit) return 0
+//   if (!authStore.user?.barangay_name) return 0
+//   if (!disbursementStore.disbursements || disbursementStore.disbursements.length === 0) return 0
 
-  return disbursementStore.disbursements.filter((d) => {
-    return d.status === 'Edit Requested' && d.barangay_name === authStore.user.barangay_name
-  }).length
-})
+//   return disbursementStore.disbursements.filter((d) => {
+//     return d.status === 'Edit Requested' && d.barangay_name === authStore.user.barangay_name
+//   }).length
+// })
 
 const totalNotificationCount = computed(() => {
   return voidRequestCount.value + editRequestCount.value
@@ -473,17 +499,28 @@ const refreshAllNotifications = async () => {
 
 const favorites = ref([
   { title: 'Dashboard', link: '/home/dashboard', icon: 'dashboard' },
-  { title: 'Transactions', type: 'panel', panelType: 'transactions', icon: 'account_balance_wallet' },
+  {
+    title: 'Transactions',
+    type: 'panel',
+    panelType: 'transactions',
+    icon: 'account_balance_wallet',
+  },
   { title: 'Libraries', type: 'panel', panelType: 'libraries', icon: 'library_books' },
-  { title: 'Reports', link: '/home/reports', icon: 'assessment' },
+  // { title: 'Reports', link: '/home/reports', icon: 'assessment' },
+  { title: 'Reports', type: 'panel', panelType: 'reports', icon: 'assessment' },
 ])
 
 const savedSearches = ref([
   { title: 'User Control', link: '/home/useraccess', icon: 'admin_panel_settings' },
   { title: 'Log Activities', link: '/home/logsview', icon: 'history' },
+  { title: 'Barangay Setup', link: '/home/barangay-setup', icon: 'settings' },
 ])
 
-const handleImageError = (e) => (e.target.src = 'src/assets/user.png')
+const handleImageError = (e) => {
+  if (e.target.src !== defaultUserAvatar) {
+    e.target.src = defaultUserAvatar
+  }
+}
 
 const navigateToFavorite = (link) => {
   router.push(link)
@@ -547,11 +584,22 @@ const closePanel = () => {
 
 const handleVoidRequestClick = async () => {
   if (!authStore.user?.barangay_name) {
-    $q.notify({ type: 'negative', message: 'Access denied: Invalid user context', position: 'top', timeout: 3000 })
+    $q.notify({
+      type: 'negative',
+      message: 'Access denied: Invalid user context',
+      position: 'top',
+      timeout: 3000,
+    })
     return
   }
   closePanel()
-  $q.notify({ type: 'info', message: 'Opening void requests...', icon: 'pending_actions', position: 'top', timeout: 2000 })
+  $q.notify({
+    type: 'info',
+    message: 'Opening void requests...',
+    icon: 'pending_actions',
+    position: 'top',
+    timeout: 2000,
+  })
 
   const year = route.query.year ? parseInt(route.query.year) : null
   await disbursementStore.fetchDisbursements(year)
@@ -560,22 +608,46 @@ const handleVoidRequestClick = async () => {
     (d) => d.status === 'Void Requested' && d.barangay_name === authStore.user.barangay_name,
   )
 
-  if (pending.length > 0) {
-    await router.push({ path: '/home/transactions/disbursement', query: { status: 'Void Requested' } })
-    $q.notify({ type: 'positive', message: `Showing ${pending.length} void request(s)`, position: 'top', timeout: 3000 })
+  if (pending.length > 0) { 
+    await router.push({
+      path: '/home/transactions/disbursement',
+      query: { status: 'Void Requested' },
+    })
+    $q.notify({
+      type: 'positive',
+      message: `Showing ${pending.length} void request(s)`,
+      position: 'top',
+      timeout: 3000,
+    })
   } else {
     await router.push('/home/transactions/disbursement')
-    $q.notify({ type: 'warning', message: 'No void requests found for your barangay.', position: 'top', timeout: 5000 })
+    $q.notify({
+      type: 'warning',
+      message: 'No void requests found for your barangay.',
+      position: 'top',
+      timeout: 5000,
+    })
   }
 }
 
 const handleEditRequestClick = async () => {
   if (!authStore.user?.barangay_name) {
-    $q.notify({ type: 'negative', message: 'Access denied: Invalid user context', position: 'top', timeout: 3000 })
+    $q.notify({
+      type: 'negative',
+      message: 'Access denied: Invalid user context',
+      position: 'top',
+      timeout: 3000,
+    })
     return
   }
   closePanel()
-  $q.notify({ type: 'info', message: 'Opening edit requests...', icon: 'edit_note', position: 'top', timeout: 2000 })
+  $q.notify({
+    type: 'info',
+    message: 'Opening edit requests...',
+    icon: 'edit_note',
+    position: 'top',
+    timeout: 2000,
+  })
 
   const year = route.query.year ? parseInt(route.query.year) : null
   await disbursementStore.fetchDisbursements(year)
@@ -585,17 +657,31 @@ const handleEditRequestClick = async () => {
   )
 
   if (pending.length > 0) {
-    await router.push({ path: '/home/transactions/disbursement', query: { status: 'Edit Requested' } })
-    $q.notify({ type: 'positive', message: `Showing ${pending.length} edit request(s)`, position: 'top', timeout: 3000 })
+    await router.push({
+      path: '/home/transactions/disbursement',
+      query: { status: 'Edit Requested' },
+    })
+    $q.notify({
+      type: 'positive',
+      message: `Showing ${pending.length} edit request(s)`,
+      position: 'top',
+      timeout: 3000,
+    })
   } else {
     await router.push('/home/transactions/disbursement')
-    $q.notify({ type: 'warning', message: 'No edit requests found for your barangay.', position: 'top', timeout: 5000 })
+    $q.notify({
+      type: 'warning',
+      message: 'No edit requests found for your barangay.',
+      position: 'top',
+      timeout: 5000,
+    })
   }
 }
 
 const expenseSelectedCurrent = ref(null)
 const expenseSelectedContinuing = ref(null)
 const selectedYear = ref(null)
+let refreshInterval = null
 
 const availableYears = computed(() => reportStore.availableYears)
 
@@ -614,10 +700,10 @@ function onYearChange(year) {
 }
 
 const userPhoto = computed(() => {
-  if (!authStore.user) return 'src/assets/user.png'
+  if (!authStore.user) return defaultUserAvatar
   return (
     authStore.user.photo_url ||
-    (authStore.user.photo_path ? `/storage/${authStore.user.photo_path}` : 'src/assets/user.png')
+    (authStore.user.photo_path ? `/storage/${authStore.user.photo_path}` : defaultUserAvatar)
   )
 })
 
@@ -643,30 +729,103 @@ const handleKeydown = (event) => {
   }
 }
 
+// onMounted(async () => {
+//   await authStore.initialize()
+//   document.addEventListener('keydown', handleKeydown)
+
+//   if (authStore.user?.barangay_name) {
+//     const year = route.query.year ? parseInt(route.query.year) : null
+//     await reportStore.fetchAvailableYears()
+
+//     await disbursementStore.fetchDisbursements(year)
+//     await appropriationStore.fetchBudgets(year)
+//     await augmentationStore.fetchAugmentations(year)
+
+//     // refreshInterval = setInterval(async () => {
+//     //   if (authStore.user?.barangay_name) {
+//     //     const y = route.query.year ? parseInt(route.query.year) : null
+//     //     await disbursementStore.fetchDisbursements(y)
+//     //   }
+//     // }, 10000)
+//     let pollInFlight = false
+//   }
+// })
+
+
+const notifRows = ref([])
+let notifPollInFlight = false
+
+async function refreshNotificationCounts() {
+  if (notifPollInFlight || !authStore.user?.barangay_name) return
+  notifPollInFlight = true
+  try {
+    const y = route.query.year ? parseInt(route.query.year) : null
+    notifRows.value = await disbursementStore.fetchDisbursementStatusesOnly(y)
+  } finally {
+    notifPollInFlight = false
+  }
+}
+
+const voidRequestCount = computed(
+  () =>
+    notifRows.value.filter(
+      (d) => d.status === 'Void Requested' && d.barangay_name === authStore.user?.barangay_name,
+    ).length,
+)
+const editRequestCount = computed(
+  () =>
+    notifRows.value.filter(
+      (d) => d.status === 'Edit Requested' && d.barangay_name === authStore.user?.barangay_name,
+    ).length,
+)
+
+function startPolling() {
+  stopPolling()
+  refreshInterval = setInterval(() => {
+    if (route.path.startsWith('/home/reports')) return
+    if (document.visibilityState === 'visible') {
+      refreshNotificationCounts()
+    }
+  }, 30000)
+}
+
+function stopPolling() {
+  if (refreshInterval) clearInterval(refreshInterval)
+  refreshInterval = null
+}
+
+function handleVisibilityChange() {
+  if (document.visibilityState === 'visible') refreshNotificationCounts()
+}
+
 onMounted(async () => {
   await authStore.initialize()
   document.addEventListener('keydown', handleKeydown)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
 
   if (authStore.user?.barangay_name) {
     const year = route.query.year ? parseInt(route.query.year) : null
-    await reportStore.fetchAvailableYears() 
-
-    await disbursementStore.fetchDisbursements(year)
+    await reportStore.fetchAvailableYears()
+    await disbursementStore.fetchDisbursements(year) // keep full fetch for initial load / other pages
     await appropriationStore.fetchBudgets(year)
     await augmentationStore.fetchAugmentations(year)
 
-    const refreshInterval = setInterval(async () => {
-      if (authStore.user?.barangay_name) {
-        const y = route.query.year ? parseInt(route.query.year) : null
-        await disbursementStore.fetchDisbursements(y)
-      }
-    }, 10000)
-
-    onUnmounted(() => {
-      clearInterval(refreshInterval)
-      document.removeEventListener('keydown', handleKeydown)
-    })
+    await refreshNotificationCounts()
+    startPolling()
   }
+})
+
+onUnmounted(() => {
+  stopPolling()
+  document.removeEventListener('keydown', handleKeydown)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+})
+
+onUnmounted(() => {
+  if (refreshInterval) {
+    clearInterval(refreshInterval)
+  }
+  document.removeEventListener('keydown', handleKeydown)
 })
 
 watch(
@@ -678,7 +837,6 @@ watch(
     await appropriationStore.fetchAppropriations(year)
     await supplementalStore.fetchSupplementalBudgets(year)
     await augmentationStore.fetchAugmentations(year)
-     
   },
 )
 
@@ -703,6 +861,11 @@ watch(
 </script>
 
 <style>
+.main-content {
+  background: #d9d9d9;
+  min-height: 100vh;
+}
+
 .avatar-menu {
   background: linear-gradient(15deg, #187c19, #e0ffe7, #187c19);
 }
@@ -1442,7 +1605,6 @@ watch(
 .panel-item {
   position: relative;
 }
-
 
 /* End of Panel */
 

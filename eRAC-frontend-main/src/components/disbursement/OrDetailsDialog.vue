@@ -11,16 +11,19 @@
       </q-card-section>
 
       <q-card-section>
-        <div class="row q-col-gutter-md">
+        <div class="row q-col-gutter-xs">
           <!-- Date Field -->
           <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">Date:</q-item-label>
+            <q-item-label class="q-mb-xs text-caption text-grey text-weight-bold"
+              >Date:</q-item-label
+            >
             <q-input
               filled
               outlined
               dense
               v-model="store.currentLiquidation.date"
               mask="##/##/####"
+              class="text-body1 text-weight-medium"
             >
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
@@ -34,32 +37,81 @@
 
           <!-- DV Number Field -->
           <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">DV Number:</q-item-label>
+            <q-item-label class="q-mb-xs text-caption text-grey text-weight-bold"
+              >DV Number:</q-item-label
+            >
             <q-input
               filled
               outlined
               dense
               :model-value="store.currentLiquidation.dvNumber"
               :disable="true"
+              class="text-body1 text-weight-medium"
             />
           </div>
 
-          <!-- DV Amount Field -->
-          <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">DV Amount:</q-item-label>
+          <!-- Funds -->
+          <!-- <div class="col-md-4 col-sm-6 q-mb-xs">
+            <div class="text-caption text-grey text-weight-bold">Funds</div>
             <q-input
               filled
               outlined
               dense
-              :model-value="formatCurrency(store.currentLiquidation.dvAmount || 0)"
+              :model-value="store.currentLiquidation.funds"
+              :disable="true"
+              class="text-body1 text-weight-medium"
+            />
+          </div> -->
+          <div class="col-md-4 col-sm-6 q-mb-xs">
+            <div class="text-caption text-grey text-weight-bold">Payee</div>
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="store.currentLiquidation.payee"
+              :disable="true"
+              class="text-body1 text-weight-medium"
+            />
+          </div>
+          <!-- Taxpayer Type -->
+          <!-- <div class="col-md-4 col-sm-6 q-mb-xs">
+            <div class="text-caption text-grey text-weight-bold">Taxpayer Type</div>
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="store.currentLiquidation.taxpayerType"
+              :disable="true"
+              class="text-body1 text-weight-medium"
+            />
+          </div> -->
+          <!-- Tax Type -->
+          <!-- <div class="col-md-4 col-sm-6 q-mb-xs">
+              <div class="text-caption text-grey text-weight-bold">Tax Type</div>
+              <q-input filled outlined dense :model-value="store.currentLiquidation.taxType" :disable="true" class="text-body1 text-weight-medium" />
+            </div> -->
+
+          <!-- DV Amount Field -->
+          <div class="col-md-4 col-sm-6">
+            <q-item-label class="q-mb-xs text-caption text-grey text-weight-bold"
+              >Net Amount:</q-item-label
+            >
+            <q-input
+              filled
+              outlined
+              dense
+              :model-value="formatCurrency(store.currentLiquidation.netAmount || 0)"
               prefix="₱"
               :disable="true"
+              class="text-body1 text-weight-medium"
             />
           </div>
 
           <!-- Actual Expense Field -->
           <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">Actual Expense:</q-item-label>
+            <q-item-label class="q-mb-xs text-caption text-grey text-weight-bold"
+              >Actual Expense:</q-item-label
+            >
             <q-input
               filled
               outlined
@@ -67,12 +119,15 @@
               :model-value="formatCurrency(totalActualExpense)"
               prefix="₱"
               :disable="true"
+              class="text-body1 text-weight-medium"
             />
           </div>
 
           <!-- Amount to Return Field -->
           <div class="col-md-4 col-sm-6">
-            <q-item-label class="q-mb-xs">Amount to Return to Appropriation:</q-item-label>
+            <q-item-label class="q-mb-xs text-caption text-grey text-weight-bold"
+              >Amount to Return to Appropriation:</q-item-label
+            >
             <q-input
               filled
               outlined
@@ -81,12 +136,15 @@
               prefix="₱"
               :disable="true"
               :color="actualReturnAmount < 0 ? 'negative' : undefined"
+              class="text-body1 text-weight-medium"
             />
           </div>
 
           <!-- Remarks Field -->
           <div class="col-md-4 col-sm-12">
-            <q-item-label class="q-mb-xs">Remarks:</q-item-label>
+            <q-item-label class="q-mb-xs text-caption text-grey text-weight-bold"
+              >Remarks:</q-item-label
+            >
             <q-input
               filled
               outlined
@@ -94,30 +152,27 @@
               v-model="store.currentLiquidation.remarks"
               placeholder="Enter remarks"
               @update:model-value="handleRemarksChange"
+              class="text-body1 text-weight-medium"
             />
           </div>
         </div>
       </q-card-section>
 
-           <!-- Expense Accounts Section -->
-      <q-card-section v-if="expenseAccounts.length > 0">
-        <div class="text-subtitle1 q-mb-md">
-          <strong>Expense Accounts:</strong>
+      <!-- Expense Accounts Section -->
+      <q-card-section v-if="expenseAccounts.length > 0" class="q-pb-none q-pt-sm">
+        <div class="text-subtitle1 q-mb-sm">
+          <strong>Expense Accounts</strong>
         </div>
 
         <!-- Expense Accounts Table -->
-        <q-table
-          :rows="expenseAccounts"
-          :columns="expenseAccountColumns"
-          row-key="id"
-          :pagination="{ rowsPerPage: 5 }"
-          flat
-          bordered
-        >
+        <!-- <q-table :rows="expenseAccounts" :columns="expenseAccountColumns" row-key="id" :pagination="{ rowsPerPage: 5 }"
+          flat bordered>
           <template v-slot:body-cell-account="props">
             <q-td :props="props">
               <div class="expense-account-hierarchy">
-                {{ props.row.accountName || props.row.account_name || `${props.row.account || ''}${props.row.expenseType ? ` > ${props.row.expenseType}` : ''}${props.row.expenseItem ? ` > ${props.row.expenseItem}` : ''}${props.row.expenseSubItem ? ` > ${props.row.expenseSubItem}` : ''}` }}
+                {{ props.row.accountName || props.row.account_name || `${props.row.account || ''}${props.row.expenseType
+                  ? ` > ${props.row.expenseType}` : ''}${props.row.expenseItem ? ` > ${props.row.expenseItem}` :
+                    ''}${props.row.expenseSubItem ? ` > ${props.row.expenseSubItem}` : ''}` }}
               </div>
             </q-td>
           </template>
@@ -126,14 +181,276 @@
               {{ formatCurrency(props.value) }}
             </q-td>
           </template>
+          <template v-slot:bottom-row>
+            <q-tr v-if="expenseAccounts.length > 0">
+              <q-td colspan="2" class="text-right text-caption text-grey-8">
+                Total Gross Amount:
+              </q-td>
+              <q-td class="text-right text-weight-bold">
+                ₱{{ formatCurrency(totalGrossAmount) }}
+              </q-td>
+              <q-td />
+            </q-tr>
+          </template>
+        </q-table> -->
+        <div class="expense-acc-block">
+          <table class="expense-inline-table full-width">
+            <thead>
+              <tr>
+                <th style="width: 36px">#</th>
+                <th>Acc</th>
+                <th>Particulars</th>
+                <th style="text-align: right; width: 140px">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="!liquidationExpenses || liquidationExpenses.length === 0">
+                <td colspan="8" class="text-center text-grey-5 text-caption q-pa-md q-gutter-sm">
+                  <span> No expense accounts added.</span>
+                </td>
+              </tr>
+              <tr
+                v-for="(row, idx) in liquidationExpenses"
+                :key="row.id"
+                class="text-weight-medium text-grey-8"
+                style="font-size: 12px"
+              >
+                <td class="text-grey-6">{{ idx + 1 }}</td>
+                <td>
+                  <div class="text-weight-medium text-grey-8" style="font-size: 12px">
+                    {{ row.accountName }}
+                  </div>
+                </td>
+                <td>
+                  <div class="text-weight-medium text-grey-8" style="font-size: 12px">
+                    {{ row.particular || '—' }}
+                  </div>
+                </td>
+                <td style="text-align: right" class="text-weight-medium">
+                  ₱{{
+                    (Number(row.amount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })
+                  }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Footer subtotal -->
+          <div
+            v-if="liquidationExpenses && liquidationExpenses.length > 0"
+            class="expense-acc-footer row items-center justify-end q-px-md q-py-xs"
+          >
+            <span class="text-caption text-grey-8">
+              Total Gross Amount:
+              <span class="text-grey-10 q-ml-sm" style="font-size: 14px">
+                ₱{{ totalGrossAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+              </span>
+            </span>
+          </div>
+        </div>
+      </q-card-section>
+
+      <!-- Deductions Table Section -->
+      <!-- <q-card-section class="q-pb-none">
+        <div class="row items-center justify-between">
+          <div class="text-subtitle1"><strong>Deductions</strong></div>
+        </div>
+        <q-table :rows="store.forms.expense.deductions || []" :columns="deductionTableColumns" row-key="id"
+          :pagination="{ rowsPerPage: 0 }" flat bordered>
+          <template v-slot:body-cell-id="props">
+            <q-td :props="props">
+              {{ (props.row.id || []).indexOf(props.row) + 1 }}
+            </q-td>
+          </template>
+          <template v-slot:body-cell-gross_vat_inc="props">
+            <q-td :props="props" class="text-right">
+              ₱{{ (Number(props.row.gross_vat_inc) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+            </q-td>
+          </template>
+          <template v-slot:body-cell-percent="props">
+            <q-td :props="props">
+              {{ props.row.percent != null ? `${props.row.percent}%` : '—' }}
+            </q-td>
+          </template>
+          <template v-slot:body-cell-amount="props">
+            <q-td :props="props" class="text-right">
+              ₱{{ (Number(props.row.amount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+            </q-td>
+          </template>
+          <template v-slot:body-cell-action="props">
+            <q-td :props="props">
+              <q-btn size="sm" flat round color="green" icon="edit" @click="editDeductionRow(props.row)" />
+            </q-td>
+          </template>
+          <template v-slot:no-data>
+            <div class="full-width row flex-center text-grey q-gutter-sm q-pa-md">
+              <q-icon size="2em" name="inbox" />
+              <span>No deduction details found</span>
+            </div>
+          </template>
+          <template v-slot:bottom-row>
+            <q-tr v-if="store.forms.expense.deductions && store.forms.expense.deductions.length > 0">
+              <q-td colspan="4" class="text-right text-caption text-red-8">
+                Total Deductions:
+              </q-td>
+              <q-td class="text-right text-weight-bold" style="color:#e53935">
+                ₱{{ totalDeductionAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}
+              </q-td>
+            </q-tr>
+          </template>
         </q-table>
+      </q-card-section> -->
+      <q-card-section>
+        <div class="row items-center justify-between q-mb-xs">
+          <div class="text-subtitle1"><strong>Deductions</strong></div>
+        </div>
+        <div class="expense-acc-block">
+          <table class="expense-inline-table full-width">
+            <thead>
+              <tr>
+                <th style="width: 36px">#</th>
+                <th>Deduction Type</th>
+                <th>Tax Type</th>
+                <th>Description</th>
+                <th>Gross VAT INC.</th>
+                <th>Percent</th>
+                <th style="text-align: right; width: 140px">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-if="
+                  !store.forms.expense.deductions || store.forms.expense.deductions.length === 0
+                "
+              >
+                <td colspan="8" class="text-center text-grey-5 text-caption q-pa-md">
+                  No deductions added.
+                </td>
+              </tr>
+              <tr
+                v-for="(ded, idx) in store.forms.expense.deductions || []"
+                :key="ded.id"
+                class="text-weight-medium text-grey-8"
+                style="font-size: 12px"
+              >
+                <td class="text-grey-6">{{ idx + 1 }}</td>
+                <td>{{ ded.deductionTypeName || '—' }}</td>
+                <td>{{ ded.taxTypeName || '—' }}</td>
+                <td>{{ ded.description || '—' }}</td>
+                <td style="text-align: right">
+                  ₱{{
+                    (Number(ded.gross_vat_inc) || 0).toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                    })
+                  }}
+                </td>
+                <td style="text-align: right">
+                  {{ ded.percent != null ? `${ded.percent}%` : '—' }}
+                </td>
+                <td style="text-align: right" class="text-weight-medium">
+                  ₱{{
+                    (Number(ded.amount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })
+                  }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Footer subtotal -->
+          <div
+            v-if="store.forms.expense.deductions && store.forms.expense.deductions.length > 0"
+            class="expense-acc-footer row items-center justify-end q-px-md q-py-xs"
+          >
+            <span class="text-caption text-red-8">
+              Total Deductions:
+              <span class="text-grey-10 q-ml-sm" style="font-size: 14px; color: #e53935">
+                ₱{{ totalDeductionAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}
+              </span>
+            </span>
+          </div>
+        </div>
+      </q-card-section>
+
+      <!-- Bank Cheques Table Section -->
+      <!-- <q-card-section class="q-pb-sm">
+        <div class="row justify-between q-pb-none q-pt-none">
+          <div class="text-subtitle1"><strong>Bank Cheques</strong></div>
+        </div>
+        <q-table :rows="store.bankCheques || []" :columns="bankChequeTableColumns" row-key="id"
+          :pagination="{ rowsPerPage: 0 }" flat bordered>
+          <template v-slot:body-cell-id="props">
+            <q-td :props="props">
+              {{ (store.bankCheques || []).indexOf(props.row) + 1 }}
+            </q-td>
+          </template>
+          <template v-slot:body-cell-amount="props">
+            <q-td :props="props" class="text-right">
+              ₱{{ (Number(props.row.amount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+            </q-td>
+          </template>
+          <template v-slot:no-data>
+            <div class="full-width row flex-center text-grey q-gutter-sm q-pa-md">
+              <q-icon size="2em" name="inbox" />
+              <span>No bank cheques found</span>
+            </div>
+          </template>
+          <template v-slot:bottom-row>
+            <q-tr v-if="store.bankCheques && store.bankCheques.length > 0">
+              <q-td colspan="4" class="text-right text-caption text-grey-8">
+                Total Bank Cheques:
+              </q-td>
+              <q-td class="text-right text-weight-bold">
+                ₱{{ bankChequeTotal.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+              </q-td>
+            </q-tr>
+          </template>
+        </q-table>
+      </q-card-section> -->
+      <q-card-section class="q-pb-xs q-pt-none">
+        <div class="row items-center justify-between q-mb-sm">
+          <div class="text-subtitle1"><strong>Bank Cheques</strong></div>
+        </div>
+        <div class="expense-acc-block">
+          <table class="expense-inline-table full-width">
+            <thead>
+              <tr>
+                <th>Bank</th>
+                <th>Cheque Number</th>
+                <th>Cheque Date</th>
+                <!-- <th>Status</th> -->
+                <th style="text-align: right; width: 140px">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="bankChequeRows.length === 0">
+                <td colspan="5" class="text-center text-grey-5 text-caption q-pa-md">
+                  No bank cheques added yet.
+                </td>
+              </tr>
+              <tr
+                v-for="row in bankChequeRows"
+                :key="row.key"
+                class="text-weight-medium text-grey-8"
+                style="font-size: 12px"
+              >
+                <td>{{ row.bank || '—' }}</td>
+                <td>{{ row.chequeNumber || '—' }}</td>
+                <td>{{ row.chequeDate || '—' }}</td>
+                <!-- <td>{{ row.bankStatus || '—' }}</td> -->
+                <td style="text-align: right" class="text-weight-medium">
+                  ₱{{ row.amount.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </q-card-section>
 
       <!-- Liquidation Details Section -->
       <q-card-section>
         <div class="row items-center q-mb-md">
           <div class="text-subtitle1">
-            <strong>Liquidation Details:</strong>
+            <strong>Liquidation Details</strong>
             <span class="text-caption text-grey-6 q-ml-sm">
               ({{ orDetailsCount }} record{{ orDetailsCount !== 1 ? 's' : '' }})
             </span>
@@ -215,7 +532,7 @@
                     inputmode="decimal"
                     pattern="\\d*\\.?\\d{0,2}"
                     @keypress="blockNonNumeric"
-                    @paste.prevent="handlePasteNumeric"
+                    @paste.prevent="(e) => handlePasteToOrAmount(e, orDetail)"
                     @input="calculateTotals"
                   />
                   <!-- Over-liquidation warning -->
@@ -276,8 +593,6 @@
           </div>
         </div>
       </q-card-section>
-
-
 
       <q-card-actions align="right" class="custom-actions">
         <q-btn
@@ -431,13 +746,18 @@
         </div>
 
         <!-- Auto-selection notification -->
-        <div v-if="selectedReimbursementExpenseAccounts.length > 0 && isAutoSelected" class="q-mb-md">
+        <div
+          v-if="selectedReimbursementExpenseAccounts.length > 0 && isAutoSelected"
+          class="q-mb-md"
+        >
           <q-banner class="bg-blue-1 text-blue-8" rounded>
             <template v-slot:avatar>
               <q-icon name="info" color="blue" />
             </template>
             <div class="text-body2">
-              <strong>Auto-selected from original disbursement:</strong> The expense accounts from the original disbursement have been pre-selected for your convenience. You can modify the amounts or add additional accounts as needed.
+              <strong>Auto-selected from original disbursement:</strong> The expense accounts from
+              the original disbursement have been pre-selected for your convenience. You can modify
+              the amounts or add additional accounts as needed.
             </div>
           </q-banner>
         </div>
@@ -476,7 +796,9 @@
                   inputmode="decimal"
                   pattern="\\d*\\.?\\d{0,2}"
                   @keypress="blockNonNumeric"
-                  @paste.prevent="(e) => handlePasteToTwoDecimals(e, (val) => (props.row.amount = val))"
+                  @paste.prevent="
+                    (e) => handlePasteToTwoDecimals(e, (val) => (props.row.amount = val))
+                  "
                   style="width: 120px"
                 />
               </div>
@@ -507,7 +829,7 @@
       <q-card-section>
         <div class="row items-center q-mb-md">
           <div class="text-subtitle1">
-            <strong>OR Details for Reimbursement:</strong>
+            <strong>OR Details for Reimbursement</strong>
           </div>
           <q-space />
         </div>
@@ -538,7 +860,9 @@
                   inputmode="decimal"
                   pattern="\\d*\\.?\\d{0,2}"
                   @keypress="blockNonNumeric"
-                  @paste.prevent="(e) => handlePasteToTwoDecimals(e, (val) => (props.row.reimbAmount = val))"
+                  @paste.prevent="
+                    (e) => handlePasteToTwoDecimals(e, (val) => (props.row.reimbAmount = val))
+                  "
                   style="width: 120px"
                 />
               </div>
@@ -582,9 +906,7 @@
       <q-card-section class="q-pb-none">
         <div class="text-h6">Select Expense Account</div>
         <div class="text-caption text-grey-6 q-mt-sm">
-          Select accounts to fund the reimbursement (₱{{
-            formatCurrency(reimbursementAmount)
-          }}
+          Select accounts to fund the reimbursement (₱{{ formatCurrency(reimbursementAmount) }}
           needed)
         </div>
       </q-card-section>
@@ -677,40 +999,87 @@ const store = useDisbursementStore()
 const bankStore = useBankStore()
 
 // Table columns for Expense Accounts - using single account column to avoid overlapping
-const expenseAccountColumns = [
-  {
-    name: 'id',
-    label: 'ID',
-    field: 'id',
-    align: 'left',
-    sortable: true,
-    style: 'width: 60px;',
-  },
-  {
-    name: 'account',
-    label: 'Expense Account',
-    field: 'accountName',
-    align: 'left',
-    sortable: true,
-    style: 'min-width: 400px;',
-  },
-  {
-    name: 'amount',
-    label: 'Amount',
-    field: 'amount',
-    align: 'right',
-    sortable: true,
-    style: 'width: 120px;',
-  },
-  {
-    name: 'particular',
-    label: 'Particular',
-    field: 'particular',
-    align: 'left',
-    sortable: true,
-    style: 'min-width: 200px;',
-  },
-]
+// const expenseAccountColumns = [
+//   {
+//     name: 'id',
+//     label: 'ID',
+//     field: 'id',
+//     align: 'left',
+//     sortable: true,
+//     style: 'width: 60px;',
+//   },
+//   {
+//     name: 'account',
+//     label: 'Expense Account',
+//     field: 'accountName',
+//     align: 'left',
+//     sortable: true,
+//     style: 'min-width: 400px;',
+//   },
+//   {
+//     name: 'amount',
+//     label: 'Amount',
+//     field: 'amount',
+//     align: 'right',
+//     sortable: true,
+//     style: 'width: 120px;',
+//   },
+//   {
+//     name: 'particular',
+//     label: 'Particular',
+//     field: 'particular',
+//     align: 'left',
+//     sortable: true,
+//     style: 'min-width: 200px;',
+//   },
+// ]
+
+// const deductionTableColumns = [
+//   {
+//     name: 'id',
+//     label: 'ID',
+//     field: 'id',
+//     align: 'left',
+//     sortable: true,
+//     style: 'width: 60px;',
+//   },
+//   {
+//     name: 'description',
+//     label: 'Description',
+//     field: 'description',
+//     align: 'left',
+//     sortable: true,
+//   },
+//   {
+//     name: 'grossVatInc',
+//     label: 'Gross VAT Inc',
+//     field: 'grossVatInc',
+//     align: 'right',
+//     sortable: true,
+//   },
+//   {
+//     name: 'percent',
+//     label: 'Percent',
+//     field: 'percent',
+//     align: 'right',
+//     sortable: true,
+//   },
+//   {
+//     name: 'amount',
+//     label: 'Amount',
+//     field: 'amount',
+//     align: 'right',
+//     sortable: true,
+//   },
+// ]
+
+// const bankChequeTableColumns = [
+//   { name: 'id', label: 'ID', field: 'id', align: 'left', style: 'width:50px', format: (val, row, rowIndex) => rowIndex + 1 },
+//   { name: 'bank', label: 'Bank', field: row => row.bankName || row.bank || '—', align: 'left', style: 'min-width:150px' },
+//   { name: 'cheque_number', label: 'Cheque Number', field: 'cheque_number', align: 'left', style: 'width:150px' },
+//   { name: 'cheque_date', label: 'Cheque Date', field: 'cheque_date', align: 'left', style: 'width:130px', format: val => val || '—' },
+//   { name: 'amount', label: 'Amount', field: 'amount', align: 'right', style: 'width:130px' }
+// ]
 
 // Initialize OR Details when dialog opens
 function initializeOrDetails() {
@@ -813,11 +1182,16 @@ watch(
 
       // Auto-select the original disbursement's expense accounts for reimbursement
       if (store.currentLiquidation?.expenses && store.currentLiquidation.expenses.length > 0) {
-        selectedReimbursementExpenseAccounts.value = store.currentLiquidation.expenses.map((expense) => ({
-          ...expense,
-          accountName: expense.accountName || expense.account_name || `${expense.account || ''}${expense.expenseType ? ` > ${expense.expenseType}` : ''}${expense.expenseItem ? ` > ${expense.expenseItem}` : ''}${expense.expenseSubItem ? ` > ${expense.expenseSubItem}` : ''}`,
-          amount: '', // Leave amount empty for user to fill
-        }))
+        selectedReimbursementExpenseAccounts.value = store.currentLiquidation.expenses.map(
+          (expense) => ({
+            ...expense,
+            accountName:
+              expense.accountName ||
+              expense.account_name ||
+              `${expense.account || ''}${expense.expenseType ? ` > ${expense.expenseType}` : ''}${expense.expenseItem ? ` > ${expense.expenseItem}` : ''}${expense.expenseSubItem ? ` > ${expense.expenseSubItem}` : ''}`,
+            amount: '', // Leave amount empty for user to fill
+          }),
+        )
 
         // Set auto-selection flag
         isAutoSelected.value = true
@@ -885,6 +1259,40 @@ const orDetailsCount = computed(() => {
 // Get expense accounts from current liquidation
 const expenseAccounts = computed(() => {
   return store.currentLiquidation?.expenses || store.currentLiquidation?.expense_accounts || []
+})
+
+// const totalGrossAmount = computed(() => {
+//   return expenseAccounts.value.reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
+// })
+
+const totalDeductionAmount = computed(() => {
+  return (store.forms.expense.deductions || []).reduce(
+    (sum, row) => sum + (Number(row.amount) || 0),
+    0,
+  )
+})
+
+const liquidationExpenses = computed(() => store.currentLiquidation?.expenses || [])
+
+const totalGrossAmount = computed(() => {
+  return liquidationExpenses.value.reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
+})
+
+// const bankChequeTotal = computed(() => {
+//   return (store.bankCheques || []).reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
+// })
+
+const bankChequeRows = computed(() => {
+  return (store.bankCheques || []).map((row, idx) => ({
+    id: row.id,
+    key: `${row.id || idx}-${row.cheque_number || idx}`,
+    bank: row.bankName || row.bank || '',
+    chequeNumber: row.cheque_number || '',
+    chequeDate: row.cheque_date || '',
+    bank_status: row.bank_status || row.bankStatus || '',
+    bankStatus: row.bank_status || row.bankStatus || '',
+    amount: Number(row.amount) || 0,
+  }))
 })
 
 // Reimbursement computed properties
@@ -1045,7 +1453,6 @@ const addOrDetail = () => {
 
 // Remove OR detail (unified function)
 const removeOrDetail = async (index) => {
-
   if (store.currentLiquidation.orDetails && store.currentLiquidation.orDetails.length > 0) {
     // Ensure we don't go below minimum rows
     if (store.currentLiquidation.orDetails.length <= 1) {
@@ -1183,7 +1590,6 @@ const isValid = computed(() => {
 
 // Filter expense accounts to only show those with valid expense_item_id
 const validExpenseAccounts = computed(() => {
-
   // Return all accounts for now to see what's available
   // We'll add the expense_item_id filter back once we confirm the data structure
   const allAccounts = store.filteredExpenseAccounts || []
@@ -1402,7 +1808,10 @@ const handleSubmitReimbursement = async () => {
     }
 
     // Validate that total OR amounts match reimbursement amount
-    const totalOrAmount = selectedReimbursementOrs.value.reduce((sum, or) => sum + (or.reimbAmount || 0), 0)
+    const totalOrAmount = selectedReimbursementOrs.value.reduce(
+      (sum, or) => sum + (or.reimbAmount || 0),
+      0,
+    )
     if (Math.abs(totalOrAmount - reimbursementAmount.value) > 0.01) {
       $q.notify({
         type: 'negative',
@@ -1653,7 +2062,26 @@ const blockNonNumeric = (event) => {
   }
 }
 
-const handlePasteNumeric = (event) => {
+// const handlePasteNumeric = (event) => {
+//   event.preventDefault()
+//   const pastedText = event.clipboardData.getData('text')
+//   const cleanText = pastedText.replace(/[^\d.]/g, '')
+//   const parts = cleanText.split('.')
+//   let finalText = parts[0]
+//   if (parts.length > 1) {
+//     finalText += '.' + parts.slice(1).join('').substring(0, 2)
+//   }
+//   event.target.value = finalText
+
+//   // Find the OR detail that this input belongs to and update it
+//   const inputElement = event.target
+//   const orDetailIndex = Array.from(inputElement.closest('.q-card-section').querySelectorAll('input[prefix="₱"]')).indexOf(inputElement)
+//   if (orDetailIndex >= 0 && store.currentLiquidation.orDetails[orDetailIndex]) {
+//     store.currentLiquidation.orDetails[orDetailIndex].orAmount = finalText
+//   }
+// }
+
+const handlePasteToOrAmount = (event, orDetail) => {
   event.preventDefault()
   const pastedText = event.clipboardData.getData('text')
   const cleanText = pastedText.replace(/[^\d.]/g, '')
@@ -1662,14 +2090,7 @@ const handlePasteNumeric = (event) => {
   if (parts.length > 1) {
     finalText += '.' + parts.slice(1).join('').substring(0, 2)
   }
-  event.target.value = finalText
-
-  // Find the OR detail that this input belongs to and update it
-  const inputElement = event.target
-  const orDetailIndex = Array.from(inputElement.closest('.q-card-section').querySelectorAll('input[prefix="₱"]')).indexOf(inputElement)
-  if (orDetailIndex >= 0 && store.currentLiquidation.orDetails[orDetailIndex]) {
-    store.currentLiquidation.orDetails[orDetailIndex].orAmount = finalText
-  }
+  orDetail.orAmount = finalText
 }
 
 // Generic paste handler for table inputs where we already know the destination
@@ -1686,7 +2107,7 @@ const handlePasteToTwoDecimals = (event, applyValue) => {
 }
 </script>
 
-<style scoped>
+<!-- <style scoped>
 /* Style for readonly inputs */
 .q-input[readonly] {
   background-color: #f5f5f5;
@@ -1738,6 +2159,249 @@ const handlePasteToTwoDecimals = (event, applyValue) => {
   .expense-account-hierarchy {
     font-size: 11px;
     max-width: 250px;
+  }
+}
+</style> -->
+<style scoped>
+.disbursement-page {
+  background-color: #fafafa;
+  min-height: 100vh;
+}
+
+.page-header {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 8px;
+}
+
+/*  Type navigation cards  */
+.type-nav-card {
+  border-radius: 12px;
+  border: 2px solid #e0e0e0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  background: white;
+}
+
+.type-nav-card:hover {
+  border-color: #bdbdbd;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+/* Regular — active = primary green */
+.type-nav-active {
+  background: var(--q-primary) !important;
+  border-color: var(--q-primary) !important;
+  color: white !important;
+}
+
+.type-nav-active .text-subtitle2,
+.type-nav-active .text-caption,
+.type-nav-active .type-count {
+  color: white !important;
+}
+
+/* BIR — active = deep-orange */
+.type-nav-active-bir {
+  /* background: var(--q-deep-orange) !important;
+  border-color: var(--q-deep-orange) !important; */
+  background: var(--q-primary) !important;
+  border-color: var(--q-primary) !important;
+  color: white !important;
+}
+
+/* SK — active = blue-10 */
+.type-nav-active-sk {
+  /* background: var(--q-blue-10) !important;
+  border-color: var(--q-blue-10) !important; */
+  background: var(--q-primary) !important;
+  border-color: var(--q-primary) !important;
+  color: white !important;
+}
+
+.type-count {
+  opacity: 0.85;
+}
+
+/* Small + button in the top-right of active card */
+.type-nav-add-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+}
+
+/* Tabs inside dialog */
+.tab-btn {
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 13px;
+}
+
+.tab-btn:hover {
+  background: transparent !important;
+}
+
+.tab-active {
+  color: #16a34a !important;
+  border-bottom: 2px solid #16a34a;
+}
+
+/* Regular: strict 2-column grid, always 2 per row */
+.action-grid-regular {
+  display: grid;
+  grid-template-columns: repeat(2, 32px);
+  gap: 4px;
+  width: 72px;
+}
+
+/* BIR/SK: single horizontal row, no wrapping */
+.action-row-flat {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.remarks-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.5;
+}
+
+.expense-acc-block {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.expense-acc-header {
+  background: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+  min-height: 36px;
+}
+
+.expense-acc-footer {
+  background: #fafafa;
+  border-top: 1px solid #e0e0e0;
+  min-height: 34px;
+}
+
+.cheque-panel {
+  background: #f1f8e9;
+  border-top: 1px solid #c5e1a5;
+  padding-top: 12px;
+}
+
+.expense-inline-table {
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.expense-inline-table th {
+  background: #fafafa;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #757575;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #e0e0e0;
+  text-align: left;
+}
+
+.expense-inline-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333;
+}
+
+.expense-inline-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Responsive design for mobile */
+@media (max-width: 768px) {
+  .q-card {
+    min-width: 95vw !important;
+  }
+
+  .q-table {
+    font-size: 12px;
+  }
+
+  .button-group .q-btn {
+    min-width: 28px;
+    padding: 4px;
+  }
+
+  .expense-account-hierarchy {
+    font-size: 11px;
+    max-width: 250px;
+  }
+
+  .expense-acc-block {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .expense-acc-header {
+    background: #f5f5f5;
+    border-bottom: 1px solid #e0e0e0;
+    min-height: 36px;
+  }
+
+  .expense-acc-footer {
+    background: #fafafa;
+    border-top: 1px solid #e0e0e0;
+    min-height: 34px;
+  }
+
+  .expense-inline-table {
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .expense-inline-table th {
+    background: #fafafa;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #757575;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid #e0e0e0;
+    text-align: left;
+  }
+
+  .expense-inline-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #333;
+  }
+
+  .expense-inline-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  :deep(.q-table__container) {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 300px;
+  }
+
+  :deep(.q-table__middle) {
+    overflow: unset;
+  }
+
+  :deep(.q-table thead tr th) {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #fafafa;
   }
 }
 </style>

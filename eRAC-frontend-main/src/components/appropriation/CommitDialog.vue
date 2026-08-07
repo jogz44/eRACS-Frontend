@@ -399,24 +399,28 @@ const displayAccounts = computed(() => {
   return filteredData.map((expenseClass) => ({
     id: expenseClass.id,
     name: expenseClass.name,
+    order: expenseClass.order,
     isMainCategory: expenseClass.isMainCategory,
     amount: '', // Classes don't have direct amounts, but will show calculated totals
     children: Array.isArray(expenseClass.children)
       ? expenseClass.children.map((expenseType) => ({
           id: expenseType.id,
           name: expenseType.name,
+          order: expenseType.order,
           isMainCategory: expenseType.isMainCategory,
           amount: appropriationStore.inputCache[`type-${expenseType.id}`] || '',
           children: Array.isArray(expenseType.children)
             ? expenseType.children.map((item) => ({
                 id: item.id,
                 name: item.name,
+                order: item.order,
                 isMainCategory: item.isMainCategory,
                 amount: appropriationStore.inputCache[`item-${item.id}`] || '',
                 children: Array.isArray(item.children)
                   ? item.children.map((subItem) => ({
                       id: subItem.id,
                       name: subItem.name,
+                      order: subItem.order,
                       isMainCategory: subItem.isMainCategory,
                       amount: appropriationStore.inputCache[`subitem-${subItem.id}`] || '',
                     }))
@@ -592,7 +596,6 @@ const calculateClassTotal = (expenseClass) => {
 
   return Math.round(total * 100) / 100
 }
-
 
 const validateAmountRule = (val) => {
   if (!val) return true

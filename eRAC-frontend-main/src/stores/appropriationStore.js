@@ -457,7 +457,7 @@ export const useAppropriationStore = defineStore("appropriation", {
           },
         })
 
-        this.allocations = response.data.data || []
+        this.allocations = sortAccountHierarchy(response.data.data || [])
       } catch (error) {
         console.error("[ERROR] fetchExpenseHierarchy:", error)
         throw error
@@ -969,4 +969,28 @@ const parseCurrency = (value) => {
   const parsed = Number.parseFloat(cleanValue)
 
   return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100
+}
+
+const getSortOrder = (item) => {
+  const value = Number(item?.order)
+  return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER
+}
+
+const sortAccountHierarchy = (items) => {
+  if (!Array.isArray(items)) return []
+
+  return [...items]
+    .sort((a, b) => {
+      const orderDiff = getSortOrder(a) - getSortOrder(b)
+      if (orderDiff !== 0) return orderDiff
+
+      const idDiff = Number(a?.id || 0) - Number(b?.id || 0)
+      if (idDiff !== 0) return idDiff
+
+      return String(a?.name || '').localeCompare(String(b?.name || ''))
+    })
+    .map((item) => ({
+      ...item,
+      children: sortAccountHierarchy(item?.children),
+    }))
 }

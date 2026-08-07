@@ -173,28 +173,23 @@ export const useBankStore = defineStore('bank', {
         const endpoint = authStore.admin ? '/api/admin/banks' : '/api/barangay/banks'
         const response = await api.get(endpoint, config)
 
-         console.log('RAW bank response:', JSON.stringify(response.data.data || response.data))
+        //  console.log('RAW bank response:', JSON.stringify(response.data.data || response.data))
 
         this.banks = (response.data.data || response.data || []).map((bank) => ({
           id: bank.id,
-          name: bank.bank_name || bank.name, 
+          name: bank.bank_name || bank.name,
           status: bank.status || 'Available',
           booklets_count: bank.booklets_count || 0, // Changed from cheques_count
           booklets: bank.booklets || [], // Changed from cheques
         }))
-        // this.availableBanks = this.banks.filter((bank) => bank.status === 'Available')
-
-        // if (this.availableBanks.length == 0) {
-        //   this.availableBanks[0] = { id: 0, name: 'No Available Bank' }
-        // }
 
         this.availableBanks = this.banks.filter(
-  (bank) => !bank.status || bank.status === 'Available'
-)
+          (bank) => !bank.status || bank.status === 'Available',
+        )
 
-if (this.availableBanks.length === 0) {
-  this.availableBanks = [{ id: 0, name: 'No Available Bank' }]
-}
+        if (this.availableBanks.length === 0) {
+          this.availableBanks = [{ id: 0, name: 'No Available Bank' }]
+        }
 
         return this.banks
       } catch (error) {
@@ -349,6 +344,24 @@ if (this.availableBanks.length === 0) {
       }
     },
 
+    async fetchBarangayBankAccounts() {
+  try {
+    const config = this.getAuthConfig()
+    const response = await api.get('/api/barangay/setup', config)
+    const payload = response.data?.data ?? response.data
+    const record = Array.isArray(payload) ? payload[0] : payload
+
+    return (record?.bank_accounts || []).map((acc) => ({
+      bank_id: acc.bank_id != null ? Number(acc.bank_id) : null,
+      bank_name: acc.bank?.name || acc.bank?.bank_name || acc.bank_name || acc.bank || '',
+      account_number: acc.account_number || '',
+    }))
+  } catch (error) {
+    console.error('Error fetching barangay bank accounts:', error)
+    throw error
+  }
+},
+
     methods: {
       calculateQuantity(start, end) {
         try {
@@ -420,10 +433,7 @@ if (this.availableBanks.length === 0) {
         const response = await api.get(`/api/barangay/booklets/${id}/cheques`, config)
 
         // Handle different response structures
-        const rawCheques =
-          response.data?.data ||
-          response.data?.cheques ||
-          []
+        const rawCheques = response.data?.data || response.data?.cheques || []
 
         const cheques = rawCheques.map((c) => ({
           chequeNo: c.chequeNo || c.cheque_number || '',
@@ -466,8 +476,10 @@ if (this.availableBanks.length === 0) {
         await disbursementStore.fetchDisbursements()
 
         // Update cheque status based on disbursement status and frontend cancelled cheques
-        cheques.forEach(cheque => {
-          const disbursement = disbursementStore.disbursements.find(d => d.chequeNumber === cheque.chequeNo)
+        cheques.forEach((cheque) => {
+          const disbursement = disbursementStore.disbursements.find(
+            (d) => d.chequeNumber === cheque.chequeNo,
+          )
 
           // Check if cheque is cancelled in frontend
           if (disbursementStore.cancelledCheques.has(cheque.chequeNo)) {
@@ -503,7 +515,6 @@ if (this.availableBanks.length === 0) {
       this.isLoading = true
       this.error = null
       try {
-
         const config = this.getAuthConfig()
         const response = await api.get(`/api/barangay/banks/${bankId}/cheques`, config)
 

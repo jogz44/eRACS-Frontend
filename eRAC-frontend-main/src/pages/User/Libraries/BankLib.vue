@@ -28,22 +28,11 @@
           </template>
         </q-input>
 
-        <q-btn
-          dense
-          outlined
-          color="negative"
-          icon="clear"
-          @click="clearAllFilters"
-        />
+        <q-btn dense outlined color="negative" icon="clear" @click="clearAllFilters" />
 
         <q-space />
 
-        <q-btn
-          label="Add"
-          icon="add"
-          color="primary"
-          @click="showAddDialog = true"
-        />
+        <q-btn label="Add" icon="add" color="primary" @click="showAddDialog = true" />
       </div>
     </div>
 
@@ -59,8 +48,20 @@
         <template v-slot:body-cell-status="props">
           <q-td :props="props">
             <q-badge
-              :color="props.row.status?.toLowerCase() === 'available' ? 'green' : props.row.status?.toLowerCase() === 'unavailable' ? 'grey' : 'orange'"
-              :label="props.row.status?.toLowerCase() === 'available' ? 'Available' : props.row.status?.toLowerCase() === 'unavailable' ? 'Unavailable' : 'Consumed'"
+              :color="
+                props.row.status?.toLowerCase() === 'available'
+                  ? 'green'
+                  : props.row.status?.toLowerCase() === 'unavailable'
+                    ? 'grey'
+                    : 'orange'
+              "
+              :label="
+                props.row.status?.toLowerCase() === 'available'
+                  ? 'Available'
+                  : props.row.status?.toLowerCase() === 'unavailable'
+                    ? 'Unavailable'
+                    : 'Consumed'
+              "
             />
           </q-td>
         </template>
@@ -78,18 +79,8 @@
 
         <template v-slot:body-cell-actions="props">
           <q-td :props="props" class="q-gutter-xs">
-            <q-btn
-              dense
-              icon="edit"
-              color="orange"
-              @click="editBank(props.row)"
-            />
-            <q-btn
-              dense
-              icon="delete"
-              color="red"
-              @click="deleteBank(props.row)"
-            />
+            <q-btn dense icon="edit" color="orange" @click="editBank(props.row)" />
+            <q-btn dense icon="delete" color="red" @click="deleteBank(props.row)" />
           </q-td>
         </template>
       </q-table>
@@ -103,18 +94,26 @@
         </q-card-section>
 
         <q-card-section>
-          <q-form >
-            <q-input
-              v-model="newBankName"
-              label="Bank Name"
+          <q-form>
+            <q-select
+              v-model="selectedBankAccount"
+              :options="availableBankAccountOptions"
+              label="Bank (from Barangay Setup)"
               outlined
-
-              :rules="[
-                (val) => !!val || 'Bank name is required',
-                (val) => val.length >= 3 || 'Name must be at least 3 characters',
-              ]"
-              lazy-rules
-            />
+              emit-value
+              map-options
+              :loading="loadingBankAccounts"
+              :rules="[(val) => !!val || 'Select a bank account first']"
+              hint="Only banks with an account already registered in Barangay Setup can be added here"
+            >
+              <template v-slot:no-option>
+                <q-item>
+                  <q-item-section class="text-grey">
+                    No unregistered bank accounts found — add one in Barangay Setup first
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
           </q-form>
         </q-card-section>
 
@@ -124,7 +123,6 @@
             label="Save"
             color="primary"
             @click="handleAddBankEnterKey"
-
             :disable="!newBankName || newBankName.length < 3 || bankStore.isLoading"
             :loading="bankStore.isLoading"
           />
@@ -179,7 +177,8 @@
         </q-card-section>
 
         <q-card-section class="text-center q-pt-none">
-          Are you sure you want to delete the bank "<strong>{{ deletingBank.name }}</strong>"? This action cannot be undone.
+          Are you sure you want to delete the bank "<strong>{{ deletingBank.name }}</strong
+          >"? This action cannot be undone.
         </q-card-section>
 
         <q-card-actions align="center" class="q-pa-md">
@@ -221,12 +220,7 @@
             </q-input>
 
             <q-space />
-            <q-btn
-              label="Add"
-              color="primary"
-              icon="add"
-              @click="showAddBookletDialog = true"
-            />
+            <q-btn label="Add" color="primary" icon="add" @click="showAddBookletDialog = true" />
           </div>
 
           <q-table
@@ -264,16 +258,13 @@
 
         <q-card-section>
           <q-form @submit="handleAddBookletSaveClick">
-
             <q-input
               v-model="newBooklet.booklet_numb"
               label="Booklet Number"
               outlined
               class="q-mb-sm"
               @keydown.enter="handleAddBookletEnterKey"
-              :rules="[
-                (val) => !!val || 'Booklet number is required',
-              ]"
+              :rules="[(val) => !!val || 'Booklet number is required']"
               maxlength="14"
             />
             <q-input
@@ -291,15 +282,15 @@
             />
 
             <q-input
-            v-model="newBooklet.quantity"
-            class="q-mb-sm quantity-input"
-            label="Quantity"
-            outlined
-            style="width: 140px ;"
-            :rules="[
-              (val) => !!val || 'Quantity is required',
-              (val) => val > 0 || 'Must be greater than 0',
-            ]"
+              v-model="newBooklet.quantity"
+              class="q-mb-sm quantity-input"
+              label="Quantity"
+              outlined
+              style="width: 140px"
+              :rules="[
+                (val) => !!val || 'Quantity is required',
+                (val) => val > 0 || 'Must be greater than 0',
+              ]"
             />
 
             <q-input
@@ -316,7 +307,6 @@
               maxlength="8"
               mask="########"
             />
-
           </q-form>
         </q-card-section>
 
@@ -336,15 +326,14 @@
     <!-- Cheque Details Dialog -->
     <q-dialog v-model="showChequeDialog" persistent>
       <q-card style="min-width: 700px">
-        <q-card-section class="row items-center q-pb-none ">
+        <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">Cheques: {{ selectedBooklet?.booklet_numb }}</div>
           <q-space />
           <q-btn
-          class="q-mr-sm"
+            class="q-mr-sm"
             icon="picture_as_pdf"
             color="red"
             label="Export PDF"
-
             dense
             @click="exportChequesToPDF"
             title="Export to PDF"
@@ -476,6 +465,7 @@ const tableRefreshKey = ref(0)
 onMounted(async () => {
   try {
     await bankStore.fetchBanks()
+    await loadBarangayBankAccounts()
 
     // Log page visit
     await logPageVisit('Bank Library')
@@ -530,6 +520,45 @@ const filteredBanks = computed(() => {
   return bankStore.banks.filter((bank) => bank.name.toLowerCase().includes(searchTermLower))
 })
 
+const barangayBankAccounts = ref([])
+const loadingBankAccounts = ref(false)
+const selectedBankAccount = ref(null)
+
+const loadBarangayBankAccounts = async () => {
+  loadingBankAccounts.value = true
+  try {
+    barangayBankAccounts.value = await bankStore.fetchBarangayBankAccounts()
+  } catch {
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to load bank accounts from Barangay Setup',
+      position: 'top',
+    })
+  } finally {
+    loadingBankAccounts.value = false
+  }
+}
+
+// banks already present in the Bank Library, keyed by bank_id (fallback: name)
+const addedBankKeys = computed(
+  () =>
+    new Set(
+      (bankStore.banks || []).map((b) => (b.bank_id ?? b.name ?? '').toString().toLowerCase()),
+    ),
+)
+
+const availableBankAccountOptions = computed(() =>
+  barangayBankAccounts.value
+    .filter(
+      (acc) => !addedBankKeys.value.has((acc.bank_id ?? acc.bank_name).toString().toLowerCase()),
+    )
+    .map((acc) => ({
+      label: `${acc.bank_name} — ${acc.account_number}`,
+      value: acc.bank_id,
+      bank_name: acc.bank_name,
+    })),
+)
+
 // Bank Actions
 const addBank = async () => {
   if (!newBankName.value) return
@@ -562,7 +591,7 @@ const addBank = async () => {
 const deleteBank = (bank) => {
   deletingBank.value = {
     id: bank.id,
-    name: bank.name
+    name: bank.name,
   }
   showDeleteDialog.value = true
 }
@@ -730,16 +759,17 @@ const filteredBooklets = computed(() => {
   if (search.value) {
     const searchTerm = search.value.toLowerCase()
     const chequeTerm = Number(search.value) // convert input to number
-    results = results.filter(
-      (booklet) =>{
-          const start = Number(booklet.starting_cheque_numb)
-          const end = Number(booklet.ending_cheque_numb)
+    results = results.filter((booklet) => {
+      const start = Number(booklet.starting_cheque_numb)
+      const end = Number(booklet.ending_cheque_numb)
 
-          return booklet.booklet_numb.toLowerCase().includes(searchTerm) ||
-            booklet.starting_cheque_numb.toLowerCase().includes(searchTerm) ||
-            booklet.ending_cheque_numb.toLowerCase().includes(searchTerm) || chequeTerm >= start && chequeTerm <= end
-        }
-    )
+      return (
+        booklet.booklet_numb.toLowerCase().includes(searchTerm) ||
+        booklet.starting_cheque_numb.toLowerCase().includes(searchTerm) ||
+        booklet.ending_cheque_numb.toLowerCase().includes(searchTerm) ||
+        (chequeTerm >= start && chequeTerm <= end)
+      )
+    })
   }
 
   return results
@@ -748,7 +778,6 @@ const filteredBooklets = computed(() => {
 // Cheque Actions
 const showChequeDetails = async (booklet) => {
   try {
-
     if (!booklet?.id) {
       throw new Error(`Invalid booklet data: ${JSON.stringify(booklet)}`)
     }
@@ -819,25 +848,24 @@ const resetChequeForm = () => {
 
 watch(
   () => bankStore.banks,
-  () => {
-  },
+  () => {},
   { deep: true },
 )
 watch(
   [() => newBooklet.value.starting_cheque_numb, () => newBooklet.value.quantity],
   ([start, qty]) => {
-    const startNum = parseInt(start, 10);
-    const quantityNum = parseInt(qty, 10);
+    const startNum = parseInt(start, 10)
+    const quantityNum = parseInt(qty, 10)
 
     if (!isNaN(startNum) && !isNaN(quantityNum) && quantityNum > 0) {
-      const end = startNum + quantityNum - 1;
-      newBooklet.value.ending_cheque_numb = end.toString().padStart(8, '0');
-      newBooklet.value.booklet_numb = `${startNum.toString().padStart(4,0).slice(-4)}-${(end).toString().padStart(4,0).slice(-4)}`;
+      const end = startNum + quantityNum - 1
+      newBooklet.value.ending_cheque_numb = end.toString().padStart(8, '0')
+      newBooklet.value.booklet_numb = `${startNum.toString().padStart(4, 0).slice(-4)}-${end.toString().padStart(4, 0).slice(-4)}`
     } else {
-      newBooklet.value.ending_cheque_numb = '';
+      newBooklet.value.ending_cheque_numb = ''
     }
-  }
-);
+  },
+)
 
 // Validation functions
 const validateAddBank = () => {
@@ -941,7 +969,9 @@ const validateAddBooklet = () => {
     })
     return false
   }
-  if (parseInt(newBooklet.value.starting_cheque_numb) > parseInt(newBooklet.value.ending_cheque_numb)) {
+  if (
+    parseInt(newBooklet.value.starting_cheque_numb) > parseInt(newBooklet.value.ending_cheque_numb)
+  ) {
     $q.notify({
       type: 'negative',
       message: 'Starting number must be less than ending number',
@@ -1098,7 +1128,9 @@ const exportChequesToPDF = () => {
             </tr>
           </thead>
           <tbody>
-            ${selectedBooklet.value.cheques.map(cheque => `
+            ${selectedBooklet.value.cheques
+              .map(
+                (cheque) => `
               <tr>
                 <td>${cheque.chequeNo || ''}</td>
                 <td>${cheque.date || ''}</td>
@@ -1106,7 +1138,9 @@ const exportChequesToPDF = () => {
                 <td>${typeof cheque.dvamount === 'string' && cheque.dvamount.includes('₱') ? cheque.dvamount : `₱${(cheque.dvamount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</td>
                 <td>${cheque.status || ''}</td>
               </tr>
-            `).join('')}
+            `,
+              )
+              .join('')}
           </tbody>
         </table>
 
@@ -1117,10 +1151,14 @@ const exportChequesToPDF = () => {
               const status = cheque.status || 'Unknown'
               acc[status] = (acc[status] || 0) + 1
               return acc
-            }, {})
-          ).map(([status, count]) => `
+            }, {}),
+          )
+            .map(
+              ([status, count]) => `
             <div class="status-count">${status}: ${count}</div>
-          `).join('')}
+          `,
+            )
+            .join('')}
         </div>
       </body>
       </html>

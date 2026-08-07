@@ -26,11 +26,25 @@ const getAuthConfig = () => {
   }
 }
 
+const getExpenseChequeNumber = (expense) =>
+  expense?.cheque_number ||
+  expense?.chequeNumber ||
+  expense?.check_number ||
+  expense?.checkNumber ||
+  expense?.cheque_no ||
+  expense?.chequeNo ||
+  ''
+
+const getExpenseChequeDate = (expense, disbursement = {}) =>
+  expense?.cheque_date ||
+  expense?.chequeDate ||
+  expense?.check_date ||
+  expense?.checkDate ||
+  disbursement?.cheque_date ||
+  ''
 export const useDisbursementStore = defineStore('disbursement', {
   state: () => ({
     particulars: [],
-
-    // Main data collections
     expenseData: [], // This will hold our complete expense hierarchy
     expenses: [], // Initialize expenses array
     expenseSearch: '',
@@ -46,6 +60,9 @@ export const useDisbursementStore = defineStore('disbursement', {
     selectedBank: null,
     selectedBooklet: null,
     selectedChequeNumber: null,
+    bankCheques: [],
+    cachedDeductionsByDisbursement: {},
+    cachedBankChequesByDisbursement: {},
     disbursements: [], // Remove static data, will be loaded from API
     pendingChequeNumbers: [], // cheque numbers assigned in current session but not yet saved
 
@@ -86,26 +103,35 @@ export const useDisbursementStore = defineStore('disbursement', {
     voidingDisbursement: false, // Loading state for voiding disbursement
     requestingEdit: false, // Loading state for edit request
     editActionLoading: false, // Loading state for edit approval/rejection actions
- 
+
+    //REMOVE THE UNNECESARRY BANK_CHEQUES FIELDS AND ADD NEW ARRAY ALSO THE DEDUCTIONS ARRAY
     // Form data
     forms: {
       disbursement: {
         date: '',
         dvNumber: '',
-        chequeNumber: '', 
-        bank_id: '',
+        // chequeNumber: '',
+        // bank_id: '',
         payee: '',
+        payee2: '',
         amount: '',
+        bankCheques: [],
       },
       expense: {
         account: '',
         balance: 0,
         bank_id: '',
-        cheque_number: '',
+        // cheque_number: '',
         bankLoading: false,
+        fund: '',
+        taxpayerType: '',
+        taxType: '',
         particulars: '',
         amount: '',
         disbursementId: null,
+        deductions: [],
+        totalDeduction: 0,
+        netAmount: 0,
       },
       orDetails: {
         receivedFrom: '',
@@ -129,10 +155,10 @@ export const useDisbursementStore = defineStore('disbursement', {
       },
     },
 
+    lastDisbursementFetchKey: null,
     // Pagination
-    pagination: { rowsPerPage: 10 }
+    pagination: { rowsPerPage: 10 },
   }),
-  
 
   getters: {
     // Filtered expense accounts for search
@@ -167,7 +193,8 @@ export const useDisbursementStore = defineStore('disbursement', {
             expenseType.children.forEach((expenseItem) => {
               if (expenseItem.amount && expenseItem.amount > 0) {
                 // Check if this item has subitems with allocations
-                const hasSubitemsWithBalance = expenseItem.children &&
+                const hasSubitemsWithBalance =
+                  expenseItem.children &&
                   expenseItem.children.some((subItem) => subItem.amount && subItem.amount > 0)
 
                 if (hasSubitemsWithBalance) {
@@ -276,25 +303,37 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     disbursementColumns: () => [
-      { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true,
-    classes: 'hidden',
-    headerClasses: 'hidden'},
+      {
+        name: 'id',
+        label: 'ID',
+        field: 'id',
+        align: 'left',
+        sortable: true,
+        classes: 'hidden',
+        headerClasses: 'hidden',
+      },
       { name: 'dvNumber', label: 'DV Number', field: 'dvNumber', align: 'left', sortable: true },
       { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: true },
       { name: 'payee', label: 'Payee', field: 'payee', align: 'left', sortable: true },
-      { name: 'particular', label: 'Particular', field: 'particular', align: 'left', sortable: true },
       {
-        name: 'chequeNumber',
-        label: 'Cheque Number',
-        field: 'chequeNumber',
+        name: 'particular',
+        label: 'Particular',
+        field: 'particular',
         align: 'left',
         sortable: true,
       },
-      { name: 'bank', label: 'Bank', field: 'bank', align: 'left', sortable: true },
+
       {
-        name: 'dvAmount',
-        label: 'Amount',
-        field: 'dvAmount',
+        name: 'bank_cheque',
+        label: 'Bank / Cheque No.',
+        field: 'bank',
+        align: 'left',
+        sortable: true,
+      },
+      {
+        name: 'netAmount',
+        label: 'Net Amount',
+        field: 'netAmount',
         format: (val) => {
           const num = Number(val) || 0
           return `₱${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -317,9 +356,17 @@ export const useDisbursementStore = defineStore('disbursement', {
           return val
         },
       },
-      { name: 'action', label: 'Action', field: '', align: 'center' },
+      // { name: 'action', label: 'Action', field: '', align: 'center' },
+      {
+        name: 'action',
+        label: 'Action',
+        field: '',
+        align: 'center',
+        style: 'width: 90px; min-width: 90px',
+      },
       { name: 'remarks', label: 'Remarks', field: '', align: 'center' },
-      { name: 'liquidate', label: 'Liquidate', field: '', align: 'center' },
+      { name: 'liquidate', label: '', field: '', align: 'center' },
+      { name: 'print', label: 'Print Cheque', field: '', align: 'center' },
     ],
 
     expenseColumns: () => [
@@ -557,17 +604,15 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Determine current editing disbursement id (if any)
         const currentDisbursementId = this.currentItem?.id ? String(this.currentItem.id) : null
 
-
-
         // Get all expense details from the database for this expense account
         if (this.expenseDetailsData && this.expenseDetailsData.length > 0) {
           // Only show first few expense details to avoid clutter
           const relevantDetails = this.expenseDetailsData.filter((ed) => {
             const matchesLevel =
-              (expenseLevel === 'subitem' && String(ed.expense_sub_item_id) === String(expenseId)) ||
+              (expenseLevel === 'subitem' &&
+                String(ed.expense_sub_item_id) === String(expenseId)) ||
               (expenseLevel === 'item' && String(ed.expense_item_id) === String(expenseId)) ||
               (expenseLevel === 'type' && String(ed.expense_type_id) === String(expenseId))
-
 
             if (!matchesLevel) return false
 
@@ -579,7 +624,6 @@ export const useDisbursementStore = defineStore('disbursement', {
 
             return true
           })
-
 
           relevantDetails.forEach((expenseDetail) => {
             // Include expense details from other disbursements in the calculation
@@ -606,8 +650,6 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Compute remaining balance
         const remainingBalance = Math.max(0, originalAmount - totalDisbursed + totalReturned)
-
-
 
         return remainingBalance
       } catch (error) {
@@ -653,27 +695,6 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
 
-    // async selectBankForExpense(bankId) {
-    //   this.forms.expense.bank_id = bankId
-    //   this.forms.expense.cheque_number = ''
-    //   if (!bankId) return
-    //   this.forms.expense.bankLoading = true
-    //   try {
-    //     const authStore = useAuthStore()
-    //     const token = authStore.admin ? authStore.adminToken : authStore.token
-    //     const res = await api.get(`/api/barangay/banks/${bankId}/available-cheques`, {
-    //       headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
-    //     })
-    //     this.forms.expense.cheque_number = res.data?.data?.cheque?.[0]?.cheque_number || ''
-    //   } catch (e) {
-    //     console.error('Expense bank selection error:', e)
-    //     this.forms.expense.bank_id = null
-    //     this.forms.expense.cheque_number = ''
-    //   } finally {
-    //     this.forms.expense.bankLoading = false
-    //   }
-    // },  
-
     async selectBankForExpense(bankId) {
       this.forms.expense.bank_id = bankId
       this.forms.expense.cheque_number = ''
@@ -683,11 +704,11 @@ export const useDisbursementStore = defineStore('disbursement', {
         const authStore = useAuthStore()
         const token = authStore.admin ? authStore.adminToken : authStore.token
         const res = await api.get(`/api/barangay/banks/${bankId}/available-cheques`, {
-          headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+          headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
         })
         const cheques = res.data?.data?.cheque || []
         // Skip cheques already assigned in this session
-        const next = cheques.find(c => !this.pendingChequeNumbers.includes(c.cheque_number))
+        const next = cheques.find((c) => !this.pendingChequeNumbers.includes(c.cheque_number))
         this.forms.expense.cheque_number = next?.cheque_number || ''
       } catch (e) {
         console.error('Expense bank selection error:', e)
@@ -727,32 +748,32 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.selectedBudgetSource = budgetSource
     },
 
-generateLocalDvNumber() {
-  const now = new Date()
-  const yy = String(now.getFullYear()).slice(-2)          
-  const mm = String(now.getMonth() + 1).padStart(2, '0') 
+    generateLocalDvNumber() {
+      const now = new Date()
+      const yy = String(now.getFullYear()).slice(-2)
+      const mm = String(now.getMonth() + 1).padStart(2, '0')
 
-  // Collect every existing DV number regardless of month/year prefix,
-  // pull out only the trailing sequence number, and find the highest one.
-  // const allDvNumbers = (this.disbursements || [])
-  //   .map(d => d.dvNumber)
-  //   .filter(Boolean)
+      // Collect every existing DV number regardless of month/year prefix,
+      // pull out only the trailing sequence number, and find the highest one.
+      // const allDvNumbers = (this.disbursements || [])
+      //   .map(d => d.dvNumber)
+      //   .filter(Boolean)
 
-  let maxSeq = 0
-    ;(this.disbursements || [])
-      .map(d => d.dvNumber)
-      .filter(Boolean)
-      .forEach(dv => {
-        // Handles DV-26-05-1005 and any DV-*-*-NNNN pattern
-        const match = dv.match(/^DV-\d+-\d+-(\d+)$/)
-        if (match) {
-          const seq = parseInt(match[1], 10) || 0
-          if (seq > maxSeq) maxSeq = seq
-        }
-      })
+      let maxSeq = 0
+      ;(this.disbursements || [])
+        .map((d) => d.dvNumber)
+        .filter(Boolean)
+        .forEach((dv) => {
+          // Handles DV-26-05-1005 and any DV-*-*-NNNN pattern
+          const match = dv.match(/^DV-\d+-\d+-(\d+)$/)
+          if (match) {
+            const seq = parseInt(match[1], 10) || 0
+            if (seq > maxSeq) maxSeq = seq
+          }
+        })
 
-    return `DV-${yy}-${mm}-${String(maxSeq + 1).padStart(4, '0')}`
-  },
+      return `DV-${yy}-${mm}-${String(maxSeq + 1).padStart(4, '0')}`
+    },
 
     // Fetch expense hierarchy from appropriation store and accounts library store
     async fetchExpenseAccounts() {
@@ -835,7 +856,6 @@ generateLocalDvNumber() {
     // Get default booklet ID for a bank
     async getDefaultBookletId(bankId) {
       try {
-
         // Try multiple API endpoints to find booklets
         let booklets = []
 
@@ -901,7 +921,6 @@ generateLocalDvNumber() {
 
     // Create mock expense data structure for admin users
     createMockExpenseDataForAdmin() {
-
       if (!this.expenseTypes || this.expenseTypes.length === 0) {
         return []
       }
@@ -909,7 +928,6 @@ generateLocalDvNumber() {
       // Group expense types by class
       const groupedByClass = {}
       this.expenseTypes.forEach((type) => {
-
         if (!groupedByClass[type.expense_class_id]) {
           groupedByClass[type.expense_class_id] = {
             id: type.expense_class_id,
@@ -1037,6 +1055,415 @@ generateLocalDvNumber() {
       }
     },
 
+    addDeductionRow(row) {
+      if (!this.forms.expense.deductions) {
+        this.forms.expense.deductions = []
+      }
+
+      this.forms.expense.deductions = [...this.forms.expense.deductions, row]
+      this._recalcDeductionTotals()
+    },
+
+    removeDeductionRow(id) {
+      this.forms.expense.deductions = (this.forms.expense.deductions || []).filter(
+        (r) => r.id !== id,
+      )
+      this._recalcDeductionTotals()
+    },
+
+    _recalcDeductionTotals() {
+      const total = (this.forms.expense.deductions || []).reduce(
+        (sum, r) => sum + (parseFloat(r.deduction_amount ?? r.amount) || 0),
+        0,
+      )
+      this.forms.expense.totalDeduction = Math.round(total * 100) / 100
+
+      const gross = parseFloat(this.forms.expense.amount) || 0
+      this.forms.expense.netAmount = Math.max(0, Math.round((gross - total) * 100) / 100)
+    },
+
+    normalizeDeductionRow(deduction = {}) {
+      const codeDetails =
+        deduction.deduction_code || deduction.deductionCode || deduction.deduction_code_detail || {}
+      const deductionAmount =
+        Number(deduction.deduction_amount ?? deduction.deductionAmount ?? deduction.amount) || 0
+      const grossVatInc =
+        Number(deduction.gross_vat_inc ?? deduction.grossVatInc ?? deduction.gross_amount) || 0
+      const rawNetAmount = deduction.net_amount ?? deduction.netAmount
+      const netAmount =
+        rawNetAmount !== null && rawNetAmount !== undefined && rawNetAmount !== ''
+          ? Number(rawNetAmount) || 0
+          : Math.max(0, grossVatInc - deductionAmount)
+      const deductionTypeName =
+        deduction.deductionTypeName ??
+        deduction.deduction_type_name ??
+        deduction.deduction_type ??
+        codeDetails.deduction_type_name ??
+        codeDetails.deduction_type ??
+        codeDetails.deductionType ??
+        ''
+      const normalizedDeductionType = String(deductionTypeName || '').toLowerCase()
+      const taxTypeName =
+        deduction.taxTypeName ??
+        deduction.tax_type_name ??
+        deduction.tax_type ??
+        codeDetails.tax_type_name ??
+        codeDetails.tax_type ??
+        codeDetails.taxType ??
+        ''
+
+      return {
+        id: deduction.id,
+        deduction_code_id: deduction.deduction_code_id ?? codeDetails.id ?? null,
+        deductionTypeName,
+        taxTypeName,
+        code: deduction.code ?? codeDetails.code ?? '',
+        description: deduction.description ?? codeDetails.description ?? deduction.code ?? '',
+        divisor: deduction.divisor ?? codeDetails.divisor ?? null,
+        vatPercent:
+          deduction.vatPercent ?? deduction.vat_percent ?? codeDetails.vat_percent ?? null,
+        ewtPercent:
+          deduction.ewtPercent ?? deduction.ewt_percent ?? codeDetails.ewt_percent ?? null,
+        gross_vat_inc: grossVatInc,
+        gross_vat_exc: Number(deduction.gross_vat_exc ?? deduction.grossVatExc) || 0,
+        percent:
+          deduction.percent ??
+          deduction.vat_percent ??
+          deduction.ewt_percent ??
+          codeDetails.vat_percent ??
+          codeDetails.ewt_percent ??
+          null,
+        deduction_amount: deductionAmount,
+        net_amount: netAmount,
+        netAmount,
+        amount: deductionAmount,
+        isManual: Boolean(
+          deduction.isManual ||
+            deduction.is_manual ||
+            codeDetails.is_others ||
+            normalizedDeductionType === 'others',
+        ),
+      }
+    },
+
+    normalizeDeductions(deductions = []) {
+      return (deductions || []).map((deduction) => this.normalizeDeductionRow(deduction))
+    },
+
+    async fetchDeductionsForDisbursement(disbursementId) {
+      if (!disbursementId) return []
+
+      try {
+        const deductionsByDisbursement = await this.fetchDeductionsByDisbursementMap()
+        const deductions = deductionsByDisbursement[disbursementId] || []
+        this.cachedDeductionsByDisbursement = {
+          ...this.cachedDeductionsByDisbursement,
+          [disbursementId]: deductions,
+        }
+        return deductions
+      } catch (error) {
+        console.warn('Could not fetch deductions for disbursement:', error.response?.data || error)
+        return this.cachedDeductionsByDisbursement?.[disbursementId] || []
+      }
+    },
+
+    async fetchDeductionsByDisbursementMap() {
+      try {
+        const response = await api.get('/api/barangay/deductions', getAuthConfig())
+        const payload = response.data?.data ?? response.data ?? []
+        const rows = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload.deductions)
+            ? payload.deductions
+            : []
+
+        const grouped = rows.reduce((acc, deduction) => {
+          const disbursementId = deduction.disbursement_id
+          if (!disbursementId) return acc
+
+          const key = String(disbursementId)
+          if (!acc[key]) acc[key] = []
+          acc[key].push(this.normalizeDeductionRow(deduction))
+          return acc
+        }, {})
+
+        this.cachedDeductionsByDisbursement = grouped
+        return grouped
+      } catch (error) {
+        console.warn('Could not fetch deductions:', error.response?.data || error)
+        return this.cachedDeductionsByDisbursement || {}
+      }
+    },
+
+    normalizeBankChequeRow(cheque = {}, fallback = {}) {
+      const amount =
+        Number(
+          cheque.amount ??
+            cheque.cheque_amount ??
+            cheque.check_amount ??
+            cheque.disbursement_amount ??
+            fallback.amount,
+        ) || 0
+      const bankId = cheque.bank_id ?? cheque.bank?.id ?? cheque.booklet?.bank_id ?? null
+      const resolvedBankId = bankId ?? fallback.bank_id ?? null
+
+      const bankFromStore = resolvedBankId
+        ? bankStore.availableBanks?.find((b) => String(b.id) === String(resolvedBankId))
+        : null
+
+      const bankName =
+        cheque.bank_name ||
+        cheque.bankName ||
+        cheque.bank?.bank_name ||
+        cheque.bank?.name ||
+        cheque.booklet?.bank?.bank_name ||
+        bankFromStore?.name ||
+        (bankId ? '' : fallback.bank_name || fallback.bankName || '') ||
+        ''
+
+      return {
+        id: cheque.id,
+        bank_id: resolvedBankId,
+        booklet_id: cheque.booklet_id ?? cheque.booklet?.id ?? fallback.booklet_id ?? null,
+        bank_name: bankName,
+        bankName,
+        bank: bankName,
+        bank_status: cheque.bank_status || cheque.bankStatus || fallback.bank_status || '',
+        bankStatus: cheque.bank_status || cheque.bankStatus || fallback.bankStatus || '',
+        cheque_number: cheque.cheque_number || cheque.chequeNumber || fallback.cheque_number || '',
+        chequeNumber: cheque.cheque_number || cheque.chequeNumber || fallback.chequeNumber || '',
+        cheque_date: cheque.cheque_date || cheque.chequeDate || fallback.cheque_date || '',
+        chequeDate: cheque.cheque_date || cheque.chequeDate || fallback.chequeDate || '',
+        particular: cheque.particular || cheque.particulars || fallback.particular || '',
+        amount,
+      }
+    },
+
+    normalizeBankCheques(cheques = [], fallback = {}) {
+      return (cheques || [])
+        .map((cheque) => this.normalizeBankChequeRow(cheque, fallback))
+        .filter((cheque) => Number(cheque.amount) > 0)
+    },
+
+    mergeDisbursementChequeRows(disbursement = {}, deductions = [], savedBankCheques = []) {
+      const resolvedNetAmount = this.resolveNetAmount(disbursement, deductions)
+      const topLevelChequeNumber = disbursement.cheque_number || disbursement.chequeNumber || ''
+
+      const rawRows = [
+        ...(disbursement.bank_cheques || []),
+        ...(disbursement.entries || []),
+        ...savedBankCheques,
+      ]
+
+      if (topLevelChequeNumber) {
+        rawRows.unshift({
+          id: `main-${topLevelChequeNumber}`,
+          bank_id: disbursement.bank_id || null,
+          booklet_id: disbursement.booklet_id || null,
+          bank_name: disbursement.bank_name || '',
+          bankName: disbursement.bank_name || '',
+          cheque_number: topLevelChequeNumber,
+          chequeNumber: topLevelChequeNumber,
+          cheque_date: disbursement.cheque_date || '',
+          chequeDate: disbursement.cheque_date || '',
+          // amount: disbursement.cheque_amount ?? disbursement.amount ?? disbursement.dv_amount ?? 0,
+          amount:
+            disbursement.cheque_amount ??
+            disbursement.amount ??
+            resolvedNetAmount ??
+            disbursement.dv_amount ??
+            0,
+          bank_status: disbursement.bank_status || '',
+        })
+      }
+
+      const normalized = this.normalizeBankCheques(rawRows, {
+        bank_id: disbursement.bank_id || null,
+        bank_name: disbursement.bank_name || '',
+        bank_status: disbursement.bank_status || '',
+      }).filter(
+        (cheque, index, rows) =>
+          rows.findIndex(
+            (row) =>
+              String(row.cheque_number || row.chequeNumber) ===
+              String(cheque.cheque_number || cheque.chequeNumber),
+          ) === index,
+      )
+
+      if (topLevelChequeNumber && normalized.length > 1) {
+        const otherTotal = normalized
+          .filter(
+            (row) => String(row.cheque_number || row.chequeNumber) !== String(topLevelChequeNumber),
+          )
+          .reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
+
+        const inferredTopLevelAmount = Math.max(
+          0,
+          Math.round((resolvedNetAmount - otherTotal) * 100) / 100,
+        )
+
+        return normalized.map((row) =>
+          String(row.cheque_number || row.chequeNumber) === String(topLevelChequeNumber)
+            ? { ...row, amount: inferredTopLevelAmount }
+            : row,
+        )
+      }
+
+      return normalized
+    },
+
+    async fetchBankChequesForDisbursement(disbursementId, fallback = {}) {
+      if (!disbursementId) return []
+
+      const endpoints = [
+        `/api/barangay/cheques/disbursement/${disbursementId}`,
+        // `/api/barangay/disbursements/${disbursementId}/cheques`,
+        // `/api/barangay/bank-cheques/disbursement/${disbursementId}`,
+      ]
+
+      const allRows = []
+
+      for (const endpoint of endpoints) {
+        try {
+          const response = await api.get(endpoint, getAuthConfig())
+          const payload = response.data?.data ?? response.data ?? []
+          const rows = Array.isArray(payload)
+            ? payload
+            : Array.isArray(payload.cheques)
+              ? payload.cheques
+              : Array.isArray(payload.bank_cheques)
+                ? payload.bank_cheques
+                : []
+
+          allRows.push(...rows)
+        } catch (error) {
+          if (![404, 405].includes(error.response?.status)) {
+            console.warn(
+              'Could not fetch bank cheques for disbursement:',
+              error.response?.data || error,
+            )
+          }
+        }
+      }
+
+      return this.normalizeBankCheques(allRows, fallback).filter(
+        (cheque, index, rows) =>
+          rows.findIndex(
+            (row) =>
+              String(row.cheque_number || row.chequeNumber) ===
+              String(cheque.cheque_number || cheque.chequeNumber),
+          ) === index,
+      )
+    },
+
+    resolveNetAmount(disbursement = {}, deductions = null) {
+      const normalizedDeductions =
+        deductions || this.normalizeDeductions(disbursement.deductions || [])
+      const grossAmount =
+        Number(disbursement.dv_amount ?? disbursement.dvAmount ?? disbursement.amount) || 0
+
+      if (normalizedDeductions.length) {
+        const totalDeductions = normalizedDeductions.reduce(
+          (sum, deduction) => sum + (Number(deduction.deduction_amount ?? deduction.amount) || 0),
+          0,
+        )
+        return Math.max(0, Math.round((grossAmount - totalDeductions) * 100) / 100)
+      }
+
+      const topLevelNet = disbursement.net_amount ?? disbursement.netAmount
+      if (topLevelNet !== null && topLevelNet !== undefined && topLevelNet !== '') {
+        return Number(topLevelNet) || 0
+      }
+
+      const chequeRows = this.normalizeBankCheques(
+        disbursement.bank_cheques ||
+          disbursement.entries ||
+          this.cachedBankChequesByDisbursement?.[disbursement.id] ||
+          [],
+      )
+      const chequeTotal = chequeRows.reduce((sum, cheque) => sum + (Number(cheque.amount) || 0), 0)
+      if (chequeTotal > 0) {
+        return Math.round(chequeTotal * 100) / 100
+      }
+
+      return grossAmount
+    },
+
+    deductionPayload(deduction) {
+      const row = this.normalizeDeductionRow(deduction)
+      const grossAmount = Number(row.gross_vat_inc) || Number(this.totalExpensesAmount) || 0
+      const deductionAmount = Number(row.deduction_amount) || 0
+      const netAmount = Number(row.net_amount) || Math.max(0, grossAmount - deductionAmount)
+
+      return {
+        id: Number(row.id) > 0 ? Number(row.id) : null,
+        deduction_code_id: row.deduction_code_id,
+        deduction_type: row.deductionTypeName,
+        tax_type: row.taxTypeName,
+        tax_type_name: row.taxTypeName,
+        code: row.code,
+        description: row.description,
+        divisor: row.divisor,
+        vat_percent: row.vatPercent,
+        ewt_percent: row.ewtPercent,
+        gross_vat_inc: grossAmount,
+        gross_vat_exc: Number(row.gross_vat_exc) || 0,
+        percent: Number(row.percent) || 0,
+        deduction_amount: deductionAmount,
+        net_amount: netAmount,
+        amount: deductionAmount,
+        is_manual: row.isManual,
+      }
+    },
+
+    async saveDeductionsForDisbursement(disbursementId, deductions, token) {
+      if (!disbursementId || !deductions?.length) return
+
+      for (const deduction of deductions) {
+        const row = this.normalizeDeductionRow(deduction)
+        const payload = this.deductionPayload(row)
+        const isManual = row.isManual || !row.deduction_code_id
+
+        await api.post(
+          '/api/barangay/deductions',
+          isManual
+            ? {
+                ...payload,
+                disbursement_id: disbursementId,
+                deduction_type: row.deductionTypeName || 'OTHERS',
+                tax_type: row.taxTypeName || null,
+                description: row.description || row.code || 'OTHERS',
+              }
+            : {
+                disbursement_id: disbursementId,
+                deduction_code_id: row.deduction_code_id,
+                gross_vat_inc: payload.gross_vat_inc,
+                description: row.description || '',
+              },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
+          },
+        )
+      }
+    },
+
+    getCreatedDisbursementId(responseData) {
+      const data = responseData?.data ?? responseData
+
+      return (
+        data?.id ||
+        data?.disbursement_id ||
+        data?.disbursement?.id ||
+        data?.data?.id ||
+        data?.data?.disbursement_id ||
+        data?.data?.disbursement?.id ||
+        null
+      )
+    },
+
     // Integrate expense types from accounts library into expenseData
     integrateExpenseTypesFromAccountsLib(accountsStore) {
       try {
@@ -1120,147 +1547,257 @@ generateLocalDvNumber() {
       }
     },
 
-    async fetchDisbursements(year = null) {
-  this.loadingDisbursements = true
-  try {
-    const authStore = useAuthStore()
-    const endpoint = authStore.admin ? '/api/admin/disbursements' : '/api/barangay/disbursements'
-    const token = authStore.admin ? authStore.adminToken : authStore.token
+    async fetchDisbursements(year = null, force = false) {
+      const authStore = useAuthStore()
+      const resolvedYear = Number(year ?? new Date().getFullYear())
+      const cacheKey = `${authStore.admin ? 'admin' : 'barangay'}:${resolvedYear}:${authStore.admin ? (authStore.getSelectedBarangay?.() ?? 'all') : 'all'}`
 
-    const params = {}
-    if (authStore.admin) {
-      const selectedBarangay = authStore.getSelectedBarangay()
-      if (selectedBarangay) params.barangay_id = selectedBarangay
-    }
-    params.year = year !== null && year !== undefined ? Number(year) : new Date().getFullYear()
+      if (!force && this.lastDisbursementFetchKey === cacheKey && this.disbursements.length) {
+        return { cached: true }
+      }
 
-    // Fetch all three in parallel
-const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = await Promise.allSettled([
-  api.get(endpoint, { 
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }, 
-    params 
-  }),
-  api.get(authStore.admin ? '/api/admin/particulars' : '/api/barangay/particulars', {
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-  }),
-  api.get('/api/barangay/bir-remittances', {
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    params: { 
-      year: params.year,
-      ...(params.barangay_id ? { barangay_id: params.barangay_id } : {}) 
+      this.lastDisbursementFetchKey = cacheKey
+      this.loadingDisbursements = true
+      try {
+        const authStore = useAuthStore()
+        const endpoint = authStore.admin
+          ? '/api/admin/disbursements'
+          : '/api/barangay/disbursements'
+        const birEndpoint = authStore.admin
+          ? '/api/admin/bir-remittances'
+          : '/api/barangay/bir-remittances'
+        const fundTransferEndpoint = authStore.admin
+          ? '/api/admin/fund-transfers'
+          : '/api/barangay/fund-transfers'
+        const token = authStore.admin ? authStore.adminToken : authStore.token
+
+        const params = {}
+        if (authStore.admin) {
+          const selectedBarangay = authStore.getSelectedBarangay()
+          if (selectedBarangay) params.barangay_id = selectedBarangay
+        }
+        params.year = year !== null && year !== undefined ? Number(year) : new Date().getFullYear()
+
+        // Fetch all three in parallel
+        const [disbursementsResponse, particularsResponse, birResponse, ftResponse] =
+          await Promise.allSettled([
+            api.get(endpoint, {
+              headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+              params,
+            }),
+            api.get(authStore.admin ? '/api/admin/particulars' : '/api/barangay/particulars', {
+              headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+            }),
+            api.get(birEndpoint, {
+              headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+              params: {
+                year: params.year,
+                ...(params.barangay_id ? { barangay_id: params.barangay_id } : {}),
+              },
+            }),
+            api.get(fundTransferEndpoint, {
+              headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+              params: {
+                year: params.year,
+                ...(params.barangay_id ? { barangay_id: params.barangay_id } : {}),
+              },
+            }),
+          ])
+
+        // Particulars
+        if (particularsResponse.status === 'fulfilled') {
+          const pData = Array.isArray(particularsResponse.value.data?.data)
+            ? particularsResponse.value.data.data
+            : Array.isArray(particularsResponse.value.data)
+              ? particularsResponse.value.data
+              : []
+          this.particulars = pData.map((item) => ({ label: item.particulars }))
+        }
+
+        const selectedBarangayName = authStore.admin ? authStore.getSelectedBarangayName?.() : null
+        const deductionsByDisbursement =
+          disbursementsResponse.status === 'fulfilled'
+            ? await this.fetchDeductionsByDisbursementMap()
+            : this.cachedDeductionsByDisbursement || {}
+
+        // Regular disbursements
+        const regularRows =
+          disbursementsResponse.status === 'fulfilled'
+            ? (disbursementsResponse.value.data.data || []).map((d) => {
+                const deductionsFromTable =
+                  deductionsByDisbursement[String(d.id)] || deductionsByDisbursement[d.id] || []
+                const deductions = deductionsFromTable.length
+                  ? deductionsFromTable
+                  : this.normalizeDeductions(d.deductions || [])
+                // const bankCheques = this.normalizeBankCheques(d.bank_cheques || [], {
+                //   bank_id: d.bank_id || null,
+                //   bank_name: d.bank_name || '',
+                //   bank: d.bank_name || '',
+                // })
+                const savedBankCheques =
+                  this.cachedBankChequesByDisbursement?.[d.id] ||
+                  this.cachedBankChequesByDisbursement?.[String(d.id)] ||
+                  []
+
+                const bankCheques = this.mergeDisbursementChequeRows(
+                  d,
+                  deductions,
+                  savedBankCheques,
+                )
+
+                if (bankCheques.length) {
+                  this.cachedBankChequesByDisbursement = {
+                    ...this.cachedBankChequesByDisbursement,
+                    [d.id]: bankCheques,
+                  }
+                }
+
+                const primaryCheque = bankCheques[0] || {}
+
+                return {
+                  id: d.id,
+                  row_id: d.row_id,
+                  disbursement_id: d.disbursement_id,
+                  expense_detail_id: d.expense_detail_id,
+                  date: d.date,
+                  dvNumber: d.dv_number,
+                  netAmount: this.resolveNetAmount(d, deductions),
+                  deductions,
+                  // chequeNumber: d.cheque_number,
+                  // bank_cheques: bankCheques,
+                  // bank: d.bank_name,
+                  chequeNumber: d.cheque_number || primaryCheque.cheque_number || '',
+                  bank_cheques: bankCheques,
+                  bank: d.bank_name || primaryCheque.bank || primaryCheque.bankName || '',
+                  bank_status: d.bank_status,
+                  payee: d.payee,
+                  payee2: d.payee2 || d.payee_2 || d.payee2_name || '',
+                  particular: d.particular,
+                  dvAmount: d.dv_amount,
+                  status: d.status,
+                  remarks: d.remarks,
+                  rejection_remarks: d.rejection_remarks,
+                  barangay_name:
+                    d.barangay_name ||
+                    d.barangayName ||
+                    (typeof d.barangay === 'string' ? d.barangay : d.barangay?.name) ||
+                    selectedBarangayName ||
+                    '',
+                  aging: calculateAging(d.date),
+                  expenses: d.expenses || [],
+                  type: d.disbursement_type || 'regular',
+                }
+              })
+            : []
+
+        // BIR rows
+        const birRows =
+          birResponse.status === 'fulfilled'
+            ? (birResponse.value.data.data || []).map((d) => {
+                const entries = this.normalizeBankCheques(d.entries || d.bank_cheques || [], {
+                  bank_id: d.bank_id || null,
+                  bank_name: d.bank_name || '',
+                  bank_status: d.bank_status || '',
+                })
+                const uniqueParticulars = [
+                  ...new Set(entries.map((e) => e.particular).filter(Boolean)),
+                ]
+                const particular =
+                  uniqueParticulars.length > 1
+                    ? `${uniqueParticulars.length} particulars`
+                    : uniqueParticulars[0] || d.particular || 'Remittance to BIR'
+
+                const primaryEntry = entries[0] || {}
+                return {
+                  id: d.id,
+                  _rawId: d.id,
+                  _table: 'bir',
+                  date: d.date,
+                  dvNumber: d.dv_number,
+                  chequeNumber:
+                    d.cheque_number ||
+                    primaryEntry.cheque_number ||
+                    primaryEntry.chequeNumber ||
+                    '',
+                  bank_id: d.bank_id,
+                  bank: d.bank_name || primaryEntry.bank || primaryEntry.bankName || '',
+                  bank_cheques: entries,
+                  bank_status: d.bank_status,
+                  payee: d.payee,
+                  particular,
+                  dvAmount: d.dv_amount,
+                  netAmount: d.dv_amount,
+                  remarks: d.remarks,
+                  rejection_remarks: d.rejection_remarks,
+                  type: 'bir',
+                  aging: calculateAging(d.date),
+                  // bank_cheques: [
+                  //   bank_id:
+                  // ],
+                  expenses: [],
+                }
+              })
+            : []
+
+        // SK / fund-transfer rows
+        const ftRows =
+          ftResponse.status === 'fulfilled'
+            ? (ftResponse.value.data.data || []).map((d) => {
+                const entries = this.normalizeBankCheques(d.entries || d.bank_cheques || [], {
+                  bank_id: d.bank_id || null,
+                  bank_name: d.bank_name || '',
+                  bank_status: d.bank_status || '',
+                })
+
+                const primaryEntry = entries[0] || {}
+                return {
+                  id: d.id,
+                  _rawId: d.id,
+                  _table: 'fund_transfer',
+                  _originalType: d.type, // keep original for debugging
+                  date: d.date,
+                  dvNumber: d.dv_number,
+                  chequeNumber:
+                    d.cheque_number ||
+                    primaryEntry.cheque_number ||
+                    primaryEntry.chequeNumber ||
+                    '',
+                  bank_id: d.bank_id,
+                  bank: d.bank_name || primaryEntry.bank || primaryEntry.bankName || '',
+                  bank_cheques: entries,
+                  bank_status: d.bank_status,
+                  payee: d.payee,
+                  dvAmount: d.amount ?? d.dv_amount,
+                  netAmount: d.dv_amount ?? d.amount,
+                  remarks: d.remarks,
+                  rejection_remarks: d.rejection_remarks,
+                  // type: 'sk',
+                  type:
+                    d.type === 'aid' || d.type === 'fund_transfer'
+                      ? 'provincial_aid'
+                      : d.type || 'sk',
+                  aging: calculateAging(d.date),
+                  expenses: [],
+                }
+              })
+            : []
+
+        // Merge all into one array
+        this.disbursements = [...regularRows, ...birRows, ...ftRows]
+
+        // Expense details
+        if (!this.expenseDetailsData.length && !authStore.admin) {
+          this.fetchExpenseDetails().catch((e) =>
+            console.warn('Failed to fetch expense details:', e),
+          )
+        }
+      } catch (error) {
+        console.error('Failed to fetch disbursements:', error)
+        this.disbursements = []
+      } finally {
+        this.loadingDisbursements = false
+      }
     },
-  }),
-  api.get('/api/barangay/fund-transfers', {
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    params: { 
-      year: params.year,
-      ...(params.barangay_id ? { barangay_id: params.barangay_id } : {}) 
-    },
-  }),
-])
-
-    // Particulars
-    if (particularsResponse.status === 'fulfilled') {
-      const pData = Array.isArray(particularsResponse.value.data?.data)
-        ? particularsResponse.value.data.data
-        : Array.isArray(particularsResponse.value.data) ? particularsResponse.value.data : []
-      this.particulars = pData.map(item => ({ label: item.particulars }))
-    }
-
-    const selectedBarangayName = authStore.admin
-      ? authStore.getSelectedBarangayName?.()
-      : null
-
-    // Regular disbursements
-   const regularRows = disbursementsResponse.status === 'fulfilled'
-  ? (disbursementsResponse.value.data.data || []).map(d => ({
-      id: d.id,
-      row_id: d.row_id,
-      disbursement_id: d.disbursement_id,
-      expense_detail_id: d.expense_detail_id,
-      date: d.date,
-      dvNumber: d.dv_number,
-      chequeNumber: d.cheque_number,
-      bank: d.bank_name,
-      payee: d.payee,
-      particular: d.particular,
-      dvAmount: d.dv_amount,
-      status: d.status,
-      remarks: d.remarks,
-      rejection_remarks: d.rejection_remarks,
-      barangay_name: d.barangay_name || d.barangayName || (typeof d.barangay === 'string' ? d.barangay : d.barangay?.name) || selectedBarangayName || '',
-      aging: calculateAging(d.date),
-      expenses: d.expenses || [],
-      type: 'regular',
-    }))
-  : []
-
-    // BIR rows
-    const birRows = birResponse.status === 'fulfilled'
-      ? (birResponse.value.data.data || []).map(d => ({
-          id: `bir-${d.id}`,
-          _rawId: d.id,
-          _table: 'bir',
-          date: d.date,
-          dvNumber: d.dv_number,
-          chequeNumber: d.cheque_number,
-          bank: d.bank_name,
-          payee: d.payee,
-          dvAmount: d.dv_amount,
-          status: d.status,
-          remarks: d.remarks,
-          rejection_remarks: d.rejection_remarks,
-          type: 'bir',
-          aging: calculateAging(d.date),
-          expenses: [],
-        }))
-      : []
-
-    // SK / fund-transfer rows
-  const ftRows = ftResponse.status === 'fulfilled'
-  ? (ftResponse.value.data.data || []).map(d => ({
-      id: `ft-${d.id}`,
-      _rawId: d.id,
-      _table: 'fund_transfer',
-      _originalType: d.type,           // keep original for debugging
-      date: d.date,
-      dvNumber: d.dv_number,
-      chequeNumber: d.cheque_number,
-      bank: d.bank_name,
-      payee: d.payee,
-      dvAmount: d.amount,
-      status: d.status,
-      remarks: d.remarks,
-      rejection_remarks: d.rejection_remarks,
-      // type: 'sk',                    
-      type: d.type || 'sk',
-      aging: calculateAging(d.date),
-      expenses: [],
-    }))
-  : []
-
-    // Merge all into one array
-    this.disbursements = [...regularRows, ...birRows, ...ftRows]
-    console.log('Disbursement types breakdown:', {
-      regular: regularRows.length,
-      bir: birRows.length,
-      sk: ftRows.length,
-      birSample: birRows[0],
-      skSample: ftRows[0],
-})
-
-    // Expense details (non-blocking)
-    if (!this.expenseDetailsData.length && !authStore.admin) {
-      this.fetchExpenseDetails().catch(e => console.warn('Failed to fetch expense details:', e))
-    }
-
-  } catch (error) {
-    console.error('Failed to fetch disbursements:', error)
-    this.disbursements = []
-  } finally {
-    this.loadingDisbursements = false
-  }
-},
 
     async fetchDisbursementById(id) {
       this.isChequeCancel = false
@@ -1283,6 +1820,7 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
             chequeNumber: disbursement.cheque_number,
             bank_id: disbursement.bank_id ? Number(disbursement.bank_id) : '',
             payee: disbursement.payee,
+            payee2: disbursement.payee2 || disbursement.payee_2 || disbursement.payee2_name || '',
             // Add other fields as needed
           }
 
@@ -1305,13 +1843,16 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
           // Load existing expenses from the disbursement
           if (disbursement.expenses && disbursement.expenses.length > 0) {
             this.expenses = disbursement.expenses.map((expense) => {
+              const expenseChequeNumber = getExpenseChequeNumber(expense)
               // Use the account_name from backend (which now includes subitem) or fallback to lookup
-              const fullAccountName = expense.account_name || this.getExpenseAccountName(
-                expense.expense_class_id,
-                expense.expense_type_id,
-                expense.expense_item_id,
-                expense.expense_sub_item_id
-              )
+              const fullAccountName =
+                expense.account_name ||
+                this.getExpenseAccountName(
+                  expense.expense_class_id,
+                  expense.expense_type_id,
+                  expense.expense_item_id,
+                  expense.expense_sub_item_id,
+                )
 
               // Parse the full account name to extract individual components
               const parts = fullAccountName.split(' > ')
@@ -1326,11 +1867,18 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
                 accountName: expense.account_name || fullAccountName, // Use particular as fallback
                 amount: expense.amount,
                 particular: expense.particular,
+                fund: expense.fund || '',
+                taxpayerType: expense.taxpayerType || expense.taxpayer_type || '',
+                taxType: expense.taxType || expense.tax_type || '',
                 bank_id: expense.bank_id || disbursement.bank_id || null,
                 bankName: expense.bank_name || disbursement.bank_name || '',
                 bank: expense.bank_name || disbursement.bank_name || '',
-                cheque_number: expense.cheque_number || disbursement.cheque_number || '',
-                chequeNumber: expense.cheque_number || disbursement.cheque_number || '',
+                cheque_number: expenseChequeNumber,
+                chequeNumber: expenseChequeNumber,
+                cheque_date: getExpenseChequeDate(expense, disbursement),
+                cheque_cancelled: Boolean(
+                  expense.cheque_cancelled || expense.cancel_cheque || expense.is_cancelled,
+                ),
                 expense_class_id: expense.expense_class_id,
                 expense_type_id: expense.expense_type_id,
                 expense_item_id: expense.expense_item_id,
@@ -1339,7 +1887,6 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
                 expense_type_name: parts[1] || '',
                 expense_item_name: parts[2] || '',
                 expense_sub_item_name: parts[3] || '',
-                // Add fields for multi-column display
                 account: account,
                 expenseType: expenseType,
                 expenseItem: expenseItem,
@@ -1350,7 +1897,33 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
             this.expenses = []
           }
 
-          this.currentItem = { ...disbursement }
+          const savedBankCheques = await this.fetchBankChequesForDisbursement(disbursement.id, {
+            bank_id: disbursement.bank_id || null,
+            bank_name: disbursement.bank_name || '',
+            bank: disbursement.bank_name || '',
+          })
+
+          const deductionsFromRaw = this.normalizeDeductions(disbursement.deductions || [])
+          this.bankCheques = this.mergeDisbursementChequeRows(
+            disbursement,
+            deductionsFromRaw,
+            savedBankCheques,
+          )
+
+          const deductionsFromTable = await this.fetchDeductionsForDisbursement(disbursement.id)
+          const deductions = deductionsFromTable.length
+            ? deductionsFromTable
+            : this.normalizeDeductions(disbursement.deductions || [])
+
+          this.forms.expense.amount = Number(disbursement.dv_amount) || 0
+          this.forms.expense.deductions = deductions
+          this._recalcDeductionTotals()
+
+          this.currentItem = {
+            ...disbursement,
+            deductions,
+            net_amount: this.resolveNetAmount(disbursement, deductions),
+          }
           // Store the original DV amount for validation during editing
           this.lockedTotalAmount = parseFloat(disbursement.dv_amount) || 0
           this.dialogs.editDisbursement = true
@@ -1363,10 +1936,17 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
     },
 
     // Fetch disbursement data for viewing only (doesn't modify form data or open dialogs)
-    async fetchDisbursementForView(id) {
+    async fetchDisbursementForView(id, type = 'regular') {
       try {
         const authStore = useAuthStore()
-        const endpoint = authStore.admin ? `/api/admin/disbursements/${id}` : `/api/barangay/disbursements/${id}`
+
+        if (type === 'bir' || type === 'sk' || type === 'provincial_aid') {
+          return await this.fetchBirOrSkForView(id, type)
+        }
+
+        const endpoint = authStore.admin
+          ? `/api/admin/disbursements/${id}`
+          : `/api/barangay/disbursements/${id}`
         // Use shared auth config that selects the correct token (admin vs barangay)
         const config = getAuthConfig()
 
@@ -1378,19 +1958,21 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
         const response = await api.get(endpoint, config)
 
         // Get the disbursement data
-        const disbursement = response.data.data;
+        const disbursement = response.data.data
 
         if (disbursement) {
           // Map expenses to ensure proper field names
           const mappedExpenses = (disbursement.expenses || []).map((expense) => {
+            const expenseChequeNumber = getExpenseChequeNumber(expense)
             // Use the account_name from backend (which now includes subitem) or fallback to lookup
-            const fullAccountName = expense.account_name || this.getExpenseAccountName(
-              expense.expense_class_id,
-              expense.expense_type_id,
-              expense.expense_item_id,
-              expense.expense_sub_item_id
-            )
-
+            const fullAccountName =
+              expense.account_name ||
+              this.getExpenseAccountName(
+                expense.expense_class_id,
+                expense.expense_type_id,
+                expense.expense_item_id,
+                expense.expense_sub_item_id,
+              )
 
             // Parse the full account name to extract individual components
             const parts = fullAccountName.split(' > ')
@@ -1404,12 +1986,19 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
               accountName: expense.account_name || fullAccountName,
               amount: expense.amount,
               particular: expense.particular,
+              fund: expense.fund || '',
+              taxpayerType: expense.taxpayerType || expense.taxpayer_type || '',
+              taxType: expense.taxType || expense.tax_type || '',
               accountId: expense.accountId,
               bank_id: expense.bank_id || disbursement.bank_id || null,
               bankName: expense.bank_name || disbursement.bank_name || '',
               bank: expense.bank_name || disbursement.bank_name || '',
-              cheque_number: expense.cheque_number || disbursement.cheque_number || '',
-              chequeNumber: expense.cheque_number || disbursement.cheque_number || '',
+              cheque_number: expenseChequeNumber,
+              chequeNumber: expenseChequeNumber,
+              cheque_date: getExpenseChequeDate(expense, disbursement),
+              cheque_cancelled: Boolean(
+                expense.cheque_cancelled || expense.cancel_cheque || expense.is_cancelled,
+              ),
               expense_class_id: expense.expense_class_id,
               expense_type_id: expense.expense_type_id,
               expense_item_id: expense.expense_item_id,
@@ -1427,49 +2016,73 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
           })
 
           // Map reimbursement expenses if they exist
-          const mappedReimbursementExpenses = disbursement.reimbursement?.expenses ?
-            disbursement.reimbursement.expenses.map((expense) => {
-              // Use the account_name from backend or fallback to lookup
-              const fullAccountName = expense.account_name || this.getExpenseAccountName(
-                expense.expense_class_id,
-                expense.expense_type_id,
-                expense.expense_item_id,
-                expense.expense_sub_item_id
-              )
+          const mappedReimbursementExpenses = disbursement.reimbursement?.expenses
+            ? disbursement.reimbursement.expenses.map((expense) => {
+                const expenseChequeNumber = getExpenseChequeNumber(expense)
+                // Use the account_name from backend or fallback to lookup
+                const fullAccountName =
+                  expense.account_name ||
+                  this.getExpenseAccountName(
+                    expense.expense_class_id,
+                    expense.expense_type_id,
+                    expense.expense_item_id,
+                    expense.expense_sub_item_id,
+                  )
 
-              // Parse the full account name to extract individual components
-              const parts = fullAccountName.split(' > ')
-              const account = parts[0] || ''
-              const expenseType = parts[1] || ''
-              const expenseItem = parts[2] || ''
-              const expenseSubItem = parts[3] || ''
+                // Parse the full account name to extract individual components
+                const parts = fullAccountName.split(' > ')
+                const account = parts[0] || ''
+                const expenseType = parts[1] || ''
+                const expenseItem = parts[2] || ''
+                const expenseSubItem = parts[3] || ''
 
-              return {
-                id: expense.id,
-                accountName: expense.account_name || fullAccountName,
-                amount: expense.amount,
-                particular: expense.particular,
-                accountId: expense.accountId,
-                bank_id: expense.bank_id || disbursement.reimbursement.bank_id || null,
-                bankName: expense.bank_name || disbursement.reimbursement.bank_name || '',
-                bank: expense.bank_name || disbursement.reimbursement.bank_name || '',
-                cheque_number: expense.cheque_number || disbursement.reimbursement.cheque_number || '',
-                chequeNumber: expense.cheque_number || disbursement.reimbursement.cheque_number || '',
-                expense_class_id: expense.expense_class_id,
-                expense_type_id: expense.expense_type_id,
-                expense_item_id: expense.expense_item_id,
-                expense_sub_item_id: expense.expense_sub_item_id,
-                expense_class_name: parts[0] || '',
-                expense_type_name: parts[1] || '',
-                expense_item_name: parts[2] || '',
-                expense_sub_item_name: parts[3] || '',
-                // Add fields for multi-column display
-                account: account,
-                expenseType: expenseType,
-                expenseItem: expenseItem,
-                expenseSubItem: expenseSubItem,
-              }
-            }) : []
+                return {
+                  id: expense.id,
+                  accountName: expense.account_name || fullAccountName,
+                  amount: expense.amount,
+                  particular: expense.particular,
+                  accountId: expense.accountId,
+                  bank_id: expense.bank_id || disbursement.reimbursement.bank_id || null,
+                  bankName: expense.bank_name || disbursement.reimbursement.bank_name || '',
+                  bank: expense.bank_name || disbursement.reimbursement.bank_name || '',
+                  cheque_number: expenseChequeNumber,
+                  chequeNumber: expenseChequeNumber,
+                  expense_class_id: expense.expense_class_id,
+                  expense_type_id: expense.expense_type_id,
+                  expense_item_id: expense.expense_item_id,
+                  expense_sub_item_id: expense.expense_sub_item_id,
+                  expense_class_name: parts[0] || '',
+                  expense_type_name: parts[1] || '',
+                  expense_item_name: parts[2] || '',
+                  expense_sub_item_name: parts[3] || '',
+                  // Add fields for multi-column display
+                  account: account,
+                  expenseType: expenseType,
+                  expenseItem: expenseItem,
+                  expenseSubItem: expenseSubItem,
+                }
+              })
+            : []
+
+          const deductionsFromTable = await this.fetchDeductionsForDisbursement(disbursement.id)
+          const deductions = deductionsFromTable.length
+            ? deductionsFromTable
+            : this.normalizeDeductions(disbursement.deductions || [])
+
+          const savedBankCheques = await this.fetchBankChequesForDisbursement(disbursement.id, {
+            bank_id: disbursement.bank_id || null,
+            bank_name: disbursement.bank_name || '',
+            bank: disbursement.bank_name || '',
+          })
+          // const rawBankCheques = disbursement.bank_cheques || []
+          const resolvedNetAmount = this.resolveNetAmount(disbursement, deductions)
+
+          const normalizedBankCheques = this.mergeDisbursementChequeRows(
+            disbursement,
+            deductions,
+            savedBankCheques,
+          )
+
           const result = {
             id: disbursement.id,
             date: disbursement.date,
@@ -1477,27 +2090,33 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
             chequeNumber: disbursement.cheque_number,
             bank_id: disbursement.bank_id,
             bank_name: disbursement.bank_name,
+            bank_cheques: normalizedBankCheques,
+            deductions,
+            netAmount: resolvedNetAmount,
             payee: disbursement.payee,
+            payee2: disbursement.payee2 || disbursement.payee_2 || disbursement.payee2_name || '',
             dvAmount: disbursement.dv_amount,
             status: disbursement.status,
             remarks: disbursement.remarks,
             rejection_remarks: disbursement.rejection_remarks,
             expenses: mappedExpenses,
-            reimbursement: disbursement.reimbursement ? {
-              id: disbursement.reimbursement.id,
-              date: disbursement.reimbursement.date,
-              dv_number: disbursement.reimbursement.dv_number,
-              dv_amount: disbursement.reimbursement.dv_amount,
-              bank_id: disbursement.reimbursement.bank_id,
-              bank_name: disbursement.reimbursement.bank_name,
-              cheque_number: disbursement.reimbursement.cheque_number,
-              status: disbursement.reimbursement.status,
-              ref_dv_number: disbursement.reimbursement.ref_dv_number,
-              expenses: mappedReimbursementExpenses
-            } : null
-          };
+            reimbursement: disbursement.reimbursement
+              ? {
+                  id: disbursement.reimbursement.id,
+                  date: disbursement.reimbursement.date,
+                  dv_number: disbursement.reimbursement.dv_number,
+                  dv_amount: disbursement.reimbursement.dv_amount,
+                  bank_id: disbursement.reimbursement.bank_id,
+                  bank_name: disbursement.reimbursement.bank_name,
+                  cheque_number: disbursement.reimbursement.cheque_number,
+                  status: disbursement.reimbursement.status,
+                  ref_dv_number: disbursement.reimbursement.ref_dv_number,
+                  expenses: mappedReimbursementExpenses,
+                }
+              : null,
+          }
 
-          return result;
+          return result
         }
         return null
       } catch (error) {
@@ -1532,6 +2151,82 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
       } catch (error) {
         console.error('Failed to liquidate disbursement:', error)
         return false
+      }
+    },
+
+    async fetchBirOrSkForView(id, type) {
+      try {
+        const authStore = useAuthStore()
+        const isBir = type === 'bir'
+        const endpoint = isBir
+          ? authStore.admin
+            ? `/api/admin/bir-remittances/${id}`
+            : `/api/barangay/bir-remittances/${id}`
+          : authStore.admin
+            ? `/api/admin/fund-transfers/${id}`
+            : `/api/barangay/fund-transfers/${id}`
+
+        const config = getAuthConfig()
+        const response = await api.get(endpoint, config)
+        const d = response.data.data
+
+        if (!d) return null
+        const fallback = {
+          bank_id: d.bank_id || null,
+          bank_name: d.bank_name || '',
+          particular: isBir ? 'Remittance to BIR' : '',
+        }
+
+        const fetchedCheques = await this.fetchBankChequesForDisbursement(d.id, fallback)
+
+        const rawEntries = d.entries || d.bank_cheques || []
+        const bankCheques = fetchedCheques.length
+          ? fetchedCheques
+          : rawEntries.length
+            ? this.normalizeBankCheques(rawEntries, fallback)
+            : d.cheque_number
+              ? [
+                  {
+                    id: `existing-${d.cheque_number}`,
+                    bank_id: d.bank_id || null,
+                    bank_name: d.bank_name || '',
+                    bankName: d.bank_name || '',
+                    bank: d.bank_name || '',
+                    cheque_number: d.cheque_number,
+                    chequeNumber: d.cheque_number,
+                    cheque_date: d.cheque_date || '',
+                    chequeDate: d.cheque_date || '',
+                    bank_status: d.bank_status || '',
+                    bankStatus: d.bank_status || '',
+                    particular: isBir ? 'Remittance to BIR' : '',
+                    amount: Number(d.dv_amount || d.amount) || 0,
+                  },
+                ]
+              : []
+
+        return {
+          id: d.id,
+          type,
+          date: d.date,
+          dvNumber: d.dv_number,
+          chequeNumber: d.cheque_number,
+          bank_id: d.bank_id,
+          bank_name: d.bank_name,
+          bank_cheques: bankCheques,
+          bank_status: d.bank_status,
+          payee: d.payee || (isBir ? 'Bureau of Internal Revenue' : ''),
+          dvAmount: isBir ? d.dv_amount : d.amount,
+          status: d.status,
+          remarks: d.remarks,
+          rejection_remarks: d.rejection_remarks,
+          // No expenses/deductions/reimbursement/liquidation for BIR/SK
+          expenses: [],
+          deductions: [],
+          reimbursement: null,
+        }
+      } catch (error) {
+        console.error('Error fetching BIR/SK for view:', error)
+        return null
       }
     },
 
@@ -1593,32 +2288,22 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
         const yyyy = today.getFullYear()
 
         this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
-        // try {
-        //   const response = await api.get('/api/barangay/generate-dvnumber', getAuthConfig())
-        //   const newDVNumber = response.data.data.dv_number || ''
-        //   this.forms.disbursement.dvNumber = newDVNumber
-        //   console.error('dvnum=================', newDVNumber)
-        // } catch (error) {
-        //   console.error('Failed to generate new DV number:', error)
-        //   this.forms.disbursement.dvNumber = ''
-        // }
+
         try {
-            const response = await api.get('/api/barangay/generate-dvnumber', getAuthConfig())
-            let apiDvNumber = response.data.data?.dv_number || ''
+          const response = await api.get('/api/barangay/generate-dvnumber', getAuthConfig())
+          let apiDvNumber = response.data.data?.dv_number || ''
 
-            // Check whether the number the backend handed back is already taken
-            // in the list we already fetched.  If so, derive the next one locally.
-            const alreadyExists = !!(apiDvNumber && (this.disbursements || [])
-              .some(d => d.dvNumber === apiDvNumber))
+          const alreadyExists = !!(
+            apiDvNumber && (this.disbursements || []).some((d) => d.dvNumber === apiDvNumber)
+          )
 
-            this.forms.disbursement.dvNumber = alreadyExists
-              ? this.generateLocalDvNumber()
-              : (apiDvNumber || this.generateLocalDvNumber())
-
-          } catch (error) {
-            console.error('Failed to generate DV number from API, using local fallback:', error)
-            this.forms.disbursement.dvNumber = this.generateLocalDvNumber()
-          }
+          this.forms.disbursement.dvNumber = alreadyExists
+            ? this.generateLocalDvNumber()
+            : apiDvNumber || this.generateLocalDvNumber()
+        } catch (error) {
+          console.error('Failed to generate DV number from API, using local fallback:', error)
+          this.forms.disbursement.dvNumber = this.generateLocalDvNumber()
+        }
 
         // Generate cheque number (separate logic)
         const lastCheque = this.disbursements.reduce(
@@ -1632,7 +2317,6 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
           await this.fetchExpenseDetails()
         }
       } else if (dialogName === 'expense') {
-        // Only fetch expense accounts if not already loaded
         if (this.expenseData.length === 0) {
           await this.fetchExpenseAccounts()
         }
@@ -1667,15 +2351,15 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
     async openOrDetailsDialog(item) {
       // Always fetch fresh data from backend to ensure we have the complete disbursement with expenses
       try {
-        const freshDisbursementData = await this.fetchDisbursementForView(item.id);
+        const freshDisbursementData = await this.fetchDisbursementForView(item.id)
         if (freshDisbursementData) {
-          this.currentLiquidation = freshDisbursementData;
+          this.currentLiquidation = freshDisbursementData
         } else {
           // Fallback to item data if fetch fails
-          this.currentLiquidation = JSON.parse(JSON.stringify(item));
+          this.currentLiquidation = JSON.parse(JSON.stringify(item))
         }
       } catch (error) {
-        console.error('Error fetching fresh disbursement data:', error);
+        console.error('Error fetching fresh disbursement data:', error)
         // Fallback: create a new object with the essential properties
         this.currentLiquidation = {
           id: item.id,
@@ -1683,13 +2367,32 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
           payee: item.payee,
           date: item.date,
           dvAmount: item.dvAmount,
+          netAmount: item.netAmount,
           status: item.status,
           remarks: item.remarks,
           rejection_remarks: item.rejection_remarks,
           expenses: item.expenses || [],
-          orDetails: []
-        };
+          deductions: item.deductions || [],
+          orDetails: [],
+        }
       }
+
+      const deductionsFromTable = await this.fetchDeductionsForDisbursement(
+        this.currentLiquidation?.id || item.id,
+      )
+      const deductions = deductionsFromTable.length
+        ? deductionsFromTable
+        : this.normalizeDeductions(this.currentLiquidation?.deductions || item.deductions || [])
+      this.currentLiquidation.deductions = deductions
+      this.currentLiquidation.netAmount = this.resolveNetAmount(this.currentLiquidation, deductions)
+      this.bankCheques = this.normalizeBankCheques(this.currentLiquidation.bank_cheques || [], {
+        bank_id: this.currentLiquidation.bank_id || null,
+        bank_name: this.currentLiquidation.bank_name || this.currentLiquidation.bank || '',
+      })
+      this.forms.expense.amount =
+        Number(this.currentLiquidation.dvAmount ?? this.currentLiquidation.dv_amount) || 0
+      this.forms.expense.deductions = deductions
+      this._recalcDeductionTotals()
 
       if (item.expense_detail_id && this.currentLiquidation?.expenses?.length) {
         const selectedExpense = this.currentLiquidation.expenses.find(
@@ -1749,8 +2452,6 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
       return this.openOrDetailsDialog(row)
     },
 
-    // In your disbursementStore.js actions
-    // In your actions
     // For viewing only (read-only)
     async openViewOrDetails(row) {
       // Close any other dialogs that might be open
@@ -1758,18 +2459,19 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
       this.dialogs.orDetails = false
       this.dialogs.disbursement = false
 
+      const rowType = row.type || 'regular'
+
       // Always fetch fresh data from backend to ensure we have the correct disbursement
       // This prevents issues where the list might show reimbursement data instead of main disbursement
       try {
-        const freshDisbursementData = await this.fetchDisbursementForView(row.id);
+        const freshDisbursementData = await this.fetchDisbursementForView(row.id, rowType)
         if (freshDisbursementData) {
-          this.currentLiquidation = freshDisbursementData;
+          this.currentLiquidation = freshDisbursementData
         } else {
-          // Fallback to row data if fetch fails
-          this.currentLiquidation = JSON.parse(JSON.stringify(row));
+          this.currentLiquidation = JSON.parse(JSON.stringify(row))
         }
       } catch (error) {
-        console.error('Error fetching fresh disbursement data:', error);
+        console.error('Error fetching fresh disbursement data:', error)
         // Fallback: create a new object with the essential properties
         this.currentLiquidation = {
           id: row.id,
@@ -1777,113 +2479,131 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
           payee: row.payee,
           date: row.date,
           dvAmount: row.dvAmount,
+          netAmount: row.netAmount,
           status: row.status,
           remarks: row.remarks,
           rejection_remarks: row.rejection_remarks,
           expenses: row.expenses || [],
-          orDetails: []
-        };
+          deductions: row.deductions || [],
+          orDetails: [],
+        }
       }
 
+      const deductionsFromTable = await this.fetchDeductionsForDisbursement(
+        this.currentLiquidation?.id || row.id,
+      )
+      const deductions = deductionsFromTable.length
+        ? deductionsFromTable
+        : this.normalizeDeductions(this.currentLiquidation?.deductions || row.deductions || [])
+      this.currentLiquidation.deductions = deductions
+      this.currentLiquidation.netAmount = this.resolveNetAmount(this.currentLiquidation, deductions)
+      this.bankCheques = this.normalizeBankCheques(this.currentLiquidation.bank_cheques || [], {
+        bank_id: this.currentLiquidation.bank_id || null,
+        bank_name: this.currentLiquidation.bank_name || this.currentLiquidation.bank || '',
+      })
+      this.forms.expense.amount =
+        Number(this.currentLiquidation.dvAmount ?? this.currentLiquidation.dv_amount) || 0
+      this.forms.expense.deductions = deductions
+      this._recalcDeductionTotals()
 
       // Initialize orDetails as empty array
       this.currentLiquidation.orDetails = []
 
-      // Ensure expenses are available
-      if (!this.currentLiquidation.expenses || this.currentLiquidation.expenses.length === 0) {
-        try {
-          const disbursement = await this.fetchDisbursementForView(row.id)
-          if (disbursement) {
-            this.currentLiquidation.expenses = disbursement.expenses;
-            this.currentLiquidation.reimbursement = disbursement.reimbursement;
-          }
-        } catch (error) {
-          console.error('Error fetching disbursement details:', error)
-        }
-      }
-
-      // Fetch OR Details from backend - ALWAYS use the main disbursement ID (row.id)
-      // This ensures OR details are always for the original disbursement, not reimbursement
-      if (row.id) {
-        try {
-          // Get auth store instance
-          const authStore = useAuthStore()
-
-          // Validate auth store
-          if (!authStore) {
-            throw new Error('Auth store not available')
-          }
-
-          // Use different endpoints for admin vs regular users
-          // IMPORTANT: Always use row.id (main disbursement ID) for OR details
-          const endpoint = authStore.admin
-            ? `/api/admin/disbursements/${row.id}/or-details`
-            : `/api/barangay/disbursements/${row.id}/or-details`
-          const token = authStore.admin ? authStore.adminToken : authStore.token
-
-          if (!token) {
-            throw new Error('No authentication token available')
-          }
-
-          const res = await api.get(endpoint, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: 'application/json',
-            },
-          })
-
-          // Check if we have data and it's an array
-          if (
-            res.data &&
-            res.data.data &&
-            Array.isArray(res.data.data) &&
-            res.data.data.length > 0
-          ) {
-            const backendUrl = 'http://localhost:8000' // Change if your backend runs elsewhere
-            this.currentLiquidation.orDetails = res.data.data.map((or, index) => {
-
-              // Convert YYYY-MM-DD to DD/MM/YYYY format
-              let formattedDate = ''
-              if (or.or_date) {
-                const dateParts = or.or_date.split('-')
-                if (dateParts.length === 3) {
-                  formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`
-                }
-              }
-
-              const mappedOr = {
-                id: or.id,
-                index: index,
-                orDate: formattedDate || or.or_date,
-                orNumber: or.or_number,
-                orAmount: or.or_amount,
-                orImage: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
-                orPhotoUrl: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
-                serverPhotoPath: or.or_photo,
-                remarks: or.remarks || '',
-                isExisting: true, // Flag to identify existing OR details
-              }
-
-              return mappedOr
-            })
-            // Set single remarks from the latest OR detail (most recent one)
-            if (res.data.data.length > 0) {
-              // Get the latest OR detail (last in the array) for remarks
-              const latestOrDetail = res.data.data[res.data.data.length - 1]
-              this.currentLiquidation.remarks = latestOrDetail.remarks || ''
+      if (rowType === 'regular') {
+        // Ensure expenses are available
+        if (!this.currentLiquidation.expenses || this.currentLiquidation.expenses.length === 0) {
+          try {
+            const disbursement = await this.fetchDisbursementForView(row.id)
+            if (disbursement) {
+              this.currentLiquidation.expenses = disbursement.expenses
+              this.currentLiquidation.reimbursement = disbursement.reimbursement
             }
-          } else {
+          } catch (error) {
+            console.error('Error fetching disbursement details:', error)
+          }
+        }
+
+        // Fetch OR Details from backend - ALWAYS use the main disbursement ID (row.id)
+        // This ensures OR details are always for the original disbursement, not reimbursement
+        if (row.id) {
+          try {
+            // Get auth store instance
+            const authStore = useAuthStore()
+
+            // Validate auth store
+            if (!authStore) {
+              throw new Error('Auth store not available')
+            }
+
+            // Use different endpoints for admin vs regular users
+            // IMPORTANT: Always use row.id (main disbursement ID) for OR details
+            const endpoint = authStore.admin
+              ? `/api/admin/disbursements/${row.id}/or-details`
+              : `/api/barangay/disbursements/${row.id}/or-details`
+            const token = authStore.admin ? authStore.adminToken : authStore.token
+
+            if (!token) {
+              throw new Error('No authentication token available')
+            }
+
+            const res = await api.get(endpoint, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/json',
+              },
+            })
+
+            // Check if we have data and it's an array
+            if (
+              res.data &&
+              res.data.data &&
+              Array.isArray(res.data.data) &&
+              res.data.data.length > 0
+            ) {
+              const backendUrl = 'http://localhost:8000' // Change if your backend runs elsewhere
+              this.currentLiquidation.orDetails = res.data.data.map((or, index) => {
+                // Convert YYYY-MM-DD to DD/MM/YYYY format
+                let formattedDate = ''
+                if (or.or_date) {
+                  const dateParts = or.or_date.split('-')
+                  if (dateParts.length === 3) {
+                    formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`
+                  }
+                }
+
+                const mappedOr = {
+                  id: or.id,
+                  index: index,
+                  orDate: formattedDate || or.or_date,
+                  orNumber: or.or_number,
+                  orAmount: or.or_amount,
+                  orImage: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
+                  orPhotoUrl: or.or_photo ? `${backendUrl}/storage/${or.or_photo}` : null,
+                  serverPhotoPath: or.or_photo,
+                  remarks: or.remarks || '',
+                  isExisting: true, // Flag to identify existing OR details
+                }
+
+                return mappedOr
+              })
+              // Set single remarks from the latest OR detail (most recent one)
+              if (res.data.data.length > 0) {
+                // Get the latest OR detail (last in the array) for remarks
+                const latestOrDetail = res.data.data[res.data.data.length - 1]
+                this.currentLiquidation.remarks = latestOrDetail.remarks || ''
+              }
+            } else {
+              this.currentLiquidation.orDetails = []
+            }
+          } catch (error) {
+            console.error('Error fetching OR details:', error)
+            console.error('Error details:', error.response?.data)
             this.currentLiquidation.orDetails = []
           }
-        } catch (error) {
-          console.error('Error fetching OR details:', error)
-          console.error('Error details:', error.response?.data)
+        } else {
           this.currentLiquidation.orDetails = []
         }
-      } else {
-        this.currentLiquidation.orDetails = []
       }
-
       this.dialogs.viewOrDetails = true
     },
 
@@ -1905,18 +2625,40 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
       // DO NOT recalculate - this prevents double counting
       const availableBalance = item.balance || 0
 
+      // this.forms.expense = {
+      //   account: accountDisplay,
+      //   accountId: item.id,
+      //   balance: availableBalance, // Use the pre-calculated balance from selection table
+      //   originalBalance: item.originalBalance || item.balance || 0, // Keep original balance for reference
+      //   particulars: '',
+      //   amount: '',
+      //   disbursementId: this.currentItem?.id || null,
+      //   bank_id: null,
+      //   cheque_number: '',
+      //   bankLoading: false,
+      //   fund: '',
+      //   taxpayerType: '',
+      //   taxType: '',
+      //   // Store additional information for backend
+      //   expense_class_id: item.expense_class_id,
+      //   expense_type_id: item.expense_type_id,
+      //   expense_item_id: item.expense_item_id,
+      //   expense_sub_item_id: item.expense_sub_item_id,
+      // }
       this.forms.expense = {
+        ...this.forms.expense,
         account: accountDisplay,
         accountId: item.id,
-        balance: availableBalance, // Use the pre-calculated balance from selection table
-        originalBalance: item.originalBalance || item.balance || 0, // Keep original balance for reference
+        balance: availableBalance,
+        originalBalance: item.originalBalance || item.balance || 0,
         particulars: '',
         amount: '',
         disbursementId: this.currentItem?.id || null,
-        bank_id: null,         
-        cheque_number: '',     
-        bankLoading: false,    
-        // Store additional information for backend
+        bank_id: null,
+        cheque_number: '',
+        bankLoading: false,
+        isEditing: false,
+        editingExpenseId: null,
         expense_class_id: item.expense_class_id,
         expense_type_id: item.expense_type_id,
         expense_item_id: item.expense_item_id,
@@ -2010,8 +2752,19 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
         particulars: existingExpense.particular,
         amount: existingExpense.amount,
         disbursementId: this.currentItem?.id || null,
+        fund: existingExpense.fund || '',
+        taxpayerType: existingExpense.taxpayerType || '',
+        taxType: existingExpense.taxType || '',
         bank_id: existingExpense.bank_id || this.forms.disbursement.bank_id || null,
-        cheque_number: existingExpense.cheque_number || existingExpense.chequeNumber || this.forms.disbursement.chequeNumber || '',
+        cheque_number:
+          existingExpense.cheque_number ||
+          existingExpense.chequeNumber ||
+          this.forms.disbursement.chequeNumber ||
+          '',
+        cheque_date: existingExpense.cheque_date || '',
+        cheque_cancelled: Boolean(existingExpense.cheque_cancelled),
+        original_cheque_number: existingExpense.original_cheque_number || '',
+        original_bank_id: existingExpense.original_bank_id || null,
         bankLoading: false,
         // Store additional information for backend
         expense_class_id: existingExpense.expense_class_id,
@@ -2024,68 +2777,101 @@ const [disbursementsResponse, particularsResponse, birResponse, ftResponse] = aw
       }
       this.dialogs.expenseDetail = true
     },
+
     // Disbursement Actions
-    // Update your saveDisbursement action in the Pinia store
     async saveDisbursement() {
       this.savingDisbursement = true // Start loading
+      const savedDeductions = [...(this.forms.expense.deductions || [])]
+      const savedBankCheques = [...(this.bankCheques || [])].filter((row) => Number(row.amount) > 0)
       try {
         const authStore = useAuthStore()
         const token = authStore.admin ? authStore.adminToken : authStore.token
 
-        // Validate required fields
-        // if (!this.forms.disbursement.bank_id) {
-        //   throw new Error('Please select a bank')
-        // }
         if (!this.forms.disbursement.payee) {
           throw new Error('Please enter a payee')
         }
         if (this.expenses.length === 0) {
           throw new Error('Please add at least one expense')
         }
+        if (savedBankCheques.length === 0) {
+          throw new Error('Please add at least one bank cheque')
+        }
 
-        // Prepare the payload
-        // const payload = {
-        //   date: this.forms.disbursement.date,
-        //   dv_number: this.forms.disbursement.dvNumber,
-        //   cheque_number: this.autoCheque,
-        //   cheque_booklet: this.autoBookletID,
-        //   bank_id: this.forms.disbursement.bank_id,
-        //   payee: this.forms.disbursement.payee,
-        //   dv_amount: this.totalExpensesAmount,
-        //   expenses: this.expenses.map((expense) => ({
-        //   accountId: expense.accountId,
-        //   amount: expense.amount,
-        //   particular: expense.particular,
-        //   bank_id: expense.bank_id,              
-        //   cheque_number: expense.cheque_number,  
-        //   expense_class_id: expense.expense_class_id, 
-        //   expense_type_id: expense.expense_type_id,
-        //   expense_item_id: expense.expense_item_id,
-        //   expense_sub_item_id: expense.expense_sub_item_id, 
-        // })),
-        // }
+        const totalDeductions = savedDeductions.reduce(
+          (sum, row) => sum + (Number(row.deduction_amount ?? row.amount) || 0),
+          0,
+        )
+        const netAmount = Math.max(
+          0,
+          Math.round((this.totalExpensesAmount - totalDeductions) * 100) / 100,
+        )
+        const chequeTotal =
+          Math.round(
+            savedBankCheques.reduce((sum, row) => {
+              return sum + (Number(row.amount) || 0)
+            }, 0) * 100,
+          ) / 100
 
-        const firstExpense = this.expenses[0]
+        if (chequeTotal !== netAmount) {
+          const difference = Math.abs(netAmount - chequeTotal).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+          throw new Error(
+            chequeTotal > netAmount
+              ? `Cheque amount exceeded the net amount by ₱${difference}`
+              : `Cheque amount is lacking ₱${difference}`,
+          )
+        }
+        const chequePayload = savedBankCheques.map((cheque) => ({
+          bank_id: cheque.bank_id || null,
+          booklet_id: cheque.booklet_id || null,
+          cheque_number: cheque.cheque_number || cheque.chequeNumber || '',
+          cheque_date: cheque.cheque_date || cheque.chequeDate || null,
+          bank_status: cheque.bank_status || cheque.bankStatus || '',
+          amount: Number(cheque.amount) || 0,
+        }))
 
-const payload = {
-  date: this.forms.disbursement.date,
-  dv_number: this.forms.disbursement.dvNumber,
-  cheque_number: firstExpense.cheque_number,
-  bank_id: firstExpense.bank_id,
-  payee: this.forms.disbursement.payee,
-  dv_amount: this.totalExpensesAmount,
-  expenses: this.expenses.map((expense) => ({
-    accountId: expense.accountId,
-    amount: expense.amount,
-    particular: expense.particular,
-    bank_id: expense.bank_id,
-    cheque_number: expense.cheque_number,
-    expense_class_id: expense.expense_class_id,
-    expense_type_id: expense.expense_type_id,
-    expense_item_id: expense.expense_item_id,
-    expense_sub_item_id: expense.expense_sub_item_id,
-  })),
-}
+        const firstCheque = savedBankCheques[0] || {}
+        const chequeForExpense = savedBankCheques[0] || {}
+        const payload = {
+          date: this.forms.disbursement.date,
+          dv_number: this.forms.disbursement.dvNumber,
+          cheque_number: firstCheque.cheque_number || '',
+          bank_cheques: chequePayload,
+          bank_id: firstCheque.bank_id || null,
+          cheque_date: firstCheque.cheque_date || firstCheque.chequeDate || null,
+          cheque_booklet: firstCheque.booklet_id || null,
+          cheque_amount: Number(firstCheque.amount) || 0,
+          bank_status: firstCheque.bank_status,
+          payee: this.forms.disbursement.payee,
+          payee2: this.forms.disbursement.payee2,
+          dv_amount: this.totalExpensesAmount,
+          net_amount: netAmount,
+          deductions: (this.forms.expense.deductions || []).map((ded) =>
+            this.deductionPayload(ded),
+          ),
+          expenses: this.expenses.map((expense) => ({
+            accountId: expense.accountId,
+            amount: expense.amount,
+            particular: expense.particular,
+            fund: expense.fund,
+            taxpayer_type: expense.taxpayerType,
+            tax_type: expense.taxType,
+
+            bank_id: expense.bank_id || chequeForExpense.bank_id || null,
+            cheque_number: expense.cheque_number || chequeForExpense.cheque_number || '',
+            cheque_date:
+              expense.cheque_date ||
+              chequeForExpense.cheque_date ||
+              chequeForExpense.chequeDate ||
+              null,
+            expense_class_id: expense.expense_class_id,
+            expense_type_id: expense.expense_type_id,
+            expense_item_id: expense.expense_item_id,
+            expense_sub_item_id: expense.expense_sub_item_id,
+          })),
+        }
 
         // Add barangay_id for admin users if selected
         if (authStore.admin) {
@@ -2106,14 +2892,39 @@ const payload = {
           },
         })
 
-        // The backend now automatically creates expense details, so we don't need to do it manually
-        // Close the dialog immediately to avoid showing cleared fields briefly
+        const createdDisbursementId = this.getCreatedDisbursementId(response.data)
+        if (!createdDisbursementId) {
+          console.warn('Created disbursement id was missing.', response.data)
+        } else {
+          this.cachedDeductionsByDisbursement = {
+            ...this.cachedDeductionsByDisbursement,
+            [createdDisbursementId]: this.normalizeDeductions(savedDeductions),
+          }
+          this.cachedBankChequesByDisbursement = {
+            ...this.cachedBankChequesByDisbursement,
+            [createdDisbursementId]: this.normalizeBankCheques(savedBankCheques),
+          }
+        }
+
+        if (!authStore.admin && savedDeductions.length > 0) {
+          if (!createdDisbursementId) {
+            console.warn(
+              'Could not save deductions because the created disbursement id was missing.',
+              response.data,
+            )
+          } else {
+            await this.saveDeductionsForDisbursement(createdDisbursementId, savedDeductions, token)
+          }
+        }
+
         this.dialogs.disbursement = false
         this.pendingChequeNumbers = []
+        this.bankCheques = []
         // Defer clearing form and regenerating fields until after dialog hide animation
         setTimeout(async () => {
           this.resetForm('disbursement')
           this.expenses = []
+          this.bankCheques = []
 
           const today = new Date()
           const dd = String(today.getDate()).padStart(2, '0')
@@ -2125,11 +2936,12 @@ const payload = {
           try {
             const response = await api.get('/api/barangay/generate-dvnumber', getAuthConfig())
             const apiDv = response.data.data?.dv_number || ''
-            const alreadyExists = !!(apiDv && (this.disbursements || [])
-              .some(d => d.dvNumber === apiDv))
+            const alreadyExists = !!(
+              apiDv && (this.disbursements || []).some((d) => d.dvNumber === apiDv)
+            )
             this.forms.disbursement.dvNumber = alreadyExists
               ? this.generateLocalDvNumber()
-              : (apiDv || this.generateLocalDvNumber())
+              : apiDv || this.generateLocalDvNumber()
           } catch (error) {
             console.error('Failed to generate DV number, using local fallback:', error)
             this.forms.disbursement.dvNumber = this.generateLocalDvNumber()
@@ -2161,29 +2973,21 @@ const payload = {
       }
     },
 
-    // New method to refresh data in background without blocking UI
     async refreshDataInBackground() {
       try {
         const authStore = useAuthStore()
 
-        // Refresh disbursements list first (most important)
-        await this.fetchDisbursements()
+        // Force a real reload so the list updates right after saving
+        await this.fetchDisbursements(null, true)
 
-        // Only refresh expense-related data for barangay users (admin users don't need this)
         if (!authStore.admin) {
-          // Refresh expense details for balance calculations
           await this.fetchExpenseDetails()
-
-          // Refresh expense accounts with updated balances
           this.refreshExpenseAccountsWithBalances()
-
-          // Force a refresh of the expense accounts to update the selection table
-          this.expenseData = [] // Clear to force refresh
+          this.expenseData = []
           await this.fetchExpenseAccounts()
         }
       } catch (error) {
         console.error('Background refresh failed:', error)
-        // Don't show error to user since this is background operation
       }
     },
 
@@ -2211,7 +3015,6 @@ const payload = {
     // Helper method to get expense account name from IDs
     getExpenseAccountName(expenseClassId, expenseTypeId, expenseItemId, expenseSubItemId = null) {
       try {
-
         let accountName = ''
 
         // Find expense class - convert IDs to strings for comparison
@@ -2239,7 +3042,6 @@ const payload = {
 
                   // Find expense subitem
                   if (expenseSubItemId && expenseItem.children) {
-
                     const expenseSubItem = expenseItem.children.find(
                       (esi) => String(esi.id) === String(expenseSubItemId),
                     )
@@ -2261,18 +3063,40 @@ const payload = {
       }
     },
 
+    async fetchDisbursementStatusesOnly(year = null) {
+      try {
+        const authStore = useAuthStore()
+        const endpoint = authStore.admin
+          ? '/api/admin/disbursements'
+          : '/api/barangay/disbursements'
+        const token = authStore.admin ? authStore.adminToken : authStore.token
+        const params = { year: Number(year ?? new Date().getFullYear()) }
+        if (authStore.admin) {
+          const barangay = authStore.getSelectedBarangay?.()
+          if (barangay) params.barangay_id = barangay
+        }
+
+        const res = await api.get(endpoint, {
+          headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+          params,
+        })
+
+        // Only update the fields the badge needs — don't touch the full disbursements array
+        // used by the Disbursements page, so it don't clobber richer data it may have loaded.
+        return (res.data.data || []).map((d) => ({
+          status: d.status,
+          barangay_name: d.barangay_name,
+        }))
+      } catch (e) {
+        console.warn('Failed to fetch disbursement statuses:', e)
+        return []
+      }
+    },
+
     // Expense Actions
     async saveExpense() {
       const amount = Number(this.forms.expense.amount) || 0
       const particulars = this.forms.expense.particulars?.trim() || ''
-
-            if (!this.forms.expense.bank_id) {
-        throw new Error('Bank is required')
-      }
-
-      if (!this.forms.expense.cheque_number) {
-        throw new Error('No available cheque number for the selected bank')
-      }
 
       const bank = bankStore.availableBanks.find(
         (b) => String(b.id) === String(this.forms.expense.bank_id),
@@ -2329,22 +3153,44 @@ const payload = {
             ...this.expenses[existingExpenseIndex],
             amount: amount,
             particular: particulars,
+            fund: this.forms.expense.fund || '',
+            taxpayerType: this.forms.expense.taxpayerType || '',
+            taxType: this.forms.expense.taxType || '',
             bank_id: this.forms.expense.bank_id,
             bankName: bank?.name || this.expenses[existingExpenseIndex].bankName || '',
             bank: bank?.name || this.expenses[existingExpenseIndex].bank || '',
             cheque_number: this.forms.expense.cheque_number,
             chequeNumber: this.forms.expense.cheque_number,
+            cheque_date:
+              this.forms.expense.cheque_date ||
+              this.expenses[existingExpenseIndex].cheque_date ||
+              '',
+            cheque_cancelled: Boolean(
+              this.forms.expense.cheque_cancelled ||
+                this.expenses[existingExpenseIndex].cheque_cancelled,
+            ),
+            original_cheque_number:
+              this.forms.expense.original_cheque_number ||
+              this.expenses[existingExpenseIndex].original_cheque_number ||
+              '',
+            original_bank_id:
+              this.forms.expense.original_bank_id ||
+              this.expenses[existingExpenseIndex].original_bank_id ||
+              null,
           }
           this.expenses = [...this.expenses]
         }
       } else {
         // Create new expense object - keep in frontend only until disbursement is saved
         const expense = {
-          id: this.getNextExpenseId(), // Generate new frontend ID for new expenses
+          id: this.getNextExpenseId(),
           accountId: this.forms.expense.accountId,
           accountName: this.forms.expense.account,
           amount: amount,
           particular: particulars,
+          fund: this.forms.expense.fund || '',
+          taxpayerType: this.forms.expense.taxpayerType || '',
+          taxType: this.forms.expense.taxType || '',
           expense_class_id: this.forms.expense.expense_class_id,
           expense_type_id: this.forms.expense.expense_type_id,
           expense_item_id: this.forms.expense.expense_item_id,
@@ -2405,6 +3251,37 @@ const payload = {
       this.deleteExpense(row.id)
     },
 
+    markExpenseChequeCancelled(row) {
+      const idx = this.expenses.findIndex((expense) => String(expense.id) === String(row.id))
+      if (idx === -1) return { success: false, message: 'Expense row not found' }
+
+      const expense = this.expenses[idx]
+      const chequeNumber = expense.cheque_number || expense.chequeNumber
+      if (!chequeNumber) return { success: false, message: 'No cheque number to cancel' }
+
+      this.expenses[idx] = {
+        ...expense,
+        original_cheque_number: expense.original_cheque_number || chequeNumber,
+        original_bank_id: expense.original_bank_id || expense.bank_id || null,
+        cheque_cancelled: true,
+        cheque_number: '',
+        chequeNumber: '',
+        bank_id: null,
+        bankName: '',
+        bank: '',
+      }
+
+      this.isChequeCancel = true
+      this.cancelledCheques.add(chequeNumber)
+      try {
+        localStorage.setItem('cancelledCheques', JSON.stringify(Array.from(this.cancelledCheques)))
+      } catch (error) {
+        console.warn('Failed to persist cancelled cheque locally:', error)
+      }
+      this.expenses = [...this.expenses]
+      return { success: true, message: 'Cheque marked for cancellation' }
+    },
+
     // Helper function to format date
     formatDateForForm(dateStr) {
       if (!dateStr) return ''
@@ -2427,24 +3304,48 @@ const payload = {
           chequeNumber: '',
           bank_id: '',
           payee: '',
+          payee2: '',
           amount: '',
+          bankCheques: [],
         }
         this.expenses = []
+        this.bankCheques = []
         // Reset bank-related selections
         this.autoBookletID = null
         this.autoCheque = null
         this.pendingChequeNumbers = []
+        // } else if (formName === 'expense') {
+        //   this.forms.expense = {
+        //     account: '',
+        //     balance: 0,
+        //     fund: '',
+        //     taxpayerType: '',
+        //     taxType: '',
+        //     particulars: '',
+        //     amount: '',
+        //     disbursementId: null,
+        //     isEditing: false,
+        //     editingExpenseId: null,
+        //     bank_id: null,
+        //     cheque_number: '',
+        //     bankLoading: false,
+        //     deductions: [],
+        //     totalDeduction: 0,
+        //     netAmount: 0,
+        //   }
       } else if (formName === 'expense') {
         this.forms.expense = {
+          ...this.forms.expense,
           account: '',
           balance: 0,
           particulars: '',
+          amount: '',
           disbursementId: null,
           isEditing: false,
           editingExpenseId: null,
-          bank_id: null,      
-    cheque_number: '',   
-    bankLoading: false,
+          bank_id: null,
+          cheque_number: '',
+          bankLoading: false,
         }
       } else if (formName === 'orDetails') {
         this.forms.orDetails = {
@@ -2564,30 +3465,91 @@ const payload = {
           }
         }
 
+        const editDeductionTotal = (this.forms.expense.deductions || []).reduce((sum, row) => {
+          return sum + (Number(row.deduction_amount ?? row.amount) || 0)
+        }, 0)
+        const editNetAmount = Math.max(
+          0,
+          Math.round(((this.totalExpensesAmount || 0) - editDeductionTotal) * 100) / 100,
+        )
+        const validEditBankCheques = (this.bankCheques || []).filter(
+          (row) => Number(row.amount) > 0,
+        )
+        const editChequeTotal =
+          Math.round(
+            validEditBankCheques.reduce((sum, row) => {
+              return sum + (Number(row.amount) || 0)
+            }, 0) * 100,
+          ) / 100
+
+        if (validEditBankCheques.length && editChequeTotal !== editNetAmount) {
+          const difference = Math.abs(editNetAmount - editChequeTotal).toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+          return {
+            success: false,
+            error:
+              editChequeTotal > editNetAmount
+                ? `Cheque amount exceeded the net amount by ₱${difference}`
+                : `Cheque amount is lacking ₱${difference}`,
+          }
+        }
+
         // Prepare the payload with ids for all expenses so backend keeps them
+        const firstEditCheque = validEditBankCheques[0] || {}
+        const editChequePayload = validEditBankCheques.map((cheque) => ({
+          bank_id: cheque.bank_id || null,
+          booklet_id: cheque.booklet_id || null,
+          cheque_number: cheque.cheque_number || cheque.chequeNumber || '',
+          cheque_date: cheque.cheque_date || cheque.chequeDate || null,
+          bank_status: cheque.bank_status || cheque.bankStatus || '',
+          amount: Number(cheque.amount) || 0,
+        }))
         const payload = {
           cancel: this.isChequeCancel,
-          bank_id: this.forms.disbursement.bank_id,
-          cheque_number: this.autoCheque,
+          bank_id: firstEditCheque.bank_id || this.forms.disbursement.bank_id,
+          cheque_number: firstEditCheque.cheque_number || this.autoCheque,
+          cheque_booklet: firstEditCheque.booklet_id || null,
+          cheque_date: firstEditCheque.cheque_date || firstEditCheque.chequeDate || null,
+          cheque_amount: Number(firstEditCheque.amount) || 0,
+          bank_status: firstEditCheque.bank_status,
           payee: this.forms.disbursement.payee,
+          payee2: this.forms.disbursement.payee2,
+          net_amount: editNetAmount,
+          bank_cheques: editChequePayload,
+          cancelled_cheques: (this.expenses || [])
+            .filter((expense) => expense.cheque_cancelled && expense.original_cheque_number)
+            .map((expense) => ({
+              expense_detail_id: Number(expense.id) > 0 ? Number(expense.id) : null,
+              cheque_number: expense.original_cheque_number,
+              bank_id: expense.original_bank_id || null,
+            })),
 
           date: this.forms.disbursement.date,
           dv_number: this.forms.disbursement.dvNumber,
-          dv_amount: !this.cancelledCheques
-            ? this.lockedTotalAmount || 0
-            : this.totalExpensesAmount,
-        expenses: this.expenses.map((expense) => ({
-  id: Number(expense.id) > 0 ? Number(expense.id) : null,
-  accountId: expense.accountId,
-  amount: expense.amount,
-  particular: expense.particular,
-  bank_id: expense.bank_id,              // ADD
-  cheque_number: expense.cheque_number,  // ADD
-  expense_class_id: expense.expense_class_id,
-  expense_type_id: expense.expense_type_id,
-  expense_item_id: expense.expense_item_id,
-  expense_sub_item_id: expense.expense_sub_item_id,  // was missing before
-})),
+          dv_amount: this.isChequeCancel
+            ? this.totalExpensesAmount
+            : this.lockedTotalAmount || this.totalExpensesAmount || 0,
+          deductions: (this.forms.expense.deductions || []).map((deduction) =>
+            this.deductionPayload(deduction),
+          ),
+          expenses: this.expenses.map((expense) => ({
+            id: Number(expense.id) > 0 ? Number(expense.id) : null,
+            accountId: expense.accountId,
+            amount: expense.amount,
+            particular: expense.particular,
+            bank_id: expense.bank_id, // ADD
+            cheque_number: expense.cheque_number, // ADD
+            cheque_date: expense.cheque_date || null,
+            cancel_cheque: Boolean(expense.cheque_cancelled),
+            original_cheque_number: expense.original_cheque_number || null,
+            original_bank_id: expense.original_bank_id || null,
+            expense_class_id: expense.expense_class_id,
+            expense_type_id: expense.expense_type_id,
+            expense_item_id: expense.expense_item_id,
+            expense_sub_item_id: expense.expense_sub_item_id, // was missing before
+          })),
         }
 
         const response = await api.put(
@@ -2600,6 +3562,23 @@ const payload = {
             },
           },
         )
+
+        const unsavedManualDeductions = (this.forms.expense.deductions || []).filter(
+          (deduction) => {
+            const row = this.normalizeDeductionRow(deduction)
+            const idNumber = Number(row.id)
+            const looksLikeFrontendId = Number.isFinite(idNumber) && idNumber > 100000000000
+            return (row.isManual || !row.deduction_code_id) && (!row.id || looksLikeFrontendId)
+          },
+        )
+
+        if (!authStore.admin && unsavedManualDeductions.length > 0) {
+          await this.saveDeductionsForDisbursement(
+            this.currentItem.id,
+            unsavedManualDeductions,
+            token,
+          )
+        }
 
         // Refresh lists/details
         await this.fetchDisbursements()
@@ -2634,6 +3613,7 @@ const payload = {
         chequeNumber: '',
         bank_id: '',
         payee: '',
+        payee2: '',
         amount: '',
       }
     },
@@ -3101,51 +4081,51 @@ const payload = {
       }
     },
 
-   // In your submitVoidRequest method, use the correct endpoint:
-async submitVoidRequest() {
-  if (!this.forms.void.remarks || this.forms.void.remarks.trim() === '') {
-    throw new Error('Remarks are required for void requests')
-  }
-
-  this.voidingDisbursement = true
-  try {
-    const authStore = useAuthStore()
-    const token = authStore.admin ? authStore.adminToken : authStore.token
-
-    // Use the correct endpoint for void requests
-    const response = await api.post(
-      `/api/barangay/disbursements/${this.forms.void.disbursementId}/void-request`,
-      {
-        remarks: this.forms.void.remarks.trim(),
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/json',
-        },
-      }
-    )
-
-    if (response.data.status) {
-      const idx = this.disbursements.findIndex((d) => d.id === this.forms.void.disbursementId)
-      if (idx !== -1) {
-        this.disbursements[idx].status = 'Void Requested'
-        this.disbursements[idx].remarks = this.forms.void.remarks.trim()
-        this.disbursements[idx].void_requested_at = new Date().toISOString()
+    // In your submitVoidRequest method, use the correct endpoint:
+    async submitVoidRequest() {
+      if (!this.forms.void.remarks || this.forms.void.remarks.trim() === '') {
+        throw new Error('Remarks are required for void requests')
       }
 
-      this.closeVoidDialog()
-      return { success: true, message: response.data.message }
-    } else {
-      return { success: false, message: response.data.message }
-    }
-  } catch (error) {
-    console.error('Failed to submit void request:', error)
-    throw new Error(error.response?.data?.message || 'Failed to submit void request')
-  } finally {
-    this.voidingDisbursement = false
-  }
-},
+      this.voidingDisbursement = true
+      try {
+        const authStore = useAuthStore()
+        const token = authStore.admin ? authStore.adminToken : authStore.token
+
+        // Use the correct endpoint for void requests
+        const response = await api.post(
+          `/api/barangay/disbursements/${this.forms.void.disbursementId}/void-request`,
+          {
+            remarks: this.forms.void.remarks.trim(),
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
+          },
+        )
+
+        if (response.data.status) {
+          const idx = this.disbursements.findIndex((d) => d.id === this.forms.void.disbursementId)
+          if (idx !== -1) {
+            this.disbursements[idx].status = 'Void Requested'
+            this.disbursements[idx].remarks = this.forms.void.remarks.trim()
+            this.disbursements[idx].void_requested_at = new Date().toISOString()
+          }
+
+          this.closeVoidDialog()
+          return { success: true, message: response.data.message }
+        } else {
+          return { success: false, message: response.data.message }
+        }
+      } catch (error) {
+        console.error('Failed to submit void request:', error)
+        throw new Error(error.response?.data?.message || 'Failed to submit void request')
+      } finally {
+        this.voidingDisbursement = false
+      }
+    },
     async approveVoidRequest(disbursementId) {
       try {
         const authStore = useAuthStore()
@@ -3349,7 +4329,6 @@ async submitVoidRequest() {
         const yyyy = today.getFullYear()
         const formattedDate = `${dd}/${mm}/${yyyy}`
 
-
         // Calculate total actual expense from OR details
         const totalActualExpense =
           this.currentLiquidation.orDetails?.reduce(
@@ -3365,13 +4344,15 @@ async submitVoidRequest() {
           bank_id: reimbursementData.bank_id,
           payee: this.currentLiquidation.payee, // Default payee for reimbursements
           dv_amount: parseFloat(reimbursementData.dv_amount),
+          net_amount: parseFloat(reimbursementData.net_amount),
           ref_dv_number: reimbursementData.ref_dv_number, // Reference to original DV
 
           // Additional fields
           expenses: [
             {
               accountId: reimbursementData.expense_account.id,
-              amount: parseFloat(reimbursementData.dv_amount),
+              // amount: parseFloat(reimbursementData.dv_amount),
+              amount: parseFloat(reimbursementData.net_amount),
               particular: `Reimbursement for DV ${reimbursementData.ref_dv_number}`,
               expense_class_id: reimbursementData.expense_account.expense_class_id,
               expense_type_id: reimbursementData.expense_account.expense_type_id,
@@ -3419,11 +4400,16 @@ async submitVoidRequest() {
           console.error('Error response:', error.response?.data)
 
           // Handle budget validation error specifically
-          if (error.response?.status === 400 && error.response?.data?.error === 'Insufficient budget') {
+          if (
+            error.response?.status === 400 &&
+            error.response?.data?.error === 'Insufficient budget'
+          ) {
             return {
               success: false,
               error: 'Insufficient budget',
-              message: error.response.data.message || 'No more budget for this account. Please commit again.'
+              message:
+                error.response.data.message ||
+                'No more budget for this account. Please commit again.',
             }
           }
 
@@ -3434,14 +4420,14 @@ async submitVoidRequest() {
         // Check if the response indicates success
         if (response.data.status) {
           // Refresh the disbursements list
-          await this.fetchDisbursements();
-          return { success: true, data: response.data.data };
+          await this.fetchDisbursements()
+          return { success: true, data: response.data.data }
         } else {
           return {
             success: false,
             error: response.data.error || response.data.message || 'Failed to submit reimbursement',
-            message: response.data.message
-          };
+            message: response.data.message,
+          }
         }
       } catch (error) {
         console.error('Failed to submit reimbursement:', error)

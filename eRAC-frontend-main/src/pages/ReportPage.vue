@@ -1,8 +1,8 @@
 <template>
   <q-page class="q-pa-lg report-page">
     <!-- Main Header with bottom border -->
-    <div class="dashboard-card q-mb-md">
-      <div class="section-header row items-center justify-between q-mb-xl">
+    <div class="dashboard-card q-mb-xs">
+      <div class="section-header row items-center justify-between q-mb-xs">
         <div class="section-title col-12 col-md-8">Current Year Reports</div>
         <!-- Year Filter Section -->
 
@@ -38,6 +38,92 @@
 
     <SetupDialog v-model="showSetupDialog" />
 
+    <div class="row q-col-gutter-md q-px-md">
+      <div class="col-12">
+        <q-card flat bordered class="q-mb-sm filters-section">
+          <q-card-section>
+            <div class="row q-col-gutter-xs items-center justify-between">
+              <div class="col-4 col-md-4 justify-start">
+                <div class="text-subtitle1 text-weight-medium">List of Advice</div>
+                <div class="text-caption text-grey-6">History of generated PBC advices</div>
+              </div>
+
+              <div class="row col-8 justify-end q-gutter-sm">
+                <div class="col-12 col-md-4">
+                  <q-input outlined dense v-model="searchQuery" placeholder="Search..." clearable>
+                    <template v-slot:append><q-icon name="search" /></template>
+                  </q-input>
+                </div>
+
+                <div class="col-12 col-md-1 justify-center">
+                  <q-btn
+                    dense
+                    outlined
+                    color="red-10"
+                    icon="clear"
+                    no-caps
+                    @click="clearAllFilters"
+                    class="full-width"
+                  />
+                </div>
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+
+        <q-card flat bordered>
+          <q-table
+            flat
+            :rows="filteredPbcAdviceList"
+            :columns="pbcAdviceColumns"
+            row-key="id"
+            :pagination="{ rowsPerPage: 5 }"
+            no-data-label="No PBC advice generated yet"
+          >
+            <template v-slot:body-cell-pbcDate="props">
+              <q-td :props="props">{{ formatFullDate(props.row.pbcDate) }}</q-td>
+            </template>
+            <template v-slot:body-cell-pbcDateRange="props">
+              <q-td :props="props">
+                {{ formatDateRange(props.row.from) }} - {{ formatDateRange(props.row.to) }}
+              </q-td>
+            </template>
+
+            <template v-slot:body-cell-amount="props">
+              <q-td :props="props" class="text-right">₱{{ formatCurrency(props.row.amount) }}</q-td>
+            </template>
+
+            <template v-slot:body-cell-action="props">
+              <q-td :props="props" class="text-right">
+                <!-- <q-btn
+                  icon="visibility"
+                  color="primary"
+                  flat
+                  dense
+                  round
+                  size="sm"
+                  :loading="viewingAdvice && loading"
+                  @click="viewPbcAdvice(props.row)"
+                > -->
+                <q-btn
+                  dense
+                  outlined
+                  color="green"
+                  label="Preview"
+                  no-caps
+                  :loading="previewAdviceLoading"
+                  @click="viewPbcAdvice(props.row)"
+                  class="q-pl-sm q-pr-sm"
+                >
+                  <q-tooltip>View / Preview</q-tooltip>
+                </q-btn>
+              </q-td>
+            </template>
+          </q-table>
+        </q-card>
+      </div>
+    </div>
+
     <!-- Current Year Reports Card -->
     <div class="row q-col-gutter-md q-pa-md">
       <!-- RAC Card -->
@@ -48,7 +134,7 @@
           </q-card-section>
 
           <q-card-section class="q-pt-md q-pb-lg">
-            <div class="col q-col-gutter-md items-end">
+            <div class="col q-col-gutter-sm items-end">
               <div class="col-12 col-sm-6 col-md-4">
                 <!-- <q-input bg-color="white" outlined dense :model-value="dateRangeDisplay" label="Date Range"
                   class="custom-date-range" clearable @clear="onDateRangeClear" readonly>
@@ -82,7 +168,7 @@
                   map-options
                   option-label="name"
                   option-value="id"
-                  :loading="loading"
+                  :loading="initialDataLoading"
                 />
               </div>
 
@@ -93,7 +179,7 @@
                   label="Generate Report"
                   class="full-width"
                   @click="openRACModal('current-rac')"
-                  :loading="loading"
+                  :loading="generatingRacReportLoading"
                 />
               </div>
             </div>
@@ -101,6 +187,65 @@
         </q-card>
       </div>
 
+      <!-- PBC Card -->
+      <div class="col-12 col-md-6">
+        <q-card class="report-card" flat bordered>
+          <q-card-section class="q-pb-none q-pt-lg">
+            <div class="subsection-title">Punong Barangay Certification (PBC)</div>
+          </q-card-section>
+
+          <q-card-section class="q-pt-md q-pb-lg">
+            <div class="col q-col-gutter-sm items-end">
+              <div class="col-12 col-sm-6 col-md-6">
+                <q-input
+                  v-model="pbcDateRange.from"
+                  filled
+                  type="date"
+                  hint="From Date"
+                  @update:model-value="(v) => onPbcDateChange('from', v)"
+                />
+                <br />
+                <q-input
+                  v-model="pbcDateRange.to"
+                  filled
+                  type="date"
+                  hint="To Date"
+                  @update:model-value="(v) => onPbcDateChange('to', v)"
+                />
+                <br />
+              </div>
+              <div class="col-12 col-sm-6 col-md-4">
+                <q-select
+                  outlined
+                  dense
+                  v-model="bankSelectedPBC"
+                  label="Select Bank"
+                  :options="reportStore.bankOptions"
+                  map-options
+                  emit-value
+                  option-label="name"
+                  option-value="id"
+                  :loading="initialDataLoading"
+                />
+              </div>
+
+              <div class="col-12 col-sm-6 col-md-4">
+                <q-btn
+                  color="primary"
+                  icon="settings"
+                  label="Generate Report"
+                  class="full-width"
+                  @click="openPBCModal"
+                  :loading="generatingPbcReportLoading"
+                />
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
+
+    <div class="row q-col-gutter-md q-pa-md">
       <!-- SACB Card -->
       <div class="col-12 col-md-6">
         <q-card class="report-card" flat bordered>
@@ -109,7 +254,7 @@
           </q-card-section>
 
           <q-card-section class="q-pt-md q-pb-lg">
-            <div class="col q-col-gutter-md items-end">
+            <div class="col q-col-gutter-sm items-end">
               <div class="col-12 col-sm-6 col-md-6">
                 <!-- <q-input
                   bg-color="white"
@@ -160,72 +305,35 @@
                   label="Generate Report"
                   class="full-width"
                   @click="openSACBModal('current-sacb')"
-                  :loading="loading"
+                  :loading="generatingSacbReportLoading"
                 />
               </div>
             </div>
           </q-card-section>
         </q-card>
       </div>
-    </div>
 
-    <!-- Continuing Reports Header with bottom border -->
-    <div class="section-header q-mb-xl">
-      <div class="section-title">Continuing Reports</div>
-    </div>
-
-    <!-- Continuing Reports Card -->
-    <div class="row q-col-gutter-md q-pa-md">
-      <!-- Continuing RAC Card -->
+      <!-- Transmittal Card -->
       <div class="col-12 col-md-6">
-        <q-card class="report-card" flat bordered>
+        <q-card class="transmittal-card" flat bordered>
           <q-card-section class="q-pb-none q-pt-lg">
-            <div class="subsection-title">Registry of Appropriation and Commitment (RAC)</div>
+            <div class="subsection-title">Transmittal</div>
           </q-card-section>
 
           <q-card-section class="q-pt-md q-pb-lg">
             <div class="col q-col-gutter-md items-end">
               <div class="col-12 col-sm-6 col-md-4">
-                <!-- <q-input bg-color="white" outlined dense :model-value="continuingDateRangeDisplay" label="Date Range"
-                  class="custom-date-range" clearable @clear="onContinuingDateRangeClear" readonly>
-                  <template v-slot:append>
-                    <q-icon name="event" class="calend-icon">
-                      <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                        <q-date v-model="continuingRacDateRange" range
-                          @update:model-value="onContinuingDateRangeChange" />
-                      </q-popup-proxy>
-                    </q-icon>
-                  </template>
-                </q-input> -->
-                <q-input
-                  v-model="continuingRacDateRange.from"
-                  filled
-                  type="date"
-                  hint="From Date"
-                  @update:model-value="(v) => onDateChangecontinuing('from', v)"
-                />
-                <br />
-                <q-input
-                  v-model="continuingRacDateRange.to"
-                  filled
-                  type="date"
-                  hint="To Date"
-                  @update:model-value="(v) => onDateChangecontinuing('to', v)"
-                />
-                <br />
-              </div>
-
-              <div class="col-12 col-sm-6 col-md-4">
                 <q-select
                   outlined
                   dense
-                  v-model="expenseSelectedContinuing"
-                  label="Expense Category"
+                  v-model="transmittalMonthSelected"
+                  label="Select Month"
+                  :options="monthOptions"
                   map-options
-                  :options="reportStore.expenseOptionsContinuing"
-                  :loading="loading"
-                  option-value="id"
-                  option-label="name"
+                  emit-value
+                  option-label="label"
+                  option-value="value"
+                  :loading="initialDataLoading"
                 />
               </div>
 
@@ -235,32 +343,8 @@
                   icon="settings"
                   label="Generate Report"
                   class="full-width"
-                  @click="openRACModal('continuing-rac')"
-                  :loading="loading"
-                />
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <!-- Continuing SACB Card -->
-      <div class="col-12 col-md-6">
-        <q-card class="report-card" flat bordered>
-          <q-card-section class="q-pb-none q-pt-lg">
-            <div class="subsection-title">Status of Appropriation and Obligation (SACB)</div>
-          </q-card-section>
-
-          <q-card-section class="q-pt-md q-pb-lg">
-            <div class="col-12 col-sm-6 col-md-6">
-              <div class="row justify-center">
-                <q-btn
-                  class="full-width"
-                  color="primary"
-                  icon="settings"
-                  label="Generate Report"
-                  @click="openSACModal('continuing-sacb')"
-                  :loading="loading"
+                  @click="openTransmittalModal"
+                  :loading="generatingTransmittalLoading"
                 />
               </div>
             </div>
@@ -305,6 +389,7 @@
                 label="Export PDF"
                 color="#69B31E"
                 @click="exportSACBToPDF"
+                v-permission="'print'"
                 size="sm"
                 no-caps
               />
@@ -315,6 +400,7 @@
                 label="Print"
                 color="#187C19"
                 @click="handleSACBPrint"
+                v-permission="'print'"
                 size="sm"
                 no-caps
               />
@@ -741,6 +827,7 @@
                 label="Export PDF"
                 color="#69B31E"
                 @click="exportToPDF"
+                v-permission="'print'"
                 size="sm"
                 no-caps
               />
@@ -751,6 +838,7 @@
                 label="Export Excel"
                 color="#69B31E"
                 @click="exportToExcel"
+                v-permission="'print'"
                 size="sm"
                 no-caps
               />
@@ -1024,7 +1112,897 @@
       </q-layout>
     </q-dialog>
 
-     <!-- Loading Overlay for Year Changes -->
+    <!-- Transmittal Modal -->
+    <q-dialog
+      v-model="transmittalModal.show"
+      maximized
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
+      <q-layout view="lHh Lpr lFf" class="sacb-layout">
+        <!-- Header -->
+        <q-header elevated class="bg-white text-dark sacb-header">
+          <q-toolbar class="q-px-md">
+            <q-btn
+              flat
+              icon="menu"
+              @click="toggleSACBDrawer"
+              class="q-mr-md"
+              :color="sacbDrawerOpen ? '#187C19' : '#666'"
+              size="md"
+            >
+              <q-tooltip>Toggle Settings Panel</q-tooltip>
+            </q-btn>
+
+            <q-toolbar-title class="text-h6 text-weight-medium" style="color: #187c19">
+              Transmittal Letter
+            </q-toolbar-title>
+
+            <q-space />
+
+            <!-- Action Buttons -->
+            <div class="q-gutter-sm">
+              <q-btn
+                outline
+                icon="file_download"
+                label="Export PDF"
+                color="#69B31E"
+                @click="exportTransmittalToPDF"
+                v-permission="'print'"
+                size="sm"
+                no-caps
+              />
+
+              <!-- <q-btn
+                unelevated
+                icon="print"
+                label="Print"
+                color="#187C19"
+                @click="handleSACBPrint"
+                v-permission="'print'"
+                size="sm"
+                no-caps
+              /> -->
+
+              <q-btn flat icon="close" @click="closeTransmittalModal" color="#666" size="md">
+                <q-tooltip>Close</q-tooltip>
+              </q-btn>
+            </div>
+          </q-toolbar>
+        </q-header>
+
+        <!-- Left Drawer for Report Signatories -->
+        <q-drawer
+          v-model="sacbDrawerOpen"
+          side="left"
+          bordered
+          :width="350"
+          :breakpoint="768"
+          :show-if-above="false"
+          class="bg-grey-1 sacb-drawer"
+        >
+          <div class="drawer-content-sacb">
+            <q-scroll-area class="drawer-scrollable-content">
+              <div class="q-pa-lg drawer-content">
+                <!-- Drawer Header -->
+                <div class="drawer-header q-mb-lg">
+                  <div class="text-h6 q-mb-sm" style="color: #187c19">
+                    <q-icon name="edit" class="q-mr-sm" />
+                    Transmittal Letter Setup
+                  </div>
+                  <div class="text-caption" style="color: #666">
+                    Configure transmittal signatories
+                  </div>
+                </div>
+
+                <!-- Report Information -->
+                <q-card flat bordered class="q-mb-lg info-card">
+                  <q-card-section class="q-pb-sm">
+                    <div class="text-subtitle2 text-weight-medium q-mb-sm" style="color: #187c19">
+                      <q-icon name="info" class="q-mr-xs" />
+                      Report Information
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">Barangay:</span>
+                      <span class="info-value">{{ authStore.user?.barangay_name }}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">Date Range:</span>
+                      <span class="info-value">
+                        {{ formatFullDate(currentSacbDateRange.from) }} -
+                        {{ formatFullDate(currentSacbDateRange.to) }}</span
+                      >
+                    </div>
+                    <div class="info-item">
+                      <span class="info-label">Report Type:</span>
+                      <span class="info-value">Transmittal</span>
+                    </div>
+                  </q-card-section>
+                </q-card>
+
+                <!-- Signatories Setup -->
+                <q-card flat bordered class="signatories-card">
+                  <q-card-section>
+                    <div class="text-subtitle2 text-weight-medium q-mb-md" style="color: #187c19">
+                      <q-icon name="people" class="q-mr-xs" />
+                      Signatories
+                    </div>
+
+                    <!-- Prepared by -->
+                    <div class="signatory-group q-mb-lg">
+                      <div class="signatory-header">
+                        <q-icon name="send" size="sm" style="color: #69b31e" class="q-mr-sm" />
+                        <span class="text-weight-medium">Sent to</span>
+                      </div>
+                      <q-input
+                        outlined
+                        dense
+                        v-model="transmittalModal.recipientName"
+                        placeholder="Enter full name"
+                        class="q-mb-sm"
+                        clearable
+                      />
+                      <q-select
+                        outlined
+                        dense
+                        :options="reportStore.positionsOptions"
+                        map-options
+                        option-label="label"
+                        option-value="value"
+                        v-model="transmittalModal.recipientPosition"
+                        placeholder="Select position"
+                        clearable
+                      />
+                    </div>
+
+                    <!-- Noted by -->
+                    <div class="signatory-group q-mb-lg">
+                      <div class="signatory-header">
+                        <q-icon name="create" size="sm" style="color: #69b31e" class="q-mr-xs" />
+                        <span class="text-weight-medium">Noted by</span>
+                      </div>
+                      <q-input
+                        outlined
+                        dense
+                        v-model="SetupModal.Notedby"
+                        placeholder="Enter full name"
+                        class="q-mb-sm"
+                        clearable
+                      />
+                      <q-select
+                        outlined
+                        dense
+                        :options="reportStore.positionsOptions"
+                        map-options
+                        option-label="label"
+                        option-value="value"
+                        v-model="SetupModal.Notedposition"
+                        placeholder="Select position"
+                        clearable
+                      />
+                    </div>
+
+                    <!-- Certified by -->
+                    <div class="signatory-group q-mb-md">
+                      <div class="signatory-header">
+                        <q-icon name="verified" size="sm" style="color: #187c19" class="q-mr-xs" />
+                        <span class="text-weight-medium">Certified by</span>
+                      </div>
+                      <q-input
+                        outlined
+                        dense
+                        v-model="SetupModal.Certifiedby"
+                        placeholder="Enter full name"
+                        class="q-mb-sm"
+                        clearable
+                      />
+                      <q-select
+                        outlined
+                        dense
+                        :options="reportStore.positionsOptions"
+                        map-options
+                        option-label="label"
+                        option-value="value"
+                        v-model="SetupModal.Certifiedposition"
+                        placeholder="Select position"
+                        clearable
+                      />
+                    </div>
+                  </q-card-section>
+                </q-card>
+
+                <!-- Quick Actions -->
+                <q-card flat bordered class="q-mt-lg">
+                  <q-card-section>
+                    <div class="text-subtitle2 text-weight-medium q-mb-md" style="color: #187c19">
+                      <q-icon name="flash_on" class="q-mr-xs" />
+                      Quick Actions
+                    </div>
+                    <div class="q-gutter-sm">
+                      <q-btn
+                        outline
+                        size="sm"
+                        icon="refresh"
+                        label="Reset Form"
+                        color="#E0FFE7"
+                        @click="resetSignatories"
+                        class="full-width"
+                      />
+                      <q-btn
+                        outline
+                        size="sm"
+                        icon="save"
+                        label="Save as Template"
+                        color="#69B31E"
+                        @click="saveAsTemplate"
+                        class="full-width"
+                      />
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </div>
+            </q-scroll-area>
+          </div>
+        </q-drawer>
+
+        <!-- Main Content Area -->
+        <q-page-container>
+          <div class="print-content-wrapper q-pa-md">
+            <q-card class="print-modal transmittal-modal" id="transmittal-print-content">
+              <q-card-section class="q-pb-none">
+                <div class="annex-label">ANNEX "B"</div>
+
+                <div class="text-center text-weight-bold text-uppercase transmittal-serif">
+                  BARANGAY {{ authStore.user?.barangay_name }}
+                </div>
+                <div class="text-subtitle1 text-center q-mb-none transmittal-serif-body">
+                  City of Tagum
+                </div>
+                <div class="text-subtitle1 text-center q-mb-sm transmittal-serif-body">
+                  Province of Davao del Norte
+                </div>
+
+                <div class="text-center text-uppercase q-mb-lg q-mt-md after-body">
+                  Transmittal Letter
+                </div>
+
+                <!-- TO / DATE row -->
+                <div class="row justify-between items-start q-mb-lg" style="font-size: 14px">
+                  <div>
+                    <div class="row">
+                      <div class="text-weight-bold">TO :</div>
+                      <div class="text-weight-bold q-ml-lg">
+                        {{ transmittalModal.recipientName || 'RECIPIENT NAME' }}
+                      </div>
+                    </div>
+                    <div
+                      class="text-caption text-weight-medium text-uppercase"
+                      style="font-size: 11px; margin-left: 70px"
+                    >
+                      {{ transmittalModal.recipientPosition?.label || 'POSITION' }}
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    {{
+                      formatFullDate(transmittalModal.date || new Date().toISOString().slice(0, 10))
+                    }}
+                  </div>
+                </div>
+
+                <div class="text-weight-bold q-mb-sm text-uppercase" style="font-size: 14px">
+                  Dear {{ transmittalModal.recipientName || "Recipient's Name" }}
+                </div>
+
+                <div class="q-mb-sm transmittal-body">
+                  We submit herewith the following financial transaction documents and reports
+                  covering the period of
+                  <span class="text-weight-bold">{{
+                    formatFullDate(transmittalModal.periodFrom)
+                  }}</span>
+                  -
+                  <span class="text-weight-bold">{{
+                    formatFullDate(transmittalModal.periodTo)
+                  }}</span
+                  >, to wit:
+                </div>
+              </q-card-section>
+
+              <q-card-section class="q-pt-none">
+                <!-- ===================== TABLE A: DV/PAYROLL ===================== -->
+                <table class="transmittal-table-payroll">
+                  <thead>
+                    <tr>
+                      <th colspan="2" class="text-left">A. DV/PAYROLL</th>
+                      <th colspan="2">CHECK</th>
+                      <th rowspan="2">PAYEE</th>
+                      <th rowspan="2">AMOUNT</th>
+                      <th colspan="2">PB CERTIFICATION</th>
+                    </tr>
+                    <tr>
+                      <th>DATE</th>
+                      <th>NO.</th>
+                      <th>DATE</th>
+                      <th>NO.</th>
+                      <th>DATE</th>
+                      <th>NO.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(row, index) in reportStore.reportTransmittal.dvRows" :key="index">
+                      <td class="text-center">{{ row.dvDate }}</td>
+                      <td class="text-center">{{ row.dvNo }}</td>
+                      <td class="text-center">{{ row.checkDate }}</td>
+                      <td class="text-center">{{ row.checkNo }}</td>
+                      <td class="text-uppercase text-left">{{ row.payee }}</td>
+                      <td class="text-right">{{ formatCurrency(row.amount) }}</td>
+                      <td class="text-center">{{ row.pbDate }}</td>
+                      <td class="text-center">{{ row.pbNo }}</td>
+                    </tr>
+
+                    <tr
+                      v-if="
+                        !reportStore.reportTransmittal.dvRows ||
+                        reportStore.reportTransmittal.dvRows.length === 0
+                      "
+                    >
+                      <td colspan="8" class="text-center text-grey-6">No records available</td>
+                    </tr>
+
+                    <tr class="transmittal-total-row">
+                      <td colspan="5" class="text-right text-weight-bold" style="color: #a10909">
+                        TOTAL
+                      </td>
+                      <td class="text-right text-weight-bold">
+                        {{ formatCurrency(transmittalDvTotal) }}
+                      </td>
+                      <td colspan="2"></td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <!-- ===================== TABLE B: RCDs / RCRs ===================== -->
+                <table class="transmittal-table">
+                  <thead>
+                    <tr>
+                      <th colspan="4" class="details text-left">
+                        B. RCDs and RCRs and the duplicate copies of the ORs issued
+                      </th>
+                    </tr>
+                    <tr>
+                      <th>RCD / RCR Number</th>
+                      <th>Period Covered</th>
+                      <th>Date</th>
+                      <th>Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(row, index) in reportStore.reportTransmittal.rcdRows" :key="index">
+                      <td>{{ row.rcdNumber }}</td>
+                      <td>{{ row.periodCovered }}</td>
+                      <td>{{ row.date }}</td>
+                      <td class="text-right">{{ formatCurrency(row.amount) }}</td>
+                    </tr>
+                    <!-- <tr v-if="!transmittalModal.rcdRows || transmittalModal.rcdRows.length === 0">
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                    </tr> -->
+
+                    <tr
+                      v-if="
+                        !reportStore.reportTransmittal.rcdRows ||
+                        reportStore.reportTransmittal.rcdRows.length === 0
+                      "
+                    >
+                      <td colspan="8" class="text-center text-grey-6">No records available</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <!-- ===================== TABLE C: Other Reports ===================== -->
+                <table class="transmittal-table q-mb-xs">
+                  <thead>
+                    <tr>
+                      <th colspan="2" class="details text-left">C. Other Reports</th>
+                    </tr>
+                    <tr>
+                      <th>Type of Report</th>
+                      <th>Period Covered</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="(row, index) in reportStore.reportTransmittal.otherReports"
+                      :key="index"
+                    >
+                      <td>{{ row.typeOfReport }}</td>
+                      <td>{{ row.periodCovered }}</td>
+                    </tr>
+                    <tr
+                      v-if="
+                        !reportStore.reportTransmittal.otherReports ||
+                        reportStore.reportTransmittal.otherReports.length === 0
+                      "
+                    >
+                      <td colspan="8" class="text-center text-grey-6">No records available</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div class="q-mb-xl transmittal-bottom q-ml-xs">
+                  Please acknowledge receipt hereof.
+                </div>
+
+                <!-- ===================== SIGNATURE BLOCK ===================== -->
+                <div class="row justify-end q-mb-xl">
+                  <div class="text-right" style="min-width: 260px">
+                    <div class="q-mb-md text-left" style="font-size: 14px; font-weight: 500">
+                      Very truly yours,
+                    </div>
+                    <div class="transmittal-signature-name text-center">
+                      {{ SetupModal.Certifiedby }}
+                    </div>
+                    <div class="transmittal-signature-position text-center">
+                      {{ SetupModal.Certifiedposition?.label || 'Position' }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row justify-between">
+                  <div style="min-width: 300px" class="q-ml-md">
+                    <div class="q-mb-md" style="font-size: 14px; font-weight: 500">Noted by:</div>
+                    <div class="transmittal-signature-name text-center">
+                      {{ SetupModal.Notedby }}
+                    </div>
+                    <div class="transmittal-signature-position text-center">
+                      {{ SetupModal.Notedposition?.label || 'Position' }}
+                    </div>
+                  </div>
+
+                  <div class="text-center q-mr-md" style="min-width: 300px">
+                    <div class="q-mb-md text-left" style="font-size: 14px; font-weight: 500">
+                      Received by:
+                    </div>
+                    <div class="transmittal-signature-name">&nbsp;</div>
+                    <div class="transmittal-signature-position">
+                      Signature, Name and Designation
+                    </div>
+                  </div>
+                </div>
+              </q-card-section>
+            </q-card>
+          </div>
+        </q-page-container>
+      </q-layout>
+    </q-dialog>
+
+    <!-- PCB Modal -->
+    <q-dialog
+      v-model="PBCModal.show"
+      maximized
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
+      <q-layout view="lHh Lpr lFf" class="sacb-layout">
+        <!-- Header -->
+        <q-header elevated class="bg-white text-dark sacb-header">
+          <q-toolbar class="q-px-md">
+            <q-btn
+              flat
+              icon="menu"
+              @click="toggleSACBDrawer"
+              class="q-mr-md"
+              :color="sacbDrawerOpen ? '#187C19' : '#666'"
+              size="md"
+            >
+              <q-tooltip>Toggle Settings Panel</q-tooltip>
+            </q-btn>
+
+            <q-toolbar-title class="text-h6 text-weight-medium" style="color: #187c19">
+              Punong Barangay Certification(PBC)
+            </q-toolbar-title>
+
+            <q-space />
+
+            <!-- Action Buttons -->
+            <div class="q-gutter-sm">
+              <q-btn
+                outline
+                icon="file_download"
+                label="Export PDF"
+                color="#69B31E"
+                @click="exportPBCToPDF"
+                v-permission="'print'"
+                size="sm"
+                no-caps
+              />
+              <q-btn flat icon="close" @click="closePBCModal" color="#666" size="md">
+                <q-tooltip>Close</q-tooltip>
+              </q-btn>
+            </div>
+          </q-toolbar>
+        </q-header>
+
+        <!-- Left Drawer for Report Signatories -->
+        <q-drawer
+          v-model="sacbDrawerOpen"
+          side="left"
+          bordered
+          :width="350"
+          :breakpoint="768"
+          :show-if-above="false"
+          class="bg-grey-1 sacb-drawer"
+        >
+          <div class="drawer-content-sacb">
+            <q-scroll-area class="drawer-scrollable-content">
+              <div class="q-pa-lg drawer-content">
+                <!-- Drawer Header -->
+                <div class="drawer-header q-mb-lg">
+                  <div class="text-h6 q-mb-sm" style="color: #187c19">
+                    <q-icon name="edit" class="q-mr-sm" />
+                    Report Setup
+                  </div>
+                  <div class="text-caption" style="color: #666">
+                    Configure report signatories and settings
+                  </div>
+                </div>
+
+                <!-- Report Information -->
+                <q-card flat bordered class="q-mb-lg info-card">
+                  <q-card-section class="q-pb-sm">
+                    <div class="text-subtitle2 text-weight-medium q-mb-sm" style="color: #187c19">
+                      <q-icon name="info" class="q-mr-xs" />
+                      Certification Details
+                    </div>
+                    <q-input
+                      outlined
+                      dense
+                      v-model="PBCModal.pbcNo"
+                      label="PBC No."
+                      class="q-mb-sm"
+                    />
+                    <q-input
+                      outlined
+                      dense
+                      v-model="PBCModal.date"
+                      type="date"
+                      label="Date"
+                      class="q-mb-sm"
+                    />
+                    <q-input
+                      outlined
+                      dense
+                      v-model="PBCModal.recipient"
+                      label="Recipient (e.g. The Bank Manager)"
+                      class="q-mb-sm text-uppercase"
+                    />
+                    <q-input
+                      outlined
+                      dense
+                      v-model="PBCModal.bankName"
+                      label="Bank Name"
+                      class="q-mb-sm"
+                    />
+                    <q-input
+                      outlined
+                      dense
+                      v-model="PBCModal.bankBranch"
+                      label="Branch"
+                      class="q-mb-sm"
+                    />
+                    <q-input outlined dense v-model="PBCModal.bankCity" label="City" />
+                  </q-card-section>
+                </q-card>
+
+                <!-- Signatories Setup -->
+                <q-card flat bordered class="signatories-card">
+                  <q-card-section>
+                    <div class="text-subtitle2 text-weight-medium q-mb-md" style="color: #187c19">
+                      <q-icon name="people" class="q-mr-xs" />
+                      Report Signatories
+                    </div>
+
+                    <!-- Prepared by -->
+                    <!-- <div class="signatory-group q-mb-lg">
+                      <div class="signatory-header">
+                        <q-icon name="create" size="sm" style="color: #69b31e" class="q-mr-xs" />
+                        <span class="text-weight-medium">Prepared by</span>
+                      </div>
+                      <q-input
+                        outlined
+                        dense
+                        v-model="SetupModal.Preparedby"
+                        placeholder="Enter full name"
+                        class="q-mb-sm"
+                        clearable
+                      />
+                      <q-select
+                        outlined
+                        dense
+                        :options="reportStore.positionsOptions"
+                        map-options
+                        option-label="label"
+                        option-value="value"
+                        v-model="SetupModal.Preparedposition"
+                        placeholder="Select position"
+                        clearable
+                      />
+                    </div> -->
+
+                    <!-- Prepared by -->
+                    <div class="signatory-group q-mb-lg">
+                      <div class="signatory-header">
+                        <q-icon name="create" size="sm" style="color: #69b31e" class="q-mr-xs" />
+                        <span class="text-weight-medium">Prepared by</span>
+                      </div>
+                      <q-input
+                        outlined
+                        dense
+                        v-model="SetupModal.Preparedby"
+                        placeholder="Enter full name"
+                        class="q-mb-sm"
+                        clearable
+                      />
+                      <q-select
+                        outlined
+                        dense
+                        :options="reportStore.positionsOptions"
+                        map-options
+                        option-label="label"
+                        option-value="value"
+                        v-model="SetupModal.Notedposition"
+                        placeholder="Select position"
+                        clearable
+                      />
+                    </div>
+
+                    <!-- Certified by -->
+                    <div class="signatory-group q-mb-md">
+                      <div class="signatory-header">
+                        <q-icon name="verified" size="sm" style="color: #187c19" class="q-mr-xs" />
+                        <span class="text-weight-medium">Delivered by</span>
+                      </div>
+                      <q-input
+                        outlined
+                        dense
+                        v-model="SetupModal.Deliveredby"
+                        placeholder="Enter full name"
+                        class="q-mb-sm"
+                        clearable
+                      />
+                      <q-select
+                        outlined
+                        dense
+                        :options="reportStore.positionsOptions"
+                        map-options
+                        option-label="label"
+                        option-value="value"
+                        v-model="SetupModal.Certifiedposition"
+                        placeholder="Select position"
+                        clearable
+                      />
+                    </div>
+                  </q-card-section>
+                </q-card>
+
+                <!-- Quick Actions -->
+                <q-card flat bordered class="q-mt-lg">
+                  <q-card-section>
+                    <div class="text-subtitle2 text-weight-medium q-mb-md" style="color: #187c19">
+                      <q-icon name="flash_on" class="q-mr-xs" />
+                      Quick Actions
+                    </div>
+                    <div class="q-gutter-sm">
+                      <q-btn
+                        outline
+                        size="sm"
+                        icon="refresh"
+                        label="Reset Form"
+                        color="#E0FFE7"
+                        @click="resetSignatories"
+                        class="full-width"
+                      />
+                      <q-btn
+                        outline
+                        size="sm"
+                        icon="save"
+                        label="Save as Template"
+                        color="#69B31E"
+                        @click="saveAsTemplate"
+                        class="full-width"
+                      />
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </div>
+            </q-scroll-area>
+          </div>
+        </q-drawer>
+
+        <!-- Main Content Area -->
+        <q-page-container style="background: #f5f5f5">
+          <div class="print-content-wrapper q-pa-md">
+            <q-card class="print-modal" id="pbc-print-content">
+              <div class="pbc-header-block q-mt-md">
+                <div class="pbc-republic">Republic of the Philippines</div>
+                <div class="pbc-province">Province of Davao del Norte</div>
+                <div class="pbc-city">CITY OF TAGUM</div>
+                <div class="pbc-barangay">BARANGAY {{ authStore.user?.barangay_name }}</div>
+              </div>
+              <div class="pbc-title">Punong Barangay's Certification (PBC)</div>
+
+              <q-card-section class="q-pt-xs">
+                <!-- TO / PBC No. -->
+                <div class="row justify-between items-start q-mb-md pbc-to-block">
+                  <div>
+                    <div style="-webkit-text-stroke: 0.5px currentColor" class="text-uppercase">
+                      To: {{ PBCModal.recipient || 'Recipient Name' }}
+                    </div>
+                    <div
+                      class="text-weight-bold uppercase"
+                      style="-webkit-text-stroke: 0.5px currentColor"
+                    >
+                      {{ PBCModal.bankName || 'Bank Name' }}
+                    </div>
+                    <div>{{ PBCModal.bankBranch || 'Tagum Branch' }}</div>
+                    <div>{{ PBCModal.bankCity || 'Tagum City' }}</div>
+                  </div>
+                  <div class="text-right">
+                    <div>
+                      <span
+                        class="text-weight-bold"
+                        style="-webkit-text-stroke: 0.5px currentColor; color: #a10909"
+                        >PBC No.:</span
+                      >
+                      {{ PBCModal.pbcNo || '—' }}
+                    </div>
+                    <div>
+                      <span class="text-weight-bold" style="-webkit-text-stroke: 0.5px currentColor"
+                        >DATE:</span
+                      >
+                      {{ formatFullDate(PBCModal.date) }}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Certification body (EN / FIL pairs) -->
+                <div class="pbc-body q-mb-md">
+                  <div class="pbc-en" style="margin-left: 10%">
+                    This is to certify that the following checks were duly issued by Barangay
+                    {{ authStore.user?.barangay_name }}
+                  </div>
+                  <div class="pbc-fil" style="margin-left: 10%">
+                    (Ito ay pagpapatunay na ang mga cheke na nakalista sa ibaba ay na-isyu ng
+                    Barangay {{ authStore.user?.barangay_name }})
+                  </div>
+                  <div class="pbc-en">
+                    complete with respective Disbursement Vouchers and supporting documents
+                  </div>
+                  <div class="pbc-fil">
+                    (na kompleto ng kanya-kanyang Disbursement Vouchers at kalakip na mga
+                    dokumento.)
+                  </div>
+                </div>
+
+                <!-- Checks Table -->
+                <table class="pbc-table">
+                  <thead>
+                    <tr>
+                      <th>CHECK NO.</th>
+                      <th>CHECK DATE</th>
+                      <th>PAYEE</th>
+                      <th>AMOUNT</th>
+                      <th>PURPOSE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template v-for="(group, gIndex) in reportStore.reportPBC" :key="gIndex">
+                      <tr class="pbc-bank-group-row">
+                        <td colspan="5" class="text-left text-weight-bold">
+                          {{ group.bankGroup }}
+                        </td>
+                      </tr>
+                      <tr v-for="(check, cIndex) in group.checks" :key="cIndex">
+                        <td class="text-center">{{ check.checkNo }}</td>
+                        <td class="text-center">{{ check.checkDate }}</td>
+                        <td class="text-left text-uppercase">{{ check.payee }}</td>
+                        <td class="text-right">{{ formatCurrency(check.amount) }}</td>
+                        <td class="text-left text-uppercase">{{ check.purpose }}</td>
+                      </tr>
+                    </template>
+
+                    <tr v-if="!reportStore.reportPBC || reportStore.reportPBC.length === 0">
+                      <td colspan="5" class="text-center text-grey-6">No checks available</td>
+                    </tr>
+
+                    <tr class="pbc-nothing-follows-row">
+                      <td colspan="5" class="text-center">**** NOTHING FOLLOWS ****</td>
+                    </tr>
+
+                    <tr class="pbc-total-row" style="-webkit-text-stroke: 0.5px currentColor">
+                      <td colspan="3" class="text-right text-weight-bold">TOTAL:</td>
+                      <td class="text-right text-weight-bold">{{ formatCurrency(pbcTotal) }}</td>
+                      <td></td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <!-- Footer certification text -->
+                <div class="pbc-footer-text q-mt-xl">
+                  <div class="pbc-en">
+                    This Certification is issued, pursuant to COA Circular 2018-<span
+                      class="pbc-blank"
+                      >____</span
+                    >, dated <span class="pbc-blank">____________</span>,
+                  </div>
+                  <div class="pbc-fil">
+                    (Itong Patunay ay ginawa alinsunod sa COA Circular 2018-<span class="pbc-blank"
+                      >____</span
+                    >
+                    na may petsang <span class="pbc-blank">________________</span>)
+                  </div>
+                  <div class="pbc-en">as a condition for the encashment of said checks.</div>
+                  <div class="pbc-fil">
+                    (bilang kondisyon para sa pagpapapalit ng mga nasabing cheke.)
+                  </div>
+                  <div class="pbc-en">
+                    The undersigned attests to the truthfulness of the foregoing facts, under pain
+                    of
+                  </div>
+                  <div class="pbc-fil">
+                    (Pinapatotohanan ko may lagda ang mga nakasaad sa itaas, batid ang.....)
+                  </div>
+                  <div class="pbc-en">
+                    liability for falsification, pursuant to Article 171(4) of the Revised Penal
+                    Code.
+                  </div>
+                  <div class="pbc-fil">
+                    (pananagutan sa kasong "Falsification," sang-ayon sa Article 171(4) ng Revised
+                    Penal Code.)
+                  </div>
+                </div>
+
+                <!-- Very truly yours -->
+                <div class="row justify-end q-mb-xl q-mt-xl">
+                  <div class="text-center" style="min-width: 280px">
+                    <div class="text-left q-mb-md">Very truly yours,</div>
+                    <div class="pbc-signature-name">
+                      {{ SetupModal.Preparedby }}
+                    </div>
+                    <div class="pbc-signature-position">
+                      {{ SetupModal.Notedposition?.label || 'Position' }}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Delivered by / Received by -->
+                <div class="row justify-between q-mb-lg">
+                  <div style="min-width: 300px" class="q-ml-md">
+                    <div class="q-mb-md">Delivered by:</div>
+                    <div class="pbc-signature-name text-center">
+                      {{ SetupModal.Deliveredby }}
+                    </div>
+                    <div class="pbc-signature-position text-center">
+                      {{ SetupModal.Certifiedposition?.label || 'Position' }}
+                    </div>
+                  </div>
+                  <div class="text-center q-mr-md" style="min-width: 300px">
+                    <div class="text-left q-mb-md">Received by:</div>
+                    <div class="pbc-signature-name">&nbsp;</div>
+                    <div class="pbc-signature-position">BANK REPRESENTATIVE</div>
+                  </div>
+                </div>
+
+                <div class="text-center pbc-page-footer">Page 1 of 1</div>
+              </q-card-section>
+            </q-card>
+          </div>
+        </q-page-container>
+      </q-layout>
+    </q-dialog>
+
+    <!-- Loading Overlay for Year Changes -->
     <q-inner-loading :showing="reportStore.isLoading && isYearChanging" color="primary">
       <q-spinner size="50px" color="primary" />
       <div class="text-center q-mt-md">
@@ -1032,7 +2010,6 @@
         <div class="text-caption">Please wait while we fetch data for the selected year...</div>
       </div>
     </q-inner-loading>
-
   </q-page>
 </template>
 
@@ -1093,9 +2070,16 @@ const { logAdminActivity } = useActivityLogging()
 
 /* -------------------- STATE -------------------- */
 const showSetupDialog = ref(false)
-const loading = ref(false)
+const initialDataLoading = ref(false)
+const generatingRacReportLoading = ref(false)
+const generatingSacbReportLoading = ref(false)
+const generatingPbcReportLoading = ref(false)
+const generatingTransmittalLoading = ref(false)
+const previewAdviceLoading = ref(false)
 const exportingPDF = ref(false)
 const exportingSACBPDF = ref(false)
+const exportingTransmittalPDF = ref(false)
+const exportingPBCPDF = ref(false)
 const sacbDrawerOpen = ref(true)
 
 function pad(n) {
@@ -1106,7 +2090,7 @@ function pad(n) {
 const currentYear = new Date().getFullYear()
 const currentdate = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
 const laterMonthNum = new Date().getMonth() + 1
-const laterMonth = pad(laterMonthNum)      
+const laterMonth = pad(laterMonthNum)
 const laterlastday = new Date(currentYear, laterMonthNum, 0).getDate()
 
 //Year Filter
@@ -1118,15 +2102,15 @@ const isYearChanging = ref(false)
 function refreshYears() {
   reportStore.fetchAvailableYears()
 
-  selectedYear.value = null   
-  onYearChange(null)       
+  selectedYear.value = null
+  onYearChange(null)
 
   notifySuccess('Filters reset to defaults.')
 }
 
 async function onYearChange(year) {
   isYearChanging.value = true
-  loading.value = true
+  initialDataLoading.value = true
 
   try {
     // Sync store's selectedYear with what the dropdown emitted
@@ -1137,11 +2121,32 @@ async function onYearChange(year) {
       const month = today.getMonth()
       const lastDay = new Date(currentYear, month + 1, 0).getDate()
       const mm = pad(month + 1)
+      // const todayStr = today.toLoocaleDateString('en-CA') // YYYY-MM-DD format
 
-      CurrentRacDateRange.value     = { from: `${currentYear}-${mm}-01`, to: `${currentYear}-${mm}-${pad(lastDay)}` }
-      continuingRacDateRange.value  = { from: `${currentYear}-${mm}-01`, to: `${currentYear}-${mm}-${pad(lastDay)}` }
-      currentSacbDateRange.value    = { from: `${currentYear}-01-01`, to: new Date().toISOString().slice(0, 10) }
-      continuingSacbDateRange.value = { from: `${currentYear}-01-01`, to: new Date().toISOString().slice(0, 10) }
+      CurrentRacDateRange.value = {
+        from: `${currentYear}-${mm}-01`,
+        to: `${currentYear}-${mm}-${pad(lastDay)}`,
+      }
+      continuingRacDateRange.value = {
+        from: `${currentYear}-${mm}-01`,
+        to: `${currentYear}-${mm}-${pad(lastDay)}`,
+      }
+      currentSacbDateRange.value = {
+        from: `${currentYear}-01-01`,
+        to: new Date().toISOString().slice(0, 10),
+      }
+      pbcDateRange.value = {
+        from: `${currentYear}-01-01`,
+        to: new Date().toISOString().slice(0, 10),
+      }
+      continuingSacbDateRange.value = {
+        from: `${currentYear}-01-01`,
+        to: new Date().toISOString().slice(0, 10),
+      }
+      continuingPbcDateRange.value = {
+        from: `${currentYear - 1}-01-01`,
+        to: new Date().toISOString().slice(0, 10),
+      }
     } else {
       const y = parseInt(year)
       if (!y || String(y).length !== 4) return
@@ -1149,75 +2154,36 @@ async function onYearChange(year) {
       const today = new Date()
       const isCurrentYear = y === today.getFullYear()
       const sacbFrom = `${y}-01-01`
-      const sacbTo   = isCurrentYear ? today.toISOString().slice(0, 10) : `${y}-12-31`
-      const month    = today.getMonth()
-      const lastDay  = new Date(y, month + 1, 0).getDate()
-      const mm       = pad(month + 1)
+      const sacbTo = isCurrentYear ? today.toISOString().slice(0, 10) : `${y}-12-31`
+      const month = today.getMonth()
+      const lastDay = new Date(y, month + 1, 0).getDate()
+      const mm = pad(month + 1)
 
-      currentSacbDateRange.value    = { from: sacbFrom, to: sacbTo }
+      currentSacbDateRange.value = { from: sacbFrom, to: sacbTo }
+      pbcDateRange.value = { from: sacbFrom, to: sacbTo }
       continuingSacbDateRange.value = { from: sacbFrom, to: sacbTo }
-      CurrentRacDateRange.value     = { from: `${y}-${mm}-01`, to: `${y}-${mm}-${pad(lastDay)}` }
-      continuingRacDateRange.value  = { from: `${y}-${mm}-01`, to: `${y}-${mm}-${pad(lastDay)}` }
+      CurrentRacDateRange.value = { from: `${y}-${mm}-01`, to: `${y}-${mm}-${pad(lastDay)}` }
+      continuingRacDateRange.value = { from: `${y}-${mm}-01`, to: `${y}-${mm}-${pad(lastDay)}` }
+      continuingPbcDateRange.value = { from: `${y - 1}-01-01`, to: sacbTo }
     }
 
-    expenseSelectedCurrent.value    = null
+    expenseSelectedCurrent.value = null
     expenseSelectedContinuing.value = null
 
     // Only re-fetch expense classes — years list doesn't need to reload
     await reportStore.fetchData(reportStore.selectedYear)
   } finally {
     isYearChanging.value = false
-    loading.value = false
+    initialDataLoading.value = false
   }
 }
-
-//refresh year filter
-// function onYearChange(year) {
-//   // null = "All Years" — reset dates to current month/year defaults
-//   if (year === null) {
-//     const today = new Date()
-//     const month = today.getMonth()
-//     const lastDay = new Date(currentYear, month + 1, 0).getDate()
-//     const mm = pad(month + 1)
-
-//     CurrentRacDateRange.value      = { from: `${currentYear}-${mm}-01`, to: `${currentYear}-${mm}-${pad(lastDay)}` }
-//     continuingRacDateRange.value   = { from: `${currentYear}-${mm}-01`, to: `${currentYear}-${mm}-${pad(lastDay)}` }
-//     currentSacbDateRange.value     = { from: `${currentYear}-01-01`, to: today.toISOString().slice(0, 10) }
-//     continuingSacbDateRange.value  = { from: `${currentYear}-01-01`, to: today.toISOString().slice(0, 10) }
-//     expenseSelectedCurrent.value   = null
-//     expenseSelectedContinuing.value = null
-//     return
-//   }
-
-//   const y = parseInt(year)
-//   if (!y || String(y).length !== 4) return
-
-//   const today = new Date()
-//   const isCurrentYear = y === today.getFullYear()
-
-//   const sacbFrom = `${y}-01-01`
-//   const sacbTo   = isCurrentYear ? today.toISOString().slice(0, 10) : `${y}-12-31`
-
-//   const month   = today.getMonth()
-//   const lastDay = new Date(y, month + 1, 0).getDate()
-//   const mm      = pad(month + 1)
-//   const racFrom = `${y}-${mm}-01`
-//   const racTo   = `${y}-${mm}-${pad(lastDay)}`
-
-//   currentSacbDateRange.value     = { from: sacbFrom, to: sacbTo }
-//   continuingSacbDateRange.value  = { from: sacbFrom, to: sacbTo }
-//   CurrentRacDateRange.value      = { from: racFrom, to: racTo }
-//   continuingRacDateRange.value   = { from: racFrom, to: racTo }
-
-//   expenseSelectedCurrent.value   = null
-//   expenseSelectedContinuing.value = null
-// }
 
 const CurrentRacDateRange = ref({
   from: `${currentYear}-${laterMonth}-01`,
   to: `${currentYear}-${laterMonth}-${pad(laterlastday)}`,
 })
 const currentSacbDateRange = ref({ from: `${currentYear}-01-01`, to: currentdate })
+const pbcDateRange = ref({ from: `${currentYear}-01-01`, to: currentdate })
 const continuingRacDateRange = ref({
   from: `${currentYear}-${laterMonth}-01`,
   to: `${currentYear}-${laterMonth}-${pad(laterlastday)}`,
@@ -1226,6 +2192,34 @@ const continuingSacbDateRange = ref({ from: `${currentYear}-01-01`, to: currentd
 
 const expenseSelectedCurrent = ref(null)
 const expenseSelectedContinuing = ref(null)
+const bankSelectedPBC = ref(null)
+const transmittalMonthSelected = ref(laterMonth)
+
+const continuingPbcDateRange = ref({
+  from: `${currentYear - 1}-01-01`,
+  to: currentdate,
+})
+// const continuingBankSelectedPBC = ref(null)
+// const continuingTransmittalMonthSelected = ref(laterMonth)
+
+function formatDateRange(dateString) {
+  return date.formatDate(dateString, 'MM-DD-YYYY')
+}
+
+const monthOptions = [
+  { label: 'January', value: '01' },
+  { label: 'February', value: '02' },
+  { label: 'March', value: '03' },
+  { label: 'April', value: '04' },
+  { label: 'May', value: '05' },
+  { label: 'June', value: '06' },
+  { label: 'July', value: '07' },
+  { label: 'August', value: '08' },
+  { label: 'September', value: '09' },
+  { label: 'October', value: '10' },
+  { label: 'November', value: '11' },
+  { label: 'December', value: '12' },
+]
 
 // Modals
 const RACModal = reactive({
@@ -1239,6 +2233,51 @@ const RACModal = reactive({
   ],
 })
 
+const transmittalModal = reactive({
+  show: false,
+  date: new Date().toISOString().slice(0, 10),
+  periodFrom: `${currentYear}-${laterMonth}-01`,
+  periodTo: `${currentYear}-${laterMonth}-${pad(laterlastday)}`,
+  recipientName: '',
+  recipientPosition: null,
+})
+
+const PBCModal = reactive({
+  show: false,
+  pbcNo: '',
+  recipient: '',
+  bankName: '',
+  bankBranch: '',
+  bankCity: '',
+  date: new Date().toISOString().slice(0, 10),
+})
+
+const pbcTotal = computed(() => {
+  if (!reportStore.reportPBC) return 0
+  return reportStore.reportPBC.reduce((sum, group) => {
+    return sum + (group.checks || []).reduce((s, c) => s + (c.amount || 0), 0)
+  }, 0)
+})
+
+const transmittalDvTotal = computed(() => {
+  return (reportStore.reportTransmittal.dvRows || []).reduce(
+    (sum, row) => sum + (Number(row.amount) || 0),
+    0,
+  )
+})
+
+function buildNextPbcNo(dateString) {
+  const baseDate = dateString ? new Date(dateString) : new Date()
+  const dateForNumber = Number.isNaN(baseDate.getTime()) ? new Date() : baseDate
+  const yy = String(dateForNumber.getFullYear()).slice(-2)
+  const mm = pad(dateForNumber.getMonth() + 1)
+  const key = `pbc-number-sequence:${yy}-${mm}`
+  const lastNumber = Number(localStorage.getItem(key) || 0) + 1
+
+  localStorage.setItem(key, String(lastNumber))
+  return `${yy}-${mm}-${String(lastNumber).padStart(5, '0')}`
+}
+
 const SACBModal = reactive({
   show: false,
   reportType: '',
@@ -1249,6 +2288,16 @@ const SACBModal = reactive({
     { id: 4, time: '09:15 AM', description: 'Print dialog opened' },
   ],
 })
+
+const pbcAdviceColumns = [
+  { name: 'pbcDate', label: 'Date Advice', field: 'pbcDate', align: 'left' },
+  { name: 'pbcNo', label: 'Advice No.', field: 'pbcNo', align: 'left' },
+  { name: 'pbcDateRange', label: 'Date Range', field: 'pbcDateRange', align: 'left' },
+  { name: 'bankName', label: 'Bank Name', field: 'bankName', align: 'left' },
+  { name: 'voucherCount', label: 'No. of Vouchers', field: 'voucherCount', align: 'right' },
+  { name: 'amount', label: 'Amount', field: 'amount', align: 'right' },
+  { name: 'action', label: 'Action', field: 'action', align: 'right' },
+]
 
 const SetupModal = reactive({
   selectedBarangay: { barangay_name: '' },
@@ -1269,17 +2318,27 @@ const SetupModal = reactive({
 })
 
 const loadAllData = async () => {
-  loading.value = true
+  initialDataLoading.value = true
   try {
-    // fetchAvailableYears first so selectedYear is valid before fetchData runs
     await reportStore.fetchAvailableYears()
     await reportStore.fetchData(reportStore.selectedYear)
+    await reportStore.fetchSignatories()
+    applySavedSignatories()
   } catch (error) {
     console.error('Error loading data:', error)
     notifyError('Failed to load data. Please try again later.')
   } finally {
-    loading.value = false
+    initialDataLoading.value = false
   }
+}
+
+function applySavedSignatories() {
+  SetupModal.Preparedby = reportStore.prepBy || ''
+  SetupModal.Preparedposition = reportStore.prepPosition
+  SetupModal.Notedby = reportStore.notedBy || ''
+  SetupModal.Notedposition = reportStore.notedPosition
+  SetupModal.Certifiedby = reportStore.certBy || ''
+  SetupModal.Certifiedposition = reportStore.certPosition
 }
 
 // const loadAllData = async () => {
@@ -1297,7 +2356,7 @@ const loadAllData = async () => {
 //   }
 // }
 
-const openSACBModal = (type) => {
+const openSACBModal = async (type) => {
   if (type === 'current-sacb') {
     if (!currentSacbDateRange.value.from || !currentSacbDateRange.value.to) {
       return notifyError('Please select a valid current SACB date range.')
@@ -1321,27 +2380,32 @@ const openSACBModal = (type) => {
     `Generated ${reportType} report for date range: ${dateRange}`,
   )
 
-  loadSacbReport(
-    type === 'current-sacb'
-      ? currentSacbDateRange.value.from
-      : type === 'continuing-sacb'
-        ? continuingSacbDateRange.value.from
-        : null,
-    type === 'current-sacb'
-      ? currentSacbDateRange.value.to
-      : type === 'continuing-sacb'
-        ? continuingSacbDateRange.value.to
-        : null,
-  )
-  SACBModal.reportType = reportType
-  SACBModal.show = true
+  generatingSacbReportLoading.value = true
+  try {
+    await loadSacbReport(
+      type === 'current-sacb'
+        ? currentSacbDateRange.value.from
+        : type === 'continuing-sacb'
+          ? continuingSacbDateRange.value.from
+          : null,
+      type === 'current-sacb'
+        ? currentSacbDateRange.value.to
+        : type === 'continuing-sacb'
+          ? continuingSacbDateRange.value.to
+          : null,
+    )
+    SACBModal.reportType = reportType
+    SACBModal.show = true
+  } finally {
+    generatingSacbReportLoading.value = false
+  }
 }
 
 const closeSACBModal = () => {
   SACBModal.show = false
 }
 
-const openRACModal = (type) => {
+const openRACModal = async (type) => {
   if (type === 'current-rac') {
     if (!CurrentRacDateRange.value.from || !CurrentRacDateRange.value.to) {
       return notifyError('Please select a valid current RAC date range.')
@@ -1383,20 +2447,196 @@ const openRACModal = (type) => {
     `Generated ${reportType} report for expense category: ${expenseCategory} with date range: ${dateRange}`,
   )
 
-  loadRacReport(
-    type === 'current-rac'
-      ? CurrentRacDateRange
-      : type === 'continuing-rac'
-        ? continuingRacDateRange
-        : null,
-  )
-  RACModal.reportType = reportType
-  RACModal.show = true
+  generatingRacReportLoading.value = true
+  try {
+    await loadRacReport(
+      type === 'current-rac'
+        ? CurrentRacDateRange
+        : type === 'continuing-rac'
+          ? continuingRacDateRange
+          : null,
+    )
+    RACModal.reportType = reportType
+    RACModal.show = true
+  } finally {
+    generatingRacReportLoading.value = false
+  }
 }
 
 const closeRACModal = () => {
   RACModal.show = false
 }
+
+const searchQuery = ref('')
+
+const filteredPbcAdviceList = computed(() => {
+  const list = reportStore.pbcAdviceList || []
+  const q = searchQuery.value?.trim().toLowerCase()
+  if (!q) return list
+
+  return list.filter((row) => {
+    return (
+      String(row.pbcNo || '')
+        .toLowerCase()
+        .includes(q) ||
+      String(row.bankName || '')
+        .toLowerCase()
+        .includes(q) ||
+      formatFullDate(row.pbcDate || '')
+        .toLowerCase()
+        .includes(q)
+    )
+  })
+})
+
+const clearAllFilters = () => {
+  searchQuery.value = ''
+}
+
+const viewPbcAdvice = async (row) => {
+  previewAdviceLoading.value = true
+  try {
+    PBCModal.pbcNo = row.pbcNo
+    PBCModal.date = row.pbcDate
+    PBCModal.recipient = row.recipient || PBCModal.recipient || 'The Bank Manager'
+    PBCModal.bankName = row.bankName || PBCModal.bankName
+    PBCModal.bankBranch = row.bankBranch || PBCModal.bankBranch
+    PBCModal.bankCity = row.bankCity || PBCModal.bankCity
+
+    await reportStore.fetchPbcReport({
+      from: row.from,
+      to: row.to,
+      bankId: row.bankId,
+      pbcNo: row.pbcNo,
+      pbcDate: row.pbcDate,
+      source: row.source || 'regular',
+    })
+
+    PBCModal.show = true
+  } catch (error) {
+    console.error(error)
+    notifyError('Failed to load this PBC advice for preview')
+  } finally {
+    previewAdviceLoading.value = false
+  }
+}
+
+const openTransmittalModal = async () => {
+  if (!transmittalMonthSelected.value) {
+    return notifyError('Please select a month for the transmittal report.')
+  }
+
+  generatingTransmittalLoading.value = true
+  try {
+    const year = Number(reportStore.selectedYear || currentYear)
+    const month = String(transmittalMonthSelected.value).padStart(2, '0')
+    const lastDay = new Date(year, Number(month), 0).getDate()
+
+    transmittalModal.periodFrom = `${year}-${month}-01`
+    transmittalModal.periodTo = `${year}-${month}-${pad(lastDay)}`
+    transmittalModal.date = new Date().toISOString().slice(0, 10)
+
+    await reportStore.fetchTransmittalReport({
+      from: transmittalModal.periodFrom,
+      to: transmittalModal.periodTo,
+      year,
+      pbcNo: PBCModal.pbcNo,
+      pbcDate: PBCModal.date,
+    })
+
+    logAdminActivity(
+      'Report Generated',
+      `Generated Transmittal report for date range: ${transmittalModal.periodFrom} to ${transmittalModal.periodTo}`,
+    )
+    transmittalModal.show = true
+  } catch (error) {
+    console.error(error)
+    notifyError('Failed to generate Transmittal report')
+  } finally {
+    generatingTransmittalLoading.value = false
+  }
+}
+
+const closeTransmittalModal = () => {
+  transmittalModal.show = false
+}
+
+const openPBCModal = async () => {
+  if (!pbcDateRange.value.from || !pbcDateRange.value.to) {
+    return notifyError('Please select a valid PBC date range.')
+  }
+  if (!bankSelectedPBC.value) {
+    return notifyError('Please select a bank.')
+  }
+
+  generatingPbcReportLoading.value = true
+  try {
+    const selectedBank = reportStore.bankOptions.find(
+      (bank) => String(bank.id) === String(bankSelectedPBC.value?.id || bankSelectedPBC.value),
+    )
+
+    if (selectedBank) {
+      PBCModal.recipient = PBCModal.recipient || 'The Bank Manager'
+      PBCModal.bankName = selectedBank.name || PBCModal.bankName
+      PBCModal.bankBranch = selectedBank.branch || PBCModal.bankBranch
+      PBCModal.bankCity = selectedBank.city || PBCModal.bankCity
+    }
+
+    PBCModal.pbcNo = buildNextPbcNo(PBCModal.date)
+
+    await reportStore.fetchPbcReport({
+      from: pbcDateRange.value.from,
+      to: pbcDateRange.value.to,
+      bankId: bankSelectedPBC.value?.id || bankSelectedPBC.value,
+      pbcNo: PBCModal.pbcNo,
+      pbcDate: PBCModal.date,
+    })
+
+    // reportStore.recordPbcAdvice({
+    //   pbcNo: PBCModal.pbcNo,
+    //   pbcDate: PBCModal.date,
+    //   voucherCount: pbcVoucherCount.value,
+    //   amount: pbcTotal.value,
+    // })
+
+    await reportStore.recordPbcAdvice({
+      pbcNo: PBCModal.pbcNo,
+      pbcDate: PBCModal.date,
+      voucherCount: pbcVoucherCount.value,
+      amount: pbcTotal.value,
+      from: pbcDateRange.value.from,
+      to: pbcDateRange.value.to,
+      bankId: bankSelectedPBC.value?.id || bankSelectedPBC.value,
+      bankName: PBCModal.bankName,
+      recipient: PBCModal.recipient,
+      bankBranch: PBCModal.bankBranch,
+      bankCity: PBCModal.bankCity,
+      source: 'regular',
+    })
+
+    logAdminActivity(
+      'Report Generated',
+      `Generated PBC report for bank: ${selectedBank?.name || 'Unknown'} with date range: ${pbcDateRange.value.from} to ${pbcDateRange.value.to}`,
+    )
+    PBCModal.show = true
+  } catch (error) {
+    console.error(error)
+    // notifyError('Failed to generate PBC report')
+    notifyError(getErrorMessage(error, 'Failed to generate PBC report'))
+  } finally {
+    generatingPbcReportLoading.value = false
+  }
+}
+
+const pbcVoucherCount = computed(() => {
+  if (!reportStore.reportPBC) return 0
+  return reportStore.reportPBC.reduce((sum, group) => sum + (group.checks?.length || 0), 0)
+})
+
+const closePBCModal = () => {
+  PBCModal.show = false
+}
+
 
 const getReportTypeLabel = (type) =>
   ({
@@ -1452,7 +2692,25 @@ const handleSACBPrint = () => {
 // }
 
 /* -------------------- HELPERS -------------------- */
-const notifyError = (msg) => $q.notify({ type: 'negative', message: msg, position: 'top' })
+function getErrorMessage(error, fallback) {
+  return (
+    error?.response?.data?.message || // axios error shape: { response: { data: { message } } }
+    error?.message ||
+    fallback
+  )
+}
+
+const notifyError = (msg, timeout = 10000) =>
+  $q.notify({
+    type: 'negative',
+    message: msg,
+    position: 'top',
+    timeout,
+    // multiLine: true,
+    // classes: 'q-pb-sm',
+    actions: [{ icon: 'close', color: 'white', round: true, dense: true }],
+  })
+
 const notifySuccess = (msg) => $q.notify({ type: 'positive', message: msg, position: 'top' })
 
 /* -------------------- COMPUTED -------------------- */
@@ -1466,33 +2724,6 @@ const dateRangeDisplay = computed(() => {
     return `To ${CurrentRacDateRange.value.to}`
   return `${CurrentRacDateRange.value.from} - ${CurrentRacDateRange.value.to}`
 })
-
-// const continuingDateRangeDisplay = computed(() => {
-//   if (!continuingRacDateRange.value.from && !continuingRacDateRange.value.to) return ''
-//   if (continuingRacDateRange.value.from && !continuingRacDateRange.value.to)
-//     return `From ${continuingRacDateRange.value.from}`
-//   if (!continuingRacDateRange.value.from && continuingRacDateRange.value.to)
-//     return `To ${continuingRacDateRange.value.to}`
-//   return `${continuingRacDateRange.value.from} - ${continuingRacDateRange.value.to}`
-// })
-
-// const currentSacbDateRangeDisplay = computed(() => {
-//   if (!currentSacbDateRange.value.from && !currentSacbDateRange.value.to) return ''
-//   if (currentSacbDateRange.value.from && !currentSacbDateRange.value.to)
-//     return `From ${currentSacbDateRange.value.from}`
-//   if (!currentSacbDateRange.value.from && currentSacbDateRange.value.to)
-//     return `To ${currentSacbDateRange.value.to}`
-//   return `${currentSacbDateRange.value.from} - ${currentSacbDateRange.value.to}`
-// })
-
-// const continuingSacbDateRangeDisplay = computed(() => {
-//   if (!continuingSacbDateRange.value.from && !continuingSacbDateRange.value.to) return ''
-//   if (continuingSacbDateRange.value.from && !continuingSacbDateRange.value.to)
-//     return `From ${continuingSacbDateRange.value.from}`
-//   if (!continuingSacbDateRange.value.from && continuingSacbDateRange.value.to)
-//     return `To ${continuingSacbDateRange.value.to}`
-//   return `${continuingSacbDateRange.value.from} - ${continuingSacbDateRange.value.to}`
-// })
 
 async function loadRacReport($date) {
   try {
@@ -1873,6 +3104,7 @@ async function exportToExcel() {
     const totalAppr = reportStore.reportRAC.reduce((s, r) => s + (r.appropriation || 0), 0)
     const totalOblig = reportStore.reportRAC.reduce((s, r) => s + (r.amount || 0), 0)
     const totalBal = totalAppr - totalOblig
+    //remove this when the time comes
 
     const summaryHeaderStyle = (cell, label) => {
       cell.value = label
@@ -1999,7 +3231,7 @@ async function exportToExcel() {
     console.error(error)
     $q.notify({ type: 'negative', message: 'Failed to export Excel' })
   }
-} 
+}
 
 async function exportSACBToPDF() {
   exportingSACBPDF.value = true
@@ -2063,6 +3295,139 @@ async function exportSACBToPDF() {
   }
 }
 
+async function exportTransmittalToPDF() {
+  exportingTransmittalPDF.value = true
+  const html2canvas = (await import('html2canvas')).default
+  const jsPDF = (await import('jspdf')).default
+  try {
+    const element = document.querySelector('#transmittal-print-content')
+
+    if (!element) {
+      $q.notify({
+        type: 'negative',
+        message: 'No Transmittal content found to export!',
+      })
+      return
+    }
+    element.classList.add('pdf-export-mode')
+
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+    })
+
+    element.classList.remove('pdf-export-mode')
+
+    const imgData = canvas.toDataURL('image/png')
+    const pdf = new jsPDF('2', 'mm', 'legal')
+
+    const pageWidth = pdf.internal.pageSize.getWidth() // 297mm (A4 landscape width)
+    const pageHeight = pdf.internal.pageSize.getHeight() // 210mm (A4 landscape height)
+    const imgWidth = pageWidth
+    const imgHeight = (canvas.height * imgWidth) / canvas.width
+
+    let heightLeft = imgHeight
+    let position = 0
+
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+    heightLeft -= pageHeight
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight
+      pdf.addPage()
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+    }
+
+    const exportDate = (transmittalModal.date || new Date().toISOString().slice(0, 10)).replace(
+      /-/g,
+      '',
+    )
+    pdf.save(`transmittal-letter_${exportDate}.pdf`)
+
+    // Log PDF export activity
+    logAdminActivity('Report Exported', `Exported ${SACBModal.reportType} report to PDF`)
+
+    $q.notify({
+      type: 'positive',
+      message: 'Transmittal Letter PDF Exported Successfully!',
+    })
+  } catch (error) {
+    console.error(error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to export Transmittal Letter PDF',
+    })
+  } finally {
+    exportingTransmittalPDF.value = false
+  }
+}
+
+async function exportPBCToPDF() {
+  exportingPBCPDF.value = true
+  const html2canvas = (await import('html2canvas')).default
+  const jsPDF = (await import('jspdf')).default
+  try {
+    const element = document.querySelector('#pbc-print-content')
+
+    if (!element) {
+      $q.notify({
+        type: 'negative',
+        message: 'No PBC content found to export!',
+      })
+      return
+    }
+    element.classList.add('pdf-export-mode')
+
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+    })
+
+    element.classList.remove('pdf-export-mode')
+
+    const imgData = canvas.toDataURL('image/png')
+    const pdf = new jsPDF('2', 'mm', 'legal')
+
+    const pageWidth = pdf.internal.pageSize.getWidth() // 297mm (A4 landscape width)
+    const pageHeight = pdf.internal.pageSize.getHeight() // 210mm (A4 landscape height)
+    const imgWidth = pageWidth
+    const imgHeight = (canvas.height * imgWidth) / canvas.width
+
+    let heightLeft = imgHeight
+    let position = 0
+
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+    heightLeft -= pageHeight
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight
+      pdf.addPage()
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+    }
+
+    const exportDate = (PBCModal.date || new Date().toISOString().slice(0, 10)).replace(/-/g, '')
+    pdf.save(`PBC_${exportDate}.pdf`)
+
+    // Log PDF export activity
+    logAdminActivity('Report Exported', `Exported PBC to PDF`)
+
+    $q.notify({
+      type: 'positive',
+      message: 'PBC Letter PDF Exported Successfully!',
+    })
+  } catch (error) {
+    console.error(error)
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to export PBC Letter PDF',
+    })
+  } finally {
+    exportingPBCPDF.value = false
+  }
+}
+
 // function getSACBDateRangeDisplay() {
 //   // Determine which SACB date range to use based on which modal was opened
 //   const currentDisplay = currentSacbDateRangeDisplay.value
@@ -2073,6 +3438,7 @@ async function exportSACBToPDF() {
 //   if (continuingDisplay) return continuingDisplay
 //   return 'No date range selected'
 // }
+
 //displaying full date format
 function formatFullDate(dateString) {
   return date.formatDate(dateString, 'MMMM DD, YYYY')
@@ -2093,21 +3459,11 @@ function onDateChange(field, newValue) {
   currentSacbDateRange.value.from = from.toISOString().slice(0, 10)
   currentSacbDateRange.value.to = to.toISOString().slice(0, 10)
 }
-function onDateChangecontinuing(field, newValue) {
-  // Extract the year from the changed field
-  const changedYear = new Date(newValue).getFullYear()
 
-  // Copy existing dates
-  const from = new Date(currentSacbDateRange.value.from)
-  const to = new Date(currentSacbDateRange.value.to)
-
-  // Apply the year to BOTH using the year the user actually changed
-  from.setFullYear(changedYear)
-  to.setFullYear(changedYear)
-
-  currentSacbDateRange.value.from = from.toISOString().slice(0, 10)
-  currentSacbDateRange.value.to = to.toISOString().slice(0, 10)
+function onPbcDateChange(field, newValue) {
+  pbcDateRange.value[field] = newValue
 }
+
 //auto change rac month
 function changeMonth(newDate) {
   if (!newDate) return
@@ -2126,16 +3482,21 @@ function toggleSACBDrawer() {
   sacbDrawerOpen.value = !sacbDrawerOpen.value
 }
 
-function resetSignatories() {
-  SetupModal.Preparedby = ''
-  SetupModal.Preparedposition = null
-  SetupModal.Notedby = ''
-  SetupModal.Notedposition = null
-  SetupModal.Certifiedby = ''
-  SetupModal.Certifiedposition = null
+// function resetSignatories() {
+//   SetupModal.Preparedby = ''
+//   SetupModal.Preparedposition = null
+//   SetupModal.Notedby = ''
+//   SetupModal.Notedposition = null
+//   SetupModal.Certifiedby = ''
+//   SetupModal.Certifiedposition = null
 
-  logAdminActivity('Signatory Form Reset', 'Reset all signatory fields in report setup')
-  notifySuccess('Signatory fields have been reset')
+//   logAdminActivity('Signatory Form Reset', 'Reset all signatory fields in report setup')
+//   notifySuccess('Signatory fields have been reset')
+// }
+function resetSignatories() {
+  applySavedSignatories()
+  logAdminActivity('Signatory Form Reset', 'Reset signatory fields to saved barangay setup')
+  notifySuccess('Signatory fields reset to your saved setup')
 }
 
 function saveAsTemplate() {
@@ -2161,17 +3522,23 @@ function formatCurrency(value) {
     maximumFractionDigits: 2,
   })
 }
-
+//
 /* -------------------- LIFECYCLE -------------------- */
+// onMounted(async () => {
+//   await loadAllData()
+//   reportStore.loadPbcAdviceList()
+//   await logPageVisit('Reports')
+// })
+
 onMounted(async () => {
   await loadAllData()
+  await reportStore.loadPbcAdviceList()
   await logPageVisit('Reports')
 })
 
 onActivated(async () => {
   await loadAllData()
 })
-
 </script>
 
 <style scoped>
@@ -2184,9 +3551,9 @@ onActivated(async () => {
 .section-header {
   display: flex;
   align-items: center;
-  padding-bottom: 16px;
+  padding-bottom: 12px;
   border-bottom: 2px solid #e0e0e0;
-  margin-bottom: 32px;
+  margin-bottom: 14px;
 }
 
 .section-title {
@@ -2215,6 +3582,15 @@ onActivated(async () => {
 /* Card styling */
 .report-card {
   min-height: 280px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e8e8e8;
+  transition: all 0.3s ease;
+}
+
+/* Card styling */
+.transmittal-card {
+  min-height: 220px;
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border: 1px solid #e8e8e8;
@@ -2499,6 +3875,12 @@ onActivated(async () => {
   max-width: 297mm; /* A4 landscape height (now width) */
   margin: 0 auto;
   padding: 20px;
+}
+
+.print-modal.pdf-export-mode {
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
 }
 
 .print-content-wrapper .print-modal {
@@ -3385,6 +4767,208 @@ onActivated(async () => {
   width: 24px;
   height: 24px;
   display: inline-block;
+}
+
+.annex-label {
+  font-family: 'Times New Roman', Times, serif;
+  text-align: right;
+  font-weight: 500;
+  font-size: 11px;
+  margin-bottom: 1px;
+}
+
+.transmittal-serif {
+  margin-bottom: -4px;
+  font-size: 18px;
+  font-family: 'Times New Roman', Times, serif;
+}
+
+.transmittal-serif-body {
+  margin-bottom: -6px;
+  font-size: 14px;
+  font-family: 'Times New Roman', Times, serif;
+}
+
+.after-body {
+  font-weight: 900;
+  -webkit-text-stroke: 2px currentColor;
+  letter-spacing: 2px;
+  font-size: 16px;
+}
+
+.transmittal-body {
+  /* font-family: 'Times New Roman', Times, serif; */
+  margin-left: 50px;
+  font-weight: 300;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.transmittal-bottom {
+  /* font-family: 'Times New Roman', Times, serif; */
+  font-weight: 300;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.transmittal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.transmittal-table-payroll {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.transmittal-table th,
+.transmittal-table td {
+  border: 1px solid #000;
+  padding: 6px 10px;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.transmittal-table-payroll th {
+  border: 1px solid #000;
+  padding: 6px 10px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.transmittal-table-payroll td {
+  border: 1px solid #000;
+  padding: 6px 10px;
+  vertical-align: middle;
+}
+
+.transmittal-table thead th {
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.transmittal-table tbody td:nth-child(5) {
+  /* PAYEE column left-aligned */
+  text-align: left;
+}
+
+.transmittal-total-row td {
+  font-weight: 700;
+}
+
+.transmittal-signature-name {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-bottom: 1px solid #000;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+  min-height: 20px;
+}
+
+.transmittal-signature-position {
+  font-size: 13px;
+  color: #555;
+}
+
+.pbc-header-block {
+  text-align: center;
+  font-family: 'Times New Roman', Times, serif;
+}
+.pbc-republic,
+.pbc-province {
+  font-size: 12px;
+}
+.pbc-city,
+.pbc-barangay {
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+.pbc-title {
+  text-align: center;
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  -webkit-text-stroke: 1.5px currentColor;
+  letter-spacing: 1.5px;
+  margin: 16px 0 24px;
+  color: #000;
+}
+.pbc-to-block {
+  font-size: 13px;
+  color: #000;
+}
+.pbc-body,
+.pbc-footer-text {
+  font-size: 13px;
+  line-height: 1.6;
+}
+/* .pbc-en {
+  color: #187c19;
+} */
+.pbc-fil {
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  margin-bottom: 6px;
+}
+.pbc-footer-text .pbc-en,
+.pbc-footer-text .pbc-fil {
+  text-indent: 80px;
+}
+.pbc-blank {
+  border-bottom: 1px solid #000;
+  padding: 0 4px;
+}
+.pbc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 16px;
+}
+.pbc-table th,
+.pbc-table td {
+  border: 1px dotted #666;
+  padding: 6px 10px;
+  /* text-align: center; */
+}
+.pbc-table thead th {
+  font-weight: 700;
+  text-transform: uppercase;
+  border-bottom: 1px solid #000;
+}
+/* .pbc-bank-group-row td {
+  background: #f5f5f5;
+  align-items: start;
+} */
+.pbc-nothing-follows-row td {
+  font-style: italic;
+  font-weight: 600;
+}
+.pbc-total-row td {
+  border-top: 1px solid #000;
+  border-bottom: 1px solid #000;
+}
+.pbc-signature-name {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-bottom: 1px solid #000;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+  min-height: 20px;
+}
+.pbc-signature-position {
+  font-size: 13px;
+  color: #555;
+}
+.pbc-page-footer {
+  font-size: 11px;
+  color: #666;
+  margin-top: 24px;
 }
 
 /* Responsive adjustments for financial report table */

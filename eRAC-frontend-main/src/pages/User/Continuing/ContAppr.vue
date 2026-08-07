@@ -551,21 +551,21 @@ const columns = [
 const filteredDialogAccounts = computed(() => {
   const currentYear = new Date().getFullYear()
 
-  // First filter by year (2024 or last year)
-  const yearFilteredAccounts = continueAccounts.value.filter((account) => {
-    const accountYear = parseInt(account.year)
-    return accountYear != currentYear
-  })
+  const eligibleAccounts = continueAccounts.value.filter((account) => {
+    const accountYear = parseInt(account.year, 10)
+    const hasBalance = Number(account.balance) > 0
+    const isPreviousYear = !Number.isNaN(accountYear) && accountYear !== currentYear
 
-  // Only allow accounts that are CAPITAL OUTLAY (in any segment)
-  const capitalOutlayFiltered = yearFilteredAccounts.filter((account) => {
+    if (!isPreviousYear || !hasBalance) return false
+
+    const expenseClass = String(account.expenseClass || '').toLowerCase()
     const name = String(account.accountName || '').toLowerCase()
-    return name.includes('capital outlay')
+    return expenseClass.includes('capital outlay') || name.includes('capital outlay')
   })
 
-  if (!dialogSearchQuery.value) return capitalOutlayFiltered
+  if (!dialogSearchQuery.value) return eligibleAccounts
 
-  return capitalOutlayFiltered.filter((account) =>
+  return eligibleAccounts.filter((account) =>
     Object.values(account).join(' ').toLowerCase().includes(dialogSearchQuery.value.toLowerCase()),
   )
 })

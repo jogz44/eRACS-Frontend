@@ -1,5 +1,6 @@
 import { defineBoot } from '#q-app/wrappers'
 import axios from 'axios'
+// import { useAuthStore } from 'stores/auth'
 
 // Be careful when using SSR for cross-request state pollution
 // due to creating a Singleton instance here;
@@ -8,14 +9,16 @@ import axios from 'axios'
 // "export default () => {}" function below (which runs individually
 // for each client)
 const api = axios.create({
-  baseURL:'http://10.0.1.23:3001',
+  //  baseURL: 'http://192.168.1.47:3001',
+  baseURL: 'http://192.168.8.33:3001', //backend ip
+  // baseURL: 'http://192.168.8.67:3001',
   // baseURL:'http://192.168.8.234:8000',
   //baseURL: process.env.API_URL || 'http://192.168.150.134:8000',
   withCredentials: false,
-
 })
 
 export default defineBoot(({ app }) => {
+  ;``
   // for use inside Vue files (Options API) through this.$axios and this.$axios
   app.config.globalProperties.$axios = axios
   // ^ ^ ^ this will allow you to use this.$axios (for Vue Options API form)
@@ -54,7 +57,7 @@ export default defineBoot(({ app }) => {
         window.dispatchEvent(new CustomEvent('session-expired'))
       }
       return Promise.reject(error)
-    }
+    },
   )
 })
 

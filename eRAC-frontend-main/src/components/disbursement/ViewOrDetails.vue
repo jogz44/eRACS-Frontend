@@ -3,39 +3,41 @@
     <q-card style="min-width: 1100px">
       <!-- Debug data trigger -->
       <div v-show="false">{{ debugData }}</div>
-      <div class="disbursement-tran">
-        <q-card-section>
+      <div class="disbursement-tran q-pb-none">
+        <q-card-section class="q-pb-xs">
           <div class="row">
-          <div class="text-h6">Disbursement #{{ store.currentLiquidation.dvNumber }}</div>
-          <q-space />
-          <div>  <q-btn
-            flat
-            dense
-            icon="picture_as_pdf"
-            color="red"
-            @click="exportToPDF"
-            title="Export to PDF"
-            :loading="exportingPDF"
-          /></div>
-        </div>
-          <div class="text-caption text-grey-6 q-mt-sm">
+            <div class="text-h6">Disbursement #{{ store.currentLiquidation.dvNumber }}</div>
+            <q-space />
+            <div>
+              <q-btn
+                flat
+                dense
+                icon="picture_as_pdf"
+                color="red"
+                @click="exportToPDF"
+                title="Export to PDF"
+                :loading="exportingPDF"
+              />
+            </div>
+          </div>
+          <div class="text-caption text-grey-6 q-mt-none">
             View liquidation details and official receipt information
           </div>
         </q-card-section>
 
-        <q-card-section>
-          <div class="row q-col-gutter-md">
+        <q-card-section class="q-pb-xs">
+          <div class="row q-col-gutter-xs">
             <!-- Date Field -->
-            <div class="col-md-4 col-sm-6 q-mb-md">
-              <div class="text-caption text-grey">Date</div>
+            <div class="col-md-4 col-sm-6 q-mb-xs">
+              <div class="text-caption text-grey text-weight-bold">Date</div>
               <div class="text-body1 text-weight-medium">
                 {{ store.currentLiquidation.date }}
               </div>
             </div>
 
             <!-- DV Number Field -->
-            <div class="col-md-4 col-sm-6 q-mb-md">
-              <div class="text-caption text-grey">DV Number</div>
+            <div class="col-md-4 col-sm-6 q-mb-xs">
+              <div class="text-caption text-grey text-weight-bold">DV Number</div>
               <div class="row items-center">
                 <div class="text-body1 text-weight-medium">
                   {{ store.currentLiquidation.dvNumber }}
@@ -52,94 +54,291 @@
             </div>
 
             <!-- DV Amount Field -->
-            <div class="col-md-4 col-sm-6 q-mb-md">
-              <div class="text-caption text-grey">DV Amount</div>
+            <div class="col-md-4 col-sm-6 q-mb-xs">
+              <div class="text-caption text-grey text-weight-bold">DV Amount</div>
               <div class="text-body1 text-weight-medium">
                 ₱ {{ formatCurrency(store.currentLiquidation.dvAmount || 0) }}
               </div>
             </div>
 
-            <!-- Bank Field -->
-            <div class="col-md-4 col-sm-6 q-mb-md">
-              <div class="text-caption text-grey">Bank</div>
+            <!-- Net Amount Field -->
+            <div class="col-md-4 col-sm-6 q-mb-xs" v-if="!isBirOrSk">
+              <div class="text-caption text-grey text-weight-bold">Net Amount</div>
               <div class="text-body1 text-weight-medium">
-                {{ store.currentLiquidation.bank_name }}
-              </div>
-            </div>
-
-            <!-- Cheque Number Field -->
-            <div class="col-md-4 col-sm-6 q-mb-md">
-              <div class="text-caption text-grey">Cheque Number</div>
-              <div class="text-body1 text-weight-medium">
-                {{ store.currentLiquidation.chequeNumber }}
+                ₱ {{ formatCurrency(store.currentLiquidation.netAmount || 0) }}
               </div>
             </div>
 
             <!-- Amount to Return Field -->
-            <div class="col-md-4 col-sm-6 q-mb-md">
-              <div class="text-caption text-grey">Amount to Return to Appropriation</div>
+            <div class="col-md-4 col-sm-6 q-mb-xs" v-if="!isBirOrSk">
+              <div class="text-caption text-grey text-weight-bold">
+                Amount to Return to Appropriation
+              </div>
               <div class="text-body1 text-weight-medium">
                 ₱ {{ formatCurrency(totalReturnAmount) }}
               </div>
             </div>
             <!-- Actual Expense Field -->
-            <div class="col-md-4 col-sm-6 q-mb-md">
-              <div class="text-caption text-grey">Actual Expense</div>
+            <div class="col-md-4 col-sm-6 q-mb-xs" v-if="!isBirOrSk">
+              <div class="text-caption text-grey text-weight-bold">Actual Expense</div>
               <div class="text-body1 text-weight-medium">
                 ₱ {{ formatCurrency(totalActualExpense) }}
               </div>
             </div>
-            <!-- Remarks Field -->
-            <div class="col-md-4 col-sm-12 q-mb-md">
-              <div class="text-caption text-grey">Remarks</div>
+            <!-- Funds -->
+            <!-- <div class="col-md-4 col-sm-6 q-mb-xs" v-if="!isBirOrSk">
+              <div class="text-caption text-grey text-weight-bold">Funds</div>
               <div class="text-body1 text-weight-medium">
-                {{ store.currentLiquidation.remarks || '—' }}
+                {{ store.currentLiquidation.funds || '—' }}
+              </div>
+            </div> -->
+            <!-- Taxpayer Type -->
+            <div class="col-md-4 col-sm-6 q-mb-xs" v-if="!isBirOrSk">
+              <div class="text-caption text-grey text-weight-bold">Payee</div>
+              <div class="text-body1 text-weight-medium">
+                {{ store.currentLiquidation.payee || '—' }}
               </div>
             </div>
 
             <!-- Status Field -->
-            <div class="col-md-4 col-sm-12 q-mb-md">
-              <div class="text-caption text-grey">Status</div>
-              <div class="text-body1 text-weight-medium">
+            <div class="col-md-4 col-sm-12 q-mb-xs" v-if="!isBirOrSk">
+              <div class="text-caption text-grey text-weight-bold">Status</div>
+              <div
+                class="text-body1 text-weight-medium"
+                :class="{
+                  'text-blue': store.currentLiquidation.status === 'Unliquidated',
+                  'text-green': store.currentLiquidation.status === 'Liquidated',
+                }"
+              >
                 {{ store.currentLiquidation.status }}
+              </div>
+            </div>
+
+            <!-- Remarks Field -->
+            <div class="col-md-8 col-sm-12 q-mb-xs" v-if="!isBirOrSk">
+              <div class="text-caption text-grey text-weight-bold">Remarks</div>
+              <div class="text-body1 text-weight-medium">
+                {{ store.currentLiquidation.remarks || '—' }}
               </div>
             </div>
           </div>
         </q-card-section>
 
-        <!-- Expense Accounts Section -->
-        <q-card-section v-if="store.currentLiquidation?.expenses?.length > 0">
-          <div class="text-subtitle1 q-mb-md">
-            <strong>Expense Accounts:</strong>
+        <q-card-section
+          v-if="!isBirOrSk && store.currentLiquidation?.expenses?.length > 0"
+          class="q-pt-sm q-pb-none"
+        >
+          <div class="row items-center justify-between q-mb-sm">
+            <div class="text-subtitle1"><strong>Expense Accounts</strong></div>
           </div>
 
-          <!-- Expense Accounts Table -->
-          <q-table
-            :rows="store.currentLiquidation.expenses"
-            :columns="expenseAccountColumns"
-            row-key="id"
-            :pagination="{ rowsPerPage: 5 }"
-            flat
-            bordered
-          >
-            <template v-slot:body-cell-account="props">
-              <q-td :props="props">
-                <div class="expense-account-hierarchy">
-                  {{ props.row.accountName || props.row.account_name || `${props.row.account || ''}${props.row.expenseType ? ` > ${props.row.expenseType}` : ''}${props.row.expenseItem ? ` > ${props.row.expenseItem}` : ''}${props.row.expenseSubItem ? ` > ${props.row.expenseSubItem}` : ''}` }}
-                </div>
-              </q-td>
-            </template>
-            <template v-slot:body-cell-amount="props">
-              <q-td :props="props">
-                {{ formatCurrency(props.value) }}
-              </q-td>
-            </template>
-          </q-table>
+          <div class="expense-acc-block">
+            <table class="expense-inline-table full-width">
+              <thead>
+                <tr>
+                  <th style="width: 36px">#</th>
+                  <th>Acc</th>
+                  <th>Particulars</th>
+                  <th style="text-align: right; width: 140px">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="!liquidationExpenses || liquidationExpenses.length === 0">
+                  <td colspan="8" class="text-center text-grey-5 text-caption q-pa-md q-gutter-sm">
+                    <span> No expense accounts added.</span>
+                  </td>
+                </tr>
+                <tr
+                  v-for="(row, idx) in liquidationExpenses"
+                  :key="row.id"
+                  class="text-weight-medium text-grey-8"
+                  style="font-size: 12px"
+                >
+                  <td class="text-grey-6">{{ idx + 1 }}</td>
+                  <td>
+                    <div class="text-weight-medium text-grey-8" style="font-size: 12px">
+                      {{ row.accountName }}
+                    </div>
+                  </td>
+                  <td>
+                    <div class="text-weight-medium text-grey-8" style="font-size: 12px">
+                      {{ row.particular || '—' }}
+                    </div>
+                  </td>
+                  <td style="text-align: right" class="text-weight-medium">
+                    ₱{{
+                      (Number(row.amount) || 0).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                      })
+                    }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Footer subtotal -->
+            <div
+              v-if="liquidationExpenses && liquidationExpenses.length > 0"
+              class="expense-acc-footer row items-center justify-end q-px-md q-py-xs"
+            >
+              <span class="text-caption text-grey-8">
+                Total Gross Amount:
+                <span class="text-grey-10 q-ml-sm" style="font-size: 14px">
+                  ₱{{ totalGrossAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                </span>
+              </span>
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-section v-if="!isBirOrSk">
+          <div class="row items-center justify-between q-mb-sm">
+            <div class="text-subtitle1"><strong>Deductions</strong></div>
+          </div>
+          <div class="expense-acc-block">
+            <table class="expense-inline-table full-width">
+              <thead>
+                <tr>
+                  <th style="width: 36px">#</th>
+                  <th>Deduction Type</th>
+                  <th>Tax Type</th>
+                  <th>Description</th>
+                  <th>Gross VAT INC.</th>
+                  <th>Percent</th>
+                  <th style="text-align: right; width: 140px">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-if="
+                    !store.currentLiquidation?.deductions ||
+                    store.currentLiquidation.deductions.length === 0
+                  "
+                >
+                  <td colspan="8" class="text-center text-grey-5 text-caption q-pa-md">
+                    No deductions added.
+                  </td>
+                </tr>
+                <tr
+                  v-for="(ded, idx) in store.currentLiquidation?.deductions || []"
+                  :key="ded.id"
+                  class="text-weight-medium text-grey-8"
+                  style="font-size: 12px"
+                >
+                  <td class="text-grey-6">{{ idx + 1 }}</td>
+                  <td>{{ ded.deductionTypeName || '—' }}</td>
+                  <td>{{ ded.taxTypeName || '—' }}</td>
+                  <td>{{ ded.description || '—' }}</td>
+                  <td style="text-align: right">
+                    ₱{{
+                      (Number(ded.gross_vat_inc) || 0).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                      })
+                    }}
+                  </td>
+                  <td style="text-align: right">
+                    {{ ded.percent != null ? `${ded.percent}%` : '—' }}
+                  </td>
+                  <td style="text-align: right" class="text-weight-medium">
+                    ₱{{
+                      (Number(ded.amount) || 0).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                      })
+                    }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Footer subtotal -->
+            <div
+              v-if="store.forms.expense.deductions && store.forms.expense.deductions.length > 0"
+              class="expense-acc-footer row items-center justify-end q-px-md q-py-xs"
+            >
+              <span class="text-caption text-red-8">
+                Total Deductions:
+                <span class="text-grey-10 q-ml-sm" style="font-size: 14px; color: #e53935">
+                  ₱{{ totalDeductionAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 }) }}
+                </span>
+              </span>
+            </div>
+          </div>
+        </q-card-section>
+
+        <!-- Bank Cheques Table Section -->
+        <q-card-section class="q-pb-xs">
+          <div class="row items-center justify-between q-mb-sm">
+            <div class="text-subtitle1"><strong>Bank Cheques</strong></div>
+          </div>
+          <div class="expense-acc-block">
+            <table class="expense-inline-table full-width">
+              <thead>
+                <tr v-if="isBirOrSk">
+                  <th style="width: 36px">#</th>
+                  <th>Bank</th>
+                  <th>Cheque No.</th>
+                  <th v-if="isBir">Particular</th>
+                  <!-- <th>Status</th> -->
+                  <th style="text-align: right; width: 140px">Amount</th>
+                </tr>
+                <tr v-else>
+                  <th>Bank</th>
+                  <th>Cheque Number</th>
+                  <th>Cheque Date</th>
+                  <!-- <th>Status</th> -->
+                  <th style="text-align: right; width: 140px">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="bankChequeRows.length === 0">
+                  <td
+                    :colspan="isBir ? 6 : isBirOrSk ? 5 : 4"
+                    class="text-center text-grey-5 text-caption q-pa-md"
+                  >
+                    No bank cheques added yet.
+                  </td>
+                </tr>
+                <template v-if="isBirOrSk">
+                  <tr
+                    v-for="(row, idx) in bankChequeRows"
+                    :key="row.key"
+                    class="text-weight-medium text-grey-8"
+                    style="font-size: 12px"
+                  >
+                    <td class="text-grey-6">{{ idx + 1 }}</td>
+                    <td>{{ row.bank || '—' }}</td>
+                    <td>{{ row.chequeNumber || '—' }}</td>
+                    <td v-if="isBir">{{ row.particular || '—' }}</td>
+                    <!-- <td>{{ row.bankStatus || '—' }}</td> -->
+                    <td style="text-align: right" class="text-weight-medium">
+                      ₱{{ row.amount.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                    </td>
+                  </tr>
+                </template>
+                <template v-else>
+                  <tr
+                    v-for="row in bankChequeRows"
+                    :key="row.key"
+                    class="text-weight-medium text-grey-8"
+                    style="font-size: 12px"
+                  >
+                    <td>{{ row.bank || '—' }}</td>
+                    <td>{{ row.chequeNumber || '—' }}</td>
+                    <td>{{ row.chequeDate || '—' }}</td>
+                    <!-- <td>{{ row.bankStatus || '—' }}</td> -->
+                    <td style="text-align: right" class="text-weight-medium">
+                      ₱{{ row.amount.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
         </q-card-section>
       </div>
 
       <!-- Reimbursement Details Section -->
-      <div v-if="store.currentLiquidation?.reimbursement" class="reimbursement-tran">
+      <div v-if="store.currentLiquidation?.reimbursement" class="reimbursement-tran q-pb-xs">
         <q-card-section>
           <div class="text-h6">Reimbursement Transaction Details</div>
           <div class="text-caption text-grey-6 q-mt-sm">
@@ -227,7 +426,18 @@
             <template v-slot:body-cell-account="props">
               <q-td :props="props">
                 <div class="expense-account-hierarchy">
-                  {{ props.row.accountName || props.row.account_name || `${props.row.account || ''}${props.row.expenseType ? ` > ${props.row.expenseType}` : ''}${props.row.expenseItem ? ` > ${props.row.expenseItem}` : ''}${props.row.expenseSubItem ? ` > ${props.row.expenseSubItem}` : ''}` }}
+                  {{
+                    props.row.accountName ||
+                    props.row.account_name ||
+                    `${
+                      props.row.account || ''
+                    }${props.row.expenseType ? ` > ${props.row.expenseType}` : ''}${
+                      props.row.expenseItem
+                        ? ` >
+                  ${props.row.expenseItem}`
+                        : ''
+                    }${props.row.expenseSubItem ? ` > ${props.row.expenseSubItem}` : ''}`
+                  }}
                 </div>
               </q-td>
             </template>
@@ -241,10 +451,10 @@
       </div>
 
       <!-- Liquidation Details Section -->
-      <q-card-section>
+      <q-card-section v-if="!isBirOrSk">
         <div class="row items-center q-mb-md">
           <div class="text-subtitle1">
-            <strong>Liquidation Details:</strong>
+            <strong>Liquidation Details</strong>
             <span class="text-caption text-grey-6 q-ml-sm">
               ({{ orDetailsCount }} record{{ orDetailsCount !== 1 ? 's' : '' }})
             </span>
@@ -258,7 +468,6 @@
             @click="reloadOrDetails"
             title="Reload OR Details"
           />
-
         </div>
 
         <!-- OR Details Table -->
@@ -367,41 +576,12 @@ const voidActionLoading = ref(false)
 const editActionLoading = ref(false)
 const exportingPDF = ref(false)
 
-// Table columns for Expense Accounts - using single account column to avoid overlapping
-const expenseAccountColumns = [
-  {
-    name: 'id',
-    label: 'ID',
-    field: 'id',
-    align: 'left',
-    sortable: true,
-    style: 'width: 60px;',
-  },
-  {
-    name: 'account',
-    label: 'Expense Account',
-    field: 'accountName',
-    align: 'left',
-    sortable: true,
-    style: 'min-width: 400px;',
-  },
-  {
-    name: 'amount',
-    label: 'Amount',
-    field: 'amount',
-    align: 'right',
-    sortable: true,
-    style: 'width: 120px;',
-  },
-  {
-    name: 'particular',
-    label: 'Particular',
-    field: 'particular',
-    align: 'left',
-    sortable: true,
-    style: 'min-width: 200px;',
-  },
-]
+const isBirOrSk = computed(() => {
+  const t = store.currentLiquidation?.type
+  return t === 'bir' || t === 'sk' || t === 'provincial_aid'
+})
+
+const isBir = computed(() => store.currentLiquidation?.type === 'bir')
 
 // Table columns for OR Details - matching OrDetailsDialog structure
 const orDetailsColumns = [
@@ -449,17 +629,16 @@ const copyToClipboard = (text) => {
 }
 
 const totalActualExpense = computed(() => {
-
   // If this disbursement has a reimbursement, we need to show the original liquidation values
   // The actual expense should be the same as the DV amount (fully liquidated)
   if (store.currentLiquidation?.reimbursement) {
-    const dvAmount = parseFloat(store.currentLiquidation.dvAmount) || 0;
-    return dvAmount;
+    const dvAmount = parseFloat(store.currentLiquidation.dvAmount) || 0
+    return dvAmount
   }
 
   // For disbursements without reimbursement, calculate from OR details
   if (!store.currentLiquidation?.orDetails || store.currentLiquidation.orDetails.length === 0) {
-    return 0;
+    return 0
   }
 
   const total = store.currentLiquidation.orDetails.reduce(
@@ -480,13 +659,46 @@ const totalReturnAmount = computed(() => {
   return finalReturnAmount
 })
 
+// const totalGrossAmount = computed(() => {
+//   return (store.currentLiquidation?.expenses || []).reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
+// })
+
+const totalDeductionAmount = computed(() => {
+  return (store.currentLiquidation?.deductions || []).reduce(
+    (sum, row) => sum + (Number(row.amount) || 0),
+    0,
+  )
+})
+
+const liquidationExpenses = computed(() => store.currentLiquidation?.expenses || [])
+
+const totalGrossAmount = computed(() => {
+  return liquidationExpenses.value.reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
+})
+
+// const bankChequeTotal = computed(() => {
+//   return (store.bankCheques || []).reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
+// })
+
 const orDetailsCount = computed(() => {
   return store.currentLiquidation?.orDetails?.length || 0
 })
 
+const bankChequeRows = computed(() => {
+  return (store.currentLiquidation?.bank_cheques || []).map((row, idx) => ({
+    id: row.id,
+    key: `${row.id || idx}-${row.cheque_number || idx}`,
+    bank: row.bankName || row.bank_name || row.bank || '',
+    chequeNumber: row.cheque_number || row.chequeNumber || '',
+    chequeDate: row.cheque_date || row.chequeDate || '',
+    bank_status: row.bank_status || row.bankStatus || '',
+    bankStatus: row.bank_status || row.bankStatus || '',
+    particular: row.particular || row.particulars || row.remark || row.remarks || '',
+    amount: Number(row.amount) || 0,
+  }))
+})
 // Debug computed property to log data structure
 const debugData = computed(() => {
-
   return store.currentLiquidation
 })
 
@@ -548,13 +760,13 @@ const exportToPDF = async () => {
     let position = 10 // Start with top margin
 
     pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight)
-    heightLeft -= (pageHeight - 20) // Account for margins
+    heightLeft -= pageHeight - 20 // Account for margins
 
     while (heightLeft > 0) {
       position = heightLeft - imgHeight + 10
       pdf.addPage()
       pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight)
-      heightLeft -= (pageHeight - 20)
+      heightLeft -= pageHeight - 20
     }
 
     // Generate filename with DV number and date
@@ -600,7 +812,6 @@ const formatCurrency = (value) => {
   const num = Number(String(value).replace(/[,\s]/g, '')) || 0
   return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
-
 
 // Handle void approval
 const handleApproveVoid = async () => {
@@ -748,172 +959,163 @@ const handleRejectEdit = () => {
 </script>
 
 <style scoped>
-/* Ensure proper spacing for the OR details table */
-.q-table {
-  margin-bottom: 16px;
+.disbursement-page {
+  background-color: #fafafa;
+  min-height: 100vh;
 }
 
-/* Style for readonly inputs */
-.q-input[readonly] {
-  background-color: #f5f5f5;
+.page-header {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 8px;
 }
 
-/* Custom actions styling */
-.custom-actions {
-  padding: 16px;
-}
-
-.modal-cancel-btn {
-  color: #666;
-}
-
-/* Void action buttons styling */
-.void-action-buttons {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 8px 16px;
-  background-color: #fff3e0;
-  border-radius: 8px;
-  border: 1px solid #ffcc02;
-  margin-right: 16px;
-}
-
-.void-approve-btn {
-  font-weight: 600;
-  text-transform: none;
-  padding: 8px 16px;
-  min-width: 120px;
-  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
+/*  Type navigation cards  */
+.type-nav-card {
+  border-radius: 12px;
+  border: 2px solid #e0e0e0;
+  cursor: pointer;
   transition: all 0.2s ease;
+  position: relative;
+  background: white;
 }
 
-.void-approve-btn:hover {
+.type-nav-card:hover {
+  border-color: #bdbdbd;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
 }
 
-.void-reject-btn {
-  font-weight: 600;
-  text-transform: none;
-  padding: 8px 16px;
-  min-width: 120px;
-  box-shadow: 0 2px 4px rgba(244, 67, 54, 0.2);
-  transition: all 0.2s ease;
+/* Regular — active = primary green */
+.type-nav-active {
+  background: var(--q-primary) !important;
+  border-color: var(--q-primary) !important;
+  color: white !important;
 }
 
-.void-reject-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
+.type-nav-active .text-subtitle2,
+.type-nav-active .text-caption,
+.type-nav-active .type-count {
+  color: white !important;
 }
 
-/* Edit action buttons styling */
-.edit-action-buttons {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 8px 16px;
-  background-color: #fff3e0;
-  border-radius: 8px;
-  border: 1px solid #ffcc02;
-  margin-right: 16px;
+/* BIR — active = deep-orange */
+.type-nav-active-bir {
+  /* background: var(--q-deep-orange) !important;
+  border-color: var(--q-deep-orange) !important; */
+  background: var(--q-primary) !important;
+  border-color: var(--q-primary) !important;
+  color: white !important;
 }
 
-.edit-request-indicator {
-  display: flex;
-  align-items: center;
-  color: #ff5722;
-  font-weight: 500;
-  font-size: 14px;
+/* SK — active = blue-10 */
+.type-nav-active-sk {
+  /* background: var(--q-blue-10) !important;
+  border-color: var(--q-blue-10) !important; */
+  background: var(--q-primary) !important;
+  border-color: var(--q-primary) !important;
+  color: white !important;
 }
 
-.edit-approve-btn {
-  font-weight: 600;
-  text-transform: none;
-  padding: 8px 16px;
-  min-width: 120px;
-  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
-  transition: all 0.2s ease;
+.type-count {
+  opacity: 0.85;
 }
 
-.edit-approve-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+/* Small + button in the top-right of active card */
+.type-nav-add-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
 }
 
-.edit-reject-btn {
-  font-weight: 600;
-  text-transform: none;
-  padding: 8px 16px;
-  min-width: 120px;
-  box-shadow: 0 2px 4px rgba(244, 67, 54, 0.2);
-  transition: all 0.2s ease;
-}
-
-.edit-reject-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
-}
-
-.void-action-buttons .q-btn {
-  font-size: 14px;
-  letter-spacing: 0.5px;
-}
-
-.void-request-indicator {
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  background-color: #fff3cd;
-  border: 1px solid #ffeaa7;
-  border-radius: 6px;
-  margin-bottom: 12px;
-  font-weight: 500;
-  color: #856404;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4);
-  }
-
-  70% {
-    box-shadow: 0 0 0 6px rgba(255, 193, 7, 0);
-  }
-
-  100% {
-    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
-  }
-}
-
-.void-request-text {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-/* Expense account hierarchy styling */
-.expense-account-hierarchy {
+/* Tabs inside dialog */
+.tab-btn {
+  color: rgba(0, 0, 0, 0.6);
   font-size: 13px;
-  line-height: 1.4;
-  word-break: break-word;
-  white-space: normal;
-  overflow-wrap: break-word;
-  max-width: 100%;
 }
 
-/* Table styling to prevent overlapping */
-.q-table .q-td {
-  white-space: normal !important;
-  word-wrap: break-word !important;
-  overflow-wrap: break-word !important;
-  padding: 8px 12px !important;
+.tab-btn:hover {
+  background: transparent !important;
 }
 
-.q-table .q-th {
-  white-space: normal !important;
-  word-wrap: break-word !important;
-  padding: 8px 12px !important;
+.tab-active {
+  color: #16a34a !important;
+  border-bottom: 2px solid #16a34a;
+}
+
+/* Regular: strict 2-column grid, always 2 per row */
+.action-grid-regular {
+  display: grid;
+  grid-template-columns: repeat(2, 32px);
+  gap: 4px;
+  width: 72px;
+}
+
+/* BIR/SK: single horizontal row, no wrapping */
+.action-row-flat {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.remarks-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.5;
+}
+
+.expense-acc-block {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.expense-acc-header {
+  background: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+  min-height: 36px;
+}
+
+.expense-acc-footer {
+  background: #fafafa;
+  border-top: 1px solid #e0e0e0;
+  min-height: 34px;
+}
+
+.cheque-panel {
+  background: #f1f8e9;
+  border-top: 1px solid #c5e1a5;
+  padding-top: 12px;
+}
+
+.expense-inline-table {
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.expense-inline-table th {
+  background: #fafafa;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #757575;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #e0e0e0;
+  text-align: left;
+}
+
+.expense-inline-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333;
+}
+
+.expense-inline-table tr:last-child td {
+  border-bottom: none;
 }
 
 /* Responsive design for mobile */
@@ -926,42 +1128,76 @@ const handleRejectEdit = () => {
     font-size: 12px;
   }
 
+  .button-group .q-btn {
+    min-width: 28px;
+    padding: 4px;
+  }
+
   .expense-account-hierarchy {
     font-size: 11px;
     max-width: 250px;
   }
 
-  .void-action-buttons {
-    flex-direction: column;
-    gap: 8px;
-    padding: 12px;
-    margin-right: 0;
-    margin-bottom: 16px;
+  .expense-acc-block {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
   }
 
-  .void-request-indicator {
-    margin-bottom: 8px;
-    padding: 6px 10px;
+  .expense-acc-header {
+    background: #f5f5f5;
+    border-bottom: 1px solid #e0e0e0;
+    min-height: 36px;
   }
 
-  .void-request-text {
+  .expense-acc-footer {
+    background: #fafafa;
+    border-top: 1px solid #e0e0e0;
+    min-height: 34px;
+  }
+
+  .expense-inline-table {
+    border-collapse: collapse;
     font-size: 13px;
   }
 
-  .void-approve-btn,
-  .void-reject-btn {
-    min-width: 100%;
-    width: 100%;
+  .expense-inline-table th {
+    background: #fafafa;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #757575;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid #e0e0e0;
+    text-align: left;
   }
 
-  .custom-actions {
-    flex-direction: column;
-    align-items: stretch;
+  .expense-inline-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #333;
   }
 
-  .custom-actions .q-mr-auto {
-    margin-right: 0 !important;
-    margin-bottom: 16px;
+  .expense-inline-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  :deep(.q-table__container) {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 300px;
+  }
+
+  :deep(.q-table__middle) {
+    overflow: unset;
+  }
+
+  :deep(.q-table thead tr th) {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #fafafa;
   }
 }
 </style>
