@@ -44,7 +44,7 @@
           <q-card-section>
             <div class="row q-col-gutter-xs items-center justify-between">
               <div class="col-4 col-md-4 justify-start">
-                <div class="text-subtitle1 text-weight-medium">List of Advice</div>
+                <div class="text-subtitle1 text-weight-medium">List of PBC Advice</div>
                 <div class="text-caption text-grey-6">History of generated PBC advices</div>
               </div>
 
@@ -2636,7 +2636,6 @@ const pbcVoucherCount = computed(() => {
 const closePBCModal = () => {
   PBCModal.show = false
 }
-
 
 const getReportTypeLabel = (type) =>
   ({
