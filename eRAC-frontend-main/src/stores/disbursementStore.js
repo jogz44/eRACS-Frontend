@@ -42,6 +42,39 @@ const getExpenseChequeDate = (expense, disbursement = {}) =>
   expense?.checkDate ||
   disbursement?.cheque_date ||
   ''
+
+const parseDmyDate = (date = null) => {
+  const today = new Date()
+  const value =
+    date ||
+    [
+      String(today.getDate()).padStart(2, '0'),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      today.getFullYear(),
+    ].join('/')
+  const match = String(value).match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+
+  if (!match) return null
+
+  const [, dd, mm, yyyy] = match
+  const parsed = new Date(Number(yyyy), Number(mm) - 1, Number(dd))
+
+  if (
+    parsed.getFullYear() !== Number(yyyy) ||
+    parsed.getMonth() !== Number(mm) - 1 ||
+    parsed.getDate() !== Number(dd)
+  ) {
+    return null
+  }
+
+  return { dd, mm, yyyy }
+}
+
+const getDvPrefixForDate = (date = null) => {
+  const parsedDate = parseDmyDate(date) || parseDmyDate()
+  return `DV-${String(parsedDate.yyyy).slice(-2)}-${parsedDate.mm}-`
+}
+
 export const useDisbursementStore = defineStore('disbursement', {
   state: () => ({
     particulars: [],
@@ -748,31 +781,44 @@ export const useDisbursementStore = defineStore('disbursement', {
       this.selectedBudgetSource = budgetSource
     },
 
-    generateLocalDvNumber() {
-      const now = new Date()
-      const yy = String(now.getFullYear()).slice(-2)
-      const mm = String(now.getMonth() + 1).padStart(2, '0')
+    async generateBackendDvNumber(date = null) {
+      if (date && !parseDmyDate(date)) return ''
 
-      // Collect every existing DV number regardless of month/year prefix,
-      // pull out only the trailing sequence number, and find the highest one.
-      // const allDvNumbers = (this.disbursements || [])
-      //   .map(d => d.dvNumber)
-      //   .filter(Boolean)
+      const params = date ? { date } : undefined
+      const response = await api.get('/api/barangay/generate-dvnumber', {
+        ...getAuthConfig(),
+        params,
+      })
 
-      let maxSeq = 0
+      const payload = response.data?.data ?? response.data ?? {}
+      const dvNumber = payload.dv_number || payload.dvNumber || ''
+
+      if (date && dvNumber && !dvNumber.startsWith(getDvPrefixForDate(date))) {
+        return ''
+      }
+
+      return dvNumber
+    },
+
+    generateLocalDvNumber(date = null) {
+      const prefix = getDvPrefixForDate(date)
+
+      // Match backend controller behavior: sequence resets for each barangay/month.
+      let maxSequence = 0
       ;(this.disbursements || [])
         .map((d) => d.dvNumber)
         .filter(Boolean)
         .forEach((dv) => {
-          // Handles DV-26-05-1005 and any DV-*-*-NNNN pattern
-          const match = dv.match(/^DV-\d+-\d+-(\d+)$/)
+          if (!dv.startsWith(prefix)) return
+
+          const match = dv.match(/(\d+)$/)
           if (match) {
-            const seq = parseInt(match[1], 10) || 0
-            if (seq > maxSeq) maxSeq = seq
+            const sequence = parseInt(match[1], 10) || 0
+            if (sequence > maxSequence) maxSequence = sequence
           }
         })
 
-      return `DV-${yy}-${mm}-${String(maxSeq + 1).padStart(4, '0')}`
+      return `${prefix}${String(maxSequence + 1).padStart(3, '0')}`
     },
 
     // Fetch expense hierarchy from appropriation store and accounts library store
@@ -2290,19 +2336,19 @@ export const useDisbursementStore = defineStore('disbursement', {
         this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
 
         try {
-          const response = await api.get('/api/barangay/generate-dvnumber', getAuthConfig())
-          let apiDvNumber = response.data.data?.dv_number || ''
-
+          const apiDvNumber = await this.generateBackendDvNumber(
+            this.forms.disbursement.date,
+          )
           const alreadyExists = !!(
             apiDvNumber && (this.disbursements || []).some((d) => d.dvNumber === apiDvNumber)
           )
 
           this.forms.disbursement.dvNumber = alreadyExists
-            ? this.generateLocalDvNumber()
-            : apiDvNumber || this.generateLocalDvNumber()
+            ? this.generateLocalDvNumber(this.forms.disbursement.date)
+            : apiDvNumber || this.generateLocalDvNumber(this.forms.disbursement.date)
         } catch (error) {
           console.error('Failed to generate DV number from API, using local fallback:', error)
-          this.forms.disbursement.dvNumber = this.generateLocalDvNumber()
+          this.forms.disbursement.dvNumber = this.generateLocalDvNumber(this.forms.disbursement.date)
         }
 
         // Generate cheque number (separate logic)
@@ -2934,17 +2980,18 @@ export const useDisbursementStore = defineStore('disbursement', {
           this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
 
           try {
-            const response = await api.get('/api/barangay/generate-dvnumber', getAuthConfig())
-            const apiDv = response.data.data?.dv_number || ''
+            const apiDv = await this.generateBackendDvNumber(
+              this.forms.disbursement.date,
+            )
             const alreadyExists = !!(
               apiDv && (this.disbursements || []).some((d) => d.dvNumber === apiDv)
             )
             this.forms.disbursement.dvNumber = alreadyExists
-              ? this.generateLocalDvNumber()
-              : apiDv || this.generateLocalDvNumber()
+              ? this.generateLocalDvNumber(this.forms.disbursement.date)
+              : apiDv || this.generateLocalDvNumber(this.forms.disbursement.date)
           } catch (error) {
             console.error('Failed to generate DV number, using local fallback:', error)
-            this.forms.disbursement.dvNumber = this.generateLocalDvNumber()
+            this.forms.disbursement.dvNumber = this.generateLocalDvNumber(this.forms.disbursement.date)
           }
         }, 350) // match Quasar default transition
 
@@ -3081,8 +3128,6 @@ export const useDisbursementStore = defineStore('disbursement', {
           params,
         })
 
-        // Only update the fields the badge needs — don't touch the full disbursements array
-        // used by the Disbursements page, so it don't clobber richer data it may have loaded.
         return (res.data.data || []).map((d) => ({
           status: d.status,
           barangay_name: d.barangay_name,
@@ -3097,6 +3142,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     async saveExpense() {
       const amount = Number(this.forms.expense.amount) || 0
       const particulars = this.forms.expense.particulars?.trim() || ''
+
 
       const bank = bankStore.availableBanks.find(
         (b) => String(b.id) === String(this.forms.expense.bank_id),

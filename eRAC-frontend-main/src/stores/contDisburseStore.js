@@ -33,6 +33,38 @@ const getExpenseChequeNumber = (expense) =>
   expense?.chequeNo ||
   ''
 
+const parseDmyDate = (date = null) => {
+  const today = new Date()
+  const value =
+    date ||
+    [
+      String(today.getDate()).padStart(2, '0'),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      today.getFullYear(),
+    ].join('/')
+  const match = String(value).match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+
+  if (!match) return null
+
+  const [, dd, mm, yyyy] = match
+  const parsed = new Date(Number(yyyy), Number(mm) - 1, Number(dd))
+
+  if (
+    parsed.getFullYear() !== Number(yyyy) ||
+    parsed.getMonth() !== Number(mm) - 1 ||
+    parsed.getDate() !== Number(dd)
+  ) {
+    return null
+  }
+
+  return { dd, mm, yyyy }
+}
+
+const getDvPrefixForDate = (date = null) => {
+  const parsedDate = parseDmyDate(date) || parseDmyDate()
+  return `DV-${String(parsedDate.yyyy).slice(-2)}-${parsedDate.mm}-`
+}
+
 const getExpenseChequeDate = (expense, disbursement = {}) =>
   expense?.cheque_date ||
   expense?.chequeDate ||
@@ -661,7 +693,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       const disbursedAmount = this.expenseDetailsData
         .filter((detail) => {
           if (type === 'subitem') {
-            return detail.expense_sub_item_id === accountId
+            return detail.expense_sub_item_id === accountId 
           } else if (type === 'item') {
             return detail.expense_item_id === accountId
           } else if (type === 'type') {
@@ -1825,31 +1857,25 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       this.currentDisbursement = null
     },
 
-    generateLocalDvNumber() {
-      const now = new Date()
-      const yy = String(now.getFullYear()).slice(-2)
-      const mm = String(now.getMonth() + 1).padStart(2, '0')
+    generateLocalDvNumber(date = null) {
+      const prefix = getDvPrefixForDate(date)
 
-      // Collect every existing DV number regardless of month/year prefix,
-      // pull out only the trailing sequence number, and find the highest one.
-      // const allDvNumbers = (this.disbursements || [])
-      //   .map(d => d.dvNumber)
-      //   .filter(Boolean)
-
-      let maxSeq = 0
+      // Match backend controller behavior: sequence resets for each barangay/month.
+      let maxSequence = 0
       ;(this.disbursements || [])
         .map((d) => d.dvNumber)
         .filter(Boolean)
         .forEach((dv) => {
-          // Handles DV-26-05-1005 and any DV-*-*-NNNN pattern
-          const match = dv.match(/^DV-\d+-\d+-(\d+)$/)
+          if (!dv.startsWith(prefix)) return
+
+          const match = dv.match(/(\d+)$/)
           if (match) {
-            const seq = parseInt(match[1], 10) || 0
-            if (seq > maxSeq) maxSeq = seq
+            const sequence = parseInt(match[1], 10) || 0
+            if (sequence > maxSequence) maxSequence = sequence
           }
         })
 
-      return `DV-${yy}-${mm}-${String(maxSeq + 1).padStart(4, '0')}`
+      return `${prefix}${String(maxSequence + 1).padStart(3, '0')}`
     },
 
     // Get default booklet ID for a bank
@@ -2845,17 +2871,23 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
           this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
 
           try {
-            const response = await api.get('/api/barangay/generate-dvnumber', getAuthConfig())
+            const response = await api.get('/api/barangay/generate-dvnumber', {
+              ...getAuthConfig(),
+              params: { date: this.forms.disbursement.date },
+            })
             const apiDv = response.data.data?.dv_number || ''
+            const matchesSelectedDate = apiDv.startsWith(
+              getDvPrefixForDate(this.forms.disbursement.date),
+            )
             const alreadyExists = !!(
               apiDv && (this.disbursements || []).some((d) => d.dvNumber === apiDv)
             )
-            this.forms.disbursement.dvNumber = alreadyExists
-              ? this.generateLocalDvNumber()
-              : apiDv || this.generateLocalDvNumber()
+            this.forms.disbursement.dvNumber = alreadyExists || !matchesSelectedDate
+              ? this.generateLocalDvNumber(this.forms.disbursement.date)
+              : apiDv || this.generateLocalDvNumber(this.forms.disbursement.date)
           } catch (error) {
             console.error('Failed to generate DV number, using local fallback:', error)
-            this.forms.disbursement.dvNumber = this.generateLocalDvNumber()
+            this.forms.disbursement.dvNumber = this.generateLocalDvNumber(this.forms.disbursement.date)
           }
         }, 350) // match Quasar default transition
 
@@ -2963,17 +2995,9 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       const mm = String(today.getMonth() + 1).padStart(2, '0')
       const yyyy = today.getFullYear()
 
-      // Generate new DV number - consider all disbursements for continuous numbering
-      const lastDV = this.disbursements.reduce((max, d) => {
-        const num = parseInt(d.dvNumber?.split('-')?.pop()) || 0
-        return Math.max(max, num)
-      }, 0)
-
-      const newDVNumber = `DV-${String(yyyy).slice(-2)}-${mm}-${String(lastDV + 1).padStart(3, '0')}`
-
       // Update form with new defaults
       this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
-      this.forms.disbursement.dvNumber = newDVNumber
+      this.forms.disbursement.dvNumber = this.generateLocalDvNumber(this.forms.disbursement.date)
     },
 
     // Expense Actions

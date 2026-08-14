@@ -3847,27 +3847,37 @@ const formatDialogDate = (value) => {
   if (text.includes('/')) return text
   if (text.includes('-')) {
     const [yyyy, mm, dd] = text.split('T')[0].split('-')
+    // return `${dd}/${mm}/${yyyy}`
     return `${dd}/${mm}/${yyyy}`
   }
   return text
 }
 
-const fetchNewDvNumber = async () => {
-  try {
-    const { api } = await import('src/boot/axios')
-    const token = authStore.admin ? authStore.adminToken : authStore.token
-    const res = await api.get('/api/barangay/generate-dvnumber', {
-      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    })
-    const apiDv = res.data?.data?.dv_number || ''
+const isCompleteValidDmyDate = (value) => {
+  const match = String(value || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  if (!match) return false
 
-    // Cross-check against ALL types (regular + BIR + SK) already in the store
+  const [, dd, mm, yyyy] = match
+  const parsed = new Date(Number(yyyy), Number(mm) - 1, Number(dd))
+
+  return (
+    parsed.getFullYear() === Number(yyyy) &&
+    parsed.getMonth() === Number(mm) - 1 &&
+    parsed.getDate() === Number(dd)
+  )
+}
+
+const fetchNewDvNumber = async (date = null) => {
+  if (date && !isCompleteValidDmyDate(date)) return ''
+
+  try {
+    const apiDv = await store.generateBackendDvNumber(date)
     const alreadyExists = !!(apiDv && (store.disbursements || []).some((d) => d.dvNumber === apiDv))
 
-    return alreadyExists ? store.generateLocalDvNumber() : apiDv || store.generateLocalDvNumber()
+    return alreadyExists ? store.generateLocalDvNumber(date) : apiDv || store.generateLocalDvNumber(date)
   } catch (e) {
     console.error('DV fetch failed, using local fallback:', e)
-    return store.generateLocalDvNumber()
+    return store.generateLocalDvNumber(date)
   }
 }
 
@@ -3888,7 +3898,7 @@ watch(showBirDialog, async (open) => {
   if (open) {
     if (editingBirId.value) return
     birForm.value.date = todayDMY()
-    birForm.value.dv_number = await fetchNewDvNumber()
+    birForm.value.dv_number = await fetchNewDvNumber(birForm.value.date)
     birForm.value.bank_id = null
     birForm.value.cheque_number = ''
     birForm.value.dv_amount = ''
@@ -3913,7 +3923,7 @@ watch(showSkDialog, async (open) => {
 
     // Fill form on open
     skForm.value.date = todayDMY()
-    skForm.value.dv_number = await fetchNewDvNumber()
+    skForm.value.dv_number = await fetchNewDvNumber(skForm.value.date)
     skForm.value.bank_id = null
     skForm.value.cheque_number = ''
     skForm.value.payee = ''
@@ -4307,6 +4317,30 @@ watch(
       payee2Edited.value = false
       filteredPayeeOptions.value = payeeOptions.value
     }
+  },
+)
+
+watch(
+  () => store.forms.disbursement.date,
+  async (date) => {
+    if (!store.dialogs.disbursement || !isCompleteValidDmyDate(date)) return
+    store.forms.disbursement.dvNumber = await fetchNewDvNumber(date)
+  },
+)
+
+watch(
+  () => birForm.value.date,
+  async (date) => {
+    if (!showBirDialog.value || editingBirId.value || !isCompleteValidDmyDate(date)) return
+    birForm.value.dv_number = await fetchNewDvNumber(date)
+  },
+)
+
+watch(
+  () => skForm.value.date,
+  async (date) => {
+    if (!showSkDialog.value || editingSkId.value || !isCompleteValidDmyDate(date)) return
+    skForm.value.dv_number = await fetchNewDvNumber(date)
   },
 )
 

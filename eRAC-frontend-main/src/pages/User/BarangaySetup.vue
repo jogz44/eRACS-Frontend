@@ -45,7 +45,6 @@
                     option-label="name"
                     option-value="value"
                     :loading="loadingPositions"
-                    :rules="[(val) => !!val || 'Position is required']"
                   />
                 </div>
               </div>
@@ -338,6 +337,26 @@ const bankAccountsPayload = () =>
       : index === 0,
   }))
 
+const resolveUserPositionId = () => {
+  if (!positionOptions.value.length) return null
+
+  const rawPosition =
+    authStore.user?.position_name ||
+    authStore.user?.position?.name ||
+    authStore.user?.position ||
+    ''
+
+  const normalized = String(rawPosition).trim().toLowerCase()
+  if (!normalized) return null
+
+  const match = positionOptions.value.find((option) => {
+    const optionName = String(option.name || '').trim().toLowerCase()
+    return optionName === normalized
+  })
+
+  return match ? Number(match.value) : null
+}
+
 const loadPositions = async () => {
   loadingPositions.value = true
   try {
@@ -346,6 +365,13 @@ const loadPositions = async () => {
       name: position.name,
       value: Number(position.id),
     }))
+
+    if (!setupForm.value.barangay_position_id) {
+      const userPositionId = resolveUserPositionId()
+      if (userPositionId != null) {
+        setupForm.value.barangay_position_id = userPositionId
+      }
+    }
   } catch {
     $q.notify({
       type: 'negative',
@@ -361,6 +387,10 @@ const loadPositions = async () => {
 const applyRecord = (record) => {
   if (!record) {
     setupForm.value = createEmptyForm()
+    const userPositionId = resolveUserPositionId()
+    if (userPositionId != null) {
+      setupForm.value.barangay_position_id = userPositionId
+    }
     bankAccounts.value = []
     preparedByName.value = userFullName.value
     displayInfo.value = { barangay: '', barangay_position: '' }
@@ -372,7 +402,9 @@ const applyRecord = (record) => {
     barangay_id: record.barangay_id,
     registered_user_id: record.registered_user_id,
     barangay_position_id:
-      record.barangay_position_id != null ? Number(record.barangay_position_id) : null,
+      record.barangay_position_id != null
+        ? Number(record.barangay_position_id)
+        : resolveUserPositionId(),
     noted_by: record.noted_by || '',
     noted_by_position_id:
       record.noted_by_position_id != null ? Number(record.noted_by_position_id) : null,

@@ -209,7 +209,6 @@
               debounce="300"
               v-model="search"
               placeholder="Search Cheque"
-              mask="########"
               outlined
               clearable
               style="width: 400px"
@@ -265,20 +264,15 @@
               class="q-mb-sm"
               @keydown.enter="handleAddBookletEnterKey"
               :rules="[(val) => !!val || 'Booklet number is required']"
-              maxlength="14"
             />
             <q-input
               v-model="newBooklet.starting_cheque_numb"
               label="Starting Cheque Number"
               outlined
               class="q-mb-sm"
+              inputmode="numeric"
               @keydown.enter="handleAddBookletEnterKey"
-              :rules="[
-                (val) => !!val || 'Starting number is required',
-                (val) => val.length === 8 || 'Must be exactly 8 digits',
-              ]"
-              maxlength="8"
-              mask="########"
+              :rules="[(val) => !!val || 'Starting number is required']"
             />
 
             <q-input
@@ -300,12 +294,7 @@
               :disable="true"
               class="q-mb-sm"
               @keydown.enter="handleAddBookletEnterKey"
-              :rules="[
-                (val) => !!val || 'Ending number is required',
-                (val) => val.length === 8 || 'Must be exactly 8 digits',
-              ]"
-              maxlength="8"
-              mask="########"
+              :rules="[(val) => !!val || 'Ending number is required']"
             />
           </q-form>
         </q-card-section>
@@ -384,12 +373,7 @@
               outlined
               class="q-mb-sm"
               @keydown.enter="handleAddChequeEnterKey"
-              :rules="[
-                (val) => !!val || 'Cheque number is required',
-                (val) => val.length === 8 || 'Must be exactly 8 digits',
-              ]"
-              maxlength="8"
-              mask="########"
+              :rules="[(val) => !!val || 'Cheque number is required']"
             />
 
             <q-input
@@ -686,15 +670,11 @@ const showBookletDetails = async (bank) => {
 
 const addBooklet = async () => {
   try {
-    const start = parseInt(newBooklet.value.starting_cheque_numb)
-    const end = parseInt(newBooklet.value.ending_cheque_numb)
-
-    if (newBooklet.value.quantity > 150) {
-      throw new Error('Quantity must not exceed 150')
-    }
     if (newBooklet.value.quantity <= 0) {
       throw new Error('Quantity must be greater than 0')
     }
+
+    const quantity = newBooklet.value.quantity
 
     await bankStore.addBooklet(selectedBank.value.id, newBooklet.value)
     resetBookletForm()
@@ -705,7 +685,7 @@ const addBooklet = async () => {
 
     $q.notify({
       type: 'positive',
-      message: `Booklet added successfully with ${end - start + 1} cheques`,
+      message: `Booklet added successfully with ${quantity} cheques`,
       position: 'top',
     })
   } catch (error) {
@@ -719,6 +699,7 @@ const addBooklet = async () => {
 
 const resetBookletForm = () => {
   newBooklet.value = {
+    quantity: 1,
     booklet_numb: '',
     starting_cheque_numb: '',
     ending_cheque_numb: '',
@@ -806,10 +787,10 @@ const showChequeDetails = async (booklet) => {
 }
 
 const addCheque = async () => {
-  if (!newCheque.value.chequeNo || newCheque.value.chequeNo.length !== 8) {
+  if (!newCheque.value.chequeNo) {
     $q.notify({
       type: 'negative',
-      message: 'Cheque number must be 8 digits',
+      message: 'Cheque number is required',
     })
     return
   }
@@ -846,6 +827,8 @@ const resetChequeForm = () => {
   }
 }
 
+const getChequeBookletPart = (value) => String(value || '').slice(-4).padStart(4, '0')
+
 watch(
   () => bankStore.banks,
   () => {},
@@ -854,13 +837,14 @@ watch(
 watch(
   [() => newBooklet.value.starting_cheque_numb, () => newBooklet.value.quantity],
   ([start, qty]) => {
-    const startNum = parseInt(start, 10)
-    const quantityNum = parseInt(qty, 10)
+    const startLabel = String(start || '').trim()
+    const quantityLabel = String(qty || '').trim()
 
-    if (!isNaN(startNum) && !isNaN(quantityNum) && quantityNum > 0) {
-      const end = startNum + quantityNum - 1
-      newBooklet.value.ending_cheque_numb = end.toString().padStart(8, '0')
-      newBooklet.value.booklet_numb = `${startNum.toString().padStart(4, 0).slice(-4)}-${end.toString().padStart(4, 0).slice(-4)}`
+    if (/^\d+$/.test(startLabel) && /^[1-9]\d*$/.test(quantityLabel)) {
+      const end = BigInt(startLabel) + BigInt(quantityLabel) - 1n
+      const endLabel = end.toString().padStart(startLabel.length, '0')
+      newBooklet.value.ending_cheque_numb = endLabel
+      newBooklet.value.booklet_numb = `${getChequeBookletPart(startLabel)}-${getChequeBookletPart(endLabel)}`
     } else {
       newBooklet.value.ending_cheque_numb = ''
     }
@@ -945,14 +929,14 @@ const validateAddBooklet = () => {
     })
     return false
   }
-  if (newBooklet.value.starting_cheque_numb.length !== 8) {
-    $q.notify({
-      type: 'negative',
-      message: 'Starting number must be exactly 8 digits',
-      position: 'top',
-    })
-    return false
-  }
+  // if (newBooklet.value.starting_cheque_numb.length !== 8) {
+  //   $q.notify({
+  //     type: 'negative',
+  //     message: 'Starting number must be exactly 8 digits',
+  //     position: 'top',
+  //   })
+  //   return false
+  // }
   if (!newBooklet.value.ending_cheque_numb) {
     $q.notify({
       type: 'negative',
@@ -961,24 +945,16 @@ const validateAddBooklet = () => {
     })
     return false
   }
-  if (newBooklet.value.ending_cheque_numb.length !== 8) {
-    $q.notify({
-      type: 'negative',
-      message: 'Ending number must be exactly 8 digits',
-      position: 'top',
-    })
-    return false
-  }
-  if (
-    parseInt(newBooklet.value.starting_cheque_numb) > parseInt(newBooklet.value.ending_cheque_numb)
-  ) {
-    $q.notify({
-      type: 'negative',
-      message: 'Starting number must be less than ending number',
-      position: 'top',
-    })
-    return false
-  }
+  // if (
+  //   parseInt(newBooklet.value.starting_cheque_numb) > parseInt(newBooklet.value.ending_cheque_numb)
+  // ) {
+  //   $q.notify({
+  //     type: 'negative',
+  //     message: 'Starting number must be less than ending number',
+  //     position: 'top',
+  //   })
+  //   return false
+  // }
   return true
 }
 
@@ -999,14 +975,6 @@ const validateAddCheque = () => {
     $q.notify({
       type: 'negative',
       message: 'Cheque number is required',
-      position: 'top',
-    })
-    return false
-  }
-  if (newCheque.value.chequeNo.length !== 8) {
-    $q.notify({
-      type: 'negative',
-      message: 'Cheque number must be exactly 8 digits',
       position: 'top',
     })
     return false

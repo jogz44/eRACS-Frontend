@@ -345,22 +345,22 @@ export const useBankStore = defineStore('bank', {
     },
 
     async fetchBarangayBankAccounts() {
-  try {
-    const config = this.getAuthConfig()
-    const response = await api.get('/api/barangay/setup', config)
-    const payload = response.data?.data ?? response.data
-    const record = Array.isArray(payload) ? payload[0] : payload
+      try {
+        const config = this.getAuthConfig()
+        const response = await api.get('/api/barangay/setup', config)
+        const payload = response.data?.data ?? response.data
+        const record = Array.isArray(payload) ? payload[0] : payload
 
-    return (record?.bank_accounts || []).map((acc) => ({
-      bank_id: acc.bank_id != null ? Number(acc.bank_id) : null,
-      bank_name: acc.bank?.name || acc.bank?.bank_name || acc.bank_name || acc.bank || '',
-      account_number: acc.account_number || '',
-    }))
-  } catch (error) {
-    console.error('Error fetching barangay bank accounts:', error)
-    throw error
-  }
-},
+        return (record?.bank_accounts || []).map((acc) => ({
+          bank_id: acc.bank_id != null ? Number(acc.bank_id) : null,
+          bank_name: acc.bank?.name || acc.bank?.bank_name || acc.bank_name || acc.bank || '',
+          account_number: acc.account_number || '',
+        }))
+      } catch (error) {
+        console.error('Error fetching barangay bank accounts:', error)
+        throw error
+      }
+    },
 
     methods: {
       calculateQuantity(start, end) {
@@ -377,18 +377,16 @@ export const useBankStore = defineStore('bank', {
       try {
         const config = this.getAuthConfig()
 
-        // Convert to numbers for validation
-        const start = parseInt(bookletData.starting_cheque_numb)
-        const end = parseInt(bookletData.ending_cheque_numb)
+        const start = String(bookletData.starting_cheque_numb || '')
+        const end = String(bookletData.ending_cheque_numb || '')
         const quantity = parseInt(bookletData.quantity)
 
         // Validate quantity
-        if (quantity < 1 || quantity > 150) {
-          throw new Error('Quantity must be between 1 and 150')
+        if (quantity < 1) {
+          throw new Error('Quantity must be greater than 0')
         }
 
-        // Client-side validationw Error('Booklet number must be numeric')
-        if (isNaN(start) || isNaN(end)) {
+        if (!/^\d+$/.test(start) || !/^\d+$/.test(end)) {
           throw new Error('Cheque numbers must be numeric')
         }
 
@@ -422,30 +420,46 @@ export const useBankStore = defineStore('bank', {
     async fetchBookletCheques(bookletId) {
       this.isLoading = true
       this.error = null
+
       try {
-        // Convert to number and validate
         const id = Number(bookletId)
+
         if (isNaN(id)) {
           throw new Error(`Invalid booklet ID: ${bookletId}`)
         }
 
         const config = this.getAuthConfig()
+
         const response = await api.get(`/api/barangay/booklets/${id}/cheques`, config)
 
-        // Handle different response structures
         const rawCheques = response.data?.data || response.data?.cheques || []
 
-        const cheques = rawCheques.map((c) => ({
-          chequeNo: c.chequeNo || c.cheque_number || '',
-          status: c.status || c.cheque_status || 'error',
-          date: c.date || c.created_at || '',
-          dvn: c.dvn || 'error',
-          dvamount: c.dvamount
-            ? '₱ ' + Number(c.dvamount).toLocaleString('en-PH', { minimumFractionDigits: 2 })
-            : '-',
-        }))
+        const cheques = rawCheques.map((c) => {
+          const amount = c.amount ?? c.dvamount ?? c.dv_amount ?? c.disbursement?.dv_amount ?? null
 
-        // Check for stale disbursements and update cheque status accordingly
+          const numericAmount =
+            amount !== null && amount !== '' ? Number(String(amount).replace(/[^0-9.-]/g, '')) : NaN
+
+          return {
+            chequeNo: c.chequeNo || c.cheque_number || '',
+
+            status: c.status || c.cheque_status || 'error',
+
+            date: c.date || c.cheque_date || c.created_at || '',
+
+            dvn: c.dvn || c.dv_number || c.disbursement?.dv_number || 'none',
+
+            // Individual cheque allocation
+            dvamount: Number.isFinite(numericAmount)
+              ? '₱ ' +
+                numericAmount.toLocaleString('en-PH', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })
+              : '-',
+          }
+        })
+
         await this.updateChequeStatusFromDisbursements(cheques)
 
         return {
@@ -459,6 +473,7 @@ export const useBankStore = defineStore('bank', {
           error: error.response?.data || error.message,
           bookletId: bookletId,
         })
+
         throw error
       } finally {
         this.isLoading = false
