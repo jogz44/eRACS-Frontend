@@ -48,7 +48,19 @@
       />
           <q-space/>
 
-          <div class="row  ">
+           <div class="row justify-end q-mb-sm">
+        <q-btn
+          unelevated
+          icon="print"
+          label="Export"
+          color="green"
+          @click="handleExport"
+          size="md"
+          no-caps
+        />
+      </div>
+
+          <!-- <div class="row  ">
         <q-btn
           unelevated
                 icon="print"
@@ -58,7 +70,7 @@
                 size="md"
                 no-caps
         />
-          </div>
+          </div> -->
       <!-- <q-btn
         label="Add"
         icon="add"
@@ -77,12 +89,18 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
+import { useRoute } from 'vue-router'
+import { useAuthStore } from 'stores/auth'
 import { useDisbursementStore } from 'stores/disbursementStore'
+import { exportTransactionToExcel } from '../../composables/transactionExportConfigs'
 
 const $q = useQuasar()
 const store = useDisbursementStore()
 const dateRange = ref(null)
+const authStore = useAuthStore()
+const route = useRoute()
 
+const selectedDisbursementType = ref('regular')
 const dateRangeDisplay = computed(() => {
   if (!dateRange.value || !dateRange.value.from || !dateRange.value.to) {
     return ''
@@ -109,7 +127,7 @@ const onDateRangeChange = (newRange) => {
     store.dateTo = ''
   }
 }
-
+//this is not the right time for anything that has been through
 const onDateRangeClear = () => {
   dateRange.value = null
   store.dateFrom = ''
@@ -123,28 +141,81 @@ const clearAllFilters = () => {
   dateRange.value = null
 }
 
-const handleSACBPrint = () => {
-  if (dateRangeDisplay.value === '') {
-    $q.notify({
-      type: 'negative',
-      message: 'Please select a date range.',
-      position: 'top',
-    })
-    return
-  }
-  $q.notify({
-    type: 'positive',
-    message: 'Report sent to printer successfully!',
-    position: 'top',
+// const handleSACBPrint = () => {
+//   if (dateRangeDisplay.value === '') {
+//     $q.notify({
+//       type: 'negative',
+//       message: 'Please select a date range.',
+//       position: 'top',
+//     })
+//     return
+//   }
+//   $q.notify({
+//     type: 'positive',
+//     message: 'Report sent to printer successfully!',
+//     position: 'top',
+//   })
+// }
+
+const matchesDisbursementType = (row, selectedType) => {
+  const rowType = row.type || 'regular'
+  if (selectedType === 'sk') return skTypeAliases.has(rowType)
+  return rowType === selectedType
+}
+const skTypeAliases = new Set(['sk', 'aid', 'provincial_aid', 'fund_transfer'])
+const filteredByType = computed(() =>
+  store.filteredDisbursements.filter(d => matchesDisbursementType(d, selectedDisbursementType.value))
+)
+
+const formatFilterDate = (dateValue) => {
+  if (!dateValue) return ''
+  const parts = String(dateValue).split('/')
+  const date = parts.length === 3
+    ? new Date(`${parts[2]}-${parts[1]}-${parts[0]}`)
+    : new Date(dateValue)
+
+  if (Number.isNaN(date.getTime())) return dateValue
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
   })
 }
+
+const disbursementExportHeader = computed(() => {
+  const hasDateRange = store.dateFrom && store.dateTo
+  const selectedYear = route.query.year || new Date().getFullYear()
+
+  return {
+    title: `${selectedDisbursementType.value.toUpperCase()} Disbursement Transactions`,
+    barangay: authStore.getSelectedBarangayName?.() || 'All Barangays',
+    periodLabel: hasDateRange ? 'Date Range' : 'Year',
+    period: hasDateRange
+      ? `${formatFilterDate(store.dateFrom)} - ${formatFilterDate(store.dateTo)}`
+      : selectedYear,
+  }
+})
+
+const handleExport = async () => {
+  if (!filteredByType.value.length) {
+    $q.notify({ type: 'warning', message: 'No data to export', position: 'top' })
+    return
+  }
+
+  await exportTransactionToExcel('disbursement', filteredByType.value, {
+    fileName: `Disbursement-${selectedDisbursementType.value}-Transactions`,
+    header: disbursementExportHeader.value,
+  })
+}
+
 </script>
 <style scoped>
 .page-header {
   border-bottom: 1px solid #e0e0e0;
   padding-bottom: 16px;
 }
-
+  
 .custom-actions {
   margin-right: 10px;
   margin-top: 10px;

@@ -423,6 +423,8 @@ const $q = useQuasar()
 const contApprStore = useContApprStore()
 const { continueAccounts, continuingAppropriations } = storeToRefs(contApprStore)
 
+
+const { selectedYear } = storeToRefs(contApprStore)
 const loading = ref(false)
 const showContinueDialog = ref(false)
 const showViewDialog = ref(false)
@@ -549,39 +551,50 @@ const columns = [
 const filteredDialogAccounts = computed(() => {
   const currentYear = new Date().getFullYear()
 
-  // First filter by year (2024 or last year)
-  const yearFilteredAccounts = continueAccounts.value.filter((account) => {
-    const accountYear = parseInt(account.year)
-    return accountYear != currentYear
-  })
+  const eligibleAccounts = continueAccounts.value.filter((account) => {
+    const accountYear = parseInt(account.year, 10)
+    const hasBalance = Number(account.balance) > 0
+    const isPreviousYear = !Number.isNaN(accountYear) && accountYear !== currentYear
 
-  // Only allow accounts that are CAPITAL OUTLAY (in any segment)
-  const capitalOutlayFiltered = yearFilteredAccounts.filter((account) => {
+    if (!isPreviousYear || !hasBalance) return false
+
+    const expenseClass = String(account.expenseClass || '').toLowerCase()
     const name = String(account.accountName || '').toLowerCase()
-    return name.includes('capital outlay')
+    return expenseClass.includes('capital outlay') || name.includes('capital outlay')
   })
 
-  if (!dialogSearchQuery.value) return capitalOutlayFiltered
+  if (!dialogSearchQuery.value) return eligibleAccounts
 
-  return capitalOutlayFiltered.filter((account) =>
+  return eligibleAccounts.filter((account) =>
     Object.values(account).join(' ').toLowerCase().includes(dialogSearchQuery.value.toLowerCase()),
   )
 })
 
+// const filteredAppropriations = computed(() => {
+//   const query = searchQuery.value.toLowerCase()
+//   const currentYear = new Date().getFullYear()
+//   const lastYear = currentYear - 1
+
+//   return mergedAppropriations.value.filter((row) => {
+//     // Only show data from 2024 or last year
+//     const rowYear = parseInt(row.year)
+//     const isCurrentOrLastYear = rowYear === 2024 || rowYear === lastYear
+
+//     if (!isCurrentOrLastYear) {
+//       return false
+//     }
+
+//     return (
+//       row.description.toLowerCase().includes(query) ||
+//       row.expense_class?.toLowerCase().includes(query) ||
+//       row.year?.toString().includes(query)
+//     )
+//   })
+// })
+
 const filteredAppropriations = computed(() => {
   const query = searchQuery.value.toLowerCase()
-  const currentYear = new Date().getFullYear()
-  const lastYear = currentYear - 1
-
   return mergedAppropriations.value.filter((row) => {
-    // Only show data from 2024 or last year
-    const rowYear = parseInt(row.year)
-    const isCurrentOrLastYear = rowYear === 2024 || rowYear === lastYear
-
-    if (!isCurrentOrLastYear) {
-      return false
-    }
-
     return (
       row.description.toLowerCase().includes(query) ||
       row.expense_class?.toLowerCase().includes(query) ||
@@ -589,8 +602,6 @@ const filteredAppropriations = computed(() => {
     )
   })
 })
-
-
 
 const loadPendingUsers = async () => {
   loading.value = true
@@ -806,7 +817,7 @@ onMounted(async () => {
   try {
     await contApprStore.fetchContinueAccounts()
     await contApprStore.fetchYears()
-    await contApprStore.fetchContinuingAppropriations()
+    await contApprStore.fetchContinuingAppropriations(contApprStore.selectedYear)
 
     // Log page visit
     const { logPageVisit } = usePageLogging()
@@ -821,6 +832,13 @@ onMounted(async () => {
     generalLoading.value = false
   }
 })
+
+watch(selectedYear, async (newYear) => {
+  if (newYear) {
+    await contApprStore.fetchContinuingAppropriations(newYear)
+  }
+})
+
 
 // Watch for dialog close to clear selections
 watch(showContinueDialog, (newValue) => {

@@ -48,19 +48,18 @@
     <!-- Right side - Login form section (1/3 width) -->
     <div class="login-section">
       <div class="login-container q-pt-md">
-           <div class="header-section">
+        <div class="header-section">
           <div class="office-info">
-            <q-img
-              src="src/assets/tagumlogo.png"
-              class="logo-image"
-              contain
-              style="width: 120px; height: 120px; margin: 0 auto 1rem auto;"
-            />
+            <div class="divide row">
+              <q-img
+                :src="tagumLogo" class="logo-image"
+                contain
+                style="width: 120px; height: 120px; margin: 0 auto 1rem auto;"/>
+            </div>
+            <div class="office-name">City Accounting Office</div>
+              <div class="system-name">Electronic Registry of Appropriation and Commitment System (eRACs)</div>
           </div>
-          <div class="office-name">City Accounting Office</div>
-            <div class="system-name">Electronic Registry of Appropriation and Commitment System (eRACs)</div>
-
-          <div class="signin-title">{{ getSigninTitle() }}</div>
+          <div class="signin-title">Admin</div>
         </div>
 
         <div class="login-form">
@@ -175,6 +174,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from 'stores/auth'
+import tagumLogo from 'src/assets/tagumlogo.png'
 
 
 const $q = useQuasar()
@@ -194,14 +194,14 @@ const showInactivityDialog = ref(false)
 // }
 
 // Get signin title based on username
-const getSigninTitle = () => {
-  if (email.value === 'coa') {
-    return 'COA Officer'
-  } else if (email.value === 'admin') {
-    return 'Super Administrator'
-  }
-  return 'Admin'
-}
+// const getSigninTitle = () => {
+//   if (email.value === 'coa') {
+//     return 'COA Officer'
+//   } else if (email.value === 'admin') {
+//     return 'Super Administrator'
+//   }
+//   return 'Admin'
+// }
 
 // Validation function
 const validateLogin = () => {

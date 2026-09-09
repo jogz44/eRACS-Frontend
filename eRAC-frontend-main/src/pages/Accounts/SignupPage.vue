@@ -138,9 +138,9 @@
                   </div>
                   <div class="col-6">
                     <q-input outlined dense bg-color="white" v-model="username" label="Username" color="green"
-                      :error="showStep2Validation && (!username || username.length < 4)"
+                      :error="(showStep2Validation && (!username || username.length < 4)) || isUsernameTaken"
                       :error-message="getUsernameErrorMessage()">
-                      <template v-slot:prepend>
+                       <template v-slot:prepend>
                         <q-icon name="person" />
                       </template>
                     </q-input>
@@ -254,7 +254,7 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from 'stores/auth'
@@ -293,6 +293,8 @@ export default {
     // Separate validation states for each step
     const showStep1Validation = ref(false)
     const showStep2Validation = ref(false)
+    const isUsernameTaken = ref(false)
+    let usernameCheckTimeout = null
 
     onMounted(async () => {
       try {
@@ -316,6 +318,22 @@ export default {
           position: 'top',
         })
       }
+    })
+
+    //validating the username if it exist
+    watch(username, async (newVal) => {
+      if (!newVal || newVal.length < 4) {
+        isUsernameTaken.value = false
+        return
+      }
+      
+      // Debounce to avoid spamming the API
+      clearTimeout(usernameCheckTimeout)
+      usernameCheckTimeout = setTimeout(async () => {
+        const response = await fetch(`/api/check-username?username=${newVal}`)
+        const data = await response.json()
+        isUsernameTaken.value = data.exists
+      }, 500)
     })
 
     // File handlers remain the same
@@ -357,6 +375,7 @@ export default {
     }
 
     const getUsernameErrorMessage = () => {
+      if (isUsernameTaken.value) return 'Username already exists'
       if (!showStep2Validation.value) return ''
       if (!username.value) return 'Username is required'
       if (username.value.length < 4) return 'Username must be at least 4 characters'
@@ -608,6 +627,7 @@ export default {
       showStep2Validation.value = true
       if (!email.value.trim() || !isValidEmail(email.value)) return
       if (!username.value.trim() || username.value.length < 4) return
+      if (isUsernameTaken.value) return
       if (!password.value || password.value.length < 8) return
       if (!confirmPassword.value || password.value !== confirmPassword.value) return
       step.value = 3
@@ -659,6 +679,7 @@ export default {
       isSending,
       showStep1Validation,
       showStep2Validation,
+      isUsernameTaken, 
       onFileAdded,
       onFileRemoved,
       onFileRejected,

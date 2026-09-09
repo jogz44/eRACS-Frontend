@@ -1,39 +1,9 @@
 <template>
   <q-page class="q-pa-lg report-page">
     <!-- Main Header with bottom border -->
-    <div class="dashboard-card q-mb-md">
-      <div class="section-header row items-center justify-between q-mb-xs">
-        <div class="section-title col-12 col-md-8">Current Year Reports</div>
-        <!-- Year Filter Section -->
-
-        <div class="col-12 col-md-4">
-          <div class="year-filter-section">
-            <div class="row items-center justify-end q-gutter-sm">
-              <div class="text-subtitle2 text-weight-medium">Year Filter:</div>
-              <q-select
-                v-model="reportStore.selectedYear"
-                :options="reportStore.availableYears"
-                option-value="value"
-                option-label="label"
-                emit-value
-                map-options
-                dense
-                outlined
-                style="min-width: 120px"
-                @update:model-value="onYearChange"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="calendar_today" />
-                </template>
-              </q-select>
-
-              <q-btn icon="refresh" color="primary" flat dense size="sm" @click="refreshYears">
-                <q-tooltip>Refresh available years</q-tooltip>
-              </q-btn>
-            </div>
-          </div>
-        </div>
-      </div>
+    <!-- Continuing Reports Header with bottom border -->
+    <div class="section-header q-mb-xl">
+      <div class="section-title">Continuing Reports</div>
     </div>
 
     <SetupDialog v-model="showSetupDialog" />
@@ -111,7 +81,7 @@
                   color="green"
                   label="Preview"
                   no-caps
-                  :loading="previewAdviceLoading"
+                  :loading="viewingAdvice && loading"
                   @click="viewPbcAdvice(props.row)"
                   class="q-pl-sm q-pr-sm"
                 >
@@ -124,9 +94,9 @@
       </div>
     </div>
 
-    <!-- Current Year Reports Card -->
+    <!-- Continuing Reports Card -->
     <div class="row q-col-gutter-md q-pa-md">
-      <!-- RAC Card -->
+      <!-- Continuing RAC Card -->
       <div class="col-12 col-md-6">
         <q-card class="report-card" flat bordered>
           <q-card-section class="q-pb-none q-pt-lg">
@@ -134,17 +104,23 @@
           </q-card-section>
 
           <q-card-section class="q-pt-md q-pb-lg">
-            <div class="col q-col-gutter-sm items-end">
+            <div class="col q-col-gutter-md items-end">
               <div class="col-12 col-sm-6 col-md-4">
                 <q-input
-                  v-model="CurrentRacDateRange.from"
+                  v-model="continuingRacDateRange.from"
                   filled
                   type="date"
                   hint="From Date"
-                  @update:model-value="changeMonth"
+                  @update:model-value="(v) => onDateChangecontinuing('from', v)"
                 />
                 <br />
-                <q-input v-model="CurrentRacDateRange.to" filled type="date" hint="To Date" />
+                <q-input
+                  v-model="continuingRacDateRange.to"
+                  filled
+                  type="date"
+                  hint="To Date"
+                  @update:model-value="(v) => onDateChangecontinuing('to', v)"
+                />
                 <br />
               </div>
 
@@ -152,14 +128,13 @@
                 <q-select
                   outlined
                   dense
-                  v-model="expenseSelectedCurrent"
+                  v-model="expenseSelectedContinuing"
                   label="Expense Category"
-                  :options="reportStore.expenseOptionsCurrent"
                   map-options
-                  option-label="name"
-                  option-value="id"
+                  :options="reportStore.expenseOptionsContinuing"
                   :loading="loading"
-                  :disable="!isBarangaySelected"
+                  option-value="id"
+                  option-label="name"
                 />
               </div>
 
@@ -169,24 +144,14 @@
                   icon="settings"
                   label="Generate Report"
                   class="full-width"
-                  :disable="!isBarangaySelected"
-                  @click="openRACModal('current-rac')"
+                  @click="openRACModal('continuing-rac')"
                   :loading="loading"
-                >
-                  <q-icon
-                    v-if="!isBarangaySelected"
-                    name="info"
-                    size="14px"
-                    color="orange"
-                    class="q-ml-sm"
-                  />
-                </q-btn>
+                />
               </div>
             </div>
           </q-card-section>
         </q-card>
       </div>
-
       <!-- PBC Card -->
       <div class="col-12 col-md-6">
         <q-card class="report-card" flat bordered>
@@ -195,18 +160,30 @@
           </q-card-section>
 
           <q-card-section class="q-pt-md q-pb-lg">
-            <div class="col q-col-gutter-sm items-end">
+            <div class="col q-col-gutter-md items-end">
               <div class="col-12 col-sm-6 col-md-6">
-                <q-input v-model="pbcDateRange.from" filled type="date" hint="From Date" />
+                <q-input
+                  v-model="continuingPbcDateRange.from"
+                  filled
+                  type="date"
+                  hint="From Date"
+                  @update:model-value="(v) => onContinuingPbcDateChange('from', v)"
+                />
                 <br />
-                <q-input v-model="pbcDateRange.to" filled type="date" hint="To Date" />
+                <q-input
+                  v-model="continuingPbcDateRange.to"
+                  filled
+                  type="date"
+                  hint="To Date"
+                  @update:model-value="(v) => onContinuingPbcDateChange('to', v)"
+                />
                 <br />
               </div>
               <div class="col-12 col-sm-6 col-md-4">
                 <q-select
                   outlined
                   dense
-                  v-model="bankSelectedPBC"
+                  v-model="continuingBankSelectedPBC"
                   label="Select Bank"
                   :options="reportStore.bankOptions"
                   map-options
@@ -214,7 +191,6 @@
                   option-label="name"
                   option-value="id"
                   :loading="loading"
-                  :disable="!isBarangaySelected"
                 />
               </div>
 
@@ -224,18 +200,9 @@
                   icon="settings"
                   label="Generate Report"
                   class="full-width"
-                  :disable="!isBarangaySelected"
-                  @click="openPBCModal"
+                  @click="openContinuingPBCModal"
                   :loading="generatingPbcReportLoading"
-                >
-                  <q-icon
-                    v-if="!isBarangaySelected"
-                    name="info"
-                    size="14px"
-                    color="orange"
-                    class="q-ml-sm"
-                  />
-                </q-btn>
+                />
               </div>
             </div>
           </q-card-section>
@@ -244,40 +211,24 @@
     </div>
 
     <div class="row q-col-gutter-md q-pa-md">
-      <!-- SACB Card -->
+      <!-- Continuing SACB Card -->
       <div class="col-12 col-md-6">
-        <q-card class="report-card" flat bordered>
+        <q-card class="transmittal-card" flat bordered>
           <q-card-section class="q-pb-none q-pt-lg">
             <div class="subsection-title">Status of Appropriation and Obligation (SACB)</div>
           </q-card-section>
 
           <q-card-section class="q-pt-md q-pb-lg">
-            <div class="col q-col-gutter-sm items-end">
-              <div class="col-12 col-sm-6 col-md-6">
-                <q-input v-model="currentSacbDateRange.from" filled type="date" hint="From Date" />
-                <br />
-                <q-input v-model="currentSacbDateRange.to" filled type="date" hint="To Date" />
-                <br />
-              </div>
-
-              <div class="col-12 col-sm-6 col-md-6">
+            <div class="col-12 col-sm-6 col-md-6">
+              <div class="row justify-center">
                 <q-btn
+                  class="full-width"
                   color="primary"
                   icon="settings"
                   label="Generate Report"
-                  class="full-width"
-                  :disable="!isBarangaySelected"
-                  @click="openSACBModal('current-sacb')"
+                  @click="openSACBModal('continuing-sacb')"
                   :loading="loading"
-                >
-                  <q-icon
-                    v-if="!isBarangaySelected"
-                    name="info"
-                    size="14px"
-                    color="orange"
-                    class="q-ml-sm"
-                  />
-                </q-btn>
+                />
               </div>
             </div>
           </q-card-section>
@@ -297,7 +248,7 @@
                 <q-select
                   outlined
                   dense
-                  v-model="transmittalMonthSelected"
+                  v-model="continuingTransmittalMonthSelected"
                   label="Select Month"
                   :options="monthOptions"
                   map-options
@@ -305,7 +256,6 @@
                   option-label="label"
                   option-value="value"
                   :loading="loading"
-                  :disable="!isBarangaySelected"
                 />
               </div>
 
@@ -315,18 +265,9 @@
                   icon="settings"
                   label="Generate Report"
                   class="full-width"
-                  :disable="!isBarangaySelected"
-                  @click="openTransmittalModal"
-                  :loading="loading"
-                >
-                  <q-icon
-                    v-if="!isBarangaySelected"
-                    name="info"
-                    size="14px"
-                    color="orange"
-                    class="q-ml-sm"
-                  />
-                </q-btn>
+                  @click="openContinuingTransmittalModal"
+                  :loading="generatingTransmittalLoading"
+                />
               </div>
             </div>
           </q-card-section>
@@ -370,6 +311,7 @@
                 label="Export PDF"
                 color="#69B31E"
                 @click="exportSACBToPDF"
+                v-permission="'print'"
                 size="sm"
                 no-caps
               />
@@ -378,8 +320,9 @@
                 unelevated
                 icon="print"
                 label="Print"
-                color="green"
+                color="#187C19"
                 @click="handleSACBPrint"
+                v-permission="'print'"
                 size="sm"
                 no-caps
               />
@@ -428,7 +371,10 @@
                     </div>
                     <div class="info-item">
                       <span class="info-label">Date Range:</span>
-                      <span class="info-value">{{ getSACBDateRangeDisplay() }}</span>
+                      <span class="info-value"
+                        >{{ formatFullDate(currentSacbDateRange.from) }} -
+                        {{ formatFullDate(currentSacbDateRange.to) }}</span
+                      >
                     </div>
                     <div class="info-item">
                       <span class="info-label">Report Type:</span>
@@ -576,53 +522,132 @@
                   Status of Appropriation and Obligation (SACB)
                 </div>
                 <div class="text-h6 text-center text-weight-medium" style="color: #187c19">
-                  Barangay
-                  {{ authStore.getSelectedBarangayName() || authStore.user?.barangay_name }}
+                  Barangay {{ authStore.user?.barangay_name }}
                 </div>
                 <div class="text-subtitle1 text-center q-mb-lg" style="color: #666">
-                  Period: {{ getSACBDateRangeDisplay() }}
+                  Period: {{ formatFullDate(currentSacbDateRange.from) }} -
+                  {{ formatFullDate(currentSacbDateRange.to) }}
                 </div>
               </q-card-section>
 
               <q-card-section>
-                <!-- SACB Table with improved styling -->
-                <q-table
-                  :rows="computedSACBRows"
-                  :columns="sacbColumns"
-                  row-key="ppa"
-                  flat
-                  bordered
-                  dense
-                  separator="cell"
-                  class="sacb-table"
-                  hide-pagination
-                  :pagination="{ rowsPerPage: 0 }"
-                >
-                  <template v-slot:body="props">
-                    <!-- Section Header -->
-                    <tr v-if="props.row.isSection">
-                      <td :colspan="sacbColumns.length" class="text-bold text-left bg-grey-3">
-                        {{ props.row.ppa }}
-                      </td>
-                    </tr>
+                <!-- SACB Table with hierarchical totals -->
+                <div class="financial-report-table">
+                  <div class="table-header">
+                    <div class="header-row">
+                      <div class="col-description">PROGRAM / PROJECT / ACTIVITY</div>
+                      <div class="col-appropriation">APPROPRIATION</div>
+                      <div class="col-obligation">OBLIGATION</div>
+                      <div class="col-balance">BALANCE</div>
+                    </div>
+                  </div>
 
-                    <!-- Total Row -->
-                    <tr v-else-if="props.row.isTotal">
-                      <td class="text-right text-bold">TOTAL</td>
-                      <td class="text-right text-bold">{{ props.row.appropriation }}</td>
-                      <td class="text-right text-bold">{{ props.row.obligation }}</td>
-                      <td class="text-right text-bold">{{ props.row.balance }}</td>
-                    </tr>
+                  <div class="table-body">
+                    <template v-for="(row, index) in reportStore.reportSACB" :key="index">
+                      <!-- Section Header (Main Category like "1. PERSONAL SERVICES") -->
+                      <div v-if="row.isSection" class="main-section">
+                        <div class="main-section-header">
+                          <div class="col-description">
+                            <span class="main-section-title">{{ row.ppa }}</span>
+                          </div>
+                          <div class="col-appropriation text-right">
+                            <span class="main-section-total">{{
+                              row.appropriation ? formatCurrency(row.appropriation) : ''
+                            }}</span>
+                          </div>
+                          <div class="col-obligation text-right">
+                            <span class="main-section-total">{{
+                              row.obligation ? formatCurrency(row.obligation) : ''
+                            }}</span>
+                          </div>
+                          <div class="col-balance text-right">
+                            <span class="main-section-total">{{
+                              row.balance ? formatCurrency(row.balance) : ''
+                            }}</span>
+                          </div>
+                        </div>
+                      </div>
 
-                    <!-- Regular Row -->
-                    <tr v-else>
-                      <td class="text-left">{{ props.row.ppa }}</td>
-                      <td class="text-right">{{ props.row.appropriation }}</td>
-                      <td class="text-right">{{ props.row.obligation }}</td>
-                      <td class="text-right">{{ props.row.balance }}</td>
-                    </tr>
-                  </template>
-                </q-table>
+                      <!-- Sub-category (like "Honorarium", "Other Personnel Benefits") -->
+                      <div v-else-if="row.isType" class="subcategory-row">
+                        <div class="col-description">
+                          <span class="subcategory-indent">></span>
+                          <span class="subcategory-text">{{ row.ppa }}</span>
+                        </div>
+                        <div class="col-appropriation text-right">
+                          {{ row.appropriation ? formatCurrency(row.appropriation) : '' }}
+                        </div>
+                        <div class="col-obligation text-right">
+                          {{ row.obligation ? formatCurrency(row.obligation) : '' }}
+                        </div>
+                        <div class="col-balance text-right">
+                          {{ row.balance ? formatCurrency(row.balance) : '' }}
+                        </div>
+                      </div>
+
+                      <!-- Sub-sub-category (like "Monetization of Leave Credits", "Productivity Enhancement Incentive") -->
+                      <div v-else-if="row.isItem" class="subsubcategory-row">
+                        <div class="col-description">
+                          <span class="subsubcategory-indent">></span>
+                          <span class="subsubcategory-text">{{ row.ppa }}</span>
+                        </div>
+                        <div class="col-appropriation text-right">
+                          {{ row.appropriation ? formatCurrency(row.appropriation) : '' }}
+                        </div>
+                        <div class="col-obligation text-right">
+                          {{ row.obligation ? formatCurrency(row.obligation) : '' }}
+                        </div>
+                        <div class="col-balance text-right">
+                          {{ row.balance ? formatCurrency(row.balance) : '' }}
+                        </div>
+                      </div>
+
+                      <!-- Sub-sub-sub-category (like individual sub-items) -->
+                      <div v-else-if="row.isSubItem" class="subsubsubcategory-row">
+                        <div class="col-description">
+                          <span class="subsubsubcategory-indent">></span>
+                          <span class="subsubsubcategory-text">{{ row.ppa }}</span>
+                        </div>
+                        <div class="amount-group">
+                          <div class="col-appropriation text-right">
+                            {{ row.appropriation ? formatCurrency(row.appropriation) : '' }}
+                          </div>
+                          <div class="col-obligation text-right">
+                            {{ row.obligation ? formatCurrency(row.obligation) : '' }}
+                          </div>
+                          <div class="col-balance text-right">
+                            {{ row.balance ? formatCurrency(row.balance) : '' }}
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Total Row -->
+                      <div v-else-if="row.isTotal" class="total-row">
+                        <div class="col-description text-right text-bold">TOTAL</div>
+                        <div class="col-appropriation text-right text-bold">
+                          {{ row.appropriation ? formatCurrency(row.appropriation) : '' }}
+                        </div>
+                        <div class="col-obligation text-right text-bold">
+                          {{ row.obligation ? formatCurrency(row.obligation) : '' }}
+                        </div>
+                        <div class="col-balance text-right text-bold">
+                          {{ row.balance ? formatCurrency(row.balance) : '' }}
+                        </div>
+                      </div>
+                    </template>
+
+                    <!-- No data message -->
+                    <div
+                      v-if="!reportStore.reportSACB || reportStore.reportSACB.length === 0"
+                      class="no-data-message"
+                    >
+                      <div class="col-description">No SACB data available</div>
+                      <div class="col-appropriation"></div>
+                      <div class="col-obligation"></div>
+                      <div class="col-balance"></div>
+                    </div>
+                  </div>
+                </div>
 
                 <!-- Report Summary Section -->
                 <div class="report-summary q-mt-xl">
@@ -724,6 +749,7 @@
                 label="Export PDF"
                 color="#69B31E"
                 @click="exportToPDF"
+                v-permission="'print'"
                 size="sm"
                 no-caps
               />
@@ -734,19 +760,20 @@
                 label="Export Excel"
                 color="#69B31E"
                 @click="exportToExcel"
+                v-permission="'print'"
                 size="sm"
                 no-caps
               />
 
-              <q-btn
+              <!-- <q-btn
                 unelevated
                 icon="print"
                 label="Print"
-                color="green"
+                color="#187C19"
                 @click="handleRACPrint"
                 size="sm"
                 no-caps
-              />
+              /> -->
 
               <q-btn flat icon="close" @click="closeRACModal" color="#666" size="md">
                 <q-tooltip>Close</q-tooltip>
@@ -760,24 +787,27 @@
           <div class="print-content-wrapper q-pa-md">
             <q-card class="print-modal" id="rac-print-content">
               <q-card-section class="q-pb-none">
-                <div class="text-h5 text-center text-weight-bold q-mb-sm" style="color: #187c19">
-                  {{ RACModal.reportType }}
+                <div
+                  class="row items-center justify-between text-h6 text-weight-bold"
+                  style="color: #187c19"
+                >
+                  <span>{{ RACModal.reportType }}</span>
+                  <span class="stat-label text-h10"
+                    >Generated Date: {{ new Date().toLocaleDateString() }}</span
+                  >
                 </div>
-                <div class="text-h6 text-center text-weight-medium" style="color: #187c19">
-                  Barangay
-                  {{ authStore.getSelectedBarangayName() || authStore.user?.barangay_name }}
+                <div class="text-h6 text-weight-medium" style="color: #187c19">
+                  Barangay {{ authStore.user?.barangay_name }}
+                  <span class="text-subtitle1 text-center" style="color: #666"> </span>
                 </div>
-                <div class="text-subtitle1 text-center q-mb-lg" style="color: #666">
-                  Date: {{ dateRangeDisplay }}
-                </div>
-                <div class="text-subtitle1 text-center q-mb-lg" style="color: #666">
-                  Expense Class: {{ reportStore.expenseRacSelected?.name }}
-                </div>
+
+                <div></div>
               </q-card-section>
 
               <q-card-section>
-                <!-- Updated RAC Table to match user page format -->
+                <!-- Updated RAC Table to match preview table layout -->
                 <div class="preview-table-container">
+                  <!-- Header matching preview table style -->
                   <!-- Table with preview layout structure -->
                   <table
                     v-if="reportStore.reportRAC && reportStore.reportRAC.length > 0"
@@ -786,8 +816,9 @@
                   >
                     <thead>
                       <!-- First header row with expense class and obligation -->
+
                       <tr class="header-row-main">
-                        <th colspan="20" class="col-expense-class">
+                        <th :colspan="5 + dynamicColumnsCount" class="col-expense-class">
                           {{ reportStore.expenseRacSelected?.name || 'Not Selected' }}
                         </th>
                       </tr>
@@ -795,7 +826,7 @@
                         <th colspan="5" class="col-expense-class">OBLIGATION</th>
                         <th
                           v-if="hasDynamicColumns"
-                          :colspan="1 + dynamicColumnsCount"
+                          :colspan="dynamicColumnsCount"
                           class="col-obligation-header"
                         >
                           ACCOUNT TITLE
@@ -823,9 +854,9 @@
                         </th>
                       </tr>
 
-                      <tr class="header-row-main">
-                        <th colspan="20" style="background-color: whitesmoke"></th>
-                      </tr>
+                      <!-- <tr class="header-row-main">
+                        <th :colspan="5 + dynamicColumnsCount" style="background-color: whitesmoke"></th>
+                      </tr> -->
                     </thead>
                     <tbody>
                       <tr
@@ -921,7 +952,7 @@
                               <span class="stat-value"
                                 >₱{{
                                   reportStore.reportRAC
-                                    .reduce((sum, r) => sum + r.appropriation, 0)
+                                    .reduce((sum, r) => sum + (r.appropriation || 0), 0)
                                     .toLocaleString()
                                 }}</span
                               >
@@ -931,7 +962,7 @@
                               <span class="stat-value"
                                 >₱{{
                                   reportStore.reportRAC
-                                    .reduce((sum, r) => sum + r.amount, 0)
+                                    .reduce((sum, r) => sum + (r.amount || 0), 0)
                                     .toLocaleString()
                                 }}</span
                               >
@@ -942,13 +973,25 @@
                                 >₱{{
                                   (
                                     reportStore.reportRAC.reduce(
-                                      (sum, r) => sum + r.appropriation,
+                                      (sum, r) => sum + (r.appropriation || 0),
                                       0,
-                                    ) - reportStore.reportRAC.reduce((sum, r) => sum + r.amount, 0)
+                                    ) -
+                                    reportStore.reportRAC.reduce(
+                                      (sum, r) => sum + (r.amount || 0),
+                                      0,
+                                    )
                                   ).toLocaleString()
                                 }}</span
                               >
                             </div>
+                            <!-- Dynamic Account Title Totals -->
+                            <!-- <div v-for="accountTitle in reportStore.dynamicAccountColumns"
+                                 :key="accountTitle"
+                                 class="stat-item">
+                              <span class="stat-label">Total {{ accountTitle }}:</span>
+                              <span class="stat-value">₱{{reportStore.reportRAC.reduce((sum, r) =>
+                                 sum + (r[`amount_${accountTitle.replace(/\s+/g, '_').toLowerCase()}`] || 0), 0).toLocaleString()}}</span>
+                            </div> -->
                           </div>
                         </q-card-section>
                       </q-card>
@@ -967,11 +1010,16 @@
                             </div>
                             <div class="stat-item">
                               <span class="stat-label">Total Records:</span>
-                              <span class="stat-value">{{ reportStore.reportRAC.length }}</span>
+                              <span class="stat-value">{{
+                                reportStore.reportRAC ? reportStore.reportRAC.length : 0
+                              }}</span>
                             </div>
+
                             <div class="stat-item">
-                              <span class="stat-label">Generated Date:</span>
-                              <span class="stat-value">{{ new Date().toLocaleDateString() }}</span>
+                              <span class="stat-label">Date Range:</span>
+                              <span class="stat-value">
+                                {{ dateRangeDisplay || 'No date range selected' }}</span
+                              >
                             </div>
                           </div>
                         </q-card-section>
@@ -1082,7 +1130,10 @@
                     </div>
                     <div class="info-item">
                       <span class="info-label">Date Range:</span>
-                      <span class="info-value">{{ getSACBDateRangeDisplay() }}</span>
+                      <span class="info-value">
+                        {{ formatFullDate(currentSacbDateRange.from) }} -
+                        {{ formatFullDate(currentSacbDateRange.to) }}</span
+                      >
                     </div>
                     <div class="info-item">
                       <span class="info-label">Report Type:</span>
@@ -1243,20 +1294,20 @@
                     <div class="row">
                       <div class="text-weight-bold">TO :</div>
                       <div class="text-weight-bold q-ml-lg">
-                        {{ transmittalModal.recipientName || 'MR. RAMIL Y. TIU, CPA' }}
+                        {{ transmittalModal.recipientName || 'RECIPIENT NAME' }}
                       </div>
                     </div>
                     <div
                       class="text-caption text-weight-medium text-uppercase"
                       style="font-size: 11px; margin-left: 70px"
                     >
-                      {{ transmittalModal.recipientPosition?.label || 'CITY ACCOUNTANT' }}
+                      {{ transmittalModal.recipientPosition?.label || 'POSITION' }}
                     </div>
                   </div>
                   <div class="text-right">
-                    <!-- {{
+                    {{
                       formatFullDate(transmittalModal.date || new Date().toISOString().slice(0, 10))
-                    }} -->
+                    }}
                   </div>
                 </div>
 
@@ -1267,20 +1318,20 @@
                 <div class="q-mb-sm transmittal-body">
                   We submit herewith the following financial transaction documents and reports
                   covering the period of
-                  <!-- <span class="text-weight-bold">{{
+                  <span class="text-weight-bold">{{
                     formatFullDate(transmittalModal.periodFrom)
                   }}</span>
                   -
                   <span class="text-weight-bold">{{
                     formatFullDate(transmittalModal.periodTo)
-                  }}</span> -->
-                  , to wit:
+                  }}</span
+                  >, to wit:
                 </div>
               </q-card-section>
 
               <q-card-section class="q-pt-none">
                 <!-- ===================== TABLE A: DV/PAYROLL ===================== -->
-                <table class="transmittal-table">
+                <table class="transmittal-table-payroll">
                   <thead>
                     <tr>
                       <th colspan="2" class="text-left">A. DV/PAYROLL</th>
@@ -1300,14 +1351,14 @@
                   </thead>
                   <tbody>
                     <tr v-for="(row, index) in reportStore.reportTransmittal.dvRows" :key="index">
-                      <td>{{ row.dvDate }}</td>
-                      <td>{{ row.dvNo }}</td>
-                      <td>{{ row.checkDate }}</td>
-                      <td>{{ row.checkNo }}</td>
-                      <td>{{ row.payee }}</td>
+                      <td class="text-center">{{ row.dvDate }}</td>
+                      <td class="text-center">{{ row.dvNo }}</td>
+                      <td class="text-center">{{ row.checkDate }}</td>
+                      <td class="text-center">{{ row.checkNo }}</td>
+                      <td class="text-uppercase text-left">{{ row.payee }}</td>
                       <td class="text-right">{{ formatCurrency(row.amount) }}</td>
-                      <td>{{ row.pbDate }}</td>
-                      <td>{{ row.pbNo }}</td>
+                      <td class="text-center">{{ row.pbDate }}</td>
+                      <td class="text-center">{{ row.pbNo }}</td>
                     </tr>
 
                     <tr
@@ -1335,7 +1386,7 @@
                 <table class="transmittal-table">
                   <thead>
                     <tr>
-                      <th colspan="4" class="text-left">
+                      <th colspan="4" class="details text-left">
                         B. RCDs and RCRs and the duplicate copies of the ORs issued
                       </th>
                     </tr>
@@ -1347,7 +1398,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(row, index) in transmittalModal.rcdRows" :key="index">
+                    <tr v-for="(row, index) in reportStore.reportTransmittal.rcdRows" :key="index">
                       <td>{{ row.rcdNumber }}</td>
                       <td>{{ row.periodCovered }}</td>
                       <td>{{ row.date }}</td>
@@ -1360,7 +1411,12 @@
                       <td></td>
                     </tr> -->
 
-                    <tr v-if="!transmittalModal.rcdRows || transmittalModal.rcdRows.length === 0">
+                    <tr
+                      v-if="
+                        !reportStore.reportTransmittal.rcdRows ||
+                        reportStore.reportTransmittal.rcdRows.length === 0
+                      "
+                    >
                       <td colspan="8" class="text-center text-grey-6">No records available</td>
                     </tr>
                   </tbody>
@@ -1370,7 +1426,7 @@
                 <table class="transmittal-table q-mb-xs">
                   <thead>
                     <tr>
-                      <th colspan="2" class="text-left">C. Other Reports</th>
+                      <th colspan="2" class="details text-left">C. Other Reports</th>
                     </tr>
                     <tr>
                       <th>Type of Report</th>
@@ -1378,13 +1434,17 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(row, index) in transmittalModal.otherReports" :key="index">
+                    <tr
+                      v-for="(row, index) in reportStore.reportTransmittal.otherReports"
+                      :key="index"
+                    >
                       <td>{{ row.typeOfReport }}</td>
                       <td>{{ row.periodCovered }}</td>
                     </tr>
                     <tr
                       v-if="
-                        !transmittalModal.otherReports || transmittalModal.otherReports.length === 0
+                        !reportStore.reportTransmittal.otherReports ||
+                        reportStore.reportTransmittal.otherReports.length === 0
                       "
                     >
                       <td colspan="8" class="text-center text-grey-6">No records available</td>
@@ -1403,10 +1463,10 @@
                       Very truly yours,
                     </div>
                     <div class="transmittal-signature-name text-center">
-                      {{ SetupModal.Certifiedby || 'NESTOR B. SANCHEZ' }}
+                      {{ SetupModal.Certifiedby }}
                     </div>
                     <div class="transmittal-signature-position text-center">
-                      {{ SetupModal.Certifiedposition?.label || 'Barangay Treasurer' }}
+                      {{ SetupModal.Certifiedposition?.label || 'Position' }}
                     </div>
                   </div>
                 </div>
@@ -1415,10 +1475,10 @@
                   <div style="min-width: 300px" class="q-ml-md">
                     <div class="q-mb-md" style="font-size: 14px; font-weight: 500">Noted by:</div>
                     <div class="transmittal-signature-name text-center">
-                      {{ SetupModal.Notedby || 'FILADELFA D. CASTILLO' }}
+                      {{ SetupModal.Notedby }}
                     </div>
                     <div class="transmittal-signature-position text-center">
-                      {{ SetupModal.Notedposition?.label || 'Punong Barangay' }}
+                      {{ SetupModal.Notedposition?.label || 'Position' }}
                     </div>
                   </div>
 
@@ -1462,7 +1522,7 @@
             </q-btn>
 
             <q-toolbar-title class="text-h6 text-weight-medium" style="color: #187c19">
-              Status of Appropriation and Obligation (SACB)
+              Punong Barangay Certification(PBC)
             </q-toolbar-title>
 
             <q-space />
@@ -1537,7 +1597,7 @@
                       dense
                       v-model="PBCModal.recipient"
                       label="Recipient (e.g. The Bank Manager)"
-                      class="q-mb-sm"
+                      class="q-mb-sm text-uppercase"
                     />
                     <q-input
                       outlined
@@ -1566,7 +1626,7 @@
                     </div>
 
                     <!-- Prepared by -->
-                    <div class="signatory-group q-mb-lg">
+                    <!-- <div class="signatory-group q-mb-lg">
                       <div class="signatory-header">
                         <q-icon name="create" size="sm" style="color: #69b31e" class="q-mr-xs" />
                         <span class="text-weight-medium">Prepared by</span>
@@ -1590,23 +1650,18 @@
                         placeholder="Select position"
                         clearable
                       />
-                    </div>
+                    </div> -->
 
-                    <!-- Noted by -->
+                    <!-- Prepared by -->
                     <div class="signatory-group q-mb-lg">
                       <div class="signatory-header">
-                        <q-icon
-                          name="visibility"
-                          size="sm"
-                          style="color: #e0ffe7"
-                          class="q-mr-xs"
-                        />
-                        <span class="text-weight-medium">Noted by</span>
+                        <q-icon name="create" size="sm" style="color: #69b31e" class="q-mr-xs" />
+                        <span class="text-weight-medium">Prepared by</span>
                       </div>
                       <q-input
                         outlined
                         dense
-                        v-model="SetupModal.Notedby"
+                        v-model="SetupModal.Preparedby"
                         placeholder="Enter full name"
                         class="q-mb-sm"
                         clearable
@@ -1628,12 +1683,12 @@
                     <div class="signatory-group q-mb-md">
                       <div class="signatory-header">
                         <q-icon name="verified" size="sm" style="color: #187c19" class="q-mr-xs" />
-                        <span class="text-weight-medium">Certified by</span>
+                        <span class="text-weight-medium">Delivered by</span>
                       </div>
                       <q-input
                         outlined
                         dense
-                        v-model="SetupModal.Certifiedby"
+                        v-model="SetupModal.Deliveredby"
                         placeholder="Enter full name"
                         class="q-mb-sm"
                         clearable
@@ -1703,11 +1758,14 @@
                 <!-- TO / PBC No. -->
                 <div class="row justify-between items-start q-mb-md pbc-to-block">
                   <div>
-                    <div style="-webkit-text-stroke: 0.5px currentColor">
-                      To: {{ PBCModal.recipient || 'The Bank Manager' }}
+                    <div style="-webkit-text-stroke: 0.5px currentColor" class="text-uppercase">
+                      To: {{ PBCModal.recipient || 'Recipient Name' }}
                     </div>
-                    <div class="text-weight-bold" style="-webkit-text-stroke: 0.5px currentColor">
-                      {{ PBCModal.bankName || 'LAND BANK OF THE PHILIPPINES' }}
+                    <div
+                      class="text-weight-bold uppercase"
+                      style="-webkit-text-stroke: 0.5px currentColor"
+                    >
+                      {{ PBCModal.bankName || 'Bank Name' }}
                     </div>
                     <div>{{ PBCModal.bankBranch || 'Tagum Branch' }}</div>
                     <div>{{ PBCModal.bankCity || 'Tagum City' }}</div>
@@ -1725,6 +1783,7 @@
                       <span class="text-weight-bold" style="-webkit-text-stroke: 0.5px currentColor"
                         >DATE:</span
                       >
+                      {{ formatFullDate(PBCModal.date) }}
                     </div>
                   </div>
                 </div>
@@ -1767,11 +1826,11 @@
                         </td>
                       </tr>
                       <tr v-for="(check, cIndex) in group.checks" :key="cIndex">
-                        <td>{{ check.checkNo }}</td>
-                        <td>{{ check.checkDate }}</td>
-                        <td class="text-left">{{ check.payee }}</td>
+                        <td class="text-center">{{ check.checkNo }}</td>
+                        <td class="text-center">{{ check.checkDate }}</td>
+                        <td class="text-left text-uppercase">{{ check.payee }}</td>
                         <td class="text-right">{{ formatCurrency(check.amount) }}</td>
-                        <td class="text-left">{{ check.purpose }}</td>
+                        <td class="text-left text-uppercase">{{ check.purpose }}</td>
                       </tr>
                     </template>
 
@@ -1831,10 +1890,10 @@
                   <div class="text-center" style="min-width: 280px">
                     <div class="text-left q-mb-md">Very truly yours,</div>
                     <div class="pbc-signature-name">
-                      {{ SetupModal.Notedby }}
+                      {{ SetupModal.Preparedby }}
                     </div>
                     <div class="pbc-signature-position">
-                      {{ SetupModal.Notedposition?.label || 'Punong Barangay' }}
+                      {{ SetupModal.Notedposition?.label || 'Position' }}
                     </div>
                   </div>
                 </div>
@@ -1844,10 +1903,10 @@
                   <div style="min-width: 300px" class="q-ml-md">
                     <div class="q-mb-md">Delivered by:</div>
                     <div class="pbc-signature-name text-center">
-                      {{ SetupModal.Certifiedby }}
+                      {{ SetupModal.Deliveredby }}
                     </div>
                     <div class="pbc-signature-position text-center">
-                      {{ SetupModal.Certifiedposition?.label || 'Barangay Treasurer' }}
+                      {{ SetupModal.Certifiedposition?.label || 'Position' }}
                     </div>
                   </div>
                   <div class="text-center q-mr-md" style="min-width: 300px">
@@ -1877,13 +1936,52 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onActivated, watch } from 'vue'
-import SetupDialog from 'components/SetupDialog.vue'
+import { ref, reactive, computed, onMounted, onActivated } from 'vue'
+// import SetupDialog from 'components/SetupDialog.vue'
 import { useQuasar, date } from 'quasar'
 import { useAuthStore } from 'stores/auth'
 import { useReportStore } from 'stores/reportStore'
-import { usePageLogging } from '../../composables/usePageLogging'
-import { useActivityLogging } from '../../composables/useActivityLogging'
+import { usePageLogging } from '../composables/usePageLogging'
+import { useActivityLogging } from '../composables/useActivityLogging'
+
+// Remove the old computedSACBRows since we're using hierarchical structure directly
+
+const totalAppropriation = computed(() => {
+  return reportStore.reportSACB
+    .filter((row) => row.isType || row.isItem) // only count type and item rows
+    .reduce((sum, row) => {
+      return sum + (row.appropriation || 0)
+    }, 0)
+    .toLocaleString('en-US', { minimumFractionDigits: 2 })
+})
+
+const totalObligation = computed(() => {
+  return reportStore.reportSACB
+    .filter((row) => row.isType || row.isItem) // only count type and item rows
+    .reduce((sum, row) => {
+      return sum + (row.obligation || 0)
+    }, 0)
+    .toLocaleString('en-US', { minimumFractionDigits: 2 })
+})
+
+const totalBalance = computed(() => {
+  return reportStore.reportSACB
+    .filter((row) => row.isType || row.isItem) // only count type and item rows
+    .reduce((sum, row) => {
+      return sum + (row.balance || 0)
+    }, 0)
+    .toLocaleString('en-US', { minimumFractionDigits: 2 })
+})
+
+// Computed property for dynamic columns count
+const dynamicColumnsCount = computed(() => {
+  return reportStore.dynamicAccountColumns.length
+})
+
+// Check if there are dynamic columns
+const hasDynamicColumns = computed(() => {
+  return reportStore.dynamicAccountColumns.length > 0
+})
 
 // stores & composables
 const $q = useQuasar()
@@ -1892,253 +1990,71 @@ const authStore = useAuthStore()
 const { logPageVisit } = usePageLogging()
 const { logAdminActivity } = useActivityLogging()
 
-// Watch for barangay changes to preserve selections
-watch(
-  () => authStore.selectedBarangay,
-  async (newBarangay, oldBarangay) => {
-    if (newBarangay !== oldBarangay && newBarangay) {
-      try {
-        // Store current selections before fetching new options
-        const currentSelected = expenseSelectedCurrent.value
-        const continuingSelected = expenseSelectedContinuing.value
-
-        await reportStore.fetchExpenseClassesForBarangay(newBarangay)
-        await reportStore.fetchBankOptionsForBarangay(newBarangay)
-
-        // Fetch new options for the new barangay
-        // await reportStore.fetchExpenseClassesForBarangay(newBarangay)
-
-        // Try to preserve selections by finding matching names
-        if (currentSelected?.name) {
-          const matchingOption = reportStore.expenseOptionsCurrent.find(
-            (opt) => opt.name === currentSelected.name,
-          )
-          expenseSelectedCurrent.value = matchingOption || null
-        }
-
-        if (continuingSelected?.name) {
-          const matchingOption = reportStore.expenseOptionsContinuing.find(
-            (opt) => opt.name === continuingSelected.name,
-          )
-          expenseSelectedContinuing.value = matchingOption || null
-        }
-      } catch (error) {
-        // Handle 401 errors - token expired, logout handled in store
-        if (error.response?.status === 401) {
-          console.warn('Token expired during barangay change in report page')
-          return
-        }
-        console.error('Error handling barangay change in report page:', error)
-      }
-    }
-  },
-)
-
 /* -------------------- STATE -------------------- */
 const showSetupDialog = ref(false)
 const loading = ref(false)
+const exportingPDF = ref(false)
+const exportingSACBPDF = ref(false)
+const exportingTransmittalPDF = ref(false)
+const exportingPBCPDF = ref(false)
 const sacbDrawerOpen = ref(true)
+const viewingAdvice = ref(false)
 
 function pad(n) {
   return String(n).padStart(2, '0')
 }
 
-// // Date ranges
-// const dateRange = ref({ from: '', to: '' })
-// const continuingDateRange = ref({ from: '', to: '' })
-// const currentSacbDateRange = ref({ from: '', to: '' })
-// const continuingSacbDateRange = ref({ from: '', to: '' })
-
 // Date ranges
 const currentYear = new Date().getFullYear()
 const currentdate = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
-// const laterMonthNum = new Date().getMonth() + 1
-const laterMonth = new Date().getMonth() + 1
-const laterlastday = new Date(currentYear, laterMonth, 0).getDate()
+const laterMonthNum = new Date().getMonth() + 1
+const laterMonth = pad(laterMonthNum)
+const laterlastday = new Date(currentYear, laterMonthNum, 0).getDate()
 
 //Year Filter
-// const selectedYear = ref(currentYear)
+// const selectedYear = ref(null)
 
 const isYearChanging = ref(false)
-const exportingTransmittalPDF = ref(false)
-const exportingPBCPDF = ref(false)
-const generatingPbcReportLoading = ref(false)
-
-// Fix refreshYears — reload years AND reset all filters to defaults for selected year
-// function refreshYears() {
-//   reportStore.fetchAvailableYears()
-
-//   // Reset selected year to current
-//   selectedYear.value = currentYear
-
-//   // Reset all date ranges to defaults
-//   const today = new Date()
-//   const month = today.getMonth()
-//   const lastDay = new Date(currentYear, month + 1, 0).getDate()
-//   const mm = pad(month + 1)
-//   const dd = pad(lastDay)
-
-//   CurrentRacDateRange.value = { from: `${currentYear}-${mm}-01`, to: `${currentYear}-${mm}-${dd}` }
-//   continuingRacDateRange.value = {
-//     from: `${currentYear}-${mm}-01`,
-//     to: `${currentYear}-${mm}-${dd}`,
-//   }
-//   currentSacbDateRange.value = {
-//     from: `${currentYear}-01-01`,
-//     to: today.toISOString().slice(0, 10),
-//   }
-//   continuingSacbDateRange.value = {
-//     from: `${currentYear}-01-01`,
-//     to: today.toISOString().slice(0, 10),
-//   }
-
-//   // Reset expense selections
-//   expenseSelectedCurrent.value = null
-//   expenseSelectedContinuing.value = null
-
-//   notifySuccess('Filters reset to defaults.')
-// }
-
-async function refreshYears() {
-  await reportStore.fetchAvailableYears()
-  reportStore.selectedYear = new Date().getFullYear()
-  await onYearChange(reportStore.selectedYear)
-  notifySuccess('Filters reset to defaults.')
-}
-
-async function onYearChange(year) {
-  isYearChanging.value = true
-  loading.value = true
-
-  try {
-    // Sync store's selectedYear with what the dropdown emitted
-    reportStore.selectedYear = year
-
-    if (year === null) {
-      const today = new Date()
-      const month = today.getMonth()
-      const lastDay = new Date(currentYear, month + 1, 0).getDate()
-      const mm = pad(month + 1)
-
-      CurrentRacDateRange.value = {
-        from: `${currentYear}-${mm}-01`,
-        to: `${currentYear}-${mm}-${pad(lastDay)}`,
-      }
-      continuingRacDateRange.value = {
-        from: `${currentYear}-${mm}-01`,
-        to: `${currentYear}-${mm}-${pad(lastDay)}`,
-      }
-      currentSacbDateRange.value = {
-        from: `${currentYear}-01-01`,
-        to: new Date().toISOString().slice(0, 10),
-      }
-      continuingSacbDateRange.value = {
-        from: `${currentYear}-01-01`,
-        to: new Date().toISOString().slice(0, 10),
-      }
-    } else {
-      const y = parseInt(year)
-      if (!y || String(y).length !== 4) return
-
-      const today = new Date()
-      const isCurrentYear = y === today.getFullYear()
-      const sacbFrom = `${y}-01-01`
-      const sacbTo = isCurrentYear ? today.toISOString().slice(0, 10) : `${y}-12-31`
-      const month = today.getMonth()
-      const lastDay = new Date(y, month + 1, 0).getDate()
-      const mm = pad(month + 1)
-
-      currentSacbDateRange.value = { from: sacbFrom, to: sacbTo }
-      continuingSacbDateRange.value = { from: sacbFrom, to: sacbTo }
-      CurrentRacDateRange.value = { from: `${y}-${mm}-01`, to: `${y}-${mm}-${pad(lastDay)}` }
-      continuingRacDateRange.value = { from: `${y}-${mm}-01`, to: `${y}-${mm}-${pad(lastDay)}` }
-    }
-
-    expenseSelectedCurrent.value = null
-    expenseSelectedContinuing.value = null
-
-    // Only re-fetch expense classes — years list doesn't need to reload
-    await reportStore.fetchData(reportStore.selectedYear)
-  } finally {
-    isYearChanging.value = false
-    loading.value = false
-  }
-}
-
-const searchQuery = ref('')
-
-const filteredPbcAdviceList = computed(() => {
-  const list = reportStore.pbcAdviceList || []
-  const q = searchQuery.value?.trim().toLowerCase()
-  if (!q) return list
-
-  return list.filter((row) => {
-    return (
-      String(row.pbcNo || '')
-        .toLowerCase()
-        .includes(q) ||
-      String(row.bankName || '')
-        .toLowerCase()
-        // .includes(q) ||
-        // formatFullDate(row.pbcDate || '')
-        //   .toLowerCase()
-        .includes(q)
-    )
-  })
-})
-
-const clearAllFilters = () => {
-  searchQuery.value = ''
-}
-
-const pbcAdviceColumns = [
-  { name: 'pbcDate', label: 'Date Advice', field: 'pbcDate', align: 'left' },
-  { name: 'pbcNo', label: 'Advice No.', field: 'pbcNo', align: 'left' },
-  { name: 'pbcDateRange', label: 'Date Range', field: 'pbcDateRange', align: 'left' },
-  { name: 'bankName', label: 'Bank Name', field: 'bankName', align: 'left' },
-  { name: 'voucherCount', label: 'No. of Vouchers', field: 'voucherCount', align: 'right' },
-  { name: 'amount', label: 'Amount', field: 'amount', align: 'right' },
-  { name: 'action', label: 'Action', field: 'action', align: 'right' },
-]
-
-//displaying full date format
-function formatFullDate(dateString) {
-  return date.formatDate(dateString, 'MMMM DD, YYYY')
-}
 
 const CurrentRacDateRange = ref({
-  from: `${currentYear}-${pad(laterMonth)}-01`,
-  to: `${currentYear}-${pad(laterMonth)}-${pad(laterlastday)}`,
+  from: `${currentYear}-${laterMonth}-01`,
+  to: `${currentYear}-${laterMonth}-${pad(laterlastday)}`,
 })
 const currentSacbDateRange = ref({ from: `${currentYear}-01-01`, to: currentdate })
-const pbcDateRange = ref({ from: `${currentYear}-01-01`, to: currentdate })
+// const pbcDateRange = ref({ from: `${currentYear}-01-01`, to: currentdate })
 const continuingRacDateRange = ref({
-  from: `${currentYear}-${pad(laterMonth)}-01`,
-  to: `${currentYear}-${pad(laterMonth)}-${pad(laterlastday)}`,
+  from: `${currentYear}-${laterMonth}-01`,
+  to: `${currentYear}-${laterMonth}-${pad(laterlastday)}`,
 })
 const continuingSacbDateRange = ref({ from: `${currentYear}-01-01`, to: currentdate })
 
-const dateRange = CurrentRacDateRange
-const continuingDateRange = continuingRacDateRange
-const previewAdviceLoading = ref(false)
-
 const expenseSelectedCurrent = ref(null)
 const expenseSelectedContinuing = ref(null)
-const bankSelectedPBC = ref(null)
-const transmittalMonthSelected = ref(laterMonth)
+// const bankSelectedPBC = ref(null)
+// const transmittalMonthSelected = ref(laterMonth)
+const generatingTransmittalLoading = ref(false)
+const generatingPbcReportLoading = ref(false)
+
+const continuingPbcDateRange = ref({
+  from: `${currentYear - 1}-01-01`,
+  to: currentdate,
+})
+const continuingBankSelectedPBC = ref(null)
+const continuingTransmittalMonthSelected = ref(laterMonth)
+
 const monthOptions = [
-  { label: 'January', value: 1 },
-  { label: 'February', value: 2 },
-  { label: 'March', value: 3 },
-  { label: 'April', value: 4 },
-  { label: 'May', value: 5 },
-  { label: 'June', value: 6 },
-  { label: 'July', value: 7 },
-  { label: 'August', value: 8 },
-  { label: 'September', value: 9 },
-  { label: 'October', value: 10 },
-  { label: 'November', value: 11 },
-  { label: 'December', value: 12 },
+  { label: 'January', value: '01' },
+  { label: 'February', value: '02' },
+  { label: 'March', value: '03' },
+  { label: 'April', value: '04' },
+  { label: 'May', value: '05' },
+  { label: 'June', value: '06' },
+  { label: 'July', value: '07' },
+  { label: 'August', value: '08' },
+  { label: 'September', value: '09' },
+  { label: 'October', value: '10' },
+  { label: 'November', value: '11' },
+  { label: 'December', value: '12' },
 ]
 
 // Modals
@@ -2153,43 +2069,19 @@ const RACModal = reactive({
   ],
 })
 
-const SACBModal = reactive({
-  show: false,
-  reportType: '',
-  activities: [
-    { id: 1, time: '09:30 AM', description: 'Report generated successfully' },
-    { id: 2, time: '09:25 AM', description: 'Data validation completed' },
-    { id: 3, time: '09:20 AM', description: 'Report parameters configured' },
-    { id: 4, time: '09:15 AM', description: 'Print dialog opened' },
-  ],
-})
-
-const SetupModal = reactive({
-  selectedBarangay: { barangay_name: '' },
-  selectedpreparedby: null,
-  selectedpreparedpos: null,
-  selectednotedby: null,
-  selectednotedpos: null,
-  selectedcertifiedby: null,
-  selectedcertifiedpos: null,
-  show: false,
-  Position: '',
-  Preparedby: '',
-  Preparedposition: '',
-  Notedby: '',
-  Notedposition: '',
-  Certifiedby: '',
-  Certifiedposition: '',
-})
-
 const transmittalModal = reactive({
   show: false,
+  date: new Date().toISOString().slice(0, 10),
+  periodFrom: `${currentYear}-${laterMonth}-01`,
+  periodTo: `${currentYear}-${laterMonth}-${pad(laterlastday)}`,
+  recipientName: '',
+  recipientPosition: null,
 })
 
 const PBCModal = reactive({
   show: false,
   pbcNo: '',
-  recipient: 'The Bank Manager',
+  recipient: '',
   bankName: '',
   bankBranch: '',
   bankCity: '',
@@ -2210,125 +2102,99 @@ const transmittalDvTotal = computed(() => {
   )
 })
 
-reportStore.reportPBC = [
-  {
-    bankGroup: 'LBP BRGY. SAN ISIDRO - 0342-0201-03',
-    checks: [
-      {
-        checkNo: '009311807',
-        checkDate: '03/25/2025',
-        payee: "MIGGY'S HARDWARE & CONSTRUCTION SUPPLIES",
-        amount: 39360.0,
-        purpose: 'PAYMENT THE PURCHASE OF GOODMI...',
-      },
-      // ...
-    ],
-  },
-  {
-    bankGroup: 'DBP BRGY. VISAYAN VILLAGE - 0916-006453-080 / 0-00399-916-9',
-    checks: [
-      /* ... */
-    ],
-  },
+const SACBModal = reactive({
+  show: false,
+  reportType: '',
+  activities: [
+    { id: 1, time: '09:30 AM', description: 'Report generated successfully' },
+    { id: 2, time: '09:25 AM', description: 'Data validation completed' },
+    { id: 3, time: '09:20 AM', description: 'Report parameters configured' },
+    { id: 4, time: '09:15 AM', description: 'Print dialog opened' },
+  ],
+})
+
+const pbcAdviceColumns = [
+  { name: 'pbcDate', label: 'Date Advice', field: 'pbcDate', align: 'left' },
+  { name: 'pbcNo', label: 'Advice No.', field: 'pbcNo', align: 'left' },
+  { name: 'pbcDateRange', label: 'Date Range', field: 'pbcDateRange', align: 'left' },
+  { name: 'bankName', label: 'Bank Name', field: 'bankName', align: 'left' },
+  { name: 'voucherCount', label: 'No. of Vouchers', field: 'voucherCount', align: 'right' },
+  { name: 'amount', label: 'Amount', field: 'amount', align: 'right' },
+  { name: 'action', label: 'Action', field: 'action', align: 'right' },
 ]
 
-async function viewPbcAdvice(row) {
-  previewAdviceLoading.value = true
-  try {
-    PBCModal.pbcNo = row.pbcNo
-    PBCModal.date = row.pbcDate
-    PBCModal.recipient = row.recipient || 'The Bank Manager'
-    PBCModal.bankName = row.bankName
-    PBCModal.bankBranch = row.bankBranch
-    PBCModal.bankCity = row.bankCity
+const searchQuery = ref('')
 
-    const years = reportStore._yearsInDateRange(row.from, row.to)
+// const filteredPbcAdviceList = computed(() => {
+//   const list = reportStore.contPbcAdviceList || []
 
-    await reportStore.fetchPbcReport({
-      from: row.from,
-      to: row.to,
-      bankId: row.bankId,
-      year: years,
-      pbcNo: row.pbcNo,
-      pbcDate: row.pbcDate,
-      source: 'regular',
-    })
+//   const q = searchQuery.value?.trim().toLowerCase()
+//   if (!q) return list
 
-    PBCModal.show = true
-  } catch (error) {
-    console.error(error)
-    notifyError(getErrorMessage(error, 'Failed to load PBC advice'))
-  } finally {
-    previewAdviceLoading.value = false
-  }
+//   return list.filter((row) => {
+//     return (
+//       String(row.pbcNo || '')
+//         .toLowerCase()
+//         .includes(q) ||
+//       String(row.bankName || '')
+//         .toLowerCase()
+//         .includes(q) ||
+//       formatFullDate(row.pbcDate || '')
+//         .toLowerCase()
+//         .includes(q)
+//     )
+//   })
+// })
+
+const filteredPbcAdviceList = computed(() => {
+  const list = reportStore.contPbcAdviceList || [] // was: reportStore.pbcAdviceList
+  const q = searchQuery.value?.trim().toLowerCase()
+  if (!q) return list
+
+  return list.filter((row) => {
+    return (
+      String(row.pbcNo || '')
+        .toLowerCase()
+        .includes(q) ||
+      String(row.bankName || '')
+        .toLowerCase()
+        .includes(q) ||
+      formatFullDate(row.pbcDate || '')
+        .toLowerCase()
+        .includes(q)
+    )
+  })
+})
+
+const clearAllFilters = () => {
+  searchQuery.value = ''
 }
 
-// const openTransmittalModal = async () => {
-//   if (!isBarangaySelected.value) {
-//     return notifyError('Please select a barangay first to generate reports.')
-//   }
-//   if (!transmittalMonthSelected.value) {
-//     return notifyError('Please select a month.')
-//   }
-
-//   loading.value = true
-//   try {
-//     const year = reportStore.selectedYear || currentYear
-//     const month = transmittalMonthSelected.value
-//     const lastDay = new Date(year, month, 0).getDate()
-//     const from = `${year}-${pad(month)}-01`
-//     const to = `${year}-${pad(month)}-${pad(lastDay)}`
-
-//     await reportStore.fetchTransmittalReport({ from, to, year, source: 'regular' })
-
-//     logAdminActivity('Report Generated', `Generated Transmittal report for ${from} to ${to}`)
-//     transmittalModal.show = true
-//   } catch (error) {
-//     console.error(error)
-//     notifyError(getErrorMessage(error, 'Failed to generate Transmittal report'))
-//   } finally {
-//     loading.value = false
-//   }
-// }
+const SetupModal = reactive({
+  selectedBarangay: { barangay_name: '' },
+  selectedpreparedby: null,
+  selectedpreparedpos: null,
+  selectednotedby: null,
+  selectednotedpos: null,
+  selectedcertifiedby: null,
+  selectedcertifiedpos: null,
+  show: false,
+  Position: '',
+  Preparedby: '',
+  Preparedposition: '',
+  Notedby: '',
+  Notedposition: '',
+  Certifiedby: '',
+  Certifiedposition: '',
+})
 
 const loadAllData = async () => {
   loading.value = true
   try {
-    // Always fetch years first so selectedYear is valid
     await reportStore.fetchAvailableYears()
-
-    if (authStore.admin) {
-      const selectedBarangayId = authStore.getSelectedBarangay()
-      if (selectedBarangayId) {
-        await Promise.all([
-          reportStore.fetchExpenseClassesForBarangay(selectedBarangayId, reportStore.selectedYear),
-          reportStore.fetchBankOptionsForBarangay(selectedBarangayId),
-        ])
-        const currentSelected = expenseSelectedCurrent.value
-        const continuingSelected = expenseSelectedContinuing.value
-
-        // Pass the selected year to filter expense classes correctly
-        await reportStore.fetchExpenseClassesForBarangay(
-          selectedBarangayId,
-          reportStore.selectedYear,
-        )
-
-        // Preserve selections if they still exist in new list
-        if (currentSelected?.name) {
-          expenseSelectedCurrent.value =
-            reportStore.expenseOptionsCurrent.find((opt) => opt.name === currentSelected.name) ||
-            null
-        }
-        if (continuingSelected?.name) {
-          expenseSelectedContinuing.value =
-            reportStore.expenseOptionsContinuing.find(
-              (opt) => opt.name === continuingSelected.name,
-            ) || null
-        }
-      }
-    } else {
-      await reportStore.fetchData(reportStore.selectedYear)
-    }
+    await reportStore.fetchData(reportStore.selectedYear)
+    await reportStore.fetchSignatories()
+    applySavedSignatories()
   } catch (error) {
     console.error('Error loading data:', error)
     notifyError('Failed to load data. Please try again later.')
@@ -2337,11 +2203,21 @@ const loadAllData = async () => {
   }
 }
 
-const openSACBModal = (type) => {
-  if (!isBarangaySelected.value) {
-    return notifyError('Please select a barangay first to generate reports.')
-  }
+function applySavedSignatories() {
+  SetupModal.Preparedby = reportStore.prepBy || ''
+  SetupModal.Preparedposition = reportStore.prepPosition
+  SetupModal.Notedby = reportStore.notedBy || ''
+  SetupModal.Notedposition = reportStore.notedPosition
+  SetupModal.Certifiedby = reportStore.certBy || ''
+  SetupModal.Certifiedposition = reportStore.certPosition
+}
 
+// const pbcVoucherCount = computed(() => {
+//   if (!reportStore.reportPBC) return 0
+//   return reportStore.reportPBC.reduce((sum, group) => sum + (group.checks?.length || 0), 0)
+// })
+
+const openSACBModal = (type) => {
   if (type === 'current-sacb') {
     if (!currentSacbDateRange.value.from || !currentSacbDateRange.value.to) {
       return notifyError('Please select a valid current SACB date range.')
@@ -2386,16 +2262,12 @@ const closeSACBModal = () => {
 }
 
 const openRACModal = (type) => {
-  if (!isBarangaySelected.value) {
-    return notifyError('Please select a barangay first to generate reports.')
-  }
-
   if (type === 'current-rac') {
-    if (!dateRange.value.from || !dateRange.value.to) {
+    if (!CurrentRacDateRange.value.from || !CurrentRacDateRange.value.to) {
       return notifyError('Please select a valid current RAC date range.')
     }
   } else if (type === 'continuing-rac') {
-    if (!continuingDateRange.value.from || !continuingDateRange.value.to) {
+    if (!continuingRacDateRange.value.from || !continuingRacDateRange.value.to) {
       return notifyError('Please select a valid continuing RAC date range.')
     }
   }
@@ -2420,19 +2292,23 @@ const openRACModal = (type) => {
   // Log report generation activity
   const reportType = getReportTypeLabel(type)
   const expenseCategory = reportStore.expenseRacSelected?.name || 'Unknown'
-  const dateRangeText =
+  const dateRange =
     type === 'current-rac'
-      ? `${dateRange.value.from} to ${dateRange.value.to}`
+      ? `${CurrentRacDateRange.value.from} to ${CurrentRacDateRange.value.to}`
       : type === 'continuing-rac'
-        ? `${continuingDateRange.value.from} to ${continuingDateRange.value.to}`
+        ? `${continuingRacDateRange.value.from} to ${continuingRacDateRange.value.to}`
         : 'No date range'
   logAdminActivity(
     'Report Generated',
-    `Generated ${reportType} report for expense category: ${expenseCategory} and date range: ${dateRangeText}`,
+    `Generated ${reportType} report for expense category: ${expenseCategory} with date range: ${dateRange}`,
   )
 
   loadRacReport(
-    type === 'current-rac' ? dateRange : type === 'continuing-rac' ? continuingDateRange : null,
+    type === 'current-rac'
+      ? CurrentRacDateRange
+      : type === 'continuing-rac'
+        ? continuingRacDateRange
+        : null,
   )
   RACModal.reportType = reportType
   RACModal.show = true
@@ -2442,115 +2318,85 @@ const closeRACModal = () => {
   RACModal.show = false
 }
 
-// const openTransmittalModal = () => {
-//   // // Log report generation activity
-//   // const reportType = getReportTypeLabel(type)
-//   // const dateRange =
-//   //   type === 'current-sacb'
-//   //     ? `${currentSacbDateRange.value.from} to ${currentSacbDateRange.value.to}`
-//   //     : type === 'continuing-sacb'
-//   //       ? `${continuingSacbDateRange.value.from} to ${continuingSacbDateRange.value.to}`
-//   //       : 'No date range'
-//   // logAdminActivity(
-//   //   'Report Generated',
-//   //   `Generated ${reportType} report for date range: ${dateRange}`,
-//   // )
+const closeTransmittalModal = () => {
+  transmittalModal.show = false
+}
 
-//   // loadSacbReport(
-//   //   type === 'current-sacb'
-//   //     ? currentSacbDateRange.value.from
-//   //     : type === 'continuing-sacb'
-//   //       ? continuingSacbDateRange.value.from
-//   //       : null,
-//   //   type === 'current-sacb'
-//   //     ? currentSacbDateRange.value.to
-//   //     : type === 'continuing-sacb'
-//   //       ? continuingSacbDateRange.value.to
-//   //       : null,
-//   // )
-//   // SACBModal.reportType = reportType
-//   transmittalModal.show = true
-// }
+const closePBCModal = () => {
+  PBCModal.show = false
+}
 
-// const openTransmittalModal = async () => {
-//   if (!isBarangaySelected.value) {
-//     return notifyError('Please select a barangay first to generate reports.')
+// const openContinuingPBCModal = async () => {
+//   if (!continuingPbcDateRange.value.from || !continuingPbcDateRange.value.to) {
+//     return notifyError('Please select a valid continuing PBC date range.')
 //   }
-//   if (!continuingTransmittalMonthSelected.value) {
-//     return notifyError('Please select a month.')
+//   if (!continuingBankSelectedPBC.value) {
+//     return notifyError('Please select a bank.')
 //   }
 
 //   loading.value = true
 //   try {
-//     const year = reportStore.selectedYear || currentYear
-//     const month = continuingTransmittalMonthSelected.value
-//     const lastDay = new Date(year, month, 0).getDate()
-//     const from = `${year}-${pad(month)}-01`
-//     const to = `${year}-${pad(month)}-${pad(lastDay)}`
+//     const selectedBank = reportStore.bankOptions.find(
+//       (bank) =>
+//         String(bank.id) ===
+//         String(continuingBankSelectedPBC.value?.id || continuingBankSelectedPBC.value),
+//     )
 
-//     await reportStore.fetchTransmittalReport({ from, to, year, source: 'continuing' })
+//     if (selectedBank) {
+//       PBCModal.recipient = PBCModal.recipient || 'The Bank Manager'
+//       PBCModal.bankName = selectedBank.name || PBCModal.bankName
+//       PBCModal.bankBranch = selectedBank.branch || PBCModal.bankBranch
+//       PBCModal.bankCity = selectedBank.city || PBCModal.bankCity
+//     }
+
+//     PBCModal.pbcNo = buildNextPbcNo(PBCModal.date)
+
+//     // years spanning the continuing range (e.g. prior year up to now)
+//     const years = reportStore._yearsInDateRange(
+//       continuingPbcDateRange.value.from,
+//       continuingPbcDateRange.value.to,
+//     )
+
+//     await reportStore.fetchPbcReport({
+//       from: continuingPbcDateRange.value.from,
+//       to: continuingPbcDateRange.value.to,
+//       bankId: continuingBankSelectedPBC.value?.id || continuingBankSelectedPBC.value,
+//       year: years,
+//       pbcNo: PBCModal.pbcNo,
+//       pbcDate: PBCModal.date,
+//       source: 'continuing',
+//     })
 
 //     logAdminActivity(
 //       'Report Generated',
-//       `Generated Continuing Transmittal report for ${from} to ${to}`,
+//       `Generated Continuing PBC report for bank: ${selectedBank?.name || 'Unknown'} with date range: ${continuingPbcDateRange.value.from} to ${continuingPbcDateRange.value.to}`,
 //     )
-//     transmittalModal.show = true
+//     PBCModal.show = true
 //   } catch (error) {
 //     console.error(error)
-//     notifyError(getErrorMessage(error, 'Failed to generate Transmittal report'))
+//     console.error(error)
+//     // notifyError('Failed to generate PBC report')
+//     notifyError(getErrorMessage(error, 'Failed to generate PBC report'))
 //   } finally {
 //     loading.value = false
 //   }
 // }
 
-const openTransmittalModal = async () => {
-  if (!isBarangaySelected.value) {
-    return notifyError('Please select a barangay first to generate reports.')
+const openContinuingPBCModal = async () => {
+  if (!continuingPbcDateRange.value.from || !continuingPbcDateRange.value.to) {
+    return notifyError('Please select a valid continuing PBC date range.')
   }
-  if (!transmittalMonthSelected.value) {
-    return notifyError('Please select a month.')
-  }
-
-  loading.value = true
-  try {
-    const year = reportStore.selectedYear || currentYear
-    const month = transmittalMonthSelected.value
-    const lastDay = new Date(year, month, 0).getDate()
-    const from = `${year}-${pad(month)}-01`
-    const to = `${year}-${pad(month)}-${pad(lastDay)}`
-
-    await reportStore.fetchTransmittalReport({ from, to, year, source: 'regular' })
-
-    logAdminActivity('Report Generated', `Generated Transmittal report for ${from} to ${to}`)
-    transmittalModal.show = true
-  } catch (error) {
-    console.error(error)
-    notifyError(getErrorMessage(error, 'Failed to generate Transmittal report'))
-  } finally {
-    loading.value = false
-  }
-}
-
-const closeTransmittalModal = () => {
-  transmittalModal.show = false
-}
-
-// const openPBCModal = () => {
-//   PBCModal.show = true
-// }
-
-const openPBCModal = async () => {
-  if (!pbcDateRange.value.from || !pbcDateRange.value.to) {
-    return notifyError('Please select a valid PBC date range.')
-  }
-  if (!bankSelectedPBC.value) {
+  if (!continuingBankSelectedPBC.value) {
     return notifyError('Please select a bank.')
   }
 
   generatingPbcReportLoading.value = true
+  viewingAdvice.value = true
   try {
     const selectedBank = reportStore.bankOptions.find(
-      (bank) => String(bank.id) === String(bankSelectedPBC.value?.id || bankSelectedPBC.value),
+      (bank) =>
+        String(bank.id) ===
+        String(continuingBankSelectedPBC.value?.id || continuingBankSelectedPBC.value),
     )
 
     if (selectedBank) {
@@ -2562,37 +2408,40 @@ const openPBCModal = async () => {
 
     PBCModal.pbcNo = buildNextPbcNo(PBCModal.date)
 
-    // const years = reportStore._yearsInDateRange(
-    //   continuingPbcDateRange.value.from,
-    //   continuingPbcDateRange.value.to,
-    // )
+    // years spanning the continuing range (e.g. prior year up to now)
+    const years = reportStore._yearsInDateRange(
+      continuingPbcDateRange.value.from,
+      continuingPbcDateRange.value.to,
+    )
 
     await reportStore.fetchPbcReport({
-      from: pbcDateRange.value.from,
-      to: pbcDateRange.value.to,
-      bankId: bankSelectedPBC.value?.id || bankSelectedPBC.value,
+      from: continuingPbcDateRange.value.from,
+      to: continuingPbcDateRange.value.to,
+      bankId: continuingBankSelectedPBC.value?.id || continuingBankSelectedPBC.value,
+      year: years,
       pbcNo: PBCModal.pbcNo,
       pbcDate: PBCModal.date,
+      source: 'continuing',
     })
 
-    await reportStore.recordPbcAdvice({
+    await reportStore.recordContPbcAdvice({
+      // was: reportStore.recordPbcAdvice(...)
       pbcNo: PBCModal.pbcNo,
       pbcDate: PBCModal.date,
       voucherCount: pbcVoucherCount.value,
       amount: pbcTotal.value,
-      from: pbcDateRange.value.from,
-      to: pbcDateRange.value.to,
-      bankId: bankSelectedPBC.value?.id || bankSelectedPBC.value,
+      from: continuingPbcDateRange.value.from,
+      to: continuingPbcDateRange.value.to,
+      bankId: continuingBankSelectedPBC.value?.id || continuingBankSelectedPBC.value,
       bankName: PBCModal.bankName,
       recipient: PBCModal.recipient,
       bankBranch: PBCModal.bankBranch,
       bankCity: PBCModal.bankCity,
-      source: 'regular',
     })
 
     logAdminActivity(
       'Report Generated',
-      `Generated PBC report for bank: ${selectedBank?.name || 'Unknown'} with date range: ${pbcDateRange.value.from} to ${pbcDateRange.value.to}`,
+      `Generated Continuing PBC report for bank: ${selectedBank?.name || 'Unknown'} with date range: ${continuingPbcDateRange.value.from} to ${continuingPbcDateRange.value.to}`,
     )
     PBCModal.show = true
   } catch (error) {
@@ -2600,19 +2449,8 @@ const openPBCModal = async () => {
     notifyError(getErrorMessage(error, 'Failed to generate PBC report'))
   } finally {
     generatingPbcReportLoading.value = false
+    viewingAdvice.value = false
   }
-}
-
-function buildNextPbcNo(dateString) {
-  const baseDate = dateString ? new Date(dateString) : new Date()
-  const dateForNumber = Number.isNaN(baseDate.getTime()) ? new Date() : baseDate
-  const yy = String(dateForNumber.getFullYear()).slice(-2)
-  const mm = pad(dateForNumber.getMonth() + 1)
-  const key = `pbc-number-sequence:${yy}-${mm}`
-  const lastNumber = Number(localStorage.getItem(key) || 0) + 1
-
-  localStorage.setItem(key, String(lastNumber))
-  return `${yy}-${mm}-${String(lastNumber).padStart(5, '0')}`
 }
 
 const pbcVoucherCount = computed(() => {
@@ -2620,8 +2458,42 @@ const pbcVoucherCount = computed(() => {
   return reportStore.reportPBC.reduce((sum, group) => sum + (group.checks?.length || 0), 0)
 })
 
-const closePBCModal = () => {
-  PBCModal.show = false
+const openContinuingTransmittalModal = async () => {
+  if (!continuingTransmittalMonthSelected.value) {
+    return notifyError('Please select a month for the continuing transmittal report.')
+  }
+
+   generatingTransmittalLoading.value = true
+  try {
+    const year = Number(reportStore.selectedYear || currentYear)
+    const month = String(continuingTransmittalMonthSelected.value).padStart(2, '0')
+    const lastDay = new Date(year, Number(month), 0).getDate()
+
+    // Month-only range — same pattern as the regular Transmittal report
+    transmittalModal.periodFrom = `${year}-${month}-01`
+    transmittalModal.periodTo = `${year}-${month}-${pad(lastDay)}`
+    transmittalModal.date = new Date().toISOString().slice(0, 10)
+
+    await reportStore.fetchTransmittalReport({
+      from: transmittalModal.periodFrom,
+      to: transmittalModal.periodTo,
+      year, // single year is enough now — no need for a multi-year span
+      pbcNo: PBCModal.pbcNo,
+      pbcDate: PBCModal.date,
+      source: 'continuing',
+    })
+
+    logAdminActivity(
+      'Report Generated',
+      `Generated Continuing Transmittal report for date range: ${transmittalModal.periodFrom} to ${transmittalModal.periodTo}`,
+    )
+    transmittalModal.show = true
+  } catch (error) {
+    console.error(error)
+    notifyError('Failed to generate Continuing Transmittal report')
+  } finally {
+     generatingTransmittalLoading.value = false
+  }
 }
 
 const getReportTypeLabel = (type) =>
@@ -2633,186 +2505,125 @@ const getReportTypeLabel = (type) =>
   })[type] || 'Unknown Report'
 
 const handleSACBPrint = () => {
-  if (dateRangeDisplay.value === '') {
-    return notifyError('Please select a date range.')
-  }
-  if (dateRange.value.from === '' || dateRange.value.to === '') {
-    return notifyError('Please select a valid date range.')
-  }
   logAdminActivity('Report Printed', `Printed ${SACBModal.reportType} report`)
   closeSACBModal()
   notifySuccess('Report sent to printer successfully!')
 }
 
-const handleRACPrint = () => {
-  logAdminActivity('Report Printed', `Printed ${RACModal.reportType} report`)
-  closeRACModal()
-  notifySuccess('Report sent to printer successfully!')
-}
+// const handleRACPrint = () => {
+//   logAdminActivity('Report Printed', `Printed ${RACModal.reportType} report`)
+//   closeRACModal()
+//   notifySuccess('Report sent to printer successfully!')
+// }
+// Cur-Rac Date range
+// const onDateRangeChange = (newRange) => {
+//   CurrentRacDateRange.value = newRange
+// }
+
+// const onDateRangeClear = () => {
+//   CurrentRacDateRange.value = { from: '', to: '' }
+// }
+
+// const onContinuingDateRangeChange = (newRange) => {
+//   continuingRacDateRange.value = newRange
+// }
+
+// const onContinuingDateRangeClear = () => {
+//   continuingRacDateRange.value = { from: '', to: '' }
+//   logAdminActivity('Date Range Cleared', 'Cleared continuing RAC date range')
+// }
+
+// const onCurrentSacbDateRangeChange = (newRange) => {
+//   currentSacbDateRange.value = newRange
+// }
+
+// const onCurrentSacbDateRangeClear = () => {
+//   currentSacbDateRange.value = { from: '', to: '' }
+// }
+
+// const onContinuingSacbDateRangeChange = (newRange) => {
+//   continuingSacbDateRange.value = newRange
+// }
+
+// const onContinuingSacbDateRangeClear = () => {
+//   continuingSacbDateRange.value = { from: '', to: '' }
+// }
+
 /* -------------------- HELPERS -------------------- */
-const notifyError = (msg) => $q.notify({ type: 'negative', message: msg, position: 'top' })
-const notifySuccess = (msg) => $q.notify({ type: 'positive', message: msg, position: 'top' })
-function getErrorMessage(error, fallback) {
-  return (
-    error?.response?.data?.message || // axios error shape: { response: { data: { message } } }
-    error?.message ||
-    fallback
-  )
+function formatFullDate(dateString) {
+  return date.formatDate(dateString, 'MMMM DD, YYYY')
 }
+
+function formatDateRange(dateString) {
+  return date.formatDate(dateString, 'MM-DD-YYYY')
+}
+
+function getErrorMessage(error, fallback) {
+  return error?.response?.data?.message || error?.message || fallback
+}
+
+function buildNextPbcNo(dateString) {
+  const baseDate = dateString ? new Date(dateString) : new Date()
+  const dateForNumber = Number.isNaN(baseDate.getTime()) ? new Date() : baseDate
+  const yy = String(dateForNumber.getFullYear()).slice(-2)
+  const mm = String(dateForNumber.getMonth() + 1).padStart(2, '0')
+  const key = `cont-pbc-number-sequence:${yy}-${mm}`
+  const lastNumber = Number(localStorage.getItem(key) || 0) + 1
+  localStorage.setItem(key, String(lastNumber))
+  return `${yy}-${mm}-${String(lastNumber).padStart(5, '0')}`
+}
+
+const notifyError = (msg, timeout = 10000) =>
+  $q.notify({
+    type: 'negative',
+    message: msg,
+    position: 'top',
+    timeout,
+    // multiLine: true,
+    // classes: 'q-pb-sm',
+    actions: [{ icon: 'close', color: 'white', round: true, dense: true }],
+  })
+// const notifyError = (msg) => $q.notify({ type: 'negative', message: msg, position: 'top' })
+const notifySuccess = (msg) => $q.notify({ type: 'positive', message: msg, position: 'top' })
 
 /* -------------------- COMPUTED -------------------- */
-// Check if barangay is selected
-const isBarangaySelected = computed(() => {
-  return authStore.getSelectedBarangay() !== null && authStore.getSelectedBarangay() !== undefined
-})
-
-const sacbColumns = computed(() => [
-  { name: 'ppa', label: 'Account Title', field: 'ppa', align: 'left', sortable: true },
-  {
-    name: 'appropriation',
-    label: 'Appropriation',
-    field: 'appropriation',
-    align: 'right',
-    sortable: true,
-    format: (val) => val?.toLocaleString(),
-  },
-  {
-    name: 'obligation',
-    label: 'Obligation',
-    field: 'obligation',
-    align: 'right',
-    sortable: true,
-    format: (val) => val?.toLocaleString(),
-  },
-  {
-    name: 'balance',
-    label: 'Balance',
-    field: 'balance',
-    align: 'right',
-    sortable: true,
-    format: (val) => val?.toLocaleString(),
-  },
-])
+// Removed sacbColumns as we're using custom hierarchical table structure
 
 const dateRangeDisplay = computed(() => {
-  if (!dateRange.value.from && !dateRange.value.to) return ''
-  if (dateRange.value.from && !dateRange.value.to) return `From ${dateRange.value.from}`
-  if (!dateRange.value.from && dateRange.value.to) return `To ${dateRange.value.to}`
-  return `${dateRange.value.from} - ${dateRange.value.to}`
+  if (!CurrentRacDateRange.value.from && !CurrentRacDateRange.value.to) return ''
+  if (CurrentRacDateRange.value.from && !CurrentRacDateRange.value.to)
+    return `From ${CurrentRacDateRange.value.from}`
+  if (!CurrentRacDateRange.value.from && CurrentRacDateRange.value.to)
+    return `To ${CurrentRacDateRange.value.to}`
+  return `${CurrentRacDateRange.value.from} - ${CurrentRacDateRange.value.to}`
 })
 
-const currentSacbDateRangeDisplay = computed(() => {
-  if (!currentSacbDateRange.value.from && !currentSacbDateRange.value.to) return ''
-  if (currentSacbDateRange.value.from && !currentSacbDateRange.value.to)
-    return `From ${currentSacbDateRange.value.from}`
-  if (!currentSacbDateRange.value.from && currentSacbDateRange.value.to)
-    return `To ${currentSacbDateRange.value.to}`
-  return `${currentSacbDateRange.value.from} - ${currentSacbDateRange.value.to}`
-})
+// const continuingDateRangeDisplay = computed(() => {
+//   if (!continuingRacDateRange.value.from && !continuingRacDateRange.value.to) return ''
+//   if (continuingRacDateRange.value.from && !continuingRacDateRange.value.to)
+//     return `From ${continuingRacDateRange.value.from}`
+//   if (!continuingRacDateRange.value.from && continuingRacDateRange.value.to)
+//     return `To ${continuingRacDateRange.value.to}`
+//   return `${continuingRacDateRange.value.from} - ${continuingRacDateRange.value.to}`
+// })
 
-const continuingSacbDateRangeDisplay = computed(() => {
-  if (!continuingSacbDateRange.value.from && !continuingSacbDateRange.value.to) return ''
-  if (continuingSacbDateRange.value.from && !continuingSacbDateRange.value.to)
-    return `From ${continuingSacbDateRange.value.from}`
-  if (!continuingSacbDateRange.value.from && continuingSacbDateRange.value.to)
-    return `To ${continuingSacbDateRange.value.to}`
-  return `${continuingSacbDateRange.value.from} - ${continuingSacbDateRange.value.to}`
-})
+// const currentSacbDateRangeDisplay = computed(() => {
+//   if (!currentSacbDateRange.value.from && !currentSacbDateRange.value.to) return ''
+//   if (currentSacbDateRange.value.from && !currentSacbDateRange.value.to)
+//     return `From ${currentSacbDateRange.value.from}`
+//   if (!currentSacbDateRange.value.from && currentSacbDateRange.value.to)
+//     return `To ${currentSacbDateRange.value.to}`
+//   return `${currentSacbDateRange.value.from} - ${currentSacbDateRange.value.to}`
+// })
 
-// Computed property for dynamic columns count
-const dynamicColumnsCount = computed(() => {
-  return reportStore.dynamicAccountColumns.length
-})
-
-// Check if there are dynamic columns
-const hasDynamicColumns = computed(() => {
-  return reportStore.dynamicAccountColumns.length > 0
-})
-
-// SACB computed properties to match user page
-const computedSACBRows = computed(() => {
-  const result = []
-  let sectionItems = []
-
-  reportStore.reportSACB.forEach((row, index) => {
-    if (row.isSection) {
-      // If sectionItems has data, push a total before starting new section
-      if (sectionItems.length) {
-        result.push(makeTotalRow(sectionItems))
-        sectionItems = []
-      }
-      result.push(row) // push the section header
-    } else {
-      result.push(row)
-      sectionItems.push(row)
-    }
-
-    // Last row check
-    if (index === reportStore.reportSACB.length - 1 && sectionItems.length) {
-      result.push(makeTotalRow(sectionItems))
-    }
-  })
-
-  return result
-})
-
-function makeTotalRow(items) {
-  const sum = (field) =>
-    items.reduce(
-      (acc, item) =>
-        acc +
-        (typeof item[field] === 'string' ? parseFloat(item[field].replace(/,/g, '')) : item[field]),
-      0,
-    )
-
-  return {
-    isTotal: true,
-    ppa: 'TOTAL',
-    appropriation: sum('appropriation').toLocaleString('en-US', { minimumFractionDigits: 2 }),
-    obligation: sum('obligation').toLocaleString('en-US', { minimumFractionDigits: 2 }),
-    balance: sum('balance').toLocaleString('en-US', { minimumFractionDigits: 2 }),
-  }
-}
-
-const totalAppropriation = computed(() => {
-  return reportStore.reportSACB
-    .filter((row) => !row.isSection) // skip section headers
-    .reduce((sum, row) => {
-      return (
-        sum +
-        (typeof row.appropriation === 'string'
-          ? parseFloat(row.appropriation.replace(/,/g, ''))
-          : row.appropriation)
-      )
-    }, 0)
-    .toLocaleString('en-US', { minimumFractionDigits: 2 })
-})
-
-const totalObligation = computed(() => {
-  return reportStore.reportSACB
-    .filter((row) => !row.isSection)
-    .reduce(
-      (sum, row) =>
-        sum +
-        (typeof row.obligation === 'string'
-          ? parseFloat(row.obligation.replace(/,/g, ''))
-          : row.obligation),
-      0,
-    )
-    .toLocaleString('en-US', { minimumFractionDigits: 2 })
-})
-
-const totalBalance = computed(() => {
-  return reportStore.reportSACB
-    .filter((row) => !row.isSection)
-    .reduce(
-      (sum, row) =>
-        sum +
-        (typeof row.balance === 'string' ? parseFloat(row.balance.replace(/,/g, '')) : row.balance),
-      0,
-    )
-    .toLocaleString('en-US', { minimumFractionDigits: 2 })
-})
+// const continuingSacbDateRangeDisplay = computed(() => {
+//   if (!continuingSacbDateRange.value.from && !continuingSacbDateRange.value.to) return ''
+//   if (continuingSacbDateRange.value.from && !continuingSacbDateRange.value.to)
+//     return `From ${continuingSacbDateRange.value.from}`
+//   if (!continuingSacbDateRange.value.from && continuingSacbDateRange.value.to)
+//     return `To ${continuingSacbDateRange.value.to}`
+//   return `${continuingSacbDateRange.value.from} - ${continuingSacbDateRange.value.to}`
+// })
 
 async function loadRacReport($date) {
   try {
@@ -2821,18 +2632,9 @@ async function loadRacReport($date) {
     console.error(error)
     $q.notify({
       type: 'negative',
-      message: 'Failed to generate Report',
+      message: 'Failed to generate RAC Report',
     })
   }
-}
-
-function formatCurrency(value) {
-  if (value == null || value === '') return ''
-  if (typeof value !== 'number') return ''
-  return value.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
 }
 
 async function loadSacbReport($from, $to) {
@@ -2846,11 +2648,9 @@ async function loadSacbReport($from, $to) {
     })
   }
 }
-function formatDateRange(dateString) {
-  return date.formatDate(dateString, 'MM-DD-YYYY')
-}
 
 async function exportToPDF() {
+  exportingPDF.value = true
   const html2canvas = (await import('html2canvas')).default
   const jsPDF = (await import('jspdf')).default
   try {
@@ -2906,6 +2706,8 @@ async function exportToPDF() {
       type: 'negative',
       message: 'Failed to export PDF',
     })
+  } finally {
+    exportingPDF.value = false
   }
 }
 
@@ -2955,7 +2757,7 @@ async function exportToExcel() {
       { width: 18 }, // C - DV#
       { width: 26 }, // D - Payee
       { width: 16 }, // E - Appropriation
-      ...dynamicCols.map(() => ({ width: 20 })),
+      ...dynamicCols.map(() => ({ width: 22 })),
     ]
 
     // ROW 1 — Report Title
@@ -2992,12 +2794,7 @@ async function exportToExcel() {
     expenseCell.font = { bold: true, size: 12, name: 'Arial' }
     expenseCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } }
     expenseCell.alignment = { horizontal: 'center', vertical: 'middle' }
-    expenseCell.border = {
-      top: { style: 'medium', color: { argb: 'FFD3D3D3' } },
-      bottom: { style: 'medium', color: { argb: 'FFD3D3D3' } },
-      left: { style: 'medium', color: { argb: 'FFD3D3D3' } },
-      right: { style: 'medium', color: { argb: 'FFD3D3D3' } },
-    }
+    expenseCell.border = outerBorder
     ws.getRow(5).height = 24
 
     // Fill empty merged cells in row 5 with same fill & border
@@ -3100,7 +2897,7 @@ async function exportToExcel() {
     })
     ws.getRow(7).height = 44
 
-    // DATA ROWS
+    // DATA ROWS — starting at row 8
     const dataStartExcelRow = 8
     reportStore.reportRAC.forEach((row, i) => {
       const excelRow = dataStartExcelRow + i
@@ -3148,7 +2945,6 @@ async function exportToExcel() {
       ws.getRow(excelRow).height = 18
     })
 
-    //SHOULD CHECK PA, NEEDS REVIEW, LAYOUT OF EXCEL EXPORT
     // TOTAL ROW
     const totalExcelRow = dataStartExcelRow + reportStore.reportRAC.length
 
@@ -3208,6 +3004,7 @@ async function exportToExcel() {
     const totalAppr = reportStore.reportRAC.reduce((s, r) => s + (r.appropriation || 0), 0)
     const totalOblig = reportStore.reportRAC.reduce((s, r) => s + (r.amount || 0), 0)
     const totalBal = totalAppr - totalOblig
+    //remove this when the time comes
 
     const summaryHeaderStyle = (cell, label) => {
       cell.value = label
@@ -3337,6 +3134,7 @@ async function exportToExcel() {
 }
 
 async function exportSACBToPDF() {
+  exportingSACBPDF.value = true
   const html2canvas = (await import('html2canvas')).default
   const jsPDF = (await import('jspdf')).default
   try {
@@ -3392,6 +3190,8 @@ async function exportSACBToPDF() {
       type: 'negative',
       message: 'Failed to export SACB PDF',
     })
+  } finally {
+    exportingSACBPDF.value = false
   }
 }
 
@@ -3439,7 +3239,11 @@ async function exportTransmittalToPDF() {
       heightLeft -= pageHeight
     }
 
-    pdf.save('transmittal-letter.pdf')
+    const exportDate = (transmittalModal.date || new Date().toISOString().slice(0, 10)).replace(
+      /-/g,
+      '',
+    )
+    pdf.save(`transmittal-letter_${exportDate}.pdf`)
 
     // Log PDF export activity
     logAdminActivity('Report Exported', `Exported ${SACBModal.reportType} report to PDF`)
@@ -3503,7 +3307,8 @@ async function exportPBCToPDF() {
       heightLeft -= pageHeight
     }
 
-    pdf.save('pbc.pdf')
+    const exportDate = (PBCModal.date || new Date().toISOString().slice(0, 10)).replace(/-/g, '')
+    pdf.save(`PBC_${exportDate}.pdf`)
 
     // Log PDF export activity
     logAdminActivity('Report Exported', `Exported PBC to PDF`)
@@ -3523,44 +3328,123 @@ async function exportPBCToPDF() {
   }
 }
 
-function getSACBDateRangeDisplay() {
-  // Determine which SACB date range to use based on which modal was opened
-  const currentDisplay = currentSacbDateRangeDisplay.value
-  const continuingDisplay = continuingSacbDateRangeDisplay.value
+// function getSACBDateRangeDisplay() {
+//   // Determine which SACB date range to use based on which modal was opened
+//   const currentDisplay = currentSacbDateRangeDisplay.value
+//   const continuingDisplay = continuingSacbDateRangeDisplay.value
 
-  // Return the one that has data, prioritizing current
-  if (currentDisplay) return currentDisplay
-  if (continuingDisplay) return continuingDisplay
-  return 'No date range selected'
+//   // Return the one that has data, prioritizing current
+//   if (currentDisplay) return currentDisplay
+//   if (continuingDisplay) return continuingDisplay
+//   return 'No date range selected'
+// }
+
+//auto change sacb year
+// function onDateChange(field, newValue) {
+//   // Extract the year from the changed field
+//   const changedYear = new Date(newValue).getFullYear()
+
+//   // Copy existing dates
+//   const from = new Date(currentSacbDateRange.value.from)
+//   const to = new Date(currentSacbDateRange.value.to)
+
+//   // Apply the year to BOTH using the year the user actually changed
+//   from.setFullYear(changedYear)
+//   to.setFullYear(changedYear)
+
+//   currentSacbDateRange.value.from = from.toISOString().slice(0, 10)
+//   currentSacbDateRange.value.to = to.toISOString().slice(0, 10)
+// }
+
+// function onPbcDateChange(field, newValue) {
+//   pbcDateRange.value[field] = newValue
+// }
+
+function onContinuingPbcDateChange(field, newValue) {
+  continuingPbcDateRange.value[field] = newValue
 }
 
-function changeMonth(newDate) {
-  if (!newDate) return
+async function viewPbcAdvice(row) {
+  loading.value = true
+  viewingAdvice.value = true
+  try {
+    PBCModal.pbcNo = row.pbcNo
+    PBCModal.date = row.pbcDate
+    PBCModal.recipient = row.recipient || 'The Bank Manager'
+    PBCModal.bankName = row.bankName
+    PBCModal.bankBranch = row.bankBranch
+    PBCModal.bankCity = row.bankCity
 
-  const date = new Date(newDate)
+    const years = reportStore._yearsInDateRange(row.from, row.to)
 
-  const year = date.getFullYear()
-  const month = date.getMonth() // 0–11
-  const lastDay = new Date(year, month + 1, 0).getDate()
+    await reportStore.fetchPbcReport({
+      from: row.from,
+      to: row.to,
+      bankId: row.bankId,
+      year: years,
+      pbcNo: row.pbcNo,
+      pbcDate: row.pbcDate,
+      source: 'continuing',
+    })
 
-  // Update ONLY the `to` date
-  CurrentRacDateRange.value.to = `${year}-${pad(month + 1)}-${pad(lastDay)}`
+    PBCModal.show = true
+  } catch (error) {
+    console.error(error)
+    notifyError(getErrorMessage(error, 'Failed to load PBC advice'))
+  } finally {
+    loading.value = false
+    viewingAdvice.value = false
+  }
 }
+
+function onDateChangecontinuing(field, newValue) {
+  // Extract the year from the changed field
+  const changedYear = new Date(newValue).getFullYear()
+
+  // Copy existing dates
+  const from = new Date(currentSacbDateRange.value.from)
+  const to = new Date(currentSacbDateRange.value.to)
+
+  // Apply the year to BOTH using the year the user actually changed
+  from.setFullYear(changedYear)
+  to.setFullYear(changedYear)
+
+  currentSacbDateRange.value.from = from.toISOString().slice(0, 10)
+  currentSacbDateRange.value.to = to.toISOString().slice(0, 10)
+}
+//auto change rac month
+// function changeMonth(newDate) {
+//   if (!newDate) return
+
+//   const date = new Date(newDate)
+
+//   const year = date.getFullYear()
+//   const month = date.getMonth() // 0–11
+//   const lastDay = new Date(year, month + 1, 0).getDate()
+
+//   // Update ONLY the `to` date
+//   CurrentRacDateRange.value.to = `${year}-${pad(month + 1)}-${pad(lastDay)}`
+// }
 
 function toggleSACBDrawer() {
   sacbDrawerOpen.value = !sacbDrawerOpen.value
 }
 
-function resetSignatories() {
-  SetupModal.Preparedby = ''
-  SetupModal.Preparedposition = null
-  SetupModal.Notedby = ''
-  SetupModal.Notedposition = null
-  SetupModal.Certifiedby = ''
-  SetupModal.Certifiedposition = null
+// function resetSignatories() {
+//   SetupModal.Preparedby = ''
+//   SetupModal.Preparedposition = null
+//   SetupModal.Notedby = ''
+//   SetupModal.Notedposition = null
+//   SetupModal.Certifiedby = ''
+//   SetupModal.Certifiedposition = null
 
-  logAdminActivity('Signatory Form Reset', 'Reset all signatory fields in report setup')
-  notifySuccess('Signatory fields have been reset')
+//   logAdminActivity('Signatory Form Reset', 'Reset all signatory fields in report setup')
+//   notifySuccess('Signatory fields have been reset')
+// }
+function resetSignatories() {
+  applySavedSignatories()
+  logAdminActivity('Signatory Form Reset', 'Reset signatory fields to saved barangay setup')
+  notifySuccess('Signatory fields reset to your saved setup')
 }
 
 function saveAsTemplate() {
@@ -3578,14 +3462,22 @@ function saveAsTemplate() {
   logAdminActivity('Signatory Template Saved', 'Saved signatory template for future use')
   notifySuccess('Signatory template saved successfully')
 }
-
+function formatCurrency(value) {
+  if (value == null || value === '') return ''
+  if (typeof value !== 'number') return ''
+  return value.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
+//
 /* -------------------- LIFECYCLE -------------------- */
 onMounted(async () => {
   await loadAllData()
-  await reportStore.loadPbcAdviceList()
-  // Log page visit
+  await reportStore.loadContPbcAdviceList()
   await logPageVisit('Reports')
 })
+
 onActivated(async () => {
   await loadAllData()
 })
@@ -3601,9 +3493,9 @@ onActivated(async () => {
 .section-header {
   display: flex;
   align-items: center;
-  padding-bottom: 16px;
+  padding-bottom: 12px;
   border-bottom: 2px solid #e0e0e0;
-  margin-bottom: 32px;
+  margin-bottom: 14px;
 }
 
 .section-title {
@@ -3631,6 +3523,16 @@ onActivated(async () => {
 
 /* Card styling */
 .report-card {
+  min-height: 280px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e8e8e8;
+  transition: all 0.3s ease;
+}
+
+/* Card styling */
+.transmittal-card {
+  min-height: 220px;
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border: 1px solid #e8e8e8;
@@ -4035,8 +3937,9 @@ onActivated(async () => {
 }
 
 .stat-label {
-  font-weight: 500;
+  font-weight: 100;
   color: #424242;
+  font-size: small;
 }
 
 .stat-value {
@@ -4154,188 +4057,6 @@ onActivated(async () => {
   font-weight: 500;
 }
 
-.annex-label {
-  font-family: 'Times New Roman', Times, serif;
-  text-align: right;
-  font-weight: 500;
-  font-size: 11px;
-  margin-bottom: 1px;
-}
-
-.transmittal-serif {
-  margin-bottom: -4px;
-  font-size: 18px;
-  font-family: 'Times New Roman', Times, serif;
-}
-
-.transmittal-serif-body {
-  margin-bottom: -6px;
-  font-size: 14px;
-  font-family: 'Times New Roman', Times, serif;
-}
-
-.after-body {
-  font-weight: 900;
-  -webkit-text-stroke: 2px currentColor;
-  letter-spacing: 2px;
-  font-size: 16px;
-}
-
-.transmittal-body {
-  /* font-family: 'Times New Roman', Times, serif; */
-  margin-left: 50px;
-  font-weight: 300;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.transmittal-bottom {
-  /* font-family: 'Times New Roman', Times, serif; */
-  font-weight: 300;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.transmittal-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.transmittal-table th,
-.transmittal-table td {
-  border: 1px solid #000;
-  padding: 6px 10px;
-  text-align: center;
-  vertical-align: middle;
-}
-
-.transmittal-table thead th {
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.transmittal-table tbody td:nth-child(5) {
-  /* PAYEE column left-aligned */
-  text-align: left;
-}
-
-.transmittal-total-row td {
-  font-weight: 700;
-}
-
-.transmittal-signature-name {
-  font-size: 14px;
-  font-weight: 700;
-  text-transform: uppercase;
-  border-bottom: 1px solid #000;
-  padding-bottom: 4px;
-  margin-bottom: 4px;
-  min-height: 20px;
-}
-
-.transmittal-signature-position {
-  font-size: 13px;
-  color: #555;
-}
-
-.pbc-header-block {
-  text-align: center;
-  font-family: 'Times New Roman', Times, serif;
-}
-.pbc-republic,
-.pbc-province {
-  font-size: 12px;
-}
-.pbc-city,
-.pbc-barangay {
-  font-weight: 700;
-  font-size: 14px;
-  text-transform: uppercase;
-}
-.pbc-title {
-  text-align: center;
-  font-weight: 700;
-  font-size: 14px;
-  text-transform: uppercase;
-  -webkit-text-stroke: 1.5px currentColor;
-  letter-spacing: 1.5px;
-  margin: 16px 0 24px;
-  color: #000;
-}
-.pbc-to-block {
-  font-size: 13px;
-  color: #000;
-}
-.pbc-body,
-.pbc-footer-text {
-  font-size: 13px;
-  line-height: 1.6;
-}
-/* .pbc-en {
-  color: #187c19;
-} */
-.pbc-fil {
-  font-style: italic;
-  font-weight: 600;
-  letter-spacing: -0.2px;
-  margin-bottom: 6px;
-}
-.pbc-footer-text .pbc-en,
-.pbc-footer-text .pbc-fil {
-  text-indent: 80px;
-}
-.pbc-blank {
-  border-bottom: 1px solid #000;
-  padding: 0 4px;
-}
-.pbc-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-  margin-top: 16px;
-}
-.pbc-table th,
-.pbc-table td {
-  border: 1px dotted #666;
-  padding: 6px 10px;
-  text-align: center;
-}
-.pbc-table thead th {
-  font-weight: 700;
-  text-transform: uppercase;
-  border-bottom: 1px solid #000;
-}
-.pbc-bank-group-row td {
-  background: #f5f5f5;
-}
-.pbc-nothing-follows-row td {
-  font-style: italic;
-  font-weight: 600;
-}
-.pbc-total-row td {
-  border-top: 1px solid #000;
-  border-bottom: 1px solid #000;
-}
-.pbc-signature-name {
-  font-size: 14px;
-  font-weight: 700;
-  text-transform: uppercase;
-  border-bottom: 1px solid #000;
-  padding-bottom: 4px;
-  margin-bottom: 4px;
-  min-height: 20px;
-}
-.pbc-signature-position {
-  font-size: 13px;
-  color: #555;
-}
-.pbc-page-footer {
-  font-size: 11px;
-  color: #666;
-  margin-top: 24px;
-}
-
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .sacb-drawer {
@@ -4357,6 +4078,9 @@ onActivated(async () => {
   .print-content-wrapper .print-modal {
     padding: 16px;
     min-height: auto;
+    /* Adjust for mobile landscape */
+    width: 100% !important;
+    transform: scale(1) !important;
   }
 
   .sacb-header .q-toolbar {
@@ -4409,9 +4133,138 @@ onActivated(async () => {
   .rac-header .q-toolbar-title {
     font-size: 0.9rem;
   }
+
+  .year-filter-section {
+    .filter-card .q-card__section {
+      padding: 12px 16px;
+
+      .row {
+        gap: 12px;
+
+        .mobile-actions {
+          gap: 8px;
+
+          .q-btn {
+            min-height: 36px;
+            font-size: 12px;
+
+            .q-btn__content {
+              .q-btn__label {
+                font-size: 12px;
+              }
+            }
+          }
+        }
+      }
+
+      .q-select {
+        min-width: 120px !important;
+      }
+
+      .q-btn {
+        font-size: 12px;
+        padding: 8px 12px;
+      }
+    }
+  }
 }
 
-/* Added preview table styles to match the user page format */
+@media (max-width: 1024px) {
+  .year-filter-section {
+    .filter-main-section {
+      .filter-desktop-layout {
+        .filter-controls-section {
+          .filter-input-section .year-select {
+            min-width: 140px;
+            max-width: 180px;
+          }
+        }
+
+        .filter-actions-section {
+          .reset-year-btn {
+            .q-btn__content {
+              .q-btn__label {
+                display: none;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 360px) {
+  .year-filter-section {
+    .filter-main-section {
+      .filter-mobile-layout {
+        .mobile-actions {
+          .q-btn {
+            .q-btn__content {
+              .q-btn__label {
+                font-size: 11px;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .summary-card {
+    min-width: unset !important;
+    width: 100% !important;
+  }
+
+  .chart-card,
+  .responsive-card,
+  .responsive-table {
+    width: 100% !important;
+    min-width: unset !important;
+  }
+
+  .year-filter-section {
+    .filter-card .q-card__section {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 16px;
+
+      .row {
+        justify-content: center;
+      }
+    }
+  }
+}
+
+/* Year filter section improvements */
+.year-filter-section {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.year-filter-section .row {
+  align-items: center;
+  gap: 8px;
+}
+
+.year-filter-section .q-select {
+  min-width: 120px;
+}
+
+.year-filter-section .q-btn {
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.year-filter-section .q-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.2);
+}
+
+/* Added preview table styles to match the reference design */
 .preview-table-container {
   width: 100%;
   margin: 20px 0;
@@ -4600,6 +4453,7 @@ onActivated(async () => {
   .preview-table .header-row-main th {
     background: linear-gradient(135deg, #187c19 0%, #0e780e 100%) !important;
     color: black !important;
+
     font-size: 20px;
   }
 
@@ -4621,6 +4475,538 @@ onActivated(async () => {
   .print-content-wrapper {
     max-width: none !important;
     padding: 10px !important;
+  }
+}
+
+/* Financial Report Table - Exact Match to Reference Image */
+.financial-report-table {
+  border: 2px solid #000;
+  background: white;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 14px;
+}
+
+.table-header {
+  background: #f0f0f0;
+  border-bottom: 2px solid #000;
+}
+
+/* .header-row {
+  display: grid;
+  grid-template-columns: 1fr 120px 120px 120px;
+  min-height: 40px;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #000;
+} */
+.header-row {
+  /* display:inline-tabl; */
+  grid-template-columns: auto 1fr repeat(auto-fill, 120px);
+  min-height: 40px;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #000;
+}
+.table-body {
+  background: white;
+}
+
+.main-section {
+  border-bottom: 2px solid #000;
+}
+
+.main-section:last-child {
+  border-bottom: none;
+}
+
+.main-section-header {
+  display: grid;
+  grid-template-columns: 1fr 120px 120px 120px;
+  min-height: 40px;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #000;
+  font-weight: 600;
+  font-size: 16px;
+  color: #000;
+}
+
+.main-section-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: #000;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.main-section-total {
+  font-weight: 600;
+  font-size: 14px;
+  color: #000;
+  font-family: 'Courier New', monospace;
+}
+
+.subcategory-row,
+.subsubcategory-row {
+  display: grid;
+  grid-template-columns: 1fr 120px 120px 120px;
+  min-height: 32px;
+  align-items: center;
+  padding: 6px 12px;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 14px;
+  color: #000;
+}
+
+.subcategory-row:hover,
+.subsubcategory-row:hover {
+  background-color: #f8f9fa;
+}
+
+/* Sub-category (like "Honorarium", "Other Personnel Benefits") */
+.subcategory-row {
+  background-color: white;
+  font-weight: 400;
+  padding-left: 20px;
+}
+
+.subcategory-text {
+  font-weight: 400;
+  font-size: 14px;
+  color: #000;
+}
+
+.subcategory-indent {
+  margin-right: 8px;
+  font-weight: bold;
+  color: #000;
+  font-size: 16px;
+}
+
+/* Sub-sub-category (like "Monetization of Leave Credits") */
+.subsubcategory-row {
+  background-color: white;
+  font-weight: 400;
+  padding-left: 40px;
+}
+
+.subsubcategory-text {
+  font-weight: 400;
+  font-size: 14px;
+  color: #000;
+}
+
+.subsubcategory-indent {
+  margin-right: 8px;
+  font-weight: bold;
+  color: #000;
+  font-size: 16px;
+}
+
+/* Sub-sub-sub-category (like individual sub-items) */
+.subsubsubcategory-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 32px;
+  padding: 4px 16px 4px 60px;
+  background-color: white;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.subsubsubcategory-text {
+  font-weight: 400;
+  font-size: 13px;
+  color: #666;
+}
+
+.subsubsubcategory-indent {
+  margin-right: 8px;
+  font-weight: bold;
+  color: #666;
+  font-size: 14px;
+}
+
+.amount-group {
+  display: grid;
+  grid-template-columns: 120px 120px 120px;
+  gap: 8px;
+  align-items: center;
+}
+
+.col-description {
+  text-align: left;
+  padding-right: 16px;
+}
+
+.col-appropriation,
+.col-obligation,
+.col-balance {
+  text-align: right;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  color: #000;
+}
+
+/* Total Row */
+.total-row {
+  /* display: grid; */
+  grid-template-columns: auto 1fr repeat(auto-fill, 120px);
+  min-height: 40px;
+  align-items: center;
+  padding: 8px 12px;
+  background: #e9ecef;
+  border-top: 2px solid #000;
+  font-weight: 600;
+  font-size: 14px;
+  color: #000;
+}
+
+/* No Data Message */
+.no-data-message {
+  display: grid;
+  grid-template-columns: 1fr 120px 120px 120px;
+  min-height: 40px;
+  align-items: center;
+  padding: 8px 12px;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+}
+
+/* Expand/collapse functionality styles */
+.section-content,
+.type-content,
+.item-content-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.expand-btn {
+  min-width: 24px !important;
+  width: 24px !important;
+  height: 24px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  color: #187c19 !important;
+}
+
+.expand-btn:hover {
+  background-color: rgba(24, 124, 25, 0.1) !important;
+}
+
+.expand-spacer {
+  width: 24px;
+  height: 24px;
+  display: inline-block;
+}
+
+.annex-label {
+  font-family: 'Times New Roman', Times, serif;
+  text-align: right;
+  font-weight: 500;
+  font-size: 11px;
+  margin-bottom: 1px;
+}
+
+.transmittal-serif {
+  margin-bottom: -4px;
+  font-size: 18px;
+  font-family: 'Times New Roman', Times, serif;
+}
+
+.transmittal-serif-body {
+  margin-bottom: -6px;
+  font-size: 14px;
+  font-family: 'Times New Roman', Times, serif;
+}
+
+.after-body {
+  font-weight: 900;
+  -webkit-text-stroke: 2px currentColor;
+  letter-spacing: 2px;
+  font-size: 16px;
+}
+
+.transmittal-body {
+  /* font-family: 'Times New Roman', Times, serif; */
+  margin-left: 50px;
+  font-weight: 300;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.transmittal-bottom {
+  /* font-family: 'Times New Roman', Times, serif; */
+  font-weight: 300;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.transmittal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.transmittal-table-payroll {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.transmittal-table th,
+.transmittal-table td {
+  border: 1px solid #000;
+  padding: 6px 10px;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.transmittal-table-payroll th {
+  border: 1px solid #000;
+  padding: 6px 10px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.transmittal-table-payroll td {
+  border: 1px solid #000;
+  padding: 6px 10px;
+  vertical-align: middle;
+}
+
+.transmittal-table thead th {
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.transmittal-table tbody td:nth-child(5) {
+  /* PAYEE column left-aligned */
+  text-align: left;
+}
+
+.transmittal-total-row td {
+  font-weight: 700;
+}
+
+.transmittal-signature-name {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-bottom: 1px solid #000;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+  min-height: 20px;
+}
+
+.transmittal-signature-position {
+  font-size: 13px;
+  color: #555;
+}
+
+.pbc-header-block {
+  text-align: center;
+  font-family: 'Times New Roman', Times, serif;
+}
+.pbc-republic,
+.pbc-province {
+  font-size: 12px;
+}
+.pbc-city,
+.pbc-barangay {
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+.pbc-title {
+  text-align: center;
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  -webkit-text-stroke: 1.5px currentColor;
+  letter-spacing: 1.5px;
+  margin: 16px 0 24px;
+  color: #000;
+}
+.pbc-to-block {
+  font-size: 13px;
+  color: #000;
+}
+.pbc-body,
+.pbc-footer-text {
+  font-size: 13px;
+  line-height: 1.6;
+}
+/* .pbc-en {
+  color: #187c19;
+} */
+.pbc-fil {
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  margin-bottom: 6px;
+}
+.pbc-footer-text .pbc-en,
+.pbc-footer-text .pbc-fil {
+  text-indent: 80px;
+}
+.pbc-blank {
+  border-bottom: 1px solid #000;
+  padding: 0 4px;
+}
+.pbc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 16px;
+}
+.pbc-table th,
+.pbc-table td {
+  border: 1px dotted #666;
+  padding: 6px 10px;
+  /* text-align: center; */
+}
+.pbc-table thead th {
+  font-weight: 700;
+  text-transform: uppercase;
+  border-bottom: 1px solid #000;
+}
+/* .pbc-bank-group-row td {
+  background: #f5f5f5;
+  align-items: start;
+} */
+.pbc-nothing-follows-row td {
+  font-style: italic;
+  font-weight: 600;
+}
+.pbc-total-row td {
+  border-top: 1px solid #000;
+  border-bottom: 1px solid #000;
+}
+.pbc-signature-name {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  border-bottom: 1px solid #000;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+  min-height: 20px;
+}
+.pbc-signature-position {
+  font-size: 13px;
+  color: #555;
+}
+.pbc-page-footer {
+  font-size: 11px;
+  color: #666;
+  margin-top: 24px;
+}
+
+/* Responsive adjustments for financial report table */
+@media (max-width: 768px) {
+  .header-row,
+  .main-section-header,
+  .subcategory-row,
+  .subsubcategory-row,
+  .total-row,
+  .no-data-message {
+    grid-template-columns: 1fr 80px 80px 80px;
+    padding: 6px 8px;
+    min-height: 36px;
+  }
+
+  .subsubsubcategory-row {
+    padding: 6px 8px 6px 48px;
+  }
+
+  .amount-group {
+    grid-template-columns: 80px 80px 80px;
+    gap: 6px;
+  }
+
+  .col-appropriation,
+  .col-obligation,
+  .col-balance {
+    font-size: 11px;
+  }
+
+  .main-section-title {
+    font-size: 14px;
+  }
+
+  .subcategory-text {
+    font-size: 13px;
+  }
+
+  .subsubcategory-text {
+    font-size: 12px;
+  }
+
+  .subcategory-row {
+    padding-left: 16px;
+  }
+
+  .subsubcategory-row {
+    padding-left: 32px;
+  }
+}
+
+@media (max-width: 600px) {
+  .header-row,
+  .main-section-header,
+  .subcategory-row,
+  .subsubcategory-row,
+  .total-row,
+  .no-data-message {
+    grid-template-columns: 1fr 60px 60px 60px;
+    padding: 4px 6px;
+    min-height: 32px;
+  }
+
+  .subsubsubcategory-row {
+    padding: 4px 6px 4px 36px;
+  }
+
+  .amount-group {
+    grid-template-columns: 60px 60px 60px;
+    gap: 4px;
+  }
+
+  .col-appropriation,
+  .col-obligation,
+  .col-balance {
+    font-size: 10px;
+  }
+
+  .main-section-title {
+    font-size: 13px;
+  }
+
+  .subcategory-text {
+    font-size: 12px;
+  }
+
+  .subsubcategory-text {
+    font-size: 11px;
+  }
+
+  .subcategory-row {
+    padding-left: 12px;
+  }
+
+  .subsubcategory-row {
+    padding-left: 24px;
   }
 }
 </style>

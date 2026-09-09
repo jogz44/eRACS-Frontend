@@ -15,7 +15,7 @@
     </div>
 
     <div class="q-mb-sm">
-      <div class="row items-center q-gutter-sm">
+      <div class="row items-center q-gutter-sm q-mb-md">
         <q-input
           outlined
           dense
@@ -33,14 +33,14 @@
           outlined
           dense
           v-model="selectedFiscalYear"
-          :options="appropriationStore.fiscalYearOptions"
+          :options="fiscalYearOptions"
           label="Fiscal Year"
           style="min-width: 180px"
           emit-value
           map-options
           :loading="appropriationStore.loading"
           @update:model-value="onFiscalYearChange"
-        >
+        > 
           <template v-slot:no-option>
             <q-item>
               <q-item-section class="text-grey">
@@ -193,11 +193,26 @@
       <q-card flat bordered>
         <q-table
           :rows="store.disbursements"
-          :columns="store.disbursementColumns"
+          :columns="adminColumns"
           row-key="id"
           :pagination="store.pagination"
           flat
         >
+          <template v-slot:body-cell-bank_cheque="props">
+            <q-td :props="props">
+              <div v-if="props.row.bank_cheques && props.row.bank_cheques.length">
+                <div v-for="(c, i) in props.row.bank_cheques" :key="i" class="q-mb-xs">
+                  <div class="text-weight-medium text-grey-8" style="font-size: 13px">
+                    {{ c.bank_name || c.bank || '-' }}
+                  </div>
+                  <q-chip v-if="c.cheque_number" dense text-color="black-8" size="md" class="q-ma-none">
+                    {{ c.cheque_number }}
+                  </q-chip>
+                </div>
+              </div>
+              <span v-else class="text-grey-5 text-caption">-</span>
+            </q-td>
+          </template>
           <template v-slot:body-cell-action="props">
             <q-td :props="props">
               <div class="q-gutter-xs">
@@ -222,6 +237,28 @@
               </div>
             </q-td>
           </template>
+          <template v-slot:body-cell-print="props">
+            <q-td :props="props">
+              <div class="column q-gutter-xs items-start">
+                <q-btn
+                  dense
+                  label="Print Cheque"
+                  color="teal"
+                  @click="handlePrintCheque(props.row)"
+                  v-permission="'print'"
+                  style="width: 10em; font-size: 13px"
+                />
+                <q-btn
+                  dense
+                  label="Print Voucher"
+                  color="teal"
+                  @click="handlePrintVoucher(props.row)"
+                  v-permission="'print'"
+                  style="width: 10em; font-size: 13px"
+                />
+              </div>
+            </q-td>
+          </template>
         </q-table>
       </q-card>
 
@@ -233,18 +270,45 @@
 
 <script setup>
 import { useQuasar } from 'quasar'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useContDisbursementStore } from 'stores/contDisburseStore'
 import { useAppropriationStore } from 'stores/appropriationStore'
+import { useRoute } from 'vue-router'
 import ContLiquidateDialog from 'components/contDisburse/ContOrDetails.vue'
 import ContViewOr from 'components/contDisburse/ContViewOr.vue'
 import { usePageLogging } from '../../../composables/usePageLogging'
+import { useBankStore } from 'stores/bankStore'
 
 const $q = useQuasar()
+const route = useRoute()
 const loading = ref(false)
 const store = useContDisbursementStore()
 const appropriationStore = useAppropriationStore()
 const { logPageVisit } = usePageLogging()
+
+const selectedRouteYear = () => {
+  const year = route.query.year ? parseInt(route.query.year, 10) : null
+  return year || new Date().getFullYear()
+}
+
+const fiscalYearOptions = computed(() => {
+  const years = appropriationStore.fiscalYears || []
+
+  return years
+    .map((item) => {
+      // appropriationStore admin years look like: { year: '2025', label: '2025' }
+      if (typeof item === 'object' && item !== null) {
+        const value = String(item.year ?? item.value ?? item.label ?? '')
+        const label = String(item.label ?? item.year ?? item.value ?? '')
+        return value ? { label, value } : null
+      }
+
+      // fallback if plain string/number
+      const value = String(item)
+      return value ? { label: value, value } : null
+    })
+    .filter(Boolean)
+})
 
 const selectedFiscalYear = computed({
   get: () => appropriationStore.selectedFiscalYear,
@@ -252,15 +316,27 @@ const selectedFiscalYear = computed({
 })
 
 const onFiscalYearChange = (value) => {
-  if (value !== appropriationStore.selectedFiscalYear) {
-    appropriationStore.setSelectedFiscalYear(value)
-    loadPendingUsers() // Refresh data when fiscal year changes
-  }
+  appropriationStore.setSelectedFiscalYear(value)
+  loadPendingUsers(value)
 }
+
+const adminColumns = computed(() => {
+  return store.disbursementColumns.filter(column => ![ 'print' ].includes(column.name))
+})
 
 onMounted(async () => {
   try {
-    await appropriationStore.initialize()
+    // in ContDisbursement.vue onMounted, or in fetchDisbursements() before mapping rows
+const bankStore = useBankStore()
+if (!bankStore.availableBanks?.length) {
+  await bankStore.fetchBanks()
+}
+    await store.fetchDisbursements(selectedRouteYear())
+    await appropriationStore.fetchFiscalYears()
+
+    if (!appropriationStore.selectedFiscalYear && fiscalYearOptions.value.length > 0) {
+      appropriationStore.setSelectedFiscalYear(fiscalYearOptions.value[0].value)
+    }
     // Log page visit
     await logPageVisit('Continuing Disbursement')
   } catch (error) {
@@ -274,17 +350,20 @@ const handleEnterKey = (event) => {
   // Admin users cannot save - only view
 }
 
-// Admin users cannot save - only view
-
-const loadPendingUsers = async () => {
+const loadPendingUsers = async (yearOverride = null) => {
   loading.value = true
   try {
-    await new Promise(resolve => setTimeout(resolve, 500))
+    const selected = yearOverride ?? selectedFiscalYear.value
+    const yearParam = selected && selected !== 'all' ? Number(selected) : null
+
+    await store.fetchDisbursements(yearParam)
+
     $q.notify({
       type: 'positive',
       message: 'Disbursement refreshed!',
       icon: 'refresh',
       position: 'top',
+      timeout: 3000
     })
   } catch (error) {
     $q.notify({
@@ -309,6 +388,13 @@ const clearAllFilters = () => {
     : appropriationStore.fiscalYears[0]
   appropriationStore.setSelectedFiscalYear(defaultYear)
 }
+
+watch(
+  () => route.query.year,
+  async () => {
+    await store.fetchDisbursements(selectedRouteYear())
+  },
+)
 </script>
 
 <style scoped>

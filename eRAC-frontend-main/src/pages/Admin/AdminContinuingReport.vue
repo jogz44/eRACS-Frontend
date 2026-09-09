@@ -2,8 +2,8 @@
   <q-page class="q-pa-lg report-page">
     <!-- Main Header with bottom border -->
     <div class="dashboard-card q-mb-md">
-      <div class="section-header row items-center justify-between q-mb-xs">
-        <div class="section-title col-12 col-md-8">Current Year Reports</div>
+      <div class="section-header row items-center justify-between q-mb-xl">
+        <div class="section-title col-12 col-md-8">Continuing Reports</div>
         <!-- Year Filter Section -->
 
         <div class="col-12 col-md-4">
@@ -111,7 +111,7 @@
                   color="green"
                   label="Preview"
                   no-caps
-                  :loading="previewAdviceLoading"
+                  :loading="viewingAdvice && loading"
                   @click="viewPbcAdvice(props.row)"
                   class="q-pl-sm q-pr-sm"
                 >
@@ -124,9 +124,9 @@
       </div>
     </div>
 
-    <!-- Current Year Reports Card -->
+    <!-- Continuing Reports Card -->
     <div class="row q-col-gutter-md q-pa-md">
-      <!-- RAC Card -->
+      <!-- Continuing RAC Card -->
       <div class="col-12 col-md-6">
         <q-card class="report-card" flat bordered>
           <q-card-section class="q-pb-none q-pt-lg">
@@ -134,17 +134,23 @@
           </q-card-section>
 
           <q-card-section class="q-pt-md q-pb-lg">
-            <div class="col q-col-gutter-sm items-end">
+            <div class="col q-col-gutter-md items-end">
               <div class="col-12 col-sm-6 col-md-4">
                 <q-input
-                  v-model="CurrentRacDateRange.from"
+                  v-model="continuingRacDateRange.from"
                   filled
                   type="date"
                   hint="From Date"
-                  @update:model-value="changeMonth"
+                  @update:model-value="(v) => onDateChangecontinuing('from', v)"
                 />
                 <br />
-                <q-input v-model="CurrentRacDateRange.to" filled type="date" hint="To Date" />
+                <q-input
+                  v-model="continuingRacDateRange.to"
+                  filled
+                  type="date"
+                  hint="To Date"
+                  @update:model-value="(v) => onDateChangecontinuing('to', v)"
+                />
                 <br />
               </div>
 
@@ -152,13 +158,13 @@
                 <q-select
                   outlined
                   dense
-                  v-model="expenseSelectedCurrent"
+                  v-model="expenseSelectedContinuing"
                   label="Expense Category"
-                  :options="reportStore.expenseOptionsCurrent"
                   map-options
-                  option-label="name"
-                  option-value="id"
+                  :options="reportStore.expenseOptionsContinuing"
                   :loading="loading"
+                  option-value="id"
+                  option-label="name"
                   :disable="!isBarangaySelected"
                 />
               </div>
@@ -170,7 +176,7 @@
                   label="Generate Report"
                   class="full-width"
                   :disable="!isBarangaySelected"
-                  @click="openRACModal('current-rac')"
+                  @click="openRACModal('continuing-rac')"
                   :loading="loading"
                 >
                   <q-icon
@@ -195,18 +201,23 @@
           </q-card-section>
 
           <q-card-section class="q-pt-md q-pb-lg">
-            <div class="col q-col-gutter-sm items-end">
+            <div class="col q-col-gutter-md items-end">
               <div class="col-12 col-sm-6 col-md-6">
-                <q-input v-model="pbcDateRange.from" filled type="date" hint="From Date" />
+                <q-input
+                  v-model="continuingPbcDateRange.from"
+                  filled
+                  type="date"
+                  hint="From Date"
+                />
                 <br />
-                <q-input v-model="pbcDateRange.to" filled type="date" hint="To Date" />
+                <q-input v-model="continuingPbcDateRange.to" filled type="date" hint="To Date" />
                 <br />
               </div>
               <div class="col-12 col-sm-6 col-md-4">
                 <q-select
                   outlined
                   dense
-                  v-model="bankSelectedPBC"
+                  v-model="continuingBankSelectedPBC"
                   label="Select Bank"
                   :options="reportStore.bankOptions"
                   map-options
@@ -226,7 +237,7 @@
                   class="full-width"
                   :disable="!isBarangaySelected"
                   @click="openPBCModal"
-                  :loading="generatingPbcReportLoading"
+                  :loading="loading"
                 >
                   <q-icon
                     v-if="!isBarangaySelected"
@@ -244,30 +255,23 @@
     </div>
 
     <div class="row q-col-gutter-md q-pa-md">
-      <!-- SACB Card -->
+      <!-- Continuing SACB Card -->
       <div class="col-12 col-md-6">
-        <q-card class="report-card" flat bordered>
+        <q-card class="transmittal-card" flat bordered>
           <q-card-section class="q-pb-none q-pt-lg">
             <div class="subsection-title">Status of Appropriation and Obligation (SACB)</div>
           </q-card-section>
 
           <q-card-section class="q-pt-md q-pb-lg">
-            <div class="col q-col-gutter-sm items-end">
-              <div class="col-12 col-sm-6 col-md-6">
-                <q-input v-model="currentSacbDateRange.from" filled type="date" hint="From Date" />
-                <br />
-                <q-input v-model="currentSacbDateRange.to" filled type="date" hint="To Date" />
-                <br />
-              </div>
-
-              <div class="col-12 col-sm-6 col-md-6">
+            <div class="col-12 col-sm-6 col-md-6">
+              <div class="row justify-center">
                 <q-btn
+                  class="full-width"
                   color="primary"
                   icon="settings"
                   label="Generate Report"
-                  class="full-width"
                   :disable="!isBarangaySelected"
-                  @click="openSACBModal('current-sacb')"
+                  @click="openSACBModal('continuing-sacb')"
                   :loading="loading"
                 >
                   <q-icon
@@ -297,7 +301,7 @@
                 <q-select
                   outlined
                   dense
-                  v-model="transmittalMonthSelected"
+                  v-model="continuingTransmittalMonthSelected"
                   label="Select Month"
                   :options="monthOptions"
                   map-options
@@ -1902,11 +1906,8 @@ watch(
         const currentSelected = expenseSelectedCurrent.value
         const continuingSelected = expenseSelectedContinuing.value
 
-        await reportStore.fetchExpenseClassesForBarangay(newBarangay)
-        await reportStore.fetchBankOptionsForBarangay(newBarangay)
-
         // Fetch new options for the new barangay
-        // await reportStore.fetchExpenseClassesForBarangay(newBarangay)
+        await reportStore.fetchExpenseClassesForBarangay(newBarangay)
 
         // Try to preserve selections by finding matching names
         if (currentSelected?.name) {
@@ -1943,12 +1944,6 @@ function pad(n) {
   return String(n).padStart(2, '0')
 }
 
-// // Date ranges
-// const dateRange = ref({ from: '', to: '' })
-// const continuingDateRange = ref({ from: '', to: '' })
-// const currentSacbDateRange = ref({ from: '', to: '' })
-// const continuingSacbDateRange = ref({ from: '', to: '' })
-
 // Date ranges
 const currentYear = new Date().getFullYear()
 const currentdate = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
@@ -1962,42 +1957,8 @@ const laterlastday = new Date(currentYear, laterMonth, 0).getDate()
 const isYearChanging = ref(false)
 const exportingTransmittalPDF = ref(false)
 const exportingPBCPDF = ref(false)
-const generatingPbcReportLoading = ref(false)
+const viewingAdvice = ref(false)
 
-// Fix refreshYears — reload years AND reset all filters to defaults for selected year
-// function refreshYears() {
-//   reportStore.fetchAvailableYears()
-
-//   // Reset selected year to current
-//   selectedYear.value = currentYear
-
-//   // Reset all date ranges to defaults
-//   const today = new Date()
-//   const month = today.getMonth()
-//   const lastDay = new Date(currentYear, month + 1, 0).getDate()
-//   const mm = pad(month + 1)
-//   const dd = pad(lastDay)
-
-//   CurrentRacDateRange.value = { from: `${currentYear}-${mm}-01`, to: `${currentYear}-${mm}-${dd}` }
-//   continuingRacDateRange.value = {
-//     from: `${currentYear}-${mm}-01`,
-//     to: `${currentYear}-${mm}-${dd}`,
-//   }
-//   currentSacbDateRange.value = {
-//     from: `${currentYear}-01-01`,
-//     to: today.toISOString().slice(0, 10),
-//   }
-//   continuingSacbDateRange.value = {
-//     from: `${currentYear}-01-01`,
-//     to: today.toISOString().slice(0, 10),
-//   }
-
-//   // Reset expense selections
-//   expenseSelectedCurrent.value = null
-//   expenseSelectedContinuing.value = null
-
-//   notifySuccess('Filters reset to defaults.')
-// }
 
 async function refreshYears() {
   await reportStore.fetchAvailableYears()
@@ -2065,10 +2026,63 @@ async function onYearChange(year) {
   }
 }
 
+async function viewPbcAdvice(row) {
+  loading.value = true
+  viewingAdvice.value = true
+  try {
+    PBCModal.pbcNo = row.pbcNo
+    PBCModal.date = row.pbcDate
+    PBCModal.recipient = row.recipient || 'The Bank Manager'
+    PBCModal.bankName = row.bankName
+    PBCModal.bankBranch = row.bankBranch
+    PBCModal.bankCity = row.bankCity
+
+    const years = reportStore._yearsInDateRange(row.from, row.to)
+
+    await reportStore.fetchPbcReport({
+      from: row.from,
+      to: row.to,
+      bankId: row.bankId,
+      year: years,
+      pbcNo: row.pbcNo,
+      pbcDate: row.pbcDate,
+      source: 'continuing',
+    })
+
+    PBCModal.show = true
+  } catch (error) {
+    console.error(error)
+    notifyError(getErrorMessage(error, 'Failed to load PBC advice'))
+  } finally {
+    loading.value = false
+    viewingAdvice.value = false
+  }
+}
+
 const searchQuery = ref('')
 
+// const filteredPbcAdviceList = computed(() => {
+//   const list = reportStore.pbcAdviceList || []
+//   const q = searchQuery.value?.trim().toLowerCase()
+//   if (!q) return list
+
+//   return list.filter((row) => {
+//     return (
+//       String(row.pbcNo || '')
+//         .toLowerCase()
+//         .includes(q) ||
+//       String(row.bankName || '')
+//         .toLowerCase()
+//         // .includes(q) ||
+//         // formatFullDate(row.pbcDate || '')
+//         //   .toLowerCase()
+//         .includes(q)
+//     )
+//   })
+// })
+
 const filteredPbcAdviceList = computed(() => {
-  const list = reportStore.pbcAdviceList || []
+  const list = reportStore.contPbcAdviceList || [] // was: reportStore.pbcAdviceList
   const q = searchQuery.value?.trim().toLowerCase()
   if (!q) return list
 
@@ -2079,13 +2093,34 @@ const filteredPbcAdviceList = computed(() => {
         .includes(q) ||
       String(row.bankName || '')
         .toLowerCase()
-        // .includes(q) ||
-        // formatFullDate(row.pbcDate || '')
-        //   .toLowerCase()
+        .includes(q) ||
+      formatFullDate(row.pbcDate || '')
+        .toLowerCase()
         .includes(q)
     )
   })
 })
+
+const pbcVoucherCount = computed(() => {
+  if (!reportStore.reportPBC) return 0
+  return reportStore.reportPBC.reduce((sum, group) => sum + (group.checks?.length || 0), 0)
+})
+
+function onDateChangecontinuing(field, newValue) {
+  // Extract the year from the changed field
+  const changedYear = new Date(newValue).getFullYear()
+
+  // Copy existing dates
+  const from = new Date(currentSacbDateRange.value.from)
+  const to = new Date(currentSacbDateRange.value.to)
+
+  // Apply the year to BOTH using the year the user actually changed
+  from.setFullYear(changedYear)
+  to.setFullYear(changedYear)
+
+  currentSacbDateRange.value.from = from.toISOString().slice(0, 10)
+  currentSacbDateRange.value.to = to.toISOString().slice(0, 10)
+}
 
 const clearAllFilters = () => {
   searchQuery.value = ''
@@ -2102,30 +2137,37 @@ const pbcAdviceColumns = [
 ]
 
 //displaying full date format
-function formatFullDate(dateString) {
-  return date.formatDate(dateString, 'MMMM DD, YYYY')
-}
+// function formatFullDate(dateString) {
+//   return date.formatDate(dateString, 'MMMM DD, YYYY')
+// }
 
+// const CurrentRacDateRange = ref({
+//   from: `${currentYear}-${laterMonth}-01`,
+//   to: `${currentYear}-${laterMonth}-${pad(laterlastday)}`,
+// })
 const CurrentRacDateRange = ref({
   from: `${currentYear}-${pad(laterMonth)}-01`,
   to: `${currentYear}-${pad(laterMonth)}-${pad(laterlastday)}`,
 })
 const currentSacbDateRange = ref({ from: `${currentYear}-01-01`, to: currentdate })
-const pbcDateRange = ref({ from: `${currentYear}-01-01`, to: currentdate })
+// const continuingRacDateRange = ref({
+//   from: `${currentYear}-${laterMonth}-01`,
+//   to: `${currentYear}-${laterMonth}-${pad(laterlastday)}`,
+// })
 const continuingRacDateRange = ref({
   from: `${currentYear}-${pad(laterMonth)}-01`,
   to: `${currentYear}-${pad(laterMonth)}-${pad(laterlastday)}`,
 })
 const continuingSacbDateRange = ref({ from: `${currentYear}-01-01`, to: currentdate })
+const continuingPbcDateRange = ref({ from: `${currentYear - 1}-01-01`, to: currentdate })
 
 const dateRange = CurrentRacDateRange
 const continuingDateRange = continuingRacDateRange
-const previewAdviceLoading = ref(false)
 
 const expenseSelectedCurrent = ref(null)
 const expenseSelectedContinuing = ref(null)
-const bankSelectedPBC = ref(null)
-const transmittalMonthSelected = ref(laterMonth)
+const continuingBankSelectedPBC = ref(null)
+const continuingTransmittalMonthSelected = ref(laterMonth)
 const monthOptions = [
   { label: 'January', value: 1 },
   { label: 'February', value: 2 },
@@ -2203,13 +2245,6 @@ const pbcTotal = computed(() => {
   }, 0)
 })
 
-const transmittalDvTotal = computed(() => {
-  return (reportStore.reportTransmittal.dvRows || []).reduce(
-    (sum, row) => sum + (Number(row.amount) || 0),
-    0,
-  )
-})
-
 reportStore.reportPBC = [
   {
     bankGroup: 'LBP BRGY. SAN ISIDRO - 0342-0201-03',
@@ -2232,60 +2267,45 @@ reportStore.reportPBC = [
   },
 ]
 
-async function viewPbcAdvice(row) {
-  previewAdviceLoading.value = true
-  try {
-    PBCModal.pbcNo = row.pbcNo
-    PBCModal.date = row.pbcDate
-    PBCModal.recipient = row.recipient || 'The Bank Manager'
-    PBCModal.bankName = row.bankName
-    PBCModal.bankBranch = row.bankBranch
-    PBCModal.bankCity = row.bankCity
-
-    const years = reportStore._yearsInDateRange(row.from, row.to)
-
-    await reportStore.fetchPbcReport({
-      from: row.from,
-      to: row.to,
-      bankId: row.bankId,
-      year: years,
-      pbcNo: row.pbcNo,
-      pbcDate: row.pbcDate,
-      source: 'regular',
-    })
-
-    PBCModal.show = true
-  } catch (error) {
-    console.error(error)
-    notifyError(getErrorMessage(error, 'Failed to load PBC advice'))
-  } finally {
-    previewAdviceLoading.value = false
-  }
-}
-
-// const openTransmittalModal = async () => {
-//   if (!isBarangaySelected.value) {
-//     return notifyError('Please select a barangay first to generate reports.')
-//   }
-//   if (!transmittalMonthSelected.value) {
-//     return notifyError('Please select a month.')
-//   }
-
+// const loadAllData = async () => {
 //   loading.value = true
 //   try {
-//     const year = reportStore.selectedYear || currentYear
-//     const month = transmittalMonthSelected.value
-//     const lastDay = new Date(year, month, 0).getDate()
-//     const from = `${year}-${pad(month)}-01`
-//     const to = `${year}-${pad(month)}-${pad(lastDay)}`
+//     const criticalPromises = [reportStore.fetchData()]
+//     await Promise.all(criticalPromises)
 
-//     await reportStore.fetchTransmittalReport({ from, to, year, source: 'regular' })
+//     // If admin, fetch expense classes for selected barangay
+//     if (authStore.admin) {
+//       const selectedBarangayId = authStore.getSelectedBarangay()
+//       if (selectedBarangayId) {
+//         // Store current selections before fetching
+//         const currentSelected = expenseSelectedCurrent.value
+//         const continuingSelected = expenseSelectedContinuing.value
 
-//     logAdminActivity('Report Generated', `Generated Transmittal report for ${from} to ${to}`)
-//     transmittalModal.show = true
+//         try {
+//           await reportStore.fetchExpenseClassesForBarangay(selectedBarangayId)
+
+//           // Try to preserve selections by finding matching names
+//           if (currentSelected?.name) {
+//             const matchingOption = reportStore.expenseOptionsCurrent.find(
+//               (opt) => opt.name === currentSelected.name,
+//             )
+//             expenseSelectedCurrent.value = matchingOption || null
+//           }
+
+//           if (continuingSelected?.name) {
+//             const matchingOption = reportStore.expenseOptionsContinuing.find(
+//               (opt) => opt.name === continuingSelected.name,
+//             )
+//             expenseSelectedContinuing.value = matchingOption || null
+//           }
+//         } catch (e) {
+//           console.error('Failed to load expense classes for selected barangay', e)
+//         }
+//       }
+//     }
 //   } catch (error) {
-//     console.error(error)
-//     notifyError(getErrorMessage(error, 'Failed to generate Transmittal report'))
+//     console.error('Error loading data:', error)
+//     notifyError('Failed to load data. Please try again later.')
 //   } finally {
 //     loading.value = false
 //   }
@@ -2300,18 +2320,14 @@ const loadAllData = async () => {
     if (authStore.admin) {
       const selectedBarangayId = authStore.getSelectedBarangay()
       if (selectedBarangayId) {
-        await Promise.all([
-          reportStore.fetchExpenseClassesForBarangay(selectedBarangayId, reportStore.selectedYear),
-          reportStore.fetchBankOptionsForBarangay(selectedBarangayId),
-        ])
         const currentSelected = expenseSelectedCurrent.value
         const continuingSelected = expenseSelectedContinuing.value
 
         // Pass the selected year to filter expense classes correctly
-        await reportStore.fetchExpenseClassesForBarangay(
-          selectedBarangayId,
-          reportStore.selectedYear,
-        )
+        await Promise.all([
+          reportStore.fetchExpenseClassesForBarangay(selectedBarangayId, reportStore.selectedYear),
+          reportStore.fetchBankOptionsForBarangay(selectedBarangayId),
+        ])
 
         // Preserve selections if they still exist in new list
         if (currentSelected?.name) {
@@ -2476,24 +2492,21 @@ const closeRACModal = () => {
 //   if (!isBarangaySelected.value) {
 //     return notifyError('Please select a barangay first to generate reports.')
 //   }
-//   if (!continuingTransmittalMonthSelected.value) {
+//   if (!transmittalMonthSelected.value) {
 //     return notifyError('Please select a month.')
 //   }
 
 //   loading.value = true
 //   try {
 //     const year = reportStore.selectedYear || currentYear
-//     const month = continuingTransmittalMonthSelected.value
+//     const month = transmittalMonthSelected.value
 //     const lastDay = new Date(year, month, 0).getDate()
 //     const from = `${year}-${pad(month)}-01`
 //     const to = `${year}-${pad(month)}-${pad(lastDay)}`
 
-//     await reportStore.fetchTransmittalReport({ from, to, year, source: 'continuing' })
+//     await reportStore.fetchTransmittalReport({ from, to, year, source: 'regular' })
 
-//     logAdminActivity(
-//       'Report Generated',
-//       `Generated Continuing Transmittal report for ${from} to ${to}`,
-//     )
+//     logAdminActivity('Report Generated', `Generated Transmittal report for ${from} to ${to}`)
 //     transmittalModal.show = true
 //   } catch (error) {
 //     console.error(error)
@@ -2507,21 +2520,21 @@ const openTransmittalModal = async () => {
   if (!isBarangaySelected.value) {
     return notifyError('Please select a barangay first to generate reports.')
   }
-  if (!transmittalMonthSelected.value) {
+  if (!continuingTransmittalMonthSelected.value) {
     return notifyError('Please select a month.')
   }
 
   loading.value = true
   try {
     const year = reportStore.selectedYear || currentYear
-    const month = transmittalMonthSelected.value
+    const month = continuingTransmittalMonthSelected.value
     const lastDay = new Date(year, month, 0).getDate()
     const from = `${year}-${pad(month)}-01`
     const to = `${year}-${pad(month)}-${pad(lastDay)}`
 
-    await reportStore.fetchTransmittalReport({ from, to, year, source: 'regular' })
+    await reportStore.fetchTransmittalReport({ from, to, year, source: 'continuing' })
 
-    logAdminActivity('Report Generated', `Generated Transmittal report for ${from} to ${to}`)
+    logAdminActivity('Report Generated', `Generated Continuing Transmittal report for ${from} to ${to}`)
     transmittalModal.show = true
   } catch (error) {
     console.error(error)
@@ -2540,17 +2553,23 @@ const closeTransmittalModal = () => {
 // }
 
 const openPBCModal = async () => {
-  if (!pbcDateRange.value.from || !pbcDateRange.value.to) {
+  if (!isBarangaySelected.value) {
+    return notifyError('Please select a barangay first to generate reports.')
+  }
+  if (!continuingPbcDateRange.value.from || !continuingPbcDateRange.value.to) {
     return notifyError('Please select a valid PBC date range.')
   }
-  if (!bankSelectedPBC.value) {
+  if (!continuingBankSelectedPBC.value) {
     return notifyError('Please select a bank.')
   }
 
-  generatingPbcReportLoading.value = true
+  loading.value = true
+  viewingAdvice.value = true
   try {
     const selectedBank = reportStore.bankOptions.find(
-      (bank) => String(bank.id) === String(bankSelectedPBC.value?.id || bankSelectedPBC.value),
+      (bank) =>
+        String(bank.id) ===
+        String(continuingBankSelectedPBC.value?.id || continuingBankSelectedPBC.value),
     )
 
     if (selectedBank) {
@@ -2562,63 +2581,48 @@ const openPBCModal = async () => {
 
     PBCModal.pbcNo = buildNextPbcNo(PBCModal.date)
 
-    // const years = reportStore._yearsInDateRange(
-    //   continuingPbcDateRange.value.from,
-    //   continuingPbcDateRange.value.to,
-    // )
+    const years = reportStore._yearsInDateRange(
+      continuingPbcDateRange.value.from,
+      continuingPbcDateRange.value.to,
+    )
 
     await reportStore.fetchPbcReport({
-      from: pbcDateRange.value.from,
-      to: pbcDateRange.value.to,
-      bankId: bankSelectedPBC.value?.id || bankSelectedPBC.value,
+      from: continuingPbcDateRange.value.from,
+      to: continuingPbcDateRange.value.to,
+      bankId: continuingBankSelectedPBC.value?.id || continuingBankSelectedPBC.value,
+      year: years,
       pbcNo: PBCModal.pbcNo,
       pbcDate: PBCModal.date,
+      source: 'continuing',
     })
 
-    await reportStore.recordPbcAdvice({
+    await reportStore.recordContPbcAdvice({
       pbcNo: PBCModal.pbcNo,
       pbcDate: PBCModal.date,
       voucherCount: pbcVoucherCount.value,
       amount: pbcTotal.value,
-      from: pbcDateRange.value.from,
-      to: pbcDateRange.value.to,
-      bankId: bankSelectedPBC.value?.id || bankSelectedPBC.value,
+      from: continuingPbcDateRange.value.from,
+      to: continuingPbcDateRange.value.to,
+      bankId: continuingBankSelectedPBC.value?.id || continuingBankSelectedPBC.value,
       bankName: PBCModal.bankName,
       recipient: PBCModal.recipient,
       bankBranch: PBCModal.bankBranch,
       bankCity: PBCModal.bankCity,
-      source: 'regular',
     })
 
     logAdminActivity(
       'Report Generated',
-      `Generated PBC report for bank: ${selectedBank?.name || 'Unknown'} with date range: ${pbcDateRange.value.from} to ${pbcDateRange.value.to}`,
+      `Generated Continuing PBC report for bank: ${selectedBank?.name || 'Unknown'} with date range: ${continuingPbcDateRange.value.from} to ${continuingPbcDateRange.value.to}`,
     )
     PBCModal.show = true
   } catch (error) {
     console.error(error)
     notifyError(getErrorMessage(error, 'Failed to generate PBC report'))
   } finally {
-    generatingPbcReportLoading.value = false
+    loading.value = false
+    viewingAdvice.value = false
   }
 }
-
-function buildNextPbcNo(dateString) {
-  const baseDate = dateString ? new Date(dateString) : new Date()
-  const dateForNumber = Number.isNaN(baseDate.getTime()) ? new Date() : baseDate
-  const yy = String(dateForNumber.getFullYear()).slice(-2)
-  const mm = pad(dateForNumber.getMonth() + 1)
-  const key = `pbc-number-sequence:${yy}-${mm}`
-  const lastNumber = Number(localStorage.getItem(key) || 0) + 1
-
-  localStorage.setItem(key, String(lastNumber))
-  return `${yy}-${mm}-${String(lastNumber).padStart(5, '0')}`
-}
-
-const pbcVoucherCount = computed(() => {
-  if (!reportStore.reportPBC) return 0
-  return reportStore.reportPBC.reduce((sum, group) => sum + (group.checks?.length || 0), 0)
-})
 
 const closePBCModal = () => {
   PBCModal.show = false
@@ -2649,16 +2653,33 @@ const handleRACPrint = () => {
   closeRACModal()
   notifySuccess('Report sent to printer successfully!')
 }
+
 /* -------------------- HELPERS -------------------- */
+function formatFullDate(dateString) {
+  return date.formatDate(dateString, 'MMMM DD, YYYY')
+}
+
+function formatDateRange(dateString) {
+  return date.formatDate(dateString, 'MM-DD-YYYY')
+}
+
+function getErrorMessage(error, fallback) {
+  return error?.response?.data?.message || error?.message || fallback
+}
+
+function buildNextPbcNo(dateString) {
+  const baseDate = dateString ? new Date(dateString) : new Date()
+  const dateForNumber = Number.isNaN(baseDate.getTime()) ? new Date() : baseDate
+  const yy = String(dateForNumber.getFullYear()).slice(-2)
+  const mm = String(dateForNumber.getMonth() + 1).padStart(2, '0')
+  const key = `cont-pbc-number-sequence:${yy}-${mm}`
+  const lastNumber = Number(localStorage.getItem(key) || 0) + 1
+  localStorage.setItem(key, String(lastNumber))
+  return `${yy}-${mm}-${String(lastNumber).padStart(5, '0')}`
+}
+
 const notifyError = (msg) => $q.notify({ type: 'negative', message: msg, position: 'top' })
 const notifySuccess = (msg) => $q.notify({ type: 'positive', message: msg, position: 'top' })
-function getErrorMessage(error, fallback) {
-  return (
-    error?.response?.data?.message || // axios error shape: { response: { data: { message } } }
-    error?.message ||
-    fallback
-  )
-}
 
 /* -------------------- COMPUTED -------------------- */
 // Check if barangay is selected
@@ -2845,9 +2866,6 @@ async function loadSacbReport($from, $to) {
       message: 'Failed to generate SACB Report',
     })
   }
-}
-function formatDateRange(dateString) {
-  return date.formatDate(dateString, 'MM-DD-YYYY')
 }
 
 async function exportToPDF() {
@@ -3534,19 +3552,6 @@ function getSACBDateRangeDisplay() {
   return 'No date range selected'
 }
 
-function changeMonth(newDate) {
-  if (!newDate) return
-
-  const date = new Date(newDate)
-
-  const year = date.getFullYear()
-  const month = date.getMonth() // 0–11
-  const lastDay = new Date(year, month + 1, 0).getDate()
-
-  // Update ONLY the `to` date
-  CurrentRacDateRange.value.to = `${year}-${pad(month + 1)}-${pad(lastDay)}`
-}
-
 function toggleSACBDrawer() {
   sacbDrawerOpen.value = !sacbDrawerOpen.value
 }
@@ -3582,8 +3587,8 @@ function saveAsTemplate() {
 /* -------------------- LIFECYCLE -------------------- */
 onMounted(async () => {
   await loadAllData()
-  await reportStore.loadPbcAdviceList()
   // Log page visit
+  await reportStore.loadContPbcAdviceList()
   await logPageVisit('Reports')
 })
 onActivated(async () => {

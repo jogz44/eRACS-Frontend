@@ -250,7 +250,6 @@
             outlined
             :model-value="formatInputValue(amount)"
             @update:model-value="handleAmountInput"
-            @blur="handleAmountBlur"
             label="Amount"
             prefix="₱"
             @keydown.enter="handleEnterKey"
@@ -585,12 +584,18 @@ const budgetTypeOptions = [{ label: 'Annual Budget', value: 'annual' }]
 
 const loadAppropriation = async () => {
   loading.value = true
-  try {
-    // Use Promise.allSettled to handle partial failures gracefully
-    const results = await Promise.allSettled([
-      appropriationStore.fetchBudgets(),
-      appropriationStore.fetchAppropriations()
-    ])
+  // try {
+  //   // Use Promise.allSettled to handle partial failures gracefully
+  //   const results = await Promise.allSettled([
+  //     appropriationStore.fetchBudgets(),
+  //     appropriationStore.fetchAppropriations()
+  //   ])
+    try {
+          const year = route.query.year ? parseInt(route.query.year) : null
+          const results = await Promise.allSettled([
+            appropriationStore.fetchBudgets(year),
+            appropriationStore.fetchAppropriations(year)
+          ])
 
     // Check for any failures
     const failures = results.filter(result => result.status === 'rejected')
@@ -739,17 +744,22 @@ const initializeEditDisplayAccounts = () => {
   editAllocations.value.forEach((alloc) => {
     const classId = alloc.expense_class_id || 'unclassified'
     const className = alloc.expense_class_name || 'Unclassified'
+    const classOrder = alloc.expense_class_order
     const typeId = alloc.expense_type_id
     const typeName = alloc.expense_type_name || `Type ${typeId}`
+    const typeOrder = alloc.expense_type_order
     const itemId = alloc.expense_item_id
     const itemName = alloc.expense_item_name || `Item ${itemId}`
+    const itemOrder = alloc.expense_item_order
     const subItemId = alloc.expense_sub_item_id
     const subItemName = alloc.expense_sub_item_name || `Sub-item ${subItemId}`
+    const subItemOrder = alloc.expense_sub_item_order
 
     if (!classMap[classId]) {
       classMap[classId] = {
         id: classId,
         name: className,
+        order: classOrder,
         children: [],
       }
     }
@@ -762,6 +772,7 @@ const initializeEditDisplayAccounts = () => {
         classMap[classId].children.push({
           id: typeId,
           name: typeName,
+          order: typeOrder,
           amount: alloc.amount,
           children: [],
         })
@@ -774,6 +785,7 @@ const initializeEditDisplayAccounts = () => {
         type = {
           id: typeId,
           name: typeName,
+          order: typeOrder,
           amount: 0,
           children: [],
         }
@@ -790,6 +802,7 @@ const initializeEditDisplayAccounts = () => {
           item = {
             id: itemId,
             name: itemName,
+            order: itemOrder,
             amount: 0,
             children: [],
           }
@@ -800,6 +813,7 @@ const initializeEditDisplayAccounts = () => {
         item.children.push({
           id: subItemId,
           name: subItemName,
+          order: subItemOrder,
           amount: alloc.amount,
         })
       } else {
@@ -811,6 +825,7 @@ const initializeEditDisplayAccounts = () => {
           type.children.push({
             id: itemId,
             name: itemName,
+            order: itemOrder,
             amount: alloc.amount,
             children: [],
           })
@@ -819,15 +834,22 @@ const initializeEditDisplayAccounts = () => {
     }
   })
 
-  const classArr = Object.values(classMap)
+  const sortByLibraryOrder = (a, b) => {
+    const orderA = Number.isFinite(Number(a.order)) ? Number(a.order) : Number.MAX_SAFE_INTEGER
+    const orderB = Number.isFinite(Number(b.order)) ? Number(b.order) : Number.MAX_SAFE_INTEGER
+    if (orderA !== orderB) return orderA - orderB
+    return Number(a.id || 0) - Number(b.id || 0)
+  }
+
+  const classArr = Object.values(classMap).sort(sortByLibraryOrder)
   classArr.forEach((cls) => {
-    cls.children.sort((a, b) => a.id - b.id)
+    cls.children.sort(sortByLibraryOrder)
     cls.children.forEach((type) => {
       if (type.children) {
-        type.children.sort((a, b) => a.id - b.id)
+        type.children.sort(sortByLibraryOrder)
         type.children.forEach(item => {
           if (item.children) {
-            item.children.sort((a, b) => a.id - b.id)
+            item.children.sort(sortByLibraryOrder)
           }
         })
       }
@@ -916,6 +938,16 @@ watch(selectedFiscalYear, (newYearId) => {
     }
   }
 })
+
+//watch for year filtering
+watch(
+  () => route.query.year,
+  async (newYear) => {
+    const year = newYear ? parseInt(newYear) : null
+    await appropriationStore.fetchBudgets(year)
+    await appropriationStore.fetchAppropriations(year)
+  },
+)
 
 // Watch for budget type changes and sync with store
 watch(selectedBudgetType, (newBudgetType) => {
@@ -1245,16 +1277,38 @@ const applyNavigationFilters = () => {
   }
 }
 
+// onMounted(async () => {
+//   try {
+//     // Apply navigation filters first
+//     applyNavigationFilters()
+
+//     // Load both budgets and appropriations to ensure complete data
+//     await appropriationStore.fetchBudgets()
+//     await appropriationStore.fetchAppropriations()
+
+//     // Log page visit
+//     const { logPageVisit } = usePageLogging()
+//     await logPageVisit('Current Appropriation')
+//   } catch (error) {
+//     $q.notify({
+//       type: 'negative',
+//       message: error.response?.data?.message || 'Failed to load budgets',
+//       icon: 'error',
+//       position: 'top',
+//     })
+//   }
+// })
+
 onMounted(async () => {
   try {
-    // Apply navigation filters first
     applyNavigationFilters()
 
-    // Load both budgets and appropriations to ensure complete data
-    await appropriationStore.fetchBudgets()
-    await appropriationStore.fetchAppropriations()
+    // Read year from route query — same as the layout sends it
+    const year = route.query.year ? parseInt(route.query.year) : null
 
-    // Log page visit
+    await appropriationStore.fetchBudgets(year)
+    await appropriationStore.fetchAppropriations(year)
+
     const { logPageVisit } = usePageLogging()
     await logPageVisit('Current Appropriation')
   } catch (error) {

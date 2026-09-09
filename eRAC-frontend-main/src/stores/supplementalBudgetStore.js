@@ -53,13 +53,14 @@ export const useSupplementalBudgetStore = defineStore('supplementalBudget', {
   },
 
   actions: {
-    async fetchSupplementalBudgets() {
+    async fetchSupplementalBudgets(year = null) {
       this.loading = true
       try {
         const authStore = useAuthStore()
         const endpoint = authStore.admin ? '/api/admin/supplemental-budgets' : '/api/barangay/supplemental-budgets'
         const token = authStore.admin ? authStore.adminToken : authStore.token
 
+        if (year !== null) this.selectedYear = year
         const params = { year: this.selectedYear }
 
         // Add barangay filter for admin users
@@ -95,13 +96,14 @@ export const useSupplementalBudgetStore = defineStore('supplementalBudget', {
       }
     },
 
-    async fetchAvailableUnusedExpenses() {
+    async fetchAvailableUnusedExpenses(year = null) {
       this.loading = true
       try {
         const authStore = useAuthStore()
         const endpoint = authStore.admin ? '/api/admin/unused-expenses' : '/api/barangay/unused-expenses'
         const token = authStore.admin ? authStore.adminToken : authStore.token
 
+        if (year !== null) this.selectedYear = year
         const params = { year: this.selectedYear }
 
         // Add barangay filter for admin users
