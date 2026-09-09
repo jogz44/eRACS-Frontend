@@ -30,12 +30,16 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
     expenseTypes: [],
     expenseItems: [],
     expenseSubItems: [], // Add sub-items state
+    expenseSubTypes: [],
     selectedYear: null,
     loading: false,
     error: null,
     fetchedTypes: reactive(new Set()), // classId-year combo
     fetchedItems: reactive(new Set()),
     fetchedSubItems: reactive(new Set()), // Add sub-items tracking
+    fetchedSubTypes: reactive(new Set()),
+    expenseSubSubTypes: [],
+    fetchedSubSubTypes: reactive(new Set()),
   }),
 
   getters: {
@@ -98,6 +102,10 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
 
         return response.data
       } catch (error) {
+        if (error.response?.status === 422) {
+          const errors = error.response.data.errors
+          throw new Error(Object.values(errors)[0][0])
+        }
         this.error = error.response?.data?.message || error.message
         throw error
       } finally {
@@ -232,6 +240,10 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
         await api.delete(`/api/barangay/expense-classes/${classId}`, getAuthConfig())
         this.expenseClasses = this.expenseClasses.filter((c) => c.id !== classId)
       } catch (error) {
+        if (error.response?.status === 422) {
+          const errors = error.response.data.errors
+          throw new Error(Object.values(errors)[0][0])
+        }
         this.error = error.response?.data?.message || error.message
         throw error
       } finally {
@@ -263,82 +275,79 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
         throw error
       } finally {
         this.loading = false
-      }  
+      }
     },
 
     //Expense Types
 
     async fetchExpenseTypes(expenseClassId) {
-  const key = `${expenseClassId}-${this.selectedYear}`
-  if (this.fetchedTypes.has(key)) return
+      const key = `${expenseClassId}-${this.selectedYear}`
+      if (this.fetchedTypes.has(key)) return
 
-  this.loading = true
-  try {
-    const response = await api.get(
-      `/api/barangay/expense-classes/${expenseClassId}/types`,
-      getAuthConfig(),
-    )
+      this.loading = true
+      try {
+        const response = await api.get(
+          `/api/barangay/expense-classes/${expenseClassId}/types`,
+          getAuthConfig(),
+        )
 
-    // Response shape: { status, message, data: { success, data: { data: [...] } } }
-    const typesData = response.data?.data?.data?.data
+        // Response shape: { status, message, data: { success, data: { data: [...] } } }
+        const typesData = response.data?.data?.data?.data
 
-    if (!Array.isArray(typesData)) {
-      console.error('Unexpected response shape:', JSON.stringify(response.data))
-      throw new Error(`Expected array of expense types, got: ${typeof typesData}`)
-    }
+        if (!Array.isArray(typesData)) {
+          console.error('Unexpected response shape:', JSON.stringify(response.data))
+          throw new Error(`Expected array of expense types, got: ${typeof typesData}`)
+        }
 
-    // accountsLibstore.js — fetchExpenseTypes()
-// async fetchExpenseTypes(expenseClassId) {
-//   const key = `${expenseClassId}-${this.selectedYear}`
-//   if (this.fetchedTypes.has(key)) return
+        // accountsLibstore.js — fetchExpenseTypes()
+        // async fetchExpenseTypes(expenseClassId) {
+        //   const key = `${expenseClassId}-${this.selectedYear}`
+        //   if (this.fetchedTypes.has(key)) return
 
-//   this.loading = true
-//   try {
-//     const response = await api.get(
-//       `/api/barangay/expense-classes/${expenseClassId}/types`,
-//       getAuthConfig(),
-//     )
+        //   this.loading = true
+        //   try {
+        //     const response = await api.get(
+        //       `/api/barangay/expense-classes/${expenseClassId}/types`,
+        //       getAuthConfig(),
+        //     )
 
-//     // ✅ Guard against non-2xx wrapped in axios (shouldn't happen, but safety net)
-//     if (!response.data?.success && response.data?.success !== undefined) {
-//       throw new Error(response.data?.message || 'Server returned an error')
-//     }
+        //     // ✅ Guard against non-2xx wrapped in axios (shouldn't happen, but safety net)
+        //     if (!response.data?.success && response.data?.success !== undefined) {
+        //       throw new Error(response.data?.message || 'Server returned an error')
+        //     }
 
-//     const apiData = response.data?.data
-//     const typesData = apiData?.data ?? apiData  // handles both {data:{data:[]}} and {data:[]}
+        //     const apiData = response.data?.data
+        //     const typesData = apiData?.data ?? apiData  // handles both {data:{data:[]}} and {data:[]}
 
-//     if (!Array.isArray(typesData)) {
-//       // ✅ Log the actual shape so you can debug quickly
-//       console.error('Unexpected response shape:', JSON.stringify(response.data))
-//       throw new Error(`Expected array of expense types, got: ${typeof typesData}`)
-//     }
+        //     if (!Array.isArray(typesData)) {
+        //       // ✅ Log the actual shape so you can debug quickly
+        //       console.error('Unexpected response shape:', JSON.stringify(response.data))
+        //       throw new Error(`Expected array of expense types, got: ${typeof typesData}`)
+        //     }
 
-    this.expenseTypes = this.expenseTypes.filter(
-      (et) => et.expense_class_id != expenseClassId,
-    )
+        this.expenseTypes = this.expenseTypes.filter((et) => et.expense_class_id != expenseClassId)
 
-    const fiscalYear = this.years.find((y) => y.id == this.selectedYear)
-    const yearValue = fiscalYear?.year?.toString() || null
+        const fiscalYear = this.years.find((y) => y.id == this.selectedYear)
+        const yearValue = fiscalYear?.year?.toString() || null
 
-    this.expenseTypes.push(
-      ...typesData.map((t) => ({
-        id: t.id,
-        name: t.name,
-        expense_class_id: t.expense_class_id || expenseClassId,
-        order: t.order || 0,
-        year: yearValue,
-      })),
-    )
+        this.expenseTypes.push(
+          ...typesData.map((t) => ({
+            id: t.id,
+            name: t.name,
+            expense_class_id: t.expense_class_id || expenseClassId,
+            order: t.order || 0,
+            year: yearValue,
+          })),
+        )
 
-    this.fetchedTypes.add(key)
-  } catch (error) {
-    // ✅ Don't add to fetchedTypes on error, so retry is possible
-    console.error('Error fetching expense types:', error.response?.data || error.message)
-    throw error
-  } finally {
-    this.loading = false
-  }
-},
+        this.fetchedTypes.add(key)
+      } catch (error) {
+        console.error('Error fetching expense types:', error.response?.data || error.message)
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
 
     async createExpenseType(typeData) {
       this.loading = true
@@ -377,7 +386,6 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
       }
     },
 
-    // In your accountsLibstore.js
     async updateExpenseType(typeData) {
       this.loading = true
       try {
@@ -425,7 +433,6 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
       }
     },
 
-    // Add this action to your store
     async updateTypesOrder(classId, types) {
       this.loading = true
       try {
@@ -465,7 +472,6 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
       if (this.fetchedItems.has(key)) return
       this.loading = true
       try {
-        // Check if we should skip fetch (items exist and not forcing refresh)
         const existingItems = this.expenseItems.filter(
           (item) =>
             item.expense_class_id == expenseClassId && item.expense_type_id == expenseTypeId,
@@ -689,9 +695,11 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
         // Filter out existing sub-items for this item
         this.expenseSubItems = this.expenseSubItems.filter(
           (subItem) =>
-            !(subItem.expense_class_id == expenseClassId &&
+            !(
+              subItem.expense_class_id == expenseClassId &&
               subItem.expense_type_id == expenseTypeId &&
-              subItem.expense_item_id == expenseItemId),
+              subItem.expense_item_id == expenseItemId
+            ),
         )
 
         // Add new sub-items
@@ -826,6 +834,280 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
         await this.updateExpenseSubItem(subItemData)
       } catch (error) {
         console.error('Error updating sub-item order:', error)
+        throw error
+      }
+    },
+
+    async fetchExpenseSubTypes(classId, typeId, itemId, subItemId, forceRefresh = false) {
+      const year = this.years.find((y) => y.id == this.selectedYear)?.year
+      const key = `${classId}-${typeId}-${itemId}-${subItemId}-${year}`
+
+      if (this.fetchedSubTypes.has(key) && !forceRefresh) return
+
+      this.loading = true
+      try {
+        const response = await api.get(
+          `/api/barangay/accounts/expense-class/${classId}/type/${typeId}/item/${itemId}/sub-item/${subItemId}/sub-types`,
+          getAuthConfig(),
+        )
+        const apiData = response.data?.data
+        const subTypesData = apiData?.data || apiData
+
+        if (!Array.isArray(subTypesData)) {
+          throw new Error('API did not return an array of expense sub-types')
+        }
+
+        this.expenseSubTypes = this.expenseSubTypes.filter(
+          (subType) => subType.expense_sub_item_id != subItemId,
+        )
+        this.expenseSubTypes.push(
+          ...subTypesData.map((subType) => ({
+            id: subType.id,
+            name: subType.name,
+            expense_class_id: subType.expense_class_id || classId,
+            expense_type_id: subType.expense_type_id || typeId,
+            expense_item_id: subType.expense_item_id || itemId,
+            expense_sub_item_id: subType.expense_sub_item_id || subItemId,
+            order: subType.order || 0,
+            year: year?.toString() || null,
+          })),
+        )
+        this.fetchedSubTypes.add(key)
+        return subTypesData
+      } catch (error) {
+        this.error =
+          error.response?.data?.message || error.message || 'Failed to load expense sub-types'
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async createExpenseSubType(subTypeData) {
+      this.loading = true
+      try {
+        const authStore = useAuthStore()
+        const response = await api.post(
+          `/api/barangay/accounts/expense-class/${subTypeData.expenseClassId}/type/${subTypeData.expenseTypeId}/item/${subTypeData.expenseItemId}/sub-item/${subTypeData.expenseSubItemId}/sub-types`,
+          { name: subTypeData.name, barangay_id: authStore.user.barangay_id },
+          getAuthConfig(),
+        )
+        const newSubType = response.data?.data || response.data
+
+        if (!newSubType) throw new Error('No data returned from API')
+
+        this.expenseSubTypes.push({
+          id: newSubType.id,
+          name: newSubType.name,
+          expense_class_id: newSubType.expense_class_id || subTypeData.expenseClassId,
+          expense_type_id: newSubType.expense_type_id || subTypeData.expenseTypeId,
+          expense_item_id: newSubType.expense_item_id || subTypeData.expenseItemId,
+          expense_sub_item_id: newSubType.expense_sub_item_id || subTypeData.expenseSubItemId,
+          order: newSubType.order || this.expenseSubTypes.length,
+          year: this.years.find((y) => y.id == this.selectedYear)?.year?.toString() || null,
+        })
+
+        return newSubType
+      } catch (error) {
+        if (error.response?.status === 422) {
+          const errors = error.response.data.errors
+          throw new Error(Object.values(errors)[0][0])
+        }
+        throw new Error(error.response?.data?.message || 'Failed to create expense sub-type')
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async updateExpenseSubType(subTypeData) {
+      this.loading = true
+      try {
+        const response = await api.put(
+          `/api/barangay/accounts/expense-class/${subTypeData.expenseClassId}/type/${subTypeData.expenseTypeId}/item/${subTypeData.expenseItemId}/sub-item/${subTypeData.expenseSubItemId}/sub-types/${subTypeData.id}`,
+          {
+            name: subTypeData.name,
+            order: subTypeData.order || 0,
+          },
+          getAuthConfig(),
+        )
+
+        const updatedSubType = response.data?.data || response.data
+        const index = this.expenseSubTypes.findIndex((subType) => subType.id === subTypeData.id)
+        if (index !== -1) {
+          this.expenseSubTypes[index] = {
+            ...this.expenseSubTypes[index],
+            ...updatedSubType,
+          }
+        }
+
+        return updatedSubType
+      } catch (error) {
+        if (error.response?.status === 422) {
+          const errors = error.response.data.errors
+          throw new Error(Object.values(errors)[0][0])
+        }
+        this.error = error.response?.data?.message || error.message
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async deleteExpenseSubType(subTypeData) {
+      this.loading = true
+      try {
+        await api.delete(
+          `/api/barangay/accounts/expense-class/${subTypeData.expenseClassId}/type/${subTypeData.expenseTypeId}/item/${subTypeData.expenseItemId}/sub-item/${subTypeData.expenseSubItemId}/sub-types/${subTypeData.id}`,
+          getAuthConfig(),
+        )
+
+        this.expenseSubTypes = this.expenseSubTypes.filter(
+          (subType) => subType.id !== subTypeData.id,
+        )
+      } catch (error) {
+        this.error = error.response?.data?.message || error.message
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async fetchExpenseSubSubTypes(
+      expenseClassId,
+      expenseTypeId,
+      expenseItemId,
+      expenseSubItemId,
+      expenseSubTypeId,
+      forceRefresh = false,
+    ) {
+      const year = this.years.find((y) => y.id == this.selectedYear)?.year
+      const key = `${expenseClassId}-${expenseTypeId}-${expenseItemId}-${expenseSubItemId}-${expenseSubTypeId}-${year}`
+
+      if (this.fetchedSubSubTypes.has(key) && !forceRefresh) return
+
+      this.loading = true
+      try {
+        const response = await api.get(
+          `/api/barangay/accounts/${expenseClassId}/types/${expenseTypeId}/items/${expenseItemId}/sub-items/${expenseSubItemId}/sub-types/${expenseSubTypeId}/sub-sub-types`,
+          getAuthConfig(),
+        )
+        const apiData = response.data?.data
+        const subSubTypesData = apiData?.data || apiData
+
+        if (!Array.isArray(subSubTypesData)) {
+          throw new Error('API did not return an array of expense sub-sub-types')
+        }
+
+        this.expenseSubSubTypes = this.expenseSubSubTypes.filter(
+          (s) => s.expense_sub_type_id != expenseSubTypeId,
+        )
+        this.expenseSubSubTypes.push(
+          ...subSubTypesData.map((s) => ({
+            id: s.id,
+            name: s.name,
+            expense_class_id: s.expense_class_id || expenseClassId,
+            expense_type_id: s.expense_type_id || expenseTypeId,
+            expense_item_id: s.expense_item_id || expenseItemId,
+            expense_sub_item_id: s.expense_sub_item_id || expenseSubItemId,
+            expense_sub_type_id: s.expense_sub_type_id || expenseSubTypeId,
+            order: s.order || 0,
+            year: year?.toString() || null,
+          })),
+        )
+        this.fetchedSubSubTypes.add(key)
+        return subSubTypesData
+      } catch (error) {
+        this.error =
+          error.response?.data?.message || error.message || 'Failed to load expense sub-sub-types'
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async createExpenseSubSubType(data) {
+      this.loading = true
+      try {
+        const authStore = useAuthStore()
+        const response = await api.post(
+          `/api/barangay/accounts/${data.expenseClassId}/types/${data.expenseTypeId}/items/${data.expenseItemId}/sub-items/${data.expenseSubItemId}/sub-types/${data.expenseSubTypeId}/sub-sub-types`,
+          { name: data.name, barangay_id: authStore.user.barangay_id },
+          getAuthConfig(),
+        )
+        const newSubSubType = response.data?.data || response.data
+        if (!newSubSubType) throw new Error('No data returned from API')
+
+        this.expenseSubSubTypes.push({
+          id: newSubSubType.id,
+          name: newSubSubType.name,
+          expense_class_id: newSubSubType.expense_class_id || data.expenseClassId,
+          expense_type_id: newSubSubType.expense_type_id || data.expenseTypeId,
+          expense_item_id: newSubSubType.expense_item_id || data.expenseItemId,
+          expense_sub_item_id: newSubSubType.expense_sub_item_id || data.expenseSubItemId,
+          expense_sub_type_id: newSubSubType.expense_sub_type_id || data.expenseSubTypeId,
+          order: newSubSubType.order || this.expenseSubSubTypes.length,
+          year: this.years.find((y) => y.id == this.selectedYear)?.year?.toString() || null,
+        })
+
+        return newSubSubType
+      } catch (error) {
+        if (error.response?.status === 422) {
+          const errors = error.response.data.errors
+          throw new Error(Object.values(errors)[0][0])
+        }
+        throw new Error(error.response?.data?.message || 'Failed to create expense sub-sub-type')
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async updateExpenseSubSubType(data) {
+      this.loading = true
+      try {
+        const response = await api.put(
+          `/api/barangay/accounts/${data.expenseClassId}/types/${data.expenseTypeId}/items/${data.expenseItemId}/sub-items/${data.expenseSubItemId}/sub-types/${data.expenseSubTypeId}/sub-sub-types/${data.id}`,
+          { name: data.name, order: data.order || 0 },
+          getAuthConfig(),
+        )
+        const updated = response.data?.data || response.data
+        const index = this.expenseSubSubTypes.findIndex((s) => s.id === data.id)
+        if (index !== -1) {
+          this.expenseSubSubTypes[index] = { ...this.expenseSubSubTypes[index], ...updated }
+        }
+        return updated
+      } catch (error) {
+        if (error.response?.status === 422) {
+          const errors = error.response.data.errors
+          throw new Error(Object.values(errors)[0][0])
+        }
+        this.error = error.response?.data?.message || error.message
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async deleteExpenseSubSubType(data) {
+      this.loading = true
+      try {
+        await api.delete(
+          `/api/barangay/accounts/${data.expenseClassId}/types/${data.expenseTypeId}/items/${data.expenseItemId}/sub-items/${data.expenseSubItemId}/sub-types/${data.expenseSubTypeId}/sub-sub-types/${data.id}`,
+          getAuthConfig(),
+        )
+        this.expenseSubSubTypes = this.expenseSubSubTypes.filter((s) => s.id !== data.id)
+      } catch (error) {
+        this.error = error.response?.data?.message || error.message
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async updateSubSubTypeOrder(data) {
+      try {
+        await this.updateExpenseSubSubType(data)
+      } catch (error) {
+        console.error('Error updating sub-sub-type order:', error)
         throw error
       }
     },
