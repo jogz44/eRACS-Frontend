@@ -476,7 +476,9 @@
                         Bal: ₱{{
                           (
                             store.expenseAccounts.find(
-                              (a) => String(a.id) === String(row.accountId),
+                              (a) =>
+                                String(a.id) === String(row.accountId) ||
+                                String(a.tran_appropriation_id) === String(row.accountId),
                             )?.balance ?? 0
                           ).toLocaleString('en-US', { minimumFractionDigits: 2 })
                         }}
@@ -1339,7 +1341,7 @@
 
           <q-card-section>
             <div class="row q-col-gutter-sm q-mb-sm">
-              <!-- Tax Type — now from API -->
+              <!-- Tax Type -->
               <div class="col-4">
                 <div class="text-caption q-mb-xs">Tax Type:</div>
                 <q-select
@@ -1357,7 +1359,7 @@
                 />
               </div>
 
-              <!-- Deduction Type — now from API -->
+              <!-- Deduction Type -->
               <div class="col-4">
                 <div class="text-caption q-mb-xs">
                   Deduction Type: <strong class="text-red">*</strong>
@@ -1377,7 +1379,7 @@
                 />
               </div>
 
-              <!-- Code — filtered from API library -->
+              <!-- Code -->
               <div class="col-4">
                 <div class="text-caption q-mb-xs">Code:</div>
                 <q-select
@@ -1504,15 +1506,6 @@
 
       <!-- Main Data Table -->
       <q-card flat bordered>
-        <!-- <q-table
-  :rows="filteredDisbursements"
-  :columns="mainTableColumns"
-  row-key="row_id"
-  v-model:pagination="store.pagination"
-  :loading="store.loadingDisbursements"
-  flat
-  @row-dblclick="(evt, row) => handleViewDisbursement(row)"
-> -->
         <q-table
           :rows="filteredDisbursements"
           :columns="mainTableColumns"
@@ -2187,11 +2180,14 @@ const typeCounts = computed(() => {
 
 // BIR summary figures
 const birTotalWithheld = computed(() => {
-  const all = store.disbursements || []
-  return all
-    .filter((d) => !d.type || d.type === 'regular')
+  const seen = new Set()
+  return (store.disbursements || [])
+    .filter((d) => (!d.type || d.type === 'regular') && d.status !== 'Voided')
     .reduce((sum, d) => {
-      const deductions = d.deductions || d.expenseRows?.flatMap((r) => r.deductions || []) || []
+      const key = String(d.disbursement_id ?? d.id)
+      if (seen.has(key)) return sum // count each DV once
+      seen.add(key)
+      const deductions = d.deductions || []
       return sum + deductions.reduce((s, ded) => s + (Number(ded.amount) || 0), 0)
     }, 0)
 })
@@ -2963,10 +2959,8 @@ const collapseRegularRowsByDv = (rows) => {
         ? `${uniqueParticulars.length} particulars`
         : uniqueParticulars[0] || ''
     group.dvAmount = Number(group.expenseRows.find((r) => Number(r.dvAmount))?.dvAmount) || 0
-    const netRow = group.expenseRows.find(
-      (r) => r.netAmount !== null && r.netAmount !== undefined && r.netAmount !== '',
-    )
-    group.netAmount = netRow ? Number(netRow.netAmount) || 0 : group.dvAmount
+    const netRow = group.expenseRows.find((r) => Number(r.netAmount) > 0)
+    group.netAmount = netRow ? Number(netRow.netAmount) : group.dvAmount
   })
 
   return [...grouped.values()]
@@ -3874,7 +3868,9 @@ const fetchNewDvNumber = async (date = null) => {
     const apiDv = await store.generateBackendDvNumber(date)
     const alreadyExists = !!(apiDv && (store.disbursements || []).some((d) => d.dvNumber === apiDv))
 
-    return alreadyExists ? store.generateLocalDvNumber(date) : apiDv || store.generateLocalDvNumber(date)
+    return alreadyExists
+      ? store.generateLocalDvNumber(date)
+      : apiDv || store.generateLocalDvNumber(date)
   } catch (e) {
     console.error('DV fetch failed, using local fallback:', e)
     return store.generateLocalDvNumber(date)

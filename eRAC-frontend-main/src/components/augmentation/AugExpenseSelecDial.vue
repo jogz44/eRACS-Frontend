@@ -102,6 +102,38 @@
                 <span v-else class="empty-text">-</span>
               </q-td>
             </template>
+            <template v-slot:body-cell-expense_sub_type="props">
+              <q-td :props="props">
+                <div v-if="props.row.expense_sub_type_name" class="subitem-container">
+                  <q-chip 
+                    size="sm" 
+                    color="cyan" 
+                    text-color="white" 
+                    icon="list"
+                    class="subitem-chip"
+                  >
+                    {{ props.row.expense_sub_type_name }}
+                  </q-chip>
+                </div>
+                <span v-else class="empty-text">-</span>
+              </q-td>
+            </template>
+            <template v-slot:body-cell-expense_sub_sub_type="props">
+              <q-td :props="props">
+                <div v-if="props.row.expense_sub_sub_type_name" class="subitem-container">
+                  <q-chip 
+                    size="sm" 
+                    color="light-blue" 
+                    text-color="white" 
+                    icon="subdirectory_arrow_right"
+                    class="subitem-chip"
+                  >
+                    {{ props.row.expense_sub_sub_type_name }}
+                  </q-chip>
+                </div>
+                <span v-else class="empty-text">-</span>
+              </q-td>
+            </template>
             <template v-slot:body-cell-action="props">
               <q-td :props="props">
                 <q-btn
@@ -152,14 +184,16 @@ const getExpenseClassColor = (expenseClass) => {
 
 const cardWidthStyle = computed(() => {
   // Calculate appropriate width based on content
-  // New layout: expense class, expense type, expense item, expense sub-item, balance, action
-  const expenseClassColumnWidth = 150 // Expense class column
-  const expenseTypeColumnWidth = 150 // Expense type column
-  const expenseItemColumnWidth = 150 // Expense item column
-  const expenseSubItemColumnWidth = 150 // Expense sub-item column
+  // New layout: expense class, expense type, expense item, expense sub-item, expense sub-type, expense sub-subtype, balance, action
+  const expenseClassColumnWidth = 130 // Expense class column
+  const expenseTypeColumnWidth = 130 // Expense type column
+  const expenseItemColumnWidth = 130 // Expense item column
+  const expenseSubItemColumnWidth = 130 // Expense sub-item column
+  const expenseSubTypeColumnWidth = 130 // Expense sub-type column
+  const expenseSubSubTypeColumnWidth = 130 // Expense sub-subtype column
   const balanceColumnWidth = 120  // Balance column
   const actionColumnWidth = 100   // Action button
-  const totalWidth = expenseClassColumnWidth + expenseTypeColumnWidth + expenseItemColumnWidth + expenseSubItemColumnWidth + balanceColumnWidth + actionColumnWidth + 200 // Add more padding
+  const totalWidth = expenseClassColumnWidth + expenseTypeColumnWidth + expenseItemColumnWidth + expenseSubItemColumnWidth + expenseSubTypeColumnWidth + expenseSubSubTypeColumnWidth + balanceColumnWidth + actionColumnWidth + 200 // Add more padding
 
   // Responsive width calculation
   if (window.innerWidth < 768) {
@@ -168,11 +202,11 @@ const cardWidthStyle = computed(() => {
   } else if (window.innerWidth < 1200) {
     // Small desktop: use calculated width or 90vw, whichever is smaller
     const width = Math.min(totalWidth, window.innerWidth * 0.9)
-    return `min-width: 1000px; max-width: 90vw; width: ${width}px;`
+    return `min-width: 1100px; max-width: 90vw; width: ${width}px;`
   } else {
     // Large desktop: use calculated width or 80vw, whichever is smaller
     const width = Math.min(totalWidth, window.innerWidth * 0.8)
-    return `min-width: 1000px; max-width: 80vw; width: ${width}px;`
+    return `min-width: 1100px; max-width: 80vw; width: ${width}px;`
   }
 })
 </script>

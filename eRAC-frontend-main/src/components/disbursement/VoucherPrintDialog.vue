@@ -354,6 +354,7 @@ import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'stores/auth'
 import { usePayeeStore } from 'stores/payeeStore'
+import { useExpenseAccountDisplay } from 'src/composables/useExpenseAccountDisplay'
 
 const model = defineModel({ type: Boolean, default: false })
 const props = defineProps({
@@ -366,6 +367,7 @@ const props = defineProps({
 const $q = useQuasar()
 const authStore = useAuthStore()
 const payeeStore = usePayeeStore()
+const { expenseAccountLabel } = useExpenseAccountDisplay()
 const voucherRef = ref(null)
 const exporting = ref(false)
 const voucherDrawerOpen = ref(true)
@@ -504,8 +506,14 @@ const voucherData = computed(() => {
     totalDeduction,
     grossAmount,
     netAmount,
-    account: firstPresent(firstExpense.accountName, firstExpense.account, row.account, '—'),
-   
+    account: firstPresent(
+      firstExpense.accountName,
+      expenseAccountLabel(firstExpense) === '—' ? '' : expenseAccountLabel(firstExpense),
+      firstExpense.account,
+      row.account,
+      '—',
+    ),
+
     chequeDate: chequeEntries[0]?.chequeDate || '',
     chequeNumber: chequeEntries[0]?.chequeNumber || '',
     bankName: chequeEntries[0]?.bankName || '',
@@ -740,6 +748,8 @@ watch(model, async (open) => {
 .account-block {
   margin-top: 18px;
   font-size: 12px;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .amount {

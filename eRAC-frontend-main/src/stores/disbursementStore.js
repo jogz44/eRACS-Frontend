@@ -43,6 +43,66 @@ const getExpenseChequeDate = (expense, disbursement = {}) =>
   disbursement?.cheque_date ||
   ''
 
+// Builds a stable key from the hierarchy ids present on an expense/account row.
+// Missing levels use a placeholder, mirroring how the backend stores nulls.
+const buildAppropriationKey = (expense) => {
+  if (!expense) return ''
+  const levelKeys = [
+    'expense_class_id',
+    'expense_type_id',
+    'expense_item_id',
+    'expense_sub_item_id',
+    'expense_sub_type_id',
+    'expense_sub_sub_type_id',
+  ]
+  const placeholders = ['class', 'type', 'item', 'subitem', 'subtype', 'subsubtype']
+  return levelKeys
+    .map((key, index) => {
+      const value = expense[key]
+      return value != null && value !== '' ? value : placeholders[index]
+    })
+    .join(':')
+}
+
+// Resolves a numeric account id for any expense/account-shaped object, by
+// preference:
+//   1. an explicit appropriation id already on the row (existing expenses)
+//   2. the tree-provided tran_appropriation_id (sub-type/sub-sub-type leaves)
+//   3. the tran_appropriations.id matching the hierarchy path, from the
+//      /api/barangay/appropriations lookup map (the other leaf levels)
+//   4. the deepest library-level id (legacy fallback)
+// The backend validates accountId against the requested expense hierarchy fields,
+// so a real tran_appropriations.id is required for barangay create/update flows.
+const resolveExpenseAccountId = (expense, appropriationIdMap = null) => {
+  if (!expense) return null
+  const direct =
+    expense.accountId ??
+    expense.tran_appropriation_id ??
+    expense.appropriation_id ??
+    expense.appropriation?.id ??
+    expense.account?.id
+  if (direct != null && direct !== '' && Number.isFinite(Number(direct))) {
+    return Number(direct)
+  }
+  if (appropriationIdMap && typeof appropriationIdMap === 'object') {
+    const id = appropriationIdMap[buildAppropriationKey(expense)]
+    if (id != null && Number.isFinite(Number(id))) {
+      return Number(id)
+    }
+  }
+  const libraryId =
+    expense.expense_sub_sub_type_id ??
+    expense.expense_sub_type_id ??
+    expense.expense_sub_item_id ??
+    expense.expense_item_id ??
+    expense.expense_type_id ??
+    expense.expense_class_id
+  if (libraryId != null && libraryId !== '' && Number.isFinite(Number(libraryId))) {
+    return Number(libraryId)
+  }
+  return null
+}
+
 const parseDmyDate = (date = null) => {
   const today = new Date()
   const value =
@@ -84,6 +144,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     currentItem: null,
     selectedBarangayId: null, // Added for admin barangay filtering
     selectedBudgetSource: 'all', // For budget source filtering (annual/supplemental)
+    appropriationBalanceOverrides: {},
 
     // Track expense details from tran_expense_details table for balance calculations
     expenseDetailsData: [], // Array to store all expense details from the database
@@ -105,6 +166,8 @@ export const useDisbursementStore = defineStore('disbursement', {
     // Current selections
     currentLiquidation: null,
     lockedTotalAmount: null, // Store the original DV amount for edit mode
+    existingExpenseIds: [], // DB ids of expenses loaded with the disbursement in edit mode
+    appropriationIdMap: {}, // hierarchy path -> tran_appropriations.id for new expense accountId
 
     // Search/filters
     searchQuery: '',
@@ -210,129 +273,94 @@ export const useDisbursementStore = defineStore('disbursement', {
         return []
       }
 
-      const flattened = state.expenseData.reduce((acc, expenseClass) => {
-        if (!expenseClass.children) {
-          return acc
+      // Order matters: this is the id field assigned at each depth below "class"
+      const LEVEL_ID_FIELDS = [
+        'expense_type_id',
+        'expense_item_id',
+        'expense_sub_item_id',
+        'expense_sub_type_id',
+        'expense_sub_sub_type_id',
+      ]
+      const LEVEL_NAMES = ['type', 'item', 'subitem', 'subtype', 'subsubtype']
+
+      const results = []
+
+      const walk = (node, depth, namePath, ids, budgetSource, expenseClass) => {
+        const children = node.children
+        const hasChildrenWithBalance =
+          Array.isArray(children) && children.some((c) => c.amount && c.amount > 0)
+
+        if (hasChildrenWithBalance && depth < LEVEL_ID_FIELDS.length) {
+          children.forEach((child) => {
+            if (!(child.amount && child.amount > 0)) return
+            const nextIds = { ...ids, [LEVEL_ID_FIELDS[depth]]: child.id }
+            walk(
+              child,
+              depth + 1,
+              [...namePath, child.name],
+              nextIds,
+              child.budget_source || budgetSource,
+              expenseClass,
+            )
+          })
+          return
         }
 
-        expenseClass.children.forEach((expenseType) => {
-          // Check if this expense type has any expense items with balance > 0
-          const hasExpenseItemsWithBalance =
-            expenseType.children &&
-            expenseType.children.some((item) => item.amount && item.amount > 0)
+        // Leaf node = the actual selectable account
+        if (!(node.amount && node.amount > 0)) return
 
-          if (hasExpenseItemsWithBalance) {
-            // If expense type has items with balance, show items and their subitems
-            expenseType.children.forEach((expenseItem) => {
-              if (expenseItem.amount && expenseItem.amount > 0) {
-                // Check if this item has subitems with allocations
-                const hasSubitemsWithBalance =
-                  expenseItem.children &&
-                  expenseItem.children.some((subItem) => subItem.amount && subItem.amount > 0)
+        let remainingBalance = this.calculateRemainingBalance(
+          node.id,
+          node.amount,
+          LEVEL_NAMES[depth - 1] || 'type',
+          node.tran_appropriation_id,
+        )
+        if (remainingBalance <= 0) return
 
-                if (hasSubitemsWithBalance) {
-                  // Show subitems that have allocations
-                  expenseItem.children.forEach((expenseSubItem) => {
-                    if (expenseSubItem.amount && expenseSubItem.amount > 0) {
-                      // Calculate remaining balance by deducting disbursements
-                      const remainingBalance = this.calculateRemainingBalance(
-                        expenseSubItem.id,
-                        expenseSubItem.amount,
-                        'subitem',
-                      )
+        const cap = this.appropriationBalanceOverrides[node.tran_appropriation_id]
+        if (cap != null) remainingBalance = Math.min(remainingBalance, cap)
+        if (remainingBalance <= 0) return
 
-                      if (remainingBalance > 0) {
-                        const expenseSubItemEntry = {
-                          id: expenseSubItem.id,
-                          account: expenseClass.name,
-                          expenseType: expenseType.name,
-                          expenseItem: expenseItem.name,
-                          expenseSubItem: expenseSubItem.name,
-                          balance: remainingBalance,
-                          originalBalance: expenseSubItem.amount,
-                          expense_class_id: expenseClass.id,
-                          expense_type_id: expenseType.id,
-                          expense_item_id: expenseItem.id,
-                          expense_sub_item_id: expenseSubItem.id,
-                          budget_source:
-                            expenseSubItem.budget_source ||
-                            expenseItem.budget_source ||
-                            expenseType.budget_source ||
-                            expenseClass.budget_source ||
-                            'Annual Budget',
-                        }
-                        acc.push(expenseSubItemEntry)
-                      }
-                    }
-                  })
-                } else {
-                  // Show the item itself if it has no subitems with allocations
-                  const remainingBalance = this.calculateRemainingBalance(
-                    expenseItem.id,
-                    expenseItem.amount,
-                    'item',
-                  )
+        results.push({
+          // Accounts Library ID
+          id: node.id,
 
-                  if (remainingBalance > 0) {
-                    const expenseItemEntry = {
-                      id: expenseItem.id,
-                      account: expenseClass.name,
-                      expenseType: expenseType.name,
-                      expenseItem: expenseItem.name,
-                      expenseSubItem: null,
-                      balance: remainingBalance,
-                      originalBalance: expenseItem.amount,
-                      expense_class_id: expenseClass.id,
-                      expense_type_id: expenseType.id,
-                      expense_item_id: expenseItem.id,
-                      expense_sub_item_id: null,
-                      budget_source:
-                        expenseItem.budget_source ||
-                        expenseType.budget_source ||
-                        expenseClass.budget_source ||
-                        'Annual Budget',
-                    }
-                    acc.push(expenseItemEntry)
-                  }
-                }
-              }
-            })
-          } else {
-            // If expense type has no items with balance, show the type itself (if it has balance)
-            if (expenseType.amount && expenseType.amount > 0) {
-              // Calculate remaining balance by deducting disbursements
-              const remainingBalance = this.calculateRemainingBalance(
-                expenseType.id,
-                expenseType.amount,
-                'type',
-              )
+          // Actual tran_appropriations.id
+          tran_appropriation_id: node.tran_appropriation_id,
 
-              if (remainingBalance > 0) {
-                const expenseTypeEntry = {
-                  id: expenseType.id,
-                  account: expenseClass.name,
-                  expenseType: expenseType.name,
-                  expenseItem: null,
-                  expenseSubItem: null,
-                  balance: remainingBalance,
-                  originalBalance: expenseType.amount,
-                  expense_class_id: expenseClass.id,
-                  expense_type_id: expenseType.id,
-                  expense_item_id: null,
-                  expense_sub_item_id: null,
-                  budget_source:
-                    expenseType.budget_source || expenseClass.budget_source || 'Annual Budget',
-                }
-                acc.push(expenseTypeEntry)
-              }
-            }
-          }
+          account: expenseClass.name,
+          expenseType: namePath[0] || null,
+          expenseItem: namePath[1] || null,
+          expenseSubItem: namePath[2] || null,
+          expenseSubType: namePath[3] || null,
+          expenseSubSubType: namePath[4] || null,
+
+          fullPath: [expenseClass.name, ...namePath].filter(Boolean).join(' > '),
+
+          balance: remainingBalance,
+          originalBalance: node.amount,
+
+          expense_class_id: expenseClass.id,
+
+          ...ids,
+
+          budget_source: budgetSource || 'Annual Budget',
         })
+      }
 
-        return acc
-      }, [])
+      state.expenseData.forEach((expenseClass) => {
+        if (!expenseClass.children) return
+        walk(
+          expenseClass,
+          0,
+          [],
+          { expense_class_id: expenseClass.id },
+          expenseClass.budget_source,
+          expenseClass,
+        )
+      })
 
-      return flattened
+      return results
     },
 
     disbursementColumns: () => [
@@ -447,35 +475,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     ],
 
     expenseAccountColumns: () => [
-      {
-        name: 'account',
-        label: 'Expense Class',
-        field: 'account',
-        align: 'left',
-        sortable: true,
-      },
-      {
-        name: 'expenseType',
-        label: 'Expense Type',
-        field: 'expenseType',
-        align: 'left',
-        sortable: true,
-      },
-      {
-        name: 'expenseItem',
-        label: 'Expense Item',
-        field: 'expenseItem',
-        align: 'left',
-        sortable: true,
-      },
-      {
-        name: 'expenseSubItem',
-        label: 'Sub Item',
-        field: 'expenseSubItem',
-        align: 'left',
-        sortable: true,
-        format: (val) => val || '-',
-      },
+      { name: 'account', label: 'Account', field: 'fullPath', align: 'left', sortable: true },
       {
         name: 'budget_source',
         label: 'Budget Source',
@@ -487,20 +487,12 @@ export const useDisbursementStore = defineStore('disbursement', {
         name: 'balance',
         label: 'Balance',
         field: 'balance',
-        format: (val) => {
-          const num = Number(val) || 0
-          return `₱${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-        },
         align: 'right',
         sortable: true,
+        format: (val) =>
+          `₱${(Number(val) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
       },
-
-      {
-        name: 'action',
-        label: 'Action',
-        field: '',
-        align: 'center',
-      },
+      { name: 'action', label: 'Action', field: '', align: 'center' },
     ],
 
     filteredDisbursements: (state) => {
@@ -563,39 +555,27 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     filteredExpenseAccounts(state) {
-      // Build a set of accountIds already added to prevent duplicates
-      const addedIds = new Set((state.expenses || []).map((e) => String(e.accountId)))
+      const addedIds = new Set(
+        (state.expenses || []).map((e) =>
+          String(resolveExpenseAccountId(e, state.appropriationIdMap)),
+        ),
+      )
+      let base = this.expenseAccounts.filter(
+        (item) => !addedIds.has(String(resolveExpenseAccountId(item, state.appropriationIdMap))),
+      )
 
-      let base = this.expenseAccounts.filter((item) => !addedIds.has(String(item.id)))
-
-      // Filter by budget source if selected - use description-based filtering like other stores
       if (state.selectedBudgetSource && state.selectedBudgetSource !== 'all') {
         base = base.filter((account) => {
-          // Check if account has budget_source field first, then fall back to description
-          const budgetSource = account.budget_source || account.description || ''
-          const budgetSourceLower = budgetSource.toLowerCase()
-
-          if (state.selectedBudgetSource === 'annual') {
-            return budgetSourceLower.includes('annual')
-          } else if (state.selectedBudgetSource === 'supplemental') {
-            return budgetSourceLower.includes('supplemental')
-          }
+          const src = (account.budget_source || '').toLowerCase()
+          if (state.selectedBudgetSource === 'annual') return src.includes('annual')
+          if (state.selectedBudgetSource === 'supplemental') return src.includes('supplemental')
           return true
         })
       }
 
-      if (!state.expenseSearch.trim()) {
-        return base
-      }
-
-      const query = state.expenseSearch.toLowerCase()
-      return base.filter(
-        (item) =>
-          item.account.toLowerCase().includes(query) ||
-          item.expenseType.toLowerCase().includes(query) ||
-          (item.expenseItem && item.expenseItem.toLowerCase().includes(query)) ||
-          (item.description && item.description.toLowerCase().includes(query)),
-      )
+      if (!state.expenseSearch.trim()) return base
+      const q = state.expenseSearch.toLowerCase()
+      return base.filter((item) => (item.fullPath || '').toLowerCase().includes(q))
     },
 
     aging: () => (dateString) => {
@@ -629,65 +609,42 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
     },
     // Calculate remaining balance by deducting expenses from tran_expense_details table
-    calculateRemainingBalance(expenseId, originalAmount, expenseLevel) {
+    calculateRemainingBalance(expenseId, originalAmount, expenseLevel, tranAppropriationId = null) {
       try {
-        let totalDisbursed = 0
-        let totalReturned = 0
-
-        // Determine current editing disbursement id (if any)
+        const levelFieldMap = {
+          type: 'expense_type_id',
+          item: 'expense_item_id',
+          subitem: 'expense_sub_item_id',
+          subtype: 'expense_sub_type_id',
+          subsubtype: 'expense_sub_sub_type_id',
+        }
+        const field = levelFieldMap[expenseLevel] || 'expense_type_id'
         const currentDisbursementId = this.currentItem?.id ? String(this.currentItem.id) : null
 
-        // Get all expense details from the database for this expense account
-        if (this.expenseDetailsData && this.expenseDetailsData.length > 0) {
-          // Only show first few expense details to avoid clutter
-          const relevantDetails = this.expenseDetailsData.filter((ed) => {
-            const matchesLevel =
-              (expenseLevel === 'subitem' &&
-                String(ed.expense_sub_item_id) === String(expenseId)) ||
-              (expenseLevel === 'item' && String(ed.expense_item_id) === String(expenseId)) ||
-              (expenseLevel === 'type' && String(ed.expense_type_id) === String(expenseId))
-
-            if (!matchesLevel) return false
-
-            // When editing a disbursement, exclude its own existing expense details
-            // This allows us to show the balance that would be available after saving
-            if (currentDisbursementId && String(ed.disbursement_id) === currentDisbursementId) {
-              return false
-            }
-
-            return true
-          })
-
-          relevantDetails.forEach((expenseDetail) => {
-            // Include expense details from other disbursements in the calculation
-            totalDisbursed += parseFloat(expenseDetail.amount) || 0
-          })
+        // Prefer the real appropriation id; only fall back to library-id matching
+        const matchesAccount = (row) => {
+          const rowApprId = row.appropriation_id ?? row.accountId
+          if (tranAppropriationId != null && rowApprId != null && rowApprId !== '') {
+            return String(rowApprId) === String(tranAppropriationId)
+          }
+          return String(row[field]) === String(expenseId)
         }
 
-        // Add current frontend expenses for this account (includes the one being edited)
-        if (this.expenses && this.expenses.length > 0) {
-          const relevantFrontendExpenses = this.expenses.filter((expense) => {
-            if (expenseLevel === 'subitem')
-              return String(expense.expense_sub_item_id) === String(expenseId)
-            if (expenseLevel === 'item')
-              return String(expense.expense_item_id) === String(expenseId)
-            if (expenseLevel === 'type')
-              return String(expense.expense_type_id) === String(expenseId)
-            return false
-          })
+        let totalDisbursed = 0
 
-          relevantFrontendExpenses.forEach((expense) => {
-            totalDisbursed += parseFloat(expense.amount) || 0
-          })
-        }
+        ;(this.expenseDetailsData || []).forEach((ed) => {
+          if (!matchesAccount(ed)) return
+          if (currentDisbursementId && String(ed.disbursement_id) === currentDisbursementId) return
+          totalDisbursed += parseFloat(ed.amount) || 0
+        })
+        ;(this.expenses || []).forEach((e) => {
+          if (matchesAccount(e)) totalDisbursed += parseFloat(e.amount) || 0
+        })
 
-        // Compute remaining balance
-        const remainingBalance = Math.max(0, originalAmount - totalDisbursed + totalReturned)
-
-        return remainingBalance
+        return Math.max(0, originalAmount - totalDisbursed)
       } catch (error) {
         console.error('Error calculating remaining balance:', error)
-        return originalAmount // Return original amount if calculation fails
+        return originalAmount
       }
     },
 
@@ -847,6 +804,9 @@ export const useDisbursementStore = defineStore('disbursement', {
         await appropriationStore.fetchExpenseHierarchy()
         this.expenseData = appropriationStore.allocations || []
 
+        // Build the hierarchy path -> tran_appropriations.id map for accountId resolution
+        await this.fetchAppropriationIdMap()
+
         // Fetch expense details for balance calculations
         await this.fetchExpenseDetails()
 
@@ -887,6 +847,9 @@ export const useDisbursementStore = defineStore('disbursement', {
           this.expenseData = appropriationStore.allocations || []
         }
 
+        // Build the hierarchy path -> tran_appropriations.id map for accountId resolution
+        await this.fetchAppropriationIdMap()
+
         // Fetch expense types from accounts library store (non-blocking)
         this.fetchExpenseTypesFromAccountsLib().catch((error) => {
           console.warn('Failed to fetch expense types:', error)
@@ -896,6 +859,69 @@ export const useDisbursementStore = defineStore('disbursement', {
         this.expenseData = []
       } finally {
         this.expenseTypeLoading = false
+      }
+    },
+
+    // Fetch committed appropriations and build a map of hierarchy path -> real
+    // tran_appropriations.id. Used to resolve a valid accountId for newly added
+    // expenses on leaves whose tree node has no tran_appropriation_id. First
+    // occurrence wins per path to mirror the backend's ->first() resolution.
+    async fetchAppropriationIdMap() {
+      try {
+        const authStore = useAuthStore()
+        if (authStore.admin) {
+          this.appropriationIdMap = {}
+          return
+        }
+        const token = authStore.token
+
+        let fiscalYearId = null
+        try {
+          const yearsResponse = await api.get('/api/barangay/fiscal-years', {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
+          })
+          const fiscalYears = Array.isArray(yearsResponse.data)
+            ? yearsResponse.data
+            : yearsResponse.data.data || []
+          const currentYear = new Date().getFullYear()
+          fiscalYearId = fiscalYears.find((y) => y.year == currentYear)?.id
+        } catch {
+          // fiscal year id is optional; proceed without it
+        }
+
+        const response = await api.get('/api/barangay/appropriations', {
+          params: {
+            status: 'committed',
+            ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
+            ...(this.selectedBudgetSource && this.selectedBudgetSource !== 'all'
+              ? { budget_type: this.selectedBudgetSource }
+              : {}),
+          },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        })
+
+        const appropriations = Array.isArray(response.data)
+          ? response.data
+          : response.data.data || []
+
+        const map = {}
+        appropriations.forEach((appropriation) => {
+          const key = buildAppropriationKey(appropriation)
+          if (!key) return
+          if (map[key] == null && appropriation.id != null) {
+            map[key] = Number(appropriation.id)
+          }
+        })
+        this.appropriationIdMap = map
+      } catch (error) {
+        console.warn('Failed to fetch appropriation id map:', error)
+        this.appropriationIdMap = {}
       }
     },
 
@@ -1034,6 +1060,9 @@ export const useDisbursementStore = defineStore('disbursement', {
         await appropriationStore.fetchExpenseHierarchy()
         this.expenseData = appropriationStore.allocations || []
 
+        // Build the hierarchy path -> tran_appropriations.id map for accountId resolution
+        await this.fetchAppropriationIdMap()
+
         // Only refresh expense details if we don't have any
         // This prevents excessive API calls
         if (!this.expenseDetailsData || this.expenseDetailsData.length === 0) {
@@ -1126,6 +1155,56 @@ export const useDisbursementStore = defineStore('disbursement', {
 
       const gross = parseFloat(this.forms.expense.amount) || 0
       this.forms.expense.netAmount = Math.max(0, Math.round((gross - total) * 100) / 100)
+    },
+
+    recomputeDeductionsForGross(grossAmount = null) {
+      const rows = this.forms.expense.deductions || []
+      if (!rows.length) return
+      const gross =
+        grossAmount != null ? Number(grossAmount) : Number(this.totalExpensesAmount) || 0
+
+      // No gross left: zero out non-manual deductions
+      if (!gross || gross <= 0) {
+        this.forms.expense.deductions = rows.map((r) =>
+          r.isManual
+            ? r
+            : {
+                ...r,
+                gross_vat_inc: 0,
+                gross_vat_exc: 0,
+                deduction_amount: 0,
+                amount: 0,
+                net_amount: 0,
+              },
+        )
+        this._recalcDeductionTotals()
+        return
+      }
+
+      const round2 = (n) => Math.round(n * 100) / 100
+      const updated = rows.map((row) => {
+        if (row.isManual) return row
+        const oldGross = Number(row.gross_vat_inc)
+        const oldAmount = Number(row.deduction_amount ?? row.amount) || 0
+        if (!oldGross || !oldAmount || oldGross <= 0) return row
+        const ratio = gross / oldGross
+        const newAmount = round2(Math.max(0, oldAmount * ratio))
+        const oldExc = Number(row.gross_vat_exc)
+        const oldNet = Number(row.net_amount)
+        return {
+          ...row,
+          gross_vat_inc: round2(gross),
+          gross_vat_exc: oldExc ? round2(Math.max(0, oldExc * ratio)) : newAmount,
+          deduction_amount: newAmount,
+          amount: newAmount,
+          net_amount: oldNet
+            ? round2(Math.max(0, oldNet * ratio))
+            : round2(Math.max(0, gross - newAmount)),
+        }
+      })
+
+      this.forms.expense.deductions = updated
+      this._recalcDeductionTotals()
     },
 
     normalizeDeductionRow(deduction = {}) {
@@ -1417,8 +1496,9 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
 
       const topLevelNet = disbursement.net_amount ?? disbursement.netAmount
-      if (topLevelNet !== null && topLevelNet !== undefined && topLevelNet !== '') {
-        return Number(topLevelNet) || 0
+      const apiNet = Number(topLevelNet)
+      if (topLevelNet !== null && topLevelNet !== undefined && topLevelNet !== '' && apiNet > 0) {
+        return apiNet
       }
 
       const chequeRows = this.normalizeBankCheques(
@@ -1670,8 +1750,13 @@ export const useDisbursementStore = defineStore('disbursement', {
         const regularRows =
           disbursementsResponse.status === 'fulfilled'
             ? (disbursementsResponse.value.data.data || []).map((d) => {
+                const dedKey = d.disbursement_id ?? d.id
                 const deductionsFromTable =
-                  deductionsByDisbursement[String(d.id)] || deductionsByDisbursement[d.id] || []
+                  deductionsByDisbursement[String(dedKey)] ||
+                  deductionsByDisbursement[dedKey] ||
+                  deductionsByDisbursement[String(d.id)] ||
+                  deductionsByDisbursement[d.id] ||
+                  []
                 const deductions = deductionsFromTable.length
                   ? deductionsFromTable
                   : this.normalizeDeductions(d.deductions || [])
@@ -1890,27 +1975,19 @@ export const useDisbursementStore = defineStore('disbursement', {
           if (disbursement.expenses && disbursement.expenses.length > 0) {
             this.expenses = disbursement.expenses.map((expense) => {
               const expenseChequeNumber = getExpenseChequeNumber(expense)
-              // Use the account_name from backend (which now includes subitem) or fallback to lookup
-              const fullAccountName =
-                expense.account_name ||
-                this.getExpenseAccountName(
-                  expense.expense_class_id,
-                  expense.expense_type_id,
-                  expense.expense_item_id,
-                  expense.expense_sub_item_id,
-                )
-
-              // Parse the full account name to extract individual components
-              const parts = fullAccountName.split(' > ')
-              const account = parts[0] || ''
-              const expenseType = parts[1] || ''
-              const expenseItem = parts[2] || ''
-              const expenseSubItem = parts[3] || ''
+              const parts = this.resolveExpenseAccountParts(expense)
+              const fullAccountName = parts.accountName
+              const account = parts.account
+              const expenseType = parts.expenseType
+              const expenseItem = parts.expenseItem
+              const expenseSubItem = parts.expenseSubItem
+              const expenseSubType = parts.expenseSubType
+              const expenseSubSubType = parts.expenseSubSubType
 
               return {
                 id: expense.id, // Use the actual database ID from tran_expense_details
-                accountId: expense.accountId,
-                accountName: expense.account_name || fullAccountName, // Use particular as fallback
+                accountId: resolveExpenseAccountId(expense, this.appropriationIdMap),
+                accountName: fullAccountName,
                 amount: expense.amount,
                 particular: expense.particular,
                 fund: expense.fund || '',
@@ -1929,19 +2006,32 @@ export const useDisbursementStore = defineStore('disbursement', {
                 expense_type_id: expense.expense_type_id,
                 expense_item_id: expense.expense_item_id,
                 expense_sub_item_id: expense.expense_sub_item_id,
-                expense_class_name: parts[0] || '',
-                expense_type_name: parts[1] || '',
-                expense_item_name: parts[2] || '',
-                expense_sub_item_name: parts[3] || '',
-                account: account,
-                expenseType: expenseType,
-                expenseItem: expenseItem,
-                expenseSubItem: expenseSubItem,
+                expense_sub_type_id: expense.expense_sub_type_id,
+                expense_sub_sub_type_id: expense.expense_sub_sub_type_id,
+                expense_class_name: account,
+                expense_type_name: expenseType,
+                expense_item_name: expenseItem,
+                expense_sub_item_name: expenseSubItem,
+                expense_sub_type_name: expenseSubType,
+                expense_sub_sub_type_name: expenseSubSubType,
+                account,
+                expenseType,
+                expenseItem,
+                expenseSubItem,
+                expenseSubType,
+                expenseSubSubType,
               }
             })
           } else {
             this.expenses = []
           }
+
+          // Snapshot the DB expense ids so saveEditedDisbursement can tell existing rows from
+          // newly-added ones even when expenseDetailsData is empty (e.g. admin users).
+          this.existingExpenseIds = this.expenses.map((exp) => Number(exp.id))
+          this.existingExpenseIds = this.existingExpenseIds.filter(
+            (id) => Number.isFinite(id) && id > 0,
+          )
 
           const savedBankCheques = await this.fetchBankChequesForDisbursement(disbursement.id, {
             bank_id: disbursement.bank_id || null,
@@ -2010,26 +2100,10 @@ export const useDisbursementStore = defineStore('disbursement', {
           // Map expenses to ensure proper field names
           const mappedExpenses = (disbursement.expenses || []).map((expense) => {
             const expenseChequeNumber = getExpenseChequeNumber(expense)
-            // Use the account_name from backend (which now includes subitem) or fallback to lookup
-            const fullAccountName =
-              expense.account_name ||
-              this.getExpenseAccountName(
-                expense.expense_class_id,
-                expense.expense_type_id,
-                expense.expense_item_id,
-                expense.expense_sub_item_id,
-              )
-
-            // Parse the full account name to extract individual components
-            const parts = fullAccountName.split(' > ')
-            const account = parts[0] || ''
-            const expenseType = parts[1] || ''
-            const expenseItem = parts[2] || ''
-            const expenseSubItem = parts[3] || ''
 
             return {
               id: expense.id,
-              accountName: expense.account_name || fullAccountName,
+              ...this.resolveExpenseAccountParts(expense),
               amount: expense.amount,
               particular: expense.particular,
               fund: expense.fund || '',
@@ -2049,15 +2123,8 @@ export const useDisbursementStore = defineStore('disbursement', {
               expense_type_id: expense.expense_type_id,
               expense_item_id: expense.expense_item_id,
               expense_sub_item_id: expense.expense_sub_item_id,
-              expense_class_name: parts[0] || '',
-              expense_type_name: parts[1] || '',
-              expense_item_name: parts[2] || '',
-              expense_sub_item_name: parts[3] || '',
-              // Add fields for multi-column display
-              account: account,
-              expenseType: expenseType,
-              expenseItem: expenseItem,
-              expenseSubItem: expenseSubItem,
+              expense_sub_type_id: expense.expense_sub_type_id,
+              expense_sub_sub_type_id: expense.expense_sub_sub_type_id,
             }
           })
 
@@ -2065,26 +2132,10 @@ export const useDisbursementStore = defineStore('disbursement', {
           const mappedReimbursementExpenses = disbursement.reimbursement?.expenses
             ? disbursement.reimbursement.expenses.map((expense) => {
                 const expenseChequeNumber = getExpenseChequeNumber(expense)
-                // Use the account_name from backend or fallback to lookup
-                const fullAccountName =
-                  expense.account_name ||
-                  this.getExpenseAccountName(
-                    expense.expense_class_id,
-                    expense.expense_type_id,
-                    expense.expense_item_id,
-                    expense.expense_sub_item_id,
-                  )
-
-                // Parse the full account name to extract individual components
-                const parts = fullAccountName.split(' > ')
-                const account = parts[0] || ''
-                const expenseType = parts[1] || ''
-                const expenseItem = parts[2] || ''
-                const expenseSubItem = parts[3] || ''
 
                 return {
                   id: expense.id,
-                  accountName: expense.account_name || fullAccountName,
+                  ...this.resolveExpenseAccountParts(expense),
                   amount: expense.amount,
                   particular: expense.particular,
                   accountId: expense.accountId,
@@ -2097,15 +2148,8 @@ export const useDisbursementStore = defineStore('disbursement', {
                   expense_type_id: expense.expense_type_id,
                   expense_item_id: expense.expense_item_id,
                   expense_sub_item_id: expense.expense_sub_item_id,
-                  expense_class_name: parts[0] || '',
-                  expense_type_name: parts[1] || '',
-                  expense_item_name: parts[2] || '',
-                  expense_sub_item_name: parts[3] || '',
-                  // Add fields for multi-column display
-                  account: account,
-                  expenseType: expenseType,
-                  expenseItem: expenseItem,
-                  expenseSubItem: expenseSubItem,
+                  expense_sub_type_id: expense.expense_sub_type_id,
+                  expense_sub_sub_type_id: expense.expense_sub_sub_type_id,
                 }
               })
             : []
@@ -2336,9 +2380,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
 
         try {
-          const apiDvNumber = await this.generateBackendDvNumber(
-            this.forms.disbursement.date,
-          )
+          const apiDvNumber = await this.generateBackendDvNumber(this.forms.disbursement.date)
           const alreadyExists = !!(
             apiDvNumber && (this.disbursements || []).some((d) => d.dvNumber === apiDvNumber)
           )
@@ -2348,7 +2390,9 @@ export const useDisbursementStore = defineStore('disbursement', {
             : apiDvNumber || this.generateLocalDvNumber(this.forms.disbursement.date)
         } catch (error) {
           console.error('Failed to generate DV number from API, using local fallback:', error)
-          this.forms.disbursement.dvNumber = this.generateLocalDvNumber(this.forms.disbursement.date)
+          this.forms.disbursement.dvNumber = this.generateLocalDvNumber(
+            this.forms.disbursement.date,
+          )
         }
 
         // Generate cheque number (separate logic)
@@ -2655,47 +2699,11 @@ export const useDisbursementStore = defineStore('disbursement', {
 
     // Update openExpenseDetail to match your current structure
     openExpenseDetail(item) {
-      // Create a proper account display string
-      let accountDisplay = item.account
-      if (item.expenseType) {
-        accountDisplay += ` > ${item.expenseType}`
-      }
-      if (item.expenseItem) {
-        accountDisplay += ` > ${item.expenseItem}`
-      }
-      if (item.expenseSubItem) {
-        accountDisplay += ` > ${item.expenseSubItem}`
-      }
-
-      // Use the balance that's already calculated and displayed in the selection table
-      // DO NOT recalculate - this prevents double counting
-      const availableBalance = item.balance || 0
-
-      // this.forms.expense = {
-      //   account: accountDisplay,
-      //   accountId: item.id,
-      //   balance: availableBalance, // Use the pre-calculated balance from selection table
-      //   originalBalance: item.originalBalance || item.balance || 0, // Keep original balance for reference
-      //   particulars: '',
-      //   amount: '',
-      //   disbursementId: this.currentItem?.id || null,
-      //   bank_id: null,
-      //   cheque_number: '',
-      //   bankLoading: false,
-      //   fund: '',
-      //   taxpayerType: '',
-      //   taxType: '',
-      //   // Store additional information for backend
-      //   expense_class_id: item.expense_class_id,
-      //   expense_type_id: item.expense_type_id,
-      //   expense_item_id: item.expense_item_id,
-      //   expense_sub_item_id: item.expense_sub_item_id,
-      // }
       this.forms.expense = {
         ...this.forms.expense,
-        account: accountDisplay,
-        accountId: item.id,
-        balance: availableBalance,
+        account: item.fullPath || item.account,
+        accountId: resolveExpenseAccountId(item, this.appropriationIdMap),
+        balance: item.balance || 0,
         originalBalance: item.originalBalance || item.balance || 0,
         particulars: '',
         amount: '',
@@ -2709,86 +2717,53 @@ export const useDisbursementStore = defineStore('disbursement', {
         expense_type_id: item.expense_type_id,
         expense_item_id: item.expense_item_id,
         expense_sub_item_id: item.expense_sub_item_id,
+        expense_sub_type_id: item.expense_sub_type_id,
+        expense_sub_sub_type_id: item.expense_sub_sub_type_id,
       }
+
       this.dialogs.expense = false
       this.dialogs.expenseDetail = true
     },
 
     // Method to open expense detail for editing existing expenses
     openExpenseDetailForEdit(existingExpense) {
-      // Derive original allocated amount and expense level (type or item)
+      const leafNode =
+        this.findLeafByTranAppropriationId(existingExpense.accountId) ||
+        this.findLeafByExpenseIds(existingExpense)
+
       let originalAllocatedAmount = 0
       let expenseLevel = 'type'
-      let balanceKeyId = null
+      let balanceKeyId = existingExpense.accountId // fallback: matches via appropriation_id in calculateRemainingBalance
 
-      try {
-        // Traverse expense hierarchy to find the matching node
-        for (const expenseClass of this.expenseData || []) {
-          if (!expenseClass?.children) continue
-          for (const expenseType of expenseClass.children || []) {
-            // If item-level
-            if (existingExpense.expense_item_id) {
-              if (expenseType?.children) {
-                const matchedItem = (expenseType.children || []).find(
-                  (ci) => String(ci.id) === String(existingExpense.expense_item_id),
-                )
-                if (matchedItem) {
-                  originalAllocatedAmount = parseFloat(matchedItem.amount) || 0
-                  expenseLevel = 'item'
-                  balanceKeyId = matchedItem.id
-                  throw new Error('__found')
-                }
-              }
-            } else {
-              // Type-level
-              if (String(expenseType.id) === String(existingExpense.expense_type_id)) {
-                originalAllocatedAmount = parseFloat(expenseType.amount) || 0
-                expenseLevel = 'type'
-                balanceKeyId = expenseType.id
-                throw new Error('__found')
-              }
-            }
-          }
-        }
-      } catch (e) {
-        if (e?.message !== '__found') {
-          // Silent fallthrough, keep defaults
-        }
+      if (leafNode) {
+        originalAllocatedAmount = parseFloat(leafNode.amount) || 0
+        balanceKeyId = leafNode.id // the lib-level id, matches expense_type_id/etc. on expense_details
+
+        // Determine level directly from which id is actually populated — no chain-walk needed
+        if (existingExpense.expense_sub_sub_type_id) expenseLevel = 'subsubtype'
+        else if (existingExpense.expense_sub_type_id) expenseLevel = 'subtype'
+        else if (existingExpense.expense_sub_item_id) expenseLevel = 'subitem'
+        else if (existingExpense.expense_item_id) expenseLevel = 'item'
+        else expenseLevel = 'type'
       }
 
-      // Fallbacks if not found in hierarchy
       if (!Number.isFinite(originalAllocatedAmount)) originalAllocatedAmount = 0
 
-      // Calculate remaining balance from DB-backed expense details
-      let remainingBalance = this.calculateRemainingBalance(
-        balanceKeyId || existingExpense.accountId,
+      // Remaining already subtracts every row in this.expenses (including this one),
+      // so add this expense's own amount back to get the editable balance.
+      const remainingBalance = this.calculateRemainingBalance(
+        balanceKeyId,
         originalAllocatedAmount,
         expenseLevel,
       )
-
-      // If the current expense is already persisted in DB for this disbursement and account,
-      // add it back to compute the editable available balance
-      let includeCurrentAmountBack = false
-      try {
-        includeCurrentAmountBack = (this.expenseDetailsData || []).some((ed) => {
-          const sameDisbursement = String(ed.disbursement_id) === String(this.currentItem?.id)
-          if (!sameDisbursement) return false
-          const isItemLevel = Boolean(existingExpense.expense_item_id)
-          if (isItemLevel) {
-            return String(ed.expense_item_id) === String(existingExpense.expense_item_id)
-          }
-          // Type-level: ensure it's a type record (no item) and matches type id
-          return (
-            ed.expense_item_id == null &&
-            String(ed.expense_type_id) === String(existingExpense.expense_type_id)
-          )
-        })
-      } catch {
-        includeCurrentAmountBack = false
-      }
-
+      const isInExpenses = (this.expenses || []).some(
+        (e) => String(e.id) === String(existingExpense.id),
+      )
       const availableBalance =
-        remainingBalance + (includeCurrentAmountBack ? parseFloat(existingExpense.amount) || 0 : 0)
+        remainingBalance + (isInExpenses ? parseFloat(existingExpense.amount) || 0 : 0)
+
+      const currentExpenseForm = this.forms.expense || {}
+      const preservedDeductions = currentExpenseForm.deductions || []
 
       this.forms.expense = {
         account: existingExpense.accountName,
@@ -2812,14 +2787,33 @@ export const useDisbursementStore = defineStore('disbursement', {
         original_cheque_number: existingExpense.original_cheque_number || '',
         original_bank_id: existingExpense.original_bank_id || null,
         bankLoading: false,
-        // Store additional information for backend
         expense_class_id: existingExpense.expense_class_id,
         expense_type_id: existingExpense.expense_type_id,
         expense_item_id: existingExpense.expense_item_id,
         expense_sub_item_id: existingExpense.expense_sub_item_id,
-        // Flag to indicate this is an edit operation
+        expense_sub_type_id: existingExpense.expense_sub_type_id,
+        expense_sub_sub_type_id: existingExpense.expense_sub_sub_type_id,
         isEditing: true,
-        editingExpenseId: existingExpense.id, // Use the database ID for editing
+        editingExpenseId: existingExpense.id,
+        deductions: preservedDeductions,
+        totalDeduction:
+          currentExpenseForm.totalDeduction ??
+          preservedDeductions.reduce(
+            (sum, r) => sum + (parseFloat(r.deduction_amount ?? r.amount) || 0),
+            0,
+          ),
+        netAmount: Math.max(
+          0,
+          Math.round(
+            ((Number(existingExpense.amount) || 0) -
+              (currentExpenseForm.totalDeduction ??
+                preservedDeductions.reduce(
+                  (sum, r) => sum + (parseFloat(r.deduction_amount ?? r.amount) || 0),
+                  0,
+                ))) *
+              100,
+          ) / 100,
+        ),
       }
       this.dialogs.expenseDetail = true
     },
@@ -2874,7 +2868,6 @@ export const useDisbursementStore = defineStore('disbursement', {
           booklet_id: cheque.booklet_id || null,
           cheque_number: cheque.cheque_number || cheque.chequeNumber || '',
           cheque_date: cheque.cheque_date || cheque.chequeDate || null,
-          bank_status: cheque.bank_status || cheque.bankStatus || '',
           amount: Number(cheque.amount) || 0,
         }))
 
@@ -2889,7 +2882,6 @@ export const useDisbursementStore = defineStore('disbursement', {
           cheque_date: firstCheque.cheque_date || firstCheque.chequeDate || null,
           cheque_booklet: firstCheque.booklet_id || null,
           cheque_amount: Number(firstCheque.amount) || 0,
-          bank_status: firstCheque.bank_status,
           payee: this.forms.disbursement.payee,
           payee2: this.forms.disbursement.payee2,
           dv_amount: this.totalExpensesAmount,
@@ -2898,7 +2890,7 @@ export const useDisbursementStore = defineStore('disbursement', {
             this.deductionPayload(ded),
           ),
           expenses: this.expenses.map((expense) => ({
-            accountId: expense.accountId,
+            accountId: resolveExpenseAccountId(expense, this.appropriationIdMap),
             amount: expense.amount,
             particular: expense.particular,
             fund: expense.fund,
@@ -2916,6 +2908,8 @@ export const useDisbursementStore = defineStore('disbursement', {
             expense_type_id: expense.expense_type_id,
             expense_item_id: expense.expense_item_id,
             expense_sub_item_id: expense.expense_sub_item_id,
+            expense_sub_type_id: expense.expense_sub_type_id,
+            expense_sub_sub_type_id: expense.expense_sub_sub_type_id,
           })),
         }
 
@@ -2980,9 +2974,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           this.forms.disbursement.date = `${dd}/${mm}/${yyyy}`
 
           try {
-            const apiDv = await this.generateBackendDvNumber(
-              this.forms.disbursement.date,
-            )
+            const apiDv = await this.generateBackendDvNumber(this.forms.disbursement.date)
             const alreadyExists = !!(
               apiDv && (this.disbursements || []).some((d) => d.dvNumber === apiDv)
             )
@@ -2991,7 +2983,9 @@ export const useDisbursementStore = defineStore('disbursement', {
               : apiDv || this.generateLocalDvNumber(this.forms.disbursement.date)
           } catch (error) {
             console.error('Failed to generate DV number, using local fallback:', error)
-            this.forms.disbursement.dvNumber = this.generateLocalDvNumber(this.forms.disbursement.date)
+            this.forms.disbursement.dvNumber = this.generateLocalDvNumber(
+              this.forms.disbursement.date,
+            )
           }
         }, 350) // match Quasar default transition
 
@@ -3060,7 +3054,14 @@ export const useDisbursementStore = defineStore('disbursement', {
     },
 
     // Helper method to get expense account name from IDs
-    getExpenseAccountName(expenseClassId, expenseTypeId, expenseItemId, expenseSubItemId = null) {
+    getExpenseAccountName(
+      expenseClassId,
+      expenseTypeId,
+      expenseItemId,
+      expenseSubItemId = null,
+      expenseSubTypeId = null,
+      expenseSubSubTypeId = null,
+    ) {
       try {
         let accountName = ''
 
@@ -3095,6 +3096,28 @@ export const useDisbursementStore = defineStore('disbursement', {
 
                     if (expenseSubItem) {
                       accountName += ` > ${expenseSubItem.name}`
+
+                      // Find expense subtype
+                      if (expenseSubTypeId && expenseSubItem.children) {
+                        const expenseSubType = expenseSubItem.children.find(
+                          (est) => String(est.id) === String(expenseSubTypeId),
+                        )
+
+                        if (expenseSubType) {
+                          accountName += ` > ${expenseSubType.name}`
+
+                          // Find expense sub-subtype
+                          if (expenseSubSubTypeId && expenseSubType.children) {
+                            const expenseSubSubType = expenseSubType.children.find(
+                              (esst) => String(esst.id) === String(expenseSubSubTypeId),
+                            )
+
+                            if (expenseSubSubType) {
+                              accountName += ` > ${expenseSubSubType.name}`
+                            }
+                          }
+                        }
+                      }
                     }
                   }
                 }
@@ -3107,6 +3130,183 @@ export const useDisbursementStore = defineStore('disbursement', {
       } catch (error) {
         console.error('Error getting expense account name:', error)
         return 'Unknown Account'
+      }
+    },
+
+    findAccountPathById(accountId) {
+      if (accountId == null || accountId === '') return ''
+      const isLeaf = (n) => !(n.children || []).some((c) => Number(c.amount) > 0)
+      const walk = (node, names) => {
+        for (const child of node.children || []) {
+          const path = [...names, child.name]
+          if (String(child.id) === String(accountId) && isLeaf(child)) return path
+          const hit = walk(child, path)
+          if (hit) return hit
+        }
+        return null
+      }
+      for (const cls of this.expenseData || []) {
+        const hit = walk(cls, [cls.name])
+        if (hit) return hit.join(' > ')
+      }
+      return ''
+    },
+
+    // Walk the loaded hierarchy tree along an expense's id chain and return one
+    // name per level (index 0 = class ... 5 = subSubType). Safe when an
+    // intermediate level is missing: the present ids decide which slot each
+    // resolved name lands in, so deeper levels never shift.
+    getExpenseAccountLevelNames(
+      expenseClassId,
+      expenseTypeId,
+      expenseItemId,
+      expenseSubItemId = null,
+      expenseSubTypeId = null,
+      expenseSubSubTypeId = null,
+    ) {
+      const names = new Array(6).fill('')
+      const findChild = (node, id) =>
+        (node?.children || []).find((n) => String(n.id) === String(id))
+      const hasId = (id) => id != null && id !== ''
+      let node = this.expenseData?.find((n) => String(n.id) === String(expenseClassId)) || null
+      if (hasId(expenseClassId)) names[0] = node?.name || ''
+      if (!node || !hasId(expenseTypeId)) return names
+      names[1] = findChild(node, expenseTypeId)?.name || ''
+      node = findChild(node, expenseTypeId)
+      if (!node || !hasId(expenseItemId)) return names
+      names[2] = findChild(node, expenseItemId)?.name || ''
+      node = findChild(node, expenseItemId)
+      if (!node || !hasId(expenseSubItemId)) return names
+      names[3] = findChild(node, expenseSubItemId)?.name || ''
+      node = findChild(node, expenseSubItemId)
+      if (!node || !hasId(expenseSubTypeId)) return names
+      names[4] = findChild(node, expenseSubTypeId)?.name || ''
+      node = findChild(node, expenseSubTypeId)
+      if (!node || !hasId(expenseSubSubTypeId)) return names
+      names[5] = findChild(node, expenseSubSubTypeId)?.name || ''
+      return names
+    },
+
+    // Read per-level names from the nested { appropriation: { expenseClass,
+    // expenseType, ... } } shape the backend uses to build its account_name.
+    getExpenseAppropriationLevelNames(expense) {
+      const appr = expense?.appropriation
+      if (!appr || typeof appr !== 'object') return []
+      const order = [
+        'expenseClass',
+        'expenseType',
+        'expenseItem',
+        'expenseSubItem',
+        'expenseSubType',
+        'expenseSubSubType',
+      ]
+      return order.map((key) => {
+        const node = appr[key]
+        return node && typeof node === 'object' && node.name != null ? String(node.name).trim() : ''
+      })
+    },
+
+    // Split a concatenated account_name into per-level slots aligned to which
+    // expense ids are present, so a missing intermediate level does not push the
+    // deeper (sub-type / sub-sub-type) names into the wrong slot.
+    splitExpenseAccountNameAligned(expense, accountName) {
+      const ids = [
+        expense?.expense_class_id,
+        expense?.expense_type_id,
+        expense?.expense_item_id,
+        expense?.expense_sub_item_id,
+        expense?.expense_sub_type_id,
+        expense?.expense_sub_sub_type_id,
+      ]
+      const present = ids.map((id) => id != null && id !== '')
+      const parts = String(accountName || '')
+        .split(' > ')
+        .map((p) => p.trim())
+        .filter(Boolean)
+      const names = new Array(6).fill('')
+      let partIndex = 0
+      for (let i = 0; i < 6; i++) {
+        if (present[i] && partIndex < parts.length) {
+          names[i] = parts[partIndex]
+          partIndex++
+        }
+      }
+      return names
+    },
+
+    resolveExpenseFullAccountName(expense) {
+      const depth = (name) => (name || '').split(' > ').filter(Boolean).length
+      let reconstructed = this.getExpenseAccountName(
+        expense?.expense_class_id,
+        expense?.expense_type_id,
+        expense?.expense_item_id,
+        expense?.expense_sub_item_id,
+        expense?.expense_sub_type_id,
+        expense?.expense_sub_sub_type_id,
+      )
+      if (reconstructed === 'Unknown Account') reconstructed = ''
+
+      const appropriationPath = this.getExpenseAppropriationLevelNames(expense)
+        .map((name) => name.trim())
+        .filter(Boolean)
+        .join(' > ')
+
+      const candidates = [
+        expense?.account_name || '',
+        reconstructed,
+        appropriationPath,
+        this.findAccountPathById(expense?.accountId ?? expense?.appropriation_id),
+      ]
+      // prefer the deepest path; ties keep the earlier (backend) one
+      return candidates.reduce((best, c) => (depth(c) > depth(best) ? c : best), '')
+    },
+
+    resolveExpenseAccountParts(expense) {
+      const accountName = this.resolveExpenseFullAccountName(expense)
+      const treeNames = this.getExpenseAccountLevelNames(
+        expense?.expense_class_id,
+        expense?.expense_type_id,
+        expense?.expense_item_id,
+        expense?.expense_sub_item_id,
+        expense?.expense_sub_type_id,
+        expense?.expense_sub_sub_type_id,
+      )
+      const appropriationNames = this.getExpenseAppropriationLevelNames(expense)
+      const fromName = this.splitExpenseAccountNameAligned(expense, accountName)
+
+      const pickLevel = (index, keys) => {
+        for (const key of keys) {
+          const value = expense?.[key]
+          if (value != null && String(value).trim() !== '') return String(value).trim()
+        }
+        for (const source of [treeNames, appropriationNames, fromName]) {
+          const value = source[index]
+          if (value != null && String(value).trim() !== '') return String(value).trim()
+        }
+        return ''
+      }
+
+      const account = pickLevel(0, ['expense_class_name', 'account'])
+      const expenseType = pickLevel(1, ['expense_type_name'])
+      const expenseItem = pickLevel(2, ['expense_item_name'])
+      const expenseSubItem = pickLevel(3, ['expense_sub_item_name', 'expense_subitem_name'])
+      const expenseSubType = pickLevel(4, ['expense_sub_type_name'])
+      const expenseSubSubType = pickLevel(5, ['expense_sub_sub_type_name'])
+
+      return {
+        accountName,
+        expense_class_name: account,
+        expense_type_name: expenseType,
+        expense_item_name: expenseItem,
+        expense_sub_item_name: expenseSubItem,
+        expense_sub_type_name: expenseSubType,
+        expense_sub_sub_type_name: expenseSubSubType,
+        account,
+        expenseType,
+        expenseItem,
+        expenseSubItem,
+        expenseSubType,
+        expenseSubSubType,
       }
     },
 
@@ -3143,7 +3343,6 @@ export const useDisbursementStore = defineStore('disbursement', {
       const amount = Number(this.forms.expense.amount) || 0
       const particulars = this.forms.expense.particulars?.trim() || ''
 
-
       const bank = bankStore.availableBanks.find(
         (b) => String(b.id) === String(this.forms.expense.bank_id),
       )
@@ -3158,7 +3357,19 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
 
       // Get the current available balance (this is the balance shown in the add expense dialog)
-      const currentAvailableBalance = this.forms.expense.balance || 0
+      // const currentAvailableBalance = this.forms.expense.balance || 0
+      const currentAvailableBalance = Number(this.forms.expense.balance) || 0
+
+      if (amount > currentAvailableBalance) {
+        throw new Error(
+          `Amount exceeds available balance. Available: ₱${currentAvailableBalance.toLocaleString(
+            'en-US',
+            { minimumFractionDigits: 2 },
+          )}, Requested: ₱${amount.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+          })}`,
+        )
+      }
 
       // Validate that the requested amount doesn't exceed the current available balance
       if (amount > currentAvailableBalance) {
@@ -3168,25 +3379,29 @@ export const useDisbursementStore = defineStore('disbursement', {
       }
 
       // Check if we're in edit mode and validate against locked total amount
-      if (this.lockedTotalAmount !== null) {
-        // Calculate what the total would be after this change
-        const currentTotal = this.expenses.reduce((sum, exp) => {
-          if (this.forms.expense.isEditing && exp.id === this.forms.expense.editingExpenseId) {
-            // Exclude the expense being edited from current total
-            return sum
-          }
-          return sum + (parseFloat(exp.amount) || 0)
-        }, 0)
+      // if (
+      //   !this.isChequeCancel &&
+      //   this.lockedTotalAmount !== null &&
+      //   this.lockedTotalAmount !== undefined
+      // ) {
+      //   // Calculate what the total would be after this change
+      //   const currentTotal = this.expenses.reduce((sum, exp) => {
+      //     if (this.forms.expense.isEditing && exp.id === this.forms.expense.editingExpenseId) {
+      //       // Exclude the expense being edited from current total
+      //       return sum
+      //     }
+      //     return sum + (parseFloat(exp.amount) || 0)
+      //   }, 0)
 
-        const newTotal = currentTotal + amount
-        if (!this.isChequeCancel) {
-          if (newTotal > this.lockedTotalAmount) {
-            throw new Error(
-              `Total amount cannot exceed the original DV amount of ₱${this.lockedTotalAmount.toLocaleString()}. Current total would be ₱${newTotal.toLocaleString()}`,
-            )
-          }
-        }
-      }
+      //   const newTotal = currentTotal + amount
+      //   if (!this.isChequeCancel) {
+      //     if (newTotal > this.lockedTotalAmount) {
+      //       throw new Error(
+      //         `Total amount cannot exceed the original DV amount of ₱${this.lockedTotalAmount.toLocaleString()}. Current total would be ₱${newTotal.toLocaleString()}`,
+      //       )
+      //     }
+      //   }
+      // }
 
       // Check if this is an edit operation
       if (this.forms.expense.isEditing && this.forms.expense.editingExpenseId) {
@@ -3230,7 +3445,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Create new expense object - keep in frontend only until disbursement is saved
         const expense = {
           id: this.getNextExpenseId(),
-          accountId: this.forms.expense.accountId,
+          accountId: resolveExpenseAccountId(this.forms.expense, this.appropriationIdMap),
           accountName: this.forms.expense.account,
           amount: amount,
           particular: particulars,
@@ -3241,6 +3456,8 @@ export const useDisbursementStore = defineStore('disbursement', {
           expense_type_id: this.forms.expense.expense_type_id,
           expense_item_id: this.forms.expense.expense_item_id,
           expense_sub_item_id: this.forms.expense.expense_sub_item_id,
+          expense_sub_type_id: this.forms.expense.expense_sub_type_id,
+          expense_sub_sub_type_id: this.forms.expense.expense_sub_sub_type_id,
           bank_id: this.forms.expense.bank_id,
           bankName: bank?.name || '',
           cheque_number: this.forms.expense.cheque_number,
@@ -3259,8 +3476,56 @@ export const useDisbursementStore = defineStore('disbursement', {
       // Refresh expense account balances to show updated amounts
       this.refreshExpenseAccountsWithBalances()
 
+      // Auto-update deduction amounts to match the new gross total
+      this.recomputeDeductionsForGross()
+
       this.closeDialog('expenseDetail')
       this.resetForm('expense')
+    },
+
+    // Find the exact leaf node in expenseData by tran_appropriation_id, regardless of depth
+    findLeafByTranAppropriationId(tranApprId) {
+      if (tranApprId == null) return null
+      const search = (node) => {
+        if (String(node.tran_appropriation_id) === String(tranApprId)) return node
+        for (const child of node.children || []) {
+          const found = search(child)
+          if (found) return found
+        }
+        return null
+      }
+      for (const cls of this.expenseData || []) {
+        const found = search(cls)
+        if (found) return found
+      }
+      return null
+    },
+    // Find the deepest leaf node in expenseData whose library id matches the
+    // populated hierarchy ids on an expense row. The hierarchy nodes carry no
+    // tran_appropriation_id, so this is the fallback for existing expenses.
+    findLeafByExpenseIds(expense) {
+      if (!expense) return null
+      const levelKeys = [
+        'expense_class_id',
+        'expense_type_id',
+        'expense_item_id',
+        'expense_sub_item_id',
+        'expense_sub_type_id',
+        'expense_sub_sub_type_id',
+      ]
+      // Tree node ids are reused across hierarchy levels, so walk down by path
+      // rather than scanning every node for the deepest id alone.
+      let nodes = Array.isArray(this.expenseData) ? this.expenseData : []
+      let node = null
+      for (let level = 0; level < levelKeys.length; level++) {
+        const id = expense[levelKeys[level]]
+        if (id == null || id === '') continue
+        const match = (nodes || []).find((candidate) => String(candidate.id) === String(id))
+        if (!match) return null
+        node = match
+        nodes = match.children
+      }
+      return node
     },
     // Similarly update editExpense and deleteExpense
     editExpense(row) {
@@ -3271,6 +3536,7 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Refresh expense account balances to show updated amounts
         this.refreshExpenseAccountsWithBalances()
+        this.recomputeDeductionsForGross()
       }
     },
 
@@ -3284,12 +3550,12 @@ export const useDisbursementStore = defineStore('disbursement', {
 
         // Refresh expense account balances to show updated amounts
         this.refreshExpenseAccountsWithBalances()
+        this.recomputeDeductionsForGross()
       }
     },
 
     // Alias functions for EditDisbursement component
     editItem(row) {
-      this.isChequeCancel = false
       this.openExpenseDetailForEdit(row)
     },
 
@@ -3429,15 +3695,26 @@ export const useDisbursementStore = defineStore('disbursement', {
         // Now update the account names for existing expenses using the loaded expense data
         if (this.expenses.length > 0) {
           this.expenses = this.expenses.map((expense) => {
-            const accountName = this.getExpenseAccountName(
-              expense.expense_class_id,
-              expense.expense_type_id,
-              expense.expense_item_id,
-              expense.expense_sub_item_id,
-            )
+            const parts = this.resolveExpenseAccountParts(expense)
+            if (parts.accountName === expense.accountName) return expense
             return {
               ...expense,
-              accountName: accountName,
+              accountName: parts.accountName,
+              expense_class_name: parts.expense_class_name || expense.expense_class_name || '',
+              expense_type_name: parts.expense_type_name || expense.expense_type_name || '',
+              expense_item_name: parts.expense_item_name || expense.expense_item_name || '',
+              expense_sub_item_name:
+                parts.expense_sub_item_name || expense.expense_sub_item_name || '',
+              expense_sub_type_name:
+                parts.expense_sub_type_name || expense.expense_sub_type_name || '',
+              expense_sub_sub_type_name:
+                parts.expense_sub_sub_type_name || expense.expense_sub_sub_type_name || '',
+              account: parts.account || expense.account || '',
+              expenseType: parts.expenseType || expense.expenseType || '',
+              expenseItem: parts.expenseItem || expense.expenseItem || '',
+              expenseSubItem: parts.expenseSubItem || expense.expenseSubItem || '',
+              expenseSubType: parts.expenseSubType || expense.expenseSubType || '',
+              expenseSubSubType: parts.expenseSubSubType || expense.expenseSubSubType || '',
             }
           })
         }
@@ -3476,11 +3753,36 @@ export const useDisbursementStore = defineStore('disbursement', {
         }
 
         // Existing DB ids for this disbursement
+        const detailIdsForCurrent = (this.expenseDetailsData || [])
+          .filter((ed) => String(ed.disbursement_id) === String(this.currentItem.id))
+          .map((ed) => Number(ed.id))
         const existingIdsForCurrent = new Set(
-          (this.expenseDetailsData || [])
-            .filter((ed) => String(ed.disbursement_id) === String(this.currentItem.id))
-            .map((ed) => Number(ed.id)),
+          detailIdsForCurrent.length > 0 ? detailIdsForCurrent : this.existingExpenseIds || [],
         )
+
+        // The original DV amount is locked: changing the expense total requires cancelling the
+        // original cheque so a replacement can be issued. Checked before pre-creating so a
+        // rejected save doesn't leave orphan expense-detail rows behind.
+        if (
+          !this.isChequeCancel &&
+          this.lockedTotalAmount !== null &&
+          this.lockedTotalAmount !== undefined
+        ) {
+          const currentTotal = Number(this.totalExpensesAmount) || 0
+          const lockedTotal = Number(this.lockedTotalAmount) || 0
+          const totalled = Math.round(currentTotal * 100) === Math.round(lockedTotal * 100)
+          if (!totalled) {
+            const fmt = (n) =>
+              n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            return {
+              success: false,
+              error:
+                currentTotal > lockedTotal
+                  ? `Total expense amount (₱${fmt(currentTotal)}) exceeds the original DV amount (₱${fmt(lockedTotal)}). Cancel the original cheque to save a higher total.`
+                  : `Total expense amount (₱${fmt(currentTotal)}) is lower than the original DV amount (₱${fmt(lockedTotal)}). Cancel the original cheque to change the DV total.`,
+            }
+          }
+        }
 
         // Pre-create new expenses so we get real DB ids for the update delete-keep logic
         for (const exp of this.expenses) {
@@ -3492,17 +3794,34 @@ export const useDisbursementStore = defineStore('disbursement', {
               amount: exp.amount,
               particulars: exp.particular,
               disbursement_id: this.currentItem.id,
+              appropriation_id: resolveExpenseAccountId(exp, this.appropriationIdMap) || null,
               expense_class_id: exp.expense_class_id || null,
               expense_type_id: exp.expense_type_id || null,
               expense_item_id: exp.expense_item_id || null,
               expense_sub_item_id: exp.expense_sub_item_id || null,
+              expense_sub_type_id: exp.expense_sub_type_id || null,
+              expense_sub_sub_type_id: exp.expense_sub_sub_type_id || null,
             }
-            const createRes = await api.post('/api/barangay/expense-details', createBody, {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                Accept: 'application/json',
-              },
-            })
+            let createRes
+            try {
+              createRes = await api.post('/api/barangay/expense-details', createBody, {
+                headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+              })
+            } catch (e) {
+              const info = e.response?.data?.data
+              if (info?.appropriation_id != null) {
+                this.appropriationBalanceOverrides = {
+                  ...this.appropriationBalanceOverrides,
+                  [info.appropriation_id]: Number(info.available_balance) || 0,
+                }
+                const fmt = (n) => Number(n).toLocaleString('en-US', { minimumFractionDigits: 2 })
+                return {
+                  success: false,
+                  error: `"${exp.accountName}" has no available balance (available ₱${fmt(info.available_balance)}, requested ₱${fmt(info.requested_amount)}). Remove that expense or pick another account.`,
+                }
+              }
+              throw e
+            }
             const created = createRes.data?.data
             if (created && created.id) {
               exp.id = Number(created.id)
@@ -3549,7 +3868,6 @@ export const useDisbursementStore = defineStore('disbursement', {
           booklet_id: cheque.booklet_id || null,
           cheque_number: cheque.cheque_number || cheque.chequeNumber || '',
           cheque_date: cheque.cheque_date || cheque.chequeDate || null,
-          bank_status: cheque.bank_status || cheque.bankStatus || '',
           amount: Number(cheque.amount) || 0,
         }))
         const payload = {
@@ -3559,7 +3877,6 @@ export const useDisbursementStore = defineStore('disbursement', {
           cheque_booklet: firstEditCheque.booklet_id || null,
           cheque_date: firstEditCheque.cheque_date || firstEditCheque.chequeDate || null,
           cheque_amount: Number(firstEditCheque.amount) || 0,
-          bank_status: firstEditCheque.bank_status,
           payee: this.forms.disbursement.payee,
           payee2: this.forms.disbursement.payee2,
           net_amount: editNetAmount,
@@ -3582,7 +3899,7 @@ export const useDisbursementStore = defineStore('disbursement', {
           ),
           expenses: this.expenses.map((expense) => ({
             id: Number(expense.id) > 0 ? Number(expense.id) : null,
-            accountId: expense.accountId,
+            accountId: resolveExpenseAccountId(expense, this.appropriationIdMap),
             amount: expense.amount,
             particular: expense.particular,
             bank_id: expense.bank_id, // ADD
@@ -3595,8 +3912,20 @@ export const useDisbursementStore = defineStore('disbursement', {
             expense_type_id: expense.expense_type_id,
             expense_item_id: expense.expense_item_id,
             expense_sub_item_id: expense.expense_sub_item_id, // was missing before
+            expense_sub_type_id: expense.expense_sub_type_id,
+            expense_sub_sub_type_id: expense.expense_sub_sub_type_id,
           })),
         }
+
+        console.log('========== EDIT DISBURSEMENT DEBUG ==========')
+        console.log('isChequeCancel:', this.isChequeCancel)
+        console.log('lockedTotalAmount:', this.lockedTotalAmount)
+        console.log('totalExpensesAmount:', this.totalExpensesAmount)
+        console.log('editDeductionTotal:', editDeductionTotal)
+        console.log('editNetAmount:', editNetAmount)
+        console.log('bankCheques:', editChequePayload)
+        console.log('PAYLOAD:', payload)
+        console.log('==============================================')
 
         const response = await api.put(
           `/api/barangay/disbursements/${this.currentItem.id}`,
@@ -3627,7 +3956,7 @@ export const useDisbursementStore = defineStore('disbursement', {
         }
 
         // Refresh lists/details
-        await this.fetchDisbursements()
+        await this.fetchDisbursements(null, true)
         await this.fetchExpenseDetails()
         this.refreshExpenseAccountsWithBalances()
         this.refreshExpenseAccountsInBackground()
@@ -3648,6 +3977,7 @@ export const useDisbursementStore = defineStore('disbursement', {
     resetEditDisbursement() {
       this.currentItem = null
       this.expenses = []
+      this.existingExpenseIds = []
       this.lockedTotalAmount = null
       this.selectedBank = null
       this.autoBookletID = null
@@ -4403,6 +4733,9 @@ export const useDisbursementStore = defineStore('disbursement', {
               expense_class_id: reimbursementData.expense_account.expense_class_id,
               expense_type_id: reimbursementData.expense_account.expense_type_id,
               expense_item_id: reimbursementData.expense_account.expense_item_id,
+              expense_sub_item_id: reimbursementData.expense_account.expense_sub_item_id,
+              expense_sub_type_id: reimbursementData.expense_account.expense_sub_type_id,
+              expense_sub_sub_type_id: reimbursementData.expense_account.expense_sub_sub_type_id,
             },
           ],
 

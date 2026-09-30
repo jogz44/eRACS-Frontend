@@ -18,7 +18,7 @@
         />
       </div>
     </div>
-
+    
     <!-- Summary Cards -->
     <div class="row q-col-gutter-md q-mb-md">
       <div class="col-md-4 col-sm-12">
@@ -268,6 +268,14 @@
               <span v-if="props.row.expense_sub_item">
                 <q-icon name="list" size="12px" />
                 {{ props.row.expense_sub_item }}
+              </span>
+              <span v-if="props.row.expense_sub_type">
+                <q-icon name="subdirectory_arrow_right" size="12px" />
+                {{ props.row.expense_sub_type }}
+              </span>
+              <span v-if="props.row.expense_sub_sub_type">
+                <q-icon name="subdirectory_arrow_right" size="12px" />
+                {{ props.row.expense_sub_sub_type }}
               </span>
             </div>
           </q-td>
@@ -731,6 +739,8 @@ const filteredExpenses = computed(() => {
     (expense.expense_type || '').toLowerCase().includes(query) ||
     (expense.expense_item || '').toLowerCase().includes(query) ||
     (expense.expense_sub_item || '').toLowerCase().includes(query) ||
+    (expense.expense_sub_type || '').toLowerCase().includes(query) ||
+    (expense.expense_sub_sub_type || '').toLowerCase().includes(query) ||
     (expense.budget_description || '').toLowerCase().includes(query)
   )
 })

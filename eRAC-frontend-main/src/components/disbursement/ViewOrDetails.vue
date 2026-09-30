@@ -156,8 +156,8 @@
                 >
                   <td class="text-grey-6">{{ idx + 1 }}</td>
                   <td>
-                    <div class="text-weight-medium text-grey-8" style="font-size: 12px">
-                      {{ row.accountName }}
+                    <div class="expense-account-hierarchy text-weight-medium text-grey-8">
+                      {{ expenseAccountLabel(row) }}
                     </div>
                   </td>
                   <td>
@@ -426,18 +426,7 @@
             <template v-slot:body-cell-account="props">
               <q-td :props="props">
                 <div class="expense-account-hierarchy">
-                  {{
-                    props.row.accountName ||
-                    props.row.account_name ||
-                    `${
-                      props.row.account || ''
-                    }${props.row.expenseType ? ` > ${props.row.expenseType}` : ''}${
-                      props.row.expenseItem
-                        ? ` >
-                  ${props.row.expenseItem}`
-                        : ''
-                    }${props.row.expenseSubItem ? ` > ${props.row.expenseSubItem}` : ''}`
-                  }}
+                  {{ expenseAccountLabel(props.row) }}
                 </div>
               </q-td>
             </template>
@@ -567,10 +556,12 @@ import { computed, ref } from 'vue'
 import { useDisbursementStore } from 'stores/disbursementStore'
 import { useAuthStore } from 'stores/auth'
 import { useQuasar } from 'quasar'
+import { useExpenseAccountDisplay } from 'src/composables/useExpenseAccountDisplay'
 
 const store = useDisbursementStore()
 const authStore = useAuthStore()
 const $q = useQuasar()
+const { expenseAccountLabel } = useExpenseAccountDisplay()
 const loadingOrDetails = ref(false)
 const voidActionLoading = ref(false)
 const editActionLoading = ref(false)
@@ -962,6 +953,15 @@ const handleRejectEdit = () => {
 .disbursement-page {
   background-color: #fafafa;
   min-height: 100vh;
+}
+
+.expense-account-hierarchy {
+  font-size: 12px;
+  line-height: 1.4;
+  word-break: break-word;
+  white-space: normal;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .page-header {

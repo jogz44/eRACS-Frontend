@@ -7,9 +7,17 @@
         <div class="text-h6">
           Edit Expenses for Disbursement #{{ store.forms.disbursement.dvNumber }}
         </div>
-        <div v-if="!isChequeCancelled" class="text-caption text-grey-6 q-mt-sm">
-          Note: Total net amount is locked to ₱{{ netAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0' }}.
-          You can only redistribute amounts between expenses, UNLESS you cancel the cheque.
+        <div v-if="!isChequeCancelled" class="text-caption text-red text-bold q-mt-sm">
+          Note: Total net amount is locked to ₱{{
+            netAmount.toLocaleString('en-US', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }) || '0'
+          }}. You can only redistribute amounts between expenses, UNLESS you cancel the cheque.
+        </div>
+        <div v-else class="text-caption text-green text-bold q-mt-sm">
+          Cheque cancelled — the amount is now unlocked. Adjust the expenses/net total and issue a
+          replacement cheque before saving.
         </div>
       </q-card-section>
 
@@ -65,7 +73,7 @@
         </div>
         <div class="row q-col-gutter-sm q-mb-sm q-mt-xs">
           <!-- Payee Field -->
-          
+
           <!-- <div class="col-md-4 col-sm-12">
             <q-item-label class="text-caption q-mb-xs" style="font-weight: bold; font-size: 13px"
               >Payee 2:</q-item-label
@@ -135,15 +143,19 @@
         <div class="row items-center justify-between q-mb-sm">
           <div class="text-subtitle1"><strong>Expense Accounts:</strong></div>
           <q-btn
-            v-if="isChequeCancelled"
-            label="Add"
+            size="sm"
+            unelevated
             color="primary"
-            icon="add"
+            outline
+            class="shadow-1 text-weight-bold"
+            style="background: #f5a623; color: white; min-width: 20px"
             @click="handleAddExpense"
             @mouseenter="preloadExpenseAccounts"
             :loading="addingExpense || store.expenseTypeLoading"
             v-permission="'add'"
-          />
+          >
+            <q-icon name="add" size="18px" class="text-weight-bold" />
+          </q-btn>
         </div>
 
         <div class="expense-acc-block">
@@ -171,14 +183,17 @@
               >
                 <td class="text-grey-6">{{ idx + 1 }}</td>
                 <td>
-                  <div class="text-weight-medium text-grey-8" style="font-size: 12px">
-                    {{ row.accountName }}
+                  <div class="expense-account-hierarchy text-weight-medium text-grey-8">
+                    {{ expenseAccountLabel(row) }}
                   </div>
                   <div class="text-grey-5" style="font-size: 11px">
                     Bal: ₱{{
                       (
-                        store.expenseAccounts.find((a) => String(a.id) === String(row.accountId))
-                          ?.balance ?? 0
+                        store.expenseAccounts.find(
+                          (a) =>
+                            String(a.id) === String(row.accountId) ||
+                            String(a.tran_appropriation_id) === String(row.accountId),
+                        )?.balance ?? 0
                       ).toLocaleString('en-US', { minimumFractionDigits: 2 })
                     }}
                   </div>
@@ -236,10 +251,17 @@
       <q-card-section>
         <div class="row items-center justify-between q-mb-xs">
           <div class="text-subtitle1"><strong>Deductions</strong></div>
-          <!-- <q-btn label="" unelevated size="sm" color="primary" outline class="shadow-1 text-weight-bold"
-                style="background: #f5a623; color: white; min-width: 20px" @click="openDeductionDialog">
-                <q-icon name="add" size="18px" class="text-weight-bold" />
-              </q-btn> -->
+          <q-btn
+            size="sm"
+            unelevated
+            color="primary"
+            outline
+            class="shadow-1 text-weight-bold"
+            style="background: #f5a623; color: white; min-width: 20px"
+            @click="openDeductionDialog"
+          >
+            <q-icon name="add" size="18px" class="text-weight-bold" />
+          </q-btn>
         </div>
         <div class="expense-acc-block">
           <table class="expense-inline-table full-width">
@@ -585,6 +607,33 @@
                 />
               </div>
             </div>
+            <div class="row justify-between">
+              <div class="row col-6 justify-start">
+                <q-chip
+                  dense
+                  square
+                  :color="bankChequeForm.bank_status === 'online' ? 'green-1' : 'grey-3'"
+                  :text-color="bankChequeForm.bank_status === 'online' ? 'green-9' : 'grey-8'"
+                  class="q-mr-sm q-mt-sm text-capitalize"
+                >
+                  {{ bankChequeForm.bank_status || 'Status from setup' }}
+                </q-chip>
+              </div>
+              <div
+                class="col balance-chip q-mt-xs justify-end"
+                :class="{ 'balance-chip--zero': bankChequeBalance <= 0 }"
+                @click="applyBalanceToChequeAmount"
+                title="Click to fill remaining balance"
+              >
+                <q-icon name="account_balance_wallet" size="13px" class="q-mr-xs" />
+                <span>Balance:</span>
+                <span class="balance-chip__amount"
+                  >₱{{
+                    bankChequeBalance.toLocaleString('en-PH', { minimumFractionDigits: 2 })
+                  }}</span
+                >
+              </div>
+            </div>
           </q-card-section>
 
           <q-card-actions align="right" class="q-pa-md q-pt-none">
@@ -599,57 +648,21 @@
       </q-dialog>
 
       <!-- Bank Cheques Table Section -->
-      <!-- <q-card-section>
-          <div class="row items-center justify-between q-mb-sm">
-            <div class="text-subtitle1"><strong>Bank Cheques</strong></div>
-            <q-btn size="sm" color="primary" outline @click="bankChequeDialogOpen = true" style="min-width:32px">
-              <q-icon name="add" size="18px" />
-            </q-btn>
-          </div>
-          <q-table :rows="store.bankCheques || []" :columns="bankChequeTableColumns" row-key="id"
-            :pagination="{ rowsPerPage: 0 }" flat bordered style="font-weight: bold; font-size: 13px;">
-            <template v-slot:body-cell-id="props">
-              <q-td :props="props">
-                {{ (store.bankCheques || []).indexOf(props.row) + 1 }}
-              </q-td>
-            </template>
-            <template v-slot:body-cell-amount="props">
-              <q-td :props="props" class="text-right">
-                ₱{{ (Number(props.row.amount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
-              </q-td>
-            </template>
-            <template v-slot:body-cell-action="props">
-              <q-td :props="props">
-                <q-btn size="sm" flat round color="green" icon="edit" @click="editBankCheque(props.row)" />
-                <q-btn size="sm" flat round color="negative" icon="cancel" @click="cancelBankCheque(props.row)" />
-              </q-td>
-            </template>
-            <template v-slot:no-data>
-              <div class="full-width row flex-center text-grey q-gutter-sm q-pa-md">
-                <q-icon size="2em" name="inbox" />
-                <span>No bank cheques found</span>
-              </div>
-            </template>
-            <template v-slot:bottom-row>
-              <q-tr v-if="store.bankCheques && store.bankCheques.length > 0">
-                <q-td colspan="4" class="text-right text-caption text-grey-8">
-                  Total Bank Cheques:
-                </q-td>
-                <q-td class="text-right text-weight-bold">
-                  ₱{{ bankChequeTotal.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
-                </q-td>
-                <q-td />
-              </q-tr>
-            </template>
-          </q-table>
-        </q-card-section> -->
       <q-card-section class="q-pb-xs">
         <div class="row items-center justify-between q-mb-xs">
           <div class="text-subtitle2 text-weight-medium"><strong>Bank Cheques</strong></div>
-          <!-- <q-btn label="" size="sm" color="primary" outline class="shadow-1" style="min-width: 20px"
-                @click="openBankChequeDialog">
-                <q-icon name="add" size="18px" class="text-weight-bold" />
-              </q-btn> -->
+          <div class="row items-center q-gutter-sm">
+            <q-btn
+              size="sm"
+              color="primary"
+              outline
+              class="shadow-1"
+              style="min-width: 20px"
+              @click="openBankChequeDialog"
+            >
+              <q-icon name="add" size="18px" class="text-weight-bold" />
+            </q-btn>
+          </div>
         </div>
         <div class="expense-acc-block">
           <table class="expense-inline-table full-width">
@@ -691,14 +704,18 @@
                     icon="edit"
                     @click="editBankCheque(row)"
                   />
+
                   <q-btn
+                    v-if="!isChequeCancelled && hasChequeToCancel"
                     size="sm"
-                    flat
-                    round
                     color="negative"
                     icon="cancel"
-                    @click="removeBankCheque(row.id)"
-                  />
+                    flat
+                    round
+                    @click="handleCancelCheque"
+                  >
+                  <q-tooltip>Cancel Cheque</q-tooltip>
+                  </q-btn>
                 </td>
               </tr>
             </tbody>
@@ -736,11 +753,7 @@
           class="modal-save-btn"
           @click="handleSaveEditedDisbursement"
           :loading="saving"
-          :disable="
-            !store.expenses ||
-            store.expenses.length === 0 ||
-            (store.totalExpensesAmount !== store.lockedTotalAmount && !isChequeCancelled)
-          "
+          :disable="!store.expenses || store.expenses.length === 0"
         />
       </q-card-actions>
     </q-card>
@@ -831,16 +844,23 @@ import { api } from 'src/boot/axios'
 import { useBankStore } from 'stores/bankStore'
 import { onMounted, ref, watch, computed } from 'vue'
 import { useQuasar } from 'quasar'
+import { useExpenseAccountDisplay } from 'src/composables/useExpenseAccountDisplay'
 
 const store = useDisbursementStore()
 const authStore = useAuthStore()
 const bankStore = useBankStore()
 const $q = useQuasar()
+const { expenseAccountLabel } = useExpenseAccountDisplay()
 const saving = ref(false)
 
 const showConfirmDialog = ref(false)
 const addingExpense = ref(false)
-const isChequeCancelled = ref(store.isChequeCancel) // Track if cheque is cancelled
+const isChequeCancelled = computed({
+  get: () => store.isChequeCancel,
+  set: (value) => {
+    store.isChequeCancel = value
+  },
+}) // Track if cheque is cancelled
 
 const filteredParticulars = ref(store.particulars)
 const expenseParticularInput = ref(store.forms.expense.particulars || '')
@@ -893,6 +913,41 @@ const fetchDeductionLibrary = async () => {
   }
 }
 
+const handleDeleteExpense = async (row) => {
+  if (!row) return
+
+  $q.dialog({
+    title: 'Delete Expense',
+    message: `Are you sure you want to remove this expense account?`,
+    cancel: true,
+    persistent: true,
+  }).onOk(async () => {
+    try {
+      await store.deleteExpense(row.id)
+
+      // Refresh the available balances immediately
+      await store.refreshExpenseAccountsWithBalances()
+
+      // Recalculate deductions based on the new gross amount
+      store.recomputeDeductionsForGross()
+
+      $q.notify({
+        type: 'positive',
+        message: 'Expense removed successfully.',
+        position: 'top',
+      })
+    } catch (error) {
+      console.error('Failed to delete expense:', error)
+
+      $q.notify({
+        type: 'negative',
+        message: error.message || 'Failed to remove expense.',
+        position: 'top',
+      })
+    }
+  })
+}
+
 const responseArray = (result) => {
   if (result?.status !== 'fulfilled') return []
   return asArray(result.value?.data?.data ?? result.value?.data)
@@ -925,6 +980,10 @@ const netAmount = computed(() =>
   Math.max(0, (Number(store.totalExpensesAmount) || 0) - totalDeductionAmount.value),
 )
 
+const bankChequeTotal = computed(() => {
+  return (store.bankCheques || []).reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
+})
+
 const emptyDeductionForm = () => ({
   deductionType: null,
   taxType: null,
@@ -940,17 +999,6 @@ const emptyDeductionForm = () => ({
   isManual: false,
 })
 const deductionForm = ref(emptyDeductionForm())
-
-// const fundOptions = [
-//   { label: 'General Fund', value: 'generalFund' },
-//   { label: 'Special Education Fund', value: 'specialEducationFund' },
-//   { label: 'Trust Fund', value: 'trustFund' },
-// ]
-
-// const taxpayerTypeOptions = [
-//   { label: 'Individual', value: 'individual' },
-//   { label: 'Non-Individual', value: 'nonIndividual' },
-// ]
 
 const taxTypeConfigs = {
   percentage: {
@@ -1065,9 +1113,31 @@ const selectedDeductionCodeId = (deduction) => {
   return match?.id ?? deduction.code ?? null
 }
 
-const removeBankCheque = (id) => {
-  store.bankCheques = (store.bankCheques || []).filter((row) => row.id !== id)
-}
+// const removeBankCheque = (id) => {
+//   store.bankCheques = (store.bankCheques || []).filter((row) => row.id !== id)
+// }
+
+// const removeBankCheque = (id) => {
+//   const row = (store.bankCheques || []).find((r) => r.id === id)
+//   if (!row) return
+
+//   const chequeLabel = row.cheque_number || row.chequeNumber || 'this cheque'
+
+//   $q.dialog({
+//     title: 'Cancel Cheque',
+//     message: `Are you sure you want to cancel cheque ${chequeLabel}? This will remove it from the disbursement.`,
+//     cancel: true,
+//     persistent: true,
+//   }).onOk(() => {
+//     store.bankCheques = (store.bankCheques || []).filter((r) => r.id !== id)
+
+//     $q.notify({
+//       type: 'positive',
+//       message: 'Cheque removed successfully.',
+//       position: 'top',
+//     })
+//   })
+// }
 
 const codeOptions = computed(() => {
   const { deductionType, taxType } = deductionForm.value
@@ -1608,9 +1678,37 @@ const bankChequeRows = computed(() => {
     amount: Number(row.amount) || 0,
   }))
 })
-const bankChequeTotal = computed(() =>
-  bankChequeRows.value.reduce((sum, row) => sum + (Number(row.amount) || 0), 0),
+
+const hasChequeToCancel = computed(
+  () => Boolean(store.forms.disbursement.chequeNumber) || (store.bankCheques || []).length > 0,
 )
+
+const netDisbursementAmount = computed(() => {
+  return Math.max(0, (Number(store.totalExpensesAmount) || 0) - totalDeductionAmount.value)
+})
+
+const otherBankChequeTotal = computed(() => {
+  return (store.bankCheques || [])
+    .filter((row) => row.id !== editingBankChequeId.value)
+    .reduce((sum, row) => sum + (Number(row.amount) || 0), 0)
+})
+
+const bankChequeBalance = computed(() => {
+  const net = Number(netDisbursementAmount.value) || 0
+  const currentAmount = Number(bankChequeForm.value.amount) || 0
+  const remaining = net - otherBankChequeTotal.value - currentAmount
+  return Math.max(0, Math.round(remaining * 100) / 100)
+})
+
+const applyBalanceToChequeAmount = () => {
+  const net = Number(netDisbursementAmount.value) || 0
+  const remaining = Math.max(0, Math.round((net - otherBankChequeTotal.value) * 100) / 100)
+  if (remaining <= 0) return
+  bankChequeForm.value.amount = String(remaining)
+  bankChequeForm.value.amountDisplay = remaining.toLocaleString('en-PH', {
+    minimumFractionDigits: 2,
+  })
+}
 
 const closeBankChequeDialog = () => {
   bankChequeDialogOpen.value = false
@@ -1636,6 +1734,20 @@ const editBankCheque = (row) => {
     cheque_date: row.cheque_date || todayFormatted(),
     amount: String(row.amount || ''),
     amountDisplay: (Number(row.amount) || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 }),
+  }
+  bankChequeDialogOpen.value = true
+}
+
+const openBankChequeDialog = () => {
+  editingBankChequeId.value = null
+  bankChequeForm.value = {
+    bank_id: null,
+    booklet_id: null,
+    bankName: '',
+    cheque_number: '',
+    cheque_date: todayFormatted(),
+    amount: '',
+    amountDisplay: '',
   }
   bankChequeDialogOpen.value = true
 }
@@ -1765,19 +1877,13 @@ watch(
 )
 
 const handleSaveEditedDisbursement = async () => {
-  // Validate total amount before saving
-  if (store.totalExpensesAmount !== store.lockedTotalAmount && !isChequeCancelled.value) {
-    $q.notify({
-      type: 'negative',
-      message: `Total amount must equal the original DV amount of ₱${store.lockedTotalAmount?.toLocaleString()}. Current total: ₱${store.totalExpensesAmount?.toLocaleString()}`,
-      icon: 'warning',
-      position: 'top',
-      timeout: 5000,
-    })
-    return
-  }
-
   saving.value = true
+  console.log(
+    'DEBUG expenses:',
+    JSON.stringify(
+      store.expenses.map((e) => ({ id: e.id, accountId: e.accountId, name: e.accountName })),
+    ),
+  )
   try {
     const result = await store.saveEditedDisbursement()
     if (result.success) {
@@ -1788,7 +1894,7 @@ const handleSaveEditedDisbursement = async () => {
         position: 'top',
         timeout: 3000,
       })
-      isChequeCancelled.value = false
+
       store.isChequeCancel = false
     } else {
       $q.notify({
@@ -2057,51 +2163,39 @@ const handlePasteNumeric = (event) => {
 const handleCancelCheque = () => {
   showConfirmDialog.value = true
 }
-void handleCancelCheque
 
 // Confirm cancel cheque action
 const confirmCancelCheque = async () => {
   try {
     showConfirmDialog.value = false
 
-    // Call backend API to mark cheque as cancelled
     store.isChequeCancel = true
 
-    if (store.isChequeCancel) {
-      // Clear the cheque number and enable bank selection
-      store.forms.disbursement.chequeNumber = ''
-      store.forms.disbursement.bank_id = null
-      store.autoCheque = ''
+    store.forms.disbursement.chequeNumber = ''
+    store.forms.disbursement.bank_id = null
+    store.autoCheque = ''
+    store.bankCheques = []
 
-      isChequeCancelled.value = true
+    await bankStore.fetchBanks()
 
-      // Refresh bank data to reflect the cancelled cheque status
-      await bankStore.fetchBanks()
-
-      $q.notify({
-        type: 'positive',
-        message: 'Cancelling Cheque! Edit details and save to confirm.',
-        icon: 'check_circle',
-        position: 'top',
-        timeout: 5000,
-      })
-    } else {
-      $q.notify({
-        type: 'negative',
-        message: 'Failed to cancel cheque',
-        icon: 'error',
-        position: 'top',
-        timeout: 3000,
-      })
-    }
+    $q.notify({
+      type: 'positive',
+      message: 'Cheque cancelled. You can now change the DV amount and issue a new cheque.',
+      icon: 'check_circle',
+      position: 'top',
+      timeout: 4000,
+    })
   } catch (error) {
     console.error('Error cancelling cheque:', error)
+
+    store.isChequeCancel = false
+
     $q.notify({
       type: 'negative',
-      message: 'Failed to cancel cheque',
+      message: 'Failed to cancel cheque.',
       icon: 'error',
       position: 'top',
-      timeout: 3000,
+      timeout: 4000,
     })
   }
 }
@@ -2166,135 +2260,19 @@ watch(
 )
 </script>
 
-<!-- <style scoped>
-.button-group {
-  display: flex;
-  gap: 4px;
-  justify-content: center;
-}
-
-.button-group .q-btn {
-  min-width: 32px;
-}
-
-/* Ensure proper spacing for the expense table */
-.q-table {
-  margin-bottom: 16px;
-}
-
-/* Style for the amount display */
-.q-input[readonly] {
-  background-color: #f5f5f5;
-}
-
-/* Amount validation colors */
-.text-negative {
-  color: #c10015 !important;
-}
-
-.text-warning {
-  color: #f57c00 !important;
-}
-
-.text-positive {
-  color: #21ba45 !important;
-}
-
-/* Expense account hierarchy styling */
-.expense-account-hierarchy {
-  font-size: 13px;
-  line-height: 1.4;
-  word-break: break-word;
-  max-width: 400px;
-}
-
-/* Responsive design for mobile */
-@media (max-width: 768px) {
-  .q-card {
-    min-width: 95vw !important;
-  }
-
-  .q-table {
-    font-size: 12px;
-  }
-
-  .button-group .q-btn {
-    min-width: 28px;
-    padding: 4px;
-  }
-
-  .expense-account-hierarchy {
-    font-size: 11px;
-    max-width: 250px;
-  }
-
-  .expense-acc-block {
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    overflow: hidden;
-  }
-
-  .expense-acc-header {
-  background: #f5f5f5;
-  border-bottom: 1px solid #e0e0e0;
-  min-height: 36px;
-}
-
-  .expense-acc-footer {
-    background: #fafafa;
-    border-top: 1px solid #e0e0e0;
-    min-height: 34px;
-  }
-
-  .expense-inline-table {
-    border-collapse: collapse;
-    font-size: 13px;
-  }
-
-.expense-inline-table th {
-  background: #fafafa;
-  padding: 6px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #757575;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border-bottom: 1px solid #e0e0e0;
-  text-align: left;
-}
-
-  .expense-inline-table td {
-    padding: 7px 10px;
-    border-bottom: 1px solid #f0f0f0;
-    color: #333;
-  }
-
-  .expense-inline-table tr:last-child td {
-    border-bottom: none;
-  }
-
-  :deep(.q-table__container) {
-    overflow-x: auto;
-    overflow-y: auto;
-    max-height: 300px;
-  }
-
-  :deep(.q-table__middle) {
-    overflow: unset;
-  }
-
-  :deep(.q-table thead tr th) {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: #fafafa;
-  }
-}
-</style> -->
 <style scoped>
 .disbursement-page {
   background-color: #fafafa;
   min-height: 100vh;
+}
+
+.expense-account-hierarchy {
+  font-size: 12px;
+  line-height: 1.4;
+  word-break: break-word;
+  white-space: normal;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .page-header {
@@ -2449,6 +2427,51 @@ watch(
 
 .expense-inline-table tr:last-child td {
   border-bottom: none;
+}
+
+/* Balance chip under the cheque Amount field */
+.balance-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+  color: #2e7d32;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.balance-chip:hover {
+  background: #c8e6c9;
+  border-color: #81c784;
+}
+
+.balance-chip:active {
+  transform: scale(0.98);
+}
+
+.balance-chip__amount {
+  margin-left: auto;
+  font-weight: 700;
+}
+
+.balance-chip--zero {
+  background: #f5f5f5;
+  border-color: #e0e0e0;
+  color: #9e9e9e;
+  cursor: default;
+}
+
+.balance-chip--zero:hover {
+  background: #f5f5f5;
+  border-color: #e0e0e0;
+  transform: none;
 }
 
 /* Responsive design for mobile */

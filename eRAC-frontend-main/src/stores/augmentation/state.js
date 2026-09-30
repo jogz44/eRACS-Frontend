@@ -8,6 +8,7 @@ export function initialState() {
 
     AugexpenseAccounts: ref([]),
     expenseHierarchy: ref([]),
+    augAppropriationMap: ref({}), // hierarchy-path key -> appropriation row
     availableBudgets: ref([]),
 
     // Loading states

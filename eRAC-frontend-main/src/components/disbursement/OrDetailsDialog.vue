@@ -217,8 +217,8 @@
               >
                 <td class="text-grey-6">{{ idx + 1 }}</td>
                 <td>
-                  <div class="text-weight-medium text-grey-8" style="font-size: 12px">
-                    {{ row.accountName }}
+                  <div class="expense-account-hierarchy text-weight-medium text-grey-8">
+                    {{ expenseAccountLabel(row) }}
                   </div>
                 </td>
                 <td>
@@ -976,8 +976,10 @@ import { useDisbursementStore } from 'stores/disbursementStore'
 import { useBankStore } from 'stores/bankStore'
 import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
+import { useExpenseAccountDisplay } from 'src/composables/useExpenseAccountDisplay'
 
 const $q = useQuasar()
+const { expenseAccountLabel } = useExpenseAccountDisplay()
 const savingPartial = ref(false)
 const savingSubmit = ref(false)
 const savingReimbursement = ref(false)
@@ -1185,10 +1187,7 @@ watch(
         selectedReimbursementExpenseAccounts.value = store.currentLiquidation.expenses.map(
           (expense) => ({
             ...expense,
-            accountName:
-              expense.accountName ||
-              expense.account_name ||
-              `${expense.account || ''}${expense.expenseType ? ` > ${expense.expenseType}` : ''}${expense.expenseItem ? ` > ${expense.expenseItem}` : ''}${expense.expenseSubItem ? ` > ${expense.expenseSubItem}` : ''}`,
+            accountName: expenseAccountLabel(expense),
             amount: '', // Leave amount empty for user to fill
           }),
         )
@@ -1710,7 +1709,7 @@ const addExpenseAccount = (account) => {
   if (!existing) {
     selectedReimbursementExpenseAccounts.value.push({
       ...account,
-      accountName: `${account.account}${account.expenseType ? ` > ${account.expenseType}` : ''}${account.expenseItem ? ` > ${account.expenseItem}` : ''}`,
+      accountName: expenseAccountLabel(account),
       amount: '',
     })
   }
@@ -1838,6 +1837,9 @@ const handleSubmitReimbursement = async () => {
         expense_class_id: primaryExpenseAccount.expense_class_id,
         expense_type_id: primaryExpenseAccount.expense_type_id,
         expense_item_id: primaryExpenseAccount.expense_item_id,
+        expense_sub_item_id: primaryExpenseAccount.expense_sub_item_id,
+        expense_sub_type_id: primaryExpenseAccount.expense_sub_type_id,
+        expense_sub_sub_type_id: primaryExpenseAccount.expense_sub_sub_type_id,
       },
       or_number: primaryOr.orNumber,
       or_amount: totalSelectedOrAmount.value,
@@ -2166,6 +2168,15 @@ const handlePasteToTwoDecimals = (event, applyValue) => {
 .disbursement-page {
   background-color: #fafafa;
   min-height: 100vh;
+}
+
+.expense-account-hierarchy {
+  font-size: 12px;
+  line-height: 1.4;
+  word-break: break-word;
+  white-space: normal;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .page-header {

@@ -1,52 +1,269 @@
 import { api } from 'src/boot/axios'
 import { useAuthStore } from 'stores/auth'
 
+// Stable 6-level hierarchy key (class : type : item : sub-item : sub-type :
+// sub-sub-type). Missing levels use a placeholder, mirroring how the backend
+// stores nulls for the new sub-type / sub-sub-type columns.
+const buildAugHierarchyKey = (row) => {
+  if (!row) return ''
+  const levelKeys = [
+    'expense_class_id',
+    'expense_type_id',
+    'expense_item_id',
+    'expense_sub_item_id',
+    'expense_sub_type_id',
+    'expense_sub_sub_type_id',
+  ]
+  const placeholders = ['class', 'type', 'item', 'subitem', 'subtype', 'subsubtype']
+  return levelKeys
+    .map((key, index) => {
+      const value = row[key]
+      return value != null && value !== '' ? value : placeholders[index]
+    })
+    .join(':')
+}
+
+// Child source for each depth: item -> sub-items, sub-item -> sub-types,
+// sub-type -> sub-sub-types. Accepts the flat "children" nesting (older/API
+// style) or the nested subItems / subTypes / subSubTypes keys (newer/API style).
+const getAugSubNodes = (node, level) => {
+  if (!node) return []
+  const children = node.children || node.childItems || []
+  if (level === 2) return node.subItems || node.sub_items || children
+  if (level === 3) return node.subTypes || node.sub_types || children
+  if (level === 4) return node.subSubTypes || node.sub_sub_types || children
+  return children
+}
+
+// Sum disbursed amounts per appropriation id from tran_expense_details rows.
+// Rows without an appropriation_id fall back to the hierarchy-path key.
+const buildAugDisbursedMap = (expenseDetails, appropriationMap) => {
+  const map = {}
+  ;(expenseDetails || []).forEach((row) => {
+    let apprId = row.appropriation_id ?? row.accountId
+    if (apprId == null || apprId === '') {
+      apprId = appropriationMap[buildAugHierarchyKey(row)]?.id
+    }
+    if (apprId == null) return
+    const key = String(apprId)
+    map[key] = (map[key] || 0) + (parseFloat(row.amount) || 0)
+  })
+  return map
+}
+
+// Recursively flatten the hierarchy into one account entry per leaf, carrying
+// the full 6-level path so sub-items / sub-types / sub-sub-types are surfaced.
+const walkAugHierarchy = (node, path, appropriationMap, results, disbursedMap = {}) => {
+  const level = path.ids.length
+  const id = node?.id ?? null
+  const name = node?.name ?? ''
+  const ids = [...path.ids, id]
+  const names = [...path.names, name]
+
+  const subNodes = getAugSubNodes(node, level)
+  const fundedSubNodes = subNodes.filter((c) => Number(c.amount) > 0)
+
+  // Same rule as the disbursement dialog: go down only through funded children
+  if (level < 5 && fundedSubNodes.length > 0) {
+    fundedSubNodes.forEach((sub) =>
+      walkAugHierarchy(sub, { ids, names }, appropriationMap, results, disbursedMap),
+    )
+    return
+  }
+  // Node has no funding at all: keep descending so unallocated leaves stay selectable
+  if (level < 5 && subNodes.length > 0 && !(Number(node.amount) > 0)) {
+    subNodes.forEach((sub) =>
+      walkAugHierarchy(sub, { ids, names }, appropriationMap, results, disbursedMap),
+    )
+    return
+  }
+
+  const [
+    expense_class_id,
+    expense_type_id,
+    expense_item_id,
+    expense_sub_item_id,
+    expense_sub_type_id,
+    expense_sub_sub_type_id,
+  ] = ids
+  const [
+    expense_class,
+    expense_type,
+    expense_item,
+    expense_sub_item,
+    expense_sub_type,
+    expense_sub_sub_type,
+  ] = names
+
+  const key = buildAugHierarchyKey({
+    expense_class_id,
+    expense_type_id,
+    expense_item_id,
+    expense_sub_item_id,
+    expense_sub_type_id,
+    expense_sub_sub_type_id,
+  })
+  const mapped = appropriationMap[key] || null
+
+  const treeAmount = Number(node?.amount) || 0
+  const appropriationId = node?.tran_appropriation_id ?? mapped?.id ?? null
+  const appropriatedAmount = treeAmount > 0 ? treeAmount : Number(mapped?.amount || 0)
+  const disbursedAmount = appropriationId != null ? disbursedMap[String(appropriationId)] || 0 : 0
+  const isAllocated = appropriatedAmount > 0
+
+  results.push({
+    id,
+    appropriation_id: appropriationId,
+    account: names.filter(Boolean).join(' - '),
+    description: names.filter(Boolean).join(' > '),
+    balance: Math.max(0, appropriatedAmount - disbursedAmount),
+    appropriated_amount: appropriatedAmount,
+    disbursed_amount: disbursedAmount,
+    expense_class: expense_class || '',
+    expense_class_id,
+    expense_type: expense_type || '',
+    expense_type_id,
+    expense_item: expense_item || '',
+    expense_item_id,
+    expense_sub_item_name: expense_sub_item || '',
+    expense_sub_item_id,
+    expense_sub_type_name: expense_sub_type || '',
+    expense_sub_type_id,
+    expense_sub_sub_type_name: expense_sub_sub_type || '',
+    expense_sub_sub_type_id,
+    budget_source: isAllocated
+      ? String(mapped?.budget_description || node?.budget_source || '')
+          .toLowerCase()
+          .includes('supplemental')
+        ? 'Supplemental Budget'
+        : 'Annual Budget'
+      : 'Unallocated',
+    is_allocated: isAllocated,
+  })
+}
+
+// Deepest first-branch names under a set of sub-nodes (sub-item -> sub-type ->
+// sub-sub-type), used to keep deep levels visible even when an appropriation is
+// stored at a higher depth of the tree.
+const getDeepestBranchNames = (subNodes, level) => {
+  const first = subNodes[0]
+  if (!first || !first.name) return []
+  const names = [first.name]
+  const deeper = getAugSubNodes(first, level + 1)
+  if (deeper.length > 0) {
+    names.push(...getDeepestBranchNames(deeper, level + 1))
+  }
+  return names
+}
+
+// Create a map of appropriation id -> full account path by walking the ENTIRE
+// hierarchy (not just leaves). The backend's from_account / to_account only
+// reach the expense item, so edit/view overrides them with the full path
+// incl. sub-item, sub-type and sub-sub-type levels.
+const buildAugAppropriationNameMap = (hierarchy, appropriationMap) => {
+  const map = {}
+  const walk = (node, path) => {
+    if (!node) return
+    const ids = [...path.ids, node.id ?? null]
+    const names = [...path.names, node.name ?? '']
+
+    const key = buildAugHierarchyKey({
+      expense_class_id: ids[0],
+      expense_type_id: ids[1],
+      expense_item_id: ids[2],
+      expense_sub_item_id: ids[3],
+      expense_sub_type_id: ids[4],
+      expense_sub_sub_type_id: ids[5],
+    })
+    const appropriation = appropriationMap[key]
+    if (appropriation && appropriation.id != null) {
+      let display = names.filter(Boolean)
+      const subNodes = getAugSubNodes(node, path.ids.length)
+      if (subNodes.length > 0) {
+        display = [...display, ...getDeepestBranchNames(subNodes, path.ids.length)]
+      }
+      map[String(appropriation.id)] = display.join(' > ')
+    }
+
+    const subNodes = getAugSubNodes(node, path.ids.length)
+    subNodes.forEach((sub) => walk(sub, { ids, names }))
+  }
+  ;(hierarchy || []).forEach((node) => walk(node, { ids: [], names: [] }))
+  return map
+}
+
 export function useAugmentationActions(state) {
   const authStore = useAuthStore()
 
+  // Normalize augmentation dates to YYYY-MM-DD.
+  // This is the format expected by Laravel and QDate.
+  const normalizeAugmentationDate = (value) => {
+    if (!value) return ''
 
-const fetchAugmentations = async (year = null) => {
-  state.loadingAugmentations.value = true
-  try {
-    const endpoint = authStore.admin ? "/api/admin/augmentations" : "/api/barangay/budget-augmentations"
-    const token = authStore.admin ? authStore.adminToken : authStore.token
-
-    const params = {}
-
-    if (state.searchQuery.value) params.search = state.searchQuery.value
-    if (state.dateFrom.value) params.date_from = state.dateFrom.value
-    if (state.dateTo.value) params.date_to = state.dateTo.value
-    if (year !== null && year !== undefined && year !== '') params.year = year
-
-
-    // Pass year param — backend uses it to filter by fiscal year
-    // if (year !== null && year !== undefined) {
-    //   params.year = year
-    // }
-
-    if (authStore.admin) {
-      const selectedBarangayId = authStore.getSelectedBarangay()
-      if (selectedBarangayId) {
-        params.barangay_id = selectedBarangayId
-      }
+    // Already in YYYY-MM-DD format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return value
     }
 
-    const response = await api.get(endpoint, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json',
-      },
-      params
-    })
+    // Support legacy DD/MM/YYYY or MM/DD/YYYY values.
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+      const [first, second, year] = value.split('/')
 
-    state.augmentation.value = response.data.data || []
-  } catch (error) {
-    console.error('Failed to fetch augmentations:', error)
-    state.augmentation.value = []
-  } finally {
-    state.loadingAugmentations.value = false
+      // If the second value is > 12, it must be MM/DD/YYYY.
+      if (Number(second) > 12) {
+        return `${year}-${first.padStart(2, '0')}-${second.padStart(2, '0')}`
+      }
+
+      // Default legacy format is DD/MM/YYYY.
+      return `${year}-${second.padStart(2, '0')}-${first.padStart(2, '0')}`
+    }
+
+    return value
   }
-}
+
+  const fetchAugmentations = async (year = null) => {
+    state.loadingAugmentations.value = true
+    try {
+      const endpoint = authStore.admin
+        ? '/api/admin/augmentations'
+        : '/api/barangay/budget-augmentations'
+      const token = authStore.admin ? authStore.adminToken : authStore.token
+
+      const params = {}
+
+      if (state.searchQuery.value) params.search = state.searchQuery.value
+      if (state.dateFrom.value) params.date_from = state.dateFrom.value
+      if (state.dateTo.value) params.date_to = state.dateTo.value
+      if (year !== null && year !== undefined && year !== '') params.year = year
+
+      // Pass year param — backend uses it to filter by fiscal year
+      // if (year !== null && year !== undefined) {
+      //   params.year = year
+      // }
+
+      if (authStore.admin) {
+        const selectedBarangayId = authStore.getSelectedBarangay()
+        if (selectedBarangayId) {
+          params.barangay_id = selectedBarangayId
+        }
+      }
+
+      const response = await api.get(endpoint, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+        params,
+      })
+
+      state.augmentation.value = response.data.data || []
+    } catch (error) {
+      console.error('Failed to fetch augmentations:', error)
+      state.augmentation.value = []
+    } finally {
+      state.loadingAugmentations.value = false
+    }
+  }
 
   // --- UPDATED: Fetch and flatten expense accounts like disbursement ---
   const fetchExpenseAccounts = async () => {
@@ -60,7 +277,7 @@ const fetchAugmentations = async (year = null) => {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: 'application/json',
-        }
+        },
       })
 
       if (!fiscalYearResponse.data.data || fiscalYearResponse.data.data.length === 0) {
@@ -68,17 +285,21 @@ const fetchAugmentations = async (year = null) => {
         return
       }
 
-      const currentFiscalYear = fiscalYearResponse.data.data[0]
+      const fiscalYears = fiscalYearResponse.data.data
+      const currentFiscalYear =
+        fiscalYears.find((y) => y.year == new Date().getFullYear()) || fiscalYears[0]
       const params = {
         fiscal_year_id: currentFiscalYear.id,
-        ...(state.selectedBudgetSource.value !== 'all' ? { budget_type: state.selectedBudgetSource.value } : {})
+        ...(state.selectedBudgetSource.value !== 'all'
+          ? { budget_type: state.selectedBudgetSource.value }
+          : {}),
       }
       const response = await api.get('/api/barangay/expense-hierarchy', {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: 'application/json',
         },
-        params
+        params,
       })
 
       // Store the hierarchy for possible future use
@@ -94,231 +315,54 @@ const fetchAugmentations = async (year = null) => {
         params: {
           status: 'committed',
           fiscal_year_id: currentFiscalYear.id,
-          ...(state.selectedBudgetSource.value !== 'all' ? { budget_type: state.selectedBudgetSource.value } : {})
-        }
+          ...(state.selectedBudgetSource.value !== 'all'
+            ? { budget_type: state.selectedBudgetSource.value }
+            : {}),
+        },
       })
 
       const appropriations = appropriationResponse.data.data || []
 
-      // Check if no appropriations found
-      if (appropriations.length === 0) {
-
-        // Use the expense hierarchy data instead of appropriations
-        // This shows ALL expense accounts from the library, even unallocated ones
-
-        // Transform expense hierarchy into expense accounts format
-        const expenseAccounts = []
-        if (state.expenseHierarchy && state.expenseHierarchy.length > 0) {
-          state.expenseHierarchy.forEach(expenseClass => {
-            if (expenseClass.children && expenseClass.children.length > 0) {
-              expenseClass.children.forEach(expenseType => {
-                if (expenseType.children && expenseType.children.length > 0) {
-                  expenseType.children.forEach(expenseItem => {
-                    // Check if this item has sub-items
-                    if (expenseItem.children && expenseItem.children.length > 0) {
-                      // Process each sub-item
-                      expenseItem.children.forEach(subItem => {
-                        expenseAccounts.push({
-                          id: subItem.id,
-                          appropriation_id: null, // No appropriation for unallocated accounts
-                          account: `${expenseClass.name} - ${expenseType.name} - ${expenseItem.name} - ${subItem.name}`,
-                          description: `${expenseClass.name} > ${expenseType.name} > ${expenseItem.name} > ${subItem.name}`,
-                          balance: 0, // Unallocated accounts have 0 balance
-                          expense_class: expenseClass.name,
-                          expense_class_id: expenseClass.id,
-                          expense_type: expenseType.name,
-                          expense_type_id: expenseType.id,
-                          expense_item: expenseItem.name,
-                          expense_item_id: expenseItem.id,
-                          expense_sub_item_name: subItem.name,
-                          budget_source: 'Unallocated',
-                          is_allocated: false
-                        })
-                      })
-                    } else {
-                      // No sub-items, process as regular item
-                      expenseAccounts.push({
-                        id: expenseItem.id,
-                        appropriation_id: null, // No appropriation for unallocated accounts
-                        account: `${expenseClass.name} - ${expenseType.name} - ${expenseItem.name}`,
-                        description: `${expenseClass.name} > ${expenseType.name} > ${expenseItem.name}`,
-                        balance: 0, // Unallocated accounts have 0 balance
-                        expense_class: expenseClass.name,
-                        expense_class_id: expenseClass.id,
-                        expense_type: expenseType.name,
-                        expense_type_id: expenseType.id,
-                        expense_item: expenseItem.name,
-                        expense_item_id: expenseItem.id,
-                        expense_sub_item_name: null, // No sub-items at this level
-                        budget_source: 'Unallocated',
-                        is_allocated: false
-                      })
-                    }
-                  })
-                } else {
-                  // Type level account (no items)
-                  expenseAccounts.push({
-                    id: expenseType.id,
-                    appropriation_id: null, // No appropriation for unallocated accounts
-                    account: `${expenseClass.name} - ${expenseType.name}`,
-                    description: `${expenseClass.name} > ${expenseType.name}`,
-                    balance: 0,
-                    expense_class: expenseClass.name,
-                    expense_class_id: expenseClass.id,
-                    expense_type: expenseType.name,
-                    expense_type_id: expenseType.id,
-                    expense_item: null, // No items at type level
-                    expense_item_id: null,
-                    expense_sub_item_name: null, // No sub-items at type level
-                    budget_source: 'Unallocated',
-                    is_allocated: false
-                  })
-                }
-              })
-            } else {
-              // Class level account (no types)
-              expenseAccounts.push({
-                id: expenseClass.id,
-                appropriation_id: null, // No appropriation for unallocated accounts
-                account: expenseClass.name,
-                description: expenseClass.name,
-                balance: 0,
-                expense_class: expenseClass.name,
-                expense_class_id: expenseClass.id,
-                expense_type: null, // No types at class level
-                expense_type_id: null,
-                expense_item: null, // No items at class level
-                expense_item_id: null,
-                expense_sub_item_name: null, // No sub-items at class level
-                budget_source: 'Unallocated',
-                is_allocated: false
-              })
-            }
-          })
-        }
-        state.AugexpenseAccounts.value = expenseAccounts
-        return
-      }
-
-      // Instead of replacing the expense hierarchy, merge appropriations with it
-      // This preserves ALL expense accounts (allocated and unallocated)
-
       // Create a map of appropriations by expense hierarchy IDs for quick lookup
       const appropriationMap = {}
-      appropriations.forEach(appropriation => {
-        const key = `${appropriation.expense_class_id || 'class'}-${appropriation.expense_type_id || 'type'}-${appropriation.expense_item_id || 'item'}-${appropriation.expense_sub_item_id || 'subitem'}`
+      appropriations.forEach((appropriation) => {
+        const key = buildAugHierarchyKey(appropriation)
         appropriationMap[key] = appropriation
-        // console.log('Mapped appropriation key:', key, 'for appropriation:', appropriation.id, 'sub_item_id:', appropriation.expense_sub_item_id)
       })
+      state.augAppropriationMap.value = appropriationMap
 
-      // Transform the complete expense hierarchy and add allocation information
+      // Fetch disbursements so balances reflect what has already been spent
+      let disbursedMap = {}
+      try {
+        const expenseDetailsResponse = await api.get('/api/barangay/expense-details', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        })
+        disbursedMap = buildAugDisbursedMap(
+          expenseDetailsResponse.data?.data || [],
+          appropriationMap,
+        )
+      } catch (error) {
+        // Don't block the dialog; balances fall back to the appropriated amount
+        console.warn('Failed to fetch expense details for balance calculation:', error)
+      }
+
       const expenseAccounts = []
       if (state.expenseHierarchy && state.expenseHierarchy.length > 0) {
-        state.expenseHierarchy.forEach(expenseClass => {
-          if (expenseClass.children && expenseClass.children.length > 0) {
-            expenseClass.children.forEach(expenseType => {
-              if (expenseType.children && expenseType.children.length > 0) {
-                expenseType.children.forEach(expenseItem => {
-                  // Check if this item has sub-items
-                  if (expenseItem.children && expenseItem.children.length > 0) {
-                    // console.log('Processing sub-items for item:', expenseItem.name, 'sub-items count:', expenseItem.children.length)
-                    // Process each sub-item
-                    expenseItem.children.forEach(subItem => {
-                      const key = `${expenseClass.id}-${expenseType.id}-${expenseItem.id}-${subItem.id}`
-                      const appropriation = appropriationMap[key]
-                      // console.log('Sub-item key:', key, 'appropriation found:', !!appropriation, 'sub-item name:', subItem.name)
-
-                      expenseAccounts.push({
-                        id: subItem.id,
-                        appropriation_id: appropriation ? appropriation.id : null, // Add the actual appropriation ID
-                        account: `${expenseClass.name} - ${expenseType.name} - ${expenseItem.name} - ${subItem.name}`,
-                        description: `${expenseClass.name} > ${expenseType.name} > ${expenseItem.name} > ${subItem.name}`,
-                        balance: appropriation ? appropriation.amount : 0,
-                        expense_class: expenseClass.name,
-                        expense_class_id: expenseClass.id,
-                        expense_type: expenseType.name,
-                        expense_type_id: expenseType.id,
-                        expense_item: expenseItem.name,
-                        expense_item_id: expenseItem.id,
-                        expense_sub_item_name: subItem.name,
-                        budget_source: appropriation ? (appropriation.budget_description?.toLowerCase().includes('supplemental') ? 'Supplemental Budget' : 'Annual Budget') : 'Unallocated',
-                        is_allocated: !!appropriation
-                      })
-                    })
-                  } else {
-                    // No sub-items, process as regular item
-                    const key = `${expenseClass.id}-${expenseType.id}-${expenseItem.id}-subitem`
-                    const appropriation = appropriationMap[key]
-
-                    expenseAccounts.push({
-                      id: expenseItem.id,
-                      appropriation_id: appropriation ? appropriation.id : null, // Add the actual appropriation ID
-                      account: `${expenseClass.name} - ${expenseType.name} - ${expenseItem.name}`,
-                      description: `${expenseClass.name} > ${expenseType.name} > ${expenseItem.name}`,
-                      balance: appropriation ? appropriation.amount : 0,
-                      expense_class: expenseClass.name,
-                      expense_class_id: expenseClass.id,
-                      expense_type: expenseType.name,
-                      expense_type_id: expenseType.id,
-                      expense_item: expenseItem.name,
-                      expense_item_id: expenseItem.id,
-                      expense_sub_item_name: null, // No sub-items at this level
-                      budget_source: appropriation ? (appropriation.budget_description?.toLowerCase().includes('supplemental') ? 'Supplemental Budget' : 'Annual Budget') : 'Unallocated',
-                      is_allocated: !!appropriation
-                    })
-                  }
-                })
-              } else {
-                // Type level account (no items)
-                const key = `${expenseClass.id}-${expenseType.id}-type-subitem`
-                const appropriation = appropriationMap[key]
-
-                expenseAccounts.push({
-                  id: expenseType.id,
-                  appropriation_id: appropriation ? appropriation.id : null, // Add the actual appropriation ID
-                  account: `${expenseClass.name} - ${expenseType.name}`,
-                  description: `${expenseClass.name} > ${expenseType.name}`,
-                  balance: appropriation ? appropriation.amount : 0,
-                  expense_class: expenseClass.name,
-                  expense_class_id: expenseClass.id,
-                  expense_type: expenseType.name,
-                  expense_type_id: expenseType.id,
-                  expense_item: null, // No items at type level
-                  expense_item_id: null,
-                  expense_sub_item_name: null, // No sub-items at type level
-                  budget_source: appropriation ? (appropriation.budget_description?.toLowerCase().includes('supplemental') ? 'Supplemental Budget' : 'Annual Budget') : 'Unallocated',
-                  is_allocated: !!appropriation
-                })
-              }
-            })
-          } else {
-            // Class level account (no types)
-            const key = `${expenseClass.id}-class-subitem-subitem`
-            const appropriation = appropriationMap[key]
-
-            expenseAccounts.push({
-              id: expenseClass.id,
-              appropriation_id: appropriation ? appropriation.id : null, // Add the actual appropriation ID
-              account: expenseClass.name,
-              description: expenseClass.name,
-              balance: appropriation ? appropriation.amount : 0,
-              expense_class: expenseClass.name,
-              expense_class_id: expenseClass.id,
-              expense_type: null, // No types at class level
-              expense_type_id: null,
-              expense_item: null, // No items at class level
-              expense_item_id: null,
-              expense_sub_item_name: null, // No sub-items at class level
-              budget_source: appropriation ? (appropriation.budget_description?.toLowerCase().includes('supplemental') ? 'Supplemental Budget' : 'Annual Budget') : 'Unallocated',
-              is_allocated: !!appropriation
-            })
-          }
+        state.expenseHierarchy.forEach((expenseClass) => {
+          walkAugHierarchy(
+            expenseClass,
+            { ids: [], names: [] },
+            appropriationMap,
+            expenseAccounts,
+            disbursedMap,
+          )
         })
       }
       state.AugexpenseAccounts.value = expenseAccounts
       return
-
-
     } catch (error) {
       console.error('Failed to fetch expense accounts:', error)
       console.error('Error details:', error.response?.data || error.message)
@@ -342,25 +386,20 @@ const fetchAugmentations = async (year = null) => {
         throw new Error('At least one expense is required')
       }
 
-      // Convert date format from DD/MM/YYYY to YYYY-MM-DD for backend
-      let backendDate = state.forms.value.augmentation.augmentation_date
-      if (backendDate && backendDate.includes('/')) {
-        const dateParts = backendDate.split('/')
-        if (dateParts.length === 3) {
-          backendDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`
-        }
-      }
+      const backendDate = normalizeAugmentationDate(
+        state.forms.value.augmentation.augmentation_date,
+      )
 
       // Create payload with appropriation IDs
       const payload = {
         augmentation_date: backendDate,
         remarks: state.forms.value.augmentation.remarks,
-        details: state.Augexpenses.value.map(expense => {
+        details: state.Augexpenses.value.map((expense) => {
           const detail = {
             from_appropriation_id: expense.from_appropriation_id,
             to_appropriation_id: expense.to_appropriation_id,
             amount: expense.amount,
-            particulars: expense.particulars
+            particulars: expense.particulars,
           }
 
           // If TO appropriation is null (unallocated), include expense hierarchy data
@@ -369,10 +408,8 @@ const fetchAugmentations = async (year = null) => {
           }
 
           return detail
-        })
+        }),
       }
-
-
 
       // Add barangay_id for admin users if selected
       if (authStore.admin) {
@@ -387,30 +424,32 @@ const fetchAugmentations = async (year = null) => {
         throw new Error('Admin users cannot create augmentations')
       }
 
-      const endpoint = "/api/barangay/budget-augmentations"
+      const endpoint = '/api/barangay/budget-augmentations'
       const token = authStore.token
 
       let response
       if (state.currentItem.value?.id) {
         // Update existing augmentation
-        response = await api.put(`/api/barangay/budget-augmentations/${state.currentItem.value.id}`, payload, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-          }
-        })
+        response = await api.put(
+          `/api/barangay/budget-augmentations/${state.currentItem.value.id}`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+            },
+          },
+        )
         // Admin activity log
-
       } else {
         // Create new augmentation
         response = await api.post(endpoint, payload, {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',
-          }
+          },
         })
         // Admin activity log
-
       }
 
       // Refresh the list
@@ -428,7 +467,7 @@ const fetchAugmentations = async (year = null) => {
       console.error('Error status:', error.response?.status)
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to save augmentation'
+        error: error.response?.data?.message || 'Failed to save augmentation',
       }
     } finally {
       state.loading.value.saveAugmentation = false
@@ -451,32 +490,35 @@ const fetchAugmentations = async (year = null) => {
         throw new Error('At least one expense is required')
       }
 
-      // Convert date format from DD/MM/YYYY to YYYY-MM-DD for backend
-      let backendDate = state.forms.value.augmentation.augmentation_date
-      if (backendDate && backendDate.includes('/')) {
-        const dateParts = backendDate.split('/')
-        if (dateParts.length === 3) {
-          backendDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`
-        }
-      }
+      const backendDate = normalizeAugmentationDate(
+        state.forms.value.augmentation.augmentation_date,
+      )
 
       // Create backward-compatible payload that matches the original structure
       const payload = {
         augmentation_date: backendDate,
         remarks: state.forms.value.augmentation.remarks,
-        details: state.Augexpenses.value.map(expense => ({
-          from_appropriation_id: expense.from_appropriation_id,
-          to_appropriation_id: expense.to_appropriation_id,
-          amount: expense.amount,
-          particulars: expense.particulars
-        }))
+        details: state.Augexpenses.value.map((expense) => {
+          const detail = {
+            from_appropriation_id: expense.from_appropriation_id,
+            to_appropriation_id: expense.to_appropriation_id,
+            amount: expense.amount,
+            particulars: expense.particulars,
+          }
+
+          if (!expense.to_appropriation_id && expense.to_expense_data) {
+            detail.to_expense_data = expense.to_expense_data
+          }
+
+          return detail
+        }),
       }
 
       const response = await api.put(`/api/barangay/budget-augmentations/${id}`, payload, {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: 'application/json',
-        }
+        },
       })
 
       // Refresh the list
@@ -488,12 +530,12 @@ const fetchAugmentations = async (year = null) => {
 
       return { success: true, data: response.data.data }
     } catch (error) {
-            console.error('Failed to update augmentation:', error)
+      console.error('Failed to update augmentation:', error)
       console.error('Error response:', error.response?.data)
       console.error('Error status:', error.response?.status)
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to update augmentation'
+        error: error.response?.data?.message || 'Failed to update augmentation',
       }
     }
   }
@@ -510,36 +552,35 @@ const fetchAugmentations = async (year = null) => {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: 'application/json',
-        }
+        },
       })
 
       // Refresh the list
       await fetchAugmentations()
-
-
 
       return { success: true }
     } catch (error) {
       console.error('Failed to delete augmentation:', error)
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to delete augmentation'
+        error: error.response?.data?.message || 'Failed to delete augmentation',
       }
     }
   }
 
   const fetchAugmentationById = async (id) => {
     try {
-
       // Use different endpoints and tokens for admin vs regular users
-      const endpoint = authStore.admin ? `/api/admin/augmentations/${id}` : `/api/barangay/budget-augmentations/${id}`
+      const endpoint = authStore.admin
+        ? `/api/admin/augmentations/${id}`
+        : `/api/barangay/budget-augmentations/${id}`
       const token = authStore.admin ? authStore.adminToken : authStore.token
 
       const response = await api.get(endpoint, {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: 'application/json',
-        }
+        },
       })
 
       return response.data.data
@@ -553,23 +594,35 @@ const fetchAugmentations = async (year = null) => {
     try {
       const augmentation = await fetchAugmentationById(row.id)
       if (augmentation) {
-        // Convert date format from YYYY-MM-DD to DD/MM/YYYY for frontend
-        const dateParts = augmentation.augmentation_date.split('-')
-        const formattedDate = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : augmentation.augmentation_date
-
         state.forms.value.augmentation = {
-          augmentation_date: formattedDate,
+          augmentation_date: normalizeAugmentationDate(augmentation.augmentation_date),
           remarks: augmentation.remarks || '',
           refNo: augmentation.ref_number || '',
         }
 
+        // Rebuild full account paths (sub-item / sub-type / sub-sub-type levels).
+        // Load the hierarchy lazily when the page did not fetch it yet (admin page)
+        if (
+          !state.expenseHierarchy.value ||
+          state.expenseHierarchy.value.length === 0 ||
+          Object.keys(state.augAppropriationMap.value || {}).length === 0
+        ) {
+          await fetchExpenseAccounts()
+        }
+
         // Map the backend details to the new appropriation structure
-        const mappedDetails = (augmentation.details || []).map(detail => {
+        const augAccountMap = buildAugAppropriationNameMap(
+          state.expenseHierarchy.value,
+          state.augAppropriationMap.value,
+        )
+        const mappedDetails = (augmentation.details || []).map((detail) => {
           // Build FROM expense account name
-          const fromExpense = detail.from_account || ''
+          const fromExpense =
+            augAccountMap[String(detail.from_appropriation_id)] || detail.from_account || ''
 
           // Build TO expense account name
-          const toExpense = detail.to_account || ''
+          const toExpense =
+            augAccountMap[String(detail.to_appropriation_id)] || detail.to_account || ''
 
           return {
             id: detail.id,
@@ -578,7 +631,7 @@ const fetchAugmentations = async (year = null) => {
             from_appropriation_id: detail.from_appropriation_id,
             to_appropriation_id: detail.to_appropriation_id,
             amount: detail.amount,
-            particulars: detail.particulars
+            particulars: detail.particulars,
           }
         })
 
@@ -595,24 +648,36 @@ const fetchAugmentations = async (year = null) => {
     try {
       const augmentation = await fetchAugmentationById(row.id)
       if (augmentation) {
-        // Convert date format from YYYY-MM-DD to DD/MM/YYYY for frontend
-        const dateParts = augmentation.augmentation_date.split('-')
-        const formattedDate = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : augmentation.augmentation_date
-
         // Set form data for display only (read-only)
         state.forms.value.augmentation = {
-          augmentation_date: formattedDate,
+          augmentation_date: normalizeAugmentationDate(augmentation.augmentation_date),
           remarks: augmentation.remarks || '',
           refNo: augmentation.ref_number || '',
         }
 
+        // Rebuild full account paths (sub-item / sub-type / sub-sub-type levels).
+        // Load the hierarchy lazily when the page did not fetch it yet (admin page)
+        if (
+          !state.expenseHierarchy.value ||
+          state.expenseHierarchy.value.length === 0 ||
+          Object.keys(state.augAppropriationMap.value || {}).length === 0
+        ) {
+          await fetchExpenseAccounts()
+        }
+
         // Map the backend details to the new appropriation structure
-        const mappedDetails = (augmentation.details || []).map(detail => {
+        const augAccountMap = buildAugAppropriationNameMap(
+          state.expenseHierarchy.value,
+          state.augAppropriationMap.value,
+        )
+        const mappedDetails = (augmentation.details || []).map((detail) => {
           // Build FROM expense account name
-          const fromExpense = detail.from_account || ''
+          const fromExpense =
+            augAccountMap[String(detail.from_appropriation_id)] || detail.from_account || ''
 
           // Build TO expense account name
-          const toExpense = detail.to_account || ''
+          const toExpense =
+            augAccountMap[String(detail.to_appropriation_id)] || detail.to_account || ''
 
           return {
             id: detail.id,
@@ -621,7 +686,7 @@ const fetchAugmentations = async (year = null) => {
             from_appropriation_id: detail.from_appropriation_id,
             to_appropriation_id: detail.to_appropriation_id,
             amount: detail.amount,
-            particulars: detail.particulars
+            particulars: detail.particulars,
           }
         })
 
@@ -683,7 +748,7 @@ const fetchAugmentations = async (year = null) => {
     const newRefNumber = `AUG-${String(yyyy).slice(-2)}-${mm}-${String(lastRef + 1).padStart(3, '0')}`
 
     // Update form with new defaults
-    state.forms.value.augmentation.augmentation_date = `${dd}/${mm}/${yyyy}`
+    state.forms.value.augmentation.augmentation_date = `${yyyy}-${mm}-${dd}`
     state.forms.value.augmentation.refNo = newRefNumber
   }
 
@@ -692,15 +757,13 @@ const fetchAugmentations = async (year = null) => {
     resetForm('augmentation')
   }
 
-
-
   // Fetch available budgets for augmentation
   const fetchAvailableBudgets = async () => {
     try {
       state.loadingBudgets.value = true
 
       // Use different endpoints and tokens for admin vs regular users
-      const endpoint = authStore.admin ? "/api/admin/budgets" : "/api/barangay/budgets"
+      const endpoint = authStore.admin ? '/api/admin/budgets' : '/api/barangay/budgets'
       const token = authStore.admin ? authStore.adminToken : authStore.token
 
       const params = { year: new Date().getFullYear() }
