@@ -63,8 +63,19 @@ export const useReportStore = defineStore('report', {
   actions: {
     _normalizeDate(input) {
       if (!input || typeof input !== 'string') return input
-      // Convert YYYY/MM/DD to YYYY-MM-DD
-      return input.replaceAll('/  ', '-')
+
+      // MM/DD/YYYY → YYYY-MM-DD
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(input)) {
+        const [month, day, year] = input.split('/')
+        return `${year}-${month}-${day}`
+      }
+
+      // YYYY/MM/DD → YYYY-MM-DD
+      if (/^\d{4}\/\d{2}\/\d{2}$/.test(input)) {
+        return input.replace(/\//g, '-')
+      }
+
+      return input
     },
     _getSelectedExpenseClass() {
       // Handle both ref and plain object for expenseRacSelected
@@ -109,20 +120,23 @@ export const useReportStore = defineStore('report', {
         const fiscalYear = year ?? new Date().getFullYear()
         const params = { fiscal_year: fiscalYear }
 
-        const [expenseClasses, positionsOptions, banksResponse, setupRecord] = await Promise.all([
-          api.get('/api/barangay/expense-classes', { ...config, params }),
-          api.get('/api/barangay/positions', config),
-          api.get('/api/barangay/banks', config),
-          this._fetchBarangaySetupBankAccounts(),
-        ])
+        const [expenseClasses, continuingClasses, positionsOptions, banksResponse, setupRecord] =
+          await Promise.all([
+            api.get('/api/barangay/expense-classes', { ...config, params }),
+            api.get('/api/barangay/expense-classes', {
+              ...config,
+              params: { ...params, source: 'continuing' },
+            }),
+            api.get('/api/barangay/positions', config),
+            api.get('/api/barangay/banks', config),
+            this._fetchBarangaySetupBankAccounts(),
+          ])
 
         const list = expenseClasses?.data?.data?.data || []
+        const contList = continuingClasses?.data?.data?.data || list
 
-        this.expenseOptionsCurrent = list.map((expense) => ({ id: expense.id, name: expense.name }))
-        this.expenseOptionsContinuing = list.map((expense) => ({
-          id: expense.id,
-          name: expense.name,
-        }))
+        this.expenseOptionsCurrent = list.map((e) => ({ id: e.id, name: e.name }))
+        this.expenseOptionsContinuing = contList.map((e) => ({ id: e.id, name: e.name }))
         this.positionsOptions =
           positionsOptions?.data?.map((pos) => ({
             label: pos.name,
@@ -360,36 +374,34 @@ export const useReportStore = defineStore('report', {
         return []
       }
     },
-    async fetchRacReport($date) {
+    async fetchRacReport($date, source = 'regular') {
       try {
         const config = this.getAuthConfig()
         const authStore = useAuthStore()
         const selected = this._getSelectedExpenseClass()
         const to = this._normalizeDate($date.value.to)
         const from = this._normalizeDate($date.value.from)
-        if (!selected?.id) {
-          throw new Error('Expense class not selected')
+        if (!selected?.id) throw new Error('Expense class not selected')
+
+        // clear stale rows so the previous report doesn't flash
+        this.reportRAC = []
+
+        if (source === 'continuing') {
+          return await this._fetchContinuingRac({ from, to, className: selected.name })
         }
-        // If admin, use admin endpoint instead
+
         if (authStore.admin) {
           const selectedBarangayId = authStore.getSelectedBarangay()
           if (!selectedBarangayId) {
             throw new Error('Please select a barangay to generate admin RAC report')
           }
-          return await this.fetchAdminRacReport(selectedBarangayId, { value: { to, from } })
+          return await this.fetchAdminRacReport(selectedBarangayId, { value: { to, from } }, source)
         }
-        const response = await api.get(
-          `/api/barangay/report/rac`,
-          {
-            params: {
-              to,
-              from,
-              expense_class_id: selected.id,
-            },
-          },
-          config,
-        )
-        console.log('========================', response)
+
+        const response = await api.get(`/api/barangay/report/rac`, {
+          ...config, // was passed as a 3rd arg before, which axios ignores
+          params: { to, from, expense_class_id: selected.id, source },
+        })
 
         // Handle middleware-wrapped response structure
         const responseData = response?.data?.data || response?.data
@@ -456,26 +468,144 @@ export const useReportStore = defineStore('report', {
         throw error
       }
     },
-    async fetchAdminRacReport(barangayId, $date) {
+    async _fetchContinuingRac({ from, to, className }) {
+      const years = this._yearsInDateRange(from, to)
+      const rows = await this._fetchContinuingDisbursementReportRows(years)
+
+      const titles = []
+      const keyMap = {}
+      const out = []
+
+      const normalize = (value) =>
+        String(value || '')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .toLowerCase()
+
+      const normalizedClassName = normalize(className)
+
+      rows.forEach((dv) => {
+        if (!this._isWithinDateRange(dv.date, from, to)) return
+
+        const lines = (dv.expenses || []).filter((expense) => {
+          const accountName = String(expense.accountName || '')
+
+          const hierarchy = accountName
+            .split(' > ')
+            .map((part) => part.trim())
+            .filter(Boolean)
+
+          const expenseClass = hierarchy[0] || ''
+
+          return normalize(expenseClass) === normalizedClassName
+        })
+
+        if (!lines.length) return
+
+        const row = {
+          date: dv.date,
+          particular: [...new Set(lines.map((line) => line.particular).filter(Boolean))].join(', '),
+          dvNumber: dv.dvNumber,
+          payee: dv.payee,
+          amount: 0,
+          appropriation: 0,
+        }
+
+        lines.forEach((expense) => {
+          /*
+           * Build the account title from the six hierarchy levels.
+           * The class is removed because it is already the RAC section header.
+           */
+          const hierarchy = [
+            expense.expenseType,
+            expense.expenseItem,
+            expense.expenseSubItem,
+            expense.expenseSubType,
+            expense.expenseSubSubType,
+          ]
+            .map((value) => String(value || '').trim())
+            .filter(Boolean)
+
+          let title = hierarchy.join(' - ')
+
+          /*
+           * Fallback for older API responses.
+           */
+          if (!title && expense.accountName) {
+            const parts = String(expense.accountName)
+              .split(' > ')
+              .map((part) => part.trim())
+              .filter(Boolean)
+
+            title = parts.slice(1).join(' - ')
+          }
+
+          const amount = Number(expense.amount) || 0
+
+          row.amount += amount
+
+          if (!title) return
+
+          const key =
+            'amount_' +
+            title
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, '_')
+              .replace(/^_+|_+$/g, '')
+
+          if (!keyMap[title]) {
+            keyMap[title] = key
+            titles.push(title)
+          }
+
+          row[key] = (row[key] || 0) + amount
+        })
+        console.log(
+          'CONTINUING RAC EXPENSE:',
+          lines.map((expense) => ({
+            accountId: expense.accountId,
+            accountName: expense.accountName,
+            expenseClass: expense.expenseClass,
+            expenseType: expense.expenseType,
+            expenseItem: expense.expenseItem,
+            expenseSubItem: expense.expenseSubItem,
+            expenseSubType: expense.expenseSubType,
+            expenseSubSubType: expense.expenseSubSubType,
+          })),
+        )
+
+        row.appropriation = row.amount
+
+        out.push(row)
+      })
+
+      out.sort((a, b) => String(a.dvNumber).localeCompare(String(b.dvNumber)))
+
+      this.dynamicAccountColumns = titles
+      this.accountTitleKeyMap = keyMap
+      this.reportRAC = out
+
+      console.log('CONTINUING RAC TITLES:', titles)
+      console.log('CONTINUING RAC KEY MAP:', keyMap)
+      console.log('CONTINUING RAC ROWS:', out)
+    },
+    async fetchAdminRacReport(barangayId, $date, source = 'regular') {
       try {
         const config = this.getAuthConfig()
         const selected = this._getSelectedExpenseClass()
         const to = this._normalizeDate($date.value.to)
         const from = this._normalizeDate($date.value.from)
 
-        // Use the same endpoint as user page but with admin parameters
-        const response = await api.get(
-          `/api/admin/report/rac`,
-          {
-            params: {
-              to,
-              from,
-              expense_class_id: selected?.id,
-              barangay_id: barangayId,
-            },
+        const response = await api.get(`/api/admin/report/rac`, {
+          ...config,
+          params: {
+            to,
+            from,
+            expense_class_id: selected?.id,
+            barangay_id: barangayId,
+            source,
           },
-          config,
-        )
+        })
 
         const rawData = response?.data?.data?.rows || []
 
@@ -537,34 +667,156 @@ export const useReportStore = defineStore('report', {
         throw error
       }
     },
-    async fetchSacbReport($from, $to) {
+    async fetchSacbReport($from, $to, source = 'regular') {
       try {
         const config = this.getAuthConfig()
         const from = this._normalizeDate($from)
         const to = this._normalizeDate($to)
         const authStore = useAuthStore()
         let response
-        if (authStore.admin) {
-          const barangayId = authStore.getSelectedBarangay()
-          response = await api.get(
-            `/api/admin/report/sacb`,
-            { params: { from, to, ...(barangayId ? { barangay_id: barangayId } : {}) } },
-            config,
-          )
-        } else {
-          response = await api.get(`/api/barangay/report/sacb`, { params: { from, to } }, config)
+
+        // clear stale rows so the previous report doesn't flash
+        this.reportSACB = []
+
+        if (source === 'continuing') {
+          this.reportSACB = await this._buildContinuingSacb({ from, to })
+          return
         }
 
-        // Handle middleware-wrapped response structure for SACB
-        const responseData = response?.data?.data || response?.data
-        const rows = responseData?.data?.rows || responseData?.rows || []
+        if (authStore.admin) {
+          const barangayId = authStore.getSelectedBarangay()
+          response = await api.get(`/api/admin/report/sacb`, {
+            ...config,
+            params: { from, to, source, ...(barangayId ? { barangay_id: barangayId } : {}) },
+          })
+        } else {
+          response = await api.get(`/api/barangay/report/sacb`, {
+            ...config,
+            params: { from, to, source },
+          })
+        }
 
-        // Backend now returns hierarchical structure directly
-        this.reportSACB = rows
+        const responseData = response?.data?.data || response?.data
+        this.reportSACB = responseData?.data?.rows || responseData?.rows || []
+
+        // const rawRows = responseData?.data?.rows || responseData?.rows || []
+
+        // // Backend returns ppa: null for some BDRRMF sub-items. Keep the row
+        // // (its amounts are in the section totals) and give it a visible label.
+        // this.reportSACB = rawRows.map((row) =>
+        //   !row.isTotal && !String(row.ppa ?? '').trim() ? { ...row, ppa: '(Unnamed)' } : row,
+        // )
+
+        console.log('===== SACB API ROWS =====')
+        console.table(
+          this.reportSACB.map((row) => ({
+            ppa: row.ppa,
+            isSection: row.isSection,
+            isType: row.isType,
+            isItem: row.isItem,
+            isSubItem: row.isSubItem,
+            isSubType: row.isSubType,
+            isSubSubType: row.isSubSubType,
+            appropriation: row.appropriation,
+            obligation: row.obligation,
+            balance: row.balance,
+          })),
+        )
+
+        // console.log(
+        //   'BLANK PPA ROWS:',
+        //   this.reportSACB.filter((r) => !r.isTotal && !String(r.ppa ?? '').trim()),
+        // )
       } catch (error) {
-        console.error('Fetch by steve - Error:', error)
+        console.error('Fetch SACB - Error:', error)
         throw error
       }
+    },
+
+    async _buildContinuingSacb({ from, to }) {
+      const config = this.getAuthConfig()
+      const authStore = useAuthStore()
+      const admin = authStore.admin
+      const selectedBarangayId = admin ? authStore.getSelectedBarangay?.() : null
+      const params = selectedBarangayId ? { barangay_id: selectedBarangayId } : {}
+      const [apprRes, disbRes] = await Promise.all([
+        api.get(
+          admin
+            ? '/api/admin/continuing-appropriations/list'
+            : '/api/barangay/continuing-appropriations/list',
+          { ...config, ...(selectedBarangayId ? { params } : {}) },
+        ),
+        // no year param, so we get ALL disbursements (needed to rebuild the original amount)
+        api.get(
+          admin ? '/api/admin/continuing-disbursements' : '/api/barangay/continuing-disbursements',
+          { ...config, ...(selectedBarangayId ? { params } : {}) },
+        ),
+      ])
+      const appropriations = this._unwrapRows(apprRes)
+      const disbursements = this._unwrapRows(disbRes)
+
+      // 1) totals per continuing account: all-time and within the date range
+      const allTime = {}
+      const inRange = {}
+      disbursements.forEach((dv) => {
+        const within = this._isWithinDateRange(dv.date, from, to)
+        ;(dv.expenses || []).forEach((e) => {
+          const id = String(e.accountId)
+          const amt = Number(e.amount) || 0
+          allTime[id] = (allTime[id] || 0) + amt
+          if (within) inRange[id] = (inRange[id] || 0) + amt
+        })
+      })
+
+      // 2) build the class > type > item > sub-item tree
+      const root = new Map()
+      const bump = (map, name, appr, obl) => {
+        if (!map.has(name)) map.set(name, { appr: 0, obl: 0, kids: new Map() })
+        const node = map.get(name)
+        node.appr += appr
+        node.obl += obl
+        return node.kids
+      }
+
+      appropriations
+        .filter((a) => a.status === 'committed')
+        .forEach((a) => {
+          ;(a.accounts || []).forEach((acc) => {
+            const id = String(acc.id)
+            const appr = (Number(acc.balance) || 0) + (allTime[id] || 0) // original amount
+            const obl = inRange[id] || 0
+            const path = [
+              acc.expenseClass,
+              acc.expenseType,
+              acc.expenseItem,
+              acc.expenseSubItem,
+            ].filter(Boolean)
+            let level = root
+            path.forEach((name) => {
+              level = bump(level, name, appr, obl)
+            })
+          })
+        })
+
+      // 3) flatten into the row shape the SACB modal already renders
+      const flags = ['isSection', 'isType', 'isItem', 'isSubItem']
+      const rows = []
+      const walk = (map, depth, counter = { n: 0 }) => {
+        ;[...map.entries()].forEach(([name, node]) => {
+          const isLeaf = node.kids.size === 0
+          const showAmounts = depth === 0 || isLeaf // same rule as the PHP
+          rows.push({
+            [flags[Math.min(depth, 3)]]: true,
+            ppa: depth === 0 ? `${++counter.n}. ${name}` : name,
+            appropriation: showAmounts ? node.appr : null,
+            obligation: showAmounts ? node.obl : null,
+            balance: showAmounts ? node.appr - node.obl : null,
+          })
+          walk(node.kids, depth + 1, counter)
+        })
+      }
+      walk(root, 0)
+      return rows
     },
 
     async loadPbcAdviceList() {
@@ -1027,6 +1279,7 @@ export const useReportStore = defineStore('report', {
     async _fetchContinuingDisbursementReportRows(year) {
       const config = this.getAuthConfig()
       const authStore = useAuthStore()
+
       const years = Array.isArray(year)
         ? year
         : [Number(year ?? this.selectedYear ?? new Date().getFullYear())]
@@ -1037,25 +1290,80 @@ export const useReportStore = defineStore('report', {
 
       const responses = await Promise.all(
         years.map((reportYear) => {
-          const params = { year: Number(reportYear) }
+          const params = {
+            year: Number(reportYear),
+          }
+
           if (authStore.admin) {
             const barangayId = authStore.getSelectedBarangay?.()
-            if (barangayId) params.barangay_id = barangayId
+
+            if (barangayId) {
+              params.barangay_id = barangayId
+            }
           }
-          return api.get(endpoint, { ...config, params })
+
+          return api.get(endpoint, {
+            ...config,
+            params,
+          })
         }),
       )
 
       const rows = responses.flatMap((response) => this._unwrapRows(response))
 
-      // TEMP DEBUG — remove after diagnosing
-      console.log('CONTINUING DISBURSEMENT RAW ROW:', rows[0])
+      /*
+       * Build the six-level hierarchy from accountName.
+       *
+       * accountName format:
+       *
+       * Expense Class
+       *   > Expense Type
+       *   > Expense Item
+       *   > Expense Sub Item
+       *   > Expense Sub Type
+       *   > Expense Sub Sub Type
+       *
+       * Older records may only contain the first 3 levels.
+       */
+      const normalizedRows = rows.map((row) => {
+        const expenses = (row.expenses || []).map((expense) => {
+          const parts = String(expense.accountName || '')
+            .split('>')
+            .map((part) => part.trim())
+            .filter(Boolean)
+
+          return {
+            ...expense,
+
+            expenseClass: parts[0] || null,
+            expenseType: parts[1] || null,
+            expenseItem: parts[2] || null,
+            expenseSubItem: parts[3] || null,
+            expenseSubType: parts[4] || null,
+            expenseSubSubType: parts[5] || null,
+          }
+        })
+
+        return {
+          ...row,
+          expenses,
+        }
+      })
+
+      // DEBUG
+      console.log('CONTINUING DISBURSEMENT NORMALIZED:', normalizedRows[0])
 
       const seen = new Set()
-      return rows.filter((row) => {
+
+      return normalizedRows.filter((row) => {
         const key = `${row.id || row.disbursement_id || row.dv_number || row.dvNumber}`
-        if (seen.has(key)) return false
+
+        if (seen.has(key)) {
+          return false
+        }
+
         seen.add(key)
+
         return true
       })
     },

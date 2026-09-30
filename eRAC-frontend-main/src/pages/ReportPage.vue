@@ -394,12 +394,23 @@
                 no-caps
               />
 
-              <q-btn
+              <!-- <q-btn
                 unelevated
                 icon="print"
                 label="Print"
                 color="#187C19"
                 @click="handleSACBPrint"
+                v-permission="'print'"
+                size="sm"
+                no-caps
+              /> -->
+
+              <q-btn
+                outline
+                icon="table_view"
+                label="Export Excel"
+                color="#69B31E"
+                @click="exportSACBExcel"
                 v-permission="'print'"
                 size="sm"
                 no-caps
@@ -630,17 +641,17 @@
                           </div>
                           <div class="col-appropriation text-right">
                             <span class="main-section-total">{{
-                              row.appropriation ? formatCurrency(row.appropriation) : ''
+                              row.appropriation != null ? formatCurrency(row.appropriation) : ''
                             }}</span>
                           </div>
                           <div class="col-obligation text-right">
                             <span class="main-section-total">{{
-                              row.obligation ? formatCurrency(row.obligation) : ''
+                              row.obligation != null ? formatCurrency(row.obligation) : ''
                             }}</span>
                           </div>
                           <div class="col-balance text-right">
                             <span class="main-section-total">{{
-                              row.balance ? formatCurrency(row.balance) : ''
+                              row.balance != null ? formatCurrency(row.balance) : ''
                             }}</span>
                           </div>
                         </div>
@@ -653,13 +664,13 @@
                           <span class="subcategory-text">{{ row.ppa }}</span>
                         </div>
                         <div class="col-appropriation text-right">
-                          {{ row.appropriation ? formatCurrency(row.appropriation) : '' }}
+                          {{ row.appropriation != null ? formatCurrency(row.appropriation) : '' }}
                         </div>
                         <div class="col-obligation text-right">
-                          {{ row.obligation ? formatCurrency(row.obligation) : '' }}
+                          {{ row.obligation != null ? formatCurrency(row.obligation) : '' }}
                         </div>
                         <div class="col-balance text-right">
-                          {{ row.balance ? formatCurrency(row.balance) : '' }}
+                          {{ row.balance != null ? formatCurrency(row.balance) : '' }}
                         </div>
                       </div>
 
@@ -670,13 +681,13 @@
                           <span class="subsubcategory-text">{{ row.ppa }}</span>
                         </div>
                         <div class="col-appropriation text-right">
-                          {{ row.appropriation ? formatCurrency(row.appropriation) : '' }}
+                          {{ row.appropriation != null ? formatCurrency(row.appropriation) : '' }}
                         </div>
                         <div class="col-obligation text-right">
-                          {{ row.obligation ? formatCurrency(row.obligation) : '' }}
+                          {{ row.obligation != null ? formatCurrency(row.obligation) : '' }}
                         </div>
                         <div class="col-balance text-right">
-                          {{ row.balance ? formatCurrency(row.balance) : '' }}
+                          {{ row.balance != null ? formatCurrency(row.balance) : '' }}
                         </div>
                       </div>
 
@@ -688,13 +699,51 @@
                         </div>
                         <div class="amount-group">
                           <div class="col-appropriation text-right">
-                            {{ row.appropriation ? formatCurrency(row.appropriation) : '' }}
+                            {{ row.appropriation != null ? formatCurrency(row.appropriation) : '' }}
                           </div>
                           <div class="col-obligation text-right">
-                            {{ row.obligation ? formatCurrency(row.obligation) : '' }}
+                            {{ row.obligation != null ? formatCurrency(row.obligation) : '' }}
                           </div>
                           <div class="col-balance text-right">
-                            {{ row.balance ? formatCurrency(row.balance) : '' }}
+                            {{ row.balance != null ? formatCurrency(row.balance) : '' }}
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Sub-Type level (under Sub-Item) -->
+                      <div v-else-if="row.isSubType" class="subtype-row">
+                        <div class="col-description">
+                          <span class="subtype-indent">></span>
+                          <span class="subtype-text">{{ row.ppa }}</span>
+                        </div>
+                        <div class="amount-group">
+                          <div class="col-appropriation text-right">
+                            {{ row.appropriation != null ? formatCurrency(row.appropriation) : '' }}
+                          </div>
+                          <div class="col-obligation text-right">
+                            {{ row.obligation != null ? formatCurrency(row.obligation) : '' }}
+                          </div>
+                          <div class="col-balance text-right">
+                            {{ row.balance != null ? formatCurrency(row.balance) : '' }}
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Sub-Sub-Type level (under Sub-Type) -->
+                      <div v-else-if="row.isSubSubType" class="subsubtype-row">
+                        <div class="col-description">
+                          <span class="subsubtype-indent">></span>
+                          <span class="subsubtype-text">{{ row.ppa }}</span>
+                        </div>
+                        <div class="amount-group">
+                          <div class="col-appropriation text-right">
+                            {{ row.appropriation != null ? formatCurrency(row.appropriation) : '' }}
+                          </div>
+                          <div class="col-obligation text-right">
+                            {{ row.obligation != null ? formatCurrency(row.obligation) : '' }}
+                          </div>
+                          <div class="col-balance text-right">
+                            {{ row.balance != null ? formatCurrency(row.balance) : '' }}
                           </div>
                         </div>
                       </div>
@@ -703,13 +752,13 @@
                       <div v-else-if="row.isTotal" class="total-row">
                         <div class="col-description text-right text-bold">TOTAL</div>
                         <div class="col-appropriation text-right text-bold">
-                          {{ row.appropriation ? formatCurrency(row.appropriation) : '' }}
+                          {{ row.appropriation != null ? formatCurrency(row.appropriation) : '' }}
                         </div>
                         <div class="col-obligation text-right text-bold">
-                          {{ row.obligation ? formatCurrency(row.obligation) : '' }}
+                          {{ row.obligation != null ? formatCurrency(row.obligation) : '' }}
                         </div>
                         <div class="col-balance text-right text-bold">
-                          {{ row.balance ? formatCurrency(row.balance) : '' }}
+                          {{ row.balance != null ? formatCurrency(row.balance) : '' }}
                         </div>
                       </div>
                     </template>
@@ -2026,29 +2075,38 @@ import { useActivityLogging } from '../composables/useActivityLogging'
 
 const totalAppropriation = computed(() => {
   return reportStore.reportSACB
-    .filter((row) => row.isType || row.isItem) // only count type and item rows
+    .filter((row) => row.isSection)
     .reduce((sum, row) => {
-      return sum + (row.appropriation || 0)
+      return sum + Number(row.appropriation || 0)
     }, 0)
-    .toLocaleString('en-US', { minimumFractionDigits: 2 })
+    .toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
 })
 
 const totalObligation = computed(() => {
   return reportStore.reportSACB
-    .filter((row) => row.isType || row.isItem) // only count type and item rows
+    .filter((row) => row.isSection)
     .reduce((sum, row) => {
-      return sum + (row.obligation || 0)
+      return sum + Number(row.obligation || 0)
     }, 0)
-    .toLocaleString('en-US', { minimumFractionDigits: 2 })
+    .toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
 })
 
 const totalBalance = computed(() => {
   return reportStore.reportSACB
-    .filter((row) => row.isType || row.isItem) // only count type and item rows
+    .filter((row) => row.isSection)
     .reduce((sum, row) => {
-      return sum + (row.balance || 0)
+      return sum + Number(row.balance || 0)
     }, 0)
-    .toLocaleString('en-US', { minimumFractionDigits: 2 })
+    .toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
 })
 
 // Computed property for dynamic columns count
@@ -2385,14 +2443,9 @@ const openSACBModal = async (type) => {
     await loadSacbReport(
       type === 'current-sacb'
         ? currentSacbDateRange.value.from
-        : type === 'continuing-sacb'
-          ? continuingSacbDateRange.value.from
-          : null,
-      type === 'current-sacb'
-        ? currentSacbDateRange.value.to
-        : type === 'continuing-sacb'
-          ? continuingSacbDateRange.value.to
-          : null,
+        : continuingSacbDateRange.value.from,
+      type === 'current-sacb' ? currentSacbDateRange.value.to : continuingSacbDateRange.value.to,
+      type === 'continuing-sacb' ? 'continuing' : 'regular',
     )
     SACBModal.reportType = reportType
     SACBModal.show = true
@@ -2450,11 +2503,8 @@ const openRACModal = async (type) => {
   generatingRacReportLoading.value = true
   try {
     await loadRacReport(
-      type === 'current-rac'
-        ? CurrentRacDateRange
-        : type === 'continuing-rac'
-          ? continuingRacDateRange
-          : null,
+      type === 'current-rac' ? CurrentRacDateRange : continuingRacDateRange,
+      type === 'continuing-rac' ? 'continuing' : 'regular',
     )
     RACModal.reportType = reportType
     RACModal.show = true
@@ -2645,11 +2695,11 @@ const getReportTypeLabel = (type) =>
     'continuing-sacb': 'Continuing Reports - Status of Appropriation and Obligation (SACB)',
   })[type] || 'Unknown Report'
 
-const handleSACBPrint = () => {
-  logAdminActivity('Report Printed', `Printed ${SACBModal.reportType} report`)
-  closeSACBModal()
-  notifySuccess('Report sent to printer successfully!')
-}
+// const handleSACBPrint = () => {
+//   logAdminActivity('Report Printed', `Printed ${SACBModal.reportType} report`)
+//   closeSACBModal()
+//   notifySuccess('Report sent to printer successfully!')
+// }
 
 // const handleRACPrint = () => {
 //   logAdminActivity('Report Printed', `Printed ${RACModal.reportType} report`)
@@ -2724,27 +2774,21 @@ const dateRangeDisplay = computed(() => {
   return `${CurrentRacDateRange.value.from} - ${CurrentRacDateRange.value.to}`
 })
 
-async function loadRacReport($date) {
+async function loadRacReport($date, source = 'regular') {
   try {
-    await reportStore.fetchRacReport($date)
+    await reportStore.fetchRacReport($date, source)
   } catch (error) {
     console.error(error)
-    $q.notify({
-      type: 'negative',
-      message: 'Failed to generate RAC Report',
-    })
+    $q.notify({ type: 'negative', message: 'Failed to generate RAC Report' })
   }
 }
 
-async function loadSacbReport($from, $to) {
+async function loadSacbReport($from, $to, source = 'regular') {
   try {
-    await reportStore.fetchSacbReport($from, $to)
+    await reportStore.fetchSacbReport($from, $to, source)
   } catch (error) {
     console.error(error)
-    $q.notify({
-      type: 'negative',
-      message: 'Failed to generate SACB Report',
-    })
+    $q.notify({ type: 'negative', message: 'Failed to generate SACB Report' })
   }
 }
 
@@ -2819,19 +2863,13 @@ async function exportToExcel() {
     const dynamicCols = reportStore.dynamicAccountColumns
     const totalCols = 5 + dynamicCols.length
 
-    // ── Helper: apply border to a cell ──
+    //  Helper: apply border to a cell
     const thinBorder = {
       top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
       bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
       left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
       right: { style: 'thin', color: { argb: 'FFCCCCCC' } },
     }
-    // const mediumBorder = {
-    //   top:    { style: 'medium', color: { argb: 'FF000000' } },
-    //   bottom: { style: 'medium', color: { argb: 'FF000000' } },
-    //   left:   { style: 'medium', color: { argb: 'FF000000' } },
-    //   right:  { style: 'medium', color: { argb: 'FF000000' } },
-    // }
 
     const outerBorder = {
       top: { style: 'medium', color: { argb: 'FFD3D3D3' } },
@@ -2840,24 +2878,18 @@ async function exportToExcel() {
       right: { style: 'medium', color: { argb: 'FFD3D3D3' } },
     }
 
-    // const applyBorderRange = (startRow, endRow, startCol, endCol, border) => {
-    //   for (let r = startRow; r <= endRow; r++) {
-    //     for (let c = startCol; c <= endCol; c++) {
-    //       const cell = ws.getCell(r, c)
-    //       cell.border = border
-    //     }
-    //   }
-    // }
+    //  Column widths
+    // ws.columns = [
+    //   { width: 20 }, // A - Date
+    //   { width: 32 }, // B - Particulars
+    //   { width: 18 }, // C - DV#
+    //   { width: 26 }, // D - Payee
+    //   { width: 16 }, // E - Appropriation
+    //   ...dynamicCols.map(() => ({ width: 22 })),
+    // ]
 
-    // ── Column widths ──
-    ws.columns = [
-      { width: 20 }, // A - Date
-      { width: 32 }, // B - Particulars
-      { width: 18 }, // C - DV#
-      { width: 26 }, // D - Payee
-      { width: 16 }, // E - Appropriation
-      ...dynamicCols.map(() => ({ width: 22 })),
-    ]
+    const colWidths = [20, 32, 18, 26, 16, ...dynamicCols.map(() => 22)]
+    ws.columns = colWidths.map((width) => ({ width }))
 
     // ROW 1 — Report Title
     ws.mergeCells(1, 1, 1, totalCols)
@@ -2978,7 +3010,7 @@ async function exportToExcel() {
     colHeaders.forEach((header, i) => {
       const cell = ws.getCell(7, i + 1)
       cell.value = header
-      cell.font = { bold: true, size: 10, name: 'Arial' }
+      cell.font = { bold: true, size: 8, name: 'Arial' }
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } }
       cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
       cell.border = {
@@ -2996,8 +3028,19 @@ async function exportToExcel() {
     })
     ws.getRow(7).height = 44
 
-    // DATA ROWS — starting at row 8
+        // DATA ROWS — starting at row 8
     const dataStartExcelRow = 8
+
+    // estimate how many lines a cell needs so the row is tall enough (8pt Arial)
+    const linesNeeded = (val, colIndex) => {
+      const text = String(val ?? '')
+      if (!text) return 1
+      const charsPerLine = Math.max(4, Math.floor(colWidths[colIndex] * 1.15))
+      return text
+        .split('\n')
+        .reduce((sum, part) => sum + Math.max(1, Math.ceil(part.length / charsPerLine)), 0)
+    }
+
     reportStore.reportRAC.forEach((row, i) => {
       const excelRow = dataStartExcelRow + i
       const isEven = i % 2 === 1
@@ -3014,11 +3057,13 @@ async function exportToExcel() {
         ...dynamicCols.map((col) => row[reportStore.accountTitleKeyMap[col]] ?? ''),
       ]
 
+      let maxLines = 1
+
       values.forEach((val, ci) => {
         const cell = ws.getCell(excelRow, ci + 1)
         cell.value = val
         cell.fill = rowFill
-        cell.font = { size: 10, name: 'Arial' }
+        cell.font = { size: 8, name: 'Arial' }
         cell.border = {
           top: { style: 'thin', color: { argb: 'FFDDDDDD' } },
           bottom: { style: 'thin', color: { argb: 'FFDDDDDD' } },
@@ -3032,16 +3077,19 @@ async function exportToExcel() {
               : { style: 'thin', color: { argb: 'FFDDDDDD' } },
         }
 
-        // Numbers: right-align and format
         if (ci >= 4) {
+          // numbers: right-aligned, never need wrapping
           cell.alignment = { horizontal: 'right', vertical: 'middle' }
           cell.numFmt = '#,##0.00'
         } else {
-          cell.alignment = { horizontal: 'left', vertical: 'middle' }
+          // text: wrap onto a new line instead of being cut off
+          cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }
+          maxLines = Math.max(maxLines, linesNeeded(val, ci))
         }
       })
 
-      ws.getRow(excelRow).height = 18
+      // ~11pt per line at 8pt font, plus a little padding; never shorter than 18
+      ws.getRow(excelRow).height = Math.max(18, maxLines * 11 + 6)
     })
 
     // TOTAL ROW
@@ -3107,7 +3155,7 @@ async function exportToExcel() {
 
     const summaryHeaderStyle = (cell, label) => {
       cell.value = label
-      cell.font = { bold: true, size: 11, name: 'Arial', color: { argb: 'FFFFFFFF' } }
+      cell.font = { bold: true, size: 10, name: 'Arial', color: { argb: 'FFFFFFFF' } }
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '58B265FF' } }
       cell.alignment = { horizontal: 'center', vertical: 'middle' }
       cell.border = outerBorder
@@ -3152,7 +3200,7 @@ async function exportToExcel() {
       // Col A - label
       const labelCell = ws.getCell(excelRow, 1)
       labelCell.value = rowData[0]
-      labelCell.font = { bold: true, size: 10, name: 'Arial' }
+      labelCell.font = { bold: true, size: 8, name: 'Arial' }
       labelCell.fill = rowFill
       labelCell.alignment = { horizontal: 'left', vertical: 'middle' }
       labelCell.border = thinBorder
@@ -3160,7 +3208,7 @@ async function exportToExcel() {
       // Col B - value (number)
       const valCell = ws.getCell(excelRow, 2)
       valCell.value = rowData[1]
-      valCell.font = { bold: true, size: 10, name: 'Arial', color: { argb: 'FF187C19' } }
+      valCell.font = { bold: true, size: 8, name: 'Arial', color: { argb: 'FF187C19' } }
       valCell.fill = rowFill
       valCell.alignment = { horizontal: 'right', vertical: 'middle' }
       valCell.border = thinBorder
@@ -3169,7 +3217,7 @@ async function exportToExcel() {
       // Col C - info label
       const infoLabelCell = ws.getCell(excelRow, 3)
       infoLabelCell.value = rowData[2]
-      infoLabelCell.font = { bold: true, size: 10, name: 'Arial' }
+      infoLabelCell.font = { bold: true, size: 8, name: 'Arial' }
       infoLabelCell.fill = rowFill
       infoLabelCell.alignment = { horizontal: 'left', vertical: 'middle' }
       infoLabelCell.border = thinBorder
@@ -3178,7 +3226,7 @@ async function exportToExcel() {
       ws.mergeCells(excelRow, 4, excelRow, 5)
       const infoValCell = ws.getCell(excelRow, 4)
       infoValCell.value = rowData[3]
-      infoValCell.font = { size: 10, name: 'Arial' }
+      infoValCell.font = { size: 8, name: 'Arial' }
       infoValCell.fill = rowFill
       infoValCell.alignment = { horizontal: 'left', vertical: 'middle' }
       infoValCell.border = thinBorder
@@ -3232,6 +3280,223 @@ async function exportToExcel() {
   }
 }
 
+async function exportSACBExcel() {
+  try {
+    const ExcelJS = (await import('exceljs')).default
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('SACB Report')
+
+    const totalCols = 4
+    const BLACK = { argb: 'FF000000' }
+    const LIGHT = { argb: 'FFDDDDDD' }
+    const fill = (argb) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } })
+
+    const toNum = (v) => {
+      if (typeof v === 'number') return v
+      if (v == null || v === '') return 0
+      return parseFloat(String(v).replace(/,/g, '')) || 0
+    }
+
+    //  Column widths (A–D). Total width is scaled to fit by pageSetup below
+    ws.columns = [{ width: 62 }, { width: 18 }, { width: 18 }, { width: 18 }]
+
+    //  Title block (same as PDF)
+    const addCenteredRow = (rowNo, text, font, height) => {
+      ws.mergeCells(rowNo, 1, rowNo, totalCols)
+      const c = ws.getCell(rowNo, 1)
+      c.value = text
+      c.font = { name: 'Arial', ...font }
+      c.alignment = { horizontal: 'center', vertical: 'middle' }
+      ws.getRow(rowNo).height = height
+    }
+
+    const isContinuingSACB = SACBModal.reportType?.startsWith('Continuing') || false
+    const sacbFrom = isContinuingSACB
+      ? continuingSacbDateRange.value.from
+      : currentSacbDateRange.value.from
+    const sacbTo = isContinuingSACB
+      ? continuingSacbDateRange.value.to
+      : currentSacbDateRange.value.to
+    const sacbPeriod =
+      sacbFrom && sacbTo ? `${formatFullDate(sacbFrom)} - ${formatFullDate(sacbTo)}` : ''
+
+    addCenteredRow(
+      1,
+      'Status of Appropriation and Obligation (SACB)',
+      { bold: true, size: 14, color: { argb: 'FF187C19' } },
+      26,
+    )
+    addCenteredRow(
+      2,
+      `Barangay ${authStore.user?.barangay_name || ''}`,
+      { bold: true, size: 12, color: { argb: 'FF187C19' } },
+      20,
+    )
+    addCenteredRow(3, `Period: ${sacbPeriod}`, { size: 10, color: { argb: 'FF666666' } }, 18)
+    ws.getRow(4).height = 8 // spacer
+
+    //  Column header row (row 5)
+    const HEADER_ROW = 5
+    const headers = ['PROGRAM / PROJECT / ACTIVITY', 'APPROPRIATION', 'OBLIGATION', 'BALANCE']
+    headers.forEach((h, i) => {
+      const cell = ws.getCell(HEADER_ROW, i + 1)
+      cell.value = h
+      cell.font = { bold: true, size: 10, name: 'Arial' }
+      cell.fill = fill('FFF0F0F0')
+      cell.alignment = {
+        horizontal: i === 0 ? 'left' : 'right',
+        vertical: 'middle',
+        wrapText: true,
+      }
+      cell.border = {
+        top: { style: 'medium', color: BLACK },
+        bottom: { style: 'medium', color: BLACK },
+        left: { style: i === 0 ? 'medium' : 'thin', color: i === 0 ? BLACK : LIGHT },
+        right: { style: i === 3 ? 'medium' : 'thin', color: i === 3 ? BLACK : LIGHT },
+      }
+    })
+    ws.getRow(HEADER_ROW).height = 24
+
+    //  Data rows
+    const sacbRows = reportStore.reportSACB || []
+    const START = HEADER_ROW + 1
+
+    const levelOf = (r) => {
+      if (r.isSubSubType) return 5
+      if (r.isSubType) return 4
+      if (r.isSubItem) return 3
+      if (r.isItem) return 2
+      if (r.isType) return 1
+      return 0
+    }
+
+    const styleBorder = (cell, ci, { heavyTop = false, heavyBottom = false } = {}) => {
+      cell.border = {
+        top: heavyTop ? { style: 'thin', color: BLACK } : { style: 'hair', color: LIGHT },
+        bottom: heavyBottom ? { style: 'thin', color: BLACK } : { style: 'hair', color: LIGHT },
+        left: ci === 0 ? { style: 'medium', color: BLACK } : undefined,
+        right: ci === 3 ? { style: 'medium', color: BLACK } : undefined,
+      }
+    }
+
+    sacbRows.forEach((row, i) => {
+      const r = START + i
+      const isSection = !!row.isSection
+      const isTotal = !!row.isTotal
+      const level = levelOf(row)
+      const bold = isSection || isTotal
+
+      const bg = isSection ? 'FFF8F9FA' : isTotal ? 'FFE9ECEF' : 'FFFFFFFF'
+      const fontColor = level >= 3 ? { argb: 'FF666666' } : BLACK
+
+      // Description
+      const d = ws.getCell(r, 1)
+      if (isSection) d.value = (row.ppa || '').toUpperCase()
+      else if (isTotal) d.value = 'TOTAL'
+      else d.value = '> ' + (row.ppa || '')
+      d.font = { name: 'Arial', size: isSection ? 11 : 10, bold, color: fontColor }
+      d.alignment = {
+        horizontal: isTotal ? 'right' : 'left',
+        vertical: 'middle',
+        wrapText: true,
+        indent: isSection || isTotal ? 0 : level * 2,
+      }
+      d.fill = fill(bg)
+      styleBorder(d, 0, { heavyTop: isSection || isTotal, heavyBottom: isSection })
+
+      // Amounts (blank when 0, same as the preview)
+      ;[row.appropriation, row.obligation, row.balance].forEach((val, ci) => {
+        const c = ws.getCell(r, ci + 2)
+        const n = toNum(val)
+        c.value = n ? n : null
+        c.numFmt = '#,##0.00;-#,##0.00'
+        c.font = { name: 'Courier New', size: 10, bold, color: fontColor }
+        c.alignment = { horizontal: 'right', vertical: 'middle' }
+        c.fill = fill(bg)
+        styleBorder(c, ci + 1, { heavyTop: isSection || isTotal, heavyBottom: isSection })
+      })
+    })
+
+    // Closing line under the table
+    const tableEnd = START + Math.max(sacbRows.length, 1) - 1
+    for (let c = 1; c <= totalCols; c++) {
+      const cell = ws.getCell(tableEnd, c)
+      cell.border = { ...cell.border, bottom: { style: 'medium', color: BLACK } }
+    }
+
+    //  Summary (same totals as the on-screen/PDF summary: type + item rows only)
+    const summaryRows = sacbRows.filter((r) => r.isSection)
+    const totalAppr = summaryRows.reduce((s, r) => s + toNum(r.appropriation), 0)
+    const totalOblig = summaryRows.reduce((s, r) => s + toNum(r.obligation), 0)
+    const totalBal = summaryRows.reduce((s, r) => s + toNum(r.balance), 0)
+
+    let sr = tableEnd + 2
+    ws.mergeCells(sr, 1, sr, totalCols)
+    const sh = ws.getCell(sr, 1)
+    sh.value = 'SUMMARY STATISTICS'
+    sh.font = { bold: true, size: 10, name: 'Arial', color: { argb: 'FFFFFFFF' } }
+    sh.fill = fill('FF187C19')
+    sh.alignment = { horizontal: 'center', vertical: 'middle' }
+    ws.getRow(sr).height = 20
+    ;[
+      ['Total Appropriation:', totalAppr],
+      ['Total Obligation:', totalOblig],
+      ['Remaining Balance:', totalBal],
+    ].forEach(([label, val]) => {
+      sr++
+      ws.mergeCells(sr, 1, sr, 2)
+      const l = ws.getCell(sr, 1)
+      l.value = label
+      l.font = { bold: true, size: 10, name: 'Arial' }
+      l.alignment = { horizontal: 'left', vertical: 'middle' }
+      ws.mergeCells(sr, 3, sr, 4)
+      const v = ws.getCell(sr, 3)
+      v.value = val
+      v.numFmt = '"₱"#,##0.00;-"₱"#,##0.00'
+      v.font = { bold: true, size: 10, name: 'Courier New', color: { argb: 'FF187C19' } }
+      v.alignment = { horizontal: 'right', vertical: 'middle' }
+      for (let c = 1; c <= totalCols; c++) {
+        ws.getCell(sr, c).border = { bottom: { style: 'hair', color: LIGHT } }
+      }
+      ws.getRow(sr).height = 18
+    })
+
+    //  PAGE SETUP: A4 portrait, fit all columns on one page width
+    ws.pageSetup = {
+      paperSize: 9, // A4
+      orientation: 'portrait',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0, // as many pages tall as needed
+      horizontalCentered: true,
+      margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
+      printArea: `A1:D${sr}`,
+      printTitlesRow: `${HEADER_ROW}:${HEADER_ROW}`, // repeat header on each page
+    }
+    ws.headerFooter.oddFooter = '&CPage &P of &N'
+    ws.views = [{ state: 'frozen', ySplit: HEADER_ROW }]
+
+    //  Write file
+    const buffer = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    const barangay = authStore.user?.barangay_name?.replace(/\s+/g, '_') || 'Barangay'
+    link.href = url
+    link.download = `SACB_${barangay}_${sacbFrom}_to_${sacbTo}.xlsx`
+    link.click()
+    URL.revokeObjectURL(url)
+
+    logAdminActivity('Report Exported', `Exported ${SACBModal.reportType} report to Excel`)
+    $q.notify({ type: 'positive', message: 'SACB Excel Exported Successfully!' })
+  } catch (error) {
+    console.error(error)
+    $q.notify({ type: 'negative', message: 'Failed to export SACB Excel' })
+  }
+}
+
 async function exportSACBToPDF() {
   exportingSACBPDF.value = true
   const html2canvas = (await import('html2canvas')).default
@@ -3253,11 +3518,11 @@ async function exportSACBToPDF() {
     })
 
     const imgData = canvas.toDataURL('image/png')
-    // Create PDF in landscape orientation with A4 dimensions
-    const pdf = new jsPDF('l', 'mm', 'a4') // 'l' for landscape
+    // Create PDF in portrait orientation with A4 dimensions
+    const pdf = new jsPDF('p', 'mm', 'a4') // 'p' for portrait
 
-    const pageWidth = pdf.internal.pageSize.getWidth() // 297mm (A4 landscape width)
-    const pageHeight = pdf.internal.pageSize.getHeight() // 210mm (A4 landscape height)
+    const pageWidth = pdf.internal.pageSize.getWidth() // 210mm (A4 portrait width)
+    const pageHeight = pdf.internal.pageSize.getHeight() // 297mm (A4 portrait height)
     const imgWidth = pageWidth
     const imgHeight = (canvas.height * imgWidth) / canvas.width
 
@@ -3362,70 +3627,358 @@ async function exportTransmittalToPDF() {
   }
 }
 
+
+const BANK_FULL_NAMES = {
+  BPI: 'BANK OF THE PHILIPPINE ISLANDS',
+  LBP: 'LAND BANK OF THE PHILIPPINES',
+  LANDBANK: 'LAND BANK OF THE PHILIPPINES',
+  DBP: 'DEVELOPMENT BANK OF THE PHILIPPINES',
+  BDO: 'BDO UNIBANK, INC.',
+  PNB: 'PHILIPPINE NATIONAL BANK',
+  MBTC: 'METROPOLITAN BANK AND TRUST COMPANY',
+  METROBANK: 'METROPOLITAN BANK AND TRUST COMPANY',
+  RCBC: 'RIZAL COMMERCIAL BANKING CORPORATION',
+  UCPB: 'UNITED COCONUT PLANTERS BANK',
+  SECURITYBANK: 'SECURITY BANK CORPORATION',
+  CHINABANK: 'CHINA BANKING CORPORATION',
+  CBC: 'CHINA BANKING CORPORATION',
+  UNIONBANK: 'UNION BANK OF THE PHILIPPINES',
+  UBP: 'UNION BANK OF THE PHILIPPINES',
+  PSBANK: 'PHILIPPINE SAVINGS BANK',
+  EASTWEST: 'EAST WEST BANKING CORPORATION',
+  AUB: 'ASIA UNITED BANK CORPORATION',
+}
+
+function fullBankName(name) {
+  const raw = String(name || '').trim()
+  if (!raw) return ''
+  const norm = (s) => s.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  if (BANK_FULL_NAMES[norm(raw)]) return BANK_FULL_NAMES[norm(raw)]
+  // e.g. "LBP BRGY. SAN ISIDRO - 0342" -> expand only the first word
+  const [first, ...rest] = raw.split(/\s+/)
+  const hit = BANK_FULL_NAMES[norm(first)]
+  return hit && rest.length ? `${hit} ${rest.join(' ')}` : raw
+}
+
 async function exportPBCToPDF() {
   exportingPBCPDF.value = true
-  const html2canvas = (await import('html2canvas')).default
-  const jsPDF = (await import('jspdf')).default
   try {
-    const element = document.querySelector('#pbc-print-content')
+    const jsPDF = (await import('jspdf')).default
 
-    if (!element) {
-      $q.notify({
-        type: 'negative',
-        message: 'No PBC content found to export!',
-      })
-      return
+    const doc = new jsPDF('p', 'mm', 'a4') // 210 x 297
+    const pageW = doc.internal.pageSize.getWidth()
+    const pageH = doc.internal.pageSize.getHeight()
+    const mL = 13
+    const mR = 13
+    const mTop = 14
+    const mBottom = 18 // room for "Page X of Y"
+    const contentW = pageW - mL - mR // 184
+    const lineH = 4.2
+    let y = mTop
+
+    // dotted lines (falls back to solid on very old jsPDF versions)
+    const dash = (on) => {
+      try {
+        doc.setLineDashPattern(on ? [0.3, 0.5] : [], 0)
+      } catch {
+        /* older jsPDF: ignore */
+      }
     }
-    element.classList.add('pdf-export-mode')
 
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
+    const ensureSpace = (h) => {
+      if (y + h > pageH - mBottom) {
+        doc.addPage()
+        y = mTop
+      }
+    }
+
+    const centered = (text, { style = 'normal', size = 9 } = {}) => {
+      doc.setFont('times', style)
+      doc.setFontSize(size)
+      doc.setTextColor(0)
+      doc.text(text, pageW / 2, y, { align: 'center' })
+      y += lineH
+    }
+
+    // wrapped paragraph that breaks across pages line by line
+    const para = (text, { style = 'normal', size = 8.5, indent = 0, gap = 1 } = {}) => {
+      doc.setFont('helvetica', style)
+      doc.setFontSize(size)
+      doc.setTextColor(0)
+      doc.splitTextToSize(text, contentW - indent).forEach((line) => {
+        ensureSpace(lineH)
+        doc.text(line, mL + indent, y)
+        y += lineH
+      })
+      y += gap
+    }
+
+    // ---------- Header block (same fonts as the preview) ----------
+    const barangay = authStore.user?.barangay_name || ''
+    centered('Republic of the Philippines', { size: 9 })
+    centered('Province of Davao del Norte', { size: 9 })
+    centered('CITY OF TAGUM', { style: 'bold', size: 10 })
+    centered(`BARANGAY ${barangay.toUpperCase()}`, { style: 'bold', size: 10 })
+    y += 4
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9.5)
+    doc.setTextColor(0)
+    doc.text("PUNONG BARANGAY'S CERTIFICATION (PBC)", pageW / 2, y, { align: 'center' })
+    y += 8
+
+    // ---------- TO / PBC No. block ----------
+    const toTop = y
+    doc.setFontSize(8.5)
+    doc.setTextColor(0)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`To: ${PBCModal.recipient || 'The Bank Manager'}`, mL, y)
+    y += lineH
+    doc.setFont('helvetica', 'bold')
+    doc.text(fullBankName(PBCModal.bankName || 'Bank Name').toUpperCase(), mL, y)
+    y += lineH
+    doc.setFont('helvetica', 'normal')
+    doc.text(PBCModal.bankBranch || 'Tagum Branch', mL, y) // same fallbacks as the preview
+    y += lineH
+    doc.text(PBCModal.bankCity || 'Tagum City', mL, y)
+    y += lineH
+
+    const rightLine = (label, value, yy, labelColor = [0, 0, 0]) => {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8.5)
+      doc.setTextColor(0)
+      const vw = doc.getTextWidth(value)
+      doc.text(value, pageW - mR, yy, { align: 'right' })
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(...labelColor)
+      doc.text(label, pageW - mR - vw - 1.5, yy, { align: 'right' })
+      doc.setTextColor(0)
+    }
+    rightLine('PBC No.:', PBCModal.pbcNo || '—', toTop, [161, 9, 9])
+    rightLine('DATE:', formatFullDate(PBCModal.date), toTop + lineH)
+    y += 5
+
+    // ---------- Certification body ----------
+    para(`This is to certify that the following checks were duly issued by Barangay ${barangay}`, {
+      indent: 12,
+    })
+    para(
+      `(Ito ay pagpapatunay na ang mga cheke na nakalista sa ibaba ay na-isyu ng Barangay ${barangay})`,
+      { style: 'italic', size: 7.5, indent: 12 },
+    )
+    para('complete with respective Disbursement Vouchers and supporting documents')
+    para('(na kompleto ng kanya-kanyang Disbursement Vouchers at kalakip na mga dokumento.)', {
+      style: 'italic',
+      size: 7.5,
+      gap: 3,
     })
 
-    element.classList.remove('pdf-export-mode')
+    // ---------- Checks table (small font, dotted lines, rows never split) ----------
+    const colW = [24, 22, 52, 28, 58] // = 184mm
+    const colX = colW.reduce((acc, w, i) => [...acc, acc[i] + w], [mL])
+    const pad = 1.1
+    const tFont = 7
+    const tLine = 3
+    const x0 = mL
+    const x1 = mL + contentW
 
-    const imgData = canvas.toDataURL('image/png')
-    const pdf = new jsPDF('2', 'mm', 'legal')
+    // cells: [{ text, colSpan, align, style }]
+    const measure = (cells) => {
+      doc.setFontSize(tFont)
+      let col = 0
+      let maxLines = 1
+      cells.forEach((c) => {
+        const span = c.colSpan || 1
+        const w = colW.slice(col, col + span).reduce((a, b) => a + b, 0)
+        doc.setFont('helvetica', c.style || 'normal')
+        c.lines = doc.splitTextToSize(String(c.text ?? ''), w - pad * 2)
+        c.w = w
+        c.x = colX[col]
+        maxLines = Math.max(maxLines, c.lines.length)
+        col += span
+      })
+      return maxLines * tLine + pad * 2
+    }
 
-    const pageWidth = pdf.internal.pageSize.getWidth() // 297mm (A4 landscape width)
-    const pageHeight = pdf.internal.pageSize.getHeight() // 210mm (A4 landscape height)
-    const imgWidth = pageWidth
-    const imgHeight = (canvas.height * imgWidth) / canvas.width
+    const drawRow = (cells, rowH, { solidTop = false, solidBottom = false } = {}) => {
+      // text
+      cells.forEach((c) => {
+        doc.setFont('helvetica', c.style || 'normal')
+        doc.setFontSize(tFont)
+        doc.setTextColor(0)
+        const textH = c.lines.length * tLine
+        const first = y + (rowH - textH) / 2 + tLine / 2 + 0.9 // vertically centered baseline
+        const align = c.align || 'left'
+        const tx =
+          align === 'center' ? c.x + c.w / 2 : align === 'right' ? c.x + c.w - pad : c.x + pad
+        c.lines.forEach((line, i) => doc.text(line, tx, first + i * tLine, { align }))
+      })
 
-    let heightLeft = imgHeight
-    let position = 0
+      // dotted column separators + dotted bottom line
+      doc.setDrawColor(110)
+      doc.setLineWidth(0.15)
+      dash(true)
+      cells.slice(1).forEach((c) => doc.line(c.x, y, c.x, y + rowH))
+      doc.line(x0, y + rowH, x1, y + rowH)
+      dash(false)
 
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-    heightLeft -= pageHeight
+      // solid lines (header and TOTAL rows)
+      doc.setDrawColor(0)
+      doc.setLineWidth(0.3)
+      if (solidTop) doc.line(x0, y, x1, y)
+      if (solidBottom) doc.line(x0, y + rowH, x1, y + rowH)
 
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight
-      pdf.addPage()
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
+      y += rowH
+    }
+
+    const drawHead = () => {
+      const cells = [
+        { text: 'CHECK NO.', align: 'center', style: 'bold' },
+        { text: 'CHECK DATE', align: 'center', style: 'bold' },
+        { text: 'PAYEE', align: 'left', style: 'bold' },
+        { text: 'AMOUNT', align: 'right', style: 'bold' },
+        { text: 'PURPOSE', align: 'left', style: 'bold' },
+      ]
+      drawRow(cells, measure(cells), { solidTop: true, solidBottom: true })
+    }
+
+    // add a row; if it doesn't fit, go to a new page and repeat the header
+    const addRow = (cells, extraHeight = 0, opts = {}) => {
+      const h = measure(cells)
+      if (y + h + extraHeight > pageH - mBottom) {
+        doc.addPage()
+        y = mTop
+        drawHead()
+      }
+      drawRow(cells, h, opts)
+    }
+
+    ensureSpace(30) // don't start the table at the very bottom of a page
+    drawHead()
+
+    const groups = reportStore.reportPBC || []
+    groups.forEach((group) => {
+      // extraHeight keeps a bank title from being left alone at the bottom of a page
+      addRow([{ text: fullBankName(group.bankGroup || ''), colSpan: 5, style: 'bold' }], 8)
+      ;(group.checks || []).forEach((c) => {
+        addRow([
+          { text: c.checkNo, align: 'center' },
+          { text: c.checkDate, align: 'center' },
+          { text: String(c.payee || '').toUpperCase() },
+          { text: formatCurrency(c.amount), align: 'right' },
+          { text: String(c.purpose || '').toUpperCase() },
+        ])
+      })
+    })
+    if (!groups.length) {
+      addRow([{ text: 'No checks available', colSpan: 5, align: 'center' }])
+    }
+
+    // "NOTHING FOLLOWS" + TOTAL stay together so TOTAL is never orphaned
+    addRow(
+      [{ text: '**** NOTHING FOLLOWS ****', colSpan: 5, align: 'center', style: 'bolditalic' }],
+      9,
+    )
+    addRow(
+      [
+        { text: 'TOTAL:', colSpan: 3, align: 'right', style: 'bold' },
+        { text: formatCurrency(pbcTotal.value), align: 'right', style: 'bold' },
+        { text: '' },
+      ],
+      0,
+      { solidTop: true, solidBottom: true },
+    )
+    y += 8
+
+    // ---------- Footer certification text (same pairs as the preview) ----------
+    para('This Certification is issued, pursuant to COA Circular 2018-____, dated ____________,', {
+      indent: 12,
+    })
+    para(
+      '(Itong Patunay ay ginawa alinsunod sa COA Circular 2018-____ na may petsang ________________)',
+      { style: 'italic', size: 7.5, indent: 12 },
+    )
+    para('as a condition for the encashment of said checks.')
+    para('(bilang kondisyon para sa pagpapapalit ng mga nasabing cheke.)', {
+      style: 'italic',
+      size: 7.5,
+    })
+    para('The undersigned attests to the truthfulness of the foregoing facts, under pain of', {
+      indent: 12,
+    })
+    para('(Pinapatotohanan ko may lagda ang mga nakasaad sa itaas, batid ang.....)', {
+      style: 'italic',
+      size: 7.5,
+      indent: 12,
+    })
+    para('liability for falsification, pursuant to Article 171(4) of the Revised Penal Code.')
+    para(
+      '(pananagutan sa kasong "Falsification," sang-ayon sa Article 171(4) ng Revised Penal Code.)',
+      { style: 'italic', size: 7.5, gap: 6 },
+    )
+
+    // ---------- Signatures (line above the name, like your reference) ----------
+    ensureSpace(62)
+
+    const sigBlock = (x, w, title, name, position) => {
+      let yy = y
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8.5)
+      doc.setTextColor(0)
+      if (title) doc.text(title, x, yy)
+      yy += 13
+      doc.setDrawColor(0)
+      doc.setLineWidth(0.25)
+      doc.line(x, yy, x + w, yy)
+      yy += 4
+      doc.setFont('helvetica', 'bold')
+      doc.text(String(name || '').toUpperCase(), x + w / 2, yy, { align: 'center' })
+      yy += 3.8
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7.5)
+      doc.text(position || '', x + w / 2, yy, { align: 'center' })
+    }
+
+    const sigW = 66
+    sigBlock(
+      pageW - mR - sigW - 4,
+      sigW,
+      'Very truly yours,',
+      SetupModal.Preparedby,
+      SetupModal.Notedposition?.label || 'Position',
+    )
+    y += 32
+    sigBlock(
+      mL + 8,
+      sigW,
+      'Delivered by:',
+      SetupModal.Deliveredby,
+      SetupModal.Certifiedposition?.label || 'Position',
+    )
+    sigBlock(pageW - mR - sigW - 4, sigW, 'Received by:', 'BANK REPRESENTATIVE', '')
+
+    // ---------- "Page X of Y" on every page (after all pages exist) ----------
+    const totalPages = doc.getNumberOfPages()
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8)
+      doc.setTextColor(102)
+      doc.text(`Page ${i} of ${totalPages}`, pageW / 2, pageH - 10, { align: 'center' })
     }
 
     const exportDate = (PBCModal.date || new Date().toISOString().slice(0, 10)).replace(/-/g, '')
-    pdf.save(`PBC_${exportDate}.pdf`)
+    doc.save(`PBC_${exportDate}.pdf`)
 
-    // Log PDF export activity
-    logAdminActivity('Report Exported', `Exported PBC to PDF`)
-
-    $q.notify({
-      type: 'positive',
-      message: 'PBC Letter PDF Exported Successfully!',
-    })
+    logAdminActivity('Report Exported', 'Exported PBC to PDF')
+    $q.notify({ type: 'positive', message: 'PBC Letter PDF Exported Successfully!' })
   } catch (error) {
     console.error(error)
-    $q.notify({
-      type: 'negative',
-      message: 'Failed to export PBC Letter PDF',
-    })
+    $q.notify({ type: 'negative', message: 'Failed to export PBC Letter PDF' })
   } finally {
     exportingPBCPDF.value = false
   }
 }
+
 
 // function getSACBDateRangeDisplay() {
 //   // Determine which SACB date range to use based on which modal was opened
@@ -4693,6 +5246,54 @@ onActivated(async () => {
   font-size: 14px;
 }
 
+/* Sub-Type level (under Sub-Item) */
+.subtype-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 32px;
+  padding: 4px 16px 4px 80px;
+  background-color: white;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.subtype-text {
+  font-weight: 400;
+  font-size: 13px;
+  color: #666;
+}
+
+.subtype-indent {
+  margin-right: 8px;
+  font-weight: bold;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Sub-Sub-Type level (under Sub-Type) */
+.subsubtype-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 32px;
+  padding: 4px 16px 4px 100px;
+  background-color: white;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.subsubtype-text {
+  font-weight: 400;
+  font-size: 13px;
+  color: #666;
+}
+
+.subsubtype-indent {
+  margin-right: 8px;
+  font-weight: bold;
+  color: #666;
+  font-size: 14px;
+}
+
 .amount-group {
   display: grid;
   grid-template-columns: 120px 120px 120px;
@@ -4987,6 +5588,14 @@ onActivated(async () => {
     padding: 6px 8px 6px 48px;
   }
 
+  .subtype-row {
+    padding: 6px 8px 6px 64px;
+  }
+
+  .subsubtype-row {
+    padding: 6px 8px 6px 80px;
+  }
+
   .amount-group {
     grid-template-columns: 80px 80px 80px;
     gap: 6px;
@@ -5033,6 +5642,14 @@ onActivated(async () => {
 
   .subsubsubcategory-row {
     padding: 4px 6px 4px 36px;
+  }
+
+  .subtype-row {
+    padding: 4px 6px 4px 48px;
+  }
+
+  .subsubtype-row {
+    padding: 4px 6px 4px 60px;
   }
 
   .amount-group {

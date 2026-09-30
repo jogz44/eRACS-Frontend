@@ -2837,7 +2837,7 @@ const totalBalance = computed(() => {
 
 async function loadRacReport($date) {
   try {
-    await reportStore.fetchRacReport($date)
+    await reportStore.fetchRacReport($date, 'continuing')
   } catch (error) {
     console.error(error)
     $q.notify({
@@ -2858,7 +2858,7 @@ function formatCurrency(value) {
 
 async function loadSacbReport($from, $to) {
   try {
-    await reportStore.fetchSacbReport($from, $to)
+    await reportStore.fetchSacbReport($from, $to, 'continuing')
   } catch (error) {
     console.error(error)
     $q.notify({
