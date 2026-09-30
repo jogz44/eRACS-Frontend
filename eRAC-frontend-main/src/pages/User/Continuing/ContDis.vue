@@ -329,7 +329,9 @@
                         Bal: ₱{{
                           (
                             store.expenseAccounts.find(
-                              (a) => String(a.id) === String(row.accountId),
+                              (a) =>
+                                String(a.id) === String(row.accountId) ||
+                                String(a.tran_appropriation_id) === String(row.accountId),
                             )?.balance ?? 0
                           ).toLocaleString('en-US', { minimumFractionDigits: 2 })
                         }}

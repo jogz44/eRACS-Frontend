@@ -3,11 +3,13 @@
     <div class="page-header q-mb-md">
       <div class="row items-center justify-between">
         <div>
-        <div class="text-h6 text-weight-medium">Continuing Appropriation</div>
+          <div class="text-h6 text-weight-medium">Continuing Appropriation</div>
+
           <div class="text-caption text-grey-7">
             Continue accounts with remaining balances from previous year for disbursement
           </div>
         </div>
+
         <q-btn
           icon="refresh"
           color="primary"
@@ -25,7 +27,8 @@
         <div class="row q-col-gutter-md items-end">
           <!-- Search Input -->
           <div class="col-md-2 col-sm-6 col-xs-12">
-            <q-item-label class="q-mb-xs text-weight-medium">Search:</q-item-label>
+            <q-item-label class="q-mb-xs text-weight-medium"> Search: </q-item-label>
+
             <q-input
               outlined
               dense
@@ -41,7 +44,8 @@
 
           <!-- Date Range Filter -->
           <div class="col-md-2 col-sm-6 col-xs-12">
-            <q-item-label class="q-mb-xs text-weight-medium">Date Range:</q-item-label>
+            <q-item-label class="q-mb-xs text-weight-medium"> Date Range: </q-item-label>
+
             <q-input
               outlined
               dense
@@ -54,11 +58,7 @@
               <template v-slot:append>
                 <q-icon name="event" class="cursor-pointer">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date
-                      v-model="dateRange"
-                      range
-                      @update:model-value="onDateRangeChange"
-                    >
+                    <q-date v-model="dateRange" range @update:model-value="onDateRangeChange">
                       <div class="row items-center justify-end">
                         <q-btn v-close-popup label="Close" color="primary" flat />
                       </div>
@@ -82,7 +82,7 @@
             />
           </div>
 
-          <!-- Flexible spacer to push Continue button to the right -->
+          <!-- Flexible spacer -->
           <div class="col"></div>
 
           <!-- Continue Button -->
@@ -106,8 +106,10 @@
       <q-card style="min-width: 700px; max-width: 90vw">
         <q-card-section class="q-pb-none">
           <div class="text-h6">Continue Accounts from Previous Year</div>
+
           <div class="text-caption text-grey-7 q-mt-xs">
-            Select accounts that had remaining balances from the previous year to continue for disbursement
+            Select accounts that had remaining balances from the previous year to continue for
+            disbursement
           </div>
         </q-card-section>
 
@@ -127,10 +129,11 @@
           <q-table
             :rows="filteredDialogAccounts"
             :columns="continueColumns"
-            row-key="id"
+            row-key="tranAppropriation_id"
             selection="multiple"
             v-model:selected="selectedAccounts"
             :pagination="{ rowsPerPage: 0 }"
+            :loading="loading || generalLoading"
             style="max-height: 400px"
             flat
             bordered
@@ -138,29 +141,40 @@
             <template v-slot:header-selection="scope">
               <q-checkbox color="secondary" v-model="scope.selected" />
             </template>
+
             <template v-slot:body-selection="scope">
               <q-checkbox color="secondary" v-model="scope.selected" />
             </template>
 
+            <template v-slot:no-data>
+              <div class="full-width row flex-center q-pa-md text-grey-6">
+                {{ continueAccountsEmptyMessage }}
+              </div>
+            </template>
+
             <template v-slot:body-cell-accountName="props">
               <q-td :props="props">
-                <div class="text-weight-medium">
-                  {{ props.row.accountName }}
+                <div
+                  v-for="(line, index) in accountDisplayLines(props.row)"
+                  :key="`line-${props.row.id}-${index}`"
+                  class="account-hierarchy-line"
+                  :class="{
+                    'text-weight-medium': index === 0,
+                    'text-body2 text-grey-8': index > 0,
+                  }"
+                  :style="{
+                    paddingLeft: `${line.indent * 20}px`,
+                  }"
+                >
+                  <q-icon
+                    v-if="line.indent > 0"
+                    name="subdirectory_arrow_right"
+                    size="xs"
+                    class="q-mr-xs"
+                  />
+
+                  {{ line.name }}
                 </div>
-                <!-- Show sub-items if they exist -->
-                <template v-if="props.row.subItems && props.row.subItems.length > 0">
-                  <div 
-                    v-for="(subItem, index) in props.row.subItems" 
-                    :key="index"
-                    class="q-pl-md text-caption text-grey-8"
-                  >
-                    <q-icon name="subdirectory_arrow_right" size="xs" class="q-mr-xs" />
-                    {{ subItem.name }}
-                    <span class="text-weight-medium text-grey-7">
-                      ({{ formatCurrency(subItem.amount) }})
-                    </span>
-                  </div>
-                </template>
               </q-td>
             </template>
 
@@ -169,9 +183,8 @@
                 <div class="text-weight-medium text-green">
                   {{ formatCurrency(props.row.balance) }}
                 </div>
-                <div class="text-caption text-grey-6">
-                  Available for disbursement
-                </div>
+
+                <div class="text-caption text-grey-6">Available for disbursement</div>
               </q-td>
             </template>
           </q-table>
@@ -183,15 +196,23 @@
                 <div class="text-subtitle2 text-weight-medium q-mb-xs">
                   Selected Accounts Summary
                 </div>
+
                 <div class="row q-col-gutter-md">
                   <div class="col-6">
                     <div class="text-caption text-grey-7">Number of Accounts:</div>
-                    <div class="text-weight-medium">{{ selectedAccounts.length }}</div>
+
+                    <div class="text-weight-medium">
+                      {{ selectedAccounts.length }}
+                    </div>
                   </div>
+
                   <div class="col-6">
                     <div class="text-caption text-grey-7">Total Amount:</div>
+
                     <div class="text-weight-medium text-green">
-                      {{ formatCurrency(selectedAccounts.reduce((sum, acc) => sum + acc.balance, 0)) }}
+                      {{
+                        formatCurrency(selectedAccounts.reduce((sum, acc) => sum + acc.balance, 0))
+                      }}
                     </div>
                   </div>
                 </div>
@@ -213,6 +234,7 @@
 
         <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancel" @click="handleCancelContinue" />
+
           <q-btn
             label="Continue Accounts"
             color="primary"
@@ -275,7 +297,9 @@
           </q-td>
         </template>
 
-        <template v-slot:body-cell-action="props">
+        <!-- <template
+          v-slot:body-cell-action="props"
+        >
           <q-td :props="props">
             <div class="q-gutter-xs">
               <q-btn
@@ -287,20 +311,59 @@
               />
             </div>
           </q-td>
+        </template> -->
+
+        <template v-slot:body-cell-action="props">
+          <q-td :props="props">
+            <div class="q-gutter-xs">
+              <q-btn
+                dense
+                icon="visibility"
+                color="blue"
+                @click="openViewDialog(props.row)"
+                v-permission="'view'"
+              />
+              <q-btn
+                v-if="props.row.status === 'draft'"
+                dense
+                icon="check_circle"
+                color="positive"
+                :loading="committingId === props.row.id"
+                :disable="committingId !== null"
+                @click="confirmCommit(props.row)"
+                v-permission="'edit'"
+              >
+                <q-tooltip>Commit for disbursement</q-tooltip>
+              </q-btn>
+            </div>
+          </q-td>
         </template>
 
-        <template v-slot:body-cell-status="props">
+        <!-- <template
+          v-slot:body-cell-status="props"
+        >
           <q-td :props="props">
             <q-badge
-              :color="props.row.unappropriated > 0 ? 'green' : 'grey'"
-              :label="props.row.unappropriated > 0 ? 'Available for Disbursement' : 'Fully Disbursed'"
+              :color="
+                props.row.unappropriated > 0
+                  ? 'green'
+                  : 'grey'
+              "
+              :label="
+                props.row.unappropriated > 0
+                  ? 'Available for Disbursement'
+                  : 'Fully Disbursed'
+              "
             />
+          </q-td>
+        </template> -->
+        <template v-slot:body-cell-status="props">
+          <q-td :props="props">
+            <q-badge :color="statusInfo(props.row).color" :label="statusInfo(props.row).label" />
           </q-td>
         </template>
       </q-table>
     </q-card>
-
-
 
     <!-- View Dialog -->
     <q-dialog v-model="showViewDialog">
@@ -308,48 +371,67 @@
         <q-card-section class="q-pb-none">
           <div class="row items-center justify-between">
             <div class="text-h6">View Appropriation Details</div>
+
             <q-btn icon="close" flat round dense @click="showViewDialog = false" />
           </div>
         </q-card-section>
 
         <q-card-section>
-          <!-- Summary section -->
+          <!-- Summary -->
           <div class="row q-mb-md q-col-gutter-md">
             <div class="col-12 col-sm-6">
               <div class="text-caption">Description:</div>
-              <strong>{{ selectedRow.description || '-' }}</strong>
+
+              <strong>
+                {{ selectedRow.description || '-' }}
+              </strong>
             </div>
 
             <div class="col-12 col-sm-6">
               <div class="text-caption">Continued Date:</div>
-              <strong>{{ selectedRow.continued_date || '-' }}</strong>
+
+              <strong>
+                {{ selectedRow.continued_date || '-' }}
+              </strong>
             </div>
+
             <div class="col-12 col-sm-6">
               <div class="text-caption">Total Amount:</div>
-              <strong>{{ formatCurrency(selectedRow.amount) }}</strong>
+
+              <strong>
+                {{ formatCurrency(selectedRow.amount) }}
+              </strong>
             </div>
+
             <div class="col-12 col-sm-6">
               <div class="text-caption">Available for Disbursement:</div>
-              <strong>{{ formatCurrency(selectedRow.unappropriated) }}</strong>
+
+              <strong>
+                {{ formatCurrency(selectedRow.unappropriated) }}
+              </strong>
             </div>
           </div>
 
-          <!-- Original Accounts from Previous Year -->
-            <div class="q-mb-md">
-              <div class="text-h6 text-weight-medium q-mb-sm">
-              Accounts Continued from Year {{ selectedRow.year || 'Previous Year' }}
-              </div>
-              <div class="text-caption q-mb-sm">
-              These accounts had remaining balances from the previous year and are now available for disbursement
-              </div>
+          <!-- Original Accounts -->
+          <div class="q-mb-md">
+            <div class="text-h6 text-weight-medium q-mb-sm">
+              Accounts Continued from Year
+              {{ selectedRow.year || 'Previous Year' }}
+            </div>
 
-              <div class="hierarchical-table" style="border: 1px solid #e0e0e0">
-                <div class="row q-pa-sm bg-grey-2 text-weight-medium">
-                  <div class="col-6">Account</div>
+            <div class="text-caption q-mb-sm">
+              These accounts had remaining balances from the previous year and are now available for
+              disbursement
+            </div>
+
+            <div class="hierarchical-table" style="border: 1px solid #e0e0e0">
+              <div class="row q-pa-sm bg-grey-2 text-weight-medium">
+                <div class="col-6">Account</div>
+
                 <div class="col-6 text-right">Remaining Balance (₱)</div>
-                </div>
+              </div>
 
-                <div class="hierarchical-body">
+              <div class="hierarchical-body">
                 <template v-if="selectedRow.accounts && selectedRow.accounts.length > 0">
                   <div
                     v-for="account in selectedRow.accounts"
@@ -357,46 +439,76 @@
                     class="row q-pa-sm"
                     style="border-bottom: 1px solid #f0f0f0"
                   >
-                          <div class="col-6">
-                            <div class="text-weight-medium">
-                        {{ account.accountName || 'Unknown Account' }}
-                            </div>
-                          </div>
-                          <div class="col-6 text-right">
-                      <div class="text-weight-medium">{{ formatCurrency(account.balance) }}</div>
-                          </div>
-                        </div>
-                      </template>
+                    <div class="col-6">
+                      <div
+                        v-for="(line, index) in accountDisplayLines(account)"
+                        :key="'view-line-' + account.id + '-' + index"
+                        :class="index === 0 ? 'text-weight-medium' : 'text-body2 text-grey-8'"
+                        :style="{
+                          paddingLeft: `${line.indent * 12}px`,
+                        }"
+                      >
+                        <q-icon
+                          v-if="index > 0"
+                          name="subdirectory_arrow_right"
+                          size="xs"
+                          class="q-mr-xs"
+                        />
+
+                        {{ line.name }}
+                      </div>
+                    </div>
+
+                    <div class="col-6 text-right">
+                      <div class="text-weight-medium">
+                        {{ formatCurrency(account.balance) }}
+                      </div>
+                    </div>
+                  </div>
+                </template>
+
                 <div v-else class="row q-pa-sm">
                   <div class="col-12 text-center text-grey-6">
                     <q-icon name="info" size="1.5em" class="q-mb-xs" />
+
                     <div>No account details available</div>
-                    </div>
                   </div>
                 </div>
+              </div>
             </div>
-            </div>
+          </div>
 
-          <!-- Status Information -->
+          <!-- Status -->
           <div class="q-mb-md">
             <div class="text-h6 text-weight-medium q-mb-sm">Status Information</div>
+
             <div class="row q-col-gutter-md">
               <div class="col-12 col-sm-6">
                 <q-card flat bordered class="q-pa-md">
                   <div class="text-caption text-grey-7">Current Status</div>
-                  <div class="text-h6" :class="selectedRow.unappropriated > 0 ? 'text-green' : 'text-grey'">
-                    {{ selectedRow.unappropriated > 0 ? 'Available for Disbursement' : 'Fully Disbursed' }}
+
+                  <div
+                    class="text-h6"
+                    :class="selectedRow.unappropriated > 0 ? 'text-green' : 'text-grey'"
+                  >
+                    {{
+                      selectedRow.unappropriated > 0
+                        ? 'Available for Disbursement'
+                        : 'Fully Disbursed'
+                    }}
                   </div>
-      </q-card>
-          </div>
+                </q-card>
+              </div>
+
               <div class="col-12 col-sm-6">
                 <q-card flat bordered class="q-pa-md">
                   <div class="text-caption text-grey-7">Total Disbursed</div>
+
                   <div class="text-h6 text-primary">
                     {{ formatCurrency(selectedRow.amount - selectedRow.unappropriated) }}
-            </div>
-      </q-card>
-            </div>
+                  </div>
+                </q-card>
+              </div>
             </div>
           </div>
         </q-card-section>
@@ -406,36 +518,50 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-
-
   </q-page>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+
 import { useQuasar } from 'quasar'
+
 import { storeToRefs } from 'pinia'
+
 import { useContApprStore } from 'src/stores/contApprStore'
+
 import { usePageLogging } from '../../../composables/usePageLogging'
-// import { api } from 'src/boot/axios'
 
 const $q = useQuasar()
-const contApprStore = useContApprStore()
-const { continueAccounts, continuingAppropriations } = storeToRefs(contApprStore)
 
+const contApprStore = useContApprStore()
+
+const {
+  continueAccounts,
+  continuingAppropriations,
+  error: continueError,
+} = storeToRefs(contApprStore)
 
 const { selectedYear } = storeToRefs(contApprStore)
+
 const loading = ref(false)
+
 const showContinueDialog = ref(false)
+
 const showViewDialog = ref(false)
+
 const description = ref('')
+
 const selectedAccounts = ref([])
+
 const searchQuery = ref('')
+
 const dialogSearchQuery = ref('')
+
 const generalLoading = ref(true)
+
 const dateRange = ref(null)
 
-// View dialog state variables
 const selectedRow = ref({
   id: null,
   amount: 0,
@@ -443,7 +569,7 @@ const selectedRow = ref({
   description: '',
   continued_date: '',
   year: '',
-  accounts: []
+  accounts: [],
 })
 
 const continueColumns = [
@@ -452,25 +578,26 @@ const continueColumns = [
     label: 'Year',
     field: 'year',
     align: 'center',
-    sortable: true
+    sortable: true,
   },
+
   {
     name: 'accountName',
     label: 'Account Name',
     field: 'accountName',
     align: 'left',
-    sortable: true
+    sortable: true,
   },
+
   {
     name: 'balance',
     label: 'Remaining Balance',
     field: 'balance',
     align: 'right',
-    sortable: true
+    sortable: true,
   },
 ]
 
-// Use store data instead of local state
 const mergedAppropriations = computed(() => {
   return continuingAppropriations.value || []
 })
@@ -483,6 +610,7 @@ const columns = [
     align: 'left',
     sortable: false,
   },
+
   {
     name: 'continued_date',
     label: 'Continued Date',
@@ -490,6 +618,7 @@ const columns = [
     align: 'left',
     sortable: true,
   },
+
   {
     name: 'year',
     label: 'Year',
@@ -497,6 +626,7 @@ const columns = [
     align: 'left',
     sortable: true,
   },
+
   {
     name: 'expense_class',
     label: 'Expense Class',
@@ -504,6 +634,7 @@ const columns = [
     align: 'left',
     sortable: true,
   },
+
   {
     name: 'description',
     label: 'Description',
@@ -511,6 +642,7 @@ const columns = [
     align: 'left',
     sortable: true,
   },
+
   {
     name: 'amount',
     label: 'Total Budget',
@@ -518,6 +650,7 @@ const columns = [
     align: 'right',
     sortable: true,
   },
+
   {
     name: 'total_appropriated',
     label: 'Total Disbursed',
@@ -525,6 +658,7 @@ const columns = [
     align: 'right',
     sortable: true,
   },
+
   {
     name: 'unappropriated',
     label: 'Available for Disbursement',
@@ -532,12 +666,14 @@ const columns = [
     align: 'right',
     sortable: true,
   },
+
   {
     name: 'action',
     label: 'Action',
     align: 'center',
     field: 'action',
   },
+
   {
     name: 'status',
     label: 'Status',
@@ -546,54 +682,158 @@ const columns = [
   },
 ]
 
+const accountDisplayLines = (account) => {
+  if (Array.isArray(account?.displayLines) && account.displayLines.length) {
+    return account.displayLines
+  }
 
+  return contApprStore.buildAccountDisplayLines(account)
+}
+
+const committingId = ref(null)
+
+const statusInfo = (row) => {
+  if (row.status === 'draft') {
+    return { color: 'orange', label: 'Draft – Not yet committed' }
+  }
+  if (row.status === 'reverted') {
+    return { color: 'red', label: 'Reverted' }
+  }
+  return Number(row.unappropriated) > 0
+    ? { color: 'green', label: 'Available for Disbursement' }
+    : { color: 'grey', label: 'Fully Disbursed' }
+}
+
+const confirmCommit = (row) => {
+  $q.dialog({
+    title: 'Commit Continuing Appropriation',
+    message:
+      `Commit "${row.description}" (${formatCurrency(row.appropriation || row.amount)})? ` +
+      'Once committed, its accounts become available for disbursement.',
+    cancel: true,
+    persistent: true,
+    ok: { label: 'Commit', color: 'positive' },
+  }).onOk(() => commitAppropriation(row))
+}
+
+const refreshTable = async () => {
+  loading.value = true
+  try {
+    await contApprStore.fetchContinuingAppropriations(contApprStore.selectedYear)
+    await contApprStore.fetchContinueAccounts()
+  } finally {
+    loading.value = false
+  }
+}
+
+const commitAppropriation = async (row) => {
+  committingId.value = row.id
+  try {
+    const result = await contApprStore.updateContinuingAppropriationStatus(row.id, 'committed')
+
+    if (result.success) {
+      $q.notify({
+        type: 'positive',
+        message: 'Committed. The accounts are now available for disbursement.',
+        icon: 'check_circle',
+        position: 'top',
+      })
+      await refreshTable()
+    } else {
+      $q.notify({
+        type: 'negative',
+        message: result.message || 'Failed to commit',
+        icon: 'error',
+        position: 'top',
+      })
+    }
+  } finally {
+    committingId.value = null
+  }
+}
 
 const filteredDialogAccounts = computed(() => {
   const currentYear = new Date().getFullYear()
 
-  const eligibleAccounts = continueAccounts.value.filter((account) => {
-    const accountYear = parseInt(account.year, 10)
-    const hasBalance = Number(account.balance) > 0
-    const isPreviousYear = !Number.isNaN(accountYear) && accountYear !== currentYear
+  const eligibleAccounts = continueAccounts.value
+    .filter((account) => {
+      const accountYear = parseInt(account.year, 10)
 
-    if (!isPreviousYear || !hasBalance) return false
+      const hasBalance = Number(account.balance) > 0
 
-    const expenseClass = String(account.expenseClass || '').toLowerCase()
-    const name = String(account.accountName || '').toLowerCase()
-    return expenseClass.includes('capital outlay') || name.includes('capital outlay')
+      const isPreviousYear = !Number.isNaN(accountYear) && accountYear < currentYear
+
+      return isPreviousYear && hasBalance
+    })
+    .map((account) => {
+      /*
+       * IMPORTANT:
+       *
+       * This must be the actual
+       * tran_appropriations.id.
+       *
+       * Do not use an expense class/type/item ID.
+       */
+      const sourceId =
+        account.tranAppropriationId ??
+        account.tran_appropriation_id ??
+        account.tranAppropriation_id ??
+        account.sourceId ??
+        account.rowId ??
+        null
+
+      return {
+        ...account,
+
+        tranAppropriation_id: sourceId,
+
+        tranAppropriationId: sourceId,
+
+        sourceId: sourceId,
+
+        balance: Number(account.balance || 0),
+      }
+    })
+
+  if (!dialogSearchQuery.value) {
+    return eligibleAccounts
+  }
+
+  const search = dialogSearchQuery.value.toLowerCase()
+
+  return eligibleAccounts.filter((account) => {
+    return [
+      account.year,
+      account.expenseClass,
+      account.expenseType,
+      account.expenseItem,
+      account.expenseSubItem,
+      account.expenseSubType,
+      account.expenseSubSubType,
+      account.accountName,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+      .includes(search)
   })
-
-  if (!dialogSearchQuery.value) return eligibleAccounts
-
-  return eligibleAccounts.filter((account) =>
-    Object.values(account).join(' ').toLowerCase().includes(dialogSearchQuery.value.toLowerCase()),
-  )
 })
 
-// const filteredAppropriations = computed(() => {
-//   const query = searchQuery.value.toLowerCase()
-//   const currentYear = new Date().getFullYear()
-//   const lastYear = currentYear - 1
+const continueAccountsEmptyMessage = computed(() => {
+  if (continueError.value) {
+    return continueError.value
+  }
 
-//   return mergedAppropriations.value.filter((row) => {
-//     // Only show data from 2024 or last year
-//     const rowYear = parseInt(row.year)
-//     const isCurrentOrLastYear = rowYear === 2024 || rowYear === lastYear
+  if ((continueAccounts.value || []).length > 0 && filteredDialogAccounts.value.length === 0) {
+    return 'Leftover accounts were returned, but none have a remaining balance to continue.'
+  }
 
-//     if (!isCurrentOrLastYear) {
-//       return false
-//     }
-
-//     return (
-//       row.description.toLowerCase().includes(query) ||
-//       row.expense_class?.toLowerCase().includes(query) ||
-//       row.year?.toString().includes(query)
-//     )
-//   })
-// })
+  return 'No leftover accounts to continue. A 2025 allocation only appears here if that budget is a previous fiscal year and it has not already been continued.'
+})
 
 const filteredAppropriations = computed(() => {
   const query = searchQuery.value.toLowerCase()
+
   return mergedAppropriations.value.filter((row) => {
     return (
       row.description.toLowerCase().includes(query) ||
@@ -605,11 +845,12 @@ const filteredAppropriations = computed(() => {
 
 const loadPendingUsers = async () => {
   loading.value = true
+
   try {
-    // Refresh both continue accounts and continuing appropriations
     await Promise.all([
       contApprStore.fetchContinueAccounts(),
-      contApprStore.fetchContinuingAppropriations()
+
+      contApprStore.fetchContinuingAppropriations(),
     ])
 
     $q.notify({
@@ -634,21 +875,25 @@ const dateRangeDisplay = computed(() => {
   if (!dateRange.value || !dateRange.value.from || !dateRange.value.to) {
     return ''
   }
+
   const fromDate = new Date(dateRange.value.from).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric'
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
   })
+
   const toDate = new Date(dateRange.value.to).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric'
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
   })
+
   return `${fromDate} - ${toDate}`
 })
 
 const onDateRangeChange = (newRange) => {
   if (newRange && newRange.from && newRange.to) {
-    // const fromDate = new Date(newRange.from)
-    // const toDate = new Date(newRange.to)
-    // Store date range in appropriate format for the store
-    // You may need to adjust this based on your store's date handling
+    // Date range is stored here.
   }
 }
 
@@ -665,6 +910,7 @@ const clearAllFilters = () => {
 const validateAndContinue = () => {
   if (showContinueDialog.value) {
     const hasSelectedAccounts = selectedAccounts.value && selectedAccounts.value.length > 0
+
     const hasDescription = description.value && description.value.trim() !== ''
 
     if (!hasSelectedAccounts) {
@@ -674,6 +920,7 @@ const validateAndContinue = () => {
         icon: 'warning',
         position: 'top',
       })
+
       return
     }
 
@@ -684,6 +931,7 @@ const validateAndContinue = () => {
         icon: 'warning',
         position: 'top',
       })
+
       return
     }
 
@@ -693,6 +941,7 @@ const validateAndContinue = () => {
 
 const handleEnterKey = (event) => {
   event.preventDefault()
+
   validateAndContinue()
 }
 
@@ -701,67 +950,43 @@ const handleContinueClick = () => {
 }
 
 const handleCancelContinue = () => {
-  // Clear selections and close dialog
   selectedAccounts.value = []
+
   description.value = ''
+
   dialogSearchQuery.value = ''
+
   showContinueDialog.value = false
 }
 
-const openContinueDialog = () => {
-  // Clear any previous selections and open dialog
+const openContinueDialog = async () => {
   selectedAccounts.value = []
+
   description.value = ''
+
   dialogSearchQuery.value = ''
+
   showContinueDialog.value = true
-}
 
-const continueSelected = async () => {
   loading.value = true
-  const totalAmount = selectedAccounts.value.reduce((sum, acc) => sum + acc.balance, 0)
-  const currentDate = new Date().toISOString().split('T')[0] // Format as YYYY-MM-DD for database
-
-  // Force expense class to CAPITAL OUTLAY for continued accounts
-  const expenseClass = 'CAPITAL OUTLAY'
 
   try {
-    const data = {
-      description: description.value,
-      fiscal_year_id: contApprStore.selectedYear,
-      expense_class: expenseClass,
-      appropriation_amount: totalAmount,
-      unappropriated_amount: totalAmount,
-      continued_date: currentDate,
-      accounts: selectedAccounts.value.map((acc) => ({
-        id: acc.id,
-        balance: acc.balance,
-      })),
-    }
+    /*
+     * First load existing continuing accounts.
+     * This lets the store remove accounts that
+     * have already been continued.
+     */
+    await contApprStore.fetchContinuingAppropriations(contApprStore.selectedYear)
 
-    const result = await contApprStore.createContinuingAppropriation(data)
+    /*
+     * Then load the source appropriations.
+     */
+    await contApprStore.fetchContinueAccounts()
 
-    if (result.success) {
-      $q.notify({
-        type: 'positive',
-        message: `Successfully continued ${selectedAccounts.value.length} accounts with total amount of ${formatCurrency(totalAmount)}. These accounts are now available for disbursement.`,
-        icon: 'check_circle',
-        position: 'top',
-        timeout: 5000
-      })
-
-      // No need to remove accounts from frontend - backend will filter them out on next fetch
-
-      // Refresh the continuing appropriations list
-      await contApprStore.fetchContinuingAppropriations()
-
-      selectedAccounts.value = []
-      description.value = ''
-      dialogSearchQuery.value = ''
-      showContinueDialog.value = false
-    } else {
+    if (continueError.value) {
       $q.notify({
         type: 'negative',
-        message: result.message || 'Failed to create continuing appropriation',
+        message: continueError.value,
         icon: 'error',
         position: 'top',
       })
@@ -769,7 +994,7 @@ const continueSelected = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: error.message || 'An error occurred while creating continuing appropriation',
+      message: error.message || 'Failed to load leftover accounts',
       icon: 'error',
       position: 'top',
     })
@@ -778,49 +1003,220 @@ const continueSelected = async () => {
   }
 }
 
+const continueSelected = async () => {
+  loading.value = true
+
+  try {
+    const totalAmount = selectedAccounts.value.reduce(
+      (sum, acc) => sum + Number(acc.balance || 0),
+      0,
+    )
+
+    const currentDate = new Date().toISOString().split('T')[0]
+
+    /*
+     * IMPORTANT:
+     *
+     * Laravel expects:
+     *
+     * accounts.*.id
+     *
+     * to be the REAL:
+     *
+     * tran_appropriations.id
+     *
+     * Never use a hierarchy/library ID here.
+     */
+    const accounts = selectedAccounts.value.map((acc) => {
+      const sourceAppropriationId =
+        acc.tranAppropriationId ??
+        acc.tran_appropriation_id ??
+        acc.tranAppropriation_id ??
+        acc.sourceId ??
+        null
+
+      return {
+        id: Number(sourceAppropriationId),
+
+        balance: Number(acc.balance),
+      }
+    })
+
+    console.log('Selected accounts:', selectedAccounts.value)
+
+    console.table(
+      selectedAccounts.value.map((acc) => ({
+        id: acc.id,
+
+        tranAppropriation_id: acc.tranAppropriation_id,
+
+        tranAppropriationId: acc.tranAppropriationId,
+
+        sourceId: acc.sourceId,
+
+        rowId: acc.rowId,
+
+        balance: acc.balance,
+
+        expenseClass: acc.expenseClass,
+
+        expenseType: acc.expenseType,
+
+        expenseItem: acc.expenseItem,
+      })),
+    )
+
+    console.log('Accounts being submitted:', accounts)
+
+    /*
+     * Safety check.
+     */
+    const invalidAccount = accounts.find((account) => !account.id || Number(account.id) <= 0)
+
+    if (invalidAccount) {
+      $q.notify({
+        type: 'negative',
+        message: 'One or more selected accounts does not have a valid source appropriation ID.',
+        icon: 'error',
+        position: 'top',
+      })
+
+      return
+    }
+
+    /*
+     * Determine expense class from
+     * the selected accounts.
+     */
+    const expenseClasses = [
+      ...new Set(selectedAccounts.value.map((acc) => acc.expenseClass).filter(Boolean)),
+    ]
+
+    const expenseClass = expenseClasses.length > 0 ? expenseClasses.join(', ') : 'CAPITAL OUTLAY'
+
+    const data = {
+      description: description.value.trim(),
+
+      fiscal_year_id: contApprStore.selectedYear,
+
+      expense_class: expenseClass,
+
+      appropriation_amount: Number(totalAmount.toFixed(2)),
+
+      unappropriated_amount: Number(totalAmount.toFixed(2)),
+
+      continued_date: currentDate,
+
+      accounts,
+    }
+
+    console.log('FINAL CONTINUING APPROPRIATION PAYLOAD:', JSON.stringify(data, null, 2))
+
+    const result = await contApprStore.createContinuingAppropriation(data)
+
+    if (result.success) {
+      $q.notify({
+        type: 'positive',
+
+        message: `Successfully continued ${
+          selectedAccounts.value.length
+        } accounts with total amount of ${formatCurrency(
+          totalAmount,
+        )}. These accounts are now available for disbursement.`,
+
+        icon: 'check_circle',
+
+        position: 'top',
+
+        timeout: 5000,
+      })
+
+      selectedAccounts.value = []
+
+      description.value = ''
+
+      dialogSearchQuery.value = ''
+
+      showContinueDialog.value = false
+    } else {
+      $q.notify({
+        type: 'negative',
+
+        message: result.message || 'Failed to create continuing appropriation',
+
+        icon: 'error',
+
+        position: 'top',
+      })
+    }
+  } catch (error) {
+    console.error('Continue appropriation error:', error)
+
+    $q.notify({
+      type: 'negative',
+
+      message:
+        error.response?.data?.message ||
+        error.message ||
+        'An error occurred while creating continuing appropriation',
+
+      icon: 'error',
+
+      position: 'top',
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
 const formatCurrency = (value) => {
-  if (!value && value !== 0) return '₱0.00'
+  if (!value && value !== 0) {
+    return '₱0.00'
+  }
+
   return new Intl.NumberFormat('en-PH', {
     style: 'currency',
     currency: 'PHP',
   }).format(value)
 }
 
-// Utility function to safely parse currency values
-// const parseCurrency = (value) => {
-//   if (!value && value !== 0) return 0
-//   const cleanValue = String(value).replace(/[₱,\s]/g, '')
-//   const parsed = parseFloat(cleanValue)
-//   return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100
-// }
-
-
-
 const openViewDialog = (row) => {
   selectedRow.value = {
     ...row,
+
     amount: row.appropriation || row.amount,
+
     unappropriated: row.unappropriated,
+
     year: row.year,
+
     description: row.description,
+
     continued_date: row.continued_date,
-    accounts: row.accounts || []
+
+    accounts: row.accounts || [],
   }
+
   showViewDialog.value = true
 }
 
-
-
-
-
 onMounted(async () => {
   try {
-    await contApprStore.fetchContinueAccounts()
+    /*
+     * Important order:
+     *
+     * 1. Load fiscal years
+     * 2. Load existing continuing appropriations
+     * 3. Load available previous-year accounts
+     */
     await contApprStore.fetchYears()
+
     await contApprStore.fetchContinuingAppropriations(contApprStore.selectedYear)
 
-    // Log page visit
+    await contApprStore.fetchContinueAccounts()
+
     const { logPageVisit } = usePageLogging()
+
     await logPageVisit('Continuing Appropriation')
   } catch (error) {
     $q.notify({
@@ -835,17 +1231,25 @@ onMounted(async () => {
 
 watch(selectedYear, async (newYear) => {
   if (newYear) {
+    /*
+     * Reload existing continuing appropriations
+     * when the fiscal year changes.
+     */
     await contApprStore.fetchContinuingAppropriations(newYear)
+
+    /*
+     * Also reload available source accounts.
+     */
+    await contApprStore.fetchContinueAccounts()
   }
 })
 
-
-// Watch for dialog close to clear selections
 watch(showContinueDialog, (newValue) => {
   if (!newValue) {
-    // Dialog was closed, clear selections
     selectedAccounts.value = []
+
     description.value = ''
+
     dialogSearchQuery.value = ''
   }
 })

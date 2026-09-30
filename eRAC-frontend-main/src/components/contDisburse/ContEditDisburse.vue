@@ -175,8 +175,11 @@
                   <div class="text-grey-5" style="font-size: 11px">
                     Bal: ₱{{
                       (
-                        store.expenseAccounts.find((a) => String(a.id) === String(row.accountId))
-                          ?.balance ?? 0
+                        store.expenseAccounts.find(
+                          (a) =>
+                            String(a.id) === String(row.accountId) ||
+                            String(a.tran_appropriation_id) === String(row.accountId),
+                        )?.balance ?? 0
                       ).toLocaleString('en-US', { minimumFractionDigits: 2 })
                     }}
                   </div>
@@ -348,17 +351,31 @@
       <q-card-section class="q-pb-xs">
         <div class="row items-center justify-between q-mb-xs">
           <div class="text-subtitle2 text-weight-medium"><strong>Bank Cheques</strong></div>
-          <q-btn
-            label=""
-            size="sm"
-            color="primary"
-            outline
-            class="shadow-1"
-            style="min-width: 20px"
-            @click="openBankChequeDialog"
-          >
-            <q-icon name="add" size="18px" class="text-weight-bold" />
-          </q-btn>
+          <div class="row items-center q-gutter-sm">
+            <q-btn
+              v-if="
+                !isChequeCancelled &&
+                (store.forms.disbursement.chequeNumber || (store.bankCheques || []).length > 0)
+              "
+              size="sm"
+              color="negative"
+              outline
+              class="shadow-1"
+              label="Cancel Cheque"
+              @click="handleCancelCheque"
+            />
+            <q-btn
+              label=""
+              size="sm"
+              color="primary"
+              outline
+              class="shadow-1"
+              style="min-width: 20px"
+              @click="openBankChequeDialog"
+            >
+              <q-icon name="add" size="18px" class="text-weight-bold" />
+            </q-btn>
+          </div>
         </div>
         <div class="expense-acc-block">
           <table class="expense-inline-table full-width">
@@ -2193,7 +2210,6 @@ const handlePasteNumeric = (event) => {
 const handleCancelCheque = () => {
   showConfirmDialog.value = true
 }
-void handleCancelCheque
 
 // Confirm cancel cheque action
 const confirmCancelCheque = async () => {
@@ -2208,6 +2224,7 @@ const confirmCancelCheque = async () => {
       store.forms.disbursement.chequeNumber = ''
       store.forms.disbursement.bank_id = null
       store.autoCheque = ''
+      store.bankCheques = []
 
       isChequeCancelled.value = true
 

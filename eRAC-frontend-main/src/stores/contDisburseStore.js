@@ -86,6 +86,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
 
     // Track expense details from tran_expense_details table for balance calculations
     expenseDetailsData: [], // Array to store all expense details from the database
+    continuedAccounts: [],
 
     autoBookletID: null, // Automatically generated cheque booklet after selecting a bank
     autoCheque: null, // Automatically generated cheque number after selecting a bank
@@ -173,164 +174,116 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
 
   getters: {
     // Get expense accounts from continuing appropriations
-    expenseAccounts(state) {
-      if (!state.expenseData || state.expenseData.length === 0) {
-        return []
-      }
+    // expenseAccounts(state) {
+    //   if (!state.expenseData || state.expenseData.length === 0) {
+    //     return []
+    //   }
 
-      // Helper function to calculate remaining balance
-      const calculateRemainingBalance = (accountId, originalAmount, type) => {
-        if (!state.expenseDetailsData || state.expenseDetailsData.length === 0) {
-          return originalAmount
-        }
+    //   const LEVEL_ID_FIELDS = [
+    //     'expense_type_id',
+    //     'expense_item_id',
+    //     'expense_sub_item_id',
+    //     'expense_sub_type_id',
+    //     'expense_sub_sub_type_id',
+    //   ]
+    //   const LEVEL_NAMES = ['type', 'item', 'subitem', 'subtype', 'subsubtype']
 
-        const disbursedAmount = state.expenseDetailsData
-          .filter((detail) => {
-            if (type === 'subitem') {
-              return detail.expense_sub_item_id === accountId
-            } else if (type === 'item') {
-              return detail.expense_item_id === accountId
-            } else if (type === 'type') {
-              return detail.expense_type_id === accountId
-            }
-            return false
-          })
-          .reduce((sum, detail) => sum + (detail.amount || 0), 0)
+    //   const calcBalance = (accountId, originalAmount, level) => {
+    //     if (!state.expenseDetailsData || state.expenseDetailsData.length === 0) {
+    //       return originalAmount
+    //     }
+    //     const fieldMap = {
+    //       type: 'expense_type_id',
+    //       item: 'expense_item_id',
+    //       subitem: 'expense_sub_item_id',
+    //       subtype: 'expense_sub_type_id',
+    //       subsubtype: 'expense_sub_sub_type_id',
+    //     }
+    //     const field = fieldMap[level] || 'expense_type_id'
+    //     const disbursed = state.expenseDetailsData
+    //       .filter((detail) => detail[field] === accountId)
+    //       .reduce((sum, detail) => sum + (detail.amount || 0), 0)
+    //     return Math.max(0, originalAmount - disbursed)
+    //   }
 
-        return Math.max(0, originalAmount - disbursedAmount)
-      }
+    //   const results = []
 
-      const flattened = state.expenseData.reduce((acc, expenseClass) => {
-        if (!expenseClass.children) {
-          return acc
-        }
+    //   const walk = (node, depth, namePath, ids, budgetSource, description, expenseClass) => {
+    //     const children = node.children
+    //     const hasChildrenWithBalance =
+    //       Array.isArray(children) && children.some((c) => c.amount && c.amount > 0)
 
-        expenseClass.children.forEach((expenseType) => {
-          // Check if this expense type has any expense items with balance > 0
-          const hasExpenseItemsWithBalance = expenseType.children
-            ? expenseType.children.some((item) => item.amount && item.amount > 0)
-            : false
+    //     if (hasChildrenWithBalance && depth < LEVEL_ID_FIELDS.length) {
+    //       children.forEach((child) => {
+    //         if (!(child.amount && child.amount > 0)) return
+    //         const nextIds = { ...ids, [LEVEL_ID_FIELDS[depth]]: child.id }
+    //         walk(
+    //           child,
+    //           depth + 1,
+    //           [...namePath, child.name],
+    //           nextIds,
+    //           child.budget_source || budgetSource,
+    //           child.description || description,
+    //           expenseClass,
+    //         )
+    //       })
+    //       return
+    //     }
 
-          if (hasExpenseItemsWithBalance) {
-            // If expense type has items with balance, show both items and their sub-items
-            expenseType.children.forEach((expenseItem) => {
-              if (expenseItem.amount && expenseItem.amount > 0) {
-                // Check if this item has sub-items
-                const hasSubItems = expenseItem.children && expenseItem.children.length > 0
+    //     if (!(node.amount && node.amount > 0)) return
 
-                if (hasSubItems) {
-                  // If item has sub-items, show each sub-item separately
-                  expenseItem.children.forEach((expenseSubItem) => {
-                    if (expenseSubItem.amount && expenseSubItem.amount > 0) {
-                      const remainingBalance = calculateRemainingBalance(
-                        expenseSubItem.id,
-                        expenseSubItem.amount,
-                        'subitem',
-                      )
+    //     const remainingBalance = calcBalance(node.id, node.amount, LEVEL_NAMES[depth - 1] || 'type')
+    //     if (remainingBalance <= 0) return
 
-                      if (remainingBalance > 0) {
-                        const expenseSubItemEntry = {
-                          id: expenseSubItem.id,
-                          account: expenseClass.name,
-                          expenseType: expenseType.name,
-                          expenseItem: expenseItem.name,
-                          expenseSubItem: expenseSubItem.name,
-                          balance: remainingBalance,
-                          originalBalance: expenseSubItem.amount,
-                          expense_class_id: expenseItem.expense_class_id ?? null,
-                          expense_type_id: expenseItem.expense_type_id ?? null,
-                          expense_item_id: expenseItem.id,
-                          expense_sub_item_id: expenseSubItem.id,
-                          budget_source:
-                            expenseSubItem.budget_source ||
-                            expenseItem.budget_source ||
-                            expenseType.budget_source ||
-                            expenseClass.budget_source ||
-                            'Continuing Appropriation',
-                          description:
-                            expenseSubItem.description ||
-                            expenseItem.description ||
-                            expenseType.description ||
-                            expenseClass.description,
-                        }
-                        acc.push(expenseSubItemEntry)
-                      }
-                    }
-                  })
-                } else {
-                  // If item has no sub-items, show the item itself
-                  const remainingBalance = calculateRemainingBalance(
-                    expenseItem.id,
-                    expenseItem.amount,
-                    'item',
-                  )
+    //     results.push({
+    //       id: node.id,
+    //       account: expenseClass.name,
+    //       expenseType: namePath[0] || null,
+    //       expenseItem: namePath[1] || null,
+    //       expenseSubItem: namePath[2] || null,
+    //       expenseSubType: namePath[3] || null,
+    //       expenseSubSubType: namePath[4] || null,
+    //       fullPath: [expenseClass.name, ...namePath].filter(Boolean).join(' > '),
+    //       balance: remainingBalance,
+    //       originalBalance: node.amount,
+    //       continuingAccountId: node.continuingAccountId || node.id,
+    //       continuingAppropriationId: node.continuingAppropriationId,
+    //       expense_class_id: ids.expense_class_id ?? node.expense_class_id ?? null,
+    //       ...ids,
+    //       budget_source: budgetSource || 'Continuing Appropriation',
+    //       description,
+    //     })
+    //   }
 
-                  if (remainingBalance > 0) {
-                    const expenseItemEntry = {
-                      id: expenseItem.id,
-                      account: expenseClass.name,
-                      expenseType: expenseType.name,
-                      expenseItem: expenseItem.name,
-                      expenseSubItem: null,
-                      balance: remainingBalance,
-                      originalBalance: expenseItem.amount,
-                      expense_class_id: expenseItem.expense_class_id ?? null,
-                      expense_type_id: expenseItem.expense_type_id ?? null,
-                      expense_item_id: expenseItem.id,
-                      expense_sub_item_id: null,
-                      budget_source:
-                        expenseItem.budget_source ||
-                        expenseType.budget_source ||
-                        expenseClass.budget_source ||
-                        'Continuing Appropriation',
-                      description:
-                        expenseItem.description ||
-                        expenseType.description ||
-                        expenseClass.description,
-                    }
-                    acc.push(expenseItemEntry)
-                  }
-                }
-              }
-            })
-          } else {
-            // If expense type has no items with balance, show the type itself (if it has balance)
-            if (expenseType.amount && expenseType.amount > 0) {
-              const remainingBalance = calculateRemainingBalance(
-                expenseType.id,
-                expenseType.amount,
-                'type',
-              )
+    //   state.expenseData.forEach((expenseClass) => {
+    //     if (!expenseClass.children) return
+    //     walk(
+    //       expenseClass,
+    //       0,
+    //       [],
+    //       { expense_class_id: expenseClass.id },
+    //       expenseClass.budget_source,
+    //       expenseClass.description,
+    //       expenseClass,
+    //     )
+    //   })
 
-              if (remainingBalance > 0) {
-                const expenseTypeEntry = {
-                  id: expenseType.id,
-                  account: expenseClass.name,
-                  expenseType: expenseType.name,
-                  expenseItem: null,
-                  expenseSubItem: null,
-                  balance: remainingBalance,
-                  originalBalance: expenseType.amount,
-                  expense_class_id: expenseType.expense_class_id ?? null,
-                  expense_type_id: expenseType.id,
-                  expense_item_id: null,
-                  expense_sub_item_id: null,
-                  budget_source:
-                    expenseType.budget_source ||
-                    expenseClass.budget_source ||
-                    'Continuing Appropriation',
-                  description: expenseType.description || expenseClass.description,
-                }
-                acc.push(expenseTypeEntry)
-              }
-            }
-          }
-        })
+    //   return results
+    // },
 
-        return acc
-      }, [])
-      return flattened
-    },
+    expenseAccounts: (state) =>
+      (state.continuedAccounts || []).map((a) => ({
+        id: a.continuingAccountId,
+        continuingAccountId: a.continuingAccountId,
+        continuingAppropriationId: a.continuingAppropriationId,
+        fullPath: (a.displayLines || []).map((l) => l.name).join(' > '),
+        balance: a.balance,
+        originalBalance: a.originalBalance ?? a.balance,
+        budget_source: 'Continuing Appropriation',
+        expense_class_id: a.expense_class_id,
+        expense_type_id: a.expense_type_id,
+        expense_item_id: a.expense_item_id,
+      })),
 
     // New getter that calculates remaining balance after disbursements
     expenseAccountsWithDisbursements(state) {
@@ -554,35 +507,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
     ],
 
     expenseAccountColumns: () => [
-      {
-        name: 'account',
-        label: 'Expense Class',
-        field: 'account',
-        align: 'left',
-        sortable: true,
-      },
-      {
-        name: 'expenseType',
-        label: 'Expense Type',
-        field: 'expenseType',
-        align: 'left',
-        sortable: true,
-      },
-      {
-        name: 'expenseItem',
-        label: 'Expense Item',
-        field: 'expenseItem',
-        align: 'left',
-        sortable: true,
-      },
-      {
-        name: 'expenseSubItem',
-        label: 'Sub Item',
-        field: 'expenseSubItem',
-        align: 'left',
-        sortable: true,
-        format: (val) => val || '-',
-      },
+      { name: 'account', label: 'Account', field: 'fullPath', align: 'left', sortable: true },
       {
         name: 'budget_source',
         label: 'Budget Source',
@@ -594,20 +519,12 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         name: 'balance',
         label: 'Balance',
         field: 'balance',
-        format: (val) => {
-          const num = Number(val) || 0
-          return `₱${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-        },
         align: 'right',
         sortable: true,
+        format: (val) =>
+          `₱${(Number(val) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
       },
-
-      {
-        name: 'action',
-        label: 'Action',
-        field: '',
-        align: 'center',
-      },
+      { name: 'action', label: 'Action', field: '', align: 'center' },
     ],
 
     filteredDisbursements: (state) => {
@@ -648,28 +565,17 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
     },
 
     filteredExpenseAccounts(state) {
-      // Build a set of accountIds already added to prevent duplicates
       const addedIds = new Set((state.expenses || []).map((e) => String(e.accountId)))
 
       let base = this.expenseAccounts.filter((item) => {
-        // Use the same logic as in openExpenseDetail to get the correct accountId
         const itemAccountId = item.continuingAccountId || item.id
-        const isAlreadyAdded = addedIds.has(String(itemAccountId))
-        return !isAlreadyAdded
+        return !addedIds.has(String(itemAccountId))
       })
 
-      if (!state.expenseSearch.trim()) {
-        return base
-      }
+      if (!state.expenseSearch.trim()) return base
 
-      const query = state.expenseSearch.toLowerCase()
-      return base.filter(
-        (item) =>
-          item.account.toLowerCase().includes(query) ||
-          item.expenseType.toLowerCase().includes(query) ||
-          (item.expenseItem && item.expenseItem.toLowerCase().includes(query)) ||
-          (item.description && item.description.toLowerCase().includes(query)),
-      )
+      const q = state.expenseSearch.toLowerCase()
+      return base.filter((item) => (item.fullPath || '').toLowerCase().includes(q))
     },
 
     aging: () => (dateString) => {
@@ -685,81 +591,264 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
 
   actions: {
     // Calculate remaining balance after disbursements
-    calculateRemainingBalance(accountId, originalAmount, type) {
+    calculateRemainingBalance(accountId, originalAmount, level) {
       if (!this.expenseDetailsData || this.expenseDetailsData.length === 0) {
         return originalAmount
       }
 
+      const fieldMap = {
+        type: 'expense_type_id',
+        item: 'expense_item_id',
+        subitem: 'expense_sub_item_id',
+        subtype: 'expense_sub_type_id',
+        subsubtype: 'expense_sub_sub_type_id',
+      }
+      const field = fieldMap[level] || 'expense_type_id'
+
       const disbursedAmount = this.expenseDetailsData
-        .filter((detail) => {
-          if (type === 'subitem') {
-            return detail.expense_sub_item_id === accountId 
-          } else if (type === 'item') {
-            return detail.expense_item_id === accountId
-          } else if (type === 'type') {
-            return detail.expense_type_id === accountId
-          }
-          return false
-        })
+        .filter((detail) => detail[field] === accountId)
         .reduce((sum, detail) => sum + (detail.amount || 0), 0)
 
       return Math.max(0, originalAmount - disbursedAmount)
     },
 
     // Fetch continuing appropriations for disbursement
+    // async fetchContinuingAppropriations() {
+    //   this.loading = true
+    //   try {
+    //     // Prefer contApprStore's robust, shape-agnostic normalization of the
+    //     // disbursement-accounts endpoint. It resolves camel/snake keys, nested
+    //     // sub-items / sub-types / sub-sub-types, and multiple amount fields, so
+    //     // accounts still surface even if the running backend shifts field names.
+    //     const contApprStore = useContApprStore()
+    //     await contApprStore.fetchContinueAccounts()
+    //     const accounts = contApprStore.continueAccounts || []
+
+    //     if (accounts.length > 0) {
+    //       this.expenseData = this.transformContApprAccountsToHierarchy(accounts)
+    //       this.error = null
+    //       return
+    //     }
+
+    //     const config = getAuthConfig()
+
+    //     // Fallback 1: direct call to the disbursement-accounts endpoint
+    //     let rows = []
+    //     try {
+    //       const response = await api.get(
+    //         '/api/barangay/continuing-appropriations/disbursement-accounts',
+    //         {
+    //           ...config,
+    //         },
+    //       )
+    //       rows = response.data?.data || []
+    //     } catch (apiError) {
+    //       console.warn(
+    //         'Disbursement accounts endpoint failed, trying continuing appropriation list:',
+    //         apiError,
+    //       )
+    //     }
+
+    //     this.expenseData = this.transformDisbursementAccountsToHierarchy(rows)
+
+    //     if (rows.length === 0) {
+    //       // Fallback 2: continuing-appropriations list
+    //       const fallbackResponse = await api.get(
+    //         '/api/barangay/continuing-appropriations/list',
+    //         config,
+    //       )
+    //       const appropriations = fallbackResponse.data?.data || []
+    //       this.expenseData = this.transformContinuingAppropriationsToHierarchy(appropriations)
+    //     }
+    //   } catch (error) {
+    //     console.error('Error fetching continuing appropriations:', error)
+    //     console.error('Error details:', error.response?.data)
+    //     this.error = error.response?.data?.message || error.message
+    //     this.expenseData = []
+
+    //     // Re-throw the error so the calling function can handle it
+    //     throw error
+    //   } finally {
+    //     this.loading = false
+    //   }
+    // },
+    // state: add  continuedAccounts: []
     async fetchContinuingAppropriations() {
       this.loading = true
       try {
-        const config = getAuthConfig()
+        const contApprStore = useContApprStore()
+        const res = await api.get('/api/barangay/continuing-appropriations/list', getAuthConfig())
+        const appropriations = res.data?.data?.rows || res.data?.data || []
 
-        // Add timeout to prevent hanging
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => {
-          controller.abort()
-        }, 10000) // 10 second timeout
+        this.continuedAccounts = appropriations
+          .filter((appr) => appr.status === 'committed')
+          .flatMap((appr) =>
+            (appr.accounts || []).map((row) => {
+              const a = contApprStore.normalizeContinuingAccount(row)
 
-        try {
-          // Prefer the endpoint intended for continuing disbursement account selection.
-          let response = await api.get(
-            '/api/barangay/continuing-appropriations/disbursement-accounts',
-            {
-              ...config,
-              signal: controller.signal,
-            },
+              // The API's `balance` is already the continued account's own remaining amount
+              const continuedBalance = contApprStore.parseAmount(
+                row.current_amount ?? row.currentAmount ?? row.balance,
+              )
+
+              return {
+                ...a,
+                id: row.id,
+                continuingAccountId: row.id,
+                continuingAppropriationId: appr.id,
+                balance: continuedBalance,
+                originalBalance: contApprStore.parseAmount(
+                  row.original_amount ?? row.originalAmount ?? continuedBalance,
+                ),
+              }
+            }),
           )
+          .filter((a) => a.balance > 0)
 
-          clearTimeout(timeoutId)
-
-          if (response.data?.status && response.data?.data) {
-            const rows = response.data.data || []
-            this.expenseData = this.transformDisbursementAccountsToHierarchy(rows)
-          } else {
-            this.expenseData = []
-          }
-        } catch (apiError) {
-          clearTimeout(timeoutId)
-          console.warn(
-            'Disbursement accounts endpoint failed, trying continuing appropriation list:',
-            apiError,
-          )
-          const fallbackResponse = await api.get(
-            '/api/barangay/continuing-appropriations/list',
-            config,
-          )
-          const appropriations = fallbackResponse.data?.data || []
-          this.expenseData = this.transformContinuingAppropriationsToHierarchy(appropriations)
-        }
+        console.log('[Disbursement] continued accounts:', this.continuedAccounts)
       } catch (error) {
-        console.error('Error fetching continuing appropriations:', error)
-        console.error('Error details:', error.response?.data)
-        this.error = error.response?.data?.message || error.message
-        this.expenseData = []
-
-        // Re-throw the error so the calling function can handle it
+        console.error('Error fetching continued accounts:', error)
+        this.continuedAccounts = []
         throw error
       } finally {
         this.loading = false
       }
+    },
+
+    // Build a class -> type -> item -> sub-item -> sub-type -> sub-sub-type tree
+    // from normalized continuing accounts. Every node along an account's path
+    // carries the account balance so the expenseAccounts getter can keep
+    // recursing down to the leaf, where the account itself is selectable through
+    // its cont_appro_accounts.id (accountId).
+    transformContApprAccountsToHierarchy(accounts) {
+      const LEVELS = [
+        ['expenseClass', 'class'],
+        ['expenseType', 'type'],
+        ['expenseItem', 'item'],
+        ['expenseSubItem', 'subitem'],
+        ['expenseSubType', 'subtype'],
+        ['expenseSubSubType', 'subsubtype'],
+      ]
+
+      const roots = []
+
+      const findOrCreate = (list, key, factory) => {
+        let found = list.find((node) => node.key === key)
+        if (!found) {
+          found = factory()
+          list.push(found)
+        }
+        return found
+      }
+
+      const makeNode = (account, name, levelKey) => ({
+        key: `${levelKey}:${name}`,
+        id: account.id,
+        name,
+        amount: Number(account.balance) || 0,
+        budget_source: 'Continuing Appropriation',
+        description: account.description || '',
+        continuingAccountId: account.id,
+        continuingAppropriationId: account.continuingAppropriationId || null,
+        tran_appropriation_id: account.tranAppropriationId || null,
+        expense_class_id: account.expense_class_id || null,
+        expense_type_id: account.expense_type_id || null,
+        expense_item_id: account.expense_item_id || null,
+        expense_sub_item_id: account.expense_sub_item_id || null,
+        expense_sub_type_id: account.expense_sub_type_id || null,
+        expense_sub_sub_type_id: account.expense_sub_sub_type_id || null,
+        children: [],
+      })
+
+      ;(accounts || []).forEach((account) => {
+        // Name levels present directly on the account row (class..sub-sub-type)
+        const nameLevels = LEVELS.filter(([nameKey]) => {
+          const name = account[nameKey]
+          return name && name !== '(Unnamed account)'
+        })
+
+        // Sub-level paths coming from the nested subItems / subTypes / subSubTypes
+        // tree (the row-level expenseSub* fields are null for such accounts).
+        const subPaths = this.buildSubLevelPaths(account)
+        const paths = subPaths.length > 0 ? subPaths : [[]]
+
+        paths.forEach((subPath) => {
+          let currentList = roots
+          let chainLength = 0
+
+          nameLevels.forEach(([nameKey, levelKey]) => {
+            const node = findOrCreate(currentList, `${levelKey}:${account[nameKey]}`, () =>
+              makeNode(account, account[nameKey], levelKey),
+            )
+            node.amount = Number(account.balance) || 0
+            currentList = node.children
+            chainLength += 1
+          })
+          ;(subPath || []).forEach(({ prefix, name, id }) => {
+            const node = findOrCreate(currentList, `${prefix}:${name}`, () =>
+              makeNode(account, name, prefix),
+            )
+            node.amount = Number(account.balance) || 0
+            if (prefix === 'subitem') node.expense_sub_item_id = id || null
+            if (prefix === 'subtype') node.expense_sub_type_id = id || null
+            if (prefix === 'subsubtype') node.expense_sub_sub_type_id = id || null
+            currentList = node.children
+            chainLength += 1
+          })
+
+          if (chainLength === 0) {
+            // Account with no readable hierarchy names; keep it selectable as-is
+            findOrCreate(roots, `account:${account.id}`, () => ({
+              ...makeNode(account, account.accountName || `Account ${account.id}`, 'account'),
+              amount: Number(account.balance) || 0,
+            }))
+          }
+        })
+      })
+
+      return roots
+    },
+
+    // Flatten an account's nested subItems -> subTypes -> subSubTypes tree into
+    // one path per branch so the hierarchy can be displayed below the expense item.
+    buildSubLevelPaths(account) {
+      const paths = []
+
+      const walkTree = (subItems, path) => {
+        ;(subItems || []).forEach((subItem) => {
+          const itemPath = [...path, { prefix: 'subitem', name: subItem.name, id: subItem.id }]
+          const subTypes = subItem.subTypes || []
+
+          if (!subTypes.length) {
+            paths.push(itemPath)
+            return
+          }
+
+          subTypes.forEach((subType) => {
+            const typePath = [
+              ...itemPath,
+              { prefix: 'subtype', name: subType.name, id: subType.id },
+            ]
+            const subSubTypes = subType.subSubTypes || []
+
+            if (!subSubTypes.length) {
+              paths.push(typePath)
+              return
+            }
+
+            subSubTypes.forEach((subSubType) => {
+              paths.push([
+                ...typePath,
+                { prefix: 'subsubtype', name: subSubType.name, id: subSubType.id },
+              ])
+            })
+          })
+        })
+      }
+
+      walkTree(account?.subItems, [])
+
+      return paths
     },
 
     async fetchParticulars() {
@@ -1036,8 +1125,13 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
           disbursementsResponse.status === 'fulfilled'
             ? (disbursementsResponse.value.data.data || []).map((d) => {
                 // console.log('raw disbursement row:', disbursementsResponse.value.data.data?.[0])
+                const dedKey = d.disbursement_id ?? d.id
                 const deductionsFromTable =
-                  deductionsByDisbursement[String(d.id)] || deductionsByDisbursement[d.id] || []
+                  deductionsByDisbursement[String(dedKey)] ||
+                  deductionsByDisbursement[dedKey] ||
+                  deductionsByDisbursement[String(d.id)] ||
+                  deductionsByDisbursement[d.id] ||
+                  []
                 const deductions = deductionsFromTable.length
                   ? deductionsFromTable
                   : this.normalizeDeductions(d.deductions || [])
@@ -1202,32 +1296,25 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
           if (disbursement.expenses && disbursement.expenses.length > 0) {
             this.expenses = disbursement.expenses.map((expense) => {
               const expenseChequeNumber = getExpenseChequeNumber(expense)
-              // Use the account_name from backend (which now includes subitem) or fallback to lookup
-              const fullAccountName =
-                expense.account_name ||
-                this.getExpenseAccountName(
-                  expense.expense_class_id,
-                  expense.expense_type_id,
-                  expense.expense_item_id,
-                  expense.expense_sub_item_id,
-                )
-
-              // Parse the full account name to extract individual components
-              const parts = fullAccountName.split(' > ')
-              const account = parts[0] || ''
-              const expenseType = parts[1] || ''
-              const expenseItem = parts[2] || ''
-              const expenseSubItem = parts[3] || ''
+              // Resolve the full account name (reconstructs deeper levels when the stored name is short)
+              const full = this.resolveExpenseAccountParts(expense)
+              const fullAccountName = full.accountName
+              const account = full.account
+              const expenseType = full.expenseType
+              const expenseItem = full.expenseItem
+              const expenseSubItem = full.expenseSubItem
+              const expenseSubType = full.expenseSubType
+              const expenseSubSubType = full.expenseSubSubType
 
               return {
-                id: expense.id, // Use the actual database ID from tran_expense_details
-                accountId: expense.accountId,
-                accountName: expense.account_name || fullAccountName, // Use particular as fallback
+                id: expense.id,
+                accountName: fullAccountName,
                 amount: expense.amount,
                 particular: expense.particular,
                 fund: expense.fund || '',
                 taxpayerType: expense.taxpayerType || expense.taxpayer_type || '',
                 taxType: expense.taxType || expense.tax_type || '',
+                accountId: expense.accountId,
                 bank_id: expense.bank_id || disbursement.bank_id || null,
                 bankName: expense.bank_name || disbursement.bank_name || '',
                 bank: expense.bank_name || disbursement.bank_name || '',
@@ -1241,19 +1328,30 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
                 expense_type_id: expense.expense_type_id,
                 expense_item_id: expense.expense_item_id,
                 expense_sub_item_id: expense.expense_sub_item_id,
-                expense_class_name: parts[0] || '',
-                expense_type_name: parts[1] || '',
-                expense_item_name: parts[2] || '',
-                expense_sub_item_name: parts[3] || '',
+                expense_sub_type_id: expense.expense_sub_type_id,
+                expense_sub_sub_type_id: expense.expense_sub_sub_type_id,
+                expense_class_name: account,
+                expense_type_name: expenseType,
+                expense_item_name: expenseItem,
+                expense_sub_item_name: expenseSubItem,
+                expense_sub_type_name: expenseSubType,
+                expense_sub_sub_type_name: expenseSubSubType,
+                // Add fields for multi-column display
                 account: account,
                 expenseType: expenseType,
                 expenseItem: expenseItem,
                 expenseSubItem: expenseSubItem,
+                expenseSubType: expenseSubType,
+                expenseSubSubType: expenseSubSubType,
               }
             })
           } else {
             this.expenses = []
           }
+
+          // Reconstruct full continuing-account names (incl. sub-item / sub-type /
+          // sub-sub-type levels) that the backend's account_name truncates
+          this.expenses = await this.enrichContinuingExpenseNames(this.expenses)
 
           const savedBankCheques = await this.fetchBankChequesForDisbursement(disbursement.id, {
             bank_id: disbursement.bank_id || null,
@@ -1335,26 +1433,19 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
           // Map expenses to ensure proper field names
           const mappedExpenses = (disbursement.expenses || []).map((expense) => {
             const expenseChequeNumber = getExpenseChequeNumber(expense)
-            // Use the account_name from backend (which now includes subitem) or fallback to lookup
-            const fullAccountName =
-              expense.account_name ||
-              this.getExpenseAccountName(
-                expense.expense_class_id,
-                expense.expense_type_id,
-                expense.expense_item_id,
-                expense.expense_sub_item_id,
-              )
-
-            // Parse the full account name to extract individual components
-            const parts = fullAccountName.split(' > ')
-            const account = parts[0] || ''
-            const expenseType = parts[1] || ''
-            const expenseItem = parts[2] || ''
-            const expenseSubItem = parts[3] || ''
+            // Resolve the full account name (reconstructs deeper levels when the stored name is short)
+            const full = this.resolveExpenseAccountParts(expense)
+            const fullAccountName = full.accountName
+            const account = full.account
+            const expenseType = full.expenseType
+            const expenseItem = full.expenseItem
+            const expenseSubItem = full.expenseSubItem
+            const expenseSubType = full.expenseSubType
+            const expenseSubSubType = full.expenseSubSubType
 
             return {
               id: expense.id,
-              accountName: expense.account_name || fullAccountName,
+              accountName: fullAccountName,
               amount: expense.amount,
               particular: expense.particular,
               fund: expense.fund || '',
@@ -1374,15 +1465,21 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
               expense_type_id: expense.expense_type_id,
               expense_item_id: expense.expense_item_id,
               expense_sub_item_id: expense.expense_sub_item_id,
-              expense_class_name: parts[0] || '',
-              expense_type_name: parts[1] || '',
-              expense_item_name: parts[2] || '',
-              expense_sub_item_name: parts[3] || '',
+              expense_sub_type_id: expense.expense_sub_type_id,
+              expense_sub_sub_type_id: expense.expense_sub_sub_type_id,
+              expense_class_name: account,
+              expense_type_name: expenseType,
+              expense_item_name: expenseItem,
+              expense_sub_item_name: expenseSubItem,
+              expense_sub_type_name: expenseSubType,
+              expense_sub_sub_type_name: expenseSubSubType,
               // Add fields for multi-column display
               account: account,
               expenseType: expenseType,
               expenseItem: expenseItem,
               expenseSubItem: expenseSubItem,
+              expenseSubType: expenseSubType,
+              expenseSubSubType: expenseSubSubType,
             }
           })
 
@@ -1390,26 +1487,19 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
           const mappedReimbursementExpenses = disbursement.reimbursement?.expenses
             ? disbursement.reimbursement.expenses.map((expense) => {
                 const expenseChequeNumber = getExpenseChequeNumber(expense)
-                // Use the account_name from backend or fallback to lookup
-                const fullAccountName =
-                  expense.account_name ||
-                  this.getExpenseAccountName(
-                    expense.expense_class_id,
-                    expense.expense_type_id,
-                    expense.expense_item_id,
-                    expense.expense_sub_item_id,
-                  )
-
-                // Parse the full account name to extract individual components
-                const parts = fullAccountName.split(' > ')
-                const account = parts[0] || ''
-                const expenseType = parts[1] || ''
-                const expenseItem = parts[2] || ''
-                const expenseSubItem = parts[3] || ''
+                // Resolve the full account name (reconstructs deeper levels when the stored name is short)
+                const full = this.resolveExpenseAccountParts(expense)
+                const fullAccountName = full.accountName
+                const account = full.account
+                const expenseType = full.expenseType
+                const expenseItem = full.expenseItem
+                const expenseSubItem = full.expenseSubItem
+                const expenseSubType = full.expenseSubType
+                const expenseSubSubType = full.expenseSubSubType
 
                 return {
                   id: expense.id,
-                  accountName: expense.account_name || fullAccountName,
+                  accountName: fullAccountName,
                   amount: expense.amount,
                   particular: expense.particular,
                   accountId: expense.accountId,
@@ -1422,18 +1512,29 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
                   expense_type_id: expense.expense_type_id,
                   expense_item_id: expense.expense_item_id,
                   expense_sub_item_id: expense.expense_sub_item_id,
-                  expense_class_name: parts[0] || '',
-                  expense_type_name: parts[1] || '',
-                  expense_item_name: parts[2] || '',
-                  expense_sub_item_name: parts[3] || '',
+                  expense_sub_type_id: expense.expense_sub_type_id,
+                  expense_sub_sub_type_id: expense.expense_sub_sub_type_id,
+                  expense_class_name: account,
+                  expense_type_name: expenseType,
+                  expense_item_name: expenseItem,
+                  expense_sub_item_name: expenseSubItem,
+                  expense_sub_type_name: expenseSubType,
+                  expense_sub_sub_type_name: expenseSubSubType,
                   // Add fields for multi-column display
                   account: account,
                   expenseType: expenseType,
                   expenseItem: expenseItem,
                   expenseSubItem: expenseSubItem,
+                  expenseSubType: expenseSubType,
+                  expenseSubSubType: expenseSubSubType,
                 }
               })
             : []
+
+          const enrichedExpenses = await this.enrichContinuingExpenseNames(mappedExpenses)
+          const enrichedReimbursementExpenses = await this.enrichContinuingExpenseNames(
+            mappedReimbursementExpenses,
+          )
 
           const deductionsFromTable = await this.fetchDeductionsForDisbursement(disbursement.id)
           const deductions = deductionsFromTable.length
@@ -1488,7 +1589,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
             status: disbursement.status,
             remarks: disbursement.remarks,
             rejection_remarks: disbursement.rejection_remarks,
-            expenses: mappedExpenses,
+            expenses: enrichedExpenses, // ← was mappedExpenses
             reimbursement: disbursement.reimbursement
               ? {
                   id: disbursement.reimbursement.id,
@@ -1500,7 +1601,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
                   cheque_number: disbursement.reimbursement.cheque_number,
                   status: disbursement.reimbursement.status,
                   ref_dv_number: disbursement.reimbursement.ref_dv_number,
-                  expenses: mappedReimbursementExpenses,
+                  expenses: enrichedReimbursementExpenses, // ← was mappedReimbursementExpenses
                 }
               : null,
           }
@@ -1528,17 +1629,10 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
           return
         }
 
-        // Fetch from appropriation store for budget allocations (only for barangay users)
-        const contApprStore = useContApprStore()
-
-        // Pass budget source filter to appropriation store
-        if (this.selectedBudgetSource && this.selectedBudgetSource !== 'all') {
-          // Set the budget type filter in appropriation store
-          contApprStore.setSelectedBudgetType(this.selectedBudgetSource)
-        }
-
-        await contApprStore.fetchExpenseHierarchy()
-        this.expenseData = contApprStore.allocations || []
+        // Continuing accounts come from contApprStore; this store has no
+        // "allocations" state, so build the selectable hierarchy from the
+        // continuing-accounts normalization instead.
+        await this.fetchContinuingAppropriations()
 
         // Fetch expense details for balance calculations
         await this.fetchExpenseDetails()
@@ -1759,7 +1853,14 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
     },
 
     // Helper method to get expense account name from IDs
-    getExpenseAccountName(expenseClassId, expenseTypeId, expenseItemId, expenseSubItemId = null) {
+    getExpenseAccountName(
+      expenseClassId,
+      expenseTypeId,
+      expenseItemId,
+      expenseSubItemId = null,
+      expenseSubTypeId = null,
+      expenseSubSubTypeId = null,
+    ) {
       try {
         let accountName = ''
 
@@ -1794,6 +1895,28 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
 
                     if (expenseSubItem) {
                       accountName += ` > ${expenseSubItem.name}`
+
+                      // Find expense subtype
+                      if (expenseSubTypeId && expenseSubItem.children) {
+                        const expenseSubType = expenseSubItem.children.find(
+                          (est) => String(est.id) === String(expenseSubTypeId),
+                        )
+
+                        if (expenseSubType) {
+                          accountName += ` > ${expenseSubType.name}`
+
+                          // Find expense sub-subtype
+                          if (expenseSubSubTypeId && expenseSubType.children) {
+                            const expenseSubSubType = expenseSubType.children.find(
+                              (esst) => String(esst.id) === String(expenseSubSubTypeId),
+                            )
+
+                            if (expenseSubSubType) {
+                              accountName += ` > ${expenseSubSubType.name}`
+                            }
+                          }
+                        }
+                      }
                     }
                   }
                 }
@@ -1807,6 +1930,236 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         console.error('Error getting expense account name:', error)
         return 'Unknown Account'
       }
+    },
+
+    // Resolve the full expense account path for display, preferring the ID-based
+    // reconstruction whenever it covers more hierarchy levels than the stored name
+    resolveExpenseFullAccountName(expense) {
+      const storedName = expense?.account_name || ''
+      const reconstructed = this.getExpenseAccountName(
+        expense?.expense_class_id,
+        expense?.expense_type_id,
+        expense?.expense_item_id,
+        expense?.expense_sub_item_id,
+        expense?.expense_sub_type_id,
+        expense?.expense_sub_sub_type_id,
+      )
+      const appropriationPath = this.getExpenseAppropriationLevelNames(expense)
+        .map((name) => name.trim())
+        .filter(Boolean)
+        .join(' > ')
+      const depth = (name) => (name || '').split(' > ').filter(Boolean).length
+      const candidates = [storedName, reconstructed, appropriationPath].filter(
+        (name) => name && String(name).trim() !== 'Unknown Account',
+      )
+      const deepest = candidates.reduce((best, c) => (depth(c) > depth(best) ? c : best), '')
+      return deepest || storedName || ''
+    },
+
+    // Walk the loaded hierarchy tree along an expense's id chain and return one
+    // name per level (index 0 = class ... 5 = subSubType). Safe when an
+    // intermediate level is missing: the present ids decide which slot each
+    // resolved name lands in, so deeper levels never shift.
+    getExpenseAccountLevelNames(
+      expenseClassId,
+      expenseTypeId,
+      expenseItemId,
+      expenseSubItemId = null,
+      expenseSubTypeId = null,
+      expenseSubSubTypeId = null,
+    ) {
+      const names = new Array(6).fill('')
+      const findChild = (node, id) =>
+        (node?.children || []).find((n) => String(n.id) === String(id))
+      const hasId = (id) => id != null && id !== ''
+      let node = this.expenseData?.find((n) => String(n.id) === String(expenseClassId)) || null
+      if (hasId(expenseClassId)) names[0] = node?.name || ''
+      if (!node || !hasId(expenseTypeId)) return names
+      names[1] = findChild(node, expenseTypeId)?.name || ''
+      node = findChild(node, expenseTypeId)
+      if (!node || !hasId(expenseItemId)) return names
+      names[2] = findChild(node, expenseItemId)?.name || ''
+      node = findChild(node, expenseItemId)
+      if (!node || !hasId(expenseSubItemId)) return names
+      names[3] = findChild(node, expenseSubItemId)?.name || ''
+      node = findChild(node, expenseSubItemId)
+      if (!node || !hasId(expenseSubTypeId)) return names
+      names[4] = findChild(node, expenseSubTypeId)?.name || ''
+      node = findChild(node, expenseSubTypeId)
+      if (!node || !hasId(expenseSubSubTypeId)) return names
+      names[5] = findChild(node, expenseSubSubTypeId)?.name || ''
+      return names
+    },
+
+    // Read per-level names from the nested { appropriation: { expenseClass,
+    // expenseType, ... } } shape the backend uses to build its account_name.
+    getExpenseAppropriationLevelNames(expense) {
+      const appr = expense?.appropriation
+      if (!appr || typeof appr !== 'object') return []
+      const order = [
+        'expenseClass',
+        'expenseType',
+        'expenseItem',
+        'expenseSubItem',
+        'expenseSubType',
+        'expenseSubSubType',
+      ]
+      return order.map((key) => {
+        const node = appr[key]
+        return node && typeof node === 'object' && node.name != null ? String(node.name).trim() : ''
+      })
+    },
+
+    // Split a concatenated account_name into per-level slots aligned to which
+    // expense ids are present, so a missing intermediate level does not push the
+    // deeper (sub-type / sub-sub-type) names into the wrong slot.
+    splitExpenseAccountNameAligned(expense, accountName) {
+      const ids = [
+        expense?.expense_class_id,
+        expense?.expense_type_id,
+        expense?.expense_item_id,
+        expense?.expense_sub_item_id,
+        expense?.expense_sub_type_id,
+        expense?.expense_sub_sub_type_id,
+      ]
+      const present = ids.map((id) => id != null && id !== '')
+      const parts = String(accountName || '')
+        .split(' > ')
+        .map((p) => p.trim())
+        .filter(Boolean)
+      const names = new Array(6).fill('')
+      let partIndex = 0
+      for (let i = 0; i < 6; i++) {
+        if (present[i] && partIndex < parts.length) {
+          names[i] = parts[partIndex]
+          partIndex++
+        }
+      }
+      return names
+    },
+
+    // Resolve per-level account parts (class ... subSubType) using the same
+    // precedence as resolveExpenseFullAccountName, tolerant of missing levels.
+    resolveExpenseAccountParts(expense) {
+      const accountName = this.resolveExpenseFullAccountName(expense)
+      const treeNames = this.getExpenseAccountLevelNames(
+        expense?.expense_class_id,
+        expense?.expense_type_id,
+        expense?.expense_item_id,
+        expense?.expense_sub_item_id,
+        expense?.expense_sub_type_id,
+        expense?.expense_sub_sub_type_id,
+      )
+      const appropriationNames = this.getExpenseAppropriationLevelNames(expense)
+      const fromName = this.splitExpenseAccountNameAligned(expense, accountName)
+
+      const pickLevel = (index, keys) => {
+        for (const key of keys) {
+          const value = expense?.[key]
+          if (value != null && String(value).trim() !== '') return String(value).trim()
+        }
+        for (const source of [treeNames, appropriationNames, fromName]) {
+          const value = source[index]
+          if (value != null && String(value).trim() !== '') return String(value).trim()
+        }
+        return ''
+      }
+
+      const account = pickLevel(0, ['expense_class_name', 'account'])
+      const expenseType = pickLevel(1, ['expense_type_name'])
+      const expenseItem = pickLevel(2, ['expense_item_name'])
+      const expenseSubItem = pickLevel(3, ['expense_sub_item_name', 'expense_subitem_name'])
+      const expenseSubType = pickLevel(4, ['expense_sub_type_name'])
+      const expenseSubSubType = pickLevel(5, ['expense_sub_sub_type_name'])
+
+      return {
+        accountName,
+        expense_class_name: account,
+        expense_type_name: expenseType,
+        expense_item_name: expenseItem,
+        expense_sub_item_name: expenseSubItem,
+        expense_sub_type_name: expenseSubType,
+        expense_sub_sub_type_name: expenseSubSubType,
+        account,
+        expenseType,
+        expenseItem,
+        expenseSubItem,
+        expenseSubType,
+        expenseSubSubType,
+      }
+    },
+
+    // Ensure continuing accounts are loaded so account names can be rebuilt.
+    async ensureContinueAccountsLoaded() {
+      const contApprStore = useContApprStore()
+      const hasAccounts =
+        (contApprStore.continueAccounts && contApprStore.continueAccounts.length > 0) ||
+        (contApprStore.allContinueAccounts && contApprStore.allContinueAccounts.length > 0)
+      if (!hasAccounts) {
+        await contApprStore.fetchContinueAccounts()
+      }
+      return contApprStore.continueAccounts || []
+    },
+
+    // Full display path (class -> ... -> sub-sub-type) for a continuing account.
+    getContinuingAccountFullPath(accountId) {
+      if (accountId == null || accountId === '') return ''
+      const contApprStore = useContApprStore()
+      const account =
+        (contApprStore.continueAccounts || []).find((a) => String(a.id) === String(accountId)) ||
+        (contApprStore.allContinueAccounts || []).find((a) => String(a.id) === String(accountId))
+      if (!account) return ''
+
+      // displayLines is already built correctly in contApprStore
+      if (Array.isArray(account.displayLines) && account.displayLines.length) {
+        return account.displayLines
+          .map((line) => line.name)
+          .filter(Boolean)
+          .join(' > ')
+      }
+
+      // Fallback: flat fields only, in case displayLines wasn't populated
+      const base = [account.expenseClass, account.expenseType, account.expenseItem].filter(Boolean)
+      if (account.expenseSubItem && account.expenseSubType) {
+        return [...base, account.expenseSubItem, account.expenseSubType, account.expenseSubSubType]
+          .filter(Boolean)
+          .join(' > ')
+      }
+      const subBranch = this.getDeepestSubBranchNames(account.subItems)
+      if (subBranch.length) {
+        return [...base, ...subBranch].filter(Boolean).join(' > ')
+      }
+      return [...base, account.expenseSubItem].filter(Boolean).join(' > ')
+    },
+    getDeepestSubBranchNames(subItems) {
+      if (!Array.isArray(subItems) || subItems.length === 0) return []
+      const names = []
+      const first = subItems[0]
+      if (first?.name) names.push(first.name)
+      const subTypes = first?.subTypes || []
+      if (subTypes.length > 0 && subTypes[0]?.name) {
+        names.push(subTypes[0].name)
+        const subSubTypes = subTypes[0]?.subSubTypes || []
+        if (subSubTypes.length > 0 && subSubTypes[0]?.name) {
+          names.push(subSubTypes[0].name)
+        }
+      }
+      return names
+    },
+
+    // Override each expense's accountName with the full continuing-account path.
+    async enrichContinuingExpenseNames(expenses) {
+      if (!Array.isArray(expenses) || expenses.length === 0) return expenses
+      await this.ensureContinueAccountsLoaded()
+      return expenses.map((expense) => ({
+        ...expense,
+        accountName:
+          this.getContinuingAccountFullPath(expense.accountId) ||
+          expense.accountName ||
+          expense.account_name ||
+          expense.account ||
+          '',
+      }))
     },
 
     // Refresh expense accounts with balances
@@ -1951,7 +2304,7 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
           this.generateNewDisbursementDefaults()
         } else if (dialogName === 'expense') {
           // Only fetch continuing appropriations if not already loaded
-          if (this.expenseData.length === 0) {
+          if (this.continuedAccounts.length === 0) {
             try {
               await this.fetchContinuingAppropriations()
             } catch (fetchError) {
@@ -2051,6 +2404,11 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         dv_amount: normalizedDvAmount,
         netAmount: Number(row?.netAmount ?? row?.net_amount ?? normalizedDvAmount ?? 0),
       }
+      // Reconstruct full continuing-account names (incl. sub-item / sub-type /
+      // sub-sub-type levels) that the backend's account_name truncates
+      this.currentLiquidation.expenses = await this.enrichContinuingExpenseNames(
+        this.currentLiquidation?.expenses || [],
+      )
       // Fetch OR Details from backend
       if (row.id) {
         try {
@@ -2087,30 +2445,26 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
 
     // Update openExpenseDetail to match your current structure
     openExpenseDetail(item) {
-      // Build account name with sub-item if present
-      let accountName = `${item.account} > ${item.expenseType} > ${item.expenseItem}`
-      if (item.expenseSubItem) {
-        accountName += ` > ${item.expenseSubItem}`
-      }
-
       this.forms.expense = {
-        account: accountName,
-        accountId: item.continuingAccountId || item.id, // Use continuingAccountId if available
+        account: item.fullPath,
+        accountId: item.continuingAccountId || item.id,
         balance: item.balance,
+        originalBalance: item.originalBalance,
         particulars: '',
         amount: '',
-        fund: '',
+        fund: this.forms.expense.fund || 'continuing',
         taxpayerType: '',
         taxType: '',
         deductions: this.forms.expense.deductions || [],
         totalDeduction: this.forms.expense.totalDeduction || 0,
         netAmount: this.forms.expense.netAmount || 0,
         disbursementId: this.currentItem?.id || null,
-        // Store additional IDs for proper tracking
         expense_class_id: item.expense_class_id,
         expense_type_id: item.expense_type_id,
         expense_item_id: item.expense_item_id,
         expense_sub_item_id: item.expense_sub_item_id,
+        expense_sub_type_id: item.expense_sub_type_id,
+        expense_sub_sub_type_id: item.expense_sub_sub_type_id,
       }
       this.dialogs.expense = false
       this.dialogs.expenseDetail = true
@@ -2120,10 +2474,13 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
     // contDisburseStore.js
     openExpenseDetailForEdit(existingExpense) {
       const matchedAccount = this.expenseAccounts.find(
-        (a) => String(a.id) === String(existingExpense.accountId),
+        (a) => String(a.continuingAccountId || a.id) === String(existingExpense.accountId),
       )
       const remainingBalance = matchedAccount ? Number(matchedAccount.balance) || 0 : 0
       const availableBalance = remainingBalance + (Number(existingExpense.amount) || 0)
+
+      const currentExpenseForm = this.forms.expense || {}
+      const preservedDeductions = currentExpenseForm.deductions || []
 
       this.forms.expense = {
         account: existingExpense.accountName,
@@ -2151,8 +2508,29 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         expense_type_id: existingExpense.expense_type_id,
         expense_item_id: existingExpense.expense_item_id,
         expense_sub_item_id: existingExpense.expense_sub_item_id,
+        expense_sub_type_id: existingExpense.expense_sub_type_id,
+        expense_sub_sub_type_id: existingExpense.expense_sub_sub_type_id,
         isEditing: true,
         editingExpenseId: existingExpense.id,
+        deductions: preservedDeductions,
+        totalDeduction:
+          currentExpenseForm.totalDeduction ??
+          preservedDeductions.reduce(
+            (sum, r) => sum + (parseFloat(r.deduction_amount ?? r.amount) || 0),
+            0,
+          ),
+        netAmount: Math.max(
+          0,
+          Math.round(
+            ((Number(existingExpense.amount) || 0) -
+              (currentExpenseForm.totalDeduction ??
+                preservedDeductions.reduce(
+                  (sum, r) => sum + (parseFloat(r.deduction_amount ?? r.amount) || 0),
+                  0,
+                ))) *
+              100,
+          ) / 100,
+        ),
       }
     },
 
@@ -2181,6 +2559,39 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
 
       const gross = parseFloat(this.forms.expense.amount) || 0
       this.forms.expense.netAmount = Math.max(0, Math.round((gross - total) * 100) / 100)
+    },
+
+    recomputeDeductionsForGross(grossAmount = null) {
+      const rows = this.forms.expense.deductions || []
+      if (!rows.length) return
+      const gross =
+        grossAmount != null ? Number(grossAmount) : Number(this.totalExpensesAmount) || 0
+      if (!gross || gross <= 0) return
+
+      const round2 = (n) => Math.round(n * 100) / 100
+      const updated = rows.map((row) => {
+        if (row.isManual) return row
+        const oldGross = Number(row.gross_vat_inc)
+        const oldAmount = Number(row.deduction_amount ?? row.amount) || 0
+        if (!oldGross || !oldAmount || oldGross <= 0) return row
+        const ratio = gross / oldGross
+        const newAmount = round2(Math.max(0, oldAmount * ratio))
+        const oldExc = Number(row.gross_vat_exc)
+        const oldNet = Number(row.net_amount)
+        return {
+          ...row,
+          gross_vat_inc: round2(gross),
+          gross_vat_exc: oldExc ? round2(Math.max(0, oldExc * ratio)) : newAmount,
+          deduction_amount: newAmount,
+          amount: newAmount,
+          net_amount: oldNet
+            ? round2(Math.max(0, oldNet * ratio))
+            : round2(Math.max(0, gross - newAmount)),
+        }
+      })
+
+      this.forms.expense.deductions = updated
+      this._recalcDeductionTotals()
     },
 
     normalizeDeductionRow(deduction = {}) {
@@ -2796,6 +3207,8 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
             expense_type_id: toNumericOrNull(expense.expense_type_id),
             expense_item_id: toNumericOrNull(expense.expense_item_id),
             expense_sub_item_id: toNumericOrNull(expense.expense_sub_item_id),
+            expense_sub_type_id: toNumericOrNull(expense.expense_sub_type_id),
+            expense_sub_sub_type_id: toNumericOrNull(expense.expense_sub_sub_type_id),
           })),
         }
 
@@ -2882,12 +3295,15 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
             const alreadyExists = !!(
               apiDv && (this.disbursements || []).some((d) => d.dvNumber === apiDv)
             )
-            this.forms.disbursement.dvNumber = alreadyExists || !matchesSelectedDate
-              ? this.generateLocalDvNumber(this.forms.disbursement.date)
-              : apiDv || this.generateLocalDvNumber(this.forms.disbursement.date)
+            this.forms.disbursement.dvNumber =
+              alreadyExists || !matchesSelectedDate
+                ? this.generateLocalDvNumber(this.forms.disbursement.date)
+                : apiDv || this.generateLocalDvNumber(this.forms.disbursement.date)
           } catch (error) {
             console.error('Failed to generate DV number, using local fallback:', error)
-            this.forms.disbursement.dvNumber = this.generateLocalDvNumber(this.forms.disbursement.date)
+            this.forms.disbursement.dvNumber = this.generateLocalDvNumber(
+              this.forms.disbursement.date,
+            )
           }
         }, 350) // match Quasar default transition
 
@@ -2895,6 +3311,8 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         this.refreshDataInBackground().catch((error) => {
           console.warn('Background refresh failed:', error)
         })
+
+        this.refreshContinuingAppropriations()
 
         await bankStore.fetchBanks()
 
@@ -3080,6 +3498,8 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
         expense_type_id: this.forms.expense.expense_type_id,
         expense_item_id: this.forms.expense.expense_item_id,
         expense_sub_item_id: this.forms.expense.expense_sub_item_id,
+        expense_sub_type_id: this.forms.expense.expense_sub_type_id,
+        expense_sub_sub_type_id: this.forms.expense.expense_sub_sub_type_id,
         bank_id: this.forms.expense.bank_id,
         bankName: this.forms.expense.bankName,
         cheque_number: this.forms.expense.cheque_number,
@@ -3105,11 +3525,13 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       }
 
       this.expenses = [...this.expenses]
+      this.recomputeDeductionsForGross()
       this.closeDialog('expenseDetail')
       this.resetForm('expense')
     },
 
     editItem(row) {
+      const preservedDeductions = this.forms.expense.deductions || []
       this.forms.expense = {
         account: row.accountName,
         accountId: row.accountId,
@@ -3122,10 +3544,13 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
       this.dialogs.expenseDetail = true
       this.isChequeCancel = false
       this.openExpenseDetailForEdit(row)
+      this.forms.expense.deductions = preservedDeductions
+      this._recalcDeductionTotals()
     },
 
     deleteItem(row) {
       this.expenses = this.expenses.filter((e) => e.id !== row.id)
+      this.recomputeDeductionsForGross()
     },
 
     // Form Actions
@@ -3175,40 +3600,24 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
     },
 
     async openEditDisbursement(row) {
-      // Set loading state for this specific disbursement
       this.loadingEditDisbursement = row.id
 
-      // Set a timeout to clear loading state if something goes wrong
       const loadingTimeout = setTimeout(() => {
         if (this.loadingEditDisbursement === row.id) {
           this.loadingEditDisbursement = null
         }
-      }, 30000) // 30 second timeout
+      }, 30000)
 
       try {
-        // Ensure expense details are loaded for correct balance calculations
         if (this.expenseDetailsData.length === 0) {
           await this.fetchExpenseDetails()
         }
 
-        // First fetch expense accounts to ensure we have the data for account names
         await this.fetchContinuingAppropriations()
 
-        // Then fetch the disbursement with its expenses
-        const disbursement = await this.fetchDisbursementById(row.id)
-
-        if (disbursement) {
-          this.forms.disbursement = {
-            date: disbursement.date,
-            dvNumber: disbursement.dvNumber,
-            chequeNumber: disbursement.chequeNumber,
-            bank_id: disbursement.bank_id,
-            payee: disbursement.payee,
-          }
-          this.expenses = disbursement.expenses || []
-          this.currentItem = { ...disbursement }
-          this.dialogs.editDisbursement = true
-        }
+        // fetchDisbursementById already sets forms.disbursement, this.expenses
+        // (enriched with full account paths), currentItem, and opens the dialog.
+        await this.fetchDisbursementById(row.id)
       } catch (error) {
         console.error('Error in openEditDisbursement:', error)
         throw error
@@ -3351,7 +3760,6 @@ export const useContDisbursementStore = defineStore('contdisbursement', {
             booklet_id: cheque.booklet_id,
             cheque_number: cheque.cheque_number,
             cheque_date: cheque.cheque_date || null,
-            bank_status: cheque.bank_status || cheque.bankStatus || null,
             amount: cheque.amount,
           })),
           expenses: this.expenses.map((expense) => ({
