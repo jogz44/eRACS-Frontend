@@ -38,12 +38,18 @@
         </q-select>
 
         <div class="q-gutter-sm">
-          <q-btn icon="add" label="Add Year" color="primary" @click="showAddYearDialog = true" />
+          <q-btn
+            icon="add"
+            label="Add Year"
+            color="primary"
+            @click="showAddYearDialog = true"
+            :disable="isAnySaving"
+          />
           <q-btn
             icon="content_copy"
             label="Copy to Another Year"
             @click="showCopyDialog = true"
-            :disable="!selectedYear || yearOptions.length < 2"
+            :disable="isAnySaving || !selectedYear || yearOptions.length < 2"
             color="secondary"
           />
         </div>
@@ -67,7 +73,7 @@
             icon="add"
             label="Add Account"
             @click="showAddClassForm"
-            :disable="!selectedYear"
+            :disable="isAnySaving || !selectedYear"
             color="primary"
           />
         </div>
@@ -102,6 +108,7 @@
                           round
                           icon="edit"
                           color="orange"
+                          :disable="isAnySaving"
                           @click.stop="editExpenseClass(expenseClass)"
                         />
                         <q-btn
@@ -110,6 +117,7 @@
                           round
                           icon="delete"
                           color="red"
+                          :disable="isAnySaving"
                           @click.stop="confirmDeleteExpenseClass(expenseClass)"
                         />
                         <q-btn
@@ -118,6 +126,7 @@
                           round
                           icon="add"
                           color="primary"
+                          :disable="isAnySaving"
                           @click.stop="showAddTypeForm(expenseClass)"
                         />
                         <q-icon
@@ -167,6 +176,7 @@
                                       round
                                       icon="edit"
                                       color="orange"
+                                      :disable="isAnySaving"
                                       @click.stop="editExpenseType(expenseType)"
                                     />
                                     <q-btn
@@ -175,6 +185,7 @@
                                       round
                                       icon="delete"
                                       color="red"
+                                      :disable="isAnySaving"
                                       @click.stop="confirmDeleteExpenseType(expenseType)"
                                     />
                                     <q-btn
@@ -183,6 +194,7 @@
                                       round
                                       icon="add"
                                       color="primary"
+                                      :disable="isAnySaving"
                                       @click.stop="showAddItemDialogForType(expenseType)"
                                     />
                                     <q-icon
@@ -245,6 +257,7 @@
                                                     round
                                                     icon="edit"
                                                     color="orange"
+                                                    :disable="isAnySaving"
                                                     @click.stop="editExpenseItem(item)"
                                                   />
                                                   <q-btn
@@ -253,6 +266,7 @@
                                                     round
                                                     icon="delete"
                                                     color="red"
+                                                    :disable="isAnySaving"
                                                     @click.stop="confirmDeleteExpenseItem(item)"
                                                   />
                                                   <q-btn
@@ -261,6 +275,7 @@
                                                     round
                                                     icon="add"
                                                     color="primary"
+                                                    :disable="isAnySaving"
                                                     @click.stop="showAddSubItemDialogForItem(item)"
                                                   />
                                                   <q-icon
@@ -333,6 +348,7 @@
                                                                   round
                                                                   icon="edit"
                                                                   color="orange"
+                                                                  :disable="isAnySaving"
                                                                   @click.stop="
                                                                     editExpenseSubItem(subItem)
                                                                   "
@@ -343,6 +359,7 @@
                                                                   round
                                                                   icon="delete"
                                                                   color="red"
+                                                                  :disable="isAnySaving"
                                                                   @click.stop="
                                                                     confirmDeleteExpenseSubItem(
                                                                       subItem,
@@ -355,6 +372,7 @@
                                                                   round
                                                                   icon="add"
                                                                   color="primary"
+                                                                  :disable="isAnySaving"
                                                                   @click.stop="
                                                                     showAddSubTypeDialogForSubItem(
                                                                       subItem,
@@ -424,6 +442,7 @@
                                                                           round
                                                                           icon="edit"
                                                                           color="orange"
+                                                                          :disable="isAnySaving"
                                                                           @click.stop="
                                                                             editExpenseSubType(
                                                                               subType,
@@ -436,6 +455,7 @@
                                                                           round
                                                                           icon="delete"
                                                                           color="red"
+                                                                          :disable="isAnySaving"
                                                                           @click.stop="
                                                                             confirmDeleteExpenseSubType(
                                                                               subType,
@@ -448,6 +468,7 @@
                                                                           round
                                                                           icon="add"
                                                                           color="primary"
+                                                                          :disable="isAnySaving"
                                                                           @click.stop="
                                                                             showAddSubSubTypeDialogForSubType(
                                                                               subType,
@@ -500,6 +521,7 @@
                                                                           round
                                                                           icon="edit"
                                                                           color="orange"
+                                                                          :disable="isAnySaving"
                                                                           @click.stop="
                                                                             editExpenseSubSubType(
                                                                               subSubType,
@@ -512,6 +534,7 @@
                                                                           round
                                                                           icon="delete"
                                                                           color="red"
+                                                                          :disable="isAnySaving"
                                                                           @click.stop="
                                                                             confirmDeleteExpenseSubSubType(
                                                                               subSubType,
@@ -583,18 +606,19 @@
                 !accountsStore.years.some((y) => y.year.toString() === val) ||
                 'Year already exists',
             ]"
-            :disable="accountsStore.loading"
+            :disable="isAnySaving"
             @keydown.enter="handleYearEnterKey"
           />
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" :disable="accountsStore.loading" v-close-popup />
+          <q-btn flat label="Cancel" :disable="isAnySaving" v-close-popup />
           <q-btn
             label="Save"
             color="primary"
             @click="handleYearSaveClick"
-            :loading="accountsStore.loading"
+            :loading="savingAddYear"
+            :disable="isAnySaving"
           />
         </q-card-actions>
       </q-card>
@@ -611,13 +635,20 @@
             v-model="newExpenseClass"
             label="Expense Class Name"
             outlined
+            :disable="isAnySaving"
             :rules="[(val) => !!val || 'Required']"
             @keydown.enter="handleClassEnterKey"
           />
         </q-card-section>
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup @click="resetClassForm" />
-          <q-btn label="Save" color="primary" @click="handleClassSaveClick" />
+          <q-btn flat label="Cancel" v-close-popup :disable="isAnySaving" @click="resetClassForm" />
+          <q-btn
+            label="Save"
+            color="primary"
+            @click="handleClassSaveClick"
+            :loading="savingAddClass"
+            :disable="isAnySaving"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -633,14 +664,21 @@
             v-model="newExpenseType.name"
             label="Type Name"
             outlined
+            :disable="isAnySaving"
             :rules="[(val) => !!val || 'Required']"
             @keyup.enter="saveExpenseType"
             @keydown.enter.prevent
           />
         </q-card-section>
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup @click="resetTypeForm" />
-          <q-btn label="Save" color="primary" @click="saveExpenseType" />
+          <q-btn flat label="Cancel" v-close-popup :disable="isAnySaving" @click="resetTypeForm" />
+          <q-btn
+            label="Save"
+            color="primary"
+            @click="saveExpenseType"
+            :loading="savingAddType"
+            :disable="isAnySaving"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -719,12 +757,13 @@
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn flat label="Cancel" v-close-popup :disable="isAnySaving" />
           <q-btn
             label="Copy"
             color="primary"
             @click="copyClassesToYear"
-            :loading="accountsStore.loading"
+            :loading="savingCopy"
+            :disable="isAnySaving"
           />
         </q-card-actions>
       </q-card>
@@ -742,13 +781,20 @@
             v-model="editingExpenseClass.name"
             label="Expense Class Name"
             outlined
+            :disable="isAnySaving"
             :rules="[(val) => !!val || 'Name is required']"
           />
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn label="Save" color="primary" @click="updateExpenseClass" v-close-popup />
+          <q-btn flat label="Cancel" v-close-popup :disable="isAnySaving" />
+          <q-btn
+            label="Save"
+            color="primary"
+            @click="updateExpenseClass"
+            :loading="savingEditClass"
+            :disable="isAnySaving"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -765,13 +811,20 @@
             v-model="editingExpenseType.name"
             label="Expense Type Name"
             outlined
+            :disable="isAnySaving"
             :rules="[(val) => !!val || 'Name is required']"
           />
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn label="Save" color="primary" @click="updateExpenseType" v-close-popup />
+          <q-btn flat label="Cancel" v-close-popup :disable="isAnySaving" />
+          <q-btn
+            label="Save"
+            color="primary"
+            @click="updateExpenseType"
+            :loading="savingEditType"
+            :disable="isAnySaving"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -792,8 +845,14 @@
         </q-card-section>
 
         <q-card-actions align="center" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn label="Delete" color="negative" @click="confirmDelete" v-close-popup />
+          <q-btn flat label="Cancel" v-close-popup :disable="isAnySaving" />
+          <q-btn
+            label="Delete"
+            color="negative"
+            @click="confirmDelete"
+            :loading="savingDelete"
+            :disable="isAnySaving"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -809,14 +868,21 @@
             v-model="newExpenseItem.name"
             label="Item Name"
             outlined
+            :disable="isAnySaving"
             :rules="[(val) => !!val || 'Name is required']"
             @keyup.enter="saveExpenseItem"
             @keydown.enter.prevent
           />
         </q-card-section>
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn label="Save" color="primary" @click="saveExpenseItem" />
+          <q-btn flat label="Cancel" v-close-popup :disable="isAnySaving" />
+          <q-btn
+            label="Save"
+            color="primary"
+            @click="saveExpenseItem"
+            :loading="savingAddItem"
+            :disable="isAnySaving"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -832,12 +898,19 @@
             v-model="editingExpenseItem.name"
             label="Item Name"
             outlined
+            :disable="isAnySaving"
             :rules="[(val) => !!val || 'Name is required']"
           />
         </q-card-section>
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn label="Save" color="primary" @click="updateExpenseItem" v-close-popup />
+          <q-btn flat label="Cancel" v-close-popup :disable="isAnySaving" />
+          <q-btn
+            label="Save"
+            color="primary"
+            @click="updateExpenseItem"
+            :loading="savingEditItem"
+            :disable="isAnySaving"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -853,14 +926,21 @@
             v-model="newExpenseSubItem.name"
             label="Sub-Item Name"
             outlined
+            :disable="isAnySaving"
             :rules="[(val) => !!val || 'Name is required']"
             @keyup.enter="saveExpenseSubItem"
             @keydown.enter.prevent
           />
         </q-card-section>
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup @click="resetSubItemForm" />
-          <q-btn label="Save" color="primary" @click="saveExpenseSubItem" />
+          <q-btn flat label="Cancel" v-close-popup :disable="isAnySaving" @click="resetSubItemForm" />
+          <q-btn
+            label="Save"
+            color="primary"
+            @click="saveExpenseSubItem"
+            :loading="savingAddSubItem"
+            :disable="isAnySaving"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -876,7 +956,7 @@
             v-model="newExpenseSubType.name"
             label="Sub-Type Name"
             outlined
-            :disable="savingSubType"
+            :disable="isAnySaving"
             :rules="[(val) => !!val || 'Name is required']"
             @keyup.enter="saveExpenseSubType"
             @keydown.enter.prevent
@@ -887,14 +967,14 @@
             flat
             label="Cancel"
             v-close-popup
-            :disable="savingSubType"
+            :disable="isAnySaving"
             @click="resetSubTypeForm"
           />
           <q-btn
             label="Save"
             color="primary"
-            :loading="savingSubType"
-            :disable="savingSubType"
+            :loading="savingAddSubType"
+            :disable="isAnySaving"
             @click="saveExpenseSubType"
           />
         </q-card-actions>
@@ -912,12 +992,19 @@
             v-model="editingExpenseSubItem.name"
             label="Sub-Item Name"
             outlined
+            :disable="isAnySaving"
             :rules="[(val) => !!val || 'Name is required']"
           />
         </q-card-section>
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn label="Save" color="primary" @click="updateExpenseSubItem" v-close-popup />
+          <q-btn flat label="Cancel" v-close-popup :disable="isAnySaving" />
+          <q-btn
+            label="Save"
+            color="primary"
+            @click="updateExpenseSubItem"
+            :loading="savingEditSubItem"
+            :disable="isAnySaving"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -933,14 +1020,27 @@
             v-model="newExpenseSubSubType.name"
             label="Item Name"
             outlined
+            :disable="isAnySaving"
             :rules="[(val) => !!val || 'Name is required']"
             @keyup.enter="saveExpenseSubSubType"
             @keydown.enter.prevent
           />
         </q-card-section>
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup @click="resetSubSubTypeForm" />
-          <q-btn label="Save" color="primary" @click="saveExpenseSubSubType" />
+          <q-btn
+            flat
+            label="Cancel"
+            v-close-popup
+            :disable="isAnySaving"
+            @click="resetSubSubTypeForm"
+          />
+          <q-btn
+            label="Save"
+            color="primary"
+            @click="saveExpenseSubSubType"
+            :loading="savingAddSubSubType"
+            :disable="isAnySaving"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -956,12 +1056,19 @@
             v-model="editingExpenseSubType.name"
             label="Sub-Type Name"
             outlined
+            :disable="isAnySaving"
             :rules="[(val) => !!val || 'Name is required']"
           />
         </q-card-section>
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn label="Save" color="primary" @click="updateExpenseSubTypeHandler" v-close-popup />
+          <q-btn flat label="Cancel" v-close-popup :disable="isAnySaving" />
+          <q-btn
+            label="Save"
+            color="primary"
+            @click="updateExpenseSubTypeHandler"
+            :loading="savingEditSubType"
+            :disable="isAnySaving"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -977,16 +1084,18 @@
             v-model="editingExpenseSubSubType.name"
             label="Item Name"
             outlined
+            :disable="isAnySaving"
             :rules="[(val) => !!val || 'Name is required']"
           />
         </q-card-section>
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn flat label="Cancel" v-close-popup :disable="isAnySaving" />
           <q-btn
             label="Save"
             color="primary"
             @click="updateExpenseSubSubTypeHandler"
-            v-close-popup
+            :loading="savingEditSubSubType"
+            :disable="isAnySaving"
           />
         </q-card-actions>
       </q-card>
@@ -1082,7 +1191,6 @@ const showAddTypeDialog = ref(false)
 const showAddItemDialog = ref(false)
 const showAddSubItemDialog = ref(false)
 const showAddSubTypeDialog = ref(false)
-const savingSubType = ref(false)
 const showEditClassDialog = ref(false)
 const showEditTypeDialog = ref(false)
 const showEditItemDialog = ref(false)
@@ -1111,6 +1219,43 @@ const showAddSubSubTypeDialog = ref(false)
 const showEditSubSubTypeDialog = ref(false)
 const showEditSubTypeDialog = ref(false)
 
+// Saving states - used to show spinners and block multiple clicks
+const savingAddYear = ref(false)
+const savingAddClass = ref(false)
+const savingAddType = ref(false)
+const savingAddItem = ref(false)
+const savingAddSubItem = ref(false)
+const savingAddSubType = ref(false)
+const savingAddSubSubType = ref(false)
+const savingEditClass = ref(false)
+const savingEditType = ref(false)
+const savingEditItem = ref(false)
+const savingEditSubItem = ref(false)
+const savingEditSubType = ref(false)
+const savingEditSubSubType = ref(false)
+const savingCopy = ref(false)
+const savingDelete = ref(false)
+
+const isAnySaving = computed(
+  () =>
+    savingAddYear.value ||
+    savingAddClass.value ||
+    savingAddType.value ||
+    savingAddItem.value ||
+    savingAddSubItem.value ||
+    savingAddSubType.value ||
+    savingAddSubSubType.value ||
+    savingEditClass.value ||
+    savingEditType.value ||
+    savingEditItem.value ||
+    savingEditSubItem.value ||
+    savingEditSubType.value ||
+    savingEditSubSubType.value ||
+    savingCopy.value ||
+    savingDelete.value ||
+    accountsStore.loading,
+)
+
 // Computed properties
 const yearOptions = computed(() => accountsStore.yearOptions)
 
@@ -1130,6 +1275,8 @@ const filteredExpenseClasses = computed(() => {
 })
 
 const validateAndAddYear = async () => {
+  if (savingAddYear.value) return
+
   const yearStr = newYear.value?.toString().trim()
 
   if (!yearStr || yearStr.length !== 4 || isNaN(yearStr)) {
@@ -1150,6 +1297,7 @@ const validateAndAddYear = async () => {
     return
   }
 
+  savingAddYear.value = true
   try {
     await accountsStore.addYear(yearStr)
     $q.notify({
@@ -1167,6 +1315,8 @@ const validateAndAddYear = async () => {
       message: error.response?.data?.message || 'Failed to add year',
       position: 'top',
     })
+  } finally {
+    savingAddYear.value = false
   }
 }
 
@@ -1186,6 +1336,8 @@ const showAddClassForm = () => {
 }
 
 const validateAndSaveExpenseClass = async () => {
+  if (savingAddClass.value) return
+
   if (!newExpenseClass.value || !newExpenseClass.value.trim()) {
     $q.notify({
       type: 'negative',
@@ -1204,6 +1356,7 @@ const validateAndSaveExpenseClass = async () => {
     return
   }
 
+  savingAddClass.value = true
   try {
     const upperCaseName = newExpenseClass.value.toUpperCase()
 
@@ -1220,6 +1373,8 @@ const validateAndSaveExpenseClass = async () => {
       message: error.message || 'Failed to add expense class',
       position: 'top',
     })
+  } finally {
+    savingAddClass.value = false
   }
 }
 
@@ -1243,6 +1398,9 @@ const editExpenseClass = (expenseClass) => {
 }
 
 const updateExpenseClass = async () => {
+  if (savingEditClass.value) return
+
+  savingEditClass.value = true
   try {
     if (!selectedYear.value) {
       throw new Error('Please select a year first')
@@ -1273,6 +1431,8 @@ const updateExpenseClass = async () => {
       message: error.message || 'Failed to update expense class',
       position: 'top',
     })
+  } finally {
+    savingEditClass.value = false
   }
 }
 
@@ -1347,6 +1507,9 @@ const getSelectedClassName = () => {
 }
 
 const saveExpenseType = async () => {
+  if (savingAddType.value) return
+
+  savingAddType.value = true
   try {
     if (!newExpenseType.value.name) {
       throw new Error('Type name is required')
@@ -1391,6 +1554,8 @@ const saveExpenseType = async () => {
       message: error.message || 'Failed to add expense type',
       position: 'top',
     })
+  } finally {
+    savingAddType.value = false
   }
 }
 
@@ -1432,6 +1597,9 @@ const editExpenseSubType = (subType) => {
 }
 
 const updateExpenseSubTypeHandler = async () => {
+  if (savingEditSubType.value) return
+
+  savingEditSubType.value = true
   try {
     const s = editingExpenseSubType.value
     const name = s.name?.trim()
@@ -1474,6 +1642,8 @@ const updateExpenseSubTypeHandler = async () => {
       message: error.message || 'Failed to update sub-type',
       position: 'top',
     })
+  } finally {
+    savingEditSubType.value = false
   }
 }
 
@@ -1503,6 +1673,9 @@ const resetSubSubTypeForm = () => {
 }
 
 const saveExpenseSubSubType = async () => {
+  if (savingAddSubSubType.value) return
+
+  savingAddSubSubType.value = true
   try {
     if (!newExpenseSubSubType.value.name?.trim()) {
       throw new Error('Item name is required')
@@ -1542,6 +1715,8 @@ const saveExpenseSubSubType = async () => {
   } catch (error) {
     console.error('Error saving expense sub-sub-type:', error)
     $q.notify({ type: 'negative', message: error.message || 'Failed to add item', position: 'top' })
+  } finally {
+    savingAddSubSubType.value = false
   }
 }
 
@@ -1551,6 +1726,9 @@ const editExpenseSubSubType = (subSubType) => {
 }
 
 const updateExpenseSubSubTypeHandler = async () => {
+  if (savingEditSubSubType.value) return
+
+  savingEditSubSubType.value = true
   try {
     const s = editingExpenseSubSubType.value
     const name = s.name?.trim()
@@ -1593,6 +1771,8 @@ const updateExpenseSubSubTypeHandler = async () => {
       message: error.message || 'Failed to update item',
       position: 'top',
     })
+  } finally {
+    savingEditSubSubType.value = false
   }
 }
 
@@ -1613,6 +1793,9 @@ const editExpenseType = (expenseType) => {
 }
 
 const updateExpenseType = async () => {
+  if (savingEditType.value) return
+
+  savingEditType.value = true
   try {
     const upperCaseName = editingExpenseType.value.name.toUpperCase()
 
@@ -1631,6 +1814,8 @@ const updateExpenseType = async () => {
       message: error.message || 'Failed to update expense type',
       position: 'top',
     })
+  } finally {
+    savingEditType.value = false
   }
 }
 
@@ -1658,6 +1843,9 @@ const showAddItemDialogForType = (expenseType) => {
 }
 
 const saveExpenseItem = async () => {
+  if (savingAddItem.value) return
+
+  savingAddItem.value = true
   try {
     if (!newExpenseItem.value.name) {
       throw new Error('Item name is required')
@@ -1708,6 +1896,8 @@ const saveExpenseItem = async () => {
       message: error.message || 'Failed to add expense item',
       position: 'top',
     })
+  } finally {
+    savingAddItem.value = false
   }
 }
 
@@ -1717,6 +1907,9 @@ const editExpenseItem = (item) => {
 }
 
 const updateExpenseItem = async () => {
+  if (savingEditItem.value) return
+
+  savingEditItem.value = true
   try {
     const parentType = accountsStore.expenseTypes.find(
       (et) => et.id === editingExpenseItem.value.expense_type_id,
@@ -1747,6 +1940,8 @@ const updateExpenseItem = async () => {
       message: error.message || 'Failed to update item',
       position: 'top',
     })
+  } finally {
+    savingEditItem.value = false
   }
 }
 
@@ -1801,6 +1996,9 @@ const getSelectedSubItemName = () => {
 }
 
 const saveExpenseSubType = async () => {
+  if (savingAddSubType.value) return
+
+  savingAddSubType.value = true
   try {
     if (!newExpenseSubType.value.name?.trim()) {
       throw new Error('Sub-type name is required')
@@ -1809,8 +2007,6 @@ const saveExpenseSubType = async () => {
     if (!currentParentSubItem.value) {
       throw new Error('Parent sub-item not selected')
     }
-
-    savingSubType.value = true
 
     const parent = currentParentSubItem.value
     const name = newExpenseSubType.value.name
@@ -1846,11 +2042,14 @@ const saveExpenseSubType = async () => {
       position: 'top',
     })
   } finally {
-    savingSubType.value = false
+    savingAddSubType.value = false
   }
 }
 
 const saveExpenseSubItem = async () => {
+  if (savingAddSubItem.value) return
+
+  savingAddSubItem.value = true
   try {
     if (!newExpenseSubItem.value.name) {
       throw new Error('Sub-item name is required')
@@ -1906,6 +2105,8 @@ const saveExpenseSubItem = async () => {
       message: error.message || 'Failed to add expense sub-item',
       position: 'top',
     })
+  } finally {
+    savingAddSubItem.value = false
   }
 }
 
@@ -1915,6 +2116,9 @@ const editExpenseSubItem = (subItem) => {
 }
 
 const updateExpenseSubItem = async () => {
+  if (savingEditSubItem.value) return
+
+  savingEditSubItem.value = true
   try {
     const parentItem = accountsStore.expenseItems.find(
       (item) => item.id === editingExpenseSubItem.value.expense_item_id,
@@ -1946,6 +2150,8 @@ const updateExpenseSubItem = async () => {
       message: error.message || 'Failed to update sub-item',
       position: 'top',
     })
+  } finally {
+    savingEditSubItem.value = false
   }
 }
 
@@ -2050,6 +2256,9 @@ const checkForDuplicates = () => {
 }
 
 const copyClassesToYear = async () => {
+  if (savingCopy.value) return
+
+  savingCopy.value = true
   try {
     if (!copyTargetYear.value || selectedClassesToCopy.value.length === 0) {
       throw new Error('Please select a target year and at least one class')
@@ -2081,6 +2290,8 @@ const copyClassesToYear = async () => {
       position: 'top',
       timeout: 5000,
     })
+  } finally {
+    savingCopy.value = false
   }
 }
 
@@ -2146,6 +2357,9 @@ const cleanupSortables = () => {
 }
 
 const confirmDelete = async () => {
+  if (savingDelete.value) return
+
+  savingDelete.value = true
   try {
     if (!itemToDelete.value?.id) {
       throw new Error('No item selected for deletion')
@@ -2239,6 +2453,7 @@ const confirmDelete = async () => {
       timeout: 5000,
     })
   } finally {
+    savingDelete.value = false
     resetAllDialogs()
     await nextTick()
   }
