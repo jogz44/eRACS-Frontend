@@ -933,7 +933,13 @@
           />
         </q-card-section>
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup :disable="isAnySaving" @click="resetSubItemForm" />
+          <q-btn
+            flat
+            label="Cancel"
+            v-close-popup
+            :disable="isAnySaving"
+            @click="resetSubItemForm"
+          />
           <q-btn
             label="Save"
             color="primary"
@@ -2446,12 +2452,51 @@ const confirmDelete = async () => {
     expandedSubItems.value = {}
   } catch (error) {
     console.error('Delete error:', error)
-    $q.notify({
-      type: 'negative',
-      message: error.message || 'Failed to delete',
-      position: 'top',
-      timeout: 5000,
-    })
+
+    // Friendly names for each delete type
+    const typeLabels = {
+      class: 'class',
+      type: 'type',
+      item: 'item',
+      subitem: 'sub-item',
+      subtype: 'sub-type',
+      subsubtype: 'item',
+    }
+    const label = typeLabels[deleteType.value] || 'record'
+
+    if (error.response) {
+      // Server answered with a failure (e.g. 500): record is in use
+      $q.notify({
+        html: true,
+        icon: 'info',
+        color: 'amber-9',
+        textColor: 'white',
+        position: 'top',
+        timeout: 20000, // 20 seconds so the user can read it
+        multiLine: true,
+        classes: 'delete-blocked-notify',
+        message: `
+    <div class="text-weight-bold" style="font-size: 15px; margin-bottom: 4px;">
+      Unable to delete ${label}
+    </div>
+    <div style="opacity: 0.95; text-weight-medium; font-size: 14px;">
+      This ${label} is already used in existing appropriation records.
+    </div>
+    <div style="margin-top: 3px; opacity: 0.95; text-weight-medium; font-size: 14px;">
+      Please remove any associated records in the Appropriation Page before attempting to delete this ${label}.
+    </div>
+  `,
+        actions: [{ label: 'Got it', color: 'white', flat: true }],
+      })
+    } else {
+      // No server response (network down, etc.)
+      $q.notify({
+        type: 'negative',
+        message: error.message || 'Failed to delete',
+        position: 'top',
+        timeout: 5000,
+      })
+    }
   } finally {
     savingDelete.value = false
     resetAllDialogs()
@@ -2883,6 +2928,14 @@ watch(
 .sortable-ghost {
   opacity: 0.5;
   background: #f5f5f5;
+}
+
+.delete-blocked-notify {
+  min-width: 340px;
+  max-width: 480px;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  line-height: 1.4;
 }
 
 .sortable-chosen {

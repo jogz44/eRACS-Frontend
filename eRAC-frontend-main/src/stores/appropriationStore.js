@@ -125,15 +125,17 @@ export const useAppropriationStore = defineStore('appropriation', {
           const d = new Date(value)
           return isNaN(d.getTime()) ? null : d
         }
-        if (state.selectedFiscalYear && state.selectedFiscalYear !== 'all') {
-          results = results.filter((item) => {
-            return String(item.fiscal_year) === String(state.selectedFiscalYear)
-          })
-        }
+
         return null
       }
 
       let results = state.appropriations
+
+      if (state.selectedFiscalYear && state.selectedFiscalYear !== 'all') {
+        results = results.filter((item) => {
+          return String(item.fiscal_year) === String(state.selectedFiscalYear)
+        })
+      }
 
       // Budget type filtering
       if (state.selectedBudgetType && state.selectedBudgetType !== 'all') {
@@ -335,6 +337,10 @@ export const useAppropriationStore = defineStore('appropriation', {
       try {
         const params = {
           year: year !== null && year !== undefined ? Number(year) : new Date().getFullYear(),
+        }
+
+        if (this.selectedBudgetType && this.selectedBudgetType !== 'all') {
+          params.budget_type = this.selectedBudgetType
         }
 
         // Add barangay filter for admin users
@@ -650,9 +656,13 @@ export const useAppropriationStore = defineStore('appropriation', {
         return response.data
       } catch (error) {
         console.error('[ERROR] commitAllocation:', error)
-        console.error('[ERROR] Response data:', error.response?.data)
-        console.error('[ERROR] Response status:', error.response?.status)
-        throw error
+        const backendMessage =
+          error.response?.data?.message || error.response?.data?.error || error.message
+
+        const wrapped = new Error(backendMessage)
+        wrapped.original = error
+        wrapped.response = error.response
+        throw wrapped
       } finally {
         if (!doBackground) this.loading = false
       }
