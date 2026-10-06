@@ -362,20 +362,20 @@
                   fill-input
                   hide-selected
                   input-debounce="0"
-                  new-value-mode="add-unique"
                   label="Select Payee"
                   option-label="label"
                   option-value="label"
                   map-options
                   emit-value
                   @filter="filterPayeeOptions"
-                  @input-value="onPayeeInputValue"
                   @update:model-value="onPayeeSelected"
                   @keydown.enter="handleEnterKey"
                 >
                   <template v-slot:no-option>
                     <q-item>
-                      <q-item-section class="text-grey"> Type a new payee name </q-item-section>
+                      <q-item-section class="text-grey">
+                        No matching payee. Register it first under Library → Registered Payees.
+                      </q-item-section>
                     </q-item>
                   </template>
                 </q-select>
@@ -1120,20 +1120,20 @@
                   fill-input
                   hide-selected
                   input-debounce="0"
-                  new-value-mode="add-unique"
                   label="Select Payee"
                   option-label="label"
                   option-value="label"
                   map-options
                   emit-value
                   @filter="filterPayeeOptions"
-                  @input-value="onPayeeInputValue"
                   @update:model-value="onPayeeSelected"
                   @keydown.enter="handleEnterKey"
                 >
                   <template v-slot:no-option>
                     <q-item>
-                      <q-item-section class="text-grey"> Type a new payee name </q-item-section>
+                      <q-item-section class="text-grey">
+                        No matching payee. Register it first under Library → Registered Payees.
+                      </q-item-section>
                     </q-item>
                   </template>
                 </q-select>
@@ -2438,7 +2438,6 @@ const selectedChequeDisbursement = ref(null)
 const voucherPrintDialog = ref(false)
 const selectedVoucherDisbursement = ref(null)
 const filteredPayeeOptions = ref([])
-const typedPayeeOptions = ref([])
 const payee2Edited = ref(false)
 const editingDeductionId = ref(null)
 const editingDeductionIndex = ref(-1)
@@ -2802,8 +2801,6 @@ const payeeOptions = computed(() => {
     if (!payee || seen.has(key)) return
     seen.add(key)
     options.push(payee)
-
-    // if (!payee || seen.has(key))
   }
 
   ;(payeeStore.payees || []).forEach((payee) => addPayee(payeeNameOf(payee)))
@@ -2811,17 +2808,9 @@ const payeeOptions = computed(() => {
     addPayee(disbursement.payee)
     addPayee(disbursement.payee2)
   })
-  typedPayeeOptions.value.forEach(addPayee)
 
   return options.sort((a, b) => a.localeCompare(b))
 })
-
-const rememberPayeeOption = (value) => {
-  const payee = normalizePayee(value)
-  if (!payee) return
-  const exists = payeeOptions.value.some((option) => option.toLowerCase() === payee.toLowerCase())
-  if (!exists) typedPayeeOptions.value.push(payee)
-}
 
 const syncPayee2FromPayee = (payee) => {
   if (!payee2Edited.value || !normalizePayee(store.forms.disbursement.payee2)) {
@@ -2832,15 +2821,8 @@ const syncPayee2FromPayee = (payee) => {
 const onPayeeSelected = (value) => {
   const payee = normalizePayee(value)
   store.forms.disbursement.payee = payee
-  rememberPayeeOption(payee)
   syncPayee2FromPayee(payee)
   applySelectedPayeeMeta(payee)
-}
-
-const onPayeeInputValue = (value) => {
-  store.forms.disbursement.payee = value || ''
-  syncPayee2FromPayee(store.forms.disbursement.payee)
-  applySelectedPayeeMeta(store.forms.disbursement.payee)
 }
 
 const onPayee2Input = (value) => {
@@ -4296,15 +4278,6 @@ const taxpayerTypeOptions = [
   { label: 'Individual', value: 'individual' },
   { label: 'Non-Individual', value: 'nonIndividual' },
 ]
-
-watch(
-  () => store.forms.disbursement.payee,
-  (newPayee, oldPayee) => {
-    if (!payee2Edited.value || store.forms.disbursement.payee2 === oldPayee) {
-      store.forms.disbursement.payee2 = newPayee
-    }
-  },
-)
 
 watch(
   () => store.dialogs.disbursement,

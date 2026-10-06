@@ -739,7 +739,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, computed } from 'vue'
+import { ref, watch, onMounted, onActivated, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute } from 'vue-router'
 import CommitDialog from 'components/appropriation/CommitDialog.vue'
@@ -1997,6 +1997,11 @@ const getDescriptionOnly = (description) => {
 
   return description
 }
+
+onActivated(() => {
+  const year = route.query.year ? parseInt(route.query.year) : null
+  appropriationStore.fetchBudgets(year, { silent: true })
+})
 </script>
 
 <style scoped>

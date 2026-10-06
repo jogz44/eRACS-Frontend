@@ -372,13 +372,19 @@
       </q-card-section>
 
       <q-card-actions align="right" class="q-pa-sm">
-        <q-btn flat label="Cancel" color="secondary" v-close-popup />
+        <q-btn
+          flat
+          label="Cancel"
+          color="secondary"
+          v-close-popup
+          :disable="submissionLoading"
+        />
         <q-btn
           label="Allocate"
           class="modal-save-btn"
           @click="checkAndSubmitAllocation"
-          :loading="appropriationStore.loading"
-          :disable="appropriationStore.loading || !canSave"
+          :loading="submissionLoading"
+          :disable="submissionLoading || !canSave"
         />
       </q-card-actions>
     </q-card>
@@ -423,12 +429,19 @@
       </q-card-section>
 
       <q-card-actions align="right" class="q-pa-md">
-        <q-btn flat label="Cancel" color="secondary" @click="showConfirmationDialog = false" />
+        <q-btn
+          flat
+          label="Cancel"
+          color="secondary"
+          @click="showConfirmationDialog = false"
+          :disable="submissionLoading"
+        />
         <q-btn
           label="Confirm & Save"
           color="primary"
           @click="confirmAndSubmitAllocation"
-          :loading="appropriationStore.loading"
+          :loading="submissionLoading"
+          :disable="submissionLoading"
         />
       </q-card-actions>
     </q-card>
@@ -442,6 +455,7 @@ import { ref, computed } from 'vue'
 
 const appropriationStore = useAppropriationStore()
 const searchQuery = ref('')
+const submissionLoading = ref(false)
 const $q = useQuasar()
 
 // Utility function to safely parse currency values
@@ -595,6 +609,9 @@ const validateAmountRule = (val) => {
 }
 
 const submitAllocation = async () => {
+  if (submissionLoading.value) return
+
+  submissionLoading.value = true
   try {
     const allocations = []
     let hasValidAllocation = false
@@ -689,6 +706,8 @@ const submitAllocation = async () => {
       icon: 'error',
       position: 'top',
     })
+  } finally {
+    submissionLoading.value = false
   }
 }
 
@@ -832,6 +851,8 @@ const findConflicts = (node, depth, conflicts) => {
 }
 
 const checkAndSubmitAllocation = () => {
+  if (submissionLoading.value) return
+
   const conflicts = []
   displayAccounts.value.forEach((expenseClass) => {
     ;(expenseClass.children || []).forEach((expenseType) => {
@@ -848,6 +869,8 @@ const checkAndSubmitAllocation = () => {
 }
 
 const confirmAndSubmitAllocation = async () => {
+  if (submissionLoading.value) return
+
   try {
     // Close confirmation dialog first
     showConfirmationDialog.value = false

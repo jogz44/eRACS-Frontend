@@ -62,13 +62,32 @@
             <q-item-label class="text-caption q-mb-xs" style="font-weight: bold; font-size: 13px"
               >Payee:</q-item-label
             >
-            <q-input
+            <q-select
               filled
               outlined
               dense
               v-model="store.forms.disbursement.payee"
+              :options="filteredPayeeOptions"
               :disable="!isChequeCancelled"
-            />
+              use-input
+              fill-input
+              hide-selected
+              input-debounce="0"
+              label="Select Payee"
+              option-label="label"
+              option-value="label"
+              map-options
+              emit-value
+              @filter="filterPayeeOptions"
+            >
+              <template v-slot:no-option>
+                <q-item>
+                  <q-item-section class="text-grey">
+                    No matching payee. Register it first under Library → Registered Payees.
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
           </div>
         </div>
         <div class="row q-col-gutter-sm q-mb-sm q-mt-xs">
@@ -842,6 +861,7 @@ import { useDisbursementStore } from 'stores/disbursementStore'
 import { useAuthStore } from 'stores/auth'
 import { api } from 'src/boot/axios'
 import { useBankStore } from 'stores/bankStore'
+import { usePayeeStore } from 'stores/payeeStore'
 import { onMounted, ref, watch, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { useExpenseAccountDisplay } from 'src/composables/useExpenseAccountDisplay'
@@ -849,6 +869,7 @@ import { useExpenseAccountDisplay } from 'src/composables/useExpenseAccountDispl
 const store = useDisbursementStore()
 const authStore = useAuthStore()
 const bankStore = useBankStore()
+const payeeStore = usePayeeStore()
 const $q = useQuasar()
 const { expenseAccountLabel } = useExpenseAccountDisplay()
 const saving = ref(false)
@@ -864,6 +885,50 @@ const isChequeCancelled = computed({
 
 const filteredParticulars = ref(store.particulars)
 const expenseParticularInput = ref(store.forms.expense.particulars || '')
+
+const normalizePayee = (value) => String(value || '').trim()
+const payeeNameOf = (payee) =>
+  payee?.payee_name || payee?.name || payee?.payee || payee?.label || payee
+
+// Only registered payees and payees already used on existing disbursements.
+const payeeOptions = computed(() => {
+  const seen = new Set()
+  const options = []
+  const addPayee = (value) => {
+    const payee = normalizePayee(value)
+    const key = payee.toLowerCase()
+    if (!payee || seen.has(key)) return
+    seen.add(key)
+    options.push(payee)
+  }
+
+  ;(payeeStore.payees || []).forEach((payee) => addPayee(payeeNameOf(payee)))
+  ;(store.disbursements || []).forEach((disbursement) => {
+    addPayee(disbursement.payee)
+    addPayee(disbursement.payee2)
+  })
+
+  return options.sort((a, b) => a.localeCompare(b))
+})
+
+const filteredPayeeOptions = ref([])
+
+const filterPayeeOptions = (value, update) => {
+  update(() => {
+    const needle = String(value || '').toLowerCase()
+    filteredPayeeOptions.value = !needle
+      ? payeeOptions.value
+      : payeeOptions.value.filter((option) => option.toLowerCase().includes(needle))
+  })
+}
+
+watch(
+  payeeOptions,
+  (options) => {
+    filteredPayeeOptions.value = options
+  },
+  { immediate: true },
+)
 
 const deductionDialogOpen = ref(false)
 const bankChequeDialogOpen = ref(false)
@@ -1861,6 +1926,13 @@ const removeRow = (row) => {
 
 onMounted(async () => {
   await bankStore.fetchBanks()
+
+  if (!payeeStore.payees?.length) {
+    await payeeStore.fetchPayees().catch(() => {
+      // The payee list is only used to populate the dropdown; the currently
+      // loaded payee is always included through store.disbursements.
+    })
+  }
 })
 
 // Watch for dialog close to reset form data

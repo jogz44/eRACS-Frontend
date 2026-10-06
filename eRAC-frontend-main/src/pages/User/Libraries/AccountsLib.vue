@@ -830,28 +830,140 @@
     </q-dialog>
 
     <!-- Delete Confirmation Dialog -->
-    <q-dialog v-model="showDeleteConfirm">
-      <q-card style="min-width: 400px">
+    <q-dialog v-model="showDeleteConfirm" @hide="resetDeleteContext">
+      <q-card style="width: 900px; max-width: 95vw">
         <q-card-section class="text-center">
-          <q-icon name="delete" size="48px" color="negative" />
+          <q-icon
+            :name="deleteDialog.blocked ? 'block' : 'delete'"
+            size="48px"
+            :color="deleteDialog.blocked ? 'amber-9' : 'negative'"
+          />
         </q-card-section>
 
         <q-card-section class="text-center q-pt-none">
-          <div class="text-h6">Confirm Delete</div>
+          <div class="text-h6">
+            {{ deleteDialog.blocked ? 'Unable to Delete' : 'Confirm Delete' }}
+          </div>
         </q-card-section>
 
         <q-card-section class="text-center q-pt-none">
-          Are you sure you want to delete {{ itemToDelete?.name }}?
+          <div v-if="checkingDeleteUsage" class="row items-center justify-center q-gutter-sm">
+            <q-spinner color="primary" size="20px" />
+            <span class="text-body2 text-grey-7">Checking existing allocations...</span>
+          </div>
+
+          <template v-else>
+            <div v-if="deleteDialog.blocked" class="text-body2 text-grey-8">
+              <div class="text-weight-medium">
+                {{
+                  deleteDialog.blockMessage ||
+                  `Cannot delete this ${deleteDialog.label} because it is already used in existing appropriation records.`
+                }}
+              </div>
+              <div class="text-caption text-grey-7 q-mt-xs">
+                An associated allocation in the appropriation has already been disbursed, so this
+                {{ deleteDialog.label }} can no longer be deleted.
+              </div>
+            </div>
+
+            <div v-else class="text-body2 text-grey-8">
+              Are you sure you want to delete
+              <strong>{{ itemToDelete?.name }}</strong
+              >?
+            </div>
+
+            <q-banner
+              v-if="!deleteDialog.blocked && deleteDialog.hasAllocation"
+              rounded
+              class="allocation-warning q-mt-md text-left"
+            >
+              <template #avatar>
+                <q-avatar color="orange-2" text-color="orange-10" icon="warning" size="38px" />
+              </template>
+              <div class="allocation-warning__content">
+                <div class="row items-start justify-between q-gutter-sm">
+                  <div class="col">
+                    <div class="text-subtitle2 text-weight-bold text-orange-10">
+                      This {{ deleteDialog.label }} is in use
+                    </div>
+                    <div class="text-body2 text-grey-8 q-mt-xs">
+                      Deleting this {{ deleteDialog.label }} will permanently remove
+                      {{ deleteDialog.allocationCount }} associated allocation{{
+                        deleteDialog.allocationCount === 1 ? '' : 's'
+                      }}
+                      from appropriations.
+                    </div>
+                  </div>
+                  <q-badge
+                    rounded
+                    color="orange-2"
+                    text-color="orange-10"
+                    :label="`${deleteDialog.allocationCount} allocation${deleteDialog.allocationCount === 1 ? '' : 's'}`"
+                    class="allocation-warning__count"
+                  />
+                </div>
+
+                <div class="text-caption text-grey-7 q-mt-sm">
+                  Review the associated records below before proceeding.
+                </div>
+
+                <div
+                  v-if="deleteDialog.associatedAppropriations?.length"
+                  class="allocation-records q-mt-md"
+                >
+                  <div class="row items-center justify-between q-px-md q-py-sm">
+                    <div class="text-subtitle2 text-weight-medium text-grey-9">
+                      Associated appropriation records
+                    </div>
+                    <div class="text-caption text-grey-6">
+                      {{ deleteDialog.associatedAppropriations.length }} shown
+                    </div>
+                  </div>
+
+                  <div class="allocation-records__scroll">
+                    <q-markup-table flat separator="horizontal" class="allocation-records__table">
+                      <thead>
+                        <tr>
+                          <th class="text-left">Account</th>
+                          <th class="text-left">Budget type</th>
+                          <th class="text-left">Description</th>
+                          <th class="text-right">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          v-for="(record, index) in deleteDialog.associatedAppropriations"
+                          :key="record.id || `${record.account}-${record.description}-${index}`"
+                        >
+                          <td class="text-weight-medium">{{ record.account || '—' }}</td>
+                          <td>
+                            <q-badge outline color="primary" :label="record.budgetType || '—'" />
+                          </td>
+                          <td class="allocation-records__description">
+                            {{ record.description || '—' }}
+                          </td>
+                          <td class="text-right text-weight-medium text-no-wrap">
+                            {{ record.amount || '₱0.00' }}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </q-markup-table>
+                  </div>
+                </div>
+              </div>
+            </q-banner>
+          </template>
         </q-card-section>
 
         <q-card-actions align="center" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup :disable="isAnySaving" />
+          <q-btn flat label="Close" v-close-popup :disable="isAnySaving" />
           <q-btn
+            v-if="!deleteDialog.blocked"
             label="Delete"
             color="negative"
             @click="confirmDelete"
             :loading="savingDelete"
-            :disable="isAnySaving"
+            :disable="isAnySaving || checkingDeleteUsage"
           />
         </q-card-actions>
       </q-card>
@@ -1136,7 +1248,9 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAccountsLibraryStore } from 'stores/accountsLibstore'
 import { usePageLogging } from '../../../composables/usePageLogging'
+import { useAppropriationStore } from 'stores/appropriationStore'
 
+const appropriationStore = useAppropriationStore()
 const $q = useQuasar()
 const accountsStore = useAccountsLibraryStore()
 const { logPageVisit } = usePageLogging()
@@ -1215,6 +1329,87 @@ const typeSortables = ref({})
 const subItemSortables = ref({})
 const itemToDelete = ref(null)
 const deleteType = ref('')
+const checkingDeleteUsage = ref(false)
+const deleteDialog = ref({
+  blocked: false,
+  blockReason: null,
+  hasAllocation: false,
+  allocationCount: 0,
+  disbursementCount: 0,
+  associatedAppropriations: [],
+})
+
+const formatDecimalCurrency = (value) => {
+  const amount = Number(value ?? 0)
+
+  if (!Number.isFinite(amount)) {
+    return '₱0.00'
+  }
+
+  return new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount)
+}
+
+const normalizeAssociatedAppropriations = (usage) => {
+  const candidates = [
+    usage?.appropriation_records,
+    usage?.appropriations,
+    usage?.associated_appropriations,
+    usage?.allocation_records,
+    usage?.records,
+    usage?.details,
+  ]
+
+  const records = candidates.flatMap((entry) => {
+    if (!entry) return []
+    return Array.isArray(entry) ? entry : [entry]
+  })
+
+  if (!records.length) {
+    return []
+  }
+
+  return records.map((record, index) => {
+    const accountName =
+      record.account_name ||
+      record.account ||
+      record.account_name_label ||
+      record.expense_name ||
+      record.name ||
+      `Account ${index + 1}`
+
+    const budgetType =
+      record.budget_type ||
+      record.budgetType ||
+      record.budget_type_name ||
+      record.type ||
+      record.budget ||
+      '—'
+
+    const description =
+      record.description || record.budget_description || record.name || record.title || '—'
+
+    const amount =
+      record.amount ??
+      record.total_amount ??
+      record.original_amount ??
+      record.allocation_amount ??
+      record.appropriation_amount ??
+      0
+
+    return {
+      id: record.id || `${accountName}-${index}`,
+      account: accountName,
+      budgetType: String(budgetType).trim() || '—',
+      description: String(description).trim() || '—',
+      amount: formatDecimalCurrency(amount),
+    }
+  })
+}
 
 const expandedSubTypes = ref({})
 const currentParentSubType = ref(null)
@@ -1442,11 +1637,69 @@ const updateExpenseClass = async () => {
   }
 }
 
-const confirmDeleteExpenseClass = (expenseClass) => {
-  itemToDelete.value = expenseClass
-  deleteType.value = 'class'
-  showDeleteConfirm.value = true
+const resetDeleteContext = () => {
+  checkingDeleteUsage.value = false
+  deleteDialog.value = {
+    blocked: false,
+    blockReason: null,
+    blockMessage: null,
+    hasAllocation: false,
+    allocationCount: 0,
+    disbursementCount: 0,
+    associatedAppropriations: [],
+    label: 'record',
+  }
 }
+
+/**
+ * Opens the delete confirmation and, for every library level, asks the server
+ * whether the node is already allocated and whether that allocation was disbursed.
+ */
+const confirmDeleteNode = async (node, level) => {
+  itemToDelete.value = node
+  deleteType.value = level
+  resetDeleteContext()
+  showDeleteConfirm.value = true
+
+  checkingDeleteUsage.value = true
+  try {
+    const usage = await accountsStore.fetchLibraryDeleteCheck(level, node.id)
+
+    if (!showDeleteConfirm.value || itemToDelete.value?.id !== node.id) return
+
+    deleteDialog.value = {
+      blocked: !usage?.can_delete,
+      blockReason: usage?.has_disbursement
+        ? 'disbursement'
+        : usage?.has_augmentation
+          ? 'augmentation'
+          : null,
+      blockMessage: usage?.message || null,
+      hasAllocation: !!usage?.has_allocation,
+      allocationCount: usage?.allocation_count || 0,
+      disbursementCount: usage?.disbursement_count || 0,
+      associatedAppropriations: normalizeAssociatedAppropriations(usage),
+      label: usage?.label || 'record',
+    }
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Failed to verify existing allocations',
+      position: 'top',
+    })
+    deleteDialog.value.blocked = true
+    deleteDialog.value.blockReason = 'unknown'
+  } finally {
+    checkingDeleteUsage.value = false
+  }
+}
+
+const confirmDeleteExpenseClass = (expenseClass) => confirmDeleteNode(expenseClass, 'class')
+const confirmDeleteExpenseType = (expenseType) => confirmDeleteNode(expenseType, 'type')
+const confirmDeleteExpenseItem = (item) => confirmDeleteNode(item, 'item')
+const confirmDeleteExpenseSubItem = (subItem) => confirmDeleteNode(subItem, 'subitem')
+const confirmDeleteExpenseSubType = (subType) => confirmDeleteNode(subType, 'subtype')
+const confirmDeleteExpenseSubSubType = (subSubType) => confirmDeleteNode(subSubType, 'subsubtype')
 
 // Methods
 const loadExpenseClassesForYear = async (yearId) => {
@@ -1653,12 +1906,6 @@ const updateExpenseSubTypeHandler = async () => {
   }
 }
 
-const confirmDeleteExpenseSubType = (subType) => {
-  itemToDelete.value = subType
-  deleteType.value = 'subtype'
-  showDeleteConfirm.value = true
-}
-
 const showAddSubSubTypeDialogForSubType = (subType) => {
   currentParentSubType.value = subType
   newExpenseSubSubType.value = {
@@ -1782,12 +2029,6 @@ const updateExpenseSubSubTypeHandler = async () => {
   }
 }
 
-const confirmDeleteExpenseSubSubType = (subSubType) => {
-  itemToDelete.value = subSubType
-  deleteType.value = 'subsubtype'
-  showDeleteConfirm.value = true
-}
-
 const resetTypeForm = () => {
   newExpenseType.value = { name: '', classId: null }
   showAddTypeDialog.value = false
@@ -1823,12 +2064,6 @@ const updateExpenseType = async () => {
   } finally {
     savingEditType.value = false
   }
-}
-
-const confirmDeleteExpenseType = (expenseType) => {
-  itemToDelete.value = expenseType
-  deleteType.value = 'type'
-  showDeleteConfirm.value = true
 }
 
 // Expense Item related functions
@@ -1949,12 +2184,6 @@ const updateExpenseItem = async () => {
   } finally {
     savingEditItem.value = false
   }
-}
-
-const confirmDeleteExpenseItem = (item) => {
-  itemToDelete.value = item
-  deleteType.value = 'item'
-  showDeleteConfirm.value = true
 }
 
 // Expense Sub-Item related functions
@@ -2161,12 +2390,6 @@ const updateExpenseSubItem = async () => {
   }
 }
 
-const confirmDeleteExpenseSubItem = (subItem) => {
-  itemToDelete.value = subItem
-  deleteType.value = 'subitem'
-  showDeleteConfirm.value = true
-}
-
 // Helper functions
 const getExpenseTypesForClass = computed(() => (classId) => {
   if (!selectedYear.value || !classId) {
@@ -2342,6 +2565,7 @@ const resetAllDialogs = () => {
 
   itemToDelete.value = null
   deleteType.value = null
+  resetDeleteContext()
 }
 
 const cleanupSortables = () => {
@@ -2363,7 +2587,7 @@ const cleanupSortables = () => {
 }
 
 const confirmDelete = async () => {
-  if (savingDelete.value) return
+  if (savingDelete.value || checkingDeleteUsage.value) return
 
   savingDelete.value = true
   try {
@@ -2376,60 +2600,66 @@ const confirmDelete = async () => {
       throw new Error('Invalid ID format')
     }
 
-    if (deleteType.value === 'class') {
-      await accountsStore.deleteExpenseClass(id)
+    if (deleteDialog.value.blocked) {
+      throw new Error(`This ${deleteDialog.value.label} cannot be deleted`)
+    }
+
+    // Shared success reporter: every level can report the appropriations that
+    // were cascade-deleted along with the library node.
+    const notifyDeleted = (label, result, defaultMessage) => {
+      const removed = Number(result?.deleted_appropriations || 0)
+
       $q.notify({
         type: 'positive',
-        message: 'Class and all associated types/items deleted successfully',
+        message:
+          removed > 0
+            ? `${label} deleted along with ${removed} associated appropriation allocation${
+                removed === 1 ? '' : 's'
+              }`
+            : defaultMessage,
         position: 'top',
       })
+    }
+
+    if (deleteType.value === 'class') {
+      const result = await accountsStore.deleteExpenseClass(id)
+      notifyDeleted('Class', result, 'Class and all associated types/items deleted successfully')
     } else if (deleteType.value === 'type') {
-      const typeData = {
+      const result = await accountsStore.deleteExpenseType({
         id: id,
         expenseClassId: itemToDelete.value.expense_class_id,
-      }
-      await accountsStore.deleteExpenseType(typeData)
-      $q.notify({
-        type: 'positive',
-        message: 'Type and all associated items deleted successfully',
-        position: 'top',
       })
+      notifyDeleted('Type', result, 'Type and all associated items deleted successfully')
     } else if (deleteType.value === 'item') {
-      const itemData = {
+      const result = await accountsStore.deleteExpenseItem({
         id: id,
         expenseClassId: itemToDelete.value.expense_class_id,
         expenseTypeId: itemToDelete.value.expense_type_id,
-      }
-      await accountsStore.deleteExpenseItem(itemData)
-      $q.notify({
-        type: 'positive',
-        message: 'Item deleted successfully',
-        position: 'top',
       })
+      notifyDeleted('Item', result, 'Item and all associated sub-items deleted successfully')
     } else if (deleteType.value === 'subitem') {
-      const subItemData = {
+      const result = await accountsStore.deleteExpenseSubItem({
         id: id,
         expenseClassId: itemToDelete.value.expense_class_id,
         expenseTypeId: itemToDelete.value.expense_type_id,
         expenseItemId: itemToDelete.value.expense_item_id,
-      }
-      await accountsStore.deleteExpenseSubItem(subItemData)
-      $q.notify({
-        type: 'positive',
-        message: 'Sub-item deleted successfully',
-        position: 'top',
       })
+      notifyDeleted(
+        'Sub-item',
+        result,
+        'Sub-item and all associated sub-types deleted successfully',
+      )
     } else if (deleteType.value === 'subtype') {
-      await accountsStore.deleteExpenseSubType({
+      const result = await accountsStore.deleteExpenseSubType({
         id,
         expenseClassId: itemToDelete.value.expense_class_id,
         expenseTypeId: itemToDelete.value.expense_type_id,
         expenseItemId: itemToDelete.value.expense_item_id,
         expenseSubItemId: itemToDelete.value.expense_sub_item_id,
       })
-      $q.notify({ type: 'positive', message: 'Sub-type deleted successfully', position: 'top' })
+      notifyDeleted('Sub-type', result, 'Sub-type and all associated items deleted successfully')
     } else if (deleteType.value === 'subsubtype') {
-      await accountsStore.deleteExpenseSubSubType({
+      const result = await accountsStore.deleteExpenseSubSubType({
         id,
         expenseClassId: itemToDelete.value.expense_class_id,
         expenseTypeId: itemToDelete.value.expense_type_id,
@@ -2437,12 +2667,34 @@ const confirmDelete = async () => {
         expenseSubItemId: itemToDelete.value.expense_sub_item_id,
         expenseSubTypeId: itemToDelete.value.expense_sub_type_id,
       })
-      $q.notify({ type: 'positive', message: 'Item deleted successfully', position: 'top' })
+      notifyDeleted('Item', result, 'Item deleted successfully')
     }
 
     // Refresh data after deletion
     if (selectedYear.value) {
       await accountsStore.fetchExpenseClasses(selectedYear.value)
+    }
+
+    // Keep the Appropriation table in sync (cascade-deleted allocations change "unappropriated")
+    try {
+      await appropriationStore.refreshBudgets()
+    } catch (e) {
+      console.error('Failed to refresh appropriation data after delete:', e)
+      $q.notify({
+        type: 'warning',
+        message: 'Account deleted, but appropriation balances could not be refreshed. Please refresh the page.',
+        position: 'top',
+        timeout: 5000,
+      })
+    }
+
+    try {
+      const { useDisbursementStore } = await import('stores/disbursementStore')
+      const disbursementStore = useDisbursementStore()
+      await disbursementStore.forceRefreshExpenseDetails()
+      await disbursementStore.refreshExpenseAccountsInBackground()
+    } catch (e) {
+      console.warn('Failed to refresh disbursement data after delete:', e)
     }
 
     // Reset expansion states to prevent stale data
@@ -2464,10 +2716,8 @@ const confirmDelete = async () => {
     }
     const label = typeLabels[deleteType.value] || 'record'
 
-    if (error.response) {
-      // Server answered with a failure (e.g. 500): record is in use
+    const notifyDeleteBlocked = (heading, detail) => {
       $q.notify({
-        html: true,
         icon: 'info',
         color: 'amber-9',
         textColor: 'white',
@@ -2475,19 +2725,32 @@ const confirmDelete = async () => {
         timeout: 20000, // 20 seconds so the user can read it
         multiLine: true,
         classes: 'delete-blocked-notify',
-        message: `
-    <div class="text-weight-bold" style="font-size: 15px; margin-bottom: 4px;">
-      Unable to delete ${label}
-    </div>
-    <div style="opacity: 0.95; text-weight-medium; font-size: 14px;">
-      This ${label} is already used in existing appropriation records.
-    </div>
-    <div style="margin-top: 3px; opacity: 0.95; text-weight-medium; font-size: 14px;">
-      Please remove any associated records in the Appropriation Page before attempting to delete this ${label}.
-    </div>
-  `,
+        message: `${heading}\n${detail}`,
         actions: [{ label: 'Got it', color: 'white', flat: true }],
       })
+    }
+
+    // The store already unwrapped the backend payload, so `error.message` is the
+    // server's own explanation. Never tell the user to go to the Appropriation
+    // Page: undisbursed allocations are removed automatically by the delete.
+    if (error.isDeleteBlocked || error.reason || error.status === 422) {
+      const detail =
+        error.message ||
+        `Cannot delete this ${label} because it is already used in existing appropriation records.`
+
+      if (error.reason === 'augmentation') {
+        notifyDeleteBlocked(
+          `Unable to delete ${label}`,
+          `${detail}\nPlease remove the related records in the Budget Augmentation Page first.`,
+        )
+      } else {
+        notifyDeleteBlocked(`Unable to delete ${label}`, detail)
+      }
+    } else if (error.status) {
+      notifyDeleteBlocked(
+        `Unable to delete ${label}`,
+        `${error.message || 'The record could not be deleted.'}`,
+      )
     } else {
       // No server response (network down, etc.)
       $q.notify({
@@ -2936,6 +3199,70 @@ watch(
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
   line-height: 1.4;
+}
+
+.allocation-warning {
+  border: 1px solid #f2d6a5;
+  background: #fffaf1;
+  color: #424242;
+}
+
+.allocation-warning__content {
+  width: 100%;
+  min-width: 0;
+}
+
+.allocation-warning__count {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  font-weight: 600;
+}
+
+.allocation-records {
+  overflow: hidden;
+  border: 1px solid #e6e8eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.allocation-records__scroll {
+  max-height: 220px;
+  overflow: auto;
+  border-top: 1px solid #e6e8eb;
+}
+
+.allocation-records__table {
+  min-width: 560px; /* keep if you want horizontal scroll on small screens, otherwise remove */
+  color: #424242;
+}
+
+:deep(.allocation-records__table thead tr) {
+  background: #f6f7f8;
+}
+
+:deep(.allocation-records__table th) {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  color: #616161;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: #f6f7f8;
+}
+
+:deep(.allocation-records__table.q-markup-table) {
+  overflow: visible;
+}
+
+:deep(.allocation-records__table td) {
+  padding: 2px 6px;
+}
+
+.allocation-records__description {
+  max-width: 240px;
+  white-space: normal;
 }
 
 .sortable-chosen {

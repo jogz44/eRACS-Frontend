@@ -27,6 +27,7 @@ export const useAppropriationStore = defineStore('appropriation', {
     selectedFiscalYear: new Date().getFullYear().toString(),
     selectedBarangayId: null, // For admin barangay filtering
     selectedBudgetType: 'all', // For budget type filtering
+    lastFetchedYear: null,
 
     allocations: [],
     authStore: useAuthStore(), // Moved hook call inside state
@@ -333,11 +334,13 @@ export const useAppropriationStore = defineStore('appropriation', {
       const year = isLegacyOptionsOnly ? null : yearOrOptions
       const mergedOptions = isLegacyOptionsOnly ? yearOrOptions : options
       const silent = mergedOptions?.silent === true
+      const throwOnError = mergedOptions?.throwOnError === true
       if (!silent) this.loading = true
       try {
         const params = {
           year: year !== null && year !== undefined ? Number(year) : new Date().getFullYear(),
         }
+        this.lastFetchedYear = params.year
 
         if (this.selectedBudgetType && this.selectedBudgetType !== 'all') {
           params.budget_type = this.selectedBudgetType
@@ -364,29 +367,39 @@ export const useAppropriationStore = defineStore('appropriation', {
           },
         })
 
-        this.appropriations = response.data.data.map((budget) => ({
-          id: budget.id,
-          date: budget.date,
-          description: budget.description,
-          amount: parseCurrency(budget.amount),
-          current_amount: parseCurrency(
+        this.appropriations = response.data.data.map((budget) => {
+          const currentAmount =
             budget.current_amount !== null && budget.current_amount !== undefined
               ? budget.current_amount
-              : budget.amount,
-          ),
-          unappropriated: parseCurrency(budget.unappropriated),
-          fiscal_year: budget.fiscal_year,
-          barangay_name: budget.barangay_name,
-          barangay_id: budget.barangay_id,
-          allocations: budget.allocations,
-        }))
+              : budget.unappropriated
+
+          return {
+            id: budget.id,
+            date: budget.date,
+            description: budget.description,
+            amount: parseCurrency(budget.amount),
+            current_amount: parseCurrency(currentAmount ?? budget.amount),
+            unappropriated: parseCurrency(currentAmount ?? budget.amount),
+            fiscal_year: budget.fiscal_year,
+            barangay_name: budget.barangay_name,
+            barangay_id: budget.barangay_id,
+            allocations: budget.allocations,
+          }
+        })
 
         this.totalAvailable = parseCurrency(response.data.total_available || 0)
       } catch (error) {
         console.error('Error fetching budgets:', error)
+        if (throwOnError) {
+          throw error
+        }
       } finally {
         if (!silent) this.loading = false
       }
+    },
+
+    async refreshBudgets() {
+      return this.fetchBudgets(this.lastFetchedYear, { silent: true, throwOnError: true })
     },
 
     // Method to set selected budget type for filtering

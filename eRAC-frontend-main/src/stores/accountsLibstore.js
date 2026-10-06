@@ -23,6 +23,25 @@ const getAuthConfig = () => {
   }
 }
 
+// Turns any server-side rejection into an Error that keeps the backend's own
+// message and reason, so the UI can show it verbatim instead of a generic text.
+const normalizeDeleteError = (error, fallbackMessage) => {
+  const data = error?.response?.data || {}
+  const errors = data.errors
+  const message =
+    (errors && Object.keys(errors).length ? Object.values(errors)[0][0] : null) ||
+    data.message ||
+    error?.message ||
+    fallbackMessage
+
+  const normalized = new Error(message)
+  normalized.reason = data.reason || null
+  normalized.status = error?.response?.status || null
+  normalized.payload = data
+  normalized.isDeleteBlocked = error?.response?.status === 422 || error?.response?.status === 409
+  return normalized
+}
+
 export const useAccountsLibraryStore = defineStore('accounts-library', {
   state: () => ({
     years: [],
@@ -234,18 +253,35 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
       }
     },
 
+    async fetchLibraryDeleteCheck(level, id) {
+      try {
+        const response = await api.get(
+          `/api/barangay/expense-accounts/delete-check/${level}/${id}`,
+          getAuthConfig(),
+        )
+
+        return response.data?.data?.data || response.data?.data || response.data
+      } catch (error) {
+        this.error = error.response?.data?.message || error.message
+        throw error
+      }
+    },
+
+    async fetchExpenseClassDeleteCheck(classId) {
+      return this.fetchLibraryDeleteCheck('class', classId)
+    },
+
     async deleteExpenseClass(classId) {
       this.loading = true
       try {
-        await api.delete(`/api/barangay/expense-classes/${classId}`, getAuthConfig())
+        const response = await api.delete(
+          `/api/barangay/expense-classes/${classId}`,
+          getAuthConfig(),
+        )
         this.expenseClasses = this.expenseClasses.filter((c) => c.id !== classId)
+        return response.data
       } catch (error) {
-        if (error.response?.status === 422) {
-          const errors = error.response.data.errors
-          throw new Error(Object.values(errors)[0][0])
-        }
-        this.error = error.response?.data?.message || error.message
-        throw error
+        throw normalizeDeleteError(error, 'Failed to delete expense class')
       } finally {
         this.loading = false
       }
@@ -418,16 +454,16 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
     async deleteExpenseType(typeData) {
       this.loading = true
       try {
-        await api.delete(
+        const response = await api.delete(
           `/api/barangay/expense-classes/${typeData.expenseClassId}/types/${typeData.id}`,
           getAuthConfig(),
         )
 
         this.expenseTypes = this.expenseTypes.filter((t) => t.id !== typeData.id)
+        return response.data
       } catch (error) {
         console.error('Error deleting expense type:', error)
-        this.error = error.response?.data?.message || error.message
-        throw error
+        throw normalizeDeleteError(error, 'Failed to delete expense type')
       } finally {
         this.loading = false
       }
@@ -579,7 +615,7 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
           },
           getAuthConfig(),
         )
-
+        
         const updatedItem = response.data?.data || response.data
 
         const index = this.expenseItems.findIndex((i) => i.id === itemData.id)
@@ -603,16 +639,16 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
     async deleteExpenseItem(itemData) {
       this.loading = true
       try {
-        await api.delete(
+        const response = await api.delete(
           `/api/barangay/expense-classes/${itemData.expenseClassId}/types/${itemData.expenseTypeId}/items/${itemData.id}`,
           getAuthConfig(),
         )
 
         this.expenseItems = this.expenseItems.filter((i) => i.id !== itemData.id)
+        return response.data
       } catch (error) {
         console.error('Error deleting expense item:', error)
-        this.error = error.response?.data?.message || error.message
-        throw error
+        throw normalizeDeleteError(error, 'Failed to delete expense item')
       } finally {
         this.loading = false
       }
@@ -814,16 +850,15 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
     async deleteExpenseSubItem(subItemData) {
       this.loading = true
       try {
-        await api.delete(
+        const response = await api.delete(
           `/api/barangay/expense-classes/${subItemData.expenseClassId}/types/${subItemData.expenseTypeId}/items/${subItemData.expenseItemId}/sub-items/${subItemData.id}`,
           getAuthConfig(),
         )
 
         this.expenseSubItems = this.expenseSubItems.filter((i) => i.id !== subItemData.id)
+        return response.data
       } catch (error) {
-        console.error('Error deleting expense sub-item:', error)
-        this.error = error.response?.data?.message || error.message
-        throw error
+        throw normalizeDeleteError(error, 'Failed to delete expense sub-item')
       } finally {
         this.loading = false
       }
@@ -956,7 +991,7 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
     async deleteExpenseSubType(subTypeData) {
       this.loading = true
       try {
-        await api.delete(
+        const response = await api.delete(
           `/api/barangay/accounts/expense-class/${subTypeData.expenseClassId}/type/${subTypeData.expenseTypeId}/item/${subTypeData.expenseItemId}/sub-item/${subTypeData.expenseSubItemId}/sub-types/${subTypeData.id}`,
           getAuthConfig(),
         )
@@ -964,9 +999,9 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
         this.expenseSubTypes = this.expenseSubTypes.filter(
           (subType) => subType.id !== subTypeData.id,
         )
+        return response.data
       } catch (error) {
-        this.error = error.response?.data?.message || error.message
-        throw error
+        throw normalizeDeleteError(error, 'Failed to delete expense sub-type')
       } finally {
         this.loading = false
       }
@@ -1090,14 +1125,14 @@ export const useAccountsLibraryStore = defineStore('accounts-library', {
     async deleteExpenseSubSubType(data) {
       this.loading = true
       try {
-        await api.delete(
+        const response = await api.delete(
           `/api/barangay/accounts/${data.expenseClassId}/types/${data.expenseTypeId}/items/${data.expenseItemId}/sub-items/${data.expenseSubItemId}/sub-types/${data.expenseSubTypeId}/sub-sub-types/${data.id}`,
           getAuthConfig(),
         )
         this.expenseSubSubTypes = this.expenseSubSubTypes.filter((s) => s.id !== data.id)
+        return response.data
       } catch (error) {
-        this.error = error.response?.data?.message || error.message
-        throw error
+        throw normalizeDeleteError(error, 'Failed to delete expense item')
       } finally {
         this.loading = false
       }
