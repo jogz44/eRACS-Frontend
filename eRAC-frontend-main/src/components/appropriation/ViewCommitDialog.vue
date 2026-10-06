@@ -46,24 +46,22 @@
 
           <div class="hierarchical-body" style="max-height: 400px; overflow-y: auto">
             <template v-for="expenseClass in filteredAccounts" :key="'class-' + expenseClass.id">
-              <!-- Expense Class Row -->
               <div
                 class="row bg-grey-3 text-weight-bold"
                 style="padding: 12px 12px; min-height: 32px"
               >
                 <div class="col-6">{{ expenseClass.name }}</div>
-                 <div class="col-6 text-right">
-                   <template v-if="calculateClassTotal(expenseClass) > 0">
-                     {{ appropriationStore.formatCurrency(calculateClassTotal(expenseClass)) }}
-                   </template>
-                 </div>
+                <div class="col-6 text-right">
+                  <template v-if="calculateClassTotal(expenseClass) > 0">
+                    {{ appropriationStore.formatCurrency(calculateClassTotal(expenseClass)) }}
+                  </template>
+                </div>
               </div>
 
-              <!-- Expense Type Rows (expandable) -->
               <template v-for="expenseType in expenseClass.children" :key="'type-' + expenseType.id">
                 <div
                   class="row"
-                  :class="getTypeClass(expenseType)"
+                  :class="nodeWeightClass(expenseType)"
                   style="padding: 6px 12px; min-height: 32px; border-bottom: 1px solid #f0f0f0"
                 >
                   <div class="col-6" style="padding-left: 24px; display: flex; align-items: center">
@@ -71,76 +69,100 @@
                       flat
                       dense
                       size="sm"
-                      :icon="(expenseType.children && expenseType.children.length > 0 && expandedTypes[expenseType.id]) ? 'expand_more' : 'chevron_right'"
-                      @click="(expenseType.children && expenseType.children.length > 0) ? toggleType(expenseType.id) : null"
+                      :icon="hasChildren(expenseType) && expandedTypes[expenseType.id] ? 'expand_more' : 'chevron_right'"
+                      @click="hasChildren(expenseType) ? toggleType(expenseType.id) : null"
                       style="min-width: 24px; margin-right: 4px;"
-                      :class="{ 'cursor-default': !expenseType.children || expenseType.children.length === 0 }"
+                      :class="{ 'cursor-default': !hasChildren(expenseType) }"
                     />
                     <span>{{ expenseType.name }}</span>
                   </div>
-                   <div class="col-6 text-right">
-                     <template v-if="calculateTypeTotal(expenseType) > 0">
-                       <strong>{{ appropriationStore.formatCurrency(calculateTypeTotal(expenseType)) }}</strong>
-                     </template>
-                   </div>
+                  <div class="col-6 text-right">
+                    <template v-if="leafAmount(expenseType) > 0">
+                      <strong>{{ appropriationStore.formatCurrency(leafAmount(expenseType)) }}</strong>
+                    </template>
+                  </div>
                 </div>
-                <!-- Expense Item and Sub-Item Rows (only if expanded) -->
-                <template v-if="expandedTypes[expenseType.id] && expenseType.children && expenseType.children.length > 0">
+
+                <template v-if="expandedTypes[expenseType.id] && hasChildren(expenseType)">
                   <template v-for="expenseItem in expenseType.children" :key="'item-' + expenseItem.id">
-
-                    <!-- Item Row (always show as header) -->
-
                     <div
                       class="row item-row"
-                      :class="getItemClass(expenseItem)"
-                      style="
-                        padding: 6px 12px;
-                        min-height: 32px;
-                        border-bottom: 1px solid #f0f0f0;
-                        margin-left: 0;
-                      "
+                      :class="nodeWeightClass(expenseItem)"
+                      style="padding: 6px 12px; min-height: 32px; border-bottom: 1px solid #f0f0f0"
                     >
-                      <div
-
-                        class="col-6"
-                        style="padding-left: 170px; display: flex; align-items: center"
-                      >
+                      <div class="col-6" style="padding-left: 48px; display: flex; align-items: center">
                         <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
-                        <span :class="expenseItem.children && expenseItem.children.length > 0 ? 'text-weight-bold' : 'text-weight-regular'">{{ expenseItem.name }}</span>
+                        <span :class="nodeWeightClass(expenseItem)">{{ expenseItem.name }}</span>
                       </div>
-                       <div class="col-6 text-right">
-                         <!-- Only show amount if item has direct allocation -->
-                         <template v-if="calculateItemTotal(expenseItem) > 0">
-                           <span :class="expenseItem.children && expenseItem.children.length > 0 ? 'text-weight-bold' : 'text-weight-regular'">
-                             {{ appropriationStore.formatCurrency(calculateItemTotal(expenseItem)) }}
-                           </span>
-                         </template>
-                       </div>
+                      <div class="col-6 text-right">
+                        <template v-if="leafAmount(expenseItem) > 0">
+                          <span :class="nodeWeightClass(expenseItem)">
+                            {{ appropriationStore.formatCurrency(leafAmount(expenseItem)) }}
+                          </span>
+                        </template>
+                      </div>
                     </div>
 
-
-                    <!-- Sub-Item Rows (only if item has sub-items) -->
-                    <template v-if="expenseItem.children && expenseItem.children.length > 0">
+                    <template v-if="hasChildren(expenseItem)">
                       <template v-for="expenseSubItem in expenseItem.children" :key="'subitem-' + expenseSubItem.id">
                         <div
                           class="row"
                           style="padding: 6px 12px; min-height: 32px; border-bottom: 1px solid #f0f0f0"
                         >
-                          <div
-                            class="col-6"
-                            style="padding-left: 200px; display: flex; align-items: center"
-                          >
+                          <div class="col-6" style="padding-left: 72px; display: flex; align-items: center">
                             <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
-                            <span class="text-weight-regular">{{ expenseSubItem.name }}</span>
+                            <span :class="nodeWeightClass(expenseSubItem)">{{ expenseSubItem.name }}</span>
                           </div>
-                           <div class="col-6 text-right">
-                             <template v-if="expenseSubItem.amount > 0">
-                               <span class="text-weight-regular">
-                                 {{ appropriationStore.formatCurrency(expenseSubItem.amount) }}
-                               </span>
-                             </template>
-                           </div>
+                          <div class="col-6 text-right">
+                            <template v-if="leafAmount(expenseSubItem) > 0">
+                              <span class="text-weight-regular">
+                                {{ appropriationStore.formatCurrency(leafAmount(expenseSubItem)) }}
+                              </span>
+                            </template>
+                          </div>
                         </div>
+
+                        <template v-if="hasChildren(expenseSubItem)">
+                          <template v-for="expenseSubType in expenseSubItem.children" :key="'subtype-' + expenseSubType.id">
+                            <div
+                              class="row"
+                              style="padding: 6px 12px; min-height: 32px; border-bottom: 1px solid #f0f0f0"
+                            >
+                              <div class="col-6" style="padding-left: 96px; display: flex; align-items: center">
+                                <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
+                                <span :class="nodeWeightClass(expenseSubType)">{{ expenseSubType.name }}</span>
+                              </div>
+                              <div class="col-6 text-right">
+                                <template v-if="leafAmount(expenseSubType) > 0">
+                                  <span class="text-weight-regular">
+                                    {{ appropriationStore.formatCurrency(leafAmount(expenseSubType)) }}
+                                  </span>
+                                </template>
+                              </div>
+                            </div>
+
+                            <template v-if="hasChildren(expenseSubType)">
+                              <template v-for="expenseSubSubType in expenseSubType.children" :key="'subsubtype-' + expenseSubSubType.id">
+                                <div
+                                  class="row"
+                                  style="padding: 6px 12px; min-height: 32px; border-bottom: 1px solid #f0f0f0"
+                                >
+                                  <div class="col-6" style="padding-left: 120px; display: flex; align-items: center">
+                                    <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
+                                    <span class="text-weight-regular">{{ expenseSubSubType.name }}</span>
+                                  </div>
+                                  <div class="col-6 text-right">
+                                    <template v-if="leafAmount(expenseSubSubType) > 0">
+                                      <span class="text-weight-regular">
+                                        {{ appropriationStore.formatCurrency(leafAmount(expenseSubSubType)) }}
+                                      </span>
+                                    </template>
+                                  </div>
+                                </div>
+                              </template>
+                            </template>
+                          </template>
+                        </template>
                       </template>
                     </template>
                   </template>
@@ -175,161 +197,155 @@ const allHistoryData = ref([])
 const expandedTypes = ref({})
 // const expandedItems = ref({})
 
+const hasChildren = (node) => Array.isArray(node?.children) && node.children.length > 0
+
+const parseCurrency = (value) => {
+  if (!value && value !== 0) return 0
+
+  const cleanValue = String(value).replace(/[₱,\s]/g, "")
+  const parsed = Number.parseFloat(cleanValue)
+
+  return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100
+}
+
+const leafAmount = (node) => {
+  if (hasChildren(node)) return 0
+  return parseCurrency(node?.amount)
+}
+
 const displayAccounts = computed(() => {
   if (!viewAllocations.value || viewAllocations.value.length === 0) return []
 
-  // Create a map to organize allocations by expense class
   const classMap = {}
+
+  const ensureChild = (parent, id, name, order, fallbackLabel) => {
+    if (!id) return null
+    let child = parent.children.find((c) => c.id === id)
+    if (!child) {
+      child = {
+        id,
+        name: name || `${fallbackLabel} ${id}`,
+        order,
+        amount: 0,
+        children: [],
+      }
+      parent.children.push(child)
+    }
+    return child
+  }
 
   viewAllocations.value.forEach((alloc) => {
     const classId = alloc.expense_class_id || 'unclassified'
-    const className = alloc.expense_class_name || 'Unclassified'
-    const typeId = alloc.expense_type_id
-    const typeName = alloc.expense_type_name || `Type ${typeId}`
-    const itemId = alloc.expense_item_id
-    const itemName = alloc.expense_item_name || `Item ${itemId}`
-
-    // Initialize class if not exists
     if (!classMap[classId]) {
       classMap[classId] = {
         id: classId,
-        name: className,
+        name: alloc.expense_class_name || 'Unclassified',
+        order: alloc.expense_class_order,
+        amount: 0,
         children: [],
       }
     }
 
-    // Handle type-level allocations (no item ID)
-    if (typeId && !itemId) {
-      // Check if type already exists
-      const existingType = classMap[classId].children.find((t) => t.id === typeId)
-      if (existingType) {
-        existingType.amount += alloc.amount
-      } else {
-        classMap[classId].children.push({
-          id: typeId,
-          name: typeName,
-          amount: alloc.amount,
-          children: [],
-        })
-      }
+    const cls = classMap[classId]
+    const type = ensureChild(
+      cls,
+      alloc.expense_type_id,
+      alloc.expense_type_name,
+      alloc.expense_type_order,
+      'Type',
+    )
+    if (!type) {
+      cls.amount += alloc.amount || 0
+      return
     }
 
-    // Handle item-level and sub-item-level allocations
-    if (itemId) {
-      // Find or create the type
-      let type = classMap[classId].children.find((t) => t.id === typeId)
-      if (!type) {
-        type = {
-          id: typeId,
-          name: typeName,
-          amount: 0,
-          children: [],
-        }
-        classMap[classId].children.push(type)
-      }
-
-      // Check if this is a sub-item allocation
-      const subItemId = alloc.expense_sub_item_id
-      const subItemName = alloc.expense_sub_item_name || `Sub-item ${subItemId}`
-
-      if (subItemId) {
-        // Handle sub-item allocation
-        let item = type.children.find((i) => i.id === itemId)
-        if (!item) {
-          item = {
-            id: itemId,
-            name: itemName,
-            amount: 0,
-            children: [],
-          }
-          type.children.push(item)
-        }
-
-        // Add the sub-item
-        item.children.push({
-          id: subItemId,
-          name: subItemName,
-          amount: alloc.amount,
-        })
-      } else {
-        // Handle regular item allocation
-        let item = type.children.find((i) => i.id === itemId)
-        if (item) {
-          item.amount += alloc.amount
-        } else {
-          type.children.push({
-            id: itemId,
-            name: itemName,
-            amount: alloc.amount,
-            children: [],
-          })
-        }
-      }
+    const item = ensureChild(
+      type,
+      alloc.expense_item_id,
+      alloc.expense_item_name,
+      alloc.expense_item_order,
+      'Item',
+    )
+    if (!item) {
+      type.amount += alloc.amount || 0
+      return
     }
+
+    const subItem = ensureChild(
+      item,
+      alloc.expense_sub_item_id,
+      alloc.expense_sub_item_name,
+      alloc.expense_sub_item_order,
+      'Sub-item',
+    )
+    if (!subItem) {
+      item.amount += alloc.amount || 0
+      return
+    }
+
+    const subType = ensureChild(
+      subItem,
+      alloc.expense_sub_type_id,
+      alloc.expense_sub_type_name,
+      alloc.expense_sub_type_order,
+      'Sub-type',
+    )
+    if (!subType) {
+      subItem.amount += alloc.amount || 0
+      return
+    }
+
+    const subSubType = ensureChild(
+      subType,
+      alloc.expense_sub_sub_type_id,
+      alloc.expense_sub_sub_type_name,
+      alloc.expense_sub_sub_type_order,
+      'Sub-sub-type',
+    )
+    if (!subSubType) {
+      subType.amount += alloc.amount || 0
+      return
+    }
+
+    subSubType.amount += alloc.amount || 0
   })
 
-  // Sort classes, types, items, and sub-items by id to keep order static
-  const classArr = Object.values(classMap)
-  classArr.forEach(cls => {
-    cls.children.sort((a, b) => a.id - b.id)
-    cls.children.forEach(type => {
-      if (type.children) {
-        type.children.sort((a, b) => a.id - b.id)
-        type.children.forEach(item => {
-          if (item.children) {
-            item.children.sort((a, b) => a.id - b.id)
-          }
-        })
-      }
+  const sortByLibraryOrder = (a, b) => {
+    const orderA = Number.isFinite(Number(a.order)) ? Number(a.order) : Number.MAX_SAFE_INTEGER
+    const orderB = Number.isFinite(Number(b.order)) ? Number(b.order) : Number.MAX_SAFE_INTEGER
+    if (orderA !== orderB) return orderA - orderB
+    return Number(a.id || 0) - Number(b.id || 0)
+  }
+
+  const sortTree = (nodes) => {
+    nodes.sort(sortByLibraryOrder)
+    nodes.forEach((node) => {
+      if (hasChildren(node)) sortTree(node.children)
     })
-  })
+  }
+
+  const classArr = Object.values(classMap)
+  sortTree(classArr)
   return classArr
 })
 
-// Non-mutating recursive filter for search
 const filteredAccounts = computed(() => {
   const query = String(searchQuery.value || '').toLowerCase()
   if (!query) return displayAccounts.value
 
   const matches = (text) => String(text || '').toLowerCase().includes(query)
 
-  const filterItem = (item) => {
-    const itemMatches = matches(item.name)
-    let subItems = []
-    if (Array.isArray(item.children)) {
-      subItems = item.children.filter((s) => matches(s.name))
-    }
-    if (itemMatches || subItems.length > 0) {
-      return { ...item, children: subItems }
+  const filterNode = (node) => {
+    const children = Array.isArray(node.children)
+      ? node.children.map(filterNode).filter(Boolean)
+      : []
+    if (matches(node.name) || children.length > 0) {
+      return { ...node, children }
     }
     return null
   }
 
-  const filterType = (type) => {
-    const typeMatches = matches(type.name)
-    let items = []
-    if (Array.isArray(type.children)) {
-      items = type.children.map(filterItem).filter(Boolean)
-    }
-    if (typeMatches || items.length > 0) {
-      return { ...type, children: items }
-    }
-    return null
-  }
-
-  return (displayAccounts.value || [])
-    .map((cls) => {
-      const classMatches = matches(cls.name)
-      let types = []
-      if (Array.isArray(cls.children)) {
-        types = cls.children.map(filterType).filter(Boolean)
-      }
-      if (classMatches || types.length > 0) {
-        return { ...cls, children: types }
-      }
-      return null
-    })
-    .filter(Boolean)
+  return (displayAccounts.value || []).map(filterNode).filter(Boolean)
 })
 
 // Expand types with children by default when displayAccounts changes
@@ -355,23 +371,17 @@ watch(
 )
 
 const toggleType = (typeId) => {
-  // Find the expense type to check if it has children
-  let hasChildren = false
-  displayAccounts.value.forEach(expenseClass => {
-    const expenseType = expenseClass.children?.find(type => type.id === typeId)
-    if (expenseType && expenseType.children && expenseType.children.length > 0) {
-      hasChildren = true
+  let canToggle = false
+  displayAccounts.value.forEach((expenseClass) => {
+    const expenseType = expenseClass.children?.find((type) => type.id === typeId)
+    if (hasChildren(expenseType)) {
+      canToggle = true
     }
   })
 
-  // Only toggle if the type has children
-  if (hasChildren) {
+  if (canToggle) {
     expandedTypes.value[typeId] = !expandedTypes.value[typeId]
   }
-}
-const calculateTypeTotal = (expenseType) => {
-  // Only show the type's own direct allocation amount, not children amounts
-  return expenseType.amount || 0
 }
 const $q = useQuasar()
 
@@ -434,57 +444,20 @@ const totalAllocated = computed(() => {
 })
 
 const calculateClassTotal = (expenseClass) => {
-  // Class should show the sum of ALL allocations under it
-  let total = 0
-
-  expenseClass.children?.forEach((expenseType) => {
-    // Include type amount only when there are no items under it
-    if ((!expenseType.children || expenseType.children.length === 0) && expenseType.amount) {
-      total += parseCurrency(expenseType.amount)
+  const sumLeaves = (node) => {
+    if (!hasChildren(node)) {
+      return parseCurrency(node.amount)
     }
+    return node.children.reduce((sum, child) => sum + sumLeaves(child), 0)
+  }
 
-    expenseType.children?.forEach((item) => {
-      if (item.children && item.children.length > 0) {
-        // When there are sub-items, include only sub-item amounts
-        item.children.forEach((subItem) => {
-          if (subItem.amount) {
-            total += parseCurrency(subItem.amount)
-          }
-        })
-      } else if (item.amount) {
-        // Items without sub-items: include the item's own amount
-        total += parseCurrency(item.amount)
-      }
-    })
-  })
-
+  const total = sumLeaves(expenseClass)
   return Math.round(total * 100) / 100
 }
 
-const calculateItemTotal = (expenseItem) => {
-  // Only show the item's own direct allocation amount, not children amounts
-  return expenseItem.amount || 0
+const nodeWeightClass = (node) => {
+  return hasChildren(node) ? 'text-weight-bold' : 'text-weight-regular'
 }
-
-// Utility function for consistent currency parsing
-const parseCurrency = (value) => {
-  if (!value && value !== 0) return 0
-
-  const cleanValue = String(value).replace(/[₱,\s]/g, "")
-  const parsed = Number.parseFloat(cleanValue)
-
-  return isNaN(parsed) ? 0 : Math.round(parsed * 100) / 100
-}
-
-const getTypeClass = (expenseType) => {
-  return expenseType.children?.length > 0 ? 'text-weight-bold' : 'text-weight-regular'
-}
-
-const getItemClass = (expenseItem) => {
-  return expenseItem.children?.length > 0 ? 'text-weight-bold' : 'text-weight-regular'
-}
-
-
 
 defineExpose({
   openDialog,

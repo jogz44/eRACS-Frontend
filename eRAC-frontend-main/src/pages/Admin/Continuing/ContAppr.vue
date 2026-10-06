@@ -2,7 +2,12 @@
   <q-page class="q-pa-md cont-appr">
     <div class="page-header q-mb-md">
       <div class="row items-center justify-between">
-        <div class="text-h6 text-weight-medium">Continuing Appropriation</div>
+        <div>
+          <div class="text-h6 text-weight-medium">Continuing Appropriation</div>
+          <div class="text-caption text-grey-7">
+            View continuing appropriations continued from previous year
+          </div>
+        </div>
         <q-btn
           icon="refresh"
           color="primary"
@@ -28,7 +33,6 @@
           </template>
         </q-input>
 
-        <!-- Fiscal Year Filter -->
         <q-select
           outlined
           dense
@@ -58,189 +62,144 @@
           icon="clear"
           @click="clearAllFilters"
         />
-
-        <q-space />
-
-        <!-- <q-btn
-          label="Continue Accounts"
-          @click="showContinueDialog = true"
-          color="secondary"
-        /> -->
       </div>
     </div>
 
-    <!-- Dialog for Selecting Accounts -->
-    <q-dialog v-model="showContinueDialog" @keydown.enter="handleEnterKey">
-      <q-card style="min-width: 600px; max-width: 90vw">
-        <q-card-section class="q-pb-none">
-          <div class="text-h6">Select Accounts to Continue</div>
-        </q-card-section>
-
-        <q-card-section>
-          <div class="row items-center q-gutter-sm q-mb-md">
-            <q-input
-              dense
-              outlined
-              debounce="300"
-              v-model="searchQuery"
-              placeholder="Search accounts..."
-              style="min-width: 250px"
-              @keydown.enter="handleEnterKey"
-            />
-          </div>
-
-          <q-table
-            :rows="filteredAccounts"
-            :columns="continueColumns"
-            row-key="id"
-            selection="multiple"
-            v-model:selected="selectedAccounts"
-            :pagination="{ rowsPerPage: 0 }"
-            style="max-height: 400px"
-            flat
-            bordered
-          >
-            <template v-slot:header-selection="scope">
-              <q-checkbox color="secondary" v-model="scope.selected" />
-            </template>
-            <template v-slot:body-selection="scope">
-              <q-checkbox color="secondary" v-model="scope.selected" />
-            </template>
-          </q-table>
-
-          <q-input
-            outlined
-            v-model="description"
-            label="Description"
-            type="text"
-            placeholder="e.g., Carried-over balances from previous year"
-            class="q-mt-md"
-            @keydown.enter="handleEnterKey"
-          />
-        </q-card-section>
-
-        <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn
-            label="Continue"
-            color="primary"
-            @click="handleContinueClick"
-            :disable="selectedAccounts.length === 0 || !description"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-
-    <!-- Main Table -->
     <q-card flat bordered>
-      <q-table flat :rows="filteredAppropriations" :columns="columns" row-key="id">
+      <q-table
+        flat
+        :rows="filteredAppropriations"
+        :columns="columns"
+        :loading="appropriationStore.loading || loading"
+        row-key="id"
+      >
+        <template v-slot:body-cell-index="props">
+          <q-td :props="props">{{ props.pageIndex + 1 }}</q-td>
+        </template>
+
+        <template v-slot:body-cell-continued_date="props">
+          <q-td :props="props">{{ props.row.continued_date || '-' }}</q-td>
+        </template>
+
+        <template v-slot:body-cell-year="props">
+          <q-td :props="props">{{ props.row.year || '-' }}</q-td>
+        </template>
+
+        <template v-slot:body-cell-expense_class="props">
+          <q-td :props="props">{{ props.row.expense_class || '-' }}</q-td>
+        </template>
+
         <template v-slot:body-cell-amount="props">
-          <q-td :props="props">{{ formatCurrency(props.row.amount) }}</q-td>
+          <q-td :props="props">
+            {{ formatCurrency(props.row.appropriation || props.row.amount) }}
+          </q-td>
+        </template>
+
+        <template v-slot:body-cell-total_appropriated="props">
+          <q-td :props="props">
+            {{ formatCurrency(props.row.total_appropriated || 0) }}
+          </q-td>
+        </template>
+
+        <template v-slot:body-cell-unappropriated="props">
+          <q-td :props="props">
+            {{ formatCurrency(props.row.unappropriated) }}
+          </q-td>
+        </template>
+
+        <template v-slot:body-cell-status="props">
+          <q-td :props="props">
+            <q-badge
+              :color="props.row.unappropriated > 0 ? 'green' : 'grey'"
+              :label="props.row.unappropriated > 0 ? 'Available for Disbursement' : 'Fully Disbursed'"
+            />
+          </q-td>
         </template>
 
         <template v-slot:body-cell-action="props">
           <q-td :props="props">
-            <div class="q-gutter-xs">
-              <q-btn
-                dense
-                icon="visibility"
-                color="blue"
-                @click="viewDetails(props.row)"
-              />
-              <!-- <q-btn
-                dense
-                label="Commit"
-                color="primary"
-                @click="openAllocationDialog(props.row)"
-              /> -->
-            </div>
+            <q-btn
+              dense
+              icon="visibility"
+              color="blue"
+              @click="viewDetails(props.row)"
+            />
           </q-td>
+        </template>
+
+        <template v-slot:no-data>
+          <div class="full-width row flex-center q-pa-lg text-grey-6">
+            <div class="text-center">
+              <q-icon name="info" size="2em" class="q-mb-sm" />
+              <div>No continuing appropriations found for the selected filters.</div>
+            </div>
+          </div>
         </template>
       </q-table>
     </q-card>
 
-    <!-- Allocation Dialog -->
-    <q-dialog v-model="showAllocationDialog" persistent @keydown.enter="handleAllocationEnterKey">
-      <q-card style="min-width: 700px; max-width: 90vw">
+    <q-dialog v-model="showViewDialog">
+      <q-card style="min-width: 900px; max-width: 90vw">
         <q-card-section class="q-pb-none">
           <div class="row items-center justify-between">
-            <div class="text-h6">Allocate Amounts</div>
-            <q-btn
-              icon="close"
-              flat
-              round
-              dense
-              @click="showAllocationDialog = false"
-            />
+            <div class="text-h6">View Appropriation Details</div>
+            <q-btn icon="close" flat round dense @click="showViewDialog = false" />
           </div>
         </q-card-section>
 
         <q-card-section>
-          <!-- Summary section -->
-          <div class="row q-mb-sm q-col-gutter-md">
-            <div class="col-12 col-sm-4">
-              <div class="text-caption">Total Budget:</div>
+          <div class="row q-mb-md q-col-gutter-md">
+            <div class="col-12 col-sm-6">
+              <div class="text-caption">Description:</div>
+              <strong>{{ selectedRow.description || '-' }}</strong>
+            </div>
+            <div class="col-12 col-sm-6">
+              <div class="text-caption">Continued Date:</div>
+              <strong>{{ selectedRow.continued_date || '-' }}</strong>
+            </div>
+            <div class="col-12 col-sm-6">
+              <div class="text-caption">Total Amount:</div>
               <strong>{{ formatCurrency(selectedRow.amount) }}</strong>
             </div>
-            <div class="col-12 col-sm-4">
-              <div class="text-caption">Return Amount:</div>
-              <strong>{{ formatCurrency(selectedRow.returnAmount || 0) }}</strong>
-            </div>
-            <div class="col-12 col-sm-4">
-              <div class="text-caption">Available Budget:</div>
-              <strong>{{ formatCurrency(availableBudget) }}</strong>
+            <div class="col-12 col-sm-6">
+              <div class="text-caption">Available for Disbursement:</div>
+              <strong>{{ formatCurrency(selectedRow.unappropriated) }}</strong>
             </div>
           </div>
 
-          <!-- Hierarchical Table -->
-          <div class="hierarchical-table" style="border: 1px solid #e0e0e0; border-radius: 4px">
-            <div class="row bg-grey-2 text-weight-medium q-pa-sm">
+          <div class="text-h6 text-weight-medium q-mb-sm">
+            Accounts Continued from Year {{ selectedRow.year || 'Previous Year' }}
+          </div>
+
+          <div class="hierarchical-table" style="border: 1px solid #e0e0e0">
+            <div class="row q-pa-sm bg-grey-2 text-weight-medium">
               <div class="col-6">Account</div>
-              <div class="col-6 text-right">Amount (₱)</div>
+              <div class="col-6 text-right">Remaining Balance (₱)</div>
             </div>
 
-            <div style="max-height: 400px; overflow-y: auto">
-              <template v-for="category in displayAccounts" :key="'cat-' + category.id">
-                <div class="row bg-grey-1 text-weight-medium q-pa-sm">
-                  <div class="col-6">CAPITAL OUTLAYS</div>
-                  <div class="col-6 text-right">
-                    {{ formatCurrency(calculateCategoryTotal(category)) }}
-                  </div>
+            <template v-if="selectedRow.accounts && selectedRow.accounts.length > 0">
+              <div
+                v-for="account in selectedRow.accounts"
+                :key="'account-' + account.id"
+                class="row q-pa-sm"
+                style="border-bottom: 1px solid #f0f0f0"
+              >
+                <div class="col-6">
+                  <div class="text-weight-medium">{{ account.accountName || 'Unknown Account' }}</div>
                 </div>
-
-                <template v-for="subcategory in category.children" :key="'sub-' + subcategory.id">
-                  <div class="row q-pa-sm" style="border-bottom: 1px solid #f0f0f0">
-                    <div class="col-6" style="padding-left: 16px; display: flex; align-items: center">
-                      <q-icon name="arrow_right" size="xs" class="q-mr-sm" />
-                      {{ subcategory.name }}
-                    </div>
-                    <div class="col-6 text-right">
-                      <q-input
-                        dense
-                        outlined
-                        v-model.number="subcategory.amount"
-                        prefix="₱"
-                        :rules="[(val) => validateAmount(val)]"
-                        style="width: 200px"
-                        :disable="availableBudget <= 0"
-                        @keydown.enter="handleAllocationEnterKey"
-                      />
-                    </div>
-                  </div>
-                </template>
-              </template>
+                <div class="col-6 text-right">
+                  <div class="text-weight-medium">{{ formatCurrency(account.balance) }}</div>
+                </div>
+              </div>
+            </template>
+            <div v-else class="row q-pa-sm">
+              <div class="col-12 text-center text-grey-6">No account details available</div>
             </div>
           </div>
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn
-            label="Save"
-            color="primary"
-            @click="handleAllocationSaveClick"
-            :disable="!canSaveAllocation"
-          />
+          <q-btn flat label="Close" v-close-popup />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -252,18 +211,60 @@ import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { usePageLogging } from '../../../composables/usePageLogging'
 import { storeToRefs } from 'pinia'
-import { useContApprStore } from 'stores/appropriationStore'
+import { useContApprStore } from 'stores/contApprStore'
 
 const $q = useQuasar()
 const appropriationStore = useContApprStore()
+const { continuingAppropriations } = storeToRefs(appropriationStore)
 const loading = ref(false)
 const { logPageVisit } = usePageLogging()
+
+const searchQuery = ref('')
+const showViewDialog = ref(false)
+const selectedRow = ref({
+  id: null,
+  amount: 0,
+  unappropriated: 0,
+  description: '',
+  continued_date: '',
+  year: '',
+  accounts: [],
+})
+
+const selectedFiscalYear = computed({
+  get: () => appropriationStore.selectedFiscalYear,
+  set: (value) => appropriationStore.setSelectedFiscalYear(value),
+})
+
+const columns = [
+  { name: 'index', label: '#', field: 'index', align: 'left', sortable: false },
+  { name: 'continued_date', label: 'Continued Date', field: 'continued_date', align: 'left', sortable: true },
+  { name: 'year', label: 'Year', field: 'year', align: 'left', sortable: true },
+  { name: 'expense_class', label: 'Expense Class', field: 'expense_class', align: 'left', sortable: true },
+  { name: 'description', label: 'Description', field: 'description', align: 'left', sortable: true },
+  { name: 'amount', label: 'Total Budget', field: 'amount', align: 'right', sortable: true },
+  { name: 'total_appropriated', label: 'Total Disbursed', field: 'total_appropriated', align: 'right', sortable: true },
+  { name: 'unappropriated', label: 'Available for Disbursement', field: 'unappropriated', align: 'right', sortable: true },
+  { name: 'status', label: 'Status', field: 'status', align: 'center' },
+  { name: 'action', label: 'Action', field: 'action', align: 'center' },
+]
+
+const filteredAppropriations = computed(() => {
+  const query = searchQuery.value.toLowerCase()
+  return (continuingAppropriations.value || []).filter((row) => {
+    return (
+      String(row.description || '').toLowerCase().includes(query) ||
+      String(row.expense_class || '').toLowerCase().includes(query) ||
+      String(row.year || '').includes(query)
+    )
+  })
+})
 
 const loadPendingUsers = async () => {
   loading.value = true
   try {
-    await appropriationStore.initialize()
-    await new Promise(resolve => setTimeout(resolve, 500))
+    await appropriationStore.fetchYears()
+    await appropriationStore.fetchContinuingAppropriations(appropriationStore.selectedYear)
     $q.notify({
       type: 'positive',
       message: 'Appropriation refreshed!',
@@ -273,7 +274,7 @@ const loadPendingUsers = async () => {
   } catch (error) {
     $q.notify({
       type: 'negative',
-      message: error.response?.data?.message || 'Failed to refresh data',
+      message: error.response?.data?.message || error.message || 'Failed to refresh data',
       icon: 'error',
       position: 'top',
     })
@@ -282,301 +283,65 @@ const loadPendingUsers = async () => {
   }
 }
 
-const selectedFiscalYear = computed({
-  get: () => appropriationStore.selectedFiscalYear,
-  set: (value) => appropriationStore.setSelectedFiscalYear(value)
-})
-
-const onFiscalYearChange = (value) => {
-  if (value !== appropriationStore.selectedFiscalYear) {
-    appropriationStore.setSelectedFiscalYear(value)
-    loadPendingUsers() // Refresh data when fiscal year changes
+const onFiscalYearChange = async (value) => {
+  if (value === appropriationStore.selectedFiscalYear) return
+  appropriationStore.setSelectedFiscalYear(value)
+  loading.value = true
+  try {
+    await appropriationStore.fetchContinuingAppropriations(value)
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || error.message || 'Failed to load data',
+      icon: 'error',
+      position: 'top',
+    })
+  } finally {
+    loading.value = false
   }
 }
 
 const clearAllFilters = () => {
   searchQuery.value = ''
-  dateFrom.value = ''
-  dateTo.value = ''
-  // Reset fiscal year to current year if available, otherwise first available year
-  const currentYear = new Date().getFullYear().toString()
-  const defaultYear = appropriationStore.fiscalYears.includes(currentYear)
-    ? currentYear
-    : appropriationStore.fiscalYears[0]
-  appropriationStore.setSelectedFiscalYear(defaultYear)
-}
-
-onMounted(async () => {
-  try {
-    await appropriationStore.initialize()
-    // Log page visit
-    await logPageVisit('Continuing Appropriation')
-  } catch (error) {
-    $q.notify({
-      type: 'negative',
-      message: error.response?.data?.message || 'Failed to load data',
-      icon: 'error',
-      position: 'top',
-    })
-  }
-})
-
-const showContinueDialog = ref(false)
-const showAllocationDialog = ref(false)
-const description = ref('')
-const selectedAccounts = ref([])
-const searchQuery = ref('')
-const dateFrom = ref('')
-const dateTo = ref('')
-
-const { continueAccounts } = storeToRefs(appropriationStore)
-
-const filteredAccounts = computed(() => {
-  if (!searchQuery.value) return continueAccounts.value
-
-  return continueAccounts.value.filter((account) =>
-    Object.values(account).join(' ').toLowerCase().includes(searchQuery.value.toLowerCase()),
-  )
-})
-
-
-const continueColumns = [
-  { name: 'accountName', label: 'Accounts Name', field: 'accountName', align: 'left' },
-  {
-    name: 'balance',
-    label: 'Remaining Balance',
-    field: 'balance',
-    align: 'right',
-    format: (val) => `₱ ${val.toLocaleString()}`,
-  },
-]
-
-const mergedAppropriations = ref([])
-
-const columns = [
-  { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: 'true' },
-  { name: 'date', label: 'Date', field: 'date', align: 'left', sortable: 'true' },
-  {
-    name: 'description',
-    label: 'Description',
-    field: 'description',
-    align: 'left',
-    sortable: 'true',
-  },
-  { name: 'amount', label: 'Total Amount', field: 'amount', align: 'right', sortable: 'true' },
-  { name: 'action', label: 'Action', field: 'action', align: 'center' },
-]
-
-const parseDate = (str) => {
-  const [m, d, y] = str.split('/')
-  return new Date(`${y}-${m.padStart?.(2, '0') ?? m}-${d.padStart?.(2, '0') ?? d}`)
-}
-
-const availableBudget = computed(() => {
-  const base = selectedRow.value.unappropriated || 0
-  const returns = selectedRow.value.returnAmount || 0
-  const augmentation = selectedRow.value.augmentationAmount || 0
-  return base + returns + augmentation
-})
-
-const filteredAppropriations = computed(() => {
-  const query = searchQuery.value.toLowerCase()
-  const from = dateFrom.value ? parseDate(dateFrom.value) : null
-  const to = dateTo.value ? parseDate(dateTo.value) : null
-
-  return mergedAppropriations.value.filter((row) => {
-    const matchesQuery = row.description.toLowerCase().includes(query)
-
-    if (from && to) {
-      const rowDate = parseDate(row.date)
-      return matchesQuery && rowDate >= from && rowDate <= to
-    }
-
-    return matchesQuery
-  })
-})
-
-const sampleAccounts = [
-  {
-    id: 1,
-    name: 'Capital Outlays',
-    children: [
-      { id: 11, name: 'OFFICE EQUIPMENT', amount: 12000 },
-      { id: 12, name: 'IT EQUIPMENT AND SOFTWARE', amount: 7600 },
-      { id: 13, name: 'VEHICLES', amount: 50000 },
-      { id: 14, name: 'FURNITURE AND FIXTURES', amount: 8300 },
-      { id: 15, name: 'BUILDING IMPROVEMENTS', amount: 42000 },
-      { id: 16, name: 'MEDICAL EQUIPMENT', amount: 15000 },
-    ],
-  },
-]
-
-const validateAndContinue = () => {
-  if (showContinueDialog.value) {
-    const hasSelectedAccounts = selectedAccounts.value && selectedAccounts.value.length > 0
-    const hasDescription = description.value && description.value.trim() !== ''
-
-    if (!hasSelectedAccounts) {
-      $q.notify({
-        type: 'negative',
-        message: 'Please select at least one account to continue',
-        icon: 'warning',
-        position: 'top',
-      })
-      return
-    }
-
-    if (!hasDescription) {
-      $q.notify({
-        type: 'negative',
-        message: 'Please provide a description before continuing',
-        icon: 'warning',
-        position: 'top',
-      })
-      return
-    }
-
-    continueSelected()
+  if (appropriationStore.fiscalYearOptions.length > 0) {
+    const defaultYear = appropriationStore.fiscalYearOptions[0].value
+    onFiscalYearChange(defaultYear)
   }
 }
 
-const handleEnterKey = (event) => {
-  event.preventDefault()
-  validateAndContinue()
-}
-
-const handleContinueClick = () => {
-  validateAndContinue()
-}
-
-const continueSelected = () => {
-  const totalAmount = selectedAccounts.value.reduce((sum, acc) => sum + acc.balance, 0)
-
-  mergedAppropriations.value.push({
-    id: mergedAppropriations.value.length + 1,
-    date: new Date().toLocaleDateString(),
-    description: description.value,
-    amount: totalAmount,
-    accounts: [...selectedAccounts.value],
-  })
-
-  selectedAccounts.value = []
-  description.value = ''
-  showContinueDialog.value = false
+const viewDetails = (row) => {
+  selectedRow.value = {
+    ...row,
+    amount: row.appropriation || row.amount,
+    unappropriated: row.unappropriated,
+    year: row.year,
+    description: row.description,
+    continued_date: row.continued_date,
+    accounts: row.accounts || [],
+  }
+  showViewDialog.value = true
 }
 
 const formatCurrency = (value) => {
+  if (!value && value !== 0) return '₱0.00'
   return new Intl.NumberFormat('en-PH', {
     style: 'currency',
     currency: 'PHP',
   }).format(value)
 }
 
-const viewDetails = () => {
-}
-
-const selectedRow = ref({
-  id: null,
-  unappropriated: 100000,
-})
-const displayAccounts = ref(JSON.parse(JSON.stringify(sampleAccounts)))
-
-const openAllocationDialog = (row) => {
-  selectedRow.value = {
-    ...row,
-    returnAmount: row.returnAmount || 0,
-    augmentationAmount: row.augmentationAmount || 0,
+onMounted(async () => {
+  try {
+    await appropriationStore.initialize()
+    await logPageVisit('Continuing Appropriation')
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || error.message || 'Failed to load data',
+      icon: 'error',
+      position: 'top',
+    })
   }
-
-  if (row.accounts && row.accounts.length > 0) {
-    displayAccounts.value = [
-      {
-        id: 1,
-        name: 'CAPITAL OUTLAYS',
-        children: row.accounts.map((acc) => ({
-          id: acc.id,
-          name: acc.accountName.split('>')[1].trim(),
-          amount: acc.balance,
-        })),
-      },
-    ]
-  } else {
-    displayAccounts.value = [
-      {
-        id: 1,
-        name: 'CAPITAL OUTLAYS',
-        children: [
-          { id: 11, name: 'OFFICE EQUIPMENT', amount: 12000 },
-          { id: 12, name: 'IT EQUIPMENT AND SOFTWARE', amount: 7600 },
-          { id: 13, name: 'VEHICLES', amount: 50000 },
-          { id: 14, name: 'FURNITURE AND FIXTURES', amount: 8300 },
-          { id: 15, name: 'BUILDING IMPROVEMENTS', amount: 42000 },
-          { id: 16, name: 'MEDICAL EQUIPMENT', amount: 15000 },
-        ],
-      },
-    ]
-  }
-
-  showAllocationDialog.value = true
-}
-
-const calculateCategoryTotal = (category) => {
-  return category.children.reduce((sum, item) => sum + (item.amount || 0), 0)
-}
-
-const totalAllocated = computed(() => {
-  return displayAccounts.value.reduce((total, category) => {
-    return total + calculateCategoryTotal(category)
-  }, 0)
-})
-
-const validateAmount = (val) => {
-  if (val === null || val === '') return true
-  const num = Number(val)
-  return !isNaN(num) && num >= 0
-}
-
-const canSaveAllocation = computed(() => {
-  return totalAllocated.value > 0 && totalAllocated.value <= availableBudget.value
-})
-
-const validateAndSaveAllocation = () => {
-  if (showAllocationDialog.value) {
-    if (!canSaveAllocation.value) {
-      $q.notify({
-        type: 'negative',
-        message: 'Please ensure total allocated amount is greater than 0 and within available budget',
-        icon: 'warning',
-        position: 'top',
-      })
-      return
-    }
-
-    saveAllocation()
-  }
-}
-
-const handleAllocationEnterKey = (event) => {
-  event.preventDefault()
-  validateAndSaveAllocation()
-}
-
-const handleAllocationSaveClick = () => {
-  validateAndSaveAllocation()
-}
-
-const saveAllocation = () => {
-
-  const rowIndex = mergedAppropriations.value.findIndex((r) => r.id === selectedRow.value.id)
-  if (rowIndex !== -1) {
-    mergedAppropriations.value[rowIndex].unappropriated -= totalAllocated.value
-  }
-
-  showAllocationDialog.value = false
-}
-
-defineExpose({
-  openAllocationDialog,
 })
 </script>
 
@@ -592,7 +357,7 @@ defineExpose({
 }
 
 .hierarchical-table {
-  background: white;
+  border-radius: 4px;
   overflow: hidden;
 }
 

@@ -8,24 +8,28 @@ const routes = [
         name: 'Login',
         path: '',
         component: () => import('../pages/Accounts/LoginPage.vue'),
+        meta: { title: 'Login' },
       },
 
       {
         path: 'signup',
         name: 'Signup',
         component: () => import('../pages/Accounts/SignupPage.vue'),
+        meta: { title: 'Signup' },
       },
 
       {
         path: 'admin/login',
         name: 'Admin',
         component: () => import('../pages/Admin/LoginPage.vue'),
+        meta: { title: 'Admin Login' },
       },
 
       {
         path: 'forgotpage',
         name: 'forgotpage',
         component: () => import('../pages/Accounts/ForgotPage.vue'),
+        meta: { title: 'Forgot Password' },
       },
     ],
   },
@@ -63,21 +67,25 @@ const routes = [
             path: 'appropriation',
             name: 'Appropriation',
             component: () => import('../pages/User/Transaction/AppropriationTran.vue'),
+            meta: { title: 'Appropriation' },
           },
           {
             path: 'disbursement',
             name: 'Disbursement',
             component: () => import('../pages/User/Transaction/DisbursementTran.vue'),
+            meta: { title: 'Disbursement' },
           },
           {
             path: 'augmentation',
             name: 'Augmentation',
             component: () => import('../pages/User/Transaction/AugmentationTran.vue'),
+            meta: { title: 'Augmentation' },
           },
           {
             path: 'supplemental',
             name: 'Supplemental',
             component: () => import('../pages/User/Transaction/SupplementalTran.vue'),
+            meta: { title: 'Supplemental' },
           },
         ],
       },
@@ -92,16 +100,19 @@ const routes = [
             path: 'appropriation',
             name: 'ContAppropriation',
             component: () => import('../pages/User/Continuing/ContAppr.vue'),
+            meta: { title: 'Cont Appropriation' },
           },
           {
             path: 'disbursement',
             name: 'ContDisbursement',
             component: () => import('../pages/User/Continuing/ContDis.vue'),
+            meta: { title: 'Cont Disbursement' },
           },
           {
             path: 'augmentation',
             name: 'ContAugmentation',
             component: () => import('../pages/User/Continuing/ContAug.vue'),
+            meta: { title: 'Cont Augmentation' },
           },
         ],
       },
@@ -116,11 +127,19 @@ const routes = [
             path: 'accounts',
             name: 'AccountsLib',
             component: () => import('../pages/User/Libraries/AccountsLib.vue'),
+            meta: { title: 'Accounts' },
           },
           {
             path: 'bank',
             name: 'BankLib',
             component: () => import('../pages/User/Libraries/BankLib.vue'),
+            meta: { title: 'Bank' },
+          },
+          {
+            path: 'payee',
+            name: 'PayeeLib',
+            component: () => import('../pages/User/Libraries/PayeesLib.vue'),
+            meta: { title: 'Payees' },
           },
         ],
       },
@@ -128,8 +147,21 @@ const routes = [
       {
         path: 'reports',
         name: 'Reports',
-        component: () => import('../pages/ReportPage.vue'),
-        meta: { title: 'Reports' },
+        redirect: '/home/reports/reports', // Empty component for parent
+        children: [
+          {
+            path: 'reports',
+            name: 'Current Reports',
+            component: () => import('../pages/ReportPage.vue'),
+            meta: { title: 'Reports' },
+          },
+          {
+            path: 'continuing-reports',
+            name: 'Continuing Reports',
+            component: () => import('../pages/ContinuingReport.vue'),
+            meta: { title: 'Reports' },
+          },
+        ],
       },
       // User Access
       {
@@ -152,6 +184,12 @@ const routes = [
         component: () => import('../pages/User/ProfileSettings.vue'),
         meta: { title: 'Profile Settings' },
       },
+      {
+        path: 'barangay-setup',
+        name: 'BarangaySetup',
+        component: () => import('../pages/User/BarangaySetup.vue'),
+        meta: { title: 'Barangay Setup' },
+      },
     ],
   },
 
@@ -166,11 +204,30 @@ const routes = [
         component: () => import('../pages/Admin/DashBoard.vue'),
         meta: { title: 'Dashboard' },
       },
+      // {
+      //   path: 'reportPage',
+      //   name: 'aDminReportPage',
+      //   component: () => import('../pages/Admin/AdminReportpage.vue'),
+      //   meta: { title: 'Report page' },
+      // },
       {
-        path: 'reportPage',
-        name: 'aDminReportPage',
-        component: () => import('../pages/Admin/AdminReportpage.vue'),
-        meta: { title: 'Report page' },
+        path: 'reports',
+        name: 'AdminReports',
+        redirect: '/admin/reports/reports',
+        children: [
+          {
+            path: 'reports',
+            name: 'AdminCurrentReports',
+            component: () => import('../pages/Admin/AdminReportpage.vue'),
+            meta: { title: 'Reports' },
+          },
+          {
+            path: 'continuing-reports',
+            name: 'AdminContinuingReports',
+            component: () => import('../pages/Admin/AdminContinuingReport.vue'),
+            meta: { title: 'Reports' },
+          },
+        ],
       },
 
       // User Control
@@ -183,11 +240,13 @@ const routes = [
             path: 'pending',
             name: 'Pending',
             component: () => import('../pages/Admin/UserControl/PendingPage.vue'),
+            meta: { title: 'Pending' },
           },
           {
             path: 'accepted',
             name: 'Accepted',
             component: () => import('../pages/Admin/UserControl/AcceptedPage.vue'),
+            meta: { title: 'Accepted' },
           },
         ],
       },
@@ -210,21 +269,25 @@ const routes = [
         path: 'disbursement',
         name: 'adminDisbursement',
         component: () => import('../pages/Admin/Transaction/DisbursementTran.vue'),
+        meta: { title: 'Disbursement' },
       },
       {
         path: 'appropriation',
         name: 'adminAppropriation',
         component: () => import('../pages/Admin/Transaction/AppropriationTran.vue'),
+        meta: { title: 'Appropriation' },
       },
       {
         path: 'augmentation',
         name: 'adminAugmentation',
         component: () => import('../pages/Admin/Transaction/AugmentationTran.vue'),
+        meta: { title: 'Augmentation' },
       },
       {
         path: 'supplemental',
         name: 'adminSupplemental',
         component: () => import('../pages/Admin/Transaction/SupplementalTran.vue'),
+        meta: { title: 'Supplemental' },
       },
 
       // Continuing Transactions
@@ -233,11 +296,13 @@ const routes = [
         path: 'contAppropriation',
         name: 'AdminAppropriation',
         component: () => import('../pages/Admin/Continuing/ContAppr.vue'),
+        meta: { title: 'Cont Appropriation' },
       },
       {
         path: 'contDisbursement',
         name: 'AdminDisbursement',
         component: () => import('../pages/Admin/Continuing/ContDis.vue'),
+        meta: { title: 'Cont Disbursement' },
       },
     ],
   },

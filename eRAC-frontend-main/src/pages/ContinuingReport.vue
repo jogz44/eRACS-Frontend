@@ -1,39 +1,9 @@
 <template>
   <q-page class="q-pa-lg report-page">
     <!-- Main Header with bottom border -->
-    <div class="dashboard-card q-mb-xs">
-      <div class="section-header row items-center justify-between q-mb-xs">
-        <div class="section-title col-12 col-md-8">Current Year Reports</div>
-        <!-- Year Filter Section -->
-
-        <div class="col-12 col-md-4">
-          <div class="year-filter-section">
-            <div class="row items-center justify-end q-gutter-sm">
-              <div class="text-subtitle2 text-weight-medium">Year Filter:</div>
-              <q-select
-                v-model="reportStore.selectedYear"
-                :options="reportStore.availableYears"
-                option-value="value"
-                option-label="label"
-                emit-value
-                map-options
-                dense
-                outlined
-                style="min-width: 120px"
-                @update:model-value="onYearChange"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="calendar_today" />
-                </template>
-              </q-select>
-
-              <q-btn icon="refresh" color="primary" flat dense size="sm" @click="refreshYears">
-                <q-tooltip>Refresh available years</q-tooltip>
-              </q-btn>
-            </div>
-          </div>
-        </div>
-      </div>
+    <!-- Continuing Reports Header with bottom border -->
+    <div class="section-header q-mb-xl">
+      <div class="section-title">Continuing Reports</div>
     </div>
 
     <SetupDialog v-model="showSetupDialog" />
@@ -44,7 +14,7 @@
           <q-card-section>
             <div class="row q-col-gutter-xs items-center justify-between">
               <div class="col-4 col-md-4 justify-start">
-                <div class="text-subtitle1 text-weight-medium">List of PBC Advice</div>
+                <div class="text-subtitle1 text-weight-medium">List of Advice</div>
                 <div class="text-caption text-grey-6">History of generated PBC advices</div>
               </div>
 
@@ -111,7 +81,7 @@
                   color="green"
                   label="Preview"
                   no-caps
-                  :loading="previewAdviceLoading"
+                  :loading="viewingAdvice && loading"
                   @click="viewPbcAdvice(props.row)"
                   class="q-pl-sm q-pr-sm"
                 >
@@ -124,9 +94,9 @@
       </div>
     </div>
 
-    <!-- Current Year Reports Card -->
+    <!-- Continuing Reports Card -->
     <div class="row q-col-gutter-md q-pa-md">
-      <!-- RAC Card -->
+      <!-- Continuing RAC Card -->
       <div class="col-12 col-md-6">
         <q-card class="report-card" flat bordered>
           <q-card-section class="q-pb-none q-pt-lg">
@@ -134,27 +104,23 @@
           </q-card-section>
 
           <q-card-section class="q-pt-md q-pb-lg">
-            <div class="col q-col-gutter-sm items-end">
+            <div class="col q-col-gutter-md items-end">
               <div class="col-12 col-sm-6 col-md-4">
-                <!-- <q-input bg-color="white" outlined dense :model-value="dateRangeDisplay" label="Date Range"
-                  class="custom-date-range" clearable @clear="onDateRangeClear" readonly>
-                  <template v-slot:append>
-                    <q-icon name="event" class="calend-icon">
-                      <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                        <q-date v-model="CurrentRacDateRange" range @update:model-value="onDateRangeChange" />
-                      </q-popup-proxy>
-                    </q-icon>
-                  </template>
-                </q-input> -->
                 <q-input
-                  v-model="CurrentRacDateRange.from"
+                  v-model="continuingRacDateRange.from"
                   filled
                   type="date"
                   hint="From Date"
-                  @update:model-value="changeMonth"
+                  @update:model-value="(v) => onDateChangecontinuing('from', v)"
                 />
                 <br />
-                <q-input v-model="CurrentRacDateRange.to" filled type="date" hint="To Date" />
+                <q-input
+                  v-model="continuingRacDateRange.to"
+                  filled
+                  type="date"
+                  hint="To Date"
+                  @update:model-value="(v) => onDateChangecontinuing('to', v)"
+                />
                 <br />
               </div>
 
@@ -162,13 +128,13 @@
                 <q-select
                   outlined
                   dense
-                  v-model="expenseSelectedCurrent"
+                  v-model="expenseSelectedContinuing"
                   label="Expense Category"
-                  :options="reportStore.expenseOptionsCurrent"
                   map-options
-                  option-label="name"
+                  :options="reportStore.expenseOptionsContinuing"
+                  :loading="loading"
                   option-value="id"
-                  :loading="initialDataLoading"
+                  option-label="name"
                 />
               </div>
 
@@ -178,15 +144,14 @@
                   icon="settings"
                   label="Generate Report"
                   class="full-width"
-                  @click="openRACModal('current-rac')"
-                  :loading="generatingRacReportLoading"
+                  @click="openRACModal('continuing-rac')"
+                  :loading="loading"
                 />
               </div>
             </div>
           </q-card-section>
         </q-card>
       </div>
-
       <!-- PBC Card -->
       <div class="col-12 col-md-6">
         <q-card class="report-card" flat bordered>
@@ -195,22 +160,22 @@
           </q-card-section>
 
           <q-card-section class="q-pt-md q-pb-lg">
-            <div class="col q-col-gutter-sm items-end">
+            <div class="col q-col-gutter-md items-end">
               <div class="col-12 col-sm-6 col-md-6">
                 <q-input
-                  v-model="pbcDateRange.from"
+                  v-model="continuingPbcDateRange.from"
                   filled
                   type="date"
                   hint="From Date"
-                  @update:model-value="(v) => onPbcDateChange('from', v)"
+                  @update:model-value="(v) => onContinuingPbcDateChange('from', v)"
                 />
                 <br />
                 <q-input
-                  v-model="pbcDateRange.to"
+                  v-model="continuingPbcDateRange.to"
                   filled
                   type="date"
                   hint="To Date"
-                  @update:model-value="(v) => onPbcDateChange('to', v)"
+                  @update:model-value="(v) => onContinuingPbcDateChange('to', v)"
                 />
                 <br />
               </div>
@@ -218,14 +183,14 @@
                 <q-select
                   outlined
                   dense
-                  v-model="bankSelectedPBC"
+                  v-model="continuingBankSelectedPBC"
                   label="Select Bank"
                   :options="reportStore.bankOptions"
                   map-options
                   emit-value
                   option-label="name"
                   option-value="id"
-                  :loading="initialDataLoading"
+                  :loading="loading"
                 />
               </div>
 
@@ -235,7 +200,7 @@
                   icon="settings"
                   label="Generate Report"
                   class="full-width"
-                  @click="openPBCModal"
+                  @click="openContinuingPBCModal"
                   :loading="generatingPbcReportLoading"
                 />
               </div>
@@ -246,66 +211,23 @@
     </div>
 
     <div class="row q-col-gutter-md q-pa-md">
-      <!-- SACB Card -->
+      <!-- Continuing SACB Card -->
       <div class="col-12 col-md-6">
-        <q-card class="report-card" flat bordered>
+        <q-card class="transmittal-card" flat bordered>
           <q-card-section class="q-pb-none q-pt-lg">
             <div class="subsection-title">Status of Appropriation and Obligation (SACB)</div>
           </q-card-section>
 
           <q-card-section class="q-pt-md q-pb-lg">
-            <div class="col q-col-gutter-sm items-end">
-              <div class="col-12 col-sm-6 col-md-6">
-                <!-- <q-input
-                  bg-color="white"
-                  outlined
-                  dense
-                  :model-value="currentSacbDateRangeDisplay"
-                  label="Date Range"
-                  class="custom-date-range"
-                  clearable
-                  @clear="onCurrentSacbDateRangeClear"
-                  readonly
-                >
-                  <template v-slot:append>
-                    <q-icon name="event" class="calend-icon">
-                      <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                        <q-date
-                          v-model="currentSacbDateRange"
-                          range
-                          @update:model-value="onCurrentSacbDateRangeChange"
-                        />
-                      </q-popup-proxy>
-                    </q-icon>
-                  </template>
-                </q-input> -->
-
-                <q-input
-                  v-model="currentSacbDateRange.from"
-                  filled
-                  type="date"
-                  hint="From Date"
-                  @update:model-value="(v) => onDateChange('from', v)"
-                />
-                <br />
-                <q-input
-                  v-model="currentSacbDateRange.to"
-                  filled
-                  type="date"
-                  hint="To Date"
-                  @update:model-value="(v) => onDateChange('to', v)"
-                />
-                <br />
-              </div>
-
-              <div class="col-12 col-sm-6 col-md-6">
+            <div class="col-12 col-sm-6 col-md-6">
+              <div class="row justify-center">
                 <q-btn
+                  class="full-width"
                   color="primary"
                   icon="settings"
                   label="Generate Report"
-                  class="full-width"
-                  @click="openSACBModal('current-sacb')"
-                  :loading="generatingSacbReportLoading"
+                  @click="openSACBModal('continuing-sacb')"
+                  :loading="loading"
                 />
               </div>
             </div>
@@ -326,14 +248,14 @@
                 <q-select
                   outlined
                   dense
-                  v-model="transmittalMonthSelected"
+                  v-model="continuingTransmittalMonthSelected"
                   label="Select Month"
                   :options="monthOptions"
                   map-options
                   emit-value
                   option-label="label"
                   option-value="value"
-                  :loading="initialDataLoading"
+                  :loading="loading"
                 />
               </div>
 
@@ -343,7 +265,7 @@
                   icon="settings"
                   label="Generate Report"
                   class="full-width"
-                  @click="openTransmittalModal"
+                  @click="openContinuingTransmittalModal"
                   :loading="generatingTransmittalLoading"
                 />
               </div>
@@ -393,8 +315,8 @@
                 size="sm"
                 no-caps
               />
-
-              <!-- <q-btn
+              <!-- 
+              <q-btn
                 unelevated
                 icon="print"
                 label="Print"
@@ -641,17 +563,17 @@
                           </div>
                           <div class="col-appropriation text-right">
                             <span class="main-section-total">{{
-                              row.appropriation != null ? formatCurrency(row.appropriation) : ''
+                              row.appropriation ? formatCurrency(row.appropriation) : ''
                             }}</span>
                           </div>
                           <div class="col-obligation text-right">
                             <span class="main-section-total">{{
-                              row.obligation != null ? formatCurrency(row.obligation) : ''
+                              row.obligation ? formatCurrency(row.obligation) : ''
                             }}</span>
                           </div>
                           <div class="col-balance text-right">
                             <span class="main-section-total">{{
-                              row.balance != null ? formatCurrency(row.balance) : ''
+                              row.balance ? formatCurrency(row.balance) : ''
                             }}</span>
                           </div>
                         </div>
@@ -664,13 +586,13 @@
                           <span class="subcategory-text">{{ row.ppa }}</span>
                         </div>
                         <div class="col-appropriation text-right">
-                          {{ row.appropriation != null ? formatCurrency(row.appropriation) : '' }}
+                          {{ row.appropriation ? formatCurrency(row.appropriation) : '' }}
                         </div>
                         <div class="col-obligation text-right">
-                          {{ row.obligation != null ? formatCurrency(row.obligation) : '' }}
+                          {{ row.obligation ? formatCurrency(row.obligation) : '' }}
                         </div>
                         <div class="col-balance text-right">
-                          {{ row.balance != null ? formatCurrency(row.balance) : '' }}
+                          {{ row.balance ? formatCurrency(row.balance) : '' }}
                         </div>
                       </div>
 
@@ -681,13 +603,13 @@
                           <span class="subsubcategory-text">{{ row.ppa }}</span>
                         </div>
                         <div class="col-appropriation text-right">
-                          {{ row.appropriation != null ? formatCurrency(row.appropriation) : '' }}
+                          {{ row.appropriation ? formatCurrency(row.appropriation) : '' }}
                         </div>
                         <div class="col-obligation text-right">
-                          {{ row.obligation != null ? formatCurrency(row.obligation) : '' }}
+                          {{ row.obligation ? formatCurrency(row.obligation) : '' }}
                         </div>
                         <div class="col-balance text-right">
-                          {{ row.balance != null ? formatCurrency(row.balance) : '' }}
+                          {{ row.balance ? formatCurrency(row.balance) : '' }}
                         </div>
                       </div>
 
@@ -699,13 +621,13 @@
                         </div>
                         <div class="amount-group">
                           <div class="col-appropriation text-right">
-                            {{ row.appropriation != null ? formatCurrency(row.appropriation) : '' }}
+                            {{ row.appropriation ? formatCurrency(row.appropriation) : '' }}
                           </div>
                           <div class="col-obligation text-right">
-                            {{ row.obligation != null ? formatCurrency(row.obligation) : '' }}
+                            {{ row.obligation ? formatCurrency(row.obligation) : '' }}
                           </div>
                           <div class="col-balance text-right">
-                            {{ row.balance != null ? formatCurrency(row.balance) : '' }}
+                            {{ row.balance ? formatCurrency(row.balance) : '' }}
                           </div>
                         </div>
                       </div>
@@ -718,13 +640,13 @@
                         </div>
                         <div class="amount-group">
                           <div class="col-appropriation text-right">
-                            {{ row.appropriation != null ? formatCurrency(row.appropriation) : '' }}
+                            {{ row.appropriation ? formatCurrency(row.appropriation) : '' }}
                           </div>
                           <div class="col-obligation text-right">
-                            {{ row.obligation != null ? formatCurrency(row.obligation) : '' }}
+                            {{ row.obligation ? formatCurrency(row.obligation) : '' }}
                           </div>
                           <div class="col-balance text-right">
-                            {{ row.balance != null ? formatCurrency(row.balance) : '' }}
+                            {{ row.balance ? formatCurrency(row.balance) : '' }}
                           </div>
                         </div>
                       </div>
@@ -737,13 +659,13 @@
                         </div>
                         <div class="amount-group">
                           <div class="col-appropriation text-right">
-                            {{ row.appropriation != null ? formatCurrency(row.appropriation) : '' }}
+                            {{ row.appropriation ? formatCurrency(row.appropriation) : '' }}
                           </div>
                           <div class="col-obligation text-right">
-                            {{ row.obligation != null ? formatCurrency(row.obligation) : '' }}
+                            {{ row.obligation ? formatCurrency(row.obligation) : '' }}
                           </div>
                           <div class="col-balance text-right">
-                            {{ row.balance != null ? formatCurrency(row.balance) : '' }}
+                            {{ row.balance ? formatCurrency(row.balance) : '' }}
                           </div>
                         </div>
                       </div>
@@ -752,13 +674,13 @@
                       <div v-else-if="row.isTotal" class="total-row">
                         <div class="col-description text-right text-bold">TOTAL</div>
                         <div class="col-appropriation text-right text-bold">
-                          {{ row.appropriation != null ? formatCurrency(row.appropriation) : '' }}
+                          {{ row.appropriation ? formatCurrency(row.appropriation) : '' }}
                         </div>
                         <div class="col-obligation text-right text-bold">
-                          {{ row.obligation != null ? formatCurrency(row.obligation) : '' }}
+                          {{ row.obligation ? formatCurrency(row.obligation) : '' }}
                         </div>
                         <div class="col-balance text-right text-bold">
-                          {{ row.balance != null ? formatCurrency(row.balance) : '' }}
+                          {{ row.balance ? formatCurrency(row.balance) : '' }}
                         </div>
                       </div>
                     </template>
@@ -945,7 +867,7 @@
                       <!-- First header row with expense class and obligation -->
 
                       <tr class="header-row-main">
-                        <th :colspan="5 + dynamicColumnsCount" class="col-expense-class">
+                        <th :colspan="6 + dynamicColumnsCount" class="col-expense-class">
                           {{ reportStore.expenseRacSelected?.name || 'Not Selected' }}
                         </th>
                       </tr>
@@ -973,7 +895,18 @@
                           :key="accountTitle"
                           class="col-account-title"
                         >
-                          {{ accountTitle }}
+                          <!-- {{ accountTitle }} -->
+                          <div class="rac-account-hierarchy">
+                            <div
+                              v-for="(level, levelIndex) in String(accountTitle).split(' > ')"
+                              :key="`${level}-${levelIndex}`"
+                              class="rac-account-level"
+                              :style="{ paddingLeft: `${levelIndex * 18}px` }"
+                            >
+                              <span v-if="levelIndex > 0" class="rac-account-arrow"> ↳ </span>
+                              {{ level }}
+                            </div>
+                          </div>
                         </th>
                         <!-- Fallback when no dynamic columns -->
                         <th v-if="!hasDynamicColumns" class="col-account-title">
@@ -1439,7 +1372,7 @@
                 </div>
 
                 <div class="text-weight-bold q-mb-sm text-uppercase" style="font-size: 14px">
-                  Dear {{ transmittalModal.recipientName || "Recipient's Name" }}
+                  Dear {{ transmittalModal.recipientName || 'Mr. Ramil Y. Tiu' }}
                 </div>
 
                 <div class="q-mb-sm transmittal-body">
@@ -2064,7 +1997,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onActivated } from 'vue'
-import SetupDialog from 'components/SetupDialog.vue'
+// import SetupDialog from 'components/SetupDialog.vue'
 import { useQuasar, date } from 'quasar'
 import { useAuthStore } from 'stores/auth'
 import { useReportStore } from 'stores/reportStore'
@@ -2075,38 +2008,29 @@ import { useActivityLogging } from '../composables/useActivityLogging'
 
 const totalAppropriation = computed(() => {
   return reportStore.reportSACB
-    .filter((row) => row.isSection)
+    .filter((row) => row.isType || row.isItem) // only count type and item rows
     .reduce((sum, row) => {
-      return sum + Number(row.appropriation || 0)
+      return sum + (row.appropriation || 0)
     }, 0)
-    .toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
+    .toLocaleString('en-US', { minimumFractionDigits: 2 })
 })
 
 const totalObligation = computed(() => {
   return reportStore.reportSACB
-    .filter((row) => row.isSection)
+    .filter((row) => row.isType || row.isItem) // only count type and item rows
     .reduce((sum, row) => {
-      return sum + Number(row.obligation || 0)
+      return sum + (row.obligation || 0)
     }, 0)
-    .toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
+    .toLocaleString('en-US', { minimumFractionDigits: 2 })
 })
 
 const totalBalance = computed(() => {
   return reportStore.reportSACB
-    .filter((row) => row.isSection)
+    .filter((row) => row.isType || row.isItem) // only count type and item rows
     .reduce((sum, row) => {
-      return sum + Number(row.balance || 0)
+      return sum + (row.balance || 0)
     }, 0)
-    .toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
+    .toLocaleString('en-US', { minimumFractionDigits: 2 })
 })
 
 // Computed property for dynamic columns count
@@ -2128,17 +2052,13 @@ const { logAdminActivity } = useActivityLogging()
 
 /* -------------------- STATE -------------------- */
 const showSetupDialog = ref(false)
-const initialDataLoading = ref(false)
-const generatingRacReportLoading = ref(false)
-const generatingSacbReportLoading = ref(false)
-const generatingPbcReportLoading = ref(false)
-const generatingTransmittalLoading = ref(false)
-const previewAdviceLoading = ref(false)
+const loading = ref(false)
 const exportingPDF = ref(false)
 const exportingSACBPDF = ref(false)
 const exportingTransmittalPDF = ref(false)
 const exportingPBCPDF = ref(false)
 const sacbDrawerOpen = ref(true)
+const viewingAdvice = ref(false)
 
 function pad(n) {
   return String(n).padStart(2, '0')
@@ -2152,96 +2072,16 @@ const laterMonth = pad(laterMonthNum)
 const laterlastday = new Date(currentYear, laterMonthNum, 0).getDate()
 
 //Year Filter
-const selectedYear = ref(null)
+// const selectedYear = ref(null)
 
 const isYearChanging = ref(false)
-
-//refresh years after filtering
-function refreshYears() {
-  reportStore.fetchAvailableYears()
-
-  selectedYear.value = null
-  onYearChange(null)
-
-  notifySuccess('Filters reset to defaults.')
-}
-
-async function onYearChange(year) {
-  isYearChanging.value = true
-  initialDataLoading.value = true
-
-  try {
-    // Sync store's selectedYear with what the dropdown emitted
-    reportStore.selectedYear = year
-
-    if (year === null) {
-      const today = new Date()
-      const month = today.getMonth()
-      const lastDay = new Date(currentYear, month + 1, 0).getDate()
-      const mm = pad(month + 1)
-      // const todayStr = today.toLoocaleDateString('en-CA') // YYYY-MM-DD format
-
-      CurrentRacDateRange.value = {
-        from: `${currentYear}-${mm}-01`,
-        to: `${currentYear}-${mm}-${pad(lastDay)}`,
-      }
-      continuingRacDateRange.value = {
-        from: `${currentYear}-${mm}-01`,
-        to: `${currentYear}-${mm}-${pad(lastDay)}`,
-      }
-      currentSacbDateRange.value = {
-        from: `${currentYear}-01-01`,
-        to: new Date().toISOString().slice(0, 10),
-      }
-      pbcDateRange.value = {
-        from: `${currentYear}-01-01`,
-        to: new Date().toISOString().slice(0, 10),
-      }
-      continuingSacbDateRange.value = {
-        from: `${currentYear}-01-01`,
-        to: new Date().toISOString().slice(0, 10),
-      }
-      continuingPbcDateRange.value = {
-        from: `${currentYear - 1}-01-01`,
-        to: new Date().toISOString().slice(0, 10),
-      }
-    } else {
-      const y = parseInt(year)
-      if (!y || String(y).length !== 4) return
-
-      const today = new Date()
-      const isCurrentYear = y === today.getFullYear()
-      const sacbFrom = `${y}-01-01`
-      const sacbTo = isCurrentYear ? today.toISOString().slice(0, 10) : `${y}-12-31`
-      const month = today.getMonth()
-      const lastDay = new Date(y, month + 1, 0).getDate()
-      const mm = pad(month + 1)
-
-      currentSacbDateRange.value = { from: sacbFrom, to: sacbTo }
-      pbcDateRange.value = { from: sacbFrom, to: sacbTo }
-      continuingSacbDateRange.value = { from: sacbFrom, to: sacbTo }
-      CurrentRacDateRange.value = { from: `${y}-${mm}-01`, to: `${y}-${mm}-${pad(lastDay)}` }
-      continuingRacDateRange.value = { from: `${y}-${mm}-01`, to: `${y}-${mm}-${pad(lastDay)}` }
-      continuingPbcDateRange.value = { from: `${y - 1}-01-01`, to: sacbTo }
-    }
-
-    expenseSelectedCurrent.value = null
-    expenseSelectedContinuing.value = null
-
-    // Only re-fetch expense classes — years list doesn't need to reload
-    await reportStore.fetchData(reportStore.selectedYear)
-  } finally {
-    isYearChanging.value = false
-    initialDataLoading.value = false
-  }
-}
 
 const CurrentRacDateRange = ref({
   from: `${currentYear}-${laterMonth}-01`,
   to: `${currentYear}-${laterMonth}-${pad(laterlastday)}`,
 })
 const currentSacbDateRange = ref({ from: `${currentYear}-01-01`, to: currentdate })
-const pbcDateRange = ref({ from: `${currentYear}-01-01`, to: currentdate })
+// const pbcDateRange = ref({ from: `${currentYear}-01-01`, to: currentdate })
 const continuingRacDateRange = ref({
   from: `${currentYear}-${laterMonth}-01`,
   to: `${currentYear}-${laterMonth}-${pad(laterlastday)}`,
@@ -2250,19 +2090,17 @@ const continuingSacbDateRange = ref({ from: `${currentYear}-01-01`, to: currentd
 
 const expenseSelectedCurrent = ref(null)
 const expenseSelectedContinuing = ref(null)
-const bankSelectedPBC = ref(null)
-const transmittalMonthSelected = ref(laterMonth)
+// const bankSelectedPBC = ref(null)
+// const transmittalMonthSelected = ref(laterMonth)
+const generatingTransmittalLoading = ref(false)
+const generatingPbcReportLoading = ref(false)
 
 const continuingPbcDateRange = ref({
   from: `${currentYear - 1}-01-01`,
   to: currentdate,
 })
-// const continuingBankSelectedPBC = ref(null)
-// const continuingTransmittalMonthSelected = ref(laterMonth)
-
-function formatDateRange(dateString) {
-  return date.formatDate(dateString, 'MM-DD-YYYY')
-}
+const continuingBankSelectedPBC = ref(null)
+const continuingTransmittalMonthSelected = ref(laterMonth)
 
 const monthOptions = [
   { label: 'January', value: '01' },
@@ -2324,18 +2162,6 @@ const transmittalDvTotal = computed(() => {
   )
 })
 
-function buildNextPbcNo(dateString) {
-  const baseDate = dateString ? new Date(dateString) : new Date()
-  const dateForNumber = Number.isNaN(baseDate.getTime()) ? new Date() : baseDate
-  const yy = String(dateForNumber.getFullYear()).slice(-2)
-  const mm = pad(dateForNumber.getMonth() + 1)
-  const key = `pbc-number-sequence:${yy}-${mm}`
-  const lastNumber = Number(localStorage.getItem(key) || 0) + 1
-
-  localStorage.setItem(key, String(lastNumber))
-  return `${yy}-${mm}-${String(lastNumber).padStart(5, '0')}`
-}
-
 const SACBModal = reactive({
   show: false,
   reportType: '',
@@ -2357,6 +2183,53 @@ const pbcAdviceColumns = [
   { name: 'action', label: 'Action', field: 'action', align: 'right' },
 ]
 
+const searchQuery = ref('')
+
+// const filteredPbcAdviceList = computed(() => {
+//   const list = reportStore.contPbcAdviceList || []
+
+//   const q = searchQuery.value?.trim().toLowerCase()
+//   if (!q) return list
+
+//   return list.filter((row) => {
+//     return (
+//       String(row.pbcNo || '')
+//         .toLowerCase()
+//         .includes(q) ||
+//       String(row.bankName || '')
+//         .toLowerCase()
+//         .includes(q) ||
+//       formatFullDate(row.pbcDate || '')
+//         .toLowerCase()
+//         .includes(q)
+//     )
+//   })
+// })
+
+const filteredPbcAdviceList = computed(() => {
+  const list = reportStore.contPbcAdviceList || [] // was: reportStore.pbcAdviceList
+  const q = searchQuery.value?.trim().toLowerCase()
+  if (!q) return list
+
+  return list.filter((row) => {
+    return (
+      String(row.pbcNo || '')
+        .toLowerCase()
+        .includes(q) ||
+      String(row.bankName || '')
+        .toLowerCase()
+        .includes(q) ||
+      formatFullDate(row.pbcDate || '')
+        .toLowerCase()
+        .includes(q)
+    )
+  })
+})
+
+const clearAllFilters = () => {
+  searchQuery.value = ''
+}
+
 const SetupModal = reactive({
   selectedBarangay: { barangay_name: '' },
   selectedpreparedby: null,
@@ -2376,7 +2249,7 @@ const SetupModal = reactive({
 })
 
 const loadAllData = async () => {
-  initialDataLoading.value = true
+  loading.value = true
   try {
     await reportStore.fetchAvailableYears()
     await reportStore.fetchData(reportStore.selectedYear)
@@ -2386,7 +2259,7 @@ const loadAllData = async () => {
     console.error('Error loading data:', error)
     notifyError('Failed to load data. Please try again later.')
   } finally {
-    initialDataLoading.value = false
+    loading.value = false
   }
 }
 
@@ -2399,22 +2272,12 @@ function applySavedSignatories() {
   SetupModal.Certifiedposition = reportStore.certPosition
 }
 
-// const loadAllData = async () => {
-//   loading.value = true
-//   try {
-//     await Promise.all([
-//       reportStore.fetchData(reportStore.selectedYear),  // ← pass year here
-//       reportStore.fetchAvailableYears()
-//     ])
-//   } catch (error) {
-//     console.error('Error loading data:', error)
-//     notifyError('Failed to load data. Please try again later.')
-//   } finally {
-//     loading.value = false
-//   }
-// }
+// const pbcVoucherCount = computed(() => {
+//   if (!reportStore.reportPBC) return 0
+//   return reportStore.reportPBC.reduce((sum, group) => sum + (group.checks?.length || 0), 0)
+// })
 
-const openSACBModal = async (type) => {
+const openSACBModal = (type) => {
   if (type === 'current-sacb') {
     if (!currentSacbDateRange.value.from || !currentSacbDateRange.value.to) {
       return notifyError('Please select a valid current SACB date range.')
@@ -2438,25 +2301,20 @@ const openSACBModal = async (type) => {
     `Generated ${reportType} report for date range: ${dateRange}`,
   )
 
-  generatingSacbReportLoading.value = true
-  try {
-    await loadSacbReport(
-      type === 'current-sacb'
-        ? currentSacbDateRange.value.from
-        : continuingSacbDateRange.value.from,
-      type === 'current-sacb' ? currentSacbDateRange.value.to : continuingSacbDateRange.value.to,
-      type === 'continuing-sacb' ? 'continuing' : 'regular',
-    )
-    SACBModal.reportType = reportType
-    SACBModal.show = true
-  } finally {
-    generatingSacbReportLoading.value = false
-  }
+  loadSacbReport(
+    type === 'current-sacb' ? currentSacbDateRange.value.from : continuingSacbDateRange.value.from,
+    type === 'current-sacb' ? currentSacbDateRange.value.to : continuingSacbDateRange.value.to,
+    type === 'continuing-sacb' ? 'continuing' : 'regular',
+  )
+  SACBModal.reportType = reportType
+  SACBModal.show = true
 }
 
 const closeSACBModal = () => {
   SACBModal.show = false
 }
+
+const generatingRacReportLoading = ref(false)
 
 const openRACModal = async (type) => {
   if (type === 'current-rac') {
@@ -2517,112 +2375,85 @@ const closeRACModal = () => {
   RACModal.show = false
 }
 
-const searchQuery = ref('')
-
-const filteredPbcAdviceList = computed(() => {
-  const list = reportStore.pbcAdviceList || []
-  const q = searchQuery.value?.trim().toLowerCase()
-  if (!q) return list
-
-  return list.filter((row) => {
-    return (
-      String(row.pbcNo || '')
-        .toLowerCase()
-        .includes(q) ||
-      String(row.bankName || '')
-        .toLowerCase()
-        .includes(q) ||
-      formatFullDate(row.pbcDate || '')
-        .toLowerCase()
-        .includes(q)
-    )
-  })
-})
-
-const clearAllFilters = () => {
-  searchQuery.value = ''
-}
-
-const viewPbcAdvice = async (row) => {
-  previewAdviceLoading.value = true
-  try {
-    PBCModal.pbcNo = row.pbcNo
-    PBCModal.date = row.pbcDate
-    PBCModal.recipient = row.recipient || PBCModal.recipient || 'The Bank Manager'
-    PBCModal.bankName = row.bankName || PBCModal.bankName
-    PBCModal.bankBranch = row.bankBranch || PBCModal.bankBranch
-    PBCModal.bankCity = row.bankCity || PBCModal.bankCity
-
-    await reportStore.fetchPbcReport({
-      from: row.from,
-      to: row.to,
-      bankId: row.bankId,
-      pbcNo: row.pbcNo,
-      pbcDate: row.pbcDate,
-      source: row.source || 'regular',
-    })
-
-    PBCModal.show = true
-  } catch (error) {
-    console.error(error)
-    notifyError('Failed to load this PBC advice for preview')
-  } finally {
-    previewAdviceLoading.value = false
-  }
-}
-
-const openTransmittalModal = async () => {
-  if (!transmittalMonthSelected.value) {
-    return notifyError('Please select a month for the transmittal report.')
-  }
-
-  generatingTransmittalLoading.value = true
-  try {
-    const year = Number(reportStore.selectedYear || currentYear)
-    const month = String(transmittalMonthSelected.value).padStart(2, '0')
-    const lastDay = new Date(year, Number(month), 0).getDate()
-
-    transmittalModal.periodFrom = `${year}-${month}-01`
-    transmittalModal.periodTo = `${year}-${month}-${pad(lastDay)}`
-    transmittalModal.date = new Date().toISOString().slice(0, 10)
-
-    await reportStore.fetchTransmittalReport({
-      from: transmittalModal.periodFrom,
-      to: transmittalModal.periodTo,
-      year,
-      pbcNo: PBCModal.pbcNo,
-      pbcDate: PBCModal.date,
-    })
-
-    logAdminActivity(
-      'Report Generated',
-      `Generated Transmittal report for date range: ${transmittalModal.periodFrom} to ${transmittalModal.periodTo}`,
-    )
-    transmittalModal.show = true
-  } catch (error) {
-    console.error(error)
-    notifyError('Failed to generate Transmittal report')
-  } finally {
-    generatingTransmittalLoading.value = false
-  }
-}
-
 const closeTransmittalModal = () => {
   transmittalModal.show = false
 }
 
-const openPBCModal = async () => {
-  if (!pbcDateRange.value.from || !pbcDateRange.value.to) {
-    return notifyError('Please select a valid PBC date range.')
+const closePBCModal = () => {
+  PBCModal.show = false
+}
+
+// const openContinuingPBCModal = async () => {
+//   if (!continuingPbcDateRange.value.from || !continuingPbcDateRange.value.to) {
+//     return notifyError('Please select a valid continuing PBC date range.')
+//   }
+//   if (!continuingBankSelectedPBC.value) {
+//     return notifyError('Please select a bank.')
+//   }
+
+//   loading.value = true
+//   try {
+//     const selectedBank = reportStore.bankOptions.find(
+//       (bank) =>
+//         String(bank.id) ===
+//         String(continuingBankSelectedPBC.value?.id || continuingBankSelectedPBC.value),
+//     )
+
+//     if (selectedBank) {
+//       PBCModal.recipient = PBCModal.recipient || 'The Bank Manager'
+//       PBCModal.bankName = selectedBank.name || PBCModal.bankName
+//       PBCModal.bankBranch = selectedBank.branch || PBCModal.bankBranch
+//       PBCModal.bankCity = selectedBank.city || PBCModal.bankCity
+//     }
+
+//     PBCModal.pbcNo = buildNextPbcNo(PBCModal.date)
+
+//     // years spanning the continuing range (e.g. prior year up to now)
+//     const years = reportStore._yearsInDateRange(
+//       continuingPbcDateRange.value.from,
+//       continuingPbcDateRange.value.to,
+//     )
+
+//     await reportStore.fetchPbcReport({
+//       from: continuingPbcDateRange.value.from,
+//       to: continuingPbcDateRange.value.to,
+//       bankId: continuingBankSelectedPBC.value?.id || continuingBankSelectedPBC.value,
+//       year: years,
+//       pbcNo: PBCModal.pbcNo,
+//       pbcDate: PBCModal.date,
+//       source: 'continuing',
+//     })
+
+//     logAdminActivity(
+//       'Report Generated',
+//       `Generated Continuing PBC report for bank: ${selectedBank?.name || 'Unknown'} with date range: ${continuingPbcDateRange.value.from} to ${continuingPbcDateRange.value.to}`,
+//     )
+//     PBCModal.show = true
+//   } catch (error) {
+//     console.error(error)
+//     console.error(error)
+//     // notifyError('Failed to generate PBC report')
+//     notifyError(getErrorMessage(error, 'Failed to generate PBC report'))
+//   } finally {
+//     loading.value = false
+//   }
+// }
+
+const openContinuingPBCModal = async () => {
+  if (!continuingPbcDateRange.value.from || !continuingPbcDateRange.value.to) {
+    return notifyError('Please select a valid continuing PBC date range.')
   }
-  if (!bankSelectedPBC.value) {
+  if (!continuingBankSelectedPBC.value) {
     return notifyError('Please select a bank.')
   }
 
   generatingPbcReportLoading.value = true
+  viewingAdvice.value = true
   try {
     const selectedBank = reportStore.bankOptions.find(
-      (bank) => String(bank.id) === String(bankSelectedPBC.value?.id || bankSelectedPBC.value),
+      (bank) =>
+        String(bank.id) ===
+        String(continuingBankSelectedPBC.value?.id || continuingBankSelectedPBC.value),
     )
 
     if (selectedBank) {
@@ -2634,47 +2465,48 @@ const openPBCModal = async () => {
 
     PBCModal.pbcNo = buildNextPbcNo(PBCModal.date)
 
+    // years spanning the continuing range (e.g. prior year up to now)
+    const years = reportStore._yearsInDateRange(
+      continuingPbcDateRange.value.from,
+      continuingPbcDateRange.value.to,
+    )
+
     await reportStore.fetchPbcReport({
-      from: pbcDateRange.value.from,
-      to: pbcDateRange.value.to,
-      bankId: bankSelectedPBC.value?.id || bankSelectedPBC.value,
+      from: continuingPbcDateRange.value.from,
+      to: continuingPbcDateRange.value.to,
+      bankId: continuingBankSelectedPBC.value?.id || continuingBankSelectedPBC.value,
+      year: years,
       pbcNo: PBCModal.pbcNo,
       pbcDate: PBCModal.date,
+      source: 'continuing',
     })
 
-    // reportStore.recordPbcAdvice({
-    //   pbcNo: PBCModal.pbcNo,
-    //   pbcDate: PBCModal.date,
-    //   voucherCount: pbcVoucherCount.value,
-    //   amount: pbcTotal.value,
-    // })
-
-    await reportStore.recordPbcAdvice({
+    await reportStore.recordContPbcAdvice({
+      // was: reportStore.recordPbcAdvice(...)
       pbcNo: PBCModal.pbcNo,
       pbcDate: PBCModal.date,
       voucherCount: pbcVoucherCount.value,
       amount: pbcTotal.value,
-      from: pbcDateRange.value.from,
-      to: pbcDateRange.value.to,
-      bankId: bankSelectedPBC.value?.id || bankSelectedPBC.value,
+      from: continuingPbcDateRange.value.from,
+      to: continuingPbcDateRange.value.to,
+      bankId: continuingBankSelectedPBC.value?.id || continuingBankSelectedPBC.value,
       bankName: PBCModal.bankName,
       recipient: PBCModal.recipient,
       bankBranch: PBCModal.bankBranch,
       bankCity: PBCModal.bankCity,
-      source: 'regular',
     })
 
     logAdminActivity(
       'Report Generated',
-      `Generated PBC report for bank: ${selectedBank?.name || 'Unknown'} with date range: ${pbcDateRange.value.from} to ${pbcDateRange.value.to}`,
+      `Generated Continuing PBC report for bank: ${selectedBank?.name || 'Unknown'} with date range: ${continuingPbcDateRange.value.from} to ${continuingPbcDateRange.value.to}`,
     )
     PBCModal.show = true
   } catch (error) {
     console.error(error)
-    // notifyError('Failed to generate PBC report')
     notifyError(getErrorMessage(error, 'Failed to generate PBC report'))
   } finally {
     generatingPbcReportLoading.value = false
+    viewingAdvice.value = false
   }
 }
 
@@ -2683,8 +2515,42 @@ const pbcVoucherCount = computed(() => {
   return reportStore.reportPBC.reduce((sum, group) => sum + (group.checks?.length || 0), 0)
 })
 
-const closePBCModal = () => {
-  PBCModal.show = false
+const openContinuingTransmittalModal = async () => {
+  if (!continuingTransmittalMonthSelected.value) {
+    return notifyError('Please select a month for the continuing transmittal report.')
+  }
+
+  generatingTransmittalLoading.value = true
+  try {
+    const year = Number(reportStore.selectedYear || currentYear)
+    const month = String(continuingTransmittalMonthSelected.value).padStart(2, '0')
+    const lastDay = new Date(year, Number(month), 0).getDate()
+
+    // Month-only range — same pattern as the regular Transmittal report
+    transmittalModal.periodFrom = `${year}-${month}-01`
+    transmittalModal.periodTo = `${year}-${month}-${pad(lastDay)}`
+    transmittalModal.date = new Date().toISOString().slice(0, 10)
+
+    await reportStore.fetchTransmittalReport({
+      from: transmittalModal.periodFrom,
+      to: transmittalModal.periodTo,
+      year, // single year is enough now — no need for a multi-year span
+      pbcNo: PBCModal.pbcNo,
+      pbcDate: PBCModal.date,
+      source: 'continuing',
+    })
+
+    logAdminActivity(
+      'Report Generated',
+      `Generated Continuing Transmittal report for date range: ${transmittalModal.periodFrom} to ${transmittalModal.periodTo}`,
+    )
+    transmittalModal.show = true
+  } catch (error) {
+    console.error(error)
+    notifyError('Failed to generate Continuing Transmittal report')
+  } finally {
+    generatingTransmittalLoading.value = false
+  }
 }
 
 const getReportTypeLabel = (type) =>
@@ -2700,6 +2566,214 @@ const getReportTypeLabel = (type) =>
 //   closeSACBModal()
 //   notifySuccess('Report sent to printer successfully!')
 // }
+
+async function exportSACBExcel() {
+  try {
+    const ExcelJS = (await import('exceljs')).default
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('SACB Report')
+
+    const totalCols = 4
+    const BLACK = { argb: 'FF000000' }
+    const LIGHT = { argb: 'FFDDDDDD' }
+    const fill = (argb) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } })
+
+    const toNum = (v) => {
+      if (typeof v === 'number') return v
+      if (v == null || v === '') return 0
+      return parseFloat(String(v).replace(/,/g, '')) || 0
+    }
+
+    ws.columns = [{ width: 62 }, { width: 18 }, { width: 18 }, { width: 18 }]
+
+    // ── Title block (same as PDF) ──
+    const addCenteredRow = (rowNo, text, font, height) => {
+      ws.mergeCells(rowNo, 1, rowNo, totalCols)
+      const c = ws.getCell(rowNo, 1)
+      c.value = text
+      c.font = { name: 'Arial', ...font }
+      c.alignment = { horizontal: 'center', vertical: 'middle' }
+      ws.getRow(rowNo).height = height
+    }
+
+    // This page is Continuing SACB, so use the continuing range (that's what the data was fetched with)
+    const sacbFrom = continuingSacbDateRange.value.from
+    const sacbTo = continuingSacbDateRange.value.to
+    const sacbPeriod =
+      sacbFrom && sacbTo ? `${formatFullDate(sacbFrom)} - ${formatFullDate(sacbTo)}` : ''
+
+    addCenteredRow(
+      1,
+      'Status of Appropriation and Obligation (SACB)',
+      { bold: true, size: 14, color: { argb: 'FF187C19' } },
+      26,
+    )
+    addCenteredRow(
+      2,
+      `Barangay ${authStore.user?.barangay_name || ''}`,
+      { bold: true, size: 12, color: { argb: 'FF187C19' } },
+      20,
+    )
+    addCenteredRow(3, `Period: ${sacbPeriod}`, { size: 10, color: { argb: 'FF666666' } }, 18)
+    ws.getRow(4).height = 8
+
+    // ── Column header row ──
+    const HEADER_ROW = 5
+    const headers = ['PROGRAM / PROJECT / ACTIVITY', 'APPROPRIATION', 'OBLIGATION', 'BALANCE']
+    headers.forEach((h, i) => {
+      const cell = ws.getCell(HEADER_ROW, i + 1)
+      cell.value = h
+      cell.font = { bold: true, size: 10, name: 'Arial' }
+      cell.fill = fill('FFF0F0F0')
+      cell.alignment = {
+        horizontal: i === 0 ? 'left' : 'right',
+        vertical: 'middle',
+        wrapText: true,
+      }
+      cell.border = {
+        top: { style: 'medium', color: BLACK },
+        bottom: { style: 'medium', color: BLACK },
+        left: { style: i === 0 ? 'medium' : 'thin', color: i === 0 ? BLACK : LIGHT },
+        right: { style: i === 3 ? 'medium' : 'thin', color: i === 3 ? BLACK : LIGHT },
+      }
+    })
+    ws.getRow(HEADER_ROW).height = 24
+
+    // ── Data rows ──
+    const sacbRows = reportStore.reportSACB || []
+    const START = HEADER_ROW + 1
+
+    const levelOf = (r) => {
+      if (r.isSubSubType) return 5
+      if (r.isSubType) return 4
+      if (r.isSubItem) return 3
+      if (r.isItem) return 2
+      if (r.isType) return 1
+      return 0
+    }
+
+    const styleBorder = (cell, ci, { heavyTop = false, heavyBottom = false } = {}) => {
+      cell.border = {
+        top: heavyTop ? { style: 'thin', color: BLACK } : { style: 'hair', color: LIGHT },
+        bottom: heavyBottom ? { style: 'thin', color: BLACK } : { style: 'hair', color: LIGHT },
+        left: ci === 0 ? { style: 'medium', color: BLACK } : undefined,
+        right: ci === 3 ? { style: 'medium', color: BLACK } : undefined,
+      }
+    }
+
+    sacbRows.forEach((row, i) => {
+      const r = START + i
+      const isSection = !!row.isSection
+      const isTotal = !!row.isTotal
+      const level = levelOf(row)
+      const bold = isSection || isTotal
+
+      const bg = isSection ? 'FFF8F9FA' : isTotal ? 'FFE9ECEF' : 'FFFFFFFF'
+      const fontColor = level >= 3 ? { argb: 'FF666666' } : BLACK
+
+      const d = ws.getCell(r, 1)
+      if (isSection) d.value = (row.ppa || '').toUpperCase()
+      else if (isTotal) d.value = 'TOTAL'
+      else d.value = '> ' + (row.ppa || '')
+      d.font = { name: 'Arial', size: isSection ? 11 : 10, bold, color: fontColor }
+      d.alignment = {
+        horizontal: isTotal ? 'right' : 'left',
+        vertical: 'middle',
+        wrapText: true,
+        indent: isSection || isTotal ? 0 : level * 2,
+      }
+      d.fill = fill(bg)
+      styleBorder(d, 0, { heavyTop: isSection || isTotal, heavyBottom: isSection })
+      ;[row.appropriation, row.obligation, row.balance].forEach((val, ci) => {
+        const c = ws.getCell(r, ci + 2)
+        const n = toNum(val)
+        c.value = n ? n : null
+        c.numFmt = '#,##0.00;-#,##0.00'
+        c.font = { name: 'Courier New', size: 10, bold, color: fontColor }
+        c.alignment = { horizontal: 'right', vertical: 'middle' }
+        c.fill = fill(bg)
+        styleBorder(c, ci + 1, { heavyTop: isSection || isTotal, heavyBottom: isSection })
+      })
+    })
+
+    const tableEnd = START + Math.max(sacbRows.length, 1) - 1
+    for (let c = 1; c <= totalCols; c++) {
+      const cell = ws.getCell(tableEnd, c)
+      cell.border = { ...cell.border, bottom: { style: 'medium', color: BLACK } }
+    }
+
+    // ── Summary (same filter as the on-screen summary: type + item rows only) ──
+    const summaryRows = sacbRows.filter((r) => r.isType || r.isItem)
+    const totalAppr = summaryRows.reduce((s, r) => s + toNum(r.appropriation), 0)
+    const totalOblig = summaryRows.reduce((s, r) => s + toNum(r.obligation), 0)
+    const totalBal = summaryRows.reduce((s, r) => s + toNum(r.balance), 0)
+
+    let sr = tableEnd + 2
+    ws.mergeCells(sr, 1, sr, totalCols)
+    const sh = ws.getCell(sr, 1)
+    sh.value = 'SUMMARY STATISTICS'
+    sh.font = { bold: true, size: 10, name: 'Arial', color: { argb: 'FFFFFFFF' } }
+    sh.fill = fill('FF187C19')
+    sh.alignment = { horizontal: 'center', vertical: 'middle' }
+    ws.getRow(sr).height = 20
+    ;[
+      ['Total Appropriation:', totalAppr],
+      ['Total Obligation:', totalOblig],
+      ['Remaining Balance:', totalBal],
+    ].forEach(([label, val]) => {
+      sr++
+      ws.mergeCells(sr, 1, sr, 2)
+      const l = ws.getCell(sr, 1)
+      l.value = label
+      l.font = { bold: true, size: 10, name: 'Arial' }
+      l.alignment = { horizontal: 'left', vertical: 'middle' }
+      ws.mergeCells(sr, 3, sr, 4)
+      const v = ws.getCell(sr, 3)
+      v.value = val
+      v.numFmt = '"₱"#,##0.00;-"₱"#,##0.00'
+      v.font = { bold: true, size: 10, name: 'Courier New', color: { argb: 'FF187C19' } }
+      v.alignment = { horizontal: 'right', vertical: 'middle' }
+      for (let c = 1; c <= totalCols; c++) {
+        ws.getCell(sr, c).border = { bottom: { style: 'hair', color: LIGHT } }
+      }
+      ws.getRow(sr).height = 18
+    })
+
+    // ── PAGE SETUP: A4 portrait, fit all columns to one page width ──
+    ws.pageSetup = {
+      paperSize: 9,
+      orientation: 'portrait',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      horizontalCentered: true,
+      margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
+      printArea: `A1:D${sr}`,
+      printTitlesRow: `${HEADER_ROW}:${HEADER_ROW}`,
+    }
+    ws.headerFooter.oddFooter = '&CPage &P of &N'
+    ws.views = [{ state: 'frozen', ySplit: HEADER_ROW }]
+
+    // ── Write file ──
+    const buffer = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    const barangay = authStore.user?.barangay_name?.replace(/\s+/g, '_') || 'Barangay'
+    link.href = url
+    link.download = `Continuing_SACB_${barangay}_${sacbFrom}_to_${sacbTo}.xlsx`
+    link.click()
+    URL.revokeObjectURL(url)
+
+    logAdminActivity('Report Exported', `Exported ${SACBModal.reportType} report to Excel`)
+    $q.notify({ type: 'positive', message: 'SACB Excel Exported Successfully!' })
+  } catch (error) {
+    console.error(error)
+    $q.notify({ type: 'negative', message: 'Failed to export SACB Excel' })
+  }
+}
 
 // const handleRACPrint = () => {
 //   logAdminActivity('Report Printed', `Printed ${RACModal.reportType} report`)
@@ -2741,12 +2815,27 @@ const getReportTypeLabel = (type) =>
 // }
 
 /* -------------------- HELPERS -------------------- */
+function formatFullDate(dateString) {
+  return date.formatDate(dateString, 'MMMM DD, YYYY')
+}
+
+function formatDateRange(dateString) {
+  return date.formatDate(dateString, 'MM-DD-YYYY')
+}
+
 function getErrorMessage(error, fallback) {
-  return (
-    error?.response?.data?.message || // axios error shape: { response: { data: { message } } }
-    error?.message ||
-    fallback
-  )
+  return error?.response?.data?.message || error?.message || fallback
+}
+
+function buildNextPbcNo(dateString) {
+  const baseDate = dateString ? new Date(dateString) : new Date()
+  const dateForNumber = Number.isNaN(baseDate.getTime()) ? new Date() : baseDate
+  const yy = String(dateForNumber.getFullYear()).slice(-2)
+  const mm = String(dateForNumber.getMonth() + 1).padStart(2, '0')
+  const key = `cont-pbc-number-sequence:${yy}-${mm}`
+  const lastNumber = Number(localStorage.getItem(key) || 0) + 1
+  localStorage.setItem(key, String(lastNumber))
+  return `${yy}-${mm}-${String(lastNumber).padStart(5, '0')}`
 }
 
 const notifyError = (msg, timeout = 10000) =>
@@ -2759,7 +2848,7 @@ const notifyError = (msg, timeout = 10000) =>
     // classes: 'q-pb-sm',
     actions: [{ icon: 'close', color: 'white', round: true, dense: true }],
   })
-
+// const notifyError = (msg) => $q.notify({ type: 'negative', message: msg, position: 'top' })
 const notifySuccess = (msg) => $q.notify({ type: 'positive', message: msg, position: 'top' })
 
 /* -------------------- COMPUTED -------------------- */
@@ -2773,6 +2862,33 @@ const dateRangeDisplay = computed(() => {
     return `To ${CurrentRacDateRange.value.to}`
   return `${CurrentRacDateRange.value.from} - ${CurrentRacDateRange.value.to}`
 })
+
+// const continuingDateRangeDisplay = computed(() => {
+//   if (!continuingRacDateRange.value.from && !continuingRacDateRange.value.to) return ''
+//   if (continuingRacDateRange.value.from && !continuingRacDateRange.value.to)
+//     return `From ${continuingRacDateRange.value.from}`
+//   if (!continuingRacDateRange.value.from && continuingRacDateRange.value.to)
+//     return `To ${continuingRacDateRange.value.to}`
+//   return `${continuingRacDateRange.value.from} - ${continuingRacDateRange.value.to}`
+// })
+
+// const currentSacbDateRangeDisplay = computed(() => {
+//   if (!currentSacbDateRange.value.from && !currentSacbDateRange.value.to) return ''
+//   if (currentSacbDateRange.value.from && !currentSacbDateRange.value.to)
+//     return `From ${currentSacbDateRange.value.from}`
+//   if (!currentSacbDateRange.value.from && currentSacbDateRange.value.to)
+//     return `To ${currentSacbDateRange.value.to}`
+//   return `${currentSacbDateRange.value.from} - ${currentSacbDateRange.value.to}`
+// })
+
+// const continuingSacbDateRangeDisplay = computed(() => {
+//   if (!continuingSacbDateRange.value.from && !continuingSacbDateRange.value.to) return ''
+//   if (continuingSacbDateRange.value.from && !continuingSacbDateRange.value.to)
+//     return `From ${continuingSacbDateRange.value.from}`
+//   if (!continuingSacbDateRange.value.from && continuingSacbDateRange.value.to)
+//     return `To ${continuingSacbDateRange.value.to}`
+//   return `${continuingSacbDateRange.value.from} - ${continuingSacbDateRange.value.to}`
+// })
 
 async function loadRacReport($date, source = 'regular') {
   try {
@@ -2863,7 +2979,7 @@ async function exportToExcel() {
     const dynamicCols = reportStore.dynamicAccountColumns
     const totalCols = 5 + dynamicCols.length
 
-    //  Helper: apply border to a cell
+    // ── Helper: apply border to a cell ──
     const thinBorder = {
       top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
       bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
@@ -2878,7 +2994,16 @@ async function exportToExcel() {
       right: { style: 'medium', color: { argb: 'FFD3D3D3' } },
     }
 
-    //  Column widths
+    // const applyBorderRange = (startRow, endRow, startCol, endCol, border) => {
+    //   for (let r = startRow; r <= endRow; r++) {
+    //     for (let c = startCol; c <= endCol; c++) {
+    //       const cell = ws.getCell(r, c)
+    //       cell.border = border
+    //     }
+    //   }
+    // }
+
+    // ── Column widths ──
     // ws.columns = [
     //   { width: 20 }, // A - Date
     //   { width: 32 }, // B - Particulars
@@ -3028,7 +3153,7 @@ async function exportToExcel() {
     })
     ws.getRow(7).height = 44
 
-        // DATA ROWS — starting at row 8
+    // DATA ROWS — starting at row 8
     const dataStartExcelRow = 8
 
     // estimate how many lines a cell needs so the row is tall enough (8pt Arial)
@@ -3280,223 +3405,6 @@ async function exportToExcel() {
   }
 }
 
-async function exportSACBExcel() {
-  try {
-    const ExcelJS = (await import('exceljs')).default
-    const wb = new ExcelJS.Workbook()
-    const ws = wb.addWorksheet('SACB Report')
-
-    const totalCols = 4
-    const BLACK = { argb: 'FF000000' }
-    const LIGHT = { argb: 'FFDDDDDD' }
-    const fill = (argb) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } })
-
-    const toNum = (v) => {
-      if (typeof v === 'number') return v
-      if (v == null || v === '') return 0
-      return parseFloat(String(v).replace(/,/g, '')) || 0
-    }
-
-    //  Column widths (A–D). Total width is scaled to fit by pageSetup below
-    ws.columns = [{ width: 62 }, { width: 18 }, { width: 18 }, { width: 18 }]
-
-    //  Title block (same as PDF)
-    const addCenteredRow = (rowNo, text, font, height) => {
-      ws.mergeCells(rowNo, 1, rowNo, totalCols)
-      const c = ws.getCell(rowNo, 1)
-      c.value = text
-      c.font = { name: 'Arial', ...font }
-      c.alignment = { horizontal: 'center', vertical: 'middle' }
-      ws.getRow(rowNo).height = height
-    }
-
-    const isContinuingSACB = SACBModal.reportType?.startsWith('Continuing') || false
-    const sacbFrom = isContinuingSACB
-      ? continuingSacbDateRange.value.from
-      : currentSacbDateRange.value.from
-    const sacbTo = isContinuingSACB
-      ? continuingSacbDateRange.value.to
-      : currentSacbDateRange.value.to
-    const sacbPeriod =
-      sacbFrom && sacbTo ? `${formatFullDate(sacbFrom)} - ${formatFullDate(sacbTo)}` : ''
-
-    addCenteredRow(
-      1,
-      'Status of Appropriation and Obligation (SACB)',
-      { bold: true, size: 14, color: { argb: 'FF187C19' } },
-      26,
-    )
-    addCenteredRow(
-      2,
-      `Barangay ${authStore.user?.barangay_name || ''}`,
-      { bold: true, size: 12, color: { argb: 'FF187C19' } },
-      20,
-    )
-    addCenteredRow(3, `Period: ${sacbPeriod}`, { size: 10, color: { argb: 'FF666666' } }, 18)
-    ws.getRow(4).height = 8 // spacer
-
-    //  Column header row (row 5)
-    const HEADER_ROW = 5
-    const headers = ['PROGRAM / PROJECT / ACTIVITY', 'APPROPRIATION', 'OBLIGATION', 'BALANCE']
-    headers.forEach((h, i) => {
-      const cell = ws.getCell(HEADER_ROW, i + 1)
-      cell.value = h
-      cell.font = { bold: true, size: 10, name: 'Arial' }
-      cell.fill = fill('FFF0F0F0')
-      cell.alignment = {
-        horizontal: i === 0 ? 'left' : 'right',
-        vertical: 'middle',
-        wrapText: true,
-      }
-      cell.border = {
-        top: { style: 'medium', color: BLACK },
-        bottom: { style: 'medium', color: BLACK },
-        left: { style: i === 0 ? 'medium' : 'thin', color: i === 0 ? BLACK : LIGHT },
-        right: { style: i === 3 ? 'medium' : 'thin', color: i === 3 ? BLACK : LIGHT },
-      }
-    })
-    ws.getRow(HEADER_ROW).height = 24
-
-    //  Data rows
-    const sacbRows = reportStore.reportSACB || []
-    const START = HEADER_ROW + 1
-
-    const levelOf = (r) => {
-      if (r.isSubSubType) return 5
-      if (r.isSubType) return 4
-      if (r.isSubItem) return 3
-      if (r.isItem) return 2
-      if (r.isType) return 1
-      return 0
-    }
-
-    const styleBorder = (cell, ci, { heavyTop = false, heavyBottom = false } = {}) => {
-      cell.border = {
-        top: heavyTop ? { style: 'thin', color: BLACK } : { style: 'hair', color: LIGHT },
-        bottom: heavyBottom ? { style: 'thin', color: BLACK } : { style: 'hair', color: LIGHT },
-        left: ci === 0 ? { style: 'medium', color: BLACK } : undefined,
-        right: ci === 3 ? { style: 'medium', color: BLACK } : undefined,
-      }
-    }
-
-    sacbRows.forEach((row, i) => {
-      const r = START + i
-      const isSection = !!row.isSection
-      const isTotal = !!row.isTotal
-      const level = levelOf(row)
-      const bold = isSection || isTotal
-
-      const bg = isSection ? 'FFF8F9FA' : isTotal ? 'FFE9ECEF' : 'FFFFFFFF'
-      const fontColor = level >= 3 ? { argb: 'FF666666' } : BLACK
-
-      // Description
-      const d = ws.getCell(r, 1)
-      if (isSection) d.value = (row.ppa || '').toUpperCase()
-      else if (isTotal) d.value = 'TOTAL'
-      else d.value = '> ' + (row.ppa || '')
-      d.font = { name: 'Arial', size: isSection ? 11 : 10, bold, color: fontColor }
-      d.alignment = {
-        horizontal: isTotal ? 'right' : 'left',
-        vertical: 'middle',
-        wrapText: true,
-        indent: isSection || isTotal ? 0 : level * 2,
-      }
-      d.fill = fill(bg)
-      styleBorder(d, 0, { heavyTop: isSection || isTotal, heavyBottom: isSection })
-
-      // Amounts (blank when 0, same as the preview)
-      ;[row.appropriation, row.obligation, row.balance].forEach((val, ci) => {
-        const c = ws.getCell(r, ci + 2)
-        const n = toNum(val)
-        c.value = n ? n : null
-        c.numFmt = '#,##0.00;-#,##0.00'
-        c.font = { name: 'Courier New', size: 10, bold, color: fontColor }
-        c.alignment = { horizontal: 'right', vertical: 'middle' }
-        c.fill = fill(bg)
-        styleBorder(c, ci + 1, { heavyTop: isSection || isTotal, heavyBottom: isSection })
-      })
-    })
-
-    // Closing line under the table
-    const tableEnd = START + Math.max(sacbRows.length, 1) - 1
-    for (let c = 1; c <= totalCols; c++) {
-      const cell = ws.getCell(tableEnd, c)
-      cell.border = { ...cell.border, bottom: { style: 'medium', color: BLACK } }
-    }
-
-    //  Summary (same totals as the on-screen/PDF summary: type + item rows only)
-    const summaryRows = sacbRows.filter((r) => r.isSection)
-    const totalAppr = summaryRows.reduce((s, r) => s + toNum(r.appropriation), 0)
-    const totalOblig = summaryRows.reduce((s, r) => s + toNum(r.obligation), 0)
-    const totalBal = summaryRows.reduce((s, r) => s + toNum(r.balance), 0)
-
-    let sr = tableEnd + 2
-    ws.mergeCells(sr, 1, sr, totalCols)
-    const sh = ws.getCell(sr, 1)
-    sh.value = 'SUMMARY STATISTICS'
-    sh.font = { bold: true, size: 10, name: 'Arial', color: { argb: 'FFFFFFFF' } }
-    sh.fill = fill('FF187C19')
-    sh.alignment = { horizontal: 'center', vertical: 'middle' }
-    ws.getRow(sr).height = 20
-    ;[
-      ['Total Appropriation:', totalAppr],
-      ['Total Obligation:', totalOblig],
-      ['Remaining Balance:', totalBal],
-    ].forEach(([label, val]) => {
-      sr++
-      ws.mergeCells(sr, 1, sr, 2)
-      const l = ws.getCell(sr, 1)
-      l.value = label
-      l.font = { bold: true, size: 10, name: 'Arial' }
-      l.alignment = { horizontal: 'left', vertical: 'middle' }
-      ws.mergeCells(sr, 3, sr, 4)
-      const v = ws.getCell(sr, 3)
-      v.value = val
-      v.numFmt = '"₱"#,##0.00;-"₱"#,##0.00'
-      v.font = { bold: true, size: 10, name: 'Courier New', color: { argb: 'FF187C19' } }
-      v.alignment = { horizontal: 'right', vertical: 'middle' }
-      for (let c = 1; c <= totalCols; c++) {
-        ws.getCell(sr, c).border = { bottom: { style: 'hair', color: LIGHT } }
-      }
-      ws.getRow(sr).height = 18
-    })
-
-    //  PAGE SETUP: A4 portrait, fit all columns on one page width
-    ws.pageSetup = {
-      paperSize: 9, // A4
-      orientation: 'portrait',
-      fitToPage: true,
-      fitToWidth: 1,
-      fitToHeight: 0, // as many pages tall as needed
-      horizontalCentered: true,
-      margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 },
-      printArea: `A1:D${sr}`,
-      printTitlesRow: `${HEADER_ROW}:${HEADER_ROW}`, // repeat header on each page
-    }
-    ws.headerFooter.oddFooter = '&CPage &P of &N'
-    ws.views = [{ state: 'frozen', ySplit: HEADER_ROW }]
-
-    //  Write file
-    const buffer = await wb.xlsx.writeBuffer()
-    const blob = new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    const barangay = authStore.user?.barangay_name?.replace(/\s+/g, '_') || 'Barangay'
-    link.href = url
-    link.download = `SACB_${barangay}_${sacbFrom}_to_${sacbTo}.xlsx`
-    link.click()
-    URL.revokeObjectURL(url)
-
-    logAdminActivity('Report Exported', `Exported ${SACBModal.reportType} report to Excel`)
-    $q.notify({ type: 'positive', message: 'SACB Excel Exported Successfully!' })
-  } catch (error) {
-    console.error(error)
-    $q.notify({ type: 'negative', message: 'Failed to export SACB Excel' })
-  }
-}
-
 async function exportSACBToPDF() {
   exportingSACBPDF.value = true
   const html2canvas = (await import('html2canvas')).default
@@ -3518,11 +3426,11 @@ async function exportSACBToPDF() {
     })
 
     const imgData = canvas.toDataURL('image/png')
-    // Create PDF in portrait orientation with A4 dimensions
-    const pdf = new jsPDF('p', 'mm', 'a4') // 'p' for portrait
+    // Create PDF in landscape orientation with A4 dimensions
+    const pdf = new jsPDF('l', 'mm', 'a4') // 'l' for landscape
 
-    const pageWidth = pdf.internal.pageSize.getWidth() // 210mm (A4 portrait width)
-    const pageHeight = pdf.internal.pageSize.getHeight() // 297mm (A4 portrait height)
+    const pageWidth = pdf.internal.pageSize.getWidth() // 297mm (A4 landscape width)
+    const pageHeight = pdf.internal.pageSize.getHeight() // 210mm (A4 landscape height)
     const imgWidth = pageWidth
     const imgHeight = (canvas.height * imgWidth) / canvas.width
 
@@ -3626,7 +3534,6 @@ async function exportTransmittalToPDF() {
     exportingTransmittalPDF.value = false
   }
 }
-
 
 const BANK_FULL_NAMES = {
   BPI: 'BANK OF THE PHILIPPINE ISLANDS',
@@ -3979,7 +3886,6 @@ async function exportPBCToPDF() {
   }
 }
 
-
 // function getSACBDateRangeDisplay() {
 //   // Determine which SACB date range to use based on which modal was opened
 //   const currentDisplay = currentSacbDateRangeDisplay.value
@@ -3991,12 +3897,65 @@ async function exportPBCToPDF() {
 //   return 'No date range selected'
 // }
 
-//displaying full date format
-function formatFullDate(dateString) {
-  return date.formatDate(dateString, 'MMMM DD, YYYY')
-}
 //auto change sacb year
-function onDateChange(field, newValue) {
+// function onDateChange(field, newValue) {
+//   // Extract the year from the changed field
+//   const changedYear = new Date(newValue).getFullYear()
+
+//   // Copy existing dates
+//   const from = new Date(currentSacbDateRange.value.from)
+//   const to = new Date(currentSacbDateRange.value.to)
+
+//   // Apply the year to BOTH using the year the user actually changed
+//   from.setFullYear(changedYear)
+//   to.setFullYear(changedYear)
+
+//   currentSacbDateRange.value.from = from.toISOString().slice(0, 10)
+//   currentSacbDateRange.value.to = to.toISOString().slice(0, 10)
+// }
+
+// function onPbcDateChange(field, newValue) {
+//   pbcDateRange.value[field] = newValue
+// }
+
+function onContinuingPbcDateChange(field, newValue) {
+  continuingPbcDateRange.value[field] = newValue
+}
+
+async function viewPbcAdvice(row) {
+  loading.value = true
+  viewingAdvice.value = true
+  try {
+    PBCModal.pbcNo = row.pbcNo
+    PBCModal.date = row.pbcDate
+    PBCModal.recipient = row.recipient || 'The Bank Manager'
+    PBCModal.bankName = row.bankName
+    PBCModal.bankBranch = row.bankBranch
+    PBCModal.bankCity = row.bankCity
+
+    const years = reportStore._yearsInDateRange(row.from, row.to)
+
+    await reportStore.fetchPbcReport({
+      from: row.from,
+      to: row.to,
+      bankId: row.bankId,
+      year: years,
+      pbcNo: row.pbcNo,
+      pbcDate: row.pbcDate,
+      source: 'continuing',
+    })
+
+    PBCModal.show = true
+  } catch (error) {
+    console.error(error)
+    notifyError(getErrorMessage(error, 'Failed to load PBC advice'))
+  } finally {
+    loading.value = false
+    viewingAdvice.value = false
+  }
+}
+
+function onDateChangecontinuing(field, newValue) {
   // Extract the year from the changed field
   const changedYear = new Date(newValue).getFullYear()
 
@@ -4011,24 +3970,19 @@ function onDateChange(field, newValue) {
   currentSacbDateRange.value.from = from.toISOString().slice(0, 10)
   currentSacbDateRange.value.to = to.toISOString().slice(0, 10)
 }
-
-function onPbcDateChange(field, newValue) {
-  pbcDateRange.value[field] = newValue
-}
-
 //auto change rac month
-function changeMonth(newDate) {
-  if (!newDate) return
+// function changeMonth(newDate) {
+//   if (!newDate) return
 
-  const date = new Date(newDate)
+//   const date = new Date(newDate)
 
-  const year = date.getFullYear()
-  const month = date.getMonth() // 0–11
-  const lastDay = new Date(year, month + 1, 0).getDate()
+//   const year = date.getFullYear()
+//   const month = date.getMonth() // 0–11
+//   const lastDay = new Date(year, month + 1, 0).getDate()
 
-  // Update ONLY the `to` date
-  CurrentRacDateRange.value.to = `${year}-${pad(month + 1)}-${pad(lastDay)}`
-}
+//   // Update ONLY the `to` date
+//   CurrentRacDateRange.value.to = `${year}-${pad(month + 1)}-${pad(lastDay)}`
+// }
 
 function toggleSACBDrawer() {
   sacbDrawerOpen.value = !sacbDrawerOpen.value
@@ -4076,15 +4030,9 @@ function formatCurrency(value) {
 }
 //
 /* -------------------- LIFECYCLE -------------------- */
-// onMounted(async () => {
-//   await loadAllData()
-//   reportStore.loadPbcAdviceList()
-//   await logPageVisit('Reports')
-// })
-
 onMounted(async () => {
   await loadAllData()
-  await reportStore.loadPbcAdviceList()
+  await reportStore.loadContPbcAdviceList()
   await logPageVisit('Reports')
 })
 
@@ -5569,6 +5517,20 @@ onActivated(async () => {
   font-size: 11px;
   color: #666;
   margin-top: 24px;
+}
+
+.rac-account-hierarchy {
+  line-height: 1.35;
+}
+
+.rac-account-level {
+  min-height: 20px;
+  white-space: normal;
+}
+
+.rac-account-arrow {
+  margin-right: 4px;
+  color: #187c19;
 }
 
 /* Responsive adjustments for financial report table */

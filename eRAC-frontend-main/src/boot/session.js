@@ -7,7 +7,7 @@ export default defineBoot(({ app }) => {
   let monitorInterval = null
   let lastActivityAt = Date.now()
   let isMonitoring = false
-  
+
   const INACTIVITY_TIMEOUT = 50 * 60 * 1000 // 50 minutes in milliseconds
   const HEARTBEAT_INTERVAL = 2 * 60 * 1000 // Send heartbeat every 2 minutes
   const MONITOR_INTERVAL = 10 * 1000 // Check inactivity every 10s
@@ -16,7 +16,7 @@ export default defineBoot(({ app }) => {
   const sendHeartbeat = async () => {
     try {
       const authStore = useAuthStore()
-      
+
       // Check if user is still authenticated
       if (!authStore.token && !authStore.adminToken) {
         stopActivityMonitoring()
@@ -27,7 +27,7 @@ export default defineBoot(({ app }) => {
         // Send a lightweight request to keep session alive
         const endpoint = authStore.adminToken ? '/api/admin/heartbeat' : '/api/barangay/heartbeat'
         const token = authStore.adminToken ? authStore.adminToken : authStore.token
-        
+
         if (token) {
           api.defaults.headers.common['Authorization'] = `Bearer ${token}`
           await api.post(endpoint, { timestamp: Date.now() })
@@ -58,11 +58,13 @@ export default defineBoot(({ app }) => {
     const authStore = useAuthStore()
     const isAdmin = !!authStore.adminToken
     const token = isAdmin ? authStore.adminToken : authStore.token
-    
+
     try {
       // Call the backend inactivity logout endpoint to delete tokens
       if (token) {
-        const endpoint = isAdmin ? '/api/admin/inactivity-logout' : '/api/barangay/inactivity-logout'
+        const endpoint = isAdmin
+          ? '/api/admin/inactivity-logout'
+          : '/api/barangay/inactivity-logout'
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`
         await api.post(endpoint)
       }
@@ -70,28 +72,28 @@ export default defineBoot(({ app }) => {
       console.warn('Backend inactivity logout failed:', error)
       // Continue with frontend logout even if backend fails
     }
-    
+
     // Set flag for inactivity logout dialog
     localStorage.setItem('inactivity_logout', 'true')
-    
+
     // Clear auth state (without calling backend logout again)
     authStore.user = null
     authStore.token = null
     authStore.admin = null
     authStore.adminToken = null
-    
+
     // Clear localStorage
     localStorage.removeItem('user_data')
     localStorage.removeItem('barangay_token')
     localStorage.removeItem('admin_data')
     localStorage.removeItem('admin_token')
-    
+
     // Clear axios headers
     delete api.defaults.headers.common['Authorization']
-    
+
     // Clear any other stored data
     localStorage.removeItem('acceptedUsers')
-    
+
     // Redirect to login
     if (app.config.globalProperties.$router) {
       const currentPath = app.config.globalProperties.$router.currentRoute.value.path
@@ -106,7 +108,7 @@ export default defineBoot(({ app }) => {
   // Function to start activity monitoring
   const startActivityMonitoring = () => {
     const authStore = useAuthStore()
-    
+
     // Only start monitoring if user is authenticated
     if (!authStore.token && !authStore.adminToken) {
       return
@@ -117,10 +119,10 @@ export default defineBoot(({ app }) => {
       return
     }
     isMonitoring = true
-    
+
     // Reset timestamp on user activity
     const activityEvents = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'click']
-    activityEvents.forEach(event => {
+    activityEvents.forEach((event) => {
       document.addEventListener(event, markActivity, { passive: true })
     })
 
@@ -135,12 +137,12 @@ export default defineBoot(({ app }) => {
 
     // Start heartbeat interval
     heartbeatInterval = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL)
-    
+
     // Start monitor interval that logs out when elapsed exceeds timeout
     lastActivityAt = Date.now()
     monitorInterval = setInterval(() => {
       const elapsed = Date.now() - lastActivityAt
-      
+
       if (elapsed >= INACTIVITY_TIMEOUT) {
         performLogoutForInactivity()
       }
@@ -157,15 +159,15 @@ export default defineBoot(({ app }) => {
       clearInterval(monitorInterval)
       monitorInterval = null
     }
-    
+
     // Remove event listeners
     const activityEvents = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'click']
-    activityEvents.forEach(event => {
+    activityEvents.forEach((event) => {
       document.removeEventListener(event, markActivity)
     })
     document.removeEventListener('visibilitychange', markActivity)
     window.removeEventListener('focus', markActivity)
-    
+
     isMonitoring = false
   }
 
@@ -173,7 +175,7 @@ export default defineBoot(({ app }) => {
   const checkAuthAndManageMonitoring = () => {
     const authStore = useAuthStore()
     const hasAuth = !!(authStore.token || authStore.adminToken)
-    
+
     if (hasAuth) {
       // User is authenticated, start monitoring if not already running
       if (!isMonitoring) {
@@ -191,16 +193,16 @@ export default defineBoot(({ app }) => {
   window.addEventListener('session-expired', async () => {
     // Clear the flag
     localStorage.removeItem('session_expired')
-    
+
     // Stop activity monitoring
     stopActivityMonitoring()
-    
+
     // Get the auth store
     const authStore = useAuthStore()
-    
+
     // Clear auth state
     await authStore.logout()
-    
+
     // Redirect to appropriate login page
     if (app.config.globalProperties.$router) {
       const currentPath = app.config.globalProperties.$router.currentRoute.value.path
@@ -211,7 +213,7 @@ export default defineBoot(({ app }) => {
       }
     }
   })
-  
+
   // Check for session expired flag on app start
   if (localStorage.getItem('session_expired')) {
     localStorage.removeItem('session_expired')
@@ -250,14 +252,7 @@ export default defineBoot(({ app }) => {
     }
   })
 
-  // Also check auth status periodically in case we missed storage events
-  setInterval(() => {
-    const authStore = useAuthStore()
-    const hasAuth = !!(authStore.token || authStore.adminToken)
-    
-    // Only check if there's a change needed
-    if ((hasAuth && !isMonitoring) || (!hasAuth && isMonitoring)) {
-      checkAuthAndManageMonitoring()
-    }
-  }, 5000) // Check every 5 seconds
+  // Only manage monitor state when auth changes or when the page is first loaded.
+  // Repeating a 5 second check here creates timer-driven traffic and can appear
+  // as a constant loop in the network tab even when there is no real failure.
 })

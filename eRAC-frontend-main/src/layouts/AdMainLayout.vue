@@ -1,35 +1,61 @@
+<!-- admin -->
 <template>
   <q-layout view="lHh Lpr lFf" class="admin-layout">
     <!-- HEADER -->
     <q-header elevated class="custom-header">
-      <q-toolbar class="q-pr-md items-center" style="justify-content: space-between;">
-         <div style="display: flex; align-items: center;">
-        <q-btn
-           v-if="$q.screen.lt.md && authStore.admin?.name"
-          flat
-          round
-          dense
-          icon="menu"
-          class="q-mr-sm"
-          @click="leftDrawerOpen = !leftDrawerOpen"
-        />
-        <div v-if="$q.screen.lt.md && authStore.admin?.name" class="barangay-mobile-title text-weight-bold q-mr-md">
-          Welcome, {{ authStore.admin?.name || 'Admin' }}
+      <q-toolbar class="q-pr-md items-center" style="justify-content: space-between">
+        <div style="display: flex; align-items: center">
+          <q-btn
+            v-if="$q.screen.lt.md && authStore.admin?.name"
+            flat
+            round
+            dense
+            icon="menu"
+            class="q-mr-sm"
+            @click="leftDrawerOpen = !leftDrawerOpen"
+          />
+          <div
+            v-if="$q.screen.lt.md && authStore.admin?.name"
+            class="barangay-mobile-title text-weight-bold q-mr-md"
+          >
+            Welcome, {{ authStore.admin?.name || 'Admin' }}
+          </div>
+          <q-space v-if="$q.screen.lt.md" />
+          <q-toolbar-title
+            v-if="$q.screen.gt.sm"
+            class="welcome-title"
+            style="color: white; font-weight: bold"
+          >
+            Welcome, {{ authStore.admin?.name || 'Admin' }}
+          </q-toolbar-title>
         </div>
-        <q-space v-if="$q.screen.lt.md" />
-        <q-toolbar-title
-          v-if="$q.screen.gt.sm"
-          class="welcome-title"
-          style="color: white; font-weight: bold ;"
-        >
-          Welcome, {{ authStore.admin?.name || 'Admin' }}
 
-        </q-toolbar-title>
-        </div>
-
-        <q-space/>
+        <q-space />
 
         <div class="header-controls">
+          <q-select
+            v-if="!authStore.canManageUsers"
+            outlined
+            dense
+            bg-color="light-green-1 "
+            label="Select Year"
+            placeholder="Choose a year to filter out transactions"
+            color="green"
+            class="year-selector"
+            style="width: 200px"
+            emit-value
+            map-options
+            v-model="selectedYear"
+            :options="availableYears"
+            option-label="label"
+            option-value="value"
+            @update:model-value="onYearChange"
+          >
+            <template v-slot:prepend>
+              <q-icon name="calendar_today" />
+            </template>
+          </q-select>
+
           <q-select
             outlined
             dense
@@ -38,7 +64,7 @@
             placeholder="Choose a barangay to enable transactions"
             color="green"
             class="barangay-selector"
-            style="width: 200px;"
+            style="width: 200px"
             emit-value
             map-options
             v-model="barangay"
@@ -50,13 +76,7 @@
 
           <div class="user-controls">
             <!-- Notifications Bell -->
-            <q-btn
-              flat
-              round
-              dense
-              class="notification-btn"
-              size="md"
-            >
+            <q-btn flat round dense class="notification-btn" size="md">
               <q-icon name="notifications" size="24px" color="white">
                 <q-badge
                   v-if="totalNotificationCount > 0"
@@ -69,7 +89,12 @@
                 />
               </q-icon>
 
-              <q-menu anchor="bottom right" self="top right" class="notification-menu" :offset="[0, 10]">
+              <q-menu
+                anchor="bottom right"
+                self="top right"
+                class="notification-menu"
+                :offset="[0, 10]"
+              >
                 <q-list style="min-width: 300px">
                   <q-item clickable @click="goToPendingUsers" class="notification-item">
                     <q-item-section avatar>
@@ -98,56 +123,54 @@
             </q-btn>
 
             <!-- Admin Avatar Menu -->
-            <q-btn
-              flat
-              dense
-              class="user-menu-btn"
-              size="md"
-            >
+            <q-btn flat dense class="user-menu-btn" size="md">
               <div class="user-profile-container">
                 <q-avatar size="32px" class="user-avatar">
-                  <img :src=adminlogo alt="Admin" />
+                  <img :src="adminlogo" alt="Admin" />
                 </q-avatar>
-                <q-icon name="keyboard_arrow_down" size="14px" color="white" class="dropdown-arrow" />
+                <q-icon
+                  name="keyboard_arrow_down"
+                  size="14px"
+                  color="white"
+                  class="dropdown-arrow"
+                />
               </div>
 
-            <q-menu class="user-menu" transition-show="jump-down" transition-hide="jump-up">
-              <q-list style="min-width: 250px">
-                <!-- Admin Profile Header -->
-                <q-item class="user-profile-header">
-                  <q-item-section avatar>
-                    <q-avatar size="72px">
-                      <img :src=adminlogo />
-                    </q-avatar>
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label class="text-weight-bold text-h6">
-                      {{ authStore.admin?.name || 'Admin' }}
-                    </q-item-label>
-                    <q-item-label caption>
-                      {{ getRoleDisplayName() }}
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
+              <q-menu class="user-menu" transition-show="jump-down" transition-hide="jump-up">
+                <q-list style="min-width: 250px">
+                  <!-- Admin Profile Header -->
+                  <q-item class="user-profile-header">
+                    <q-item-section avatar>
+                      <q-avatar size="72px">
+                        <img :src="adminlogo" />
+                      </q-avatar>
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label class="text-weight-bold text-h6">
+                        {{ authStore.admin?.name || 'Admin' }}
+                      </q-item-label>
+                      <q-item-label caption>
+                        {{ getRoleDisplayName() }}
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
 
-                <q-separator />
+                  <q-separator />
 
-                <!-- Menu Items -->
-                <q-item clickable v-ripple @click="handleLogout" class="menu-item">
-                  <q-item-section avatar>
-                    <q-icon name="logout" color="negative" />
-                  </q-item-section>
-                  <q-item-section>Log Out</q-item-section>
-                </q-item>
-              </q-list>
-            </q-menu>
-          </q-btn>
+                  <!-- Menu Items -->
+                  <q-item clickable v-ripple @click="handleLogout" class="menu-item">
+                    <q-item-section avatar>
+                      <q-icon name="logout" color="negative" />
+                    </q-item-section>
+                    <q-item-section>Log Out</q-item-section>
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </q-btn>
           </div>
         </div>
       </q-toolbar>
     </q-header>
-
-
 
     <!-- DRAWER -->
     <q-drawer
@@ -162,15 +185,18 @@
       <div class="drawer-content">
         <!-- Logo & Title Section -->
         <div class="logo-section">
-          <q-item class="row items-center q-pt-md" style="padding: 5px;">
+          <q-item class="column items-center q-pt-md" style="padding: 5px">
             <img
-              :src=eracslogo
+              :src="eracslogo"
               alt="ERACS Logo"
-              style="width: 100px;  max-width: 100%; height: auto;"
+              style="width: 100px; height: auto; max-width: 100%"
               class="q-mb-sm"
             />
-            <q-item-label class="eracs-title text-center" style="font-size: small;color: black; font-style: normal;">
-              Electronic Registry of Appropriation and Commitment System (eRACs)
+            <q-item-label
+              class="eracs-title text-center"
+              style="font-size: small; color: white; font-style: normal"
+            >
+              Electronic Registry of Appropriation and Commitment System (eRACS)
             </q-item-label>
           </q-item>
         </div>
@@ -178,19 +204,28 @@
         <!-- Main Functions Section -->
         <!-- All admin types (Super Admin, COA) can access these functions -->
         <div class="favorites-section">
-          <div class="section-title">Main Functions </div>
+          <div class="section-title">Main Functions</div>
           <div class="favorites-list q-pa-sm">
             <div
               v-for="favorite in favorites"
               :key="favorite.title"
               class="favorite-item"
-              :class="{ 'disabled': favorite.title === 'Reports' && !isBarangaySelected }"
-              @click="favorite.type === 'panel' ? togglePanel(favorite.panelType) : navigateToFavorite(favorite.link)"
+              :class="{ disabled: favorite.title === 'Reports' && !isBarangaySelected }"
+              @click="
+                favorite.type === 'panel'
+                  ? togglePanel(favorite.panelType)
+                  : navigateToFavorite(favorite.link)
+              "
             >
               <q-icon :name="favorite.icon" size="16px" />
               <span class="favorite-title">{{ favorite.title }}</span>
-              <q-icon v-if="favorite.type === 'panel'" name="chevron_right" size="14px" class="panel-indicator" />
-              <q-icon v-if="favorite.title === 'Reports' && !isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
+              <q-icon
+                v-if="favorite.type === 'panel'"
+                name="chevron_right"
+                size="14px"
+                class="panel-indicator"
+              />
+              <!-- <q-icon v-if="favorite.title === 'Reports' && !isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" /> -->
             </div>
           </div>
         </div>
@@ -203,39 +238,63 @@
             <div class="transaction-group-title">Current Transactions</div>
             <div
               class="transaction-item"
-              :class="{ 'disabled': !isBarangaySelected }"
+              :class="{ disabled: !isBarangaySelected }"
               @click="navigateTo('/admin/appropriation')"
             >
               <q-icon name="account_balance" size="16px" />
               <span>Appropriation</span>
-              <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
+              <q-icon
+                v-if="!isBarangaySelected"
+                name="info"
+                size="14px"
+                color="orange"
+                class="q-ml-sm"
+              />
             </div>
             <div
               class="transaction-item"
-              :class="{ 'disabled': !isBarangaySelected }"
+              :class="{ disabled: !isBarangaySelected }"
               @click="navigateTo('/admin/disbursement')"
             >
               <q-icon name="payments" size="16px" />
               <span>Disbursement</span>
-              <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
+              <q-icon
+                v-if="!isBarangaySelected"
+                name="info"
+                size="14px"
+                color="orange"
+                class="q-ml-sm"
+              />
             </div>
             <div
               class="transaction-item"
-              :class="{ 'disabled': !isBarangaySelected }"
+              :class="{ disabled: !isBarangaySelected }"
               @click="navigateTo('/admin/augmentation')"
             >
               <q-icon name="add_circle" size="16px" />
               <span>Augmentation</span>
-              <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
+              <q-icon
+                v-if="!isBarangaySelected"
+                name="info"
+                size="14px"
+                color="orange"
+                class="q-ml-sm"
+              />
             </div>
             <div
               class="transaction-item"
-              :class="{ 'disabled': !isBarangaySelected }"
+              :class="{ disabled: !isBarangaySelected }"
               @click="navigateTo('/admin/supplemental')"
             >
               <q-icon name="add_circle" size="16px" />
               <span>Supplemental</span>
-              <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
+              <q-icon
+                v-if="!isBarangaySelected"
+                name="info"
+                size="14px"
+                color="orange"
+                class="q-ml-sm"
+              />
             </div>
           </div>
 
@@ -244,23 +303,34 @@
             <div class="transaction-group-title">Continuing Transactions</div>
             <div
               class="transaction-item"
-              :class="{ 'disabled': !isBarangaySelected }"
+              :class="{ disabled: !isBarangaySelected }"
               @click="navigateTo('/admin/contAppropriation')"
             >
               <q-icon name="account_balance_wallet" size="16px" />
               <span>Appropriation</span>
-              <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
+              <q-icon
+                v-if="!isBarangaySelected"
+                name="info"
+                size="14px"
+                color="orange"
+                class="q-ml-sm"
+              />
             </div>
             <div
               class="transaction-item"
-              :class="{ 'disabled': !isBarangaySelected }"
+              :class="{ disabled: !isBarangaySelected }"
               @click="navigateTo('/admin/contDisbursement')"
             >
               <q-icon name="credit_card" size="16px" />
               <span>Disbursement</span>
-              <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
+              <q-icon
+                v-if="!isBarangaySelected"
+                name="info"
+                size="14px"
+                color="orange"
+                class="q-ml-sm"
+              />
             </div>
-
           </div>
         </div>
 
@@ -292,49 +362,101 @@
       :class="{ 'panel-open': activePanel === 'transactions' }"
       v-show="activePanel === 'transactions'"
     >
-      <div class="panel-header">
-        <div class="panel-title">Transactions</div>
-        <q-btn flat round dense icon="close" @click="closePanel" class="close-btn" />
+      <div class="panel-header" style="flex-direction: column; align-items: stretch; gap: 8px">
+        <!-- Top row: Title + Close -->
+        <div style="display: flex; align-items: center; justify-content: space-between">
+          <div class="panel-title">Transactions</div>
+          <q-btn flat round dense icon="close" @click="closePanel" class="close-btn" />
+        </div>
+
+        <!-- Bottom row: Year filter + Refresh -->
+        <div class="row items-center q-gutter-sm">
+          <q-select
+            v-model="selectedYear"
+            :options="availableYears"
+            option-value="value"
+            option-label="label"
+            emit-value
+            map-options
+            dense
+            outlined
+            style="min-width: 120px; flex: 1"
+            @update:model-value="onYearChange"
+          >
+            <template v-slot:prepend>
+              <q-icon name="calendar_today" />
+            </template>
+          </q-select>
+
+          <q-btn icon="refresh" color="primary" flat dense size="sm" @click="refreshYears">
+            <q-tooltip>Refresh available years</q-tooltip>
+          </q-btn>
+        </div>
       </div>
+
       <div class="panel-content">
         <!-- Current Transactions -->
         <div class="panel-section">
           <div class="panel-section-title">Current</div>
           <div
             class="panel-item"
-            :class="{ 'disabled': !isBarangaySelected }"
+            :class="{ disabled: !isBarangaySelected }"
             @click="navigateTo('/admin/appropriation')"
           >
             <div class="colored-dot dot-pink"></div>
             <span>Appropriation</span>
-            <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
+            <q-icon
+              v-if="!isBarangaySelected"
+              name="info"
+              size="14px"
+              color="orange"
+              class="q-ml-sm"
+            />
           </div>
           <div
             class="panel-item"
-            :class="{ 'disabled': !isBarangaySelected }"
+            :class="{ disabled: !isBarangaySelected }"
             @click="navigateTo('/admin/disbursement')"
           >
             <div class="colored-dot dot-red"></div>
             <span>Disbursement</span>
-            <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
+            <q-icon
+              v-if="!isBarangaySelected"
+              name="info"
+              size="14px"
+              color="orange"
+              class="q-ml-sm"
+            />
           </div>
           <div
             class="panel-item"
-            :class="{ 'disabled': !isBarangaySelected }"
+            :class="{ disabled: !isBarangaySelected }"
             @click="navigateTo('/admin/augmentation')"
           >
             <div class="colored-dot dot-blue"></div>
             <span>Augmentation</span>
-            <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
+            <q-icon
+              v-if="!isBarangaySelected"
+              name="info"
+              size="14px"
+              color="orange"
+              class="q-ml-sm"
+            />
           </div>
-            <div
+          <div
             class="panel-item"
-            :class="{ 'disabled': !isBarangaySelected }"
+            :class="{ disabled: !isBarangaySelected }"
             @click="navigateTo('/admin/supplemental')"
           >
             <div class="colored-dot dot-blue"></div>
             <span>Supplemental</span>
-            <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
+            <q-icon
+              v-if="!isBarangaySelected"
+              name="info"
+              size="14px"
+              color="orange"
+              class="q-ml-sm"
+            />
           </div>
         </div>
         <!-- Continuing Transactions -->
@@ -342,23 +464,58 @@
           <div class="panel-section-title">Continuing</div>
           <div
             class="panel-item"
-            :class="{ 'disabled': !isBarangaySelected }"
+            :class="{ disabled: !isBarangaySelected }"
             @click="navigateTo('/admin/contAppropriation')"
           >
             <div class="colored-dot dot-orange"></div>
             <span>Appropriation</span>
-            <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
+            <q-icon
+              v-if="!isBarangaySelected"
+              name="info"
+              size="14px"
+              color="orange"
+              class="q-ml-sm"
+            />
           </div>
           <div
             class="panel-item"
-            :class="{ 'disabled': !isBarangaySelected }"
+            :class="{ disabled: !isBarangaySelected }"
             @click="navigateTo('/admin/contDisbursement')"
           >
             <div class="colored-dot dot-purple"></div>
             <span>Disbursement</span>
-            <q-icon v-if="!isBarangaySelected" name="info" size="14px" color="orange" class="q-ml-sm" />
+            <q-icon
+              v-if="!isBarangaySelected"
+              name="info"
+              size="14px"
+              color="orange"
+              class="q-ml-sm"
+            />
           </div>
+        </div>
+      </div>
+    </div>
 
+    <div
+      class="sliding-panel reports-panel"
+      :class="{ 'panel-open': activePanel === 'reports' }"
+      v-show="activePanel === 'reports'"
+    >
+      <div class="panel-header">
+        <div class="panel-title">Reports</div>
+        <q-btn flat round dense icon="close" @click="closePanel" class="close-btn" />
+      </div>
+
+      <div class="panel-content">
+        <div class="panel-section">
+         <div class="panel-item" @click="navigateTo('/admin/reports')">
+            <div class="colored-dot dot-light-blue"></div>
+            <span>Current Reports</span>
+          </div>
+          <div class="panel-item" @click="navigateTo('/admin/reports/continuing-reports')">
+            <div class="colored-dot dot-grey"></div>
+            <span>Continuing Reports</span>
+          </div>
         </div>
       </div>
     </div>
@@ -371,7 +528,7 @@
     ></div>
 
     <!-- MAIN CONTENT -->
-    <q-page-container style="background: #D9D9D9; min-height: 100vh;">
+    <q-page-container style="background: #d9d9d9; min-height: 100vh">
       <router-view />
     </q-page-container>
   </q-layout>
@@ -380,12 +537,15 @@
 <script setup>
 import { ref, watch, onMounted, nextTick, computed } from 'vue'
 import { onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'stores/auth'
 import { api } from 'boot/axios'
-import adminlogo from "src/assets/admin.png"
-import eracslogo from "src/assets/tagumlogo.png"
+import adminlogo from 'src/assets/admin.png'
+import eracslogo from 'src/assets/tagumlogo.png'
+import { useReportStore } from 'stores/reportStore'
+import { useDisbursementStore } from 'stores/disbursementStore'
+import { useAppropriationStore } from 'stores/appropriationStore'
 
 const $q = useQuasar()
 const router = useRouter()
@@ -396,6 +556,10 @@ const barangayOptions = ref([])
 const barangay = ref(null)
 const pendingUserCount = ref(0)
 const notificationTimerId = ref(null)
+const reportStore = useReportStore()
+const disbursementStore = useDisbursementStore()
+const appropriationStore = useAppropriationStore()
+const route = useRoute()
 
 const totalNotificationCount = computed(() => {
   // For testing - you can temporarily set this to 1 to see the badge
@@ -403,45 +567,101 @@ const totalNotificationCount = computed(() => {
   return pendingUserCount.value
 })
 
+const expenseSelectedCurrent = ref(null)
+const expenseSelectedContinuing = ref(null)
+const selectedYear = ref(null)
+
+// const availableYears = computed(() => [
+//   { value: null, label: 'All Years' },
+//   ...reportStore.availableYears
+// ])
+
+const availableYears = computed(() => reportStore.availableYears)
+
+// reload years AND reset all filters to defaults for selected year
+// function refreshYears() {
+//   reportStore.fetchAvailableYears()
+
+//   selectedYear.value = null
+
+//   // Reset expense selections
+//   expenseSelectedCurrent.value = null
+//   expenseSelectedContinuing.value = null
+
+// }
+
+function refreshYears() {
+  authStore.fetchAvailableYears()
+  selectedYear.value = null
+  expenseSelectedCurrent.value = null
+  expenseSelectedContinuing.value = null
+}
+
+function onYearChange(year) {
+  const currentPath = router.currentRoute.value.path
+  const transactionPages = [
+    '/admin/appropriation',
+    '/admin/disbursement',
+    '/admin/augmentation',
+    '/admin/supplemental',
+    '/admin/contAppropriation',
+    '/admin/contDisbursement',
+  ]
+
+  // If already on a transaction page, update the route query immediately
+  if (transactionPages.some((p) => currentPath.includes(p))) {
+    const query = {}
+    if (year !== null && year !== undefined) {
+      query.year = year
+    }
+    router.replace({ path: currentPath, query })
+  }
+
+  // Reset expense selections
+  expenseSelectedCurrent.value = null
+  expenseSelectedContinuing.value = null
+}
+
 onMounted(async () => {
+  document.addEventListener('keydown', handleKeydown)
+
   try {
-    // Load barangay options with admin token
     const response = await api.get('/api/barangay/barangays', {
       headers: {
         Authorization: `Bearer ${authStore.adminToken}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
       },
     })
     if (response.data && Array.isArray(response.data)) {
-      barangayOptions.value = response.data.map((b) => ({
-        name: b.name,
-        id: b.id,
-      }))
-
-      // Restore barangay selection from localStorage first
+      barangayOptions.value = response.data.map((b) => ({ name: b.name, id: b.id }))
       const savedBarangayId = localStorage.getItem('admin_selected_barangay')
       if (savedBarangayId) {
         barangay.value = parseInt(savedBarangayId)
-        // Update reactive state
         authStore.selectedBarangay = parseInt(savedBarangayId)
-        authStore.selectedBarangayName = localStorage.getItem('admin_selected_barangay_name') || null
+        authStore.selectedBarangayName =
+          localStorage.getItem('admin_selected_barangay_name') || null
       }
     }
   } catch (error) {
     console.error('Error loading setup data:', error)
-    // Don't show notification if it might break the page
-    // Just log the error for debugging
   }
-  // Initial load of notifications
+
+  await reportStore.fetchAvailableYears()
+
+  // Read year from route query on initial load — same as mainLayout
+  const year = route.query.year ? parseInt(route.query.year) : null
+  await disbursementStore.fetchDisbursements(year)
+  await appropriationStore.fetchBudgets(year)
+
   await fetchPendingUserCount()
-  // Poll every 60 seconds
   notificationTimerId.value = setInterval(() => {
     fetchPendingUserCount()
   }, 60000)
 })
 
 onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown)
   if (notificationTimerId.value) {
     clearInterval(notificationTimerId.value)
     notificationTimerId.value = null
@@ -454,36 +674,54 @@ const isBarangaySelected = computed(() => {
 })
 
 // Show info notification when no barangay is selected on load
-watch(isBarangaySelected, (newValue, oldValue) => {
-  if (!newValue && oldValue !== undefined && !authStore.isLoggingOut && authStore.admin && router.currentRoute.value.path !== '/admin/login') {
-    setTimeout(() => {
-      if (!isBarangaySelected.value && !authStore.isLoggingOut && authStore.admin && router.currentRoute.value.path !== '/admin/login') {
-        $q.notify({
-          type: 'info',
-          message: 'Select a barangay from the dropdown to access transaction features',
-          position: 'top',
-          timeout: 6000,
-          icon: 'info',
-          color: 'blue',
-          textColor: 'white',
-          actions: [
-            { label: 'OK', color: 'white', handler: () => {} }
-          ]
-        })
-      }
-    }, 1000)
-  }
-}, { immediate: false })
+watch(
+  isBarangaySelected,
+  (newValue, oldValue) => {
+    if (
+      !newValue &&
+      oldValue !== undefined &&
+      !authStore.isLoggingOut &&
+      authStore.admin &&
+      router.currentRoute.value.path !== '/admin/login'
+    ) {
+      setTimeout(() => {
+        if (
+          !isBarangaySelected.value &&
+          !authStore.isLoggingOut &&
+          authStore.admin &&
+          router.currentRoute.value.path !== '/admin/login'
+        ) {
+          $q.notify({
+            type: 'info',
+            message: 'Select a barangay from the dropdown to access transaction features',
+            position: 'top',
+            timeout: 6000,
+            icon: 'info',
+            color: 'blue',
+            textColor: 'white',
+            actions: [{ label: 'OK', color: 'white', handler: () => {} }],
+          })
+        }
+      }, 1000)
+    }
+  },
+  { immediate: false },
+)
 
 // Admin functions data
 const favorites = computed(() => {
   const baseFavorites = [
     { title: 'Dashboard', link: '/admin/dashboard', icon: 'dashboard' },
-    { title: 'Reports', link: '/admin/reportPage', icon: 'assessment' },
-
+    // { title: 'Reports', link: '/admin/reportPage', icon: 'assessment' },
+    { title: 'Reports', type: 'panel', panelType: 'reports', icon: 'assessment' },
   ]
   if (authStore.canManageUsers) {
-    baseFavorites.push({ title: 'Transactions', type: 'panel', panelType: 'transactions', icon: 'account_balance_wallet' })
+    baseFavorites.push({
+      title: 'Transactions',
+      type: 'panel',
+      panelType: 'transactions',
+      icon: 'account_balance_wallet',
+    })
   }
   return baseFavorites
 })
@@ -494,7 +732,7 @@ const savedSearches = ref([
   { title: 'Pending Users', link: '/admin/usercontrol/pending', icon: 'pending' },
 
   { title: 'Accepted Users', link: '/admin/usercontrol/accepted', icon: 'check_circle' },
-  { title: 'Logs', link: '/admin/logs', icon: 'history' }
+  { title: 'Logs', link: '/admin/logs', icon: 'history' },
 ])
 
 const navigateToFavorite = (link) => {
@@ -508,9 +746,7 @@ const navigateToFavorite = (link) => {
       icon: 'info',
       color: 'blue',
       textColor: 'white',
-      actions: [
-        { label: 'Got it', color: 'white', handler: () => {} }
-      ]
+      actions: [{ label: 'Got it', color: 'white', handler: () => {} }],
     })
     return
   }
@@ -533,16 +769,16 @@ const navigateToSearch = (link) => {
 }
 
 const navigateTo = (link) => {
-  // Check if trying to access transaction pages
   const transactionPages = [
     '/admin/appropriation',
     '/admin/disbursement',
     '/admin/augmentation',
     '/admin/supplemental',
     '/admin/contAppropriation',
-    '/admin/contDisbursement'
+    '/admin/contDisbursement',
   ]
 
+  // Block navigation if no barangay selected for transaction pages
   if (transactionPages.includes(link) && !isBarangaySelected.value) {
     $q.notify({
       type: 'info',
@@ -552,20 +788,36 @@ const navigateTo = (link) => {
       icon: 'info',
       color: 'blue',
       textColor: 'white',
-      actions: [
-        { label: 'Got it', color: 'white', handler: () => {} }
-      ]
+      actions: [{ label: 'Got it', color: 'white', handler: () => {} }],
     })
     return
   }
 
-  router.push(link)
-  // Close the panel after navigation
+  // Build query — always append year if one is selected
+  const query = {}
+  if (selectedYear.value !== null && selectedYear.value !== undefined) {
+    query.year = selectedYear.value
+  }
+
+  router.push({ path: link, query })
   closePanel()
   if ($q.screen.lt.md) {
     leftDrawerOpen.value = false
   }
 }
+
+// const navigateTo = (link) => {
+//  const query = {}
+//   if (selectedYear.value !== null && selectedYear.value !== undefined) {
+//     query.year = selectedYear.value
+//   }
+//   router.push({ path: link, query })
+
+//   closePanel()
+//   if ($q.screen.lt.md) {
+//     leftDrawerOpen.value = false
+//   }
+// }
 
 const togglePanel = (panelType) => {
   if (activePanel.value === panelType) {
@@ -640,117 +892,97 @@ const handleLogout = async () => {
   })
 }
 
-                    const onBarangayChange = async (barangayId) => {
-                      try {
-                        // Save to localStorage for persistence across page refreshes
-                        if (barangayId) {
-                          localStorage.setItem('admin_selected_barangay', barangayId.toString())
-                          // Update reactive state
-                          authStore.selectedBarangay = barangayId
-                          // Save barangay name for later display/logging
-                          try {
-                            const selected = (barangayOptions.value || []).find(b => b.id === barangayId)
-                            if (selected?.name) {
-                              localStorage.setItem('admin_selected_barangay_name', selected.name)
-                              authStore.selectedBarangayName = selected.name
-                            }
-                          } catch (error) {
-                            console.error('Error saving barangay selection:', error)
-                          }
+const onBarangayChange = async (barangayId) => {
+  try {
+    if (barangayId) {
+      localStorage.setItem('admin_selected_barangay', barangayId.toString())
+      authStore.selectedBarangay = barangayId
+      try {
+        const selected = (barangayOptions.value || []).find((b) => b.id === barangayId)
+        if (selected?.name) {
+          localStorage.setItem('admin_selected_barangay_name', selected.name)
+          authStore.selectedBarangayName = selected.name
+        }
+      } catch (error) {
+        console.error('Error saving barangay selection:', error)
+      }
+    } else {
+      localStorage.removeItem('admin_selected_barangay')
+      localStorage.removeItem('admin_selected_barangay_name')
+      authStore.selectedBarangay = null
+      authStore.selectedBarangayName = null
+      $q.notify({
+        type: 'warning',
+        message: 'No barangay selected - all data will be shown',
+        icon: 'warning',
+        position: 'top',
+      })
+    }
 
-                        } else {
-                          localStorage.removeItem('admin_selected_barangay')
-                          localStorage.removeItem('admin_selected_barangay_name')
-                          // Update reactive state
-                          authStore.selectedBarangay = null
-                          authStore.selectedBarangayName = null
-                          // Show warning notification
-                          $q.notify({
-                            type: 'warning',
-                            message: 'No barangay selected - all data will be shown',
-                            icon: 'warning',
-                            position: 'top',
-                          })
-                        }
+    try {
+      const currentRoute = router.currentRoute.value.path
+      const year = route.query.year ? parseInt(route.query.year) : null
 
-                        // Refresh only the current page's store with new barangay filter
-                        try {
-                          const currentRoute = router.currentRoute.value.path
-
-                          if (currentRoute.includes('/admin/transaction/appropriation')) {
-                            // On appropriation page - only refresh appropriation store
-                            const { useAppropriationStore } = await import('stores/appropriationStore')
-                            const appropriationStore = useAppropriationStore()
-                            await appropriationStore.fetchBudgets()
-                          } else if (currentRoute.includes('/admin/transaction/disbursement')) {
-                            // On disbursement page - only refresh disbursement store
-                            const { useDisbursementStore } = await import('stores/disbursementStore')
-                            const disbursementStore = useDisbursementStore()
-                            await disbursementStore.fetchDisbursements()
-                          } else if (currentRoute.includes('/admin/transaction/augmentation')) {
-                            // On augmentation page - only refresh augmentation store
-                            const { useAugmentationStore } = await import('stores/augmentation')
-                            const augmentationStore = useAugmentationStore()
-                            await augmentationStore.fetchAugmentations()
-
-                          }else if (currentRoute.includes('/admin/supplemental')) {
-                            // On supplemental page - only refresh supplemental store
-                            const { useSupplementalBudgetStore } = await import('stores/supplementalBudgetStore')
-                            const supplementalBudgetStore = useSupplementalBudgetStore()
-                            await supplementalBudgetStore.fetchSupplementalBudgets()
-
-                          } else if (currentRoute.includes('/admin/reportPage')) {
-                            // On reports page - refresh report store expense classes
-                            const { useReportStore } = await import('stores/reportStore')
-                            const reportStore = useReportStore()
-                            if (barangayId) {
-                              // Store current selections before fetching
-                              const currentSelected = reportStore.expenseSelectedCurrent
-                              const continuingSelected = reportStore.expenseSelectedContinuing
-
-                              await reportStore.fetchExpenseClassesForBarangay(barangayId)
-
-                              // Try to preserve selections by finding matching names
-                              if (currentSelected?.name) {
-                                const matchingOption = reportStore.expenseOptionsCurrent.find(opt => opt.name === currentSelected.name)
-                                reportStore.expenseSelectedCurrent = matchingOption || null
-                              }
-
-                              if (continuingSelected?.name) {
-                                const matchingOption = reportStore.expenseOptionsContinuing.find(opt => opt.name === continuingSelected.name)
-                                reportStore.expenseSelectedContinuing = matchingOption || null
-                              }
-                            }
-                          } else {
-                            // On other admin pages - refresh all stores (dashboard, etc.)
-                            const { useAppropriationStore } = await import('stores/appropriationStore')
-                            const { useDisbursementStore } = await import('stores/disbursementStore')
-                            const { useAugmentationStore } = await import('stores/augmentation')
-
-
-                            const appropriationStore = useAppropriationStore()
-                            const disbursementStore = useDisbursementStore()
-                            const augmentationStore = useAugmentationStore()
-
-                            await Promise.all([
-                              appropriationStore.fetchBudgets(),
-                              disbursementStore.fetchDisbursements(),
-                              augmentationStore.fetchAugmentations()
-                            ])
-                          }
-                        } catch (error) {
-                          // Handle 401 Unauthorized - token expired
-                          if (error.response?.status === 401) {
-                            console.warn('Admin token expired during barangay change, logging out...')
-                            await authStore.adminLogout(router)
-                            return
-                          }
-                          console.error('Error refreshing stores with new barangay filter:', error)
-                        }
-                      } catch (error) {
-                        console.error('Error updating barangay filter:', error)
-                      }
-                    }
+      if (
+        currentRoute.includes('/admin/appropriation') ||
+        currentRoute.includes('/admin/contAppropriation')
+      ) {
+        await appropriationStore.fetchBudgets(year)
+        await appropriationStore.fetchAppropriations(year)
+      } else if (currentRoute.includes('/admin/contDisbursement')) {
+        // Check contDisbursement BEFORE disbursement to avoid includes collision
+        await disbursementStore.fetchDisbursements(year)
+      } else if (currentRoute.includes('/admin/disbursement')) {
+        await disbursementStore.fetchDisbursements(year)
+      } else if (currentRoute.includes('/admin/augmentation')) {
+        const { useAugmentationStore } = await import('stores/augmentation')
+        const augmentationStore = useAugmentationStore()
+        await augmentationStore.fetchAugmentations(year)
+      } else if (currentRoute.includes('/admin/supplemental')) {
+        const { useSupplementalBudgetStore } = await import('stores/supplementalBudgetStore')
+        const supplementalBudgetStore = useSupplementalBudgetStore()
+        await supplementalBudgetStore.fetchSupplementalBudgets(year)
+      } else if (currentRoute.includes('/admin/reportPage')) {
+        const { useReportStore } = await import('stores/reportStore')
+        const reportStore = useReportStore()
+        if (barangayId) {
+          const currentSelected = reportStore.expenseSelectedCurrent
+          const continuingSelected = reportStore.expenseSelectedContinuing
+          await reportStore.fetchExpenseClassesForBarangay(barangayId)
+          if (currentSelected?.name) {
+            reportStore.expenseSelectedCurrent =
+              reportStore.expenseOptionsCurrent.find((opt) => opt.name === currentSelected.name) ||
+              null
+          }
+          if (continuingSelected?.name) {
+            reportStore.expenseSelectedContinuing =
+              reportStore.expenseOptionsContinuing.find(
+                (opt) => opt.name === continuingSelected.name,
+              ) || null
+          }
+        }
+      } else {
+        // Dashboard and other pages — refresh all
+        const { useAugmentationStore } = await import('stores/augmentation')
+        const augmentationStore = useAugmentationStore()
+        await Promise.all([
+          appropriationStore.fetchBudgets(year),
+          disbursementStore.fetchDisbursements(year),
+          augmentationStore.fetchAugmentations(year),
+        ])
+      }
+    } catch (error) {
+      if (error.response?.status === 401) {
+        console.warn('Admin token expired during barangay change, logging out...')
+        await authStore.adminLogout(router)
+        return
+      }
+      console.error('Error refreshing stores with new barangay filter:', error)
+    }
+  } catch (error) {
+    console.error('Error updating barangay filter:', error)
+  }
+}
 
 // Note: Stores now get barangay ID directly from auth store, so no need to watch store changes
 
@@ -761,10 +993,10 @@ const handleKeydown = (event) => {
 }
 
 // Redirect to login if not authenticated
-const token = localStorage.getItem('admin_token');
+const token = localStorage.getItem('admin_token')
 if (token) {
-  authStore.adminToken = token;
-  api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  authStore.adminToken = token
+  api.defaults.headers.common['Authorization'] = `Bearer ${token}`
 } else {
   router.replace('/admin/login')
 }
@@ -779,16 +1011,43 @@ watch(
     if (!token) {
       router.replace('/admin/login')
     }
-  }
+  },
 )
 
+watch(
+  () => route.query.year,
+  async (newYear) => {
+    const year = newYear ? parseInt(newYear) : null
+    const currentRoute = router.currentRoute.value.path
 
+    // contDisbursement must be checked BEFORE disbursement — it contains the substring
+    if (currentRoute.includes('contDisbursement')) {
+      await disbursementStore.fetchDisbursements(year)
+    } else if (currentRoute.includes('contAppropriation')) {
+      await appropriationStore.fetchBudgets(year)
+      await appropriationStore.fetchAppropriations(year)
+    } else if (currentRoute.includes('disbursement')) {
+      await disbursementStore.fetchDisbursements(year)
+    } else if (currentRoute.includes('appropriation')) {
+      await appropriationStore.fetchBudgets(year)
+      await appropriationStore.fetchAppropriations(year)
+    } else if (currentRoute.includes('augmentation')) {
+      const { useAugmentationStore } = await import('stores/augmentation')
+      const augmentationStore = useAugmentationStore()
+      await augmentationStore.fetchAugmentations(year)
+    } else if (currentRoute.includes('supplemental')) {
+      const { useSupplementalBudgetStore } = await import('stores/supplementalBudgetStore')
+      const supplementalBudgetStore = useSupplementalBudgetStore()
+      await supplementalBudgetStore.fetchSupplementalBudgets(year)
+    }
+  },
+)
 </script>
 
 <style>
 .custom-card-drawer {
   position: sticky;
-  background: linear-gradient(30deg, #187C19, #E0FFE7, #187C19);
+  background: linear-gradient(30deg, #187c19, #e0ffe7, #187c19);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   padding-top: 0;
   overflow: hidden;
@@ -802,7 +1061,7 @@ watch(
 }
 
 .custom-header {
-  background: #0E780E;
+  background: #0e780e;
   justify-content: center;
   border-left: black;
   margin-left: -2px;
@@ -874,12 +1133,12 @@ watch(
   cursor: pointer;
   transition: all 0.2s ease;
   color: white !important;
-  background-color: #69B31E;
+  background-color: #69b31e;
   box-shadow: 0 4px 8px rgba(82, 140, 24, 0.4);
 }
 
 .favorite-item:hover {
-  background-color: #0E780E;
+  background-color: #0e780e;
 }
 
 .favorite-item.disabled {
@@ -933,12 +1192,12 @@ watch(
   cursor: pointer;
   transition: all 0.2s ease;
   color: white !important;
-  background-color: #69B31E;
+  background-color: #69b31e;
   box-shadow: 0 4px 8px rgba(82, 140, 24, 0.4);
 }
 
 .saved-search-item:hover {
-  background-color: #0E780E;
+  background-color: #0e780e;
 }
 
 .search-title {
@@ -957,7 +1216,7 @@ watch(
 
 .favorite-item:hover .panel-indicator {
   transform: translateX(2px);
-  color: #69B31E;
+  color: #69b31e;
 }
 
 /* Added complete sliding panel styles */
@@ -969,7 +1228,7 @@ watch(
   width: 280px;
   height: auto;
   max-height: 600px;
-  background: linear-gradient(30deg, #187C19 0%, #E0FFE7 50%, #187C19 100%);
+  background: linear-gradient(30deg, #187c19 0%, #e0ffe7 50%, #187c19 100%);
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
   z-index: 3000;
   transform: translate(-100%, -50%);
@@ -995,8 +1254,12 @@ watch(
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .panel-header {
@@ -1060,12 +1323,12 @@ watch(
   cursor: pointer;
   transition: all 0.2s ease;
   color: white !important;
-  background-color: #69B31E;
+  background-color: #69b31e;
   border: 1px solid rgba(76, 175, 80, 0.1);
 }
 
 .panel-item:hover {
-  background-color: #187C19;
+  background-color: #187c19;
   transform: translateX(3px);
   border-color: rgba(76, 175, 80, 0.3);
   box-shadow: 0 2px 8px rgba(76, 175, 80, 0.15);
@@ -1170,7 +1433,7 @@ watch(
 .drawer-footer {
   justify-content: space-between;
   flex-shrink: 0;
-  background-color: #0E780E;
+  background-color: #0e780e;
   height: 12%;
 }
 
@@ -1263,7 +1526,7 @@ watch(
   font-weight: normal;
   opacity: 0.9;
   margin-top: 2px;
-  color: #E0FFE7;
+  color: #e0ffe7;
 }
 
 /* Collapsed Transactions Section */
@@ -1279,7 +1542,6 @@ watch(
   padding: 8px;
 
   border-radius: 6px;
-
 }
 
 .transaction-group-title {
@@ -1303,7 +1565,7 @@ watch(
   cursor: pointer;
   transition: all 0.2s ease;
   color: white !important;
-  background-color: #69B31E;
+  background-color: #69b31e;
   box-shadow: 0 4px 8px rgba(82, 140, 24, 0.4);
   width: 95%;
   max-width: 280px;
@@ -1311,7 +1573,7 @@ watch(
 }
 
 .transaction-item:hover {
-  background-color: #0E780E;
+  background-color: #0e780e;
   transform: translateX(2px);
 }
 

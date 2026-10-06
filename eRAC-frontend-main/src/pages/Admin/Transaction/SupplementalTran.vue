@@ -501,12 +501,14 @@ import { useQuasar } from 'quasar'
 import { useSupplementalBudgetStore } from 'src/stores/supplementalBudgetStore'
 import { usePageLogging } from '../../../composables/usePageLogging'
 import { useAuthStore } from 'stores/auth'
+import { useRoute } from 'vue-router' 
 
 const $q = useQuasar()
 const authStore = useAuthStore()
 const isAdmin = computed(() => !!authStore.admin)
 const supplementalBudgetStore = useSupplementalBudgetStore()
 const { logPageVisit } = usePageLogging()
+const route = useRoute()
 
 const loading = ref(false)
 const showViewDialog = ref(false)
@@ -1140,7 +1142,15 @@ onMounted(async () => {
     await supplementalBudgetStore.fetchYears()
 
     // Set default year if not set
-    if (!supplementalBudgetStore.selectedYear) {
+    // if (!supplementalBudgetStore.selectedYear) {
+    //   supplementalBudgetStore.setSelectedYear(new Date().getFullYear())
+    // }
+
+  const urlYear = route.query.year ? parseInt(route.query.year) : null
+    if (urlYear) {
+      supplementalBudgetStore.setSelectedYear(urlYear)
+      selectedYear.value = urlYear
+    } else if (!supplementalBudgetStore.selectedYear) {
       supplementalBudgetStore.setSelectedYear(new Date().getFullYear())
     }
 
@@ -1162,6 +1172,16 @@ onMounted(async () => {
     })
   }
 })
+
+watch(
+  () => route.query.year,
+  async (newYear) => {
+    const year = newYear ? parseInt(newYear) : null
+    supplementalBudgetStore.setSelectedYear(year ?? new Date().getFullYear())
+    selectedYear.value = year ?? new Date().getFullYear()
+    await loadData(false)
+  },
+)
 
 // Watch for dialog close to clear selections
 watch(showViewDialog, (newValue) => {

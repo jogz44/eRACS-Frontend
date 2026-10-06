@@ -113,6 +113,22 @@ export function useGetters(state) {
       style: 'width: 18%; min-width: 120px;'
     },
     {
+      name: 'expense_sub_type',
+      label: 'Expense Sub-type',
+      field: 'expense_sub_type_name',
+      align: 'left',
+      sortable: true,
+      style: 'width: 18%; min-width: 120px;'
+    },
+    {
+      name: 'expense_sub_sub_type',
+      label: 'Expense Sub-subtype',
+      field: 'expense_sub_sub_type_name',
+      align: 'left',
+      sortable: true,
+      style: 'width: 18%; min-width: 120px;'
+    },
+    {
       name: 'balance',
       label: 'Balance',
       field: 'balance',

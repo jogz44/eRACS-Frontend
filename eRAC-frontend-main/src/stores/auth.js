@@ -90,6 +90,7 @@ export const useAuthStore = defineStore('auth', {
           suffix: '',
           email: '',
           username: '',
+          barangay_id: null,
           barangay_name: '',
           position_name: '',
           position: '',
@@ -106,6 +107,9 @@ export const useAuthStore = defineStore('auth', {
         suffix: userData.suffix || '',
         email: userData.email || '',
         username: userData.username || '',
+        // Kept alongside barangay_name — needed by any request that must scope
+        // data to the logged-in user's barangay (e.g. registered payees).
+        barangay_id: userData.barangay_id || null,
         barangay_name: userData.barangay_name || '',
         position_name: userData.position_name || '',
         position: userData.position || '',
@@ -232,12 +236,13 @@ export const useAuthStore = defineStore('auth', {
       try {
         const response = await api.post('/api/barangay/login', { username, password })
 
-        // Update state
-        this.user = response.data.user
+        // Update state — run through _formatUser so the stored shape
+        // (including barangay_id) is consistent with session-restore via initialize()
+        this.user = this._formatUser(response.data.user)
         this.token = response.data.access_token
 
         // Store in localStorage
-        localStorage.setItem('user_data', JSON.stringify(response.data.user))
+        localStorage.setItem('user_data', JSON.stringify(this.user))
         localStorage.setItem('barangay_token', response.data.access_token)
 
         // Initialize permissions immediately from login payload if present

@@ -15,15 +15,6 @@ export function useDialogActions(state, fetchExpenseAccounts, resetForm ) {
         state.Augexpenses.value = []
         state.currentItem.value = null
 
-        // Set default date to today after form reset
-        const today = new Date()
-        const dd = String(today.getDate()).padStart(2, '0')
-        const mm = String(today.getMonth() + 1).padStart(2, '0')
-        const yyyy = today.getFullYear()
-
-        // Set the date directly to the form
-        state.forms.value.augmentation.augmentation_date = `${dd}/${mm}/${yyyy}`
-
         state.dialogs.value[dialogName] = true
       } finally {
         state.loading.value.addDialog = false
@@ -79,7 +70,9 @@ export function useDialogActions(state, fetchExpenseAccounts, resetForm ) {
         expense_class_id: expenseItem.expense_class_id,
         expense_type_id: expenseItem.expense_type_id,
         expense_item_id: expenseItem.expense_item_id,
-        expense_sub_item_id: expenseItem.expense_sub_item_id || null
+        expense_sub_item_id: expenseItem.expense_sub_item_id || null,
+        expense_sub_type_id: expenseItem.expense_sub_type_id || null,
+        expense_sub_sub_type_id: expenseItem.expense_sub_sub_type_id || null
       }
 
       // Reset the flag and loading state

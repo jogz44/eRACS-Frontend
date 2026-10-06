@@ -50,9 +50,9 @@
       <q-btn
         unelevated
         icon="print"
-        label="Print"
+        label="Export"
         color="green"
-        @click="handlePrint"
+        @click="handleExport"
         size="md"
         no-caps
       />
@@ -67,9 +67,12 @@
 import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAugmentationStore } from 'stores/augmentation'
+import { useAuthStore } from 'stores/auth'
+import { exportTransactionToExcel } from 'src/composables/transactionExportConfigs'
 
 const $q = useQuasar()
 const store = useAugmentationStore()
+const authStore = useAuthStore()
 const dateRange = ref(null)
 
 const dateRangeDisplay = computed(() => {
@@ -85,20 +88,25 @@ const dateRangeDisplay = computed(() => {
   return `${fromDate} - ${toDate}`
 })
 
-// Print handler similar to other admin pages
-const handlePrint = () => {
-  if (dateRangeDisplay.value === '') {
+const exportHeader = computed(() => ({
+  title: 'Augmentation Transactions',
+  barangay: authStore.getSelectedBarangayName?.() || 'All Barangays',
+  periodLabel: dateRangeDisplay.value ? 'Date Range' : 'Period',
+  period: dateRangeDisplay.value || 'All records',
+}))
+
+const handleExport = async () => {
+  if (!store.filteredAugmentations.length) {
     $q.notify({
-      type: 'negative',
-      message: 'Please select a date range.',
+      type: 'warning',
+      message: 'No data to export',
       position: 'top',
     })
     return
   }
-  $q.notify({
-    type: 'positive',
-    message: 'Report sent to printer successfully!',
-    position: 'top',
+
+  await exportTransactionToExcel('augmentation', store.filteredAugmentations, {
+    header: exportHeader.value,
   })
 }
 

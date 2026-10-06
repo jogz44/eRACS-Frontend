@@ -182,9 +182,11 @@ import AugmentationDialog from 'components/augmentation/AugmentationDialog.vue'
 import AugExpenseSelecDial from 'components/augmentation/AugExpenseSelecDial.vue'
 import AugExpenseDetailDial from 'components/augmentation/AugExpenseDetailDial.vue'
 import { usePageLogging } from '../../../composables/usePageLogging'
+// import { useRoute } from 'vue-router' 
 
 const $q = useQuasar()
 const store = useAugmentationStore()
+// const route = useRoute()
 
 // Local state
 const isRefreshing = ref(false)
@@ -406,6 +408,15 @@ watch(searchQuery, (newQuery) => {
   store.searchQuery = newQuery
 }, { debounce: 300 })
 
+// watch(
+//   () => route.query.year,
+//   async (newYear) => {
+//     const year = newYear ? parseInt(newYear) : null
+//     supplementalBudgetStore.setSelectedYear(year ?? new Date().getFullYear())
+//     selectedYear.value = year ?? new Date().getFullYear()
+//     await loadData(false)
+//   },
+// )
 
 // Enhanced onMounted with better error handling
 onMounted(async () => {
